@@ -1,0 +1,134 @@
+:root {
+  --bg: #08090c;
+  --bg-elevated: #11151c;
+  --panel: rgba(17, 21, 28, 0.92);
+  --panel-border: rgba(199, 155, 92, 0.24);
+  --text: #f5f2ea;
+  --muted: #a4acb9;
+  --accent: #c79b5c;
+  --accent-soft: rgba(199, 155, 92, 0.18);
+  --danger: #b34f56;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(199, 155, 92, 0.18), transparent 28%),
+    linear-gradient(180deg, #0b0d11 0%, #050608 100%);
+  color: var(--text);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem;
+}
+
+.hero-panel,
+.status-card,
+.feature-card {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+}
+
+.hero-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1.5rem;
+}
+
+.hero-copy h1 {
+  margin: 0.35rem 0 0.75rem;
+  max-width: 12ch;
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+
+.eyebrow,
+.feature-kicker,
+.metric span,
+.status-card p {
+  margin: 0;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}
+
+.lede,
+.feature-card p,
+.status-card span {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.hero-meta {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.metric {
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.metric strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.status-grid,
+.section-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.status-card,
+.feature-card {
+  border-radius: 1.25rem;
+  padding: 1rem;
+}
+
+.status-card h2,
+.feature-card h2 {
+  margin: 0.45rem 0 0.6rem;
+  font-size: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    padding: 2rem;
+  }
+
+  .hero-panel {
+    grid-template-columns: 2fr 1fr;
+    align-items: end;
+    min-height: 22rem;
+    padding: 2rem;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .section-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
