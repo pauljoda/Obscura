@@ -23,6 +23,7 @@ interface VideoPlayerProps {
   src?: string;
   poster?: string;
   markers?: Marker[];
+  duration?: number;
   onMarkerClick?: (marker: Marker) => void;
 }
 
@@ -38,12 +39,13 @@ export function VideoPlayer({
   src,
   poster,
   markers = [],
+  duration: propDuration,
   onMarkerClick,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(propDuration ?? 0);
   const [muted, setMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
 

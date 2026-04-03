@@ -12,9 +12,10 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@obscura/ui";
+import type { StudioItem, TagItem } from "../lib/api";
 
 export type ViewMode = "grid" | "list";
-export type SortOption = "recent" | "title" | "duration" | "size" | "rating";
+export type SortOption = "recent" | "title" | "duration" | "size" | "rating" | "date" | "plays";
 
 interface FilterBarProps {
   viewMode: ViewMode;
@@ -25,14 +26,19 @@ interface FilterBarProps {
   onRemoveFilter: (index: number) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  availableStudios?: StudioItem[];
+  availableTags?: TagItem[];
+  onAddFilter?: (type: string, label: string, value: string) => void;
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "recent", label: "Recently Added" },
+  { value: "date", label: "Scene Date" },
   { value: "title", label: "Title A-Z" },
   { value: "duration", label: "Duration" },
   { value: "size", label: "File Size" },
   { value: "rating", label: "Rating" },
+  { value: "plays", label: "Most Played" },
 ];
 
 export function FilterBar({
@@ -44,6 +50,9 @@ export function FilterBar({
   onRemoveFilter,
   searchQuery,
   onSearchChange,
+  availableStudios = [],
+  availableTags = [],
+  onAddFilter,
 }: FilterBarProps) {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -194,7 +203,17 @@ export function FilterBar({
                 {["4K", "1080p", "720p", "480p"].map((res) => (
                   <button
                     key={res}
-                    className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors duration-fast cursor-pointer"
+                    onClick={() =>
+                      onAddFilter?.("resolution", "Resolution", res)
+                    }
+                    className={cn(
+                      "tag-chip cursor-pointer transition-colors duration-fast",
+                      activeFilters.some(
+                        (f) => f.label === "Resolution" && f.value === res
+                      )
+                        ? "tag-chip-accent"
+                        : "tag-chip-default hover:tag-chip-accent"
+                    )}
                   >
                     {res}
                   </button>
@@ -202,27 +221,52 @@ export function FilterBar({
               </div>
             </FilterSection>
             <FilterSection title="Tags">
-              <div className="flex flex-wrap gap-1">
-                {["Outdoor", "Interview", "BTS", "Solo", "Group", "POV"].map(
-                  (tag) => (
+              <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto scrollbar-hidden">
+                {availableTags
+                  .filter((t) => t.sceneCount > 0)
+                  .slice(0, 16)
+                  .map((tag) => (
                     <button
-                      key={tag}
-                      className="tag-chip tag-chip-default hover:tag-chip-info transition-colors duration-fast cursor-pointer"
+                      key={tag.id}
+                      onClick={() =>
+                        onAddFilter?.("tag", "Tag", tag.name)
+                      }
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        activeFilters.some(
+                          (f) => f.label === "Tag" && f.value === tag.name
+                        )
+                          ? "tag-chip-info"
+                          : "tag-chip-default hover:tag-chip-info"
+                      )}
                     >
-                      {tag}
+                      {tag.name}
+                      <span className="text-text-disabled ml-1">
+                        {tag.sceneCount}
+                      </span>
                     </button>
-                  )
-                )}
+                  ))}
               </div>
             </FilterSection>
             <FilterSection title="Studio">
               <div className="flex flex-wrap gap-1">
-                {["Studio Alpha", "Studio Beta", "Studio Gamma"].map((s) => (
+                {availableStudios.map((studio) => (
                   <button
-                    key={s}
-                    className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors duration-fast cursor-pointer"
+                    key={studio.id}
+                    onClick={() =>
+                      onAddFilter?.("studio", "Studio", studio.id)
+                    }
+                    className={cn(
+                      "tag-chip cursor-pointer transition-colors duration-fast",
+                      activeFilters.some(
+                        (f) =>
+                          f.label === "Studio" && f.value === studio.id
+                      )
+                        ? "tag-chip-accent"
+                        : "tag-chip-default hover:tag-chip-accent"
+                    )}
                   >
-                    {s}
+                    {studio.name}
                   </button>
                 ))}
               </div>

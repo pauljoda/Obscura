@@ -102,7 +102,7 @@ export function MediaCard({
         </h4>
 
         {/* Studio + Performers */}
-        {(studio || performers?.length) && (
+        {(studio || (performers && performers.length > 0)) && (
           <div className="flex items-center gap-1.5 text-text-muted min-w-0">
             {studio && (
               <span className="text-[0.7rem] text-text-accent truncate flex-shrink-0">

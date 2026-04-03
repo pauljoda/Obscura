@@ -39,12 +39,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={cn(
           "flex flex-1 flex-col transition-[margin-left] duration-moderate pb-14 md:pb-0",
+          "h-dvh overflow-y-auto",
           collapsed ? "md:ml-14" : "md:ml-60"
         )}
         style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
       >
         <CanvasHeader />
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 p-5">{children}</div>
       </main>
 
       {/* Mobile bottom nav */}
