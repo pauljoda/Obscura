@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 
+import { existsSync } from "node:fs";
+
 const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios } = schema;
 
 // Helper: format file size
@@ -207,6 +209,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       fileSize: scene.fileSize,
       fileSizeFormatted: formatFileSize(scene.fileSize),
       filePath: scene.filePath,
+      hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
+      streamUrl: scene.filePath && existsSync(scene.filePath) ? `/stream/${scene.id}` : null,
       playCount: scene.playCount,
       studioId: scene.studioId,
       performers: perfJoins
@@ -306,6 +310,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       fileSize: scene.fileSize,
       fileSizeFormatted: formatFileSize(scene.fileSize),
       filePath: scene.filePath,
+      hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
+      streamUrl: scene.filePath && existsSync(scene.filePath) ? `/stream/${scene.id}` : null,
       thumbnailPath: scene.thumbnailPath,
       previewPath: scene.previewPath,
       playCount: scene.playCount,

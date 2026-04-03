@@ -28,6 +28,8 @@ export interface SceneListItem {
   fileSize: number | null;
   fileSizeFormatted: string | null;
   filePath: string | null;
+  hasVideo: boolean;
+  streamUrl: string | null;
   playCount: number;
   studioId: string | null;
   performers: { id: string; name: string }[];

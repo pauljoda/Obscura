@@ -84,6 +84,11 @@ export function SceneDetail({ id }: { id: string }) {
 
       {/* Video Player */}
       <VideoPlayer
+        src={
+          scene.streamUrl
+            ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}${scene.streamUrl}`
+            : undefined
+        }
         markers={scene.markers.map((m) => ({
           id: m.id,
           time: m.seconds,
