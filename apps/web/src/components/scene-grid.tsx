@@ -5,7 +5,7 @@ import { cn } from "@obscura/ui";
 import { Film, Play, Clock, HardDrive, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ViewMode } from "./filter-bar";
-import type { SceneListItem } from "../lib/api";
+import { toApiUrl, type SceneListItem } from "../lib/api";
 
 const gradientClasses = [
   "gradient-thumb-1",
@@ -90,7 +90,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
         <Link key={scene.id} href={`/scenes/${scene.id}`}>
           <MediaCard
             title={scene.title}
-            thumbnail={scene.thumbnailPath ?? undefined}
+            thumbnail={toApiUrl(scene.thumbnailPath)}
             duration={scene.durationFormatted ?? undefined}
             resolution={scene.resolution ?? undefined}
             codec={scene.codec ?? undefined}

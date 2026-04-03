@@ -22,7 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { fetchSceneDetail, type SceneDetail as SceneDetailType } from "../lib/api";
+import { fetchSceneDetail, toApiUrl, type SceneDetail as SceneDetailType } from "../lib/api";
 
 const tabs = ["Details", "Markers", "Files", "Related"] as const;
 type Tab = (typeof tabs)[number];
@@ -84,16 +84,8 @@ export function SceneDetail({ id }: { id: string }) {
 
       {/* Video Player */}
       <VideoPlayer
-        src={
-          scene.streamUrl
-            ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}${scene.streamUrl}`
-            : undefined
-        }
-        directSrc={
-          scene.directStreamUrl
-            ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}${scene.directStreamUrl}`
-            : undefined
-        }
+        src={toApiUrl(scene.streamUrl)}
+        directSrc={toApiUrl(scene.directStreamUrl)}
         markers={scene.markers.map((m) => ({
           id: m.id,
           time: m.seconds,

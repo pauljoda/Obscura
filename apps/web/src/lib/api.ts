@@ -225,3 +225,15 @@ export async function runQueue(queueName: string): Promise<{
     method: "POST",
   });
 }
+
+export function toApiUrl(assetPath: string | null | undefined) {
+  if (!assetPath) {
+    return undefined;
+  }
+
+  if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
+    return assetPath;
+  }
+
+  return `${API_BASE}${assetPath}`;
+}

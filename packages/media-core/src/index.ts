@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { createReadStream } from "node:fs";
 import { readdir, stat, open } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -243,8 +244,53 @@ export async function computeOsHash(filePath: string) {
   }
 }
 
+function findWorkspaceRoot(startDir: string) {
+  let current = path.resolve(startDir);
+
+  while (true) {
+    if (
+      existsSync(path.join(current, "pnpm-workspace.yaml")) ||
+      existsSync(path.join(current, ".git"))
+    ) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+
+    current = parent;
+  }
+}
+
 export function getCacheRootDir() {
-  return process.env.OBSCURA_CACHE_DIR ?? path.resolve(process.cwd(), ".obscura-cache");
+  if (process.env.OBSCURA_CACHE_DIR) {
+    return path.resolve(process.env.OBSCURA_CACHE_DIR);
+  }
+
+  const workspaceRoot = findWorkspaceRoot(process.cwd());
+  if (!workspaceRoot) {
+    return path.resolve(process.cwd(), ".obscura-cache");
+  }
+
+  const sharedCache = path.join(workspaceRoot, ".obscura-cache");
+  const legacyWorkerCache = path.join(workspaceRoot, "apps", "worker", ".obscura-cache");
+  const legacyApiCache = path.join(workspaceRoot, "apps", "api", ".obscura-cache");
+
+  if (existsSync(sharedCache)) {
+    return sharedCache;
+  }
+
+  if (existsSync(legacyWorkerCache)) {
+    return legacyWorkerCache;
+  }
+
+  if (existsSync(legacyApiCache)) {
+    return legacyApiCache;
+  }
+
+  return sharedCache;
 }
 
 export function getGeneratedSceneDir(sceneId: string) {
