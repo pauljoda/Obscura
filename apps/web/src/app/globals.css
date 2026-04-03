@@ -67,12 +67,12 @@
   --color-overlay-heavy: rgba(8, 9, 12, 0.9);
   --color-overlay-glass: rgba(17, 21, 28, 0.8);
 
-  /* ── Border Radius (industrial, not bubbly) ── */
+  /* ── Border Radius (sharp, machined) ── */
   --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
   --radius-full: 9999px;
 
   /* ── Shadows ── */
@@ -393,6 +393,123 @@
     outline: none;
     box-shadow: var(--shadow-focus-accent);
     border-color: var(--color-border-accent);
+  }
+
+  /* ── Sharp Card: tighter radius, defined edges, machined bevel ── */
+  .surface-card-sharp {
+    background: linear-gradient(
+      180deg,
+      var(--color-surface-2) 0%,
+      color-mix(in srgb, var(--color-surface-2) 85%, var(--color-surface-1) 15%) 100%
+    );
+    border: 1px solid var(--color-border-subtle);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-card);
+    transition:
+      border-color var(--duration-normal) var(--ease-default),
+      box-shadow var(--duration-normal) var(--ease-default),
+      transform var(--duration-normal) var(--ease-default);
+  }
+
+  .surface-card-sharp:hover {
+    border-color: var(--color-border-accent);
+    border-top-color: rgba(199, 155, 92, 0.15);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+
+  /* ── Stats Card ── */
+  .surface-stat {
+    background: linear-gradient(
+      135deg,
+      var(--color-surface-2) 0%,
+      var(--color-surface-3) 100%
+    );
+    border: 1px solid var(--color-border-subtle);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-card);
+  }
+
+  .surface-stat-accent {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-surface-2) 92%, var(--color-accent-900) 8%) 0%,
+      var(--color-surface-3) 100%
+    );
+    border: 1px solid var(--color-border-accent);
+    border-top: 1px solid rgba(199, 155, 92, 0.12);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-card), 0 0 12px rgba(199, 155, 92, 0.04);
+  }
+
+  /* ── Accent gradient pill ── */
+  .pill-accent {
+    background: linear-gradient(
+      135deg,
+      var(--color-accent-800) 0%,
+      var(--color-accent-900) 100%
+    );
+    border: 1px solid var(--color-border-accent);
+    border-radius: var(--radius-xs);
+    color: var(--color-accent-300);
+  }
+
+  /* ── Gradient thumbnail placeholders ── */
+  .gradient-thumb-1 { background: linear-gradient(135deg, #1a1028 0%, #2d1b4e 40%, #4a2040 100%); }
+  .gradient-thumb-2 { background: linear-gradient(135deg, #0f1a2e 0%, #1b3a5c 40%, #0d2847 100%); }
+  .gradient-thumb-3 { background: linear-gradient(135deg, #1a0f0a 0%, #3d2415 40%, #5c3a1b 100%); }
+  .gradient-thumb-4 { background: linear-gradient(135deg, #0a1a14 0%, #153d2b 40%, #1b5c3f 100%); }
+  .gradient-thumb-5 { background: linear-gradient(135deg, #1a1018 0%, #3d1535 40%, #5c1b4a 100%); }
+  .gradient-thumb-6 { background: linear-gradient(135deg, #1a180a 0%, #3d3515 40%, #5c4f1b 100%); }
+  .gradient-thumb-7 { background: linear-gradient(135deg, #0a0f1a 0%, #15243d 40%, #1b365c 100%); }
+  .gradient-thumb-8 { background: linear-gradient(135deg, #1a0a12 0%, #3d1528 40%, #5c1b3b 100%); }
+
+  /* ── Tag color accents ── */
+  .tag-chip {
+    border-radius: var(--radius-xs);
+    padding: 1px 6px;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .tag-chip-default {
+    background: var(--color-surface-3);
+    color: var(--color-text-muted);
+    border: 1px solid transparent;
+  }
+
+  .tag-chip-accent {
+    background: rgba(199, 155, 92, 0.1);
+    color: var(--color-accent-400);
+    border: 1px solid rgba(199, 155, 92, 0.15);
+  }
+
+  .tag-chip-info {
+    background: rgba(74, 128, 179, 0.1);
+    color: var(--color-info-text);
+    border: 1px solid rgba(74, 128, 179, 0.15);
+  }
+
+  .tag-chip-success {
+    background: rgba(90, 150, 112, 0.1);
+    color: var(--color-success-text);
+    border: 1px solid rgba(90, 150, 112, 0.15);
+  }
+
+  .tag-chip-warning {
+    background: rgba(184, 149, 69, 0.1);
+    color: var(--color-warning-text);
+    border: 1px solid rgba(184, 149, 69, 0.15);
+  }
+
+  .tag-chip-error {
+    background: rgba(179, 79, 86, 0.1);
+    color: var(--color-error-text);
+    border: 1px solid rgba(179, 79, 86, 0.15);
   }
 }
 
