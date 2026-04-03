@@ -10,10 +10,15 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     cache: "no-store",
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers,
   });
 
   if (!res.ok) {
