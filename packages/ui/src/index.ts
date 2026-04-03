@@ -1,31 +1,53 @@
-export const designTokens = {
-  background: "#08090c",
-  elevated: "#11151c",
-  text: "#f5f2ea",
-  muted: "#a4acb9",
-  accent: "burnished brass"
-} as const;
+// Design tokens
+export { colors } from "./tokens/colors";
+export { typography } from "./tokens/typography";
+export { animation } from "./tokens/animation";
+export { spacing, radii } from "./tokens/spacing";
 
-export const apiRoutes = {
-  health: "/health",
-  jobs: "/jobs"
-} as const;
+// Utilities
+export { cn } from "./lib/utils";
 
+// Primitives
+export { Button, type ButtonProps } from "./primitives/button";
+export { Badge, type BadgeProps } from "./primitives/badge";
+
+// Composed components
+export { StatusLed, type LedStatus, type LedSize } from "./composed/status-led";
+export { Meter } from "./composed/meter";
+export { Panel } from "./composed/panel";
+export { MediaCard, type MediaCardProps } from "./composed/media-card";
+
+// Navigation sections for the app shell sidebar
 export const appShellSections = [
   {
+    id: "browse",
     kicker: "Browse",
-    title: "Library Views",
-    description: "Fast grid and list surfaces with room for saved filters, density control, and mobile-first navigation."
+    items: [
+      { label: "Scenes", href: "/scenes", icon: "film" },
+      { label: "Galleries", href: "/galleries", icon: "images" },
+      { label: "Performers", href: "/performers", icon: "users" },
+      { label: "Studios", href: "/studios", icon: "building" },
+      { label: "Tags", href: "/tags", icon: "tags" },
+      { label: "Collections", href: "/collections", icon: "folder" },
+    ],
   },
   {
+    id: "resolve",
     kicker: "Resolve",
-    title: "Metadata Queue",
-    description: "Dedicated workflows for unmatched files, imported stash records, and low-confidence provider matches."
+    items: [
+      { label: "Queue", href: "/resolve", icon: "list-checks" },
+      { label: "Review", href: "/resolve/review", icon: "diff" },
+    ],
   },
   {
+    id: "operate",
     kicker: "Operate",
-    title: "Job Console",
-    description: "Persistent worker topology for scan, probe, fingerprint, preview, and metadata tasks."
-  }
+    items: [
+      { label: "Jobs", href: "/jobs", icon: "activity" },
+      { label: "Settings", href: "/settings", icon: "settings" },
+    ],
+  },
 ] as const;
 
+export type NavSection = (typeof appShellSections)[number];
+export type NavItem = NavSection["items"][number];
