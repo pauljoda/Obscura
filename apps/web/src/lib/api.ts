@@ -51,6 +51,7 @@ export interface SceneListItem {
   hasVideo: boolean;
   streamUrl: string | null;
   directStreamUrl: string | null;
+  thumbnailPath: string | null;
   playCount: number;
   studioId: string | null;
   performers: { id: string; name: string; gender?: string | null; favorite?: boolean }[];

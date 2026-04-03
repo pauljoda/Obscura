@@ -90,6 +90,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
         <Link key={scene.id} href={`/scenes/${scene.id}`}>
           <MediaCard
             title={scene.title}
+            thumbnail={scene.thumbnailPath ?? undefined}
             duration={scene.durationFormatted ?? undefined}
             resolution={scene.resolution ?? undefined}
             codec={scene.codec ?? undefined}

@@ -1,9 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 import postgres from "postgres";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { queueDefinitions, type QueueName } from "@obscura/contracts";
 import {
@@ -195,6 +196,46 @@ async function processLibraryScan(job: Job) {
 
   const settings = await ensureLibrarySettingsRow();
   const files = await discoverVideoFiles(root.path, root.recursive);
+  const discoveredSet = new Set(files);
+
+  const allKnownScenes = await db
+    .select({
+      id: scenes.id,
+      filePath: scenes.filePath,
+    })
+    .from(scenes);
+
+  const globallyMissingSceneIds = allKnownScenes
+    .filter((scene) => scene.filePath && !existsSync(scene.filePath))
+    .map((scene) => scene.id);
+
+  if (globallyMissingSceneIds.length > 0) {
+    for (const missingSceneId of globallyMissingSceneIds) {
+      await rm(getGeneratedSceneDir(missingSceneId), { recursive: true, force: true });
+    }
+
+    await db.delete(scenes).where(inArray(scenes.id, globallyMissingSceneIds));
+  }
+
+  const knownScenesInRoot = await db
+    .select({
+      id: scenes.id,
+      filePath: scenes.filePath,
+    })
+    .from(scenes)
+    .where(like(scenes.filePath, `${root.path}%`));
+
+  const staleSceneIds = knownScenesInRoot
+    .filter((scene) => scene.filePath && !discoveredSet.has(scene.filePath))
+    .map((scene) => scene.id);
+
+  if (staleSceneIds.length > 0) {
+    for (const staleSceneId of staleSceneIds) {
+      await rm(getGeneratedSceneDir(staleSceneId), { recursive: true, force: true });
+    }
+
+    await db.delete(scenes).where(inArray(scenes.id, staleSceneIds));
+  }
 
   if (files.length === 0) {
     await db
