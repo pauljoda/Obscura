@@ -25,15 +25,20 @@ Obscura is a private, self-hosted media browser for adult content. It is optimiz
 
 ## Getting Started
 
-This repo is scaffolded for Docker-first development. Dependency installation and runtime bootstrapping are intentionally not executed automatically in this initial foundation commit.
+This repo is scaffolded for Docker-first development. Dependency installation and runtime bootstrapping are intentionally not executed automatically in this initial foundation phase.
 
 Planned local workflow:
 
 1. `pnpm install`
-2. `docker compose up --build`
+2. `docker compose -f infra/docker/docker-compose.yml up --build`
 3. `pnpm dev`
+
+## Foundation Docs
+
+- `AGENTS.md` - repo contract, architecture rules, commit discipline, and semver policy
+- `docs/architecture.md` - service boundaries and domain model direction
+- `docs/design-language.md` - control-room visual system and UI tone
 
 ## Versioning
 
 Obscura follows semantic versioning. The root `package.json` version is the canonical app version and must stay aligned with release tags and `CHANGELOG.md`.
-
