@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "@obscura/contracts": "workspace:*",
-    "@obscura/media-core": "workspace:*"
+    "@obscura/media-core": "workspace:*",
+    "bullmq": "^5.73.0",
+    "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.10.1",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -19,4 +23,3 @@
     "typescript": "^5.7.2"
   }
 }
-

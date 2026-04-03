@@ -316,6 +316,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       directStreamUrl: scene.filePath && existsSync(scene.filePath) ? `/stream/${scene.id}/source` : null,
       thumbnailPath: scene.thumbnailPath,
       previewPath: scene.previewPath,
+      spritePath: scene.spritePath,
+      trickplayVttPath: scene.trickplayVttPath,
       playCount: scene.playCount,
       playDuration: scene.playDuration,
       resumeTime: scene.resumeTime,

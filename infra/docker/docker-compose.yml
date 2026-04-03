@@ -18,11 +18,15 @@ services:
     command: pnpm --filter @obscura/api dev
     env_file:
       - ../../.env.example
+    environment:
+      OBSCURA_CACHE_DIR: /data/cache
     ports:
       - "4000:4000"
     depends_on:
       - postgres
       - redis
+    volumes:
+      - cache-data:/data/cache
 
   worker:
     build:
@@ -31,9 +35,13 @@ services:
     command: pnpm --filter @obscura/worker dev
     env_file:
       - ../../.env.example
+    environment:
+      OBSCURA_CACHE_DIR: /data/cache
     depends_on:
       - postgres
       - redis
+    volumes:
+      - cache-data:/data/cache
 
   postgres:
     image: postgres:16-alpine
@@ -53,3 +61,4 @@ services:
 
 volumes:
   postgres-data:
+  cache-data:

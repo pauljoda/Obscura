@@ -456,6 +456,49 @@
     color: var(--color-accent-300);
   }
 
+  .control-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 0.45rem;
+  }
+
+  .control-input,
+  .control-select,
+  .control-textarea {
+    width: 100%;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface-2) 96%, white 2%) 0%,
+      var(--color-surface-1) 100%
+    );
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    padding: 0.7rem 0.8rem;
+    box-shadow: var(--shadow-well);
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .control-input:focus,
+  .control-select:focus,
+  .control-textarea:focus {
+    outline: none;
+    border-color: var(--color-border-accent-strong);
+    box-shadow: var(--shadow-focus-accent);
+  }
+
+  .control-checkbox {
+    accent-color: var(--color-accent-500);
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
   /* ── Gradient thumbnail placeholders ── */
   .gradient-thumb-1 { background: linear-gradient(135deg, #1a1028 0%, #2d1b4e 40%, #4a2040 100%); }
   .gradient-thumb-2 { background: linear-gradient(135deg, #0f1a2e 0%, #1b3a5c 40%, #0d2847 100%); }

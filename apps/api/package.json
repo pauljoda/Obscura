@@ -16,8 +16,10 @@
     "@fastify/cors": "^11.2.0",
     "@fastify/static": "^9.0.0",
     "@obscura/contracts": "workspace:*",
+    "bullmq": "^5.73.0",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.2.1",
+    "ioredis": "^5.10.1",
     "postgres": "^3.4.8"
   },
   "devDependencies": {

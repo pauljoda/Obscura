@@ -5,6 +5,6 @@ WORKDIR /app
 COPY . .
 
 RUN corepack enable
+RUN apk add --no-cache ffmpeg
 
 EXPOSE 4000
-

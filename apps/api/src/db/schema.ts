@@ -8,6 +8,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -83,6 +84,65 @@ export const tagsRelations = relations(tags, ({ many, one }) => ({
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
+// ─── Library Roots ────────────────────────────────────────────────
+export const libraryRoots = pgTable(
+  "library_roots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    path: text("path").notNull(),
+    label: text("label").notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    recursive: boolean("recursive").default(true).notNull(),
+    lastScannedAt: timestamp("last_scanned_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("library_roots_path_idx").on(table.path)]
+);
+
+// ─── Library Settings ─────────────────────────────────────────────
+export const librarySettings = pgTable("library_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  autoScanEnabled: boolean("auto_scan_enabled").default(false).notNull(),
+  scanIntervalMinutes: integer("scan_interval_minutes").default(60).notNull(),
+  autoGenerateMetadata: boolean("auto_generate_metadata").default(true).notNull(),
+  autoGenerateFingerprints: boolean("auto_generate_fingerprints").default(true).notNull(),
+  autoGeneratePreview: boolean("auto_generate_preview").default(true).notNull(),
+  generateTrickplay: boolean("generate_trickplay").default(true).notNull(),
+  trickplayIntervalSeconds: integer("trickplay_interval_seconds").default(10).notNull(),
+  previewClipDurationSeconds: integer("preview_clip_duration_seconds").default(8).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ─── Job Runs ─────────────────────────────────────────────────────
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    queueName: text("queue_name").notNull(),
+    bullmqJobId: text("bullmq_job_id").notNull(),
+    status: text("status").notNull(),
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    targetLabel: text("target_label"),
+    progress: integer("progress").default(0).notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    payload: jsonb("payload"),
+    error: text("error"),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("job_runs_bullmq_job_id_idx").on(table.bullmqJobId),
+    index("job_runs_queue_name_idx").on(table.queueName),
+    index("job_runs_status_idx").on(table.status),
+    index("job_runs_created_at_idx").on(table.createdAt),
+  ]
+);
+
 // ─── Scenes ─────────────────────────────────────────────────────────
 export const scenes = pgTable(
   "scenes",
@@ -111,6 +171,7 @@ export const scenes = pgTable(
     thumbnailPath: text("thumbnail_path"),
     previewPath: text("preview_path"),
     spritePath: text("sprite_path"),
+    trickplayVttPath: text("trickplay_vtt_path"),
 
     // Fingerprints
     checksumMd5: text("checksum_md5"),

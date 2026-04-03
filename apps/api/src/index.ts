@@ -1,8 +1,11 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { apiRoutes, queueDefinitions } from "@obscura/contracts";
+import { apiRoutes } from "@obscura/contracts";
 import { scenesRoutes } from "./routes/scenes";
 import { streamRoutes } from "./routes/stream";
+import { settingsRoutes } from "./routes/settings";
+import { jobsRoutes } from "./routes/jobs";
+import { assetsRoutes } from "./routes/assets";
 
 const app = Fastify({
   logger: true,
@@ -20,15 +23,10 @@ app.get(apiRoutes.health, async () => ({
   version: "0.1.0",
 }));
 
-app.get(apiRoutes.jobs, async () => ({
-  queues: queueDefinitions.map((queue) => ({
-    name: queue.name,
-    description: queue.description,
-    status: "not-configured",
-  })),
-}));
-
 // ─── Feature routes ───────────────────────────────────────────────
+await app.register(settingsRoutes);
+await app.register(jobsRoutes);
+await app.register(assetsRoutes);
 await app.register(scenesRoutes);
 await app.register(streamRoutes);
 
