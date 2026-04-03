@@ -91,6 +91,9 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
           <MediaCard
             title={scene.title}
             thumbnail={toApiUrl(scene.thumbnailPath)}
+            trickplaySprite={toApiUrl(scene.spritePath)}
+            trickplayVtt={toApiUrl(scene.trickplayVttPath)}
+            scrubDurationSeconds={scene.duration ?? undefined}
             duration={scene.durationFormatted ?? undefined}
             resolution={scene.resolution ?? undefined}
             codec={scene.codec ?? undefined}

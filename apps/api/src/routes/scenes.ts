@@ -213,6 +213,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       streamUrl: scene.filePath && existsSync(scene.filePath) ? `/stream/${scene.id}/hls/master.m3u8` : null,
       directStreamUrl: scene.filePath && existsSync(scene.filePath) ? `/stream/${scene.id}/source` : null,
       thumbnailPath: scene.thumbnailPath,
+      spritePath: scene.spritePath,
+      trickplayVttPath: scene.trickplayVttPath,
       playCount: scene.playCount,
       studioId: scene.studioId,
       performers: perfJoins

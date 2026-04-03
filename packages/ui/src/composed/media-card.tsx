@@ -1,10 +1,107 @@
+import { useRef, useState } from "react";
 import { cn } from "../lib/utils";
-import { Badge } from "../primitives/badge";
 import { Play, Clock, HardDrive, Eye } from "lucide-react";
+
+interface TrickplayFrame {
+  start: number;
+  end: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  url: string;
+}
+
+const trickplayCache = new Map<string, Promise<TrickplayFrame[]>>();
+
+function parseTimestamp(value: string) {
+  const [timePart, msPart = "0"] = value.trim().split(".");
+  const segments = timePart.split(":").map(Number);
+  if (segments.length !== 3 || segments.some((segment) => Number.isNaN(segment))) {
+    return 0;
+  }
+
+  const [hours, minutes, seconds] = segments;
+  return hours * 3600 + minutes * 60 + seconds + Number(msPart) / 1000;
+}
+
+function parseTrickplayVtt(raw: string) {
+  const frames: TrickplayFrame[] = [];
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const line = lines[index];
+    if (!line.includes("-->")) {
+      continue;
+    }
+
+    const [startRaw, endRaw] = line.split("-->").map((part) => part.trim());
+    const assetLine = lines[index + 1];
+    const [url, fragment] = assetLine.split("#xywh=");
+    if (!fragment) {
+      continue;
+    }
+
+    const [x, y, width, height] = fragment.split(",").map(Number);
+    if ([x, y, width, height].some((value) => Number.isNaN(value))) {
+      continue;
+    }
+
+    frames.push({
+      start: parseTimestamp(startRaw),
+      end: parseTimestamp(endRaw),
+      x,
+      y,
+      width,
+      height,
+      url,
+    });
+  }
+
+  return frames;
+}
+
+async function loadTrickplayFrames(vttUrl: string) {
+  const cached = trickplayCache.get(vttUrl);
+  if (cached) {
+    return cached;
+  }
+
+  const pending = fetch(vttUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load trickplay map (${response.status})`);
+      }
+      return response.text();
+    })
+    .then(parseTrickplayVtt);
+
+  trickplayCache.set(vttUrl, pending);
+  return pending;
+}
+
+function formatHoverTime(seconds: number) {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const remainder = wholeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
 
 export interface MediaCardProps {
   title: string;
   thumbnail?: string;
+  trickplaySprite?: string;
+  trickplayVtt?: string;
+  scrubDurationSeconds?: number;
   gradientClass?: string;
   duration?: string;
   resolution?: string;
@@ -23,6 +120,9 @@ export interface MediaCardProps {
 export function MediaCard({
   title,
   thumbnail,
+  trickplaySprite,
+  trickplayVtt,
+  scrubDurationSeconds,
   gradientClass,
   duration,
   resolution,
@@ -35,36 +135,142 @@ export function MediaCard({
   views,
   className,
 }: MediaCardProps) {
+  const cardRef = useRef<HTMLElement>(null);
+  const [frames, setFrames] = useState<TrickplayFrame[] | null>(null);
+  const [trickplayError, setTrickplayError] = useState(false);
+  const [activeFrameIndex, setActiveFrameIndex] = useState<number | null>(null);
+  const lastFrameIndexRef = useRef<number | null>(null);
+
+  const hasScrubPreview =
+    Boolean(trickplaySprite && trickplayVtt && scrubDurationSeconds && scrubDurationSeconds > 0) &&
+    !trickplayError;
+
+  const activeFrame =
+    activeFrameIndex != null && frames && activeFrameIndex < frames.length
+      ? frames[activeFrameIndex]
+      : null;
+
+  const spriteWidth = frames
+    ? frames.reduce((max, frame) => Math.max(max, frame.x + frame.width), 0)
+    : 0;
+  const spriteHeight = frames
+    ? frames.reduce((max, frame) => Math.max(max, frame.y + frame.height), 0)
+    : 0;
+
+  async function ensureTrickplayLoaded() {
+    if (!trickplayVtt || frames || trickplayError) {
+      return;
+    }
+
+    try {
+      const nextFrames = await loadTrickplayFrames(trickplayVtt);
+      setFrames(nextFrames);
+    } catch {
+      setTrickplayError(true);
+    }
+  }
+
+  function updateActiveFrame(normalizedPosition: number) {
+    if (!frames || !scrubDurationSeconds) {
+      return;
+    }
+
+    const clamped = Math.max(0, Math.min(1, normalizedPosition));
+    const targetTime = clamped * scrubDurationSeconds;
+
+    let nextFrameIndex = frames.findIndex(
+      (frame) => targetTime >= frame.start && targetTime < frame.end
+    );
+
+    if (nextFrameIndex === -1) {
+      nextFrameIndex = Math.min(frames.length - 1, Math.floor(clamped * frames.length));
+    }
+
+    if (lastFrameIndexRef.current === nextFrameIndex) {
+      return;
+    }
+
+    lastFrameIndexRef.current = nextFrameIndex;
+    setActiveFrameIndex(nextFrameIndex);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
+    if (!hasScrubPreview || !cardRef.current) {
+      return;
+    }
+
+    const bounds = cardRef.current.getBoundingClientRect();
+    if (bounds.width === 0) {
+      return;
+    }
+
+    updateActiveFrame((event.clientX - bounds.left) / bounds.width);
+  }
+
+  function handlePointerLeave() {
+    lastFrameIndexRef.current = null;
+    setActiveFrameIndex(null);
+  }
+
   return (
     <article
+      ref={cardRef}
       className={cn(
         "surface-card-sharp group cursor-pointer overflow-hidden",
         className
       )}
+      onPointerEnter={() => {
+        void ensureTrickplayLoaded();
+      }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
     >
-      {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-surface-1">
         {thumbnail ? (
           <img
             src={thumbnail}
             alt={title}
-            className="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-normal",
+              activeFrame ? "scale-[1.01] opacity-0" : "group-hover:scale-[1.03]"
+            )}
           />
         ) : (
           <div
             className={cn(
               "flex h-full w-full items-center justify-center",
-              gradientClass || "bg-surface-1"
+              gradientClass || "bg-surface-1",
+              activeFrame && "opacity-0"
             )}
           >
             <Play className="h-7 w-7 text-white/15" />
           </div>
         )}
 
-        {/* Bottom gradient overlay */}
+        {activeFrame && trickplaySprite && spriteWidth > 0 && spriteHeight > 0 && (
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              src={trickplaySprite}
+              alt=""
+              aria-hidden="true"
+              className="absolute max-w-none select-none"
+              draggable={false}
+              style={{
+                width: `${(spriteWidth / activeFrame.width) * 100}%`,
+                height: `${(spriteHeight / activeFrame.height) * 100}%`,
+                left: `-${(activeFrame.x / activeFrame.width) * 100}%`,
+                top: `-${(activeFrame.y / activeFrame.height) * 100}%`,
+              }}
+            />
+            <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/70 via-black/30 to-transparent pointer-events-none" />
+            <div className="absolute left-2 top-2 rounded-sm border border-accent-500/25 bg-black/70 px-2 py-1 text-[0.65rem] font-mono tracking-[0.12em] text-accent-100">
+              SCRUB {formatHoverTime(activeFrame.start)}
+            </div>
+          </div>
+        )}
+
         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-        {/* Duration badge - bottom left */}
         {duration && (
           <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-mono text-white/90 backdrop-blur-sm">
             <Clock className="h-2.5 w-2.5 text-white/60" />
@@ -72,7 +278,6 @@ export function MediaCard({
           </span>
         )}
 
-        {/* Resolution + codec - top right */}
         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
           {resolution && (
             <span className="pill-accent px-1.5 py-0.5 text-[0.58rem] font-semibold tracking-wide">
@@ -86,22 +291,37 @@ export function MediaCard({
           )}
         </div>
 
-        {/* Play overlay on hover */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity duration-normal group-hover:opacity-100">
           <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-accent-500/90 text-accent-950 shadow-lg shadow-accent-500/25">
             <Play className="h-4.5 w-4.5 ml-0.5" fill="currentColor" />
           </div>
         </div>
+
+        {hasScrubPreview && (
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-2">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/55">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-accent-700 via-accent-500 to-accent-300 transition-[width] duration-75"
+                style={{
+                  width:
+                    activeFrame && scrubDurationSeconds
+                      ? `${Math.min(100, (activeFrame.start / scrubDurationSeconds) * 100)}%`
+                      : "0%",
+                }}
+              />
+            </div>
+            <div className="rounded-sm border border-white/10 bg-black/65 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-white/65">
+              Hover scrub
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Metadata */}
       <div className="p-2.5 space-y-1.5">
-        {/* Title */}
         <h4 className="truncate text-[0.8rem] font-medium text-text-primary leading-tight">
           {title}
         </h4>
 
-        {/* Studio + Performers */}
         {(studio || (performers && performers.length > 0)) && (
           <div className="flex items-center gap-1.5 text-text-muted min-w-0">
             {studio && (
@@ -125,7 +345,6 @@ export function MediaCard({
           </div>
         )}
 
-        {/* Tags */}
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {tags.slice(0, 3).map((tag) => {
@@ -145,7 +364,6 @@ export function MediaCard({
           </div>
         )}
 
-        {/* Bottom info bar */}
         {(fileSize || views !== undefined) && (
           <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">
             {fileSize && (

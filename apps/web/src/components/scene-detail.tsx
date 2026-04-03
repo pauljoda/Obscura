@@ -86,6 +86,7 @@ export function SceneDetail({ id }: { id: string }) {
       <VideoPlayer
         src={toApiUrl(scene.streamUrl)}
         directSrc={toApiUrl(scene.directStreamUrl)}
+        poster={toApiUrl(scene.thumbnailPath)}
         markers={scene.markers.map((m) => ({
           id: m.id,
           time: m.seconds,

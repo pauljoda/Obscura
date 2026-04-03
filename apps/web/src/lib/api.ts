@@ -52,6 +52,8 @@ export interface SceneListItem {
   streamUrl: string | null;
   directStreamUrl: string | null;
   thumbnailPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
   playCount: number;
   studioId: string | null;
   performers: { id: string; name: string; gender?: string | null; favorite?: boolean }[];
@@ -63,10 +65,7 @@ export interface SceneDetail extends SceneListItem {
   interactive: boolean;
   frameRate: number | null;
   bitRate: number | null;
-  thumbnailPath: string | null;
   previewPath: string | null;
-  spritePath: string | null;
-  trickplayVttPath: string | null;
   playDuration: number | null;
   resumeTime: number | null;
   lastPlayedAt: string | null;
