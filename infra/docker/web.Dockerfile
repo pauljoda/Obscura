@@ -6,5 +6,4 @@ COPY . .
 
 RUN corepack enable
 
-EXPOSE 3000
-
+EXPOSE 8008

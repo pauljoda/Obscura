@@ -8,6 +8,6 @@ dist
 coverage
 .turbo
 .pnpm-store
+*.tsbuildinfo
 *.log
 tmp
-

@@ -33,6 +33,8 @@ Planned local workflow:
 2. `docker compose -f infra/docker/docker-compose.yml up --build`
 3. `pnpm dev`
 
+The web application is expected to be served on `http://localhost:8008`.
+
 ## Foundation Docs
 
 - `AGENTS.md` - repo contract, architecture rules, commit discipline, and semver policy
