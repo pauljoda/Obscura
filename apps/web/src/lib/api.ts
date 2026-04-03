@@ -30,9 +30,10 @@ export interface SceneListItem {
   filePath: string | null;
   hasVideo: boolean;
   streamUrl: string | null;
+  directStreamUrl: string | null;
   playCount: number;
   studioId: string | null;
-  performers: { id: string; name: string }[];
+  performers: { id: string; name: string; gender?: string | null; favorite?: boolean }[];
   tags: { id: string; name: string }[];
   createdAt: string;
 }

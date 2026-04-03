@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { VideoPlayer } from "./video-player";
-import { Badge, Button } from "@obscura/ui";
+import { Button } from "@obscura/ui";
 import { cn } from "@obscura/ui";
 import {
   Star,
@@ -87,6 +87,11 @@ export function SceneDetail({ id }: { id: string }) {
         src={
           scene.streamUrl
             ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}${scene.streamUrl}`
+            : undefined
+        }
+        directSrc={
+          scene.directStreamUrl
+            ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}${scene.directStreamUrl}`
             : undefined
         }
         markers={scene.markers.map((m) => ({
@@ -382,6 +387,10 @@ export function SceneDetail({ id }: { id: string }) {
           <div className="space-y-2 text-mono-sm">
             <FileInfoRow label="Path" value={scene.filePath ?? "—"} />
             <div className="separator" />
+            <FileInfoRow label="Adaptive Stream" value={scene.streamUrl ?? "—"} />
+            <div className="separator" />
+            <FileInfoRow label="Direct Stream" value={scene.directStreamUrl ?? "—"} />
+            <div className="separator" />
             <FileInfoRow
               label="Size"
               value={scene.fileSizeFormatted ?? "—"}
@@ -439,7 +448,7 @@ function InfoRow({
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
 }) {

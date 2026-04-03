@@ -1,0 +1,47 @@
+{
+  "sourcePath": "/Users/pauldavis/Dev/Obscura/apps/web/public/media/scenes/sintel_trailer.mp4",
+  "sourceSize": 11062154,
+  "sourceMtimeMs": 1775248713783.1504,
+  "renditions": [
+    {
+      "name": "480p",
+      "label": "480p",
+      "height": 480,
+      "videoBitrate": "1400k",
+      "maxRate": "1600k",
+      "bufferSize": "2800k",
+      "audioBitrate": "128k",
+      "crf": 20
+    },
+    {
+      "name": "360p",
+      "label": "360p",
+      "height": 360,
+      "videoBitrate": "850k",
+      "maxRate": "950k",
+      "bufferSize": "1700k",
+      "audioBitrate": "128k",
+      "crf": 21
+    },
+    {
+      "name": "240p",
+      "label": "240p",
+      "height": 240,
+      "videoBitrate": "450k",
+      "maxRate": "520k",
+      "bufferSize": "900k",
+      "audioBitrate": "96k",
+      "crf": 22
+    },
+    {
+      "name": "180p",
+      "label": "180p",
+      "height": 180,
+      "videoBitrate": "320k",
+      "maxRate": "360k",
+      "bufferSize": "640k",
+      "audioBitrate": "96k",
+      "crf": 23
+    }
+  ]
+}

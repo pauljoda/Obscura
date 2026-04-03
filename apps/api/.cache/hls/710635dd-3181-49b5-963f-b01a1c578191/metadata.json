@@ -1,0 +1,17 @@
+{
+  "sourcePath": "/Users/pauldavis/Dev/Obscura/apps/web/public/media/scenes/big_buck_bunny.mp4",
+  "sourceSize": 64657027,
+  "sourceMtimeMs": 1775248628373.9495,
+  "renditions": [
+    {
+      "name": "180p",
+      "label": "180p",
+      "height": 180,
+      "videoBitrate": "320k",
+      "maxRate": "360k",
+      "bufferSize": "640k",
+      "audioBitrate": "96k",
+      "crf": 23
+    }
+  ]
+}
