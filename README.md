@@ -13,7 +13,6 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#features">Features</a> &middot;
-  <a href="#architecture">Architecture</a> &middot;
   <a href="#configuration">Configuration</a> &middot;
   <a href="#development">Development</a>
 </p>
@@ -22,94 +21,50 @@
 
 ## Quick Start
 
-Pull and run with Docker Compose:
+Obscura ships as a **single Docker image** with everything included — no external databases, no multi-service setup, no configuration required.
+
+### Docker Run
 
 ```bash
-curl -O https://raw.githubusercontent.com/pauljoda/obscura/main/docker-compose.yml
-docker compose up -d
+docker run -d \
+  --name obscura \
+  -p 8008:8008 \
+  -v obscura-data:/data \
+  -v /path/to/your/media:/media \
+  ghcr.io/pauljoda/obscura:latest
 ```
-
-Obscura will be available at `http://localhost:8008`.
 
 ### Docker Compose
 
 ```yaml
 services:
-  web:
-    image: ghcr.io/pauljoda/obscura-web:latest
+  obscura:
+    image: ghcr.io/pauljoda/obscura:latest
     ports:
       - "8008:8008"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://api:4000
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  api:
-    image: ghcr.io/pauljoda/obscura-api:latest
-    ports:
-      - "4000:4000"
-    environment:
-      - DATABASE_URL=postgresql://obscura:obscura@postgres:5432/obscura
-      - REDIS_URL=redis://redis:6379
-      - OBSCURA_CACHE_DIR=/data/cache
-    depends_on:
-      - postgres
-      - redis
     volumes:
-      - cache-data:/data/cache
-      - media-data:/media
-    restart: unless-stopped
-
-  worker:
-    image: ghcr.io/pauljoda/obscura-worker:latest
-    environment:
-      - DATABASE_URL=postgresql://obscura:obscura@postgres:5432/obscura
-      - REDIS_URL=redis://redis:6379
-      - OBSCURA_CACHE_DIR=/data/cache
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - cache-data:/data/cache
-      - media-data:/media
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: obscura
-      POSTGRES_USER: obscura
-      POSTGRES_PASSWORD: obscura
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
+      - obscura-data:/data
+      - /path/to/your/media:/media
     restart: unless-stopped
 
 volumes:
-  postgres-data:
-  cache-data:
-  media-data:
+  obscura-data:
 ```
 
-### Docker Images
+```bash
+docker compose up -d
+```
 
-| Image | Description |
-|-------|-------------|
-| `ghcr.io/pauljoda/obscura-web` | Next.js frontend |
-| `ghcr.io/pauljoda/obscura-api` | Fastify HTTP API |
-| `ghcr.io/pauljoda/obscura-worker` | BullMQ background worker |
+Open **http://localhost:8008** and you're done.
 
 ### Volumes
 
-| Volume | Purpose |
-|--------|---------|
-| `postgres-data` | PostgreSQL database storage |
-| `cache-data` | HLS transcoded video cache, thumbnails, sprite sheets |
-| `media-data` | Shared media library root |
+| Mount | Purpose |
+|-------|---------|
+| `/data` | Database, cache, thumbnails, HLS transcodes — everything Obscura generates |
+| `/media` | Your media library. Mount one or more directories here |
+
+That's it. No environment variables, no database credentials, no Redis URLs. The image manages PostgreSQL, Redis, and all application services internally.
 
 ---
 
@@ -141,68 +96,47 @@ Configure library roots, scan behavior, and application preferences through the 
 
 ---
 
-## Architecture
+## Configuration
 
-Obscura is a monorepo with three services and shared packages:
+Obscura works out of the box with zero configuration. For advanced use cases, the following environment variables are available:
 
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OBSCURA_CACHE_DIR` | `/data/cache` | Directory for HLS cache, thumbnails, sprites |
+
+### Multiple Media Directories
+
+Mount as many media directories as you need:
+
+```bash
+docker run -d \
+  --name obscura \
+  -p 8008:8008 \
+  -v obscura-data:/data \
+  -v /mnt/nas/videos:/media/videos \
+  -v /mnt/nas/clips:/media/clips \
+  ghcr.io/pauljoda/obscura:latest
 ```
-┌────────────┐     ┌────────────┐     ┌────────────┐
-│    Web      │────▶│    API      │────▶│   Worker    │
-│  Next.js    │     │  Fastify    │     │   BullMQ    │
-│  :8008      │     │  :4000      │     │             │
-└────────────┘     └─────┬───────┘     └──────┬──────┘
-                         │                     │
-                   ┌─────┴─────┐         ┌─────┴─────┐
-                   │ PostgreSQL │         │   Redis    │
-                   │    :5432   │         │   :6379    │
-                   └───────────┘         └───────────┘
-```
 
-### Technology Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 15, React 19, Tailwind CSS 4 |
-| API | Fastify 5, Drizzle ORM |
-| Worker | BullMQ 5, ffmpeg |
-| Database | PostgreSQL 16 |
-| Queue | Redis 7 |
-| Build | pnpm workspaces, Turborepo |
-| Deploy | Docker, GitHub Actions, GHCR |
-
-### Packages
-
-| Package | Purpose |
-|---------|---------|
-| `@obscura/contracts` | Typed DTOs, route constants, job identifiers |
-| `@obscura/ui` | Design tokens, shared components |
-| `@obscura/media-core` | File discovery, fingerprint, scan primitives |
-| `@obscura/stash-import` | Stash database migration adapter |
-| `@obscura/config` | Shared TypeScript and lint configuration |
+Then add each as a library root in **Settings > Library**.
 
 ---
 
-## Configuration
+## What's Inside
 
-### Environment Variables
+The single image bundles:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | — | PostgreSQL connection string |
-| `REDIS_URL` | — | Redis connection string |
-| `OBSCURA_CACHE_DIR` | `/data/cache` | Directory for HLS cache, thumbnails, sprites |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:4000` | API URL (used by the web frontend) |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:8008` | Web app URL |
-| `PORT` | Service-specific | `8008` (web), `4000` (api) |
-| `HOST` | `0.0.0.0` | Bind address |
+| Component | Version | Role |
+|-----------|---------|------|
+| **Next.js** | 15 | Web frontend (React 19, Tailwind CSS 4) |
+| **Fastify** | 5 | HTTP API (Drizzle ORM) |
+| **BullMQ** | 5 | Background job worker |
+| **PostgreSQL** | 16 | Database |
+| **Redis** | 7 | Job queue |
+| **ffmpeg** | latest | Video transcoding |
+| **nginx** | latest | Reverse proxy |
 
-### PostgreSQL
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `POSTGRES_DB` | `obscura` | Database name |
-| `POSTGRES_USER` | `obscura` | Database user |
-| `POSTGRES_PASSWORD` | `obscura` | Database password |
+All services run inside the container, coordinated by a single entrypoint. Port **8008** is the only exposed port — nginx routes API requests internally.
 
 ---
 
@@ -264,7 +198,7 @@ obscura/
 │   ├── config/          Shared TypeScript config
 │   ├── media-core/      Media discovery & fingerprint
 │   └── stash-import/    Stash migration adapter
-├── infra/docker/        Dockerfiles & dev compose stack
+├── infra/docker/        Dockerfiles & compose stacks
 ├── scripts/release/     Version validation tooling
 └── docs/                Architecture & design docs
 ```
@@ -280,8 +214,17 @@ obscura/
 | `pnpm --filter @obscura/api db:push` | Push schema changes to PostgreSQL |
 | `pnpm --filter @obscura/api db:studio` | Open Drizzle Studio |
 
+### Building the Docker Image Locally
+
+```bash
+docker build -f infra/docker/unified.Dockerfile -t obscura .
+docker run -p 8008:8008 -v obscura-data:/data -v /your/media:/media obscura
+```
+
 ---
 
 ## License
 
-This project is private and not licensed for redistribution.
+This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+You are free to share and adapt this work for non-commercial purposes, with attribution, under the same license terms. See [LICENSE](LICENSE) for details.

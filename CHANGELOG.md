@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Unified Docker deployment into a single all-in-one image (`ghcr.io/pauljoda/obscura`) with PostgreSQL, Redis, nginx, and all application services bundled together.
+- Simplified docker-compose.yml to a single service with two volume mounts (`/data` and `/media`).
+- Only port 8008 is exposed — nginx reverse proxy routes API requests internally.
+- Updated CI/CD workflow to build and publish the unified image.
+- Replaced private license with Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0).
+- Rewrote README with simplified quick start, `docker run` one-liner, and zero-configuration deployment.
+
 ### Added
 
 - Bootstrapped monorepo with pnpm workspaces and turborepo (web, api, worker, packages).

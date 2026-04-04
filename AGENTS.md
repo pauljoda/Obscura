@@ -2,6 +2,7 @@
 
 ## Commit & Changelog Policy
 
+- **You MUST ALWAYS commit after every set of changes.** Do not wait for the user to ask — commit immediately when a logical unit of work is complete.
 - Every meaningful implementation iteration must end in a git commit.
 - Use small, reviewable commits with intentional scopes.
 - Update `CHANGELOG.md` after each commit — add entries under `## [Unreleased]`.
@@ -96,15 +97,16 @@ docs/              — Architecture and design language docs
 ## Docker
 
 - Development: `docker compose -f infra/docker/docker-compose.yml up` runs all services with hot reload.
-- Production: multi-stage Alpine builds for each service, published to GHCR.
-- Images: `ghcr.io/pauljoda/obscura-web`, `obscura-api`, `obscura-worker`.
-- ffmpeg is included in api and worker images for video processing.
+- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, Redis, nginx, ffmpeg, and all three services.
+- Per-service Dockerfiles remain in `infra/docker/` for development; the unified build uses `infra/docker/unified.Dockerfile`.
+- nginx reverse proxy on port 8008 routes `/api/*` to Fastify (4000) and everything else to Next.js (3000) internally.
+- Volumes: `/data` (database, cache, thumbnails) and `/media` (user media library).
 
 ## CI/CD
 
-- GitHub Actions workflow builds and pushes Docker images on push to `main`.
+- GitHub Actions workflow builds and pushes the unified Docker image on push to `main`.
 - Uses Docker Buildx with GitHub Actions cache.
-- Images are tagged with `latest` (on main), git SHA, and semver patterns.
+- Image: `ghcr.io/pauljoda/obscura`, tagged with `latest` (on main), git SHA, and semver patterns.
 - Platform: `linux/amd64`.
 
 ## Tooling Expectations

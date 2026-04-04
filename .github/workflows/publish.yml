@@ -9,15 +9,6 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service:
-          - name: web
-            dockerfile: infra/docker/web.Dockerfile
-          - name: api
-            dockerfile: infra/docker/api.Dockerfile
-          - name: worker
-            dockerfile: infra/docker/worker.Dockerfile
 
     permissions:
       packages: write
@@ -41,7 +32,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/obscura-${{ matrix.service.name }}
+          images: ghcr.io/${{ github.repository_owner }}/obscura
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=
@@ -52,7 +43,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.service.dockerfile }}
+          file: infra/docker/unified.Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
