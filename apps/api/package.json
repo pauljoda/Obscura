@@ -14,15 +14,21 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
     "@obscura/contracts": "workspace:*",
+    "@obscura/media-core": "workspace:*",
+    "@obscura/stash-import": "workspace:*",
     "bullmq": "^5.73.0",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.2.1",
+    "fflate": "^0.8.2",
     "ioredis": "^5.10.1",
+    "js-yaml": "^4.1.1",
     "postgres": "^3.4.8"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.2",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.2",

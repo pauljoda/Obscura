@@ -13,7 +13,9 @@ import {
   discoverVideoFiles,
   fileNameToTitle,
   getGeneratedSceneDir,
+  getSidecarPaths,
   probeVideoFile,
+  readNfo,
   runProcess,
 } from "@obscura/media-core";
 import * as schema from "../../api/src/db/schema";
@@ -217,6 +219,30 @@ async function processLibraryScan(job: Job) {
     await db.delete(scenes).where(inArray(scenes.id, globallyMissingSceneIds));
   }
 
+  // Remove scenes whose file path doesn't fall under any enabled library root
+  const allRoots = await db
+    .select({ path: libraryRoots.path })
+    .from(libraryRoots)
+    .where(eq(libraryRoots.enabled, true));
+
+  const enabledRootPaths = allRoots.map((r) => r.path);
+
+  const orphanedSceneIds = allKnownScenes
+    .filter((scene) => {
+      if (!scene.filePath) return false;
+      if (globallyMissingSceneIds.includes(scene.id)) return false;
+      return !enabledRootPaths.some((rootPath) => scene.filePath!.startsWith(rootPath));
+    })
+    .map((scene) => scene.id);
+
+  if (orphanedSceneIds.length > 0) {
+    for (const orphanedId of orphanedSceneIds) {
+      await rm(getGeneratedSceneDir(orphanedId), { recursive: true, force: true });
+    }
+
+    await db.delete(scenes).where(inArray(scenes.id, orphanedSceneIds));
+  }
+
   const knownScenesInRoot = await db
     .select({
       id: scenes.id,
@@ -263,29 +289,63 @@ async function processLibraryScan(job: Job) {
       .where(eq(scenes.filePath, filePath))
       .limit(1);
 
-    const scene =
-      existing ??
-      (
-        await db
-          .insert(scenes)
-          .values({
-            title: fileNameToTitle(filePath),
-            filePath,
-            organized: false,
-          })
-          .returning({
-            id: scenes.id,
-            duration: scenes.duration,
-            width: scenes.width,
-            codec: scenes.codec,
-            checksumMd5: scenes.checksumMd5,
-            oshash: scenes.oshash,
-            thumbnailPath: scenes.thumbnailPath,
-            previewPath: scenes.previewPath,
-            spritePath: scenes.spritePath,
-            trickplayVttPath: scenes.trickplayVttPath,
-          })
-      )[0];
+    let scene = existing;
+
+    // Check for NFO sidecar metadata
+    const nfo = await readNfo(filePath);
+
+    if (!scene) {
+      const title = nfo?.title || fileNameToTitle(filePath);
+
+      [scene] = await db
+        .insert(scenes)
+        .values({
+          title,
+          details: nfo?.plot ?? null,
+          date: nfo?.aired ?? null,
+          rating: nfo?.rating != null ? Math.round(nfo.rating) : null,
+          url: nfo?.url ?? null,
+          filePath,
+          organized: false,
+        })
+        .returning({
+          id: scenes.id,
+          duration: scenes.duration,
+          width: scenes.width,
+          codec: scenes.codec,
+          checksumMd5: scenes.checksumMd5,
+          oshash: scenes.oshash,
+          thumbnailPath: scenes.thumbnailPath,
+          previewPath: scenes.previewPath,
+          spritePath: scenes.spritePath,
+          trickplayVttPath: scenes.trickplayVttPath,
+        });
+    } else if (nfo) {
+      // Enrich existing scene with NFO data for any fields that are currently empty
+      const [current] = await db
+        .select({
+          details: scenes.details,
+          date: scenes.date,
+          rating: scenes.rating,
+          url: scenes.url,
+        })
+        .from(scenes)
+        .where(eq(scenes.id, scene.id))
+        .limit(1);
+
+      if (current) {
+        const patch: Record<string, unknown> = {};
+        if (!current.details && nfo.plot) patch.details = nfo.plot;
+        if (!current.date && nfo.aired) patch.date = nfo.aired;
+        if (current.rating == null && nfo.rating != null) patch.rating = Math.round(nfo.rating);
+        if (!current.url && nfo.url) patch.url = nfo.url;
+
+        if (Object.keys(patch).length > 0) {
+          patch.updatedAt = new Date();
+          await db.update(scenes).set(patch).where(eq(scenes.id, scene.id));
+        }
+      }
+    }
 
     if (
       settings.autoGenerateMetadata &&
@@ -436,13 +496,12 @@ async function processPreview(job: Job) {
       ? scene
       : await probeVideoFile(scene.filePath);
 
-  const sceneDir = getGeneratedSceneDir(scene.id);
-  await mkdir(sceneDir, { recursive: true });
+  const sidecar = getSidecarPaths(scene.filePath);
 
-  const thumbnailFile = path.join(sceneDir, "thumbnail.jpg");
-  const previewFile = path.join(sceneDir, "preview.mp4");
-  const spriteFile = path.join(sceneDir, "sprite.jpg");
-  const trickplayFile = path.join(sceneDir, "trickplay.vtt");
+  const thumbnailFile = sidecar.thumbnail;
+  const previewFile = sidecar.preview;
+  const spriteFile = sidecar.sprite;
+  const trickplayFile = sidecar.trickplayVtt;
 
   const duration = metadata.duration ?? 0;
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
@@ -525,7 +584,7 @@ async function processPreview(job: Job) {
     const y = row * thumbHeight;
 
     vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-    vttLines.push(`${sceneAssetUrl(scene.id, "sprite.jpg")}#xywh=${x},${y},${thumbWidth},${thumbHeight}`);
+    vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${thumbWidth},${thumbHeight}`);
     vttLines.push("");
   }
 
@@ -534,10 +593,10 @@ async function processPreview(job: Job) {
   await db
     .update(scenes)
     .set({
-      thumbnailPath: sceneAssetUrl(scene.id, "thumbnail.jpg"),
-      previewPath: sceneAssetUrl(scene.id, "preview.mp4"),
-      spritePath: sceneAssetUrl(scene.id, "sprite.jpg"),
-      trickplayVttPath: sceneAssetUrl(scene.id, "trickplay.vtt"),
+      thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
+      previewPath: sceneAssetUrl(scene.id, "preview"),
+      spritePath: sceneAssetUrl(scene.id, "sprite"),
+      trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),
       updatedAt: new Date(),
     })
     .where(eq(scenes.id, scene.id));

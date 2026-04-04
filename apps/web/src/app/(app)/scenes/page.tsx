@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { SceneGrid } from "../../../components/scene-grid";
 import { FilterBar } from "../../../components/filter-bar";
-import type { ViewMode, SortOption } from "../../../components/filter-bar";
+import type { ViewMode, SortOption, SortDir } from "../../../components/filter-bar";
 import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
 import {
   fetchScenes,
@@ -19,6 +19,7 @@ import {
 export default function ScenesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<
     { label: string; value: string; type: string }[]
@@ -56,6 +57,7 @@ export default function ScenesPage() {
       const result = await fetchScenes({
         search: searchQuery || undefined,
         sort: sortBy,
+        order: sortDir,
         tag: tagFilters.length > 0 ? tagFilters : undefined,
         performer: perfFilters.length > 0 ? perfFilters : undefined,
         resolution: resFilter?.value,
@@ -69,7 +71,7 @@ export default function ScenesPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, sortBy, activeFilters]);
+  }, [searchQuery, sortBy, sortDir, activeFilters]);
 
   useEffect(() => {
     const timer = setTimeout(loadScenes, searchQuery ? 300 : 0);
@@ -142,7 +144,11 @@ export default function ScenesPage() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         sortBy={sortBy}
-        onSortChange={setSortBy}
+        sortDir={sortDir}
+        onSortChange={(sort, dir) => {
+          setSortBy(sort);
+          if (dir) setSortDir(dir);
+        }}
         activeFilters={activeFilters.map((f) => ({
           label: f.label,
           value: f.value,

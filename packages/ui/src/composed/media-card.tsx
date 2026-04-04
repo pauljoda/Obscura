@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
-import { Play, Clock, HardDrive, Eye } from "lucide-react";
+import { Film, Clock, HardDrive, Eye } from "lucide-react";
 
 function formatHoverTime(seconds: number) {
   const wholeSeconds = Math.max(0, Math.floor(seconds));
@@ -165,7 +165,7 @@ export function MediaCard({
               activeFrame && "opacity-0"
             )}
           >
-            <Play className="h-7 w-7 text-white/15" />
+            <Film className="h-7 w-7 text-white/10" />
           </div>
         )}
 
@@ -190,7 +190,7 @@ export function MediaCard({
               }}
             />
             <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/70 via-black/30 to-transparent pointer-events-none" />
-            <div className="absolute left-2 top-2 rounded-sm border border-accent-500/25 bg-black/70 px-2 py-1 text-[0.65rem] font-mono tracking-[0.12em] text-accent-100">
+            <div className="absolute left-2 top-2 rounded-sm glass-chip-accent px-2 py-1 text-[0.65rem] font-mono tracking-[0.12em] text-accent-100">
               SCRUB {formatHoverTime(activeFrame.start)}
             </div>
           </div>
@@ -199,7 +199,7 @@ export function MediaCard({
         <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
         {duration && (
-          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-sm bg-black/75 px-1.5 py-0.5 text-[0.65rem] font-mono text-white/90 backdrop-blur-sm">
+          <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-sm glass-chip px-1.5 py-0.5 text-[0.65rem] font-mono text-white/90">
             <Clock className="h-2.5 w-2.5 text-white/60" />
             {duration}
           </span>
@@ -212,23 +212,18 @@ export function MediaCard({
             </span>
           )}
           {codec && (
-            <span className="rounded-sm bg-black/60 px-1.5 py-0.5 text-[0.58rem] font-mono text-white/70 backdrop-blur-sm">
+            <span className="rounded-sm glass-chip px-1.5 py-0.5 text-[0.58rem] font-mono text-white/70">
               {codec}
             </span>
           )}
         </div>
 
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity duration-normal group-hover:opacity-100">
-          <div className="flex h-11 w-11 items-center justify-center rounded-sm bg-accent-500/90 text-accent-950 shadow-lg shadow-accent-500/25">
-            <Play className="h-4.5 w-4.5 ml-0.5" fill="currentColor" />
-          </div>
-        </div>
 
         {hasScrubPreview && (
           <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-2">
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/55">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-accent-700 via-accent-500 to-accent-300 transition-[width] duration-75"
+                className="h-full rounded-full bg-gradient-to-r from-accent-700 via-accent-500 to-accent-300 shadow-[0_0_6px_rgba(199,155,92,0.3)] transition-[width] duration-75"
                 style={{
                   width:
                     activeFrame && scrubDurationSeconds
@@ -237,7 +232,7 @@ export function MediaCard({
                 }}
               />
             </div>
-            <div className="rounded-sm border border-white/10 bg-black/65 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-white/65">
+            <div className="rounded-sm glass-chip px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-white/65">
               Hover scrub
             </div>
           </div>

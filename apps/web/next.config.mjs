@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typedRoutes: false
+  typedRoutes: false,
+  output: "standalone",
 };
 
 export default nextConfig;

@@ -13,6 +13,16 @@ export const apiRoutes = {
   studios: "/studios",
   performers: "/performers",
   tags: "/tags",
+  scrapers: "/scrapers",
+  scraperPackages: "/scrapers/packages",
+  scraperPackageDetail: "/scrapers/packages/:id",
+  scrapersIndex: "/scrapers/index",
+  scraperScrape: "/scrapers/:id/scrape",
+  scrapeResults: "/scrapers/results",
+  scrapeResultDetail: "/scrapers/results/:id",
+  scrapeResultAccept: "/scrapers/results/:id/accept",
+  scrapeResultReject: "/scrapers/results/:id/reject",
+  sceneScrape: "/scenes/:id/scrape",
 } as const;
 
 export const API_BASE_URL =
@@ -109,6 +119,64 @@ export interface JobRunDto {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Scraper DTOs ────────────────────────────────────────────────
+
+export interface ScraperPackageDto {
+  id: string;
+  packageId: string;
+  name: string;
+  version: string;
+  installPath: string;
+  sha256: string | null;
+  capabilities: Record<string, boolean> | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunityIndexEntryDto {
+  id: string;
+  name: string;
+  version: string;
+  date: string;
+  path: string;
+  sha256: string;
+  requires?: string[];
+  installed?: boolean;
+  installedVersion?: string;
+}
+
+export interface ScrapeResultDto {
+  id: string;
+  sceneId: string;
+  scraperPackageId: string | null;
+  action: string;
+  status: "pending" | "accepted" | "rejected";
+  rawResult: unknown;
+  proposedTitle: string | null;
+  proposedDate: string | null;
+  proposedDetails: string | null;
+  proposedUrl: string | null;
+  proposedStudioName: string | null;
+  proposedPerformerNames: string[] | null;
+  proposedTagNames: string[] | null;
+  proposedImageUrl: string | null;
+  appliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScraperCapabilities {
+  sceneByURL: boolean;
+  sceneByFragment: boolean;
+  sceneByName: boolean;
+  performerByURL: boolean;
+  performerByName: boolean;
+  performerByFragment: boolean;
+}
+
+// ─── Jobs DTOs ───────────────────────────────────────────────────
 
 export interface JobsDashboardDto {
   queues: QueueSummaryDto[];

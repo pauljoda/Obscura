@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createReadStream } from "node:fs";
-import { readdir, stat, open } from "node:fs/promises";
+import { readdir, readFile, stat, open, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
@@ -295,4 +295,156 @@ export function getCacheRootDir() {
 
 export function getGeneratedSceneDir(sceneId: string) {
   return path.join(getCacheRootDir(), "scenes", sceneId);
+}
+
+/**
+ * Get sidecar file paths for a video file.
+ * E.g. `/media/video.mp4` → `/media/video-thumb.jpg`
+ */
+export function getSidecarPaths(videoFilePath: string) {
+  const dir = path.dirname(videoFilePath);
+  const stem = path.basename(videoFilePath, path.extname(videoFilePath));
+
+  return {
+    thumbnail: path.join(dir, `${stem}-thumb.jpg`),
+    preview: path.join(dir, `${stem}-preview.mp4`),
+    sprite: path.join(dir, `${stem}-sprite.jpg`),
+    trickplayVtt: path.join(dir, `${stem}-trickplay.vtt`),
+    nfo: path.join(dir, `${stem}.nfo`),
+  };
+}
+
+// ─── NFO metadata ──────────────────────────────────────────────────
+
+export interface NfoMetadata {
+  title?: string;
+  plot?: string;
+  aired?: string;
+  studio?: string;
+  rating?: number;
+  genres?: string[];
+  tags?: string[];
+  runtime?: number;
+  duration?: string;
+  url?: string;
+}
+
+function xmlEscape(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function extractTag(xml: string, tag: string): string | null {
+  const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`);
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+}
+
+function extractAllTags(xml: string, tag: string): string[] {
+  const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g");
+  const results: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(xml)) !== null) {
+    results.push(match[1].trim());
+  }
+  return results;
+}
+
+export async function readNfo(videoFilePath: string): Promise<NfoMetadata | null> {
+  const nfoPath = getSidecarPaths(videoFilePath).nfo;
+
+  if (!existsSync(nfoPath)) {
+    return null;
+  }
+
+  try {
+    const xml = await readFile(nfoPath, "utf8");
+
+    const runtimeStr = extractTag(xml, "runtime");
+    const ratingStr = extractTag(xml, "rating");
+
+    return {
+      title: extractTag(xml, "title") ?? undefined,
+      plot: extractTag(xml, "plot") ?? undefined,
+      aired: extractTag(xml, "aired") ?? undefined,
+      studio: extractTag(xml, "studio") ?? undefined,
+      rating: ratingStr ? Number(ratingStr) : undefined,
+      genres: extractAllTags(xml, "genre"),
+      tags: extractAllTags(xml, "tag"),
+      runtime: runtimeStr ? Number(runtimeStr) : undefined,
+      duration: extractTag(xml, "duration") ?? undefined,
+      url: extractTag(xml, "url") ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatDurationHMS(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+export interface NfoWriteData {
+  title: string;
+  plot?: string | null;
+  date?: string | null;
+  studio?: string | null;
+  rating?: number | null;
+  genres?: string[];
+  tags?: string[];
+  duration?: number | null;
+  url?: string | null;
+}
+
+export async function writeNfo(videoFilePath: string, data: NfoWriteData): Promise<void> {
+  const nfoPath = getSidecarPaths(videoFilePath).nfo;
+
+  const lines: string[] = [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<episodedetails>`,
+    `  <title>${xmlEscape(data.title)}</title>`,
+  ];
+
+  const add = (tag: string, value: unknown) => {
+    if (value !== undefined && value !== null && value !== "") {
+      lines.push(`  <${tag}>${xmlEscape(String(value))}</${tag}>`);
+    }
+  };
+
+  add("plot", data.plot);
+  add("url", data.url);
+  add("aired", data.date);
+  add("studio", data.studio);
+
+  if (data.rating != null) {
+    add("rating", data.rating);
+  }
+
+  if (typeof data.duration === "number" && data.duration > 0) {
+    add("runtime", Math.round(data.duration / 60));
+    add("duration", formatDurationHMS(data.duration));
+  }
+
+  if (data.genres) {
+    for (const genre of data.genres) {
+      add("genre", genre);
+    }
+  }
+
+  if (data.tags) {
+    for (const tag of data.tags) {
+      add("tag", tag);
+    }
+  }
+
+  lines.push(`</episodedetails>`);
+
+  await writeFile(nfoPath, lines.join("\n") + "\n", "utf8");
 }

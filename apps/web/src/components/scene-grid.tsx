@@ -2,7 +2,7 @@
 
 import { MediaCard } from "@obscura/ui";
 import { cn } from "@obscura/ui";
-import { Film, Play, Clock, HardDrive, Eye, Loader2 } from "lucide-react";
+import { Film, Clock, HardDrive, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ViewMode } from "./filter-bar";
 import { toApiUrl, type SceneListItem } from "../lib/api";
@@ -132,9 +132,13 @@ function SceneListItem({
             gradientClasses[index % gradientClasses.length]
           )}
         >
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-            <Play className="h-4 w-4 text-white" fill="white" />
-          </div>
+          {scene.thumbnailPath && (
+            <img
+              src={toApiUrl(scene.thumbnailPath)}
+              alt={scene.title}
+              className="h-full w-full object-cover"
+            />
+          )}
           {scene.durationFormatted && (
             <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 rounded-sm">
               {scene.durationFormatted}

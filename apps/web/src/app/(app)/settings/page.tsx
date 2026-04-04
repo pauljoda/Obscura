@@ -1,27 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@obscura/ui";
+import { Button, Badge } from "@obscura/ui";
 import {
+  Check,
+  Download,
   FolderOpen,
   HardDrive,
+  Loader2,
+  Package,
   Plus,
   RefreshCw,
   Save,
   ScanSearch,
+  Search,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
 } from "lucide-react";
 import {
   browseLibraryPath,
   createLibraryRoot,
   deleteLibraryRoot,
+  fetchCommunityIndex,
+  fetchInstalledScrapers,
   fetchLibraryConfig,
+  installScraper,
   runQueue,
+  toggleScraper,
+  uninstallScraper,
   updateLibraryRoot,
   updateLibrarySettings,
+  type CommunityIndexEntry,
   type LibraryBrowse,
   type LibraryRoot,
   type LibrarySettings,
+  type ScraperPackage,
   type StorageStats,
 } from "../../../lib/api";
 
@@ -71,15 +85,27 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Scrapers state
+  const [scraperPkgs, setScraperPkgs] = useState<ScraperPackage[]>([]);
+  const [indexEntries, setIndexEntries] = useState<CommunityIndexEntry[]>([]);
+  const [indexLoading, setIndexLoading] = useState(false);
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [showIndex, setShowIndex] = useState(false);
+  const [scraperSearch, setScraperSearch] = useState("");
+
   async function loadConfig() {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchLibraryConfig();
+      const [response, scrapersRes] = await Promise.all([
+        fetchLibraryConfig(),
+        fetchInstalledScrapers(),
+      ]);
       setSettings(response.settings);
       setRoots(response.roots);
       setStorage(response.storage);
+      setScraperPkgs(scrapersRes.packages);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load settings");
     } finally {
@@ -183,6 +209,74 @@ export default function SettingsPage() {
       setError(runError instanceof Error ? runError.message : "Failed to queue scan");
     }
   }
+
+  async function loadScraperIndex(force = false) {
+    setIndexLoading(true);
+    setError(null);
+    try {
+      const res = await fetchCommunityIndex(force);
+      // Mark already-installed entries
+      const installedIds = new Set(scraperPkgs.map((p) => p.packageId));
+      setIndexEntries(
+        res.entries.map((e) => ({ ...e, installed: installedIds.has(e.id) }))
+      );
+      setShowIndex(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch community index");
+    } finally {
+      setIndexLoading(false);
+    }
+  }
+
+  async function handleInstallScraper(packageId: string) {
+    setInstallingId(packageId);
+    setError(null);
+    try {
+      await installScraper(packageId);
+      setMessage(`Installed ${packageId}`);
+      const res = await fetchInstalledScrapers();
+      setScraperPkgs(res.packages);
+      setIndexEntries((prev) =>
+        prev.map((e) => (e.id === packageId ? { ...e, installed: true } : e))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to install ${packageId}`);
+    } finally {
+      setInstallingId(null);
+    }
+  }
+
+  async function handleUninstallScraper(pkg: ScraperPackage) {
+    setError(null);
+    try {
+      await uninstallScraper(pkg.id);
+      setMessage(`Removed ${pkg.name}`);
+      const res = await fetchInstalledScrapers();
+      setScraperPkgs(res.packages);
+      setIndexEntries((prev) =>
+        prev.map((e) => (e.id === pkg.packageId ? { ...e, installed: false } : e))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove scraper");
+    }
+  }
+
+  async function handleToggleScraper(pkg: ScraperPackage) {
+    try {
+      const updated = await toggleScraper(pkg.id, !pkg.enabled);
+      setScraperPkgs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to toggle scraper");
+    }
+  }
+
+  const filteredIndex = scraperSearch
+    ? indexEntries.filter(
+        (e) =>
+          e.name.toLowerCase().includes(scraperSearch.toLowerCase()) ||
+          e.id.toLowerCase().includes(scraperSearch.toLowerCase())
+      )
+    : indexEntries;
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -493,6 +587,165 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      {/* ─── Scrapers Section ─────────────────────────────────── */}
+      <section className="surface-panel p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Package className="h-5 w-5 text-accent-500" />
+            <div>
+              <h2 className="text-base">Scrapers</h2>
+              <p className="text-text-muted text-sm">
+                {scraperPkgs.length} scraper{scraperPkgs.length !== 1 ? "s" : ""} installed
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadScraperIndex(true)}
+            disabled={indexLoading}
+          >
+            {indexLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {showIndex ? "Refresh Index" : "Browse Community Index"}
+          </Button>
+        </div>
+
+        {scraperPkgs.length === 0 ? (
+          <div className="surface-well p-6 text-center">
+            <p className="text-text-muted text-sm">
+              No scrapers installed yet. Browse the community index to get started.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {scraperPkgs.map((pkg) => (
+              <div key={pkg.id} className="surface-well p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{pkg.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-mono-sm text-text-muted">{pkg.packageId}</span>
+                      <Badge
+                        variant={pkg.enabled ? "accent" : "default"}
+                        className="text-[0.6rem]"
+                      >
+                        {pkg.enabled ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </div>
+                    {pkg.capabilities && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {Object.entries(pkg.capabilities)
+                          .filter(([, v]) => v)
+                          .map(([key]) => (
+                            <span
+                              key={key}
+                              className="tag-chip-default text-[0.6rem] px-1.5 py-0.5"
+                            >
+                              {key}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void handleToggleScraper(pkg)}
+                    >
+                      {pkg.enabled ? (
+                        <ToggleRight className="h-3.5 w-3.5" />
+                      ) : (
+                        <ToggleLeft className="h-3.5 w-3.5" />
+                      )}
+                      {pkg.enabled ? "Disable" : "Enable"}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => void handleUninstallScraper(pkg)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showIndex && (
+          <div className="space-y-3 mt-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-medium">Community Index</h3>
+                <p className="text-text-muted text-xs">
+                  {indexEntries.length} scrapers available
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
+                <input
+                  className="control-input pl-8 w-64"
+                  placeholder="Filter scrapers..."
+                  value={scraperSearch}
+                  onChange={(e) => setScraperSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2 max-h-[400px] overflow-y-auto scrollbar-hidden">
+              {filteredIndex.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="surface-well px-4 py-3 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{entry.name}</p>
+                    <p className="text-text-disabled text-xs mt-0.5">
+                      {entry.date}
+                      {entry.requires?.length
+                        ? ` · requires: ${entry.requires.join(", ")}`
+                        : ""}
+                    </p>
+                  </div>
+                  {entry.installed ? (
+                    <Badge variant="accent" className="text-[0.6rem] flex-shrink-0">
+                      <Check className="h-2.5 w-2.5 mr-1" />
+                      Installed
+                    </Badge>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleInstallScraper(entry.id)}
+                      disabled={installingId === entry.id}
+                    >
+                      {installingId === entry.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      Install
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {filteredIndex.length === 0 && (
+                <div className="text-text-muted text-sm text-center py-6">
+                  {scraperSearch ? "No scrapers match your search." : "Index is empty."}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

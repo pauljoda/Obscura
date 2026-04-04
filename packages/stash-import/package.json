@@ -11,10 +11,14 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@obscura/media-core": "workspace:*"
+    "@obscura/media-core": "workspace:*",
+    "js-yaml": "^4.1.1",
+    "jsdom": "^29.0.1"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^22.19.17",
     "typescript": "^5.7.2"
   }
 }
-

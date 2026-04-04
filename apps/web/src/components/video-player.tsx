@@ -32,11 +32,13 @@ interface VideoPlayerProps {
   markers?: Marker[];
   duration?: number;
   onMarkerClick?: (marker: Marker) => void;
+  onPlayStarted?: () => void;
+  onTimeUpdate?: (time: number) => void;
   trickplaySprite?: string;
   trickplayVtt?: string;
 }
 
-type QualityMode = "auto" | number;
+type QualityMode = "auto" | "direct" | number;
 
 interface QualityOption {
   value: QualityMode;
@@ -86,6 +88,8 @@ export function VideoPlayer({
   markers = [],
   duration: propDuration,
   onMarkerClick,
+  onPlayStarted,
+  onTimeUpdate,
   trickplaySprite,
   trickplayVtt,
 }: VideoPlayerProps) {
@@ -93,6 +97,7 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
+  const playTrackedRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -101,9 +106,10 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [qualityMode, setQualityMode] = useState<QualityMode>("auto");
+  const [qualityMode, setQualityMode] = useState<QualityMode>("direct");
+  const [streamMode, setStreamMode] = useState<"direct" | "hls">("direct");
   const [qualityOptions, setQualityOptions] = useState<QualityOption[]>([
-    { value: "auto", label: "Auto" },
+    { value: "direct", label: "Direct" },
   ]);
   const [activeQualityLabel, setActiveQualityLabel] = useState<string | null>(null);
   const [bufferedProgress, setBufferedProgress] = useState(0);
@@ -158,11 +164,17 @@ export function VideoPlayer({
     setBufferAhead(0);
     setBandwidthEstimate(null);
     setDroppedFrames(null);
-    setQualityOptions([{ value: "auto", label: "Auto" }]);
+    const initialMode = directSrc ? "direct" : "auto";
+    setQualityMode(initialMode);
+    setStreamMode(initialMode === "direct" ? "direct" : "hls");
+    setQualityOptions(
+      directSrc
+        ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
+        : [{ value: "auto" as const, label: "Auto" }],
+    );
     setActiveQualityLabel(null);
     setPlayerNotice(null);
     setUsingAdaptiveStream(false);
-    setQualityMode("auto");
 
     hlsRef.current?.destroy();
     hlsRef.current = null;
@@ -175,6 +187,17 @@ export function VideoPlayer({
       return;
     }
 
+    // Direct mode: use the raw source URL, skip HLS entirely
+    if (streamMode === "direct") {
+      const directSource = directSrc ?? src;
+      if (directSource) {
+        video.src = directSource;
+        video.load();
+      }
+      return;
+    }
+
+    // HLS / adaptive mode
     if (src?.endsWith(".m3u8")) {
       if (Hls.isSupported()) {
         const hls = new Hls({
@@ -193,14 +216,17 @@ export function VideoPlayer({
         });
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          const options = [
+          const hlsLevels = hls.levels
+            .map((level, index) => ({
+              value: index,
+              label: getLevelLabel(level, index),
+            }))
+            .reverse();
+
+          const options: QualityOption[] = [
+            ...(directSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
             { value: "auto" as const, label: "Auto" },
-            ...hls.levels
-              .map((level, index) => ({
-                value: index,
-                label: getLevelLabel(level, index),
-              }))
-              .reverse(),
+            ...hlsLevels,
           ];
 
           setQualityOptions(options);
@@ -231,7 +257,8 @@ export function VideoPlayer({
           setUsingAdaptiveStream(false);
 
           if (directSrc) {
-            setPlayerNotice("Adaptive stream recovered to direct source.");
+            setQualityMode("direct");
+            setPlayerNotice("Adaptive stream failed — switched to direct.");
             video.src = directSrc;
             video.load();
             return;
@@ -254,14 +281,25 @@ export function VideoPlayer({
       }
     }
 
+    // Non-HLS fallback in adaptive mode
     const fallbackSource = directSrc ?? src;
     if (fallbackSource) {
       video.src = fallbackSource;
       video.load();
     }
-  }, [src, directSrc, propDuration]);
+  }, [src, directSrc, propDuration, streamMode]);
+
+  // Sync streamMode from qualityMode — only triggers source re-init when
+  // switching between direct and adaptive (not when changing HLS levels)
+  useEffect(() => {
+    setStreamMode(qualityMode === "direct" ? "direct" : "hls");
+  }, [qualityMode]);
 
   useEffect(() => {
+    if (qualityMode === "direct") {
+      return;
+    }
+
     const hls = hlsRef.current;
     if (!hls) {
       return;
@@ -291,20 +329,31 @@ export function VideoPlayer({
       setBufferAhead(Math.max(0, bufferedEnd - video.currentTime));
     };
 
-    const onTimeUpdate = () => {
+    const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
+      onTimeUpdate?.(video.currentTime);
       updateBuffered();
     };
 
     const onLoadedMetadata = () => {
       setDuration(video.duration || propDuration || 0);
       updateBuffered();
+      onTimeUpdate?.(video.currentTime);
+    };
+
+    const onSeeked = () => {
+      setCurrentTime(video.currentTime);
+      onTimeUpdate?.(video.currentTime);
     };
 
     const onProgress = () => updateBuffered();
     const onPlay = () => {
       setPlaying(true);
       scheduleControlsHide();
+      if (playTrackedRef.current === false) {
+        playTrackedRef.current = true;
+        onPlayStarted?.();
+      }
     };
     const onPause = () => {
       setPlaying(false);
@@ -321,13 +370,17 @@ export function VideoPlayer({
       setVolume(video.volume);
     };
 
-    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("seeked", onSeeked);
     video.addEventListener("progress", onProgress);
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
     video.addEventListener("ended", onEnded);
     video.addEventListener("volumechange", onVolumeChange);
+
+    // Fire initial time in case metadata is already loaded
+    onTimeUpdate?.(video.currentTime);
 
     const metricsInterval = window.setInterval(() => {
       const quality = video.getVideoPlaybackQuality?.();
@@ -342,8 +395,9 @@ export function VideoPlayer({
     }, 1000);
 
     return () => {
-      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("progress", onProgress);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
@@ -472,7 +526,11 @@ export function VideoPlayer({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const selectedQualityLabel =
-    qualityMode === "auto" ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}` : activeQualityLabel;
+    qualityMode === "direct"
+      ? "Direct"
+      : qualityMode === "auto"
+        ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
+        : activeQualityLabel;
 
   const hasFilmStrip = Boolean(trickplaySprite && trickplayVtt && duration > 0);
 
@@ -480,7 +538,7 @@ export function VideoPlayer({
     <div className="space-y-1">
     <div
       ref={containerRef}
-      className="relative overflow-hidden rounded-xl border border-border-subtle bg-black shadow-[0_18px_70px_rgba(0,0,0,0.45)]"
+      className="relative overflow-hidden rounded-sm border border-border-subtle bg-black shadow-[0_18px_70px_rgba(0,0,0,0.45)]"
       onMouseMove={surfaceControls}
       onMouseLeave={() => playing && setShowControls(false)}
       onTouchStart={surfaceControls}
@@ -503,59 +561,50 @@ export function VideoPlayer({
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-4 pb-12 pt-4">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
+      <div className={cn(
+        "pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
+        showControls ? "opacity-100" : "opacity-0"
+      )}>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          <span className="glass-chip rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
             {usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
           </span>
           {selectedQualityLabel && (
-            <span className="rounded-full border border-accent-500/25 bg-accent-500/12 px-2.5 py-1 text-[0.7rem] font-medium text-accent-100">
+            <span className="glass-chip-accent rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
             </span>
           )}
           {playerNotice && (
-            <span className="rounded-full border border-warning/20 bg-black/50 px-2.5 py-1 text-[0.7rem] text-white/80">
+            <span className="glass-chip rounded-sm border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
               {playerNotice}
             </span>
           )}
         </div>
 
-        <div className="grid min-w-[184px] grid-cols-3 gap-2 text-right text-[0.68rem] text-white/70">
+        <div className="hidden sm:grid min-w-[184px] grid-cols-3 gap-2 text-right text-[0.68rem] text-white/70">
           <MetricChip icon={<Wifi className="h-3.5 w-3.5" />} label="ABR" value={formatBandwidth(bandwidthEstimate)} />
           <MetricChip icon={<Gauge className="h-3.5 w-3.5" />} label="Buffer" value={`${bufferAhead.toFixed(1)}s`} />
           <MetricChip icon={<Settings2 className="h-3.5 w-3.5" />} label="Drop" value={droppedFrames == null ? "—" : String(droppedFrames)} />
         </div>
       </div>
 
-      {!playing && (src || directSrc) && (
-        <button
-          type="button"
-          onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors hover:bg-black/10"
-        >
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white shadow-[0_0_32px_rgba(0,0,0,0.35)] backdrop-blur-sm">
-            <Play className="ml-1 h-8 w-8" fill="currentColor" />
-          </span>
-        </button>
-      )}
-
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-4 pb-4 pt-20 transition-opacity duration-normal",
+          "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 sm:px-4 pb-3 sm:pb-4 pt-12 sm:pt-20 transition-opacity duration-normal",
           showControls ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       >
-        <div className="mb-3 space-y-2">
+        <div className="mb-2 sm:mb-3 space-y-2">
           <div
-            className="relative h-2.5 w-full cursor-pointer overflow-hidden rounded-full bg-white/14"
+            className="relative h-2 sm:h-2.5 w-full cursor-pointer overflow-hidden rounded-sm bg-white/14"
             onClick={(event) => {
               const rect = event.currentTarget.getBoundingClientRect();
               const nextPercent = (event.clientX - rect.left) / rect.width;
               seekTo(nextPercent * duration);
             }}
           >
-            <div className="absolute inset-y-0 left-0 rounded-full bg-white/15" style={{ width: `${bufferedProgress}%` }} />
-            <div className="absolute inset-y-0 left-0 rounded-full bg-accent-500" style={{ width: `${progress}%` }} />
+            <div className="absolute inset-y-0 left-0 rounded-sm bg-white/15" style={{ width: `${bufferedProgress}%` }} />
+            <div className="absolute inset-y-0 left-0 rounded-sm bg-accent-500" style={{ width: `${progress}%` }} />
             {markers.map((marker) => {
               const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0;
               return (
@@ -576,7 +625,7 @@ export function VideoPlayer({
           </div>
 
           {markers.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="hidden sm:flex flex-wrap gap-1.5">
               {markers.slice(0, 4).map((marker) => (
                 <button
                   key={marker.id}
@@ -585,7 +634,7 @@ export function VideoPlayer({
                     seekTo(marker.time);
                     onMarkerClick?.(marker);
                   }}
-                  className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
+                  className="glass-chip rounded-sm px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
                 >
                   {marker.title}
                 </button>
@@ -594,24 +643,24 @@ export function VideoPlayer({
           )}
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             <button
               type="button"
               onClick={() => seek(-10)}
               className="text-white/70 transition-colors hover:text-white"
             >
-              <SkipBack className="h-4 w-4" />
+              <SkipBack className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
             </button>
             <button
               type="button"
               onClick={togglePlay}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-500 text-accent-950 transition-colors hover:bg-accent-400"
+              className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
             >
               {playing ? (
-                <Pause className="h-4 w-4" fill="currentColor" />
+                <Pause className="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
               ) : (
-                <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
+                <Play className="ml-0.5 h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
               )}
             </button>
             <button
@@ -619,10 +668,10 @@ export function VideoPlayer({
               onClick={() => seek(10)}
               className="text-white/70 transition-colors hover:text-white"
             >
-              <SkipForward className="h-4 w-4" />
+              <SkipForward className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
             </button>
 
-            <div className="flex items-center gap-2 text-white/80">
+            <div className="hidden sm:flex items-center gap-2 text-white/80">
               <button type="button" onClick={toggleMute} className="transition-colors hover:text-white">
                 {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </button>
@@ -638,12 +687,12 @@ export function VideoPlayer({
               />
             </div>
 
-            <span className="text-xs text-white/80">
+            <span className="text-[0.68rem] sm:text-xs text-white/80">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="relative">
               <button
                 type="button"
@@ -651,13 +700,13 @@ export function VideoPlayer({
                   setQualityMenuOpen((open) => !open);
                   setSpeedMenuOpen(false);
                 }}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="glass-chip flex items-center gap-1 sm:gap-1.5 rounded-sm px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {selectedQualityLabel ?? "Quality"}
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               </button>
               {qualityMenuOpen && (
-                <div className="absolute bottom-12 right-0 min-w-[140px] rounded-lg border border-white/10 bg-black/92 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur">
+                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] rounded-sm glass-dropdown p-1">
                   {qualityOptions.map((option) => (
                     <button
                       key={String(option.value)}
@@ -667,41 +716,41 @@ export function VideoPlayer({
                         setQualityMenuOpen(false);
                       }}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                        "flex w-full items-center justify-between rounded-sm px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
                         qualityMode === option.value
                           ? "bg-accent-500/18 text-accent-100"
                           : "text-white/78 hover:bg-white/8 hover:text-white"
                       )}
                     >
                       <span>{option.label}</span>
-                      {qualityMode === option.value && <span className="text-[0.68rem] uppercase tracking-[0.16em]">On</span>}
+                      {qualityMode === option.value && <span className="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <button
                 type="button"
                 onClick={() => {
                   setSpeedMenuOpen((open) => !open);
                   setQualityMenuOpen(false);
                 }}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/6 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="glass-chip flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {playbackRate}x
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {speedMenuOpen && (
-                <div className="absolute bottom-12 right-0 min-w-[112px] rounded-lg border border-white/10 bg-black/92 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.45)] backdrop-blur">
+                <div className="absolute bottom-12 right-0 min-w-[112px] rounded-sm glass-dropdown p-1">
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
                       type="button"
                       onClick={() => applyPlaybackRate(rate)}
                       className={cn(
-                        "block w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
+                        "block w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
                         playbackRate === rate
                           ? "bg-accent-500/18 text-accent-100"
                           : "text-white/78 hover:bg-white/8 hover:text-white"
@@ -717,22 +766,23 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="rounded-full border border-white/10 bg-white/6 p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+              className="glass-chip rounded-sm p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             >
-              <Maximize className="h-4 w-4" />
+              <Maximize className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
             </button>
           </div>
         </div>
       </div>
     </div>
     {hasFilmStrip && (
-      <div className="rounded-lg border border-border-subtle bg-black overflow-hidden">
+      <div className="rounded-sm border border-border-subtle bg-black overflow-hidden">
         <FilmStrip
           spriteUrl={trickplaySprite!}
           vttUrl={trickplayVtt!}
           videoRef={videoRef}
           duration={duration}
           onSeek={seekTo}
+          markers={markers}
         />
       </div>
     )}
@@ -750,7 +800,7 @@ function MetricChip({
   value: string;
 }) {
   return (
-    <div className="pointer-events-none rounded-lg border border-white/8 bg-black/30 px-2 py-1.5 backdrop-blur-sm">
+    <div className="pointer-events-none glass-chip rounded-sm px-2 py-1.5">
       <div className="mb-0.5 flex items-center justify-end gap-1 text-white/50">
         {icon}
         <span className="text-[0.58rem] uppercase tracking-[0.16em]">{label}</span>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Brass gradient for aperture blades -->
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d4af74"/>
+      <stop offset="50%" stop-color="#c79b5c"/>
+      <stop offset="100%" stop-color="#8c6c32"/>
+    </linearGradient>
+    <!-- Darker brass for depth -->
+    <linearGradient id="brass-dark" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6b5225"/>
+      <stop offset="100%" stop-color="#4a3818"/>
+    </linearGradient>
+    <!-- Subtle glow -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c79b5c" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#c79b5c" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Outer ring gradient -->
+    <linearGradient id="ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d3540"/>
+      <stop offset="50%" stop-color="#1f2533"/>
+      <stop offset="100%" stop-color="#11151c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background glow -->
+  <circle cx="256" cy="256" r="240" fill="url(#glow)"/>
+
+  <!-- Outer housing ring -->
+  <circle cx="256" cy="256" r="220" fill="url(#ring)" stroke="#c79b5c" stroke-opacity="0.2" stroke-width="2"/>
+  <circle cx="256" cy="256" r="218" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+
+  <!-- Inner dark field -->
+  <circle cx="256" cy="256" r="190" fill="#08090c"/>
+
+  <!-- Aperture blades — 6 angular/sharp blades arranged radially -->
+  <!-- Blade 1: top -->
+  <polygon points="256,80 310,160 256,145 202,160" fill="url(#brass)" opacity="0.9"/>
+  <!-- Blade 2: top-right -->
+  <polygon points="408,130 370,225 330,185 350,140" fill="url(#brass)" opacity="0.78"/>
+  <!-- Blade 3: bottom-right -->
+  <polygon points="432,340 350,370 330,325 370,285" fill="url(#brass)" opacity="0.65"/>
+  <!-- Blade 4: bottom -->
+  <polygon points="256,432 202,352 256,367 310,352" fill="url(#brass)" opacity="0.9"/>
+  <!-- Blade 5: bottom-left -->
+  <polygon points="104,370 142,285 182,325 162,370" fill="url(#brass)" opacity="0.78"/>
+  <!-- Blade 6: top-left -->
+  <polygon points="80,170 162,140 182,185 142,225" fill="url(#brass)" opacity="0.65"/>
+
+  <!-- Inner ring — lens element -->
+  <circle cx="256" cy="256" r="100" fill="none" stroke="url(#brass)" stroke-width="2.5" stroke-opacity="0.5"/>
+  <circle cx="256" cy="256" r="85" fill="none" stroke="#c79b5c" stroke-width="1" stroke-opacity="0.2"/>
+
+  <!-- Center aperture hole -->
+  <circle cx="256" cy="256" r="55" fill="#08090c"/>
+  <circle cx="256" cy="256" r="55" fill="none" stroke="#c79b5c" stroke-width="1.5" stroke-opacity="0.3"/>
+
+  <!-- Tiny highlight dot — lens flare -->
+  <circle cx="236" cy="236" r="8" fill="#c79b5c" opacity="0.12"/>
+
+  <!-- Machined tick marks around outer ring -->
+  <g stroke="#c79b5c" stroke-opacity="0.15" stroke-width="1.5">
+    <line x1="256" y1="40" x2="256" y2="52"/>
+    <line x1="256" y1="460" x2="256" y2="472"/>
+    <line x1="40" y1="256" x2="52" y2="256"/>
+    <line x1="460" y1="256" x2="472" y2="256"/>
+    <!-- 45-degree ticks -->
+    <line x1="103" y1="103" x2="111" y2="111"/>
+    <line x1="409" y1="103" x2="401" y2="111"/>
+    <line x1="103" y1="409" x2="111" y2="401"/>
+    <line x1="409" y1="409" x2="401" y2="401"/>
+  </g>
+
+  <!-- Top-left subtle inner bevel highlight -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+</svg>

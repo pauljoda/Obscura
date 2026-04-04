@@ -1,8 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
-
 import { existsSync } from "node:fs";
+import { writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import { writeNfo, getSidecarPaths, getGeneratedSceneDir } from "@obscura/media-core";
 
 const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios } = schema;
 
@@ -134,16 +136,28 @@ export async function scenesRoutes(app: FastifyInstance) {
     }
 
     // Sort
-    const sortMap: Record<string, any> = {
-      recent: desc(scenes.createdAt),
-      title: asc(scenes.title),
-      duration: desc(scenes.duration),
-      size: desc(scenes.fileSize),
-      rating: desc(scenes.rating),
-      date: desc(scenes.date),
-      plays: desc(scenes.playCount),
+    const sortColumnMap: Record<string, any> = {
+      recent: scenes.createdAt,
+      title: scenes.title,
+      duration: scenes.duration,
+      size: scenes.fileSize,
+      rating: scenes.rating,
+      date: scenes.date,
+      plays: scenes.playCount,
     };
-    const orderBy = sortMap[query.sort ?? "recent"] ?? desc(scenes.createdAt);
+    const defaultDir: Record<string, "asc" | "desc"> = {
+      recent: "desc",
+      title: "asc",
+      duration: "desc",
+      size: "desc",
+      rating: "desc",
+      date: "desc",
+      plays: "desc",
+    };
+    const sortKey = query.sort ?? "recent";
+    const col = sortColumnMap[sortKey] ?? scenes.createdAt;
+    const dir = query.order === "asc" || query.order === "desc" ? query.order : (defaultDir[sortKey] ?? "desc");
+    const orderBy = dir === "asc" ? asc(col) : desc(col);
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -216,6 +230,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       spritePath: scene.spritePath,
       trickplayVttPath: scene.trickplayVttPath,
       playCount: scene.playCount,
+      orgasmCount: scene.orgasmCount,
       studioId: scene.studioId,
       performers: perfJoins
         .filter((p) => p.sceneId === scene.id)
@@ -300,6 +315,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       details: scene.details,
       date: scene.date,
       rating: scene.rating,
+      url: scene.url,
       organized: scene.organized,
       interactive: scene.interactive,
       duration: scene.duration,
@@ -322,6 +338,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       spritePath: scene.spritePath,
       trickplayVttPath: scene.trickplayVttPath,
       playCount: scene.playCount,
+      orgasmCount: scene.orgasmCount,
       playDuration: scene.playDuration,
       resumeTime: scene.resumeTime,
       lastPlayedAt: scene.lastPlayedAt,
@@ -351,6 +368,347 @@ export async function scenesRoutes(app: FastifyInstance) {
       createdAt: scene.createdAt,
       updatedAt: scene.updatedAt,
     };
+  });
+
+  // ─── PATCH /scenes/:id ────────────────────────────────────────
+  app.patch("/scenes/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      title?: string;
+      details?: string | null;
+      date?: string | null;
+      rating?: number | null;
+      url?: string | null;
+      organized?: boolean;
+      orgasmCount?: number;
+      studioName?: string | null;
+      performerNames?: string[];
+      tagNames?: string[];
+    };
+
+    const existing = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true, filePath: true },
+    });
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    await db.transaction(async (tx) => {
+      const sceneUpdate: Record<string, unknown> = { updatedAt: new Date() };
+
+      if (body.title !== undefined) sceneUpdate.title = body.title;
+      if (body.details !== undefined) sceneUpdate.details = body.details;
+      if (body.date !== undefined) sceneUpdate.date = body.date;
+      if (body.rating !== undefined) sceneUpdate.rating = body.rating;
+      if (body.url !== undefined) sceneUpdate.url = body.url;
+      if (body.organized !== undefined) sceneUpdate.organized = body.organized;
+      if (body.orgasmCount !== undefined) sceneUpdate.orgasmCount = body.orgasmCount;
+
+      // Studio: find or create by name
+      if (body.studioName !== undefined) {
+        if (body.studioName === null || body.studioName === "") {
+          sceneUpdate.studioId = null;
+        } else {
+          const [existingStudio] = await tx
+            .select({ id: studios.id })
+            .from(studios)
+            .where(ilike(studios.name, body.studioName))
+            .limit(1);
+
+          if (existingStudio) {
+            sceneUpdate.studioId = existingStudio.id;
+          } else {
+            const [created] = await tx
+              .insert(studios)
+              .values({ name: body.studioName })
+              .returning({ id: studios.id });
+            sceneUpdate.studioId = created.id;
+          }
+        }
+      }
+
+      await tx.update(scenes).set(sceneUpdate).where(eq(scenes.id, id));
+
+      // Performers: replace all
+      if (body.performerNames !== undefined) {
+        await tx.delete(scenePerformers).where(eq(scenePerformers.sceneId, id));
+
+        for (const name of body.performerNames) {
+          if (!name.trim()) continue;
+
+          const [existingPerf] = await tx
+            .select({ id: performers.id })
+            .from(performers)
+            .where(ilike(performers.name, name.trim()))
+            .limit(1);
+
+          const performerId = existingPerf?.id ?? (
+            await tx
+              .insert(performers)
+              .values({ name: name.trim() })
+              .returning({ id: performers.id })
+          )[0].id;
+
+          await tx
+            .insert(scenePerformers)
+            .values({ sceneId: id, performerId })
+            .onConflictDoNothing();
+        }
+
+        // Update performer scene counts
+        await tx.execute(sql`
+          UPDATE performers SET scene_count = (
+            SELECT count(*) FROM scene_performers WHERE performer_id = performers.id
+          )
+        `);
+      }
+
+      // Tags: replace all
+      if (body.tagNames !== undefined) {
+        await tx.delete(sceneTags).where(eq(sceneTags.sceneId, id));
+
+        for (const name of body.tagNames) {
+          if (!name.trim()) continue;
+
+          const [existingTag] = await tx
+            .select({ id: tags.id })
+            .from(tags)
+            .where(ilike(tags.name, name.trim()))
+            .limit(1);
+
+          const tagId = existingTag?.id ?? (
+            await tx
+              .insert(tags)
+              .values({ name: name.trim() })
+              .returning({ id: tags.id })
+          )[0].id;
+
+          await tx
+            .insert(sceneTags)
+            .values({ sceneId: id, tagId })
+            .onConflictDoNothing();
+        }
+
+        // Update tag scene counts
+        await tx.execute(sql`
+          UPDATE tags SET scene_count = (
+            SELECT count(*) FROM scene_tags WHERE tag_id = tags.id
+          )
+        `);
+      }
+    });
+
+    // Write NFO sidecar if the scene has a file
+    if (existing.filePath) {
+      try {
+        // Re-fetch full scene data to write complete NFO
+        const updated = await db.query.scenes.findFirst({
+          where: eq(scenes.id, id),
+          with: {
+            studio: true,
+            sceneTags: { with: { tag: true } },
+          },
+        });
+
+        if (updated) {
+          await writeNfo(existing.filePath, {
+            title: updated.title,
+            plot: updated.details,
+            date: updated.date,
+            studio: updated.studio?.name,
+            rating: updated.rating,
+            tags: updated.sceneTags.map((st) => st.tag.name),
+            duration: updated.duration,
+            url: updated.url,
+          });
+        }
+      } catch {
+        // NFO write failure is non-fatal
+      }
+    }
+
+    return { ok: true, id };
+  });
+
+  // ─── POST /scenes/:id/markers ──────────────────────────────────
+  app.post("/scenes/:id/markers", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      title: string;
+      seconds: number;
+      endSeconds?: number | null;
+      primaryTagName?: string | null;
+    };
+
+    if (!body.title?.trim() || body.seconds == null) {
+      reply.code(400);
+      return { error: "title and seconds are required" };
+    }
+
+    const existing = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true },
+    });
+    if (!existing) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    let primaryTagId: string | null = null;
+    if (body.primaryTagName?.trim()) {
+      const [existingTag] = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(ilike(tags.name, body.primaryTagName.trim()))
+        .limit(1);
+      primaryTagId = existingTag?.id ?? (
+        await db
+          .insert(tags)
+          .values({ name: body.primaryTagName.trim() })
+          .returning({ id: tags.id })
+      )[0].id;
+    }
+
+    const [marker] = await db
+      .insert(sceneMarkers)
+      .values({
+        sceneId: id,
+        title: body.title.trim(),
+        seconds: body.seconds,
+        endSeconds: body.endSeconds ?? null,
+        primaryTagId,
+      })
+      .returning();
+
+    const primaryTag = primaryTagId
+      ? await db.query.tags.findFirst({
+          where: eq(tags.id, primaryTagId),
+          columns: { id: true, name: true },
+        })
+      : null;
+
+    return {
+      id: marker.id,
+      title: marker.title,
+      seconds: marker.seconds,
+      endSeconds: marker.endSeconds,
+      primaryTag: primaryTag ? { id: primaryTag.id, name: primaryTag.name } : null,
+    };
+  });
+
+  // ─── PATCH /scenes/markers/:markerId ─────────────────────────
+  app.patch("/scenes/markers/:markerId", async (request, reply) => {
+    const { markerId } = request.params as { markerId: string };
+    const body = request.body as {
+      title?: string;
+      seconds?: number;
+      endSeconds?: number | null;
+      primaryTagName?: string | null;
+    };
+
+    const existing = await db.query.sceneMarkers.findFirst({
+      where: eq(sceneMarkers.id, markerId),
+    });
+    if (!existing) {
+      reply.code(404);
+      return { error: "Marker not found" };
+    }
+
+    const update: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.title !== undefined) update.title = body.title.trim();
+    if (body.seconds !== undefined) update.seconds = body.seconds;
+    if (body.endSeconds !== undefined) update.endSeconds = body.endSeconds;
+
+    if (body.primaryTagName !== undefined) {
+      if (!body.primaryTagName?.trim()) {
+        update.primaryTagId = null;
+      } else {
+        const [existingTag] = await db
+          .select({ id: tags.id })
+          .from(tags)
+          .where(ilike(tags.name, body.primaryTagName.trim()))
+          .limit(1);
+        update.primaryTagId = existingTag?.id ?? (
+          await db
+            .insert(tags)
+            .values({ name: body.primaryTagName.trim() })
+            .returning({ id: tags.id })
+        )[0].id;
+      }
+    }
+
+    await db.update(sceneMarkers).set(update).where(eq(sceneMarkers.id, markerId));
+
+    return { ok: true };
+  });
+
+  // ─── DELETE /scenes/markers/:markerId ─────────────────────────
+  app.delete("/scenes/markers/:markerId", async (request, reply) => {
+    const { markerId } = request.params as { markerId: string };
+
+    const existing = await db.query.sceneMarkers.findFirst({
+      where: eq(sceneMarkers.id, markerId),
+    });
+    if (!existing) {
+      reply.code(404);
+      return { error: "Marker not found" };
+    }
+
+    await db.delete(sceneMarkers).where(eq(sceneMarkers.id, markerId));
+    return { ok: true };
+  });
+
+  // ─── POST /scenes/:id/play ─────────────────────────────────────
+  app.post("/scenes/:id/play", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const existing = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    await db
+      .update(scenes)
+      .set({
+        playCount: sql`${scenes.playCount} + 1`,
+        lastPlayedAt: new Date(),
+      })
+      .where(eq(scenes.id, id));
+
+    return { ok: true };
+  });
+
+  // ─── POST /scenes/:id/orgasm ──────────────────────────────────
+  app.post("/scenes/:id/orgasm", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const existing = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    const [updated] = await db
+      .update(scenes)
+      .set({
+        orgasmCount: sql`${scenes.orgasmCount} + 1`,
+      })
+      .where(eq(scenes.id, id))
+      .returning({ orgasmCount: scenes.orgasmCount });
+
+    return { ok: true, orgasmCount: updated.orgasmCount };
   });
 
   // ─── GET /studios (for filter dropdowns) ──────────────────────
@@ -387,5 +745,123 @@ export async function scenesRoutes(app: FastifyInstance) {
       .from(tags)
       .orderBy(desc(tags.sceneCount));
     return { tags: rows };
+  });
+
+  // ─── POST /scenes/:id/thumbnail ──────────────────────────────
+  app.post("/scenes/:id/thumbnail", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const scene = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true, filePath: true },
+    });
+
+    if (!scene) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    const file = await request.file();
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+
+    const buffer = await file.toBuffer();
+
+    // Save custom thumbnail to generated dir (preserves auto-generated sidecar)
+    const genDir = getGeneratedSceneDir(id);
+    await mkdir(genDir, { recursive: true });
+    const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
+    await writeFile(thumbPath, buffer);
+
+    // Update the DB thumbnail path to the custom asset URL
+    const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+    await db
+      .update(scenes)
+      .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+      .where(eq(scenes.id, id));
+
+    return { ok: true, thumbnailPath: assetUrl };
+  });
+
+  // ─── POST /scenes/:id/thumbnail/from-url ──────────────────────
+  app.post("/scenes/:id/thumbnail/from-url", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { imageUrl } = request.body as { imageUrl: string };
+
+    if (!imageUrl || !imageUrl.startsWith("http")) {
+      reply.code(400);
+      return { error: "Invalid image URL" };
+    }
+
+    const scene = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true },
+    });
+
+    if (!scene) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    try {
+      const res = await fetch(imageUrl);
+      if (!res.ok) {
+        reply.code(502);
+        return { error: `Failed to fetch image: ${res.status}` };
+      }
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      const genDir = getGeneratedSceneDir(id);
+      await mkdir(genDir, { recursive: true });
+      const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
+      await writeFile(thumbPath, buffer);
+
+      const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+      await db
+        .update(scenes)
+        .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+        .where(eq(scenes.id, id));
+
+      return { ok: true, thumbnailPath: assetUrl };
+    } catch (err) {
+      reply.code(502);
+      return { error: "Failed to download image" };
+    }
+  });
+
+  // ─── DELETE /scenes/:id/thumbnail ────────────────────────────
+  app.delete("/scenes/:id/thumbnail", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const scene = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true, filePath: true },
+    });
+
+    if (!scene) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    // Delete custom thumbnail file if it exists
+    const customPath = path.join(getGeneratedSceneDir(id), "thumbnail-custom.jpg");
+    try {
+      const { unlink } = await import("node:fs/promises");
+      if (existsSync(customPath)) await unlink(customPath);
+    } catch {
+      // non-fatal
+    }
+
+    // Revert to the standard generated thumbnail URL
+    const defaultUrl = `/assets/scenes/${id}/thumb`;
+    await db
+      .update(scenes)
+      .set({ thumbnailPath: defaultUrl, updatedAt: new Date() })
+      .where(eq(scenes.id, id));
+
+    return { ok: true, thumbnailPath: defaultUrl };
   });
 }

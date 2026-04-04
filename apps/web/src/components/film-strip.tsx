@@ -8,12 +8,20 @@ import {
   type TrickplayFrame,
 } from "@obscura/ui";
 
+interface FilmStripMarker {
+  id: string;
+  time: number;
+  title: string;
+  tag?: string;
+}
+
 interface FilmStripProps {
   spriteUrl: string;
   vttUrl: string;
   videoRef: RefObject<HTMLVideoElement | null>;
   duration: number;
   onSeek: (time: number) => void;
+  markers?: FilmStripMarker[];
 }
 
 const STRIP_HEIGHT = 52;
@@ -24,9 +32,11 @@ export function FilmStrip({
   videoRef,
   duration,
   onSeek,
+  markers = [],
 }: FilmStripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<HTMLDivElement>(null);
   const [frames, setFrames] = useState<TrickplayFrame[] | null>(null);
   const [error, setError] = useState(false);
   const draggingRef = useRef(false);
@@ -73,7 +83,9 @@ export function FilmStrip({
       const trackPosition = normalizedTime * trackWidth;
       const tx = containerWidth / 2 - trackPosition;
 
-      track.style.transform = `translateX(${tx}px)`;
+      const transform = `translateX(${tx}px)`;
+      track.style.transform = transform;
+      if (markersRef.current) markersRef.current.style.transform = transform;
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -91,7 +103,9 @@ export function FilmStrip({
       const containerWidth = container.clientWidth;
       const normalizedTime = Math.max(0, Math.min(1, time / duration));
       const trackPosition = normalizedTime * trackWidth;
-      track.style.transform = `translateX(${containerWidth / 2 - trackPosition}px)`;
+      const transform = `translateX(${containerWidth / 2 - trackPosition}px)`;
+      track.style.transform = transform;
+      if (markersRef.current) markersRef.current.style.transform = transform;
     },
     [trackWidth, duration]
   );
@@ -200,7 +214,33 @@ export function FilmStrip({
               />
             </div>
           ))}
+
         </div>
+
+        {/* Marker indicators — same width, synced via rAF in markersRef */}
+        {duration > 0 && markers.length > 0 && (
+          <div
+            ref={markersRef}
+            className="absolute inset-y-0 pointer-events-none will-change-transform"
+            style={{ width: trackWidth }}
+          >
+            {markers.map((marker) => {
+              const left = (marker.time / duration) * trackWidth;
+              return (
+                <div
+                  key={marker.id}
+                  className="absolute top-0 bottom-0 flex flex-col items-center"
+                  style={{ left }}
+                >
+                  <div className="w-px h-full bg-accent-500/50" />
+                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-px text-[0.5rem] font-medium tracking-wide uppercase leading-tight bg-black/80 text-accent-300 border border-accent-500/30 rounded-sm">
+                    {marker.title}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <button

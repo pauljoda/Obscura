@@ -38,17 +38,10 @@ export const appShellSections = [
     ],
   },
   {
-    id: "resolve",
-    kicker: "Resolve",
-    items: [
-      { label: "Queue", href: "/resolve", icon: "list-checks" },
-      { label: "Review", href: "/resolve/review", icon: "diff" },
-    ],
-  },
-  {
     id: "operate",
     kicker: "Operate",
     items: [
+      { label: "Scrape", href: "/scrape", icon: "scan-search" },
       { label: "Jobs", href: "/jobs", icon: "activity" },
       { label: "Settings", href: "/settings", icon: "settings" },
     ],

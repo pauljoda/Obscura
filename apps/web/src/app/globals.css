@@ -66,6 +66,8 @@
   --color-overlay-scrim: rgba(8, 9, 12, 0.75);
   --color-overlay-heavy: rgba(8, 9, 12, 0.9);
   --color-overlay-glass: rgba(17, 21, 28, 0.8);
+  --color-overlay-glass-light: rgba(17, 21, 28, 0.55);
+  --color-overlay-glass-accent: rgba(30, 26, 18, 0.6);
 
   /* ── Border Radius (sharp, machined) ── */
   --radius-xs: 2px;
@@ -86,6 +88,8 @@
     0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.2);
   --shadow-well: inset 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-focus-accent: 0 0 0 2px rgba(199, 155, 92, 0.15);
+  --shadow-glow-accent: 0 0 20px rgba(199, 155, 92, 0.08), 0 0 6px rgba(199, 155, 92, 0.12);
+  --shadow-glow-accent-strong: 0 0 24px rgba(199, 155, 92, 0.14), 0 0 8px rgba(199, 155, 92, 0.18);
 
   /* ── Transitions ── */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
@@ -250,6 +254,39 @@
     box-shadow: var(--shadow-elevated);
   }
 
+  /* Glass chip: aggressive blur for elements floating over media */
+  .glass-chip {
+    background: var(--color-overlay-glass-light);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Glass chip with accent tint */
+  .glass-chip-accent {
+    background: var(--color-overlay-glass-accent);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(199, 155, 92, 0.2);
+    box-shadow:
+      inset 0 1px 0 rgba(199, 155, 92, 0.08),
+      inset 0 0 0 0.5px rgba(199, 155, 92, 0.04),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Glass dropdown: heavier glass for menus over video */
+  .glass-dropdown {
+    background: rgba(12, 14, 20, 0.82);
+    backdrop-filter: blur(24px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 10px 40px rgba(0, 0, 0, 0.5),
+      0 0 0 0.5px rgba(255, 255, 255, 0.04);
+  }
+
   /* Gradient-fade separator */
   .separator {
     height: 1px;
@@ -382,9 +419,11 @@
     border-radius: var(--radius-full);
     background: linear-gradient(
       90deg,
-      var(--color-accent-600),
-      var(--color-accent-500)
+      var(--color-accent-700),
+      var(--color-accent-500),
+      var(--color-accent-400)
     );
+    box-shadow: 0 0 6px rgba(199, 155, 92, 0.25);
     transition: width var(--duration-moderate) var(--ease-default);
   }
 
@@ -419,6 +458,11 @@
     transform: translateY(-1px);
   }
 
+  /* Static variant — no lift on hover (prevents jitter on large panels) */
+  .surface-card-sharp.no-lift:hover {
+    transform: none;
+  }
+
   /* ── Stats Card ── */
   .surface-stat {
     background: linear-gradient(
@@ -435,25 +479,29 @@
   .surface-stat-accent {
     background: linear-gradient(
       135deg,
-      color-mix(in srgb, var(--color-surface-2) 92%, var(--color-accent-900) 8%) 0%,
+      color-mix(in srgb, var(--color-surface-2) 88%, var(--color-accent-900) 12%) 0%,
       var(--color-surface-3) 100%
     );
     border: 1px solid var(--color-border-accent);
-    border-top: 1px solid rgba(199, 155, 92, 0.12);
+    border-top: 1px solid rgba(199, 155, 92, 0.15);
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-card), 0 0 12px rgba(199, 155, 92, 0.04);
+    box-shadow: var(--shadow-card), var(--shadow-glow-accent);
   }
 
   /* ── Accent gradient pill ── */
   .pill-accent {
     background: linear-gradient(
       135deg,
-      var(--color-accent-800) 0%,
+      var(--color-accent-700) 0%,
+      var(--color-accent-800) 50%,
       var(--color-accent-900) 100%
     );
     border: 1px solid var(--color-border-accent);
     border-radius: var(--radius-xs);
-    color: var(--color-accent-300);
+    color: var(--color-accent-200);
+    box-shadow:
+      inset 0 1px 0 rgba(199, 155, 92, 0.15),
+      0 0 8px rgba(199, 155, 92, 0.06);
   }
 
   .control-label {
@@ -470,19 +518,21 @@
   .control-select,
   .control-textarea {
     width: 100%;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-surface-2) 96%, white 2%) 0%,
-      var(--color-surface-1) 100%
-    );
+    background: var(--color-surface-1);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     padding: 0.7rem 0.8rem;
+    font-size: 0.85rem;
     box-shadow: var(--shadow-well);
     transition:
       border-color var(--duration-fast) var(--ease-default),
       box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .control-input::placeholder,
+  .control-textarea::placeholder {
+    color: var(--color-text-disabled);
   }
 
   .control-input:focus,
@@ -554,6 +604,175 @@
     color: var(--color-error-text);
     border: 1px solid rgba(179, 79, 86, 0.15);
   }
+
+  /* ── Chip input (editable tag/performer tokens) ── */
+  .chip-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 6px;
+    min-height: 38px;
+    align-items: center;
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-well);
+    cursor: text;
+    transition:
+      border-color var(--duration-fast) var(--ease-default),
+      box-shadow var(--duration-fast) var(--ease-default);
+  }
+
+  .chip-input-container:focus-within {
+    border-color: var(--color-border-accent-strong);
+    box-shadow: var(--shadow-focus-accent);
+  }
+
+  .chip-input-container input {
+    flex: 1;
+    min-width: 80px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    padding: 2px 4px;
+  }
+
+  .chip-input-container input::placeholder {
+    color: var(--color-text-disabled);
+  }
+
+  .chip-removable {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 3px 1px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: var(--color-surface-3);
+    color: var(--color-text-muted);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .chip-removable-new {
+    background: rgba(74, 128, 179, 0.12);
+    color: var(--color-info-text);
+    border: 1px solid rgba(74, 128, 179, 0.18);
+  }
+
+  .chip-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.5;
+    transition: opacity var(--duration-fast) var(--ease-default);
+    padding: 0;
+  }
+
+  .chip-remove-btn:hover {
+    opacity: 1;
+  }
+
+  /* ── Autocomplete dropdown ── */
+  .autocomplete-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    z-index: 50;
+    max-height: 180px;
+    overflow-y: auto;
+    background: var(--color-surface-3);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-elevated);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(164, 172, 185, 0.12) transparent;
+  }
+
+  .autocomplete-item {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-default);
+  }
+
+  .autocomplete-item:hover,
+  .autocomplete-item-active {
+    background: var(--color-surface-4);
+    color: var(--color-text-primary);
+  }
+
+  .autocomplete-item-count {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--color-text-disabled);
+    margin-left: 6px;
+  }
+
+  /* ── Scrape diff overlay ── */
+  .scrape-field-changed {
+    background: rgba(74, 128, 179, 0.06);
+    border-left: 2px solid var(--color-info);
+    padding-left: 8px;
+  }
+
+  .scrape-field-new {
+    color: var(--color-info-text);
+  }
+
+  /* ── Thumbnail overlay ── */
+  .thumb-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(8, 9, 12, 0.7);
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-default);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+
+  .thumb-edit-overlay:hover {
+    opacity: 1;
+  }
+
+  /* ── Star rating picker ── */
+  .star-rating-picker {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .star-rating-picker button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: transform var(--duration-fast) var(--ease-default);
+  }
+
+  .star-rating-picker button:hover {
+    transform: scale(1.15);
+  }
 }
 
 /* ── Utility Overrides ── */
@@ -562,5 +781,24 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ── Tag filter scroll area — thin industrial scrollbar ── */
+.tag-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(164, 172, 185, 0.12) transparent;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(164, 172, 185, 0.15);
+    border-radius: 2px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(164, 172, 185, 0.25);
   }
 }

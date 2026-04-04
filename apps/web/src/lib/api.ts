@@ -5,6 +5,9 @@ import type {
   LibraryRootDto,
   LibrarySettingsDto,
   StorageStatsDto,
+  ScraperPackageDto,
+  CommunityIndexEntryDto,
+  ScrapeResultDto,
 } from "@obscura/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -55,6 +58,7 @@ export interface SceneListItem {
   spritePath: string | null;
   trickplayVttPath: string | null;
   playCount: number;
+  orgasmCount: number;
   studioId: string | null;
   performers: { id: string; name: string; gender?: string | null; favorite?: boolean }[];
   tags: { id: string; name: string }[];
@@ -69,6 +73,7 @@ export interface SceneDetail extends SceneListItem {
   playDuration: number | null;
   resumeTime: number | null;
   lastPlayedAt: string | null;
+  url: string | null;
   studio: { id: string; name: string; url: string | null } | null;
   markers: {
     id: string;
@@ -120,6 +125,7 @@ export type LibraryBrowse = LibraryBrowseDto;
 export async function fetchScenes(params: {
   search?: string;
   sort?: string;
+  order?: "asc" | "desc";
   tag?: string[];
   performer?: string[];
   studio?: string;
@@ -130,6 +136,7 @@ export async function fetchScenes(params: {
   const sp = new URLSearchParams();
   if (params.search) sp.set("search", params.search);
   if (params.sort) sp.set("sort", params.sort);
+  if (params.order) sp.set("order", params.order);
   if (params.resolution) sp.set("resolution", params.resolution);
   if (params.studio) sp.set("studio", params.studio);
   if (params.limit) sp.set("limit", String(params.limit));
@@ -142,6 +149,71 @@ export async function fetchScenes(params: {
 
 export async function fetchSceneDetail(id: string): Promise<SceneDetail> {
   return fetchApi(`/scenes/${id}`);
+}
+
+export async function updateScene(
+  id: string,
+  data: {
+    title?: string;
+    details?: string | null;
+    date?: string | null;
+    rating?: number | null;
+    url?: string | null;
+    organized?: boolean;
+    orgasmCount?: number;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+  }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/scenes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Marker API functions ────────────────────────────────────
+
+export interface MarkerDto {
+  id: string;
+  title: string;
+  seconds: number;
+  endSeconds: number | null;
+  primaryTag: { id: string; name: string } | null;
+}
+
+export async function createMarker(
+  sceneId: string,
+  data: { title: string; seconds: number; endSeconds?: number | null; primaryTagName?: string | null }
+): Promise<MarkerDto> {
+  return fetchApi(`/scenes/${sceneId}/markers`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateMarker(
+  markerId: string,
+  data: { title?: string; seconds?: number; endSeconds?: number | null; primaryTagName?: string | null }
+): Promise<{ ok: true }> {
+  return fetchApi(`/scenes/markers/${markerId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteMarker(markerId: string): Promise<{ ok: true }> {
+  return fetchApi(`/scenes/markers/${markerId}`, { method: "DELETE" });
+}
+
+export async function trackPlay(sceneId: string): Promise<{ ok: true }> {
+  return fetchApi(`/scenes/${sceneId}/play`, { method: "POST" });
+}
+
+export async function trackOrgasm(
+  sceneId: string
+): Promise<{ ok: true; orgasmCount: number }> {
+  return fetchApi(`/scenes/${sceneId}/orgasm`, { method: "POST" });
 }
 
 export async function fetchSceneStats(): Promise<SceneStats> {
@@ -222,6 +294,156 @@ export async function runQueue(queueName: string): Promise<{
 }> {
   return fetchApi(`/jobs/queues/${queueName}/run`, {
     method: "POST",
+  });
+}
+
+// ─── Scraper types ───────────────────────────────────────────────
+
+export type ScraperPackage = ScraperPackageDto;
+export type CommunityIndexEntry = CommunityIndexEntryDto;
+export type ScrapeResult = ScrapeResultDto;
+
+export interface NormalizedScrapeResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  url: string | null;
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+}
+
+// ─── Scraper API functions ───────────────────────────────────────
+
+export async function fetchCommunityIndex(
+  force = false
+): Promise<{ entries: CommunityIndexEntry[] }> {
+  const qs = force ? "?force=true" : "";
+  return fetchApi(`/scrapers/index${qs}`);
+}
+
+export async function fetchInstalledScrapers(): Promise<{
+  packages: ScraperPackage[];
+}> {
+  return fetchApi("/scrapers/packages");
+}
+
+export async function installScraper(packageId: string): Promise<ScraperPackage> {
+  return fetchApi("/scrapers/packages", {
+    method: "POST",
+    body: JSON.stringify({ packageId }),
+  });
+}
+
+export async function uninstallScraper(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/scrapers/packages/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function toggleScraper(
+  id: string,
+  enabled: boolean
+): Promise<ScraperPackage> {
+  return fetchApi(`/scrapers/packages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function scrapeScene(
+  scraperId: string,
+  sceneId: string,
+  action?: string,
+  options?: { url?: string; query?: string }
+): Promise<{
+  result?: ScrapeResult;
+  normalized?: NormalizedScrapeResult;
+  results?: NormalizedScrapeResult[];
+  message?: string;
+  action?: string;
+  triedActions?: string[];
+}> {
+  return fetchApi(`/scrapers/${scraperId}/scrape`, {
+    method: "POST",
+    body: JSON.stringify({
+      sceneId,
+      action: action || "auto",
+      url: options?.url,
+      query: options?.query,
+    }),
+  });
+}
+
+export async function fetchScrapeResults(params?: {
+  status?: string;
+  sceneId?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ results: ScrapeResult[]; total: number; limit: number; offset: number }> {
+  const sp = new URLSearchParams();
+  if (params?.status) sp.set("status", params.status);
+  if (params?.sceneId) sp.set("sceneId", params.sceneId);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return fetchApi(`/scrapers/results${qs ? `?${qs}` : ""}`);
+}
+
+export async function acceptScrapeResult(
+  id: string,
+  fields?: string[]
+): Promise<{ ok: true; sceneId: string }> {
+  return fetchApi(`/scrapers/results/${id}/accept`, {
+    method: "POST",
+    body: JSON.stringify({ fields }),
+  });
+}
+
+export async function rejectScrapeResult(
+  id: string
+): Promise<{ ok: true }> {
+  return fetchApi(`/scrapers/results/${id}/reject`, {
+    method: "POST",
+  });
+}
+
+export async function uploadThumbnail(
+  sceneId: string,
+  file: File
+): Promise<{ ok: true; thumbnailPath: string }> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetch(`${API_BASE}/scenes/${sceneId}/thumbnail`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(message || `Upload failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function deleteThumbnail(
+  sceneId: string
+): Promise<{ ok: true; thumbnailPath: string }> {
+  return fetchApi(`/scenes/${sceneId}/thumbnail`, {
+    method: "DELETE",
+  });
+}
+
+export async function uploadThumbnailFromUrl(
+  sceneId: string,
+  imageUrl: string
+): Promise<{ ok: true; thumbnailPath: string }> {
+  return fetchApi(`/scenes/${sceneId}/thumbnail/from-url`, {
+    method: "POST",
+    body: JSON.stringify({ imageUrl }),
   });
 }
 

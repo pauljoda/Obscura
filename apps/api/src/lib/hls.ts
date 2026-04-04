@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getCacheRootDir } from "@obscura/media-core";
 import { getHlsRenditions, runProcess, type HlsRendition } from "./media";
 
 export interface HlsPackage {
@@ -16,11 +17,7 @@ interface HlsCacheMetadata {
   renditions: HlsRendition[];
 }
 
-const HLS_CACHE_DIR = path.resolve(
-  process.cwd(),
-  ".cache",
-  "hls"
-);
+const HLS_CACHE_DIR = path.join(getCacheRootDir(), "hls");
 
 const generationLocks = new Map<string, Promise<HlsPackage>>();
 

@@ -9,7 +9,7 @@ const badgeVariants = cva(
         default:
           "bg-surface-2 border-border-subtle text-text-secondary",
         accent:
-          "bg-accent-950 border-accent-500/20 text-accent-400",
+          "bg-gradient-to-r from-accent-950 to-accent-900 border-accent-500/25 text-accent-300 shadow-[inset_0_1px_0_rgba(199,155,92,0.08),0_0_8px_rgba(199,155,92,0.06)]",
         success:
           "bg-success-muted/30 border-success/20 text-success-text",
         warning:

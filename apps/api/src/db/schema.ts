@@ -180,6 +180,7 @@ export const scenes = pgTable(
 
     // Playback tracking
     playCount: integer("play_count").default(0).notNull(),
+    orgasmCount: integer("orgasm_count").default(0).notNull(),
     playDuration: real("play_duration").default(0).notNull(),
     resumeTime: real("resume_time").default(0).notNull(),
     lastPlayedAt: timestamp("last_played_at"),
@@ -295,5 +296,72 @@ export const sceneMarkersRelations = relations(sceneMarkers, ({ one }) => ({
   primaryTag: one(tags, {
     fields: [sceneMarkers.primaryTagId],
     references: [tags.id],
+  }),
+}));
+
+// ─── Scraper Packages ───────────────────────────────────────────────
+export const scraperPackages = pgTable(
+  "scraper_packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    packageId: text("package_id").notNull(),
+    name: text("name").notNull(),
+    version: text("version").notNull(),
+    installPath: text("install_path").notNull(),
+    sha256: text("sha256"),
+    capabilities: jsonb("capabilities").$type<Record<string, boolean>>(),
+    enabled: boolean("enabled").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("scraper_packages_package_id_idx").on(table.packageId),
+  ]
+);
+
+export const scraperPackagesRelations = relations(scraperPackages, ({ many }) => ({
+  scrapeResults: many(scrapeResults),
+}));
+
+// ─── Scrape Results ─────────────────────────────────────────────────
+export const scrapeResults = pgTable(
+  "scrape_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sceneId: uuid("scene_id")
+      .notNull()
+      .references(() => scenes.id, { onDelete: "cascade" }),
+    scraperPackageId: uuid("scraper_package_id")
+      .references(() => scraperPackages.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    status: text("status").notNull().default("pending"),
+    rawResult: jsonb("raw_result"),
+    proposedTitle: text("proposed_title"),
+    proposedDate: text("proposed_date"),
+    proposedDetails: text("proposed_details"),
+    proposedUrl: text("proposed_url"),
+    proposedStudioName: text("proposed_studio_name"),
+    proposedPerformerNames: jsonb("proposed_performer_names").$type<string[]>(),
+    proposedTagNames: jsonb("proposed_tag_names").$type<string[]>(),
+    proposedImageUrl: text("proposed_image_url"),
+    appliedAt: timestamp("applied_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("scrape_results_scene_idx").on(table.sceneId),
+    index("scrape_results_status_idx").on(table.status),
+    index("scrape_results_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const scrapeResultsRelations = relations(scrapeResults, ({ one }) => ({
+  scene: one(scenes, {
+    fields: [scrapeResults.sceneId],
+    references: [scenes.id],
+  }),
+  scraperPackage: one(scraperPackages, {
+    fields: [scrapeResults.scraperPackageId],
+    references: [scraperPackages.id],
   }),
 }));

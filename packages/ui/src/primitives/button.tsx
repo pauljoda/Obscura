@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 rounded-md font-medium",
+    "inline-flex items-center justify-center gap-2 rounded-sm font-medium",
     "transition-all duration-fast",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/20 focus-visible:ring-offset-1 focus-visible:ring-offset-bg",
     "disabled:pointer-events-none disabled:opacity-40",
@@ -13,9 +13,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: [
-          "bg-accent-500 text-accent-950 font-semibold",
-          "hover:bg-accent-400",
-          "active:bg-accent-600",
+          "bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_12px_rgba(199,155,92,0.12)]",
+          "hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_18px_rgba(199,155,92,0.18)]",
+          "active:from-accent-500 active:to-accent-600 active:shadow-none",
         ].join(" "),
         secondary: [
           "surface-card text-text-secondary",

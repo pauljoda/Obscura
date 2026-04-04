@@ -1,13 +1,39 @@
-.DS_Store
-.env
-.env.*
-!.env.example
+# Dependencies
 node_modules
+.pnpm-store
+
+# Build output
 .next
 dist
 coverage
 .turbo
-.pnpm-store
 *.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Generated media & cache (dev/test data)
+.cache/
+.obscura-cache/
+apps/web/public/media/scenes/
+apps/web/public/media/performers/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Debug
 *.log
+npm-debug.log*
+
+# Temp
 tmp

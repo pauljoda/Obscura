@@ -7,8 +7,7 @@ import {
   Building2,
   Tags,
   FolderOpen,
-  ListChecks,
-  GitCompareArrows,
+  ScanSearch,
   Activity,
   Settings,
   PanelLeftClose,
@@ -18,6 +17,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@obscura/ui";
 import { appShellSections } from "@obscura/ui";
+import { Logo, LogoMark } from "./logo";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   film: Film,
@@ -26,8 +26,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   building: Building2,
   tags: Tags,
   folder: FolderOpen,
-  "list-checks": ListChecks,
-  diff: GitCompareArrows,
+  "scan-search": ScanSearch,
   activity: Activity,
   settings: Settings,
 };
@@ -52,10 +51,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo + collapse toggle */}
       <div className="flex h-14 items-center justify-between px-3 border-b border-border-subtle">
-        {!collapsed && (
-          <span className="text-kicker tracking-[0.15em] select-none">
-            Obscura
-          </span>
+        {collapsed ? (
+          <LogoMark size={24} />
+        ) : (
+          <Logo size={24} />
         )}
         <button
           onClick={onToggle}

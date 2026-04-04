@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useCallback, useRef, type ComponentType } from "react";
 import { VideoPlayer } from "./video-player";
-import { Button } from "@obscura/ui";
+import { SceneEdit } from "./scene-edit";
 import { cn } from "@obscura/ui";
+import { Button } from "@obscura/ui";
 import {
   Star,
   Clock,
   Monitor,
   HardDrive,
   Calendar,
-  Bookmark,
   FileVideo,
   Link2,
   Eye,
@@ -20,11 +20,30 @@ import {
   User,
   Tag as TagIcon,
   Loader2,
+  Droplets,
+  CheckCircle2,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
-import { fetchSceneDetail, toApiUrl, type SceneDetail as SceneDetailType } from "../lib/api";
+import {
+  fetchSceneDetail,
+  fetchTags,
+  updateScene,
+  trackPlay,
+  trackOrgasm,
+  createMarker,
+  updateMarker,
+  deleteMarker,
+  toApiUrl,
+  type SceneDetail as SceneDetailType,
+  type TagItem,
+} from "../lib/api";
 
-const tabs = ["Details", "Markers", "Files", "Related"] as const;
+const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
 
 function formatBitRate(bps: number | null): string {
@@ -38,14 +57,141 @@ export function SceneDetail({ id }: { id: string }) {
   const [scene, setScene] = useState<SceneDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [savingRating, setSavingRating] = useState(false);
+  const currentTimeRef = useRef(0);
+
+  // Marker editor state
+  const [allTags, setAllTags] = useState<TagItem[]>([]);
+  const [editingMarker, setEditingMarker] = useState<string | null>(null); // marker id or "new"
+  const [markerTitle, setMarkerTitle] = useState("");
+  const [markerSeconds, setMarkerSeconds] = useState(0);
+  const [markerEndSeconds, setMarkerEndSeconds] = useState<number | null>(null);
+  const [markerTagName, setMarkerTagName] = useState("");
+  const [savingMarker, setSavingMarker] = useState(false);
+
+  const refreshScene = useCallback(() => {
+    fetchSceneDetail(id)
+      .then(setScene)
+      .catch((err) => setError(err.message));
+  }, [id]);
 
   useEffect(() => {
     setLoading(true);
-    fetchSceneDetail(id)
-      .then(setScene)
+    Promise.all([fetchSceneDetail(id), fetchTags()])
+      .then(([sceneData, tagsData]) => {
+        setScene(sceneData);
+        setAllTags(tagsData.tags);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handlePlayStarted = useCallback(() => {
+    trackPlay(id).catch(() => {});
+  }, [id]);
+
+  const [displayTime, setDisplayTime] = useState(0);
+  const handleTimeUpdate = useCallback((time: number) => {
+    currentTimeRef.current = time;
+    // Update display time every ~500ms (throttle by checking delta)
+    setDisplayTime((prev) => Math.abs(time - prev) >= 0.4 ? time : prev);
+  }, []);
+
+  function startNewMarker() {
+    setEditingMarker("new");
+    setMarkerTitle("");
+    setMarkerSeconds(Math.floor(currentTimeRef.current));
+    setMarkerEndSeconds(null);
+    setMarkerTagName("");
+  }
+
+  function startEditMarker(m: SceneDetailType["markers"][0]) {
+    setEditingMarker(m.id);
+    setMarkerTitle(m.title);
+    setMarkerSeconds(m.seconds);
+    setMarkerEndSeconds(m.endSeconds);
+    setMarkerTagName(m.primaryTag?.name ?? "");
+  }
+
+  function cancelMarkerEdit() {
+    setEditingMarker(null);
+  }
+
+  async function handleSaveMarker() {
+    if (!markerTitle.trim()) return;
+    setSavingMarker(true);
+    try {
+      if (editingMarker === "new") {
+        await createMarker(id, {
+          title: markerTitle.trim(),
+          seconds: markerSeconds,
+          endSeconds: markerEndSeconds,
+          primaryTagName: markerTagName.trim() || null,
+        });
+      } else if (editingMarker) {
+        await updateMarker(editingMarker, {
+          title: markerTitle.trim(),
+          seconds: markerSeconds,
+          endSeconds: markerEndSeconds,
+          primaryTagName: markerTagName.trim() || null,
+        });
+      }
+      setEditingMarker(null);
+      refreshScene();
+    } catch {
+      // silent
+    } finally {
+      setSavingMarker(false);
+    }
+  }
+
+  async function handleDeleteMarker(markerId: string) {
+    try {
+      await deleteMarker(markerId);
+      refreshScene();
+    } catch {
+      // silent
+    }
+  }
+
+  async function handleRatingClick(starIdx: number) {
+    if (!scene || savingRating) return;
+    const currentStars = scene.rating ? Math.round(scene.rating / 20) : 0;
+    const newRating = starIdx === currentStars ? null : starIdx * 20;
+    setSavingRating(true);
+    try {
+      await updateScene(id, { rating: newRating });
+      setScene((prev) => prev ? { ...prev, rating: newRating } : prev);
+    } catch {
+      // silent
+    } finally {
+      setSavingRating(false);
+    }
+  }
+
+  async function handleOrgasm() {
+    if (!scene) return;
+    try {
+      const res = await trackOrgasm(id);
+      setScene((prev) =>
+        prev ? { ...prev, orgasmCount: res.orgasmCount } : prev
+      );
+    } catch {
+      // silent
+    }
+  }
+
+  async function handleToggleOrganized() {
+    if (!scene) return;
+    const newVal = !scene.organized;
+    try {
+      await updateScene(id, { organized: newVal });
+      setScene((prev) => prev ? { ...prev, organized: newVal } : prev);
+    } catch {
+      // silent
+    }
+  }
 
   if (loading) {
     return (
@@ -70,16 +216,17 @@ export function SceneDetail({ id }: { id: string }) {
   }
 
   const ratingStars = scene.rating ? Math.round(scene.rating / 20) : 0;
+  const activeStars = ratingHover > 0 ? ratingHover : ratingStars;
 
   return (
     <div className="space-y-5">
-      {/* Back link */}
+      {/* Back link — shows scene title */}
       <Link
         href="/scenes"
-        className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
+        className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1.5 text-text-muted text-[0.72rem] font-medium hover:text-text-accent hover:border-border-accent transition-colors duration-fast w-fit"
       >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Back to Scenes
+        <ArrowLeft className="h-3 w-3" />
+        Scenes
       </Link>
 
       {/* Video Player */}
@@ -94,65 +241,106 @@ export function SceneDetail({ id }: { id: string }) {
           tag: m.primaryTag?.name,
         }))}
         duration={scene.duration ?? undefined}
+        onPlayStarted={handlePlayStarted}
+        onTimeUpdate={handleTimeUpdate}
         trickplaySprite={toApiUrl(scene.spritePath)}
         trickplayVtt={toApiUrl(scene.trickplayVttPath)}
       />
 
       {/* Scene header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl">{scene.title}</h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-text-muted">
-            {scene.studio && (
-              <span className="text-text-accent font-medium">
-                {scene.studio.name}
-              </span>
-            )}
-            {scene.date && (
+      <div className="surface-card-sharp p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-semibold">{scene.title}</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[0.78rem] text-text-muted">
+              {scene.studio && (
+                <Link
+                  href={`/studios/${scene.studio.id}`}
+                  className="text-text-accent font-medium hover:text-text-accent-bright transition-colors"
+                >
+                  {scene.studio.name}
+                </Link>
+              )}
+              {scene.date && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {scene.date}
+                </span>
+              )}
               <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {scene.date}
+                <Clock className="h-3.5 w-3.5" />
+                {scene.durationFormatted}
               </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {scene.durationFormatted}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" />
-              {scene.playCount} plays
-            </span>
-            {scene.resolution && (
-              <span className="pill-accent px-1.5 py-0.5 text-[0.65rem] font-semibold">
-                {scene.resolution}
+              <span className="flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                {scene.playCount} plays
               </span>
-            )}
+              {scene.resolution && (
+                <span className="pill-accent px-1.5 py-0.5 text-[0.65rem] font-semibold">
+                  {scene.resolution}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {/* Rating stars */}
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  "h-4 w-4",
-                  i < ratingStars
-                    ? "fill-accent-500 text-accent-500"
-                    : "text-text-disabled"
-                )}
-              />
-            ))}
-            {scene.rating && (
-              <span className="text-mono-sm text-text-muted ml-1">
-                {scene.rating}
-              </span>
-            )}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Rating stars — clickable */}
+            <div
+              className="flex items-center gap-0.5"
+              onMouseLeave={() => setRatingHover(0)}
+            >
+              {Array.from({ length: 5 }).map((_, i) => {
+                const starIdx = i + 1;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className="p-0 bg-transparent border-none cursor-pointer"
+                    onMouseEnter={() => setRatingHover(starIdx)}
+                    onClick={() => void handleRatingClick(starIdx)}
+                    disabled={savingRating}
+                  >
+                    <Star
+                      className={cn(
+                        "h-4 w-4 transition-colors duration-fast",
+                        starIdx <= activeStars
+                          ? "fill-accent-500 text-accent-500"
+                          : "text-text-disabled hover:text-accent-800"
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Orgasm counter */}
+            <button
+              type="button"
+              onClick={() => void handleOrgasm()}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-sm text-text-muted hover:text-accent-400 hover:bg-surface-2 transition-colors duration-fast"
+              title="Orgasm counter — click to increment"
+            >
+              <Droplets className="h-4 w-4" />
+              {scene.orgasmCount > 0 && (
+                <span className="text-mono-sm">{scene.orgasmCount}</span>
+              )}
+            </button>
+
+            {/* Organized toggle */}
+            <button
+              type="button"
+              onClick={() => void handleToggleOrganized()}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-2.5 rounded-sm transition-colors duration-fast",
+                scene.organized
+                  ? "text-success-text hover:bg-surface-2"
+                  : "text-text-disabled hover:text-text-muted hover:bg-surface-2"
+              )}
+              title={scene.organized ? "Marked as organized" : "Mark as organized"}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+            </button>
           </div>
-          <Button variant="ghost" size="icon">
-            <Bookmark className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
@@ -163,19 +351,17 @@ export function SceneDetail({ id }: { id: string }) {
         </p>
       )}
 
-      <div className="separator" />
-
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-border-subtle overflow-x-auto scrollbar-hidden">
+      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hidden surface-well px-1 py-1">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors duration-fast relative whitespace-nowrap",
+              "px-4 py-1.5 text-[0.78rem] font-medium transition-colors duration-fast whitespace-nowrap rounded-sm",
               activeTab === tab
-                ? "text-text-accent"
-                : "text-text-muted hover:text-text-primary"
+                ? "text-text-accent bg-accent-950 border border-border-accent"
+                : "text-text-muted hover:text-text-primary hover:bg-surface-2 border border-transparent"
             )}
           >
             {tab}
@@ -183,9 +369,6 @@ export function SceneDetail({ id }: { id: string }) {
               <span className="ml-1.5 text-[0.6rem] text-text-disabled">
                 {scene.markers.length}
               </span>
-            )}
-            {activeTab === tab && (
-              <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-accent-500" />
             )}
           </button>
         ))}
@@ -213,7 +396,7 @@ export function SceneDetail({ id }: { id: string }) {
                       href={`/performers/${p.id}`}
                       className="surface-card-sharp flex items-center gap-3 p-3 hover:border-border-accent transition-colors"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-surface-3 text-sm font-medium text-text-muted">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xs bg-surface-3 text-sm font-mono font-medium text-text-muted border border-border-subtle">
                         {p.name
                           .split(" ")
                           .map((n) => n[0])
@@ -309,71 +492,123 @@ export function SceneDetail({ id }: { id: string }) {
                 value={String(scene.playCount)}
               />
             </div>
-
-            {/* Organized status */}
-            <div className="pt-2 border-t border-border-subtle">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">Organized</span>
-                <span
-                  className={cn(
-                    "text-mono-sm",
-                    scene.organized
-                      ? "text-success-text"
-                      : "text-text-disabled"
-                  )}
-                >
-                  {scene.organized ? "Yes" : "No"}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       )}
 
+      {activeTab === "Metadata" && (
+        <SceneEdit id={scene.id} inline onSaved={refreshScene} />
+      )}
+
       {activeTab === "Markers" && (
-        <div className="space-y-2">
-          {scene.markers.length === 0 ? (
+        <div className="space-y-3">
+          {/* Add marker button */}
+          {editingMarker !== "new" && (
+            <Button variant="secondary" size="sm" onClick={startNewMarker}>
+              <Plus className="h-3.5 w-3.5" />
+              Add Marker at {formatSecondsInput(Math.floor(displayTime))}
+            </Button>
+          )}
+
+          {/* New marker form */}
+          {editingMarker === "new" && (
+            <MarkerForm
+              title={markerTitle}
+              seconds={markerSeconds}
+              endSeconds={markerEndSeconds}
+              tagName={markerTagName}
+              allTags={allTags}
+              saving={savingMarker}
+              onTitleChange={setMarkerTitle}
+              onSecondsChange={setMarkerSeconds}
+              onEndSecondsChange={setMarkerEndSeconds}
+              onTagNameChange={setMarkerTagName}
+              onSetCurrentTime={() => setMarkerSeconds(Math.floor(currentTimeRef.current))}
+              onSetCurrentEndTime={() => setMarkerEndSeconds(Math.floor(currentTimeRef.current))}
+              onSave={() => void handleSaveMarker()}
+              onCancel={cancelMarkerEdit}
+            />
+          )}
+
+          {/* Marker list */}
+          {scene.markers.length === 0 && editingMarker !== "new" && (
             <div className="surface-well p-8 text-center">
-              <Bookmark className="h-8 w-8 text-text-disabled mx-auto mb-2" />
               <p className="text-text-muted text-sm">No markers yet</p>
             </div>
-          ) : (
-            scene.markers.map((marker) => {
-              const startMin = Math.floor(marker.seconds / 60);
-              const startSec = Math.floor(marker.seconds % 60);
-              const timeStr = `${startMin}:${String(startSec).padStart(2, "0")}`;
-              let endStr = "";
-              if (marker.endSeconds) {
-                const endMin = Math.floor(marker.endSeconds / 60);
-                const endSec = Math.floor(marker.endSeconds % 60);
-                endStr = ` → ${endMin}:${String(endSec).padStart(2, "0")}`;
-              }
-
-              return (
-                <div
-                  key={marker.id}
-                  className="surface-card-sharp flex items-center gap-4 p-3 cursor-pointer hover:border-border-accent transition-colors"
-                >
-                  <span className="text-mono-tabular text-accent-400 w-24 flex-shrink-0">
-                    {timeStr}
-                    {endStr && (
-                      <span className="text-text-disabled">{endStr}</span>
-                    )}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {marker.title}
-                    </p>
-                  </div>
-                  {marker.primaryTag && (
-                    <span className="tag-chip tag-chip-accent flex-shrink-0">
-                      {marker.primaryTag.name}
-                    </span>
-                  )}
-                </div>
-              );
-            })
           )}
+          {scene.markers.map((marker) => {
+            if (editingMarker === marker.id) {
+              return (
+                <MarkerForm
+                  key={marker.id}
+                  title={markerTitle}
+                  seconds={markerSeconds}
+                  endSeconds={markerEndSeconds}
+                  tagName={markerTagName}
+                  allTags={allTags}
+                  saving={savingMarker}
+                  onTitleChange={setMarkerTitle}
+                  onSecondsChange={setMarkerSeconds}
+                  onEndSecondsChange={setMarkerEndSeconds}
+                  onTagNameChange={setMarkerTagName}
+                  onSetCurrentTime={() => setMarkerSeconds(Math.floor(currentTimeRef.current))}
+                  onSetCurrentEndTime={() => setMarkerEndSeconds(Math.floor(currentTimeRef.current))}
+                  onSave={() => void handleSaveMarker()}
+                  onCancel={cancelMarkerEdit}
+                />
+              );
+            }
+
+            const startMin = Math.floor(marker.seconds / 60);
+            const startSec = Math.floor(marker.seconds % 60);
+            const timeStr = `${startMin}:${String(startSec).padStart(2, "0")}`;
+            let endStr = "";
+            if (marker.endSeconds) {
+              const endMin = Math.floor(marker.endSeconds / 60);
+              const endSec = Math.floor(marker.endSeconds % 60);
+              endStr = ` → ${endMin}:${String(endSec).padStart(2, "0")}`;
+            }
+
+            return (
+              <div
+                key={marker.id}
+                className="surface-card-sharp flex items-center gap-4 p-3 group"
+              >
+                <span className="text-mono-tabular text-accent-400 w-24 flex-shrink-0">
+                  {timeStr}
+                  {endStr && (
+                    <span className="text-text-disabled">{endStr}</span>
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {marker.title}
+                  </p>
+                </div>
+                {marker.primaryTag && (
+                  <span className="tag-chip tag-chip-accent flex-shrink-0">
+                    {marker.primaryTag.name}
+                  </span>
+                )}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => startEditMarker(marker)}
+                    className="p-1 text-text-muted hover:text-text-accent transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteMarker(marker.id)}
+                    className="p-1 text-text-muted hover:text-error-text transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -426,14 +661,6 @@ export function SceneDetail({ id }: { id: string }) {
           </div>
         </div>
       )}
-
-      {activeTab === "Related" && (
-        <div className="surface-well p-8 text-center">
-          <p className="text-text-muted text-sm">
-            Related scenes will appear once fingerprinting is complete.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
@@ -463,6 +690,180 @@ function FileInfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-4">
       <span className="text-text-muted flex-shrink-0">{label}</span>
       <span className="truncate text-right">{value}</span>
+    </div>
+  );
+}
+
+function formatSecondsInput(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function parseTimeInput(value: string): number {
+  const parts = value.split(":").map(Number);
+  if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+  if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+  return Number(value) || 0;
+}
+
+function MarkerForm({
+  title,
+  seconds,
+  endSeconds,
+  tagName,
+  allTags,
+  saving,
+  onTitleChange,
+  onSecondsChange,
+  onEndSecondsChange,
+  onTagNameChange,
+  onSetCurrentTime,
+  onSetCurrentEndTime,
+  onSave,
+  onCancel,
+}: {
+  title: string;
+  seconds: number;
+  endSeconds: number | null;
+  tagName: string;
+  allTags: TagItem[];
+  saving: boolean;
+  onTitleChange: (v: string) => void;
+  onSecondsChange: (v: number) => void;
+  onEndSecondsChange: (v: number | null) => void;
+  onTagNameChange: (v: string) => void;
+  onSetCurrentTime: () => void;
+  onSetCurrentEndTime: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const [tagFocused, setTagFocused] = useState(false);
+  const filteredTags = tagFocused
+    ? (tagName.trim()
+        ? allTags.filter((t) =>
+            t.name.toLowerCase().includes(tagName.toLowerCase())
+          )
+        : allTags
+      ).slice(0, 10)
+    : [];
+
+  return (
+    <div className="surface-card-sharp p-4 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs text-text-muted">Title</label>
+          <input
+            className="control-input w-full"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="Marker title"
+            autoFocus
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-text-muted">Start Time</label>
+          <div className="flex items-center gap-2">
+            <input
+              className="control-input flex-1"
+              value={formatSecondsInput(seconds)}
+              onChange={(e) => onSecondsChange(parseTimeInput(e.target.value))}
+              placeholder="0:00"
+            />
+            <button
+              type="button"
+              onClick={onSetCurrentTime}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors rounded-sm"
+              title="Set to current playback time"
+            >
+              <MapPin className="h-3 w-3" />
+              Now
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-text-muted">End Time (optional)</label>
+          <div className="flex items-center gap-2">
+            <input
+              className="control-input flex-1"
+              value={endSeconds != null ? formatSecondsInput(endSeconds) : ""}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                onEndSecondsChange(v ? parseTimeInput(v) : null);
+              }}
+              placeholder="—"
+            />
+            <button
+              type="button"
+              onClick={onSetCurrentEndTime}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors rounded-sm"
+              title="Set to current playback time"
+            >
+              <MapPin className="h-3 w-3" />
+              Now
+            </button>
+            {endSeconds != null && (
+              <button
+                type="button"
+                onClick={() => onEndSecondsChange(null)}
+                className="flex items-center justify-center p-1.5 text-text-muted hover:text-error-text transition-colors rounded-sm"
+                title="Clear end time"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs text-text-muted">Primary Tag (optional)</label>
+          <div className="relative">
+            <input
+              className="control-input w-full"
+              value={tagName}
+              onChange={(e) => onTagNameChange(e.target.value)}
+              onFocus={() => setTagFocused(true)}
+              onBlur={() => setTimeout(() => setTagFocused(false), 150)}
+              placeholder="Tag name"
+            />
+            {filteredTags.length > 0 && (
+              <div className="autocomplete-dropdown">
+                {filteredTags.map((t) => (
+                  <div
+                    key={t.id}
+                    className="autocomplete-item"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onTagNameChange(t.name);
+                      setTagFocused(false);
+                    }}
+                  >
+                    {t.name}
+                    <span className="autocomplete-item-count">{t.sceneCount}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onSave}
+          disabled={saving || !title.trim()}
+        >
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Save Marker
+        </Button>
+      </div>
     </div>
   );
 }
