@@ -28,6 +28,7 @@ import {
   FileText,
   Droplets,
   CheckCircle2,
+  Clapperboard,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -40,6 +41,7 @@ import {
   scrapeScene,
   uploadThumbnail,
   uploadThumbnailFromUrl,
+  generateThumbnailFromFrame,
   deleteThumbnail,
   toApiUrl,
   type SceneDetail,
@@ -54,6 +56,7 @@ interface SceneEditProps {
   id: string;
   inline?: boolean;
   onSaved?: () => void;
+  currentPlaybackTime?: number;
 }
 
 // ─── ChipInput ─────────────────────────────────────────────────
@@ -346,7 +349,12 @@ function MetadataRow({
 
 // ─── Main Component ────────────────────────────────────────────
 
-export function SceneEdit({ id, inline, onSaved }: SceneEditProps) {
+export function SceneEdit({
+  id,
+  inline,
+  onSaved,
+  currentPlaybackTime,
+}: SceneEditProps) {
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -384,6 +392,7 @@ export function SceneEdit({ id, inline, onSaved }: SceneEditProps) {
   // Thumbnail upload
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [generatingFrameThumb, setGeneratingFrameThumb] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -599,6 +608,12 @@ export function SceneEdit({ id, inline, onSaved }: SceneEditProps) {
   }
 
   const hasCustomThumbnail = scene?.thumbnailPath?.includes("thumb-custom") ?? false;
+  const hasPlaybackFrameTime =
+    typeof currentPlaybackTime === "number" &&
+    Number.isFinite(currentPlaybackTime);
+  const playbackFrameTime = hasPlaybackFrameTime ? currentPlaybackTime : null;
+  const playbackFrameTimeLabel =
+    playbackFrameTime != null ? formatSecondsLabel(playbackFrameTime) : "";
 
   async function handleClearThumbnail() {
     setUploadingThumb(true);
@@ -613,6 +628,32 @@ export function SceneEdit({ id, inline, onSaved }: SceneEditProps) {
       setError(err instanceof Error ? err.message : "Failed to clear thumbnail");
     } finally {
       setUploadingThumb(false);
+    }
+  }
+
+  async function handleThumbnailFromCurrentFrame() {
+    if (playbackFrameTime == null) {
+      setError("Current playback frame is unavailable");
+      return;
+    }
+
+    const seconds = Math.max(0, playbackFrameTime);
+    setGeneratingFrameThumb(true);
+    setError(null);
+    try {
+      await generateThumbnailFromFrame(id, seconds);
+      const updated = await fetchSceneDetail(id);
+      setScene(updated);
+      onSaved?.();
+      setMessage(`Thumbnail captured at ${formatSecondsLabel(seconds)}`);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to capture thumbnail from current frame"
+      );
+    } finally {
+      setGeneratingFrameThumb(false);
     }
   }
 
@@ -1100,6 +1141,31 @@ export function SceneEdit({ id, inline, onSaved }: SceneEditProps) {
               </button>
             )}
           </div>
+          {inline && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleThumbnailFromCurrentFrame()}
+              disabled={
+                uploadingThumb ||
+                generatingFrameThumb ||
+                !hasPlaybackFrameTime
+              }
+            >
+              {generatingFrameThumb ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Clapperboard className="h-3.5 w-3.5" />
+              )}
+              {generatingFrameThumb
+                ? "Generating..."
+                : `Thumbnail from Current Frame${
+                    hasPlaybackFrameTime
+                      ? ` (${playbackFrameTimeLabel})`
+                      : ""
+                  }`}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1151,5 +1217,12 @@ function FormField({
       {children}
     </div>
   );
+}
+
+function formatSecondsLabel(seconds: number) {
+  const safe = Math.max(0, seconds);
+  const mins = Math.floor(safe / 60);
+  const secs = Math.floor(safe % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 

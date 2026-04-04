@@ -448,6 +448,16 @@ export async function uploadThumbnailFromUrl(
   });
 }
 
+export async function generateThumbnailFromFrame(
+  sceneId: string,
+  seconds: number
+): Promise<{ ok: true; thumbnailPath: string; seconds: number }> {
+  return fetchApi(`/scenes/${sceneId}/thumbnail/from-frame`, {
+    method: "POST",
+    body: JSON.stringify({ seconds }),
+  });
+}
+
 export function toApiUrl(assetPath: string | null | undefined) {
   if (!assetPath) {
     return undefined;

@@ -497,7 +497,12 @@ export function SceneDetail({ id }: { id: string }) {
       )}
 
       {activeTab === "Metadata" && (
-        <SceneEdit id={scene.id} inline onSaved={refreshScene} />
+        <SceneEdit
+          id={scene.id}
+          inline
+          onSaved={refreshScene}
+          currentPlaybackTime={displayTime}
+        />
       )}
 
       {activeTab === "Markers" && (

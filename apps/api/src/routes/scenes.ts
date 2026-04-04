@@ -4,7 +4,12 @@ import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { writeNfo, getSidecarPaths, getGeneratedSceneDir } from "@obscura/media-core";
+import {
+  writeNfo,
+  getSidecarPaths,
+  getGeneratedSceneDir,
+  runProcess,
+} from "@obscura/media-core";
 
 const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios } = schema;
 
@@ -831,6 +836,68 @@ export async function scenesRoutes(app: FastifyInstance) {
     } catch (err) {
       reply.code(502);
       return { error: "Failed to download image" };
+    }
+  });
+
+  // ─── POST /scenes/:id/thumbnail/from-frame ────────────────────
+  app.post("/scenes/:id/thumbnail/from-frame", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as { seconds?: number };
+    const requestedSeconds = Number(body?.seconds);
+
+    if (!Number.isFinite(requestedSeconds)) {
+      reply.code(400);
+      return { error: "Invalid frame time" };
+    }
+
+    const scene = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true, filePath: true, duration: true },
+    });
+
+    if (!scene || !scene.filePath || !existsSync(scene.filePath)) {
+      reply.code(404);
+      return { error: "Scene video file not found" };
+    }
+
+    const maxSeconds =
+      scene.duration && scene.duration > 0 ? Math.max(0, scene.duration - 0.05) : null;
+    const seconds =
+      maxSeconds != null
+        ? Math.min(Math.max(0, requestedSeconds), maxSeconds)
+        : Math.max(0, requestedSeconds);
+
+    try {
+      const genDir = getGeneratedSceneDir(id);
+      await mkdir(genDir, { recursive: true });
+      const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
+
+      await runProcess("ffmpeg", [
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        scene.filePath,
+        "-ss",
+        seconds.toFixed(3),
+        "-frames:v",
+        "1",
+        "-q:v",
+        "2",
+        thumbPath,
+      ]);
+
+      const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+      await db
+        .update(scenes)
+        .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+        .where(eq(scenes.id, id));
+
+      return { ok: true, thumbnailPath: assetUrl, seconds };
+    } catch {
+      reply.code(500);
+      return { error: "Failed to generate thumbnail from frame" };
     }
   });
 
