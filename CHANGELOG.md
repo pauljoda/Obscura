@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- Dashboard page now displays live library stats (scene count, total duration, storage, weekly additions) and job activity feed from the API, replacing hardcoded zeroes.
+- Performers listing page wired to `GET /performers` with client-side search/sort, performer card grid, and links to detail pages.
+- Performers detail page using `GET /performers/:id` (new endpoint) — shows bio, career metadata, and a full scene grid filtered by performer.
+- Studios listing page wired to `GET /studios` with search/sort and cards linked to detail pages.
+- Studios detail page using `GET /studios/:id` (new endpoint) — shows studio info and filtered scene grid.
+- Tags listing page wired to `GET /tags` — live tag cloud (top 40 sorted by scene count) with navigation links, plus a searchable tag list.
+- Tags detail page using `fetchScenes({ tag: [name] })` — real scene grid for each tag.
+- `GET /performers/:id` API endpoint returning full performer metadata (bio, aliases, gender, birthdate, country, career dates, etc.).
+- `GET /studios/:id` API endpoint returning studio detail (name, URL, image).
+- `fetchPerformerDetail` and `fetchStudioDetail` helper functions added to `api.ts`.
+- Galleries and Collections pages upgraded to properly styled Dark Control Room empty states with contextual links.
+
 ### Changed
 
 - Unified Docker deployment into a single all-in-one image (`ghcr.io/pauljoda/obscura`) with PostgreSQL, Redis, nginx, and all application services bundled together.

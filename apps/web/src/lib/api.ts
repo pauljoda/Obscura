@@ -114,6 +114,43 @@ export interface TagItem {
   sceneCount: number;
 }
 
+export interface PerformerDetail {
+  id: string;
+  name: string;
+  disambiguation: string | null;
+  aliases: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  country: string | null;
+  ethnicity: string | null;
+  eyeColor: string | null;
+  hairColor: string | null;
+  height: number | null;
+  weight: number | null;
+  measurements: string | null;
+  tattoos: string | null;
+  piercings: string | null;
+  careerStart: number | null;
+  careerEnd: number | null;
+  details: string | null;
+  imageUrl: string | null;
+  favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudioDetail {
+  id: string;
+  name: string;
+  url: string | null;
+  imageUrl: string | null;
+  parentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type LibraryRoot = LibraryRootDto;
 export type LibrarySettings = LibrarySettingsDto;
 export type StorageStats = StorageStatsDto;
@@ -231,6 +268,14 @@ export async function fetchPerformers(): Promise<{ performers: PerformerItem[] }
 
 export async function fetchTags(): Promise<{ tags: TagItem[] }> {
   return fetchApi("/tags");
+}
+
+export async function fetchPerformerDetail(id: string): Promise<PerformerDetail> {
+  return fetchApi(`/performers/${id}`);
+}
+
+export async function fetchStudioDetail(id: string): Promise<StudioDetail> {
+  return fetchApi(`/studios/${id}`);
 }
 
 export async function fetchLibraryConfig(): Promise<{
