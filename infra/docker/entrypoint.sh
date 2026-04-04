@@ -49,10 +49,10 @@ redis-server --daemonize yes --dir "$REDIS_DIR" --loglevel warning
 echo "[obscura] Applying database schema..."
 cd /app/apps/api
 DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
-  node ../../node_modules/drizzle-kit/bin.cjs push 2>&1 || true
-cd /app
+  node node_modules/drizzle-kit/bin.cjs push 2>&1 || true
 
 # ── Start API server ──────────────────────────────────────────────
+# Run tsx from the api directory so Node resolves it from apps/api/node_modules
 echo "[obscura] Starting API server..."
 DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
 REDIS_URL="redis://127.0.0.1:6379" \
@@ -60,18 +60,20 @@ OBSCURA_CACHE_DIR="$CACHE_DIR" \
 PORT=4000 \
 HOST=127.0.0.1 \
 NODE_ENV=production \
-  node --import tsx/esm apps/api/src/index.ts &
+  node_modules/.bin/tsx src/index.ts &
 
 # ── Start worker ──────────────────────────────────────────────────
 echo "[obscura] Starting background worker..."
+cd /app/apps/worker
 DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
 REDIS_URL="redis://127.0.0.1:6379" \
 OBSCURA_CACHE_DIR="$CACHE_DIR" \
 NODE_ENV=production \
-  node --import tsx/esm apps/worker/src/index.ts &
+  node_modules/.bin/tsx src/index.ts &
 
 # ── Start Next.js ─────────────────────────────────────────────────
 echo "[obscura] Starting web frontend..."
+cd /app
 HOSTNAME=127.0.0.1 \
 PORT=3000 \
 NODE_ENV=production \
