@@ -727,58 +727,6 @@ export async function scenesRoutes(app: FastifyInstance) {
     return { studios: rows };
   });
 
-  // ─── GET /performers (for filter dropdowns) ───────────────────
-  app.get("/performers", async () => {
-    const rows = await db
-      .select({
-        id: performers.id,
-        name: performers.name,
-        sceneCount: performers.sceneCount,
-        favorite: performers.favorite,
-      })
-      .from(performers)
-      .orderBy(asc(performers.name));
-    return { performers: rows };
-  });
-
-  // ─── GET /performers/:id ──────────────────────────────────────
-  app.get("/performers/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const row = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-    });
-    if (!row) {
-      reply.code(404);
-      return { error: "Performer not found" };
-    }
-    return {
-      id: row.id,
-      name: row.name,
-      disambiguation: row.disambiguation,
-      aliases: row.aliases,
-      gender: row.gender,
-      birthdate: row.birthdate,
-      country: row.country,
-      ethnicity: row.ethnicity,
-      eyeColor: row.eyeColor,
-      hairColor: row.hairColor,
-      height: row.height,
-      weight: row.weight,
-      measurements: row.measurements,
-      tattoos: row.tattoos,
-      piercings: row.piercings,
-      careerStart: row.careerStart,
-      careerEnd: row.careerEnd,
-      details: row.details,
-      imageUrl: row.imageUrl,
-      favorite: row.favorite,
-      rating: row.rating,
-      sceneCount: row.sceneCount,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
-  });
-
   // ─── GET /studios/:id ─────────────────────────────────────────
   app.get("/studios/:id", async (request, reply) => {
     const { id } = request.params as { id: string };

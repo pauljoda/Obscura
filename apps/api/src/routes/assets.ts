@@ -3,7 +3,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq } from "drizzle-orm";
-import { getSidecarPaths, getGeneratedSceneDir } from "@obscura/media-core";
+import { getSidecarPaths, getGeneratedSceneDir, getGeneratedPerformerDir } from "@obscura/media-core";
 
 const { scenes } = schema;
 
@@ -118,5 +118,25 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     reply.code(404);
     return { error: "Asset not found" };
+  });
+
+  // ─── Performer assets: /assets/performers/:id/:kind ─────────────
+  app.get("/assets/performers/:id/:kind", async (request, reply) => {
+    const { id, kind } = request.params as { id: string; kind: string };
+
+    if (kind !== "image") {
+      reply.code(404);
+      return { error: "Unknown asset kind" };
+    }
+
+    const imagePath = path.join(getGeneratedPerformerDir(id), "image.jpg");
+    if (existsSync(imagePath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(imagePath));
+    }
+
+    reply.code(404);
+    return { error: "Performer image not found" };
   });
 }
