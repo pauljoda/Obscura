@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { Images, Film } from "lucide-react";
-import { cn } from "@obscura/ui";
+import { MediaCard, cn } from "@obscura/ui";
 import {
   toApiUrl,
   type GalleryListItem,
   type SceneListItem,
 } from "../../lib/api";
+import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import { DASHBOARD_STAT_GRADIENTS, formatIngestStamp } from "./dashboard-utils";
 
 const MERGE_CAP = 11;
@@ -36,6 +37,7 @@ function mergeIngest(
   return rows.slice(0, MERGE_CAP);
 }
 
+/** Same card stack as the scenes gallery grid (MediaCard + trickplay strip). */
 function SceneIngestTile({
   scene,
   gradientClass,
@@ -43,54 +45,34 @@ function SceneIngestTile({
   scene: SceneListItem;
   gradientClass: string;
 }) {
-  const thumb =
-    toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath);
-
   return (
-    <Link
-      href={`/scenes/${scene.id}`}
-      className="group snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-accent-strong focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-    >
-      <div
-        className={cn(
-          "relative aspect-video overflow-hidden rounded-sm border border-border-subtle bg-surface-1 transition-[border-color,box-shadow] duration-normal",
-          "group-hover:border-border-accent group-hover:shadow-[var(--shadow-card-hover)]"
-        )}
+    <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
+      <Link
+        href={`/scenes/${scene.id}`}
+        className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-accent-strong focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
       >
-        <div
-          className={cn(
-            "absolute inset-0 transition-opacity duration-normal",
-            thumb ? "opacity-0 group-hover:opacity-35" : "opacity-100",
-            gradientClass
-          )}
+        <MediaCard
+          title={scene.title}
+          thumbnail={toApiUrl(scene.thumbnailPath)}
+          cardThumbnail={toApiUrl(scene.cardThumbnailPath)}
+          trickplaySprite={toApiUrl(scene.spritePath)}
+          trickplayVtt={toApiUrl(scene.trickplayVttPath)}
+          scrubDurationSeconds={scene.duration ?? undefined}
+          duration={scene.durationFormatted ?? undefined}
+          resolution={scene.resolution ?? undefined}
+          codec={scene.codec ?? undefined}
+          fileSize={scene.fileSizeFormatted ?? undefined}
+          performers={scene.performers.map((p) => p.name)}
+          tags={scene.tags.map((t) => t.name)}
+          tagColors={SCENE_TAG_COLORS}
+          views={scene.playCount}
+          gradientClass={gradientClass}
         />
-        {thumb && (
-          <img
-            src={thumb}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        )}
-        <div className="absolute left-1.5 top-1.5">
-          <span className="glass-chip rounded-sm px-1.5 py-0.5 text-[0.55rem] font-mono font-semibold uppercase tracking-[0.14em] text-white/85 border border-white/10">
-            Motion
-          </span>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--color-overlay-glass)_88%,transparent)] px-2 py-1.5 backdrop-blur-md">
-          <p className="truncate text-[0.78rem] font-medium leading-tight text-text-primary">
-            {scene.title}
-          </p>
-          <p className="text-mono-sm text-text-disabled mt-0.5">
-            {formatIngestStamp(scene.createdAt)}
-            {scene.durationFormatted ? (
-              <span className="text-text-disabled/80"> · {scene.durationFormatted}</span>
-            ) : null}
-          </p>
-        </div>
-      </div>
-    </Link>
+      </Link>
+      <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
+        Added {formatIngestStamp(scene.createdAt)}
+      </p>
+    </div>
   );
 }
 
@@ -150,21 +132,30 @@ function GalleryIngestTile({
 }
 
 function IngestSkeleton() {
+  const slots = [
+    { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
+    { w: "w-[min(52vw,168px)] sm:w-[148px]", aspect: "aspect-[3/4]" },
+    { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
+    { w: "w-[min(52vw,168px)] sm:w-[148px]", aspect: "aspect-[3/4]" },
+  ] as const;
+
   return (
-    <div className="flex gap-2 overflow-hidden">
-      {[
-        "min-w-[240px] aspect-video",
-        "min-w-[148px] aspect-[3/4]",
-        "min-w-[240px] aspect-video",
-        "min-w-[148px] aspect-[3/4]",
-      ].map((cls, i) => (
-        <div
-          key={i}
-          className={cn(
-            "shrink-0 rounded-sm border border-border-subtle bg-surface-2/80 animate-pulse",
-            cls
+    <div className="flex gap-2.5 overflow-hidden">
+      {slots.map((slot, i) => (
+        <div key={i} className={cn("shrink-0 space-y-2", slot.w)}>
+          <div
+            className={cn(
+              "w-full rounded-sm border border-border-subtle bg-surface-2/80 animate-pulse",
+              slot.aspect
+            )}
+          />
+          {slot.aspect === "aspect-video" && (
+            <>
+              <div className="h-3 w-3/4 rounded-xs bg-surface-2/80 animate-pulse" />
+              <div className="h-3 w-1/2 rounded-xs bg-surface-2/80 animate-pulse" />
+            </>
           )}
-        />
+        </div>
       ))}
     </div>
   );

@@ -6,6 +6,7 @@ import { Film, Clock, HardDrive, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ViewMode } from "./filter-bar";
 import { toApiUrl, type SceneListItem } from "../lib/api";
+import { SCENE_TAG_COLORS } from "./scene-tag-colors";
 
 const gradientClasses = [
   "gradient-thumb-1",
@@ -17,34 +18,6 @@ const gradientClasses = [
   "gradient-thumb-7",
   "gradient-thumb-8",
 ];
-
-// Map tag names to color classes for visual variety
-const tagColorMap: Record<string, string> = {
-  Outdoor: "tag-chip-success",
-  Indoor: "tag-chip-default",
-  Interview: "tag-chip-info",
-  BTS: "tag-chip-warning",
-  Solo: "tag-chip-accent",
-  Group: "tag-chip-error",
-  POV: "tag-chip-info",
-  Cinematic: "tag-chip-accent",
-  Ambient: "tag-chip-success",
-  Documentary: "tag-chip-info",
-  "Studio Lit": "tag-chip-warning",
-  "Natural Light": "tag-chip-success",
-  Handheld: "tag-chip-default",
-  Steadicam: "tag-chip-accent",
-  Drone: "tag-chip-info",
-  "Slow Motion": "tag-chip-warning",
-  "Time Lapse": "tag-chip-success",
-  Bondage: "tag-chip-error",
-  Toys: "tag-chip-warning",
-  Massage: "tag-chip-success",
-  Cosplay: "tag-chip-accent",
-  Vintage: "tag-chip-warning",
-  Anal: "tag-chip-error",
-  Oral: "tag-chip-info",
-};
 
 interface SceneGridProps {
   scenes: SceneListItem[];
@@ -106,7 +79,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
             }
             performers={scene.performers.map((p) => p.name)}
             tags={scene.tags.map((t) => t.name)}
-            tagColors={tagColorMap}
+            tagColors={SCENE_TAG_COLORS}
             views={scene.playCount}
             gradientClass={gradientClasses[i % gradientClasses.length]}
           />
@@ -180,7 +153,7 @@ function SceneListItem({
                   key={tag.id}
                   className={cn(
                     "tag-chip",
-                    tagColorMap[tag.name] || "tag-chip-default"
+                    SCENE_TAG_COLORS[tag.name] || "tag-chip-default"
                   )}
                 >
                   {tag.name}

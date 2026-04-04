@@ -12,15 +12,6 @@ export interface DashboardHeroProps {
   queueCount: number;
 }
 
-function useLocalClock(tickMs = 1000) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), tickMs);
-    return () => clearInterval(id);
-  }, [tickMs]);
-  return now;
-}
-
 export function DashboardHero({
   loading,
   sceneCount,
@@ -28,18 +19,35 @@ export function DashboardHero({
   intervalMinutes,
   queueCount,
 }: DashboardHeroProps) {
-  const now = useLocalClock();
-  const timeStr = now.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const dateStr = now.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [mounted]);
+
+  const timeStr = mounted
+    ? now.toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    : "--:--:--";
+  const dateStr = mounted
+    ? now.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
 
   return (
     <section className="relative overflow-hidden rounded-sm border border-border-accent/30 shadow-[var(--shadow-glow-accent)]">
