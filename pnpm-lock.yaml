@@ -154,12 +154,18 @@ importers:
 
   packages/contracts:
     devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
 
   packages/media-core:
     devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
