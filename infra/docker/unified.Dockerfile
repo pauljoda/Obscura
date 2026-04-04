@@ -24,18 +24,20 @@ RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 WORKDIR /app
 
-# Copy all node_modules from deps stage
-# Use a single recursive copy — pnpm hoists most deps to root node_modules
-# and only creates per-package node_modules when needed (some packages have none)
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps ./apps
-COPY --from=deps /app/packages ./packages
-
+# Copy entire deps output — preserves pnpm's symlink structure
+COPY --from=deps /app ./
 COPY . .
 
 # Build web with API URL pointing to the nginx /api proxy
 ENV NEXT_PUBLIC_API_URL=/api
 RUN pnpm turbo run build
+
+# Prepare standalone web in a separate location so it doesn't
+# clobber node_modules when copied into the runner
+RUN mkdir -p /web-standalone && \
+    cp -r apps/web/.next/standalone/apps/web /web-standalone/web && \
+    cp -r apps/web/.next/static /web-standalone/web/.next/static && \
+    cp -r apps/web/public /web-standalone/web/public
 
 # ── Stage 3: Unified production image ────────────────────────────
 FROM node:22-alpine AS runner
@@ -55,24 +57,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# ── Full node_modules and workspace packages ─────────────────────
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/packages ./packages
+# Copy the ENTIRE built workspace — pnpm virtual store and symlinks intact
+COPY --from=builder /app ./
 
-# ── API + Worker source ──────────────────────────────────────────
-COPY --from=builder /app/apps/api ./apps/api
-COPY --from=builder /app/apps/worker ./apps/worker
+# Replace apps/web with the optimized standalone build
+RUN rm -rf apps/web
+COPY --from=builder /web-standalone/web ./apps/web
 
-# ── Web: extract only apps/web/ from standalone (NOT the root) ───
-# The standalone output at .next/standalone/ contains its own node_modules/
-# and package.json at the root. We must NOT copy those — only the web app
-# directory which has server.js and the .next/server/ chunks.
-COPY --from=builder /app/apps/web/.next/standalone/apps/web ./apps/web
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
-
-# ── nginx config and entrypoint ──────────────────────────────────
+# nginx config and entrypoint
 COPY infra/docker/nginx.conf /etc/nginx/nginx.conf
 COPY infra/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
