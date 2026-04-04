@@ -60,10 +60,14 @@ export function MediaCard({
   className,
 }: MediaCardProps) {
   const cardRef = useRef<HTMLElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   const [frames, setFrames] = useState<TrickplayFrame[] | null>(null);
   const [trickplayError, setTrickplayError] = useState(false);
   const [activeFrameIndex, setActiveFrameIndex] = useState<number | null>(null);
   const lastFrameIndexRef = useRef<number | null>(null);
+  const touchScrubbing = useRef(false);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const touchLocked = useRef<"scrub" | "scroll" | null>(null);
 
   const hasScrubPreview =
     Boolean(trickplaySprite && trickplayVtt && scrubDurationSeconds && scrubDurationSeconds > 0) &&
@@ -142,6 +146,53 @@ export function MediaCard({
     setActiveFrameIndex(null);
   }
 
+  // --- Mobile touch scrub handlers ---
+  // On mobile, pointerMove fires but vertical scroll cancels it immediately.
+  // We use raw touch events with a direction-lock: once horizontal movement
+  // exceeds vertical, we lock into scrub mode and preventDefault to stop scroll.
+  const LOCK_THRESHOLD = 8; // px to decide scrub vs scroll
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (!hasScrubPreview) return;
+    const touch = event.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    touchLocked.current = null;
+    touchScrubbing.current = false;
+    void ensureTrickplayLoaded();
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    if (!hasScrubPreview || !touchStartPos.current || !thumbRef.current) return;
+    const touch = event.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+
+    // Decide direction lock if not yet locked
+    if (!touchLocked.current && (dx > LOCK_THRESHOLD || dy > LOCK_THRESHOLD)) {
+      touchLocked.current = dx >= dy ? "scrub" : "scroll";
+    }
+
+    if (touchLocked.current === "scroll") return;
+
+    // Lock into scrub — prevent scroll
+    event.preventDefault();
+    touchScrubbing.current = true;
+
+    const bounds = thumbRef.current.getBoundingClientRect();
+    if (bounds.width === 0) return;
+    updateActiveFrame((touch.clientX - bounds.left) / bounds.width);
+  }
+
+  function handleTouchEnd() {
+    touchStartPos.current = null;
+    touchLocked.current = null;
+    if (touchScrubbing.current) {
+      touchScrubbing.current = false;
+      lastFrameIndexRef.current = null;
+      setActiveFrameIndex(null);
+    }
+  }
+
   return (
     <article
       ref={cardRef}
@@ -155,7 +206,13 @@ export function MediaCard({
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
     >
-      <div className="relative aspect-video overflow-hidden bg-surface-1">
+      <div
+        ref={thumbRef}
+        className="relative aspect-video overflow-hidden bg-surface-1"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {thumbnail ? (
           <img
             src={cardThumbnail || thumbnail}
@@ -243,7 +300,7 @@ export function MediaCard({
               />
             </div>
             <div className="rounded-sm glass-chip px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-white/65">
-              Hover scrub
+              Scrub
             </div>
           </div>
         )}
