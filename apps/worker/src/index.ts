@@ -517,6 +517,13 @@ async function processPreview(job: Job) {
       ? Math.max(180, Math.round((metadata.height / metadata.width) * thumbWidth))
       : 180;
 
+  const cardFile = sidecar.cardThumbnail;
+  const cardWidth = 160;
+  const cardHeight =
+    metadata.width && metadata.height
+      ? Math.max(90, Math.round((metadata.height / metadata.width) * cardWidth))
+      : 90;
+
   await runProcess("ffmpeg", [
     "-hide_banner",
     "-loglevel",
@@ -531,6 +538,24 @@ async function processPreview(job: Job) {
     "-vf",
     `scale=${thumbWidth}:${thumbHeight}`,
     thumbnailFile,
+  ]);
+
+  await runProcess("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-ss",
+    String(thumbnailAt),
+    "-i",
+    scene.filePath,
+    "-frames:v",
+    "1",
+    "-vf",
+    `scale=${cardWidth}:${cardHeight}`,
+    "-q:v",
+    "8",
+    cardFile,
   ]);
   await markJobProgress(job, "preview", 30);
 
@@ -594,6 +619,7 @@ async function processPreview(job: Job) {
     .update(scenes)
     .set({
       thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
+      cardThumbnailPath: sceneAssetUrl(scene.id, "card"),
       previewPath: sceneAssetUrl(scene.id, "preview"),
       spritePath: sceneAssetUrl(scene.id, "sprite"),
       trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),

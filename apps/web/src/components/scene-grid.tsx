@@ -91,6 +91,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
           <MediaCard
             title={scene.title}
             thumbnail={toApiUrl(scene.thumbnailPath)}
+            cardThumbnail={toApiUrl(scene.cardThumbnailPath)}
             trickplaySprite={toApiUrl(scene.spritePath)}
             trickplayVtt={toApiUrl(scene.trickplayVttPath)}
             scrubDurationSeconds={scene.duration ?? undefined}
@@ -134,8 +135,10 @@ function SceneListItem({
         >
           {scene.thumbnailPath && (
             <img
-              src={toApiUrl(scene.thumbnailPath)}
+              src={toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath)}
               alt={scene.title}
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           )}

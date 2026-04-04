@@ -9,12 +9,13 @@ const { scenes } = schema;
 
 const SIDECAR_MIME: Record<string, string> = {
   thumb: "image/jpeg",
+  card: "image/jpeg",
   sprite: "image/jpeg",
   preview: "video/mp4",
   trickplay: "text/vtt",
 };
 
-type SidecarKind = "thumb" | "sprite" | "preview" | "trickplay";
+type SidecarKind = "thumb" | "card" | "sprite" | "preview" | "trickplay";
 
 function isSidecarKind(value: string): value is SidecarKind {
   return value in SIDECAR_MIME;
@@ -54,7 +55,7 @@ export async function assetsRoutes(app: FastifyInstance) {
     if (kind === "thumb-custom") {
       const customPath = path.join(getGeneratedSceneDir(id), "thumbnail-custom.jpg");
       if (existsSync(customPath)) {
-        reply.header("Cache-Control", "public, max-age=300");
+        reply.header("Cache-Control", "public, max-age=86400, immutable");
         reply.header("Content-Type", "image/jpeg");
         return reply.send(createReadStream(customPath));
       }
@@ -83,6 +84,7 @@ export async function assetsRoutes(app: FastifyInstance) {
     const sidecar = getSidecarPaths(scene.filePath);
     const kindToPath: Record<string, string> = {
       thumb: sidecar.thumbnail,
+      card: sidecar.cardThumbnail,
       sprite: sidecar.sprite,
       preview: sidecar.preview,
       trickplay: sidecar.trickplayVtt,
@@ -92,7 +94,7 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     // Try sidecar path first, then fall back to legacy cache dir
     if (existsSync(assetPath)) {
-      reply.header("Cache-Control", "public, max-age=300");
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
       reply.header("Content-Type", SIDECAR_MIME[resolvedKind]);
       return reply.send(createReadStream(assetPath));
     }
@@ -101,6 +103,7 @@ export async function assetsRoutes(app: FastifyInstance) {
     const legacyDir = getGeneratedSceneDir(id);
     const legacyNames: Record<SidecarKind, string> = {
       thumb: "thumbnail.jpg",
+      card: "card.jpg",
       sprite: "sprite.jpg",
       preview: "preview.mp4",
       trickplay: "trickplay.vtt",
@@ -108,7 +111,7 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     const legacyPath = path.join(legacyDir, legacyNames[resolvedKind]);
     if (existsSync(legacyPath)) {
-      reply.header("Cache-Control", "public, max-age=300");
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
       reply.header("Content-Type", mimeForFile(legacyNames[resolvedKind]));
       return reply.send(createReadStream(legacyPath));
     }

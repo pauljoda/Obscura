@@ -169,6 +169,7 @@ export const scenes = pgTable(
 
     // Generated media paths
     thumbnailPath: text("thumbnail_path"),
+    cardThumbnailPath: text("card_thumbnail_path"),
     previewPath: text("preview_path"),
     spritePath: text("sprite_path"),
     trickplayVttPath: text("trickplay_vtt_path"),

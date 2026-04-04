@@ -55,6 +55,7 @@ export interface SceneListItem {
   streamUrl: string | null;
   directStreamUrl: string | null;
   thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
   spritePath: string | null;
   trickplayVttPath: string | null;
   playCount: number;

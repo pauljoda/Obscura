@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Low-resolution card thumbnails (160px, quality-optimized) generated during preview pipeline for fast gallery loading.
+- `loading="lazy"` and `decoding="async"` on all scene gallery thumbnail images.
+- Sprite sheet preloading on hover for snappier trickplay scrub activation.
+- Memoized sprite dimension calculations in MediaCard to reduce re-render cost during scrubbing.
+- 24-hour immutable cache headers on all generated scene assets (thumbnails, sprites, previews, trickplay).
 - Bootstrapped monorepo with pnpm workspaces and turborepo (web, api, worker, packages).
 - Dark Control Room design language with burnished brass accent palette, five-level surface hierarchy, and three-voice typography (Geist, Inter, JetBrains Mono).
 - Scene browsing grid with interactive filter bar, sorting, and responsive card layout.

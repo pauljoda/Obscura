@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
 import { Film, Clock, HardDrive, Eye } from "lucide-react";
@@ -21,6 +21,7 @@ function formatHoverTime(seconds: number) {
 export interface MediaCardProps {
   title: string;
   thumbnail?: string;
+  cardThumbnail?: string;
   trickplaySprite?: string;
   trickplayVtt?: string;
   scrubDurationSeconds?: number;
@@ -42,6 +43,7 @@ export interface MediaCardProps {
 export function MediaCard({
   title,
   thumbnail,
+  cardThumbnail,
   trickplaySprite,
   trickplayVtt,
   scrubDurationSeconds,
@@ -72,12 +74,13 @@ export function MediaCard({
       ? frames[activeFrameIndex]
       : null;
 
-  const spriteWidth = frames
-    ? frames.reduce((max, frame) => Math.max(max, frame.x + frame.width), 0)
-    : 0;
-  const spriteHeight = frames
-    ? frames.reduce((max, frame) => Math.max(max, frame.y + frame.height), 0)
-    : 0;
+  const { spriteWidth, spriteHeight } = useMemo(() => {
+    if (!frames) return { spriteWidth: 0, spriteHeight: 0 };
+    return {
+      spriteWidth: frames.reduce((max, frame) => Math.max(max, frame.x + frame.width), 0),
+      spriteHeight: frames.reduce((max, frame) => Math.max(max, frame.y + frame.height), 0),
+    };
+  }, [frames]);
 
   async function ensureTrickplayLoaded() {
     if (!trickplayVtt || frames || trickplayError) {
@@ -85,6 +88,11 @@ export function MediaCard({
     }
 
     try {
+      // Preload the sprite image in parallel with VTT parsing
+      if (trickplaySprite) {
+        const img = new Image();
+        img.src = trickplaySprite;
+      }
       const nextFrames = await loadTrickplayFrames(trickplayVtt);
       setFrames(nextFrames);
     } catch {
@@ -150,8 +158,10 @@ export function MediaCard({
       <div className="relative aspect-video overflow-hidden bg-surface-1">
         {thumbnail ? (
           <img
-            src={thumbnail}
+            src={cardThumbnail || thumbnail}
             alt={title}
+            loading="lazy"
+            decoding="async"
             className={cn(
               "h-full w-full object-cover transition-transform duration-normal",
               activeFrame ? "scale-[1.01] opacity-0" : "group-hover:scale-[1.03]"
