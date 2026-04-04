@@ -62,7 +62,6 @@ export function DashboardHero({
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <Logo size={48} className="gap-4" textClassName="text-2xl tracking-[0.18em]" />
-              <p className="mt-2 text-xs text-text-muted tracking-wide">Home</p>
             </div>
 
             <div className="flex flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
