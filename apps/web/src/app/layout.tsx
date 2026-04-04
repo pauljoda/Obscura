@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   title: "Obscura",
   description: "Private media browser for personal libraries",
   icons: {
-    icon: "/icon.svg",
+    icon: "/logo.svg",
   },
 };
 
