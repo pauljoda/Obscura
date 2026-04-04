@@ -107,8 +107,14 @@ export interface StudioItem {
 export interface PerformerItem {
   id: string;
   name: string;
-  sceneCount: number;
+  disambiguation: string | null;
+  gender: string | null;
+  imagePath: string | null;
   favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
+  country: string | null;
+  createdAt: string;
 }
 
 export interface TagItem {
@@ -137,11 +143,33 @@ export interface PerformerDetail {
   careerEnd: number | null;
   details: string | null;
   imageUrl: string | null;
+  imagePath: string | null;
   favorite: boolean;
   rating: number | null;
   sceneCount: number;
+  tags: { id: string; name: string }[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NormalizedPerformerScrapeResult {
+  name: string | null;
+  disambiguation: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  country: string | null;
+  ethnicity: string | null;
+  eyeColor: string | null;
+  hairColor: string | null;
+  height: string | null;
+  weight: string | null;
+  measurements: string | null;
+  tattoos: string | null;
+  piercings: string | null;
+  aliases: string | null;
+  details: string | null;
+  imageUrl: string | null;
+  tagNames: string[];
 }
 
 export interface StudioDetail {
@@ -274,8 +302,27 @@ export async function fetchStudios(): Promise<{ studios: StudioItem[] }> {
   return fetchApi("/studios");
 }
 
-export async function fetchPerformers(): Promise<{ performers: PerformerItem[] }> {
-  return fetchApi("/performers");
+export async function fetchPerformers(params?: {
+  search?: string;
+  sort?: string;
+  order?: string;
+  gender?: string;
+  favorite?: string;
+  country?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ performers: PerformerItem[]; total: number; limit: number; offset: number }> {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.sort) sp.set("sort", params.sort);
+  if (params?.order) sp.set("order", params.order);
+  if (params?.gender) sp.set("gender", params.gender);
+  if (params?.favorite) sp.set("favorite", params.favorite);
+  if (params?.country) sp.set("country", params.country);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return fetchApi(`/performers${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchTags(): Promise<{ tags: TagItem[] }> {
@@ -284,6 +331,113 @@ export async function fetchTags(): Promise<{ tags: TagItem[] }> {
 
 export async function fetchPerformerDetail(id: string): Promise<PerformerDetail> {
   return fetchApi(`/performers/${id}`);
+}
+
+export async function createPerformer(
+  data: Partial<PerformerDetail> & { name: string; tagNames?: string[] }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi("/performers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePerformer(
+  id: string,
+  data: Record<string, unknown>
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/performers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePerformer(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/performers/${id}`, { method: "DELETE" });
+}
+
+export async function togglePerformerFavorite(
+  id: string,
+  favorite: boolean
+): Promise<{ ok: true; favorite: boolean }> {
+  return fetchApi(`/performers/${id}/favorite`, {
+    method: "PATCH",
+    body: JSON.stringify({ favorite }),
+  });
+}
+
+export async function setPerformerRating(
+  id: string,
+  rating: number | null
+): Promise<{ ok: true; rating: number | null }> {
+  return fetchApi(`/performers/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
+  });
+}
+
+export async function uploadPerformerImage(
+  id: string,
+  file: File
+): Promise<{ ok: true; imagePath: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/performers/${id}/image`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(message || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function uploadPerformerImageFromUrl(
+  id: string,
+  imageUrl: string
+): Promise<{ ok: true; imagePath: string }> {
+  return fetchApi(`/performers/${id}/image/from-url`, {
+    method: "POST",
+    body: JSON.stringify({ imageUrl }),
+  });
+}
+
+export async function deletePerformerImage(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/performers/${id}/image`, { method: "DELETE" });
+}
+
+export async function scrapePerformerApi(
+  scraperId: string,
+  performerId: string,
+  options?: { action?: string; url?: string; query?: string }
+): Promise<{
+  result?: NormalizedPerformerScrapeResult;
+  results?: NormalizedPerformerScrapeResult[];
+  message?: string;
+  action?: string;
+  triedActions?: string[];
+}> {
+  return fetchApi(`/scrapers/${scraperId}/scrape-performer`, {
+    method: "POST",
+    body: JSON.stringify({
+      performerId,
+      action: options?.action || "auto",
+      url: options?.url,
+      query: options?.query,
+    }),
+  });
+}
+
+export async function applyPerformerScrape(
+  id: string,
+  fields: Record<string, unknown>,
+  selectedFields: string[]
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/performers/${id}/apply-scrape`, {
+    method: "POST",
+    body: JSON.stringify({ fields, selectedFields }),
+  });
 }
 
 export async function fetchStudioDetail(id: string): Promise<StudioDetail> {
