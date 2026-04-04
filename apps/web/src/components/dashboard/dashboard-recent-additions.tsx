@@ -37,7 +37,6 @@ function mergeIngest(
   return rows.slice(0, MERGE_CAP);
 }
 
-/** Same card stack as the scenes gallery grid (MediaCard + trickplay strip). */
 function SceneIngestTile({
   scene,
   gradientClass,
@@ -70,7 +69,7 @@ function SceneIngestTile({
         />
       </Link>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
-        Added {formatIngestStamp(scene.createdAt)}
+        {formatIngestStamp(scene.createdAt)}
       </p>
     </div>
   );
@@ -176,16 +175,8 @@ export function DashboardRecentAdditions({
 
   return (
     <section>
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-kicker">Ingest</p>
-          <h2 className="mt-0.5 text-lg font-semibold tracking-tight font-heading">
-            Recent additions
-          </h2>
-          <p className="text-mono-sm text-text-disabled mt-1 max-w-md leading-relaxed">
-            Motion and stills sorted by when they entered the index — scrub sideways.
-          </p>
-        </div>
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold tracking-tight font-heading">New</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Link
             href="/scenes"
@@ -193,7 +184,7 @@ export function DashboardRecentAdditions({
           >
             <span className="inline-flex items-center gap-1.5">
               <Film className="h-3 w-3 opacity-70" />
-              All video
+              Scenes
             </span>
           </Link>
           <Link
@@ -216,15 +207,12 @@ export function DashboardRecentAdditions({
             <div className="flex h-11 w-11 items-center justify-center rounded-sm border border-border-subtle bg-surface-2 mb-3">
               <Film className="h-5 w-5 text-text-disabled" />
             </div>
-            <p className="text-sm text-text-muted max-w-sm">
-              Nothing new in the index yet. Run a library scan after you point Obscura at a
-              media root.
-            </p>
+            <p className="text-sm text-text-muted">No recent items.</p>
             <Link
               href="/settings"
               className="mt-3 text-xs font-medium text-text-accent hover:text-text-accent-bright transition-colors duration-fast"
             >
-              Library settings →
+              Settings →
             </Link>
           </div>
         ) : (
@@ -252,15 +240,9 @@ export function DashboardRecentAdditions({
             {showStillsSlot && (
               <div className="snap-start shrink-0 flex w-[min(48vw,152px)] sm:w-[136px] flex-col justify-between rounded-sm border border-dashed border-border-default bg-surface-1/40 px-2.5 py-3">
                 <Images className="h-4 w-4 text-text-disabled mb-2" />
-                <div>
-                  <p className="text-[0.72rem] font-medium text-text-secondary leading-snug">
-                    Stills slot
-                  </p>
-                  <p className="text-[0.62rem] text-text-disabled mt-1.5 leading-relaxed">
-                    Folder-based galleries are not in the index yet. They will show up here next
-                    to new video.
-                  </p>
-                </div>
+                <p className="text-[0.68rem] text-text-muted leading-snug">
+                  No stills in index yet.
+                </p>
               </div>
             )}
           </div>

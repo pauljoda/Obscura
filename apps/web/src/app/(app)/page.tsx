@@ -57,8 +57,7 @@ export default function DashboardPage() {
         queueCount={jobs?.queues.length ?? 0}
       />
 
-      <section>
-        <h4 className="text-kicker mb-3">Library</h4>
+      <section aria-label="Library totals">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <DashboardStatTile
             icon={<Film className="h-3.5 w-3.5" />}

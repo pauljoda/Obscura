@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity } from "lucide-react";
 import { cn } from "@obscura/ui";
+import { Logo } from "../logo";
 
 export interface DashboardHeroProps {
   loading: boolean;
@@ -60,25 +60,15 @@ export function DashboardHero({
       <div className="relative border-b border-border-accent/10 bg-surface-2/80 backdrop-blur-xl">
         <div className="px-5 py-6 md:px-8 md:py-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex gap-4 min-w-0">
-              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-sm glass-chip-accent shadow-[var(--shadow-glow-accent)]">
-                <Activity className="h-7 w-7 text-accent-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-kicker text-accent-400/90 mb-1">Overview</p>
-                <h1 className="text-2xl font-semibold tracking-tight md:text-[1.65rem]">
-                  Dashboard
-                </h1>
-                <p className="mt-1.5 max-w-md text-[0.8rem] text-text-muted leading-relaxed">
-                  Quick readout: counts, what just landed, queues, and jobs.
-                </p>
-              </div>
+            <div className="min-w-0">
+              <Logo size={30} className="gap-3" />
+              <p className="mt-2 text-[0.72rem] text-text-muted tracking-wide">Home</p>
             </div>
 
             <div className="flex flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
               <div className="glass-chip rounded-sm px-4 py-3 text-right min-w-[200px] border border-white/5">
                 <p className="text-mono-sm text-text-disabled uppercase tracking-widest">
-                  Local time
+                  Time
                 </p>
                 <p className="text-mono-tabular text-lg text-text-primary mt-0.5 tabular-nums">
                   {timeStr}
@@ -87,7 +77,7 @@ export function DashboardHero({
               </div>
               <div className="flex flex-wrap gap-2 justify-end">
                 <span className="glass-chip rounded-sm px-2.5 py-1 text-[0.65rem] font-medium text-text-muted border border-white/5">
-                  {loading ? "…" : `${sceneCount ?? 0} scenes indexed`}
+                  {loading ? "…" : `${sceneCount ?? 0} scenes`}
                 </span>
                 <span
                   className={cn(
@@ -97,7 +87,7 @@ export function DashboardHero({
                       : "glass-chip text-text-muted border-white/5"
                   )}
                 >
-                  Auto scan {scheduleEnabled ? `· ${intervalMinutes}m` : "off"}
+                  Scan {scheduleEnabled ? `${intervalMinutes}m` : "off"}
                 </span>
                 <span className="glass-chip rounded-sm px-2.5 py-1 text-[0.65rem] font-mono text-text-muted border border-white/5">
                   {queueCount} queue{queueCount !== 1 ? "s" : ""}

@@ -62,8 +62,7 @@ const NAV_ITEMS: {
 
 export function DashboardQuickNav({ sceneCount }: { sceneCount?: number }) {
   return (
-    <section>
-      <h4 className="text-kicker mb-3">Browse</h4>
+    <section aria-label="Library sections">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
         {NAV_ITEMS.map((tile, i) => (
           <NavTile

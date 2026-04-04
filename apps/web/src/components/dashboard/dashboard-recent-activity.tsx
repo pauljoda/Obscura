@@ -62,12 +62,12 @@ export function DashboardRecentActivity({
   return (
     <section>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h4 className="text-kicker">Recent activity</h4>
+        <h2 className="text-lg font-semibold tracking-tight font-heading">Jobs</h2>
         <Link
           href="/jobs"
           className="text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast font-medium"
         >
-          All jobs →
+          All →
         </Link>
       </div>
 
@@ -84,14 +84,12 @@ export function DashboardRecentActivity({
       ) : (
         <div className="surface-card-sharp no-lift flex flex-col items-center justify-center p-10 text-center">
           <Clock className="h-9 w-9 text-text-disabled mb-2 opacity-80" />
-          <p className="text-text-muted text-sm max-w-sm">
-            Activity will appear here once the library is configured and scanned.
-          </p>
+          <p className="text-text-muted text-sm">No jobs yet.</p>
           <Link
             href="/settings"
             className="mt-3 text-text-accent text-xs font-medium hover:text-text-accent-bright transition-colors duration-fast"
           >
-            Configure library →
+            Settings →
           </Link>
         </div>
       )}

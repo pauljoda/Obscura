@@ -81,10 +81,8 @@ export function DashboardQueueRack({ queues }: { queues: QueueSummaryDto[] }) {
   return (
     <section>
       <div className="flex items-end justify-between gap-3 mb-3">
-        <h4 className="text-kicker">Queues</h4>
-        <span className="text-mono-sm text-text-disabled">
-          {queues.length} worker lane{queues.length !== 1 ? "s" : ""}
-        </span>
+        <h2 className="text-lg font-semibold tracking-tight font-heading">Queues</h2>
+        <span className="text-mono-sm text-text-disabled">{queues.length}</span>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden md:flex-wrap md:overflow-visible">
         {queues.map((queue, i) => (
