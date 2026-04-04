@@ -1,0 +1,671 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  X,
+  Wand2,
+  Star,
+  Upload,
+  Image as ImageIcon,
+  Check,
+  ChevronDown,
+} from "lucide-react";
+import Link from "next/link";
+import { cn } from "@obscura/ui";
+import {
+  fetchPerformerDetail,
+  updatePerformer,
+  fetchInstalledScrapers,
+  fetchTags,
+  scrapePerformerApi,
+  applyPerformerScrape,
+  uploadPerformerImage,
+  uploadPerformerImageFromUrl,
+  deletePerformerImage,
+  toApiUrl,
+  type PerformerDetail,
+  type ScraperPackage,
+  type NormalizedPerformerScrapeResult,
+  type TagItem,
+} from "../lib/api";
+
+interface PerformerEditProps {
+  id: string;
+  onSaved?: () => void;
+  onCancel?: () => void;
+}
+
+const genderOptions = [
+  "",
+  "Female",
+  "Male",
+  "Transgender Female",
+  "Transgender Male",
+  "Intersex",
+  "Non-Binary",
+];
+
+export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
+  const [performer, setPerformer] = useState<PerformerDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Form state
+  const [name, setName] = useState("");
+  const [disambiguation, setDisambiguation] = useState("");
+  const [aliases, setAliases] = useState("");
+  const [gender, setGender] = useState("");
+  const [birthdate, setBirthdate] = useState("");
+  const [country, setCountry] = useState("");
+  const [ethnicity, setEthnicity] = useState("");
+  const [eyeColor, setEyeColor] = useState("");
+  const [hairColor, setHairColor] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [measurements, setMeasurements] = useState("");
+  const [tattoos, setTattoos] = useState("");
+  const [piercings, setPiercings] = useState("");
+  const [careerStart, setCareerStart] = useState("");
+  const [careerEnd, setCareerEnd] = useState("");
+  const [details, setDetails] = useState("");
+  const [tagNames, setTagNames] = useState<string[]>([]);
+
+  // Scraper state
+  const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
+  const [selectedScraper, setSelectedScraper] = useState("");
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<NormalizedPerformerScrapeResult | null>(null);
+  const [selectedScrapeFields, setSelectedScrapeFields] = useState<Set<string>>(new Set());
+
+  // Image upload
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Tags
+  const [allTags, setAllTags] = useState<TagItem[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetchPerformerDetail(id),
+      fetchInstalledScrapers(),
+      fetchTags(),
+    ]).then(([p, s, t]) => {
+      setPerformer(p);
+      // Initialize form
+      setName(p.name);
+      setDisambiguation(p.disambiguation ?? "");
+      setAliases(p.aliases ?? "");
+      setGender(p.gender ?? "");
+      setBirthdate(p.birthdate ?? "");
+      setCountry(p.country ?? "");
+      setEthnicity(p.ethnicity ?? "");
+      setEyeColor(p.eyeColor ?? "");
+      setHairColor(p.hairColor ?? "");
+      setHeight(p.height != null ? String(p.height) : "");
+      setWeight(p.weight != null ? String(p.weight) : "");
+      setMeasurements(p.measurements ?? "");
+      setTattoos(p.tattoos ?? "");
+      setPiercings(p.piercings ?? "");
+      setCareerStart(p.careerStart != null ? String(p.careerStart) : "");
+      setCareerEnd(p.careerEnd != null ? String(p.careerEnd) : "");
+      setDetails(p.details ?? "");
+      setTagNames(p.tags?.map((t) => t.name) ?? []);
+
+      // Filter scrapers with performer capabilities
+      const perfScrapers = s.packages.filter((pkg) => {
+        const caps = pkg.capabilities as Record<string, boolean> | null;
+        return caps && (caps.performerByURL || caps.performerByName || caps.performerByFragment);
+      });
+      setScrapers(perfScrapers);
+      if (perfScrapers.length > 0) setSelectedScraper(perfScrapers[0].id);
+
+      setAllTags(t.tags);
+      setLoading(false);
+    }).catch((err) => {
+      setError(err.message);
+      setLoading(false);
+    });
+  }, [id]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updatePerformer(id, {
+        name: name.trim(),
+        disambiguation: disambiguation.trim() || null,
+        aliases: aliases.trim() || null,
+        gender: gender || null,
+        birthdate: birthdate.trim() || null,
+        country: country.trim() || null,
+        ethnicity: ethnicity.trim() || null,
+        eyeColor: eyeColor.trim() || null,
+        hairColor: hairColor.trim() || null,
+        height: height ? parseInt(height, 10) || null : null,
+        weight: weight ? parseInt(weight, 10) || null : null,
+        measurements: measurements.trim() || null,
+        tattoos: tattoos.trim() || null,
+        piercings: piercings.trim() || null,
+        careerStart: careerStart ? parseInt(careerStart, 10) || null : null,
+        careerEnd: careerEnd ? parseInt(careerEnd, 10) || null : null,
+        details: details.trim() || null,
+        tagNames,
+      });
+      setMessage("Changes saved");
+      onSaved?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleScrape() {
+    if (!selectedScraper) return;
+    setScraping(true);
+    setError(null);
+    setScrapeResult(null);
+    try {
+      const res = await scrapePerformerApi(selectedScraper, id);
+      if (res.result) {
+        setScrapeResult(res.result);
+        // Pre-select all non-null fields
+        const fields = new Set<string>();
+        for (const [key, value] of Object.entries(res.result)) {
+          if (value != null && value !== "" && key !== "tagNames") {
+            fields.add(key);
+          }
+        }
+        if (res.result.tagNames?.length) fields.add("tagNames");
+        setSelectedScrapeFields(fields);
+      } else if (res.results && res.results.length > 0) {
+        setScrapeResult(res.results[0]);
+        const fields = new Set<string>();
+        for (const [key, value] of Object.entries(res.results[0])) {
+          if (value != null && value !== "" && key !== "tagNames") fields.add(key);
+        }
+        if (res.results[0].tagNames?.length) fields.add("tagNames");
+        setSelectedScrapeFields(fields);
+      } else {
+        setError("Scraper returned no results");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Scrape failed");
+    } finally {
+      setScraping(false);
+    }
+  }
+
+  async function handleApplyScrape() {
+    if (!scrapeResult) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await applyPerformerScrape(
+        id,
+        scrapeResult as unknown as Record<string, unknown>,
+        Array.from(selectedScrapeFields)
+      );
+      // Refresh the performer data
+      const updated = await fetchPerformerDetail(id);
+      setPerformer(updated);
+      // Re-populate form
+      setName(updated.name);
+      setDisambiguation(updated.disambiguation ?? "");
+      setAliases(updated.aliases ?? "");
+      setGender(updated.gender ?? "");
+      setBirthdate(updated.birthdate ?? "");
+      setCountry(updated.country ?? "");
+      setEthnicity(updated.ethnicity ?? "");
+      setEyeColor(updated.eyeColor ?? "");
+      setHairColor(updated.hairColor ?? "");
+      setHeight(updated.height != null ? String(updated.height) : "");
+      setWeight(updated.weight != null ? String(updated.weight) : "");
+      setMeasurements(updated.measurements ?? "");
+      setTattoos(updated.tattoos ?? "");
+      setPiercings(updated.piercings ?? "");
+      setCareerStart(updated.careerStart != null ? String(updated.careerStart) : "");
+      setCareerEnd(updated.careerEnd != null ? String(updated.careerEnd) : "");
+      setDetails(updated.details ?? "");
+      setTagNames(updated.tags?.map((t) => t.name) ?? []);
+
+      setScrapeResult(null);
+      setMessage("Scrape result applied");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to apply scrape");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleImageUpload(file: File) {
+    setUploadingImage(true);
+    setError(null);
+    try {
+      await uploadPerformerImage(id, file);
+      const updated = await fetchPerformerDetail(id);
+      setPerformer(updated);
+      setMessage("Image updated");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function handleDeleteImage() {
+    setUploadingImage(true);
+    setError(null);
+    try {
+      await deletePerformerImage(id);
+      const updated = await fetchPerformerDetail(id);
+      setPerformer(updated);
+      setMessage("Image removed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove image");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  function toggleScrapeField(field: string) {
+    setSelectedScrapeFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      return next;
+    });
+  }
+
+  function addTag(tagName: string) {
+    const trimmed = tagName.trim();
+    if (!trimmed) return;
+    if (!tagNames.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+      setTagNames([...tagNames, trimmed]);
+    }
+    setTagInput("");
+    setShowTagDropdown(false);
+  }
+
+  function removeTag(index: number) {
+    setTagNames(tagNames.filter((_, i) => i !== index));
+  }
+
+  const availableTags = allTags.filter(
+    (t) => !tagNames.some((tn) => tn.toLowerCase() === t.name.toLowerCase())
+  );
+  const filteredTags = tagInput.trim()
+    ? availableTags.filter((t) => t.name.toLowerCase().includes(tagInput.toLowerCase()))
+    : availableTags;
+
+  if (loading) {
+    return (
+      <div className="surface-well p-16 flex items-center justify-center">
+        <Loader2 className="h-7 w-7 text-text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  const imageUrl = performer ? toApiUrl(performer.imagePath) : undefined;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onCancel}
+            className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </button>
+          <h1 className="text-lg font-heading font-semibold">Edit Performer</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 text-xs text-text-muted hover:text-text-primary transition-colors duration-fast"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !name.trim()}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+              "bg-accent-950 text-text-accent border border-border-accent",
+              "hover:bg-accent-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            Save
+          </button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      {error && (
+        <div className="surface-well border-l-2 border-status-error px-3 py-2 text-sm text-status-error">
+          {error}
+        </div>
+      )}
+      {message && (
+        <div className="surface-well border-l-2 border-status-success px-3 py-2 text-sm text-status-success">
+          {message}
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left column — image */}
+        <div className="flex-shrink-0 lg:w-72 space-y-3">
+          {/* Portrait image */}
+          <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-surface-3">
+            {imageUrl ? (
+              <img src={imageUrl} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <ImageIcon className="h-12 w-12 text-text-disabled/30" />
+              </div>
+            )}
+          </div>
+
+          {/* Image actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              disabled={uploadingImage}
+              className="flex-1 flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast"
+            >
+              {uploadingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              Upload
+            </button>
+            {imageUrl && (
+              <button
+                onClick={handleDeleteImage}
+                disabled={uploadingImage}
+                className="flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-status-error transition-colors duration-fast"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageUpload(file);
+              e.target.value = "";
+            }}
+          />
+
+          {/* Scraper panel */}
+          {scrapers.length > 0 && (
+            <div className="surface-well p-3 space-y-2">
+              <div className="text-kicker">Scrape Metadata</div>
+              <select
+                value={selectedScraper}
+                onChange={(e) => setSelectedScraper(e.target.value)}
+                className="control-input w-full py-1.5 text-xs"
+              >
+                {scrapers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleScrape}
+                disabled={scraping || !selectedScraper}
+                className={cn(
+                  "w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                  "bg-accent-950 text-text-accent border border-border-accent",
+                  "hover:bg-accent-900 disabled:opacity-50"
+                )}
+              >
+                {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                {scraping ? "Scraping..." : "Scrape"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right column — form fields */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Scrape result preview */}
+          {scrapeResult && (
+            <div className="surface-well p-4 border-l-2 border-border-accent space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-kicker text-text-accent">Scrape Result</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setScrapeResult(null)}
+                    className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                  <button
+                    onClick={handleApplyScrape}
+                    disabled={saving || selectedScrapeFields.size === 0}
+                    className={cn(
+                      "flex items-center gap-1 px-3 py-1 rounded text-xs transition-all duration-fast",
+                      "bg-accent-950 text-text-accent border border-border-accent",
+                      "hover:bg-accent-900 disabled:opacity-50"
+                    )}
+                  >
+                    <Check className="h-3 w-3" />
+                    Apply Selected
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Object.entries(scrapeResult).map(([key, value]) => {
+                  if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
+                  const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
+                  if (key === "imageUrl" && typeof value === "string" && value.startsWith("http")) {
+                    return (
+                      <div key={key} className="col-span-full flex items-start gap-2">
+                        <button
+                          onClick={() => toggleScrapeField(key)}
+                          className={cn(
+                            "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
+                            selectedScrapeFields.has(key)
+                              ? "bg-accent-800 border-border-accent"
+                              : "border-border-subtle"
+                          )}
+                        >
+                          {selectedScrapeFields.has(key) && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                        </button>
+                        <div className="min-w-0">
+                          <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider">{formatFieldName(key)}</div>
+                          <div className="mt-1 w-20 h-28 rounded overflow-hidden bg-surface-3">
+                            <img src={value} alt="Scraped" className="w-full h-full object-cover" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={key} className="flex items-start gap-2">
+                      <button
+                        onClick={() => toggleScrapeField(key)}
+                        className={cn(
+                          "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
+                          selectedScrapeFields.has(key)
+                            ? "bg-accent-800 border-border-accent"
+                            : "border-border-subtle"
+                        )}
+                      >
+                        {selectedScrapeFields.has(key) && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                      </button>
+                      <div className="min-w-0">
+                        <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider">{formatFieldName(key)}</div>
+                        <div className="text-xs text-text-secondary truncate">{displayValue}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Form fields */}
+          <div className="surface-well p-4 space-y-4">
+            <div className="text-kicker mb-1">Basic Info</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FieldInput label="Name" value={name} onChange={setName} required />
+              <FieldInput label="Disambiguation" value={disambiguation} onChange={setDisambiguation} />
+              <FieldInput label="Aliases" value={aliases} onChange={setAliases} className="col-span-full" placeholder="Comma-separated" />
+              <div>
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Gender</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="control-input w-full py-1.5 text-sm"
+                >
+                  {genderOptions.map((g) => (
+                    <option key={g} value={g}>{g || "Not specified"}</option>
+                  ))}
+                </select>
+              </div>
+              <FieldInput label="Country" value={country} onChange={setCountry} />
+            </div>
+          </div>
+
+          <div className="surface-well p-4 space-y-4">
+            <div className="text-kicker mb-1">Physical Details</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FieldInput label="Birthdate" value={birthdate} onChange={setBirthdate} placeholder="YYYY-MM-DD" />
+              <FieldInput label="Ethnicity" value={ethnicity} onChange={setEthnicity} />
+              <FieldInput label="Height (cm)" value={height} onChange={setHeight} type="number" />
+              <FieldInput label="Weight (lbs)" value={weight} onChange={setWeight} type="number" />
+              <FieldInput label="Measurements" value={measurements} onChange={setMeasurements} />
+              <FieldInput label="Eye Color" value={eyeColor} onChange={setEyeColor} />
+              <FieldInput label="Hair Color" value={hairColor} onChange={setHairColor} />
+            </div>
+          </div>
+
+          <div className="surface-well p-4 space-y-4">
+            <div className="text-kicker mb-1">Career & Body Art</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FieldInput label="Career Start" value={careerStart} onChange={setCareerStart} type="number" placeholder="Year" />
+              <FieldInput label="Career End" value={careerEnd} onChange={setCareerEnd} type="number" placeholder="Year" />
+              <FieldInput label="Tattoos" value={tattoos} onChange={setTattoos} className="col-span-full" />
+              <FieldInput label="Piercings" value={piercings} onChange={setPiercings} className="col-span-full" />
+            </div>
+          </div>
+
+          <div className="surface-well p-4 space-y-3">
+            <div className="text-kicker mb-1">Tags</div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {tagNames.map((tag, i) => (
+                <span key={tag} className="inline-flex items-center gap-1 tag-chip tag-chip-default">
+                  {tag}
+                  <button onClick={() => removeTag(i)} className="text-text-disabled hover:text-text-primary">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => {
+                  setTagInput(e.target.value);
+                  setShowTagDropdown(true);
+                }}
+                onFocus={() => setShowTagDropdown(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && tagInput.trim()) {
+                    e.preventDefault();
+                    addTag(tagInput);
+                  }
+                }}
+                placeholder="Add tag..."
+                className="control-input w-full py-1.5 text-sm"
+              />
+              {showTagDropdown && filteredTags.length > 0 && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowTagDropdown(false)} />
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 surface-elevated max-h-40 overflow-y-auto py-1">
+                    {filteredTags.slice(0, 20).map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => addTag(tag.name)}
+                        className="w-full px-3 py-1.5 text-xs text-left text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+                      >
+                        {tag.name}
+                        <span className="ml-2 text-text-disabled">{tag.sceneCount}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="surface-well p-4 space-y-3">
+            <div className="text-kicker mb-1">Biography</div>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              rows={4}
+              className="control-input w-full py-2 text-sm resize-y"
+              placeholder="Performer biography..."
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldInput({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  required,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">
+        {label}
+        {required && <span className="text-status-error ml-0.5">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="control-input w-full py-1.5 text-sm"
+      />
+    </div>
+  );
+}
+
+function formatFieldName(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
+}
