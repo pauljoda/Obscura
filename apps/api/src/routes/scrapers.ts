@@ -10,11 +10,16 @@ import { getCacheRootDir } from "@obscura/media-core";
 import {
   parseScraperYaml,
   scrapeScene,
+  scrapePerformer,
   normalizeSceneResult,
+  normalizePerformerResult,
   ScraperExecutionError,
   type ScraperSceneFragment,
+  type ScraperPerformerFragment,
   type StashScrapedScene,
+  type StashScrapedPerformer,
 } from "@obscura/stash-import";
+import { getGeneratedPerformerDir } from "@obscura/media-core";
 import yaml from "js-yaml";
 
 const {
@@ -490,6 +495,228 @@ export async function scrapersRoutes(app: FastifyInstance) {
     };
   });
 
+  // ─── POST /scrapers/:id/scrape-performer ────────────────────────
+  // Run a scraper against a performer (synchronous, interactive)
+  app.post("/scrapers/:id/scrape-performer", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      performerId: string;
+      action?: string;
+      url?: string;
+      query?: string;
+    };
+
+    if (!body.performerId) {
+      return reply.code(400).send({ error: "performerId is required" });
+    }
+
+    const [pkg] = await db
+      .select()
+      .from(scraperPackages)
+      .where(eq(scraperPackages.id, id))
+      .limit(1);
+
+    if (!pkg) {
+      return reply.code(404).send({ error: "Scraper package not found" });
+    }
+
+    if (!pkg.enabled) {
+      return reply.code(400).send({ error: "Scraper is disabled" });
+    }
+
+    const [performer] = await db
+      .select({
+        id: performers.id,
+        name: performers.name,
+      })
+      .from(performers)
+      .where(eq(performers.id, body.performerId))
+      .limit(1);
+
+    if (!performer) {
+      return reply.code(404).send({ error: "Performer not found" });
+    }
+
+    // Find the YAML definition
+    const files = await readdir(pkg.installPath);
+    const ymlFile = files.find((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+    if (!ymlFile) {
+      return reply.code(500).send({ error: "Scraper YAML definition not found" });
+    }
+
+    const yamlPath = path.join(pkg.installPath, ymlFile);
+    const { definition, capabilities } = await parseScraperYaml(yamlPath);
+
+    type PerformerAction = "performerByURL" | "performerByName" | "performerByFragment";
+    const explicitAction = body.action && body.action !== "auto" ? body.action as PerformerAction : null;
+
+    const actionsToTry: PerformerAction[] = [];
+    if (explicitAction) {
+      actionsToTry.push(explicitAction);
+    } else {
+      if (body.url && capabilities.performerByURL) {
+        actionsToTry.push("performerByURL");
+      }
+      if ((body.query || performer.name) && capabilities.performerByName) {
+        actionsToTry.push("performerByName");
+      }
+      if (capabilities.performerByFragment) {
+        actionsToTry.push("performerByFragment");
+      }
+    }
+
+    if (actionsToTry.length === 0) {
+      return reply.code(400).send({
+        error: "No compatible performer scrape actions available for this scraper.",
+        triedActions: [],
+      });
+    }
+
+    function buildInput(action: PerformerAction): ScraperPerformerFragment | { name: string } {
+      if (action === "performerByURL") {
+        return { url: body.url || "" };
+      } else if (action === "performerByName") {
+        return { name: body.query || performer.name || "" };
+      } else {
+        return { name: performer.name ?? "" };
+      }
+    }
+
+    const triedActions: string[] = [];
+    const errors: string[] = [];
+
+    for (const action of actionsToTry) {
+      triedActions.push(action);
+      const input = buildInput(action);
+
+      try {
+        const rawResult = await scrapePerformer(
+          yamlPath,
+          definition,
+          action,
+          input,
+          { scrapersRootDir: getScrapersDir() }
+        );
+
+        if (!rawResult) {
+          errors.push(`${action}: no results`);
+          continue;
+        }
+
+        // For performerByName, return array of search results
+        if (Array.isArray(rawResult)) {
+          return {
+            results: rawResult.map((r) => normalizePerformerResult(r)),
+            rawResults: rawResult,
+            action,
+            triedActions,
+          };
+        }
+
+        const normalized = normalizePerformerResult(rawResult);
+        return { result: normalized, rawResult, action, triedActions };
+      } catch (err) {
+        if (err instanceof ScraperExecutionError) {
+          errors.push(`${action}: ${err.message}`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    return {
+      result: null,
+      message: `No results found. Tried: ${triedActions.join(" → ")}`,
+      triedActions,
+      errors,
+    };
+  });
+
+  // ─── POST /performers/:id/apply-scrape ─────────────────────────
+  // Apply a performer scrape result to the performer record
+  app.post("/performers/:id/apply-scrape", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      fields: Record<string, unknown>;
+      selectedFields: string[];
+    };
+
+    const existing = await db.query.performers.findFirst({
+      where: eq(performers.id, id),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      return reply.code(404).send({ error: "Performer not found" });
+    }
+
+    const selected = new Set(body.selectedFields);
+    const updates: Record<string, any> = { updatedAt: new Date() };
+
+    const fieldMap: Record<string, string> = {
+      name: "name",
+      disambiguation: "disambiguation",
+      gender: "gender",
+      birthdate: "birthdate",
+      country: "country",
+      ethnicity: "ethnicity",
+      eyeColor: "eyeColor",
+      hairColor: "hairColor",
+      height: "height",
+      weight: "weight",
+      measurements: "measurements",
+      tattoos: "tattoos",
+      piercings: "piercings",
+      aliases: "aliases",
+      details: "details",
+    };
+
+    for (const [scraperField, dbField] of Object.entries(fieldMap)) {
+      if (selected.has(scraperField) && body.fields[scraperField] != null) {
+        let value: unknown = body.fields[scraperField];
+        // Parse numeric fields
+        if (dbField === "height" || dbField === "weight") {
+          const num = parseInt(String(value), 10);
+          value = Number.isFinite(num) ? num : null;
+        }
+        updates[dbField] = value;
+      }
+    }
+
+    await db.update(performers).set(updates).where(eq(performers.id, id));
+
+    // Handle image download if selected
+    if (selected.has("imageUrl") && body.fields.imageUrl) {
+      const imageUrl = String(body.fields.imageUrl);
+      try {
+        let buffer: Buffer;
+        if (imageUrl.startsWith("data:image/")) {
+          const base64Data = imageUrl.split(",")[1];
+          if (base64Data) buffer = Buffer.from(base64Data, "base64");
+          else throw new Error("Invalid data URL");
+        } else {
+          const res = await fetch(imageUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          buffer = Buffer.from(await res.arrayBuffer());
+        }
+
+        const genDir = getGeneratedPerformerDir(id);
+        await mkdir(genDir, { recursive: true });
+        await writeFile(path.join(genDir, "image.jpg"), buffer);
+
+        const assetUrl = `/assets/performers/${id}/image`;
+        await db
+          .update(performers)
+          .set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() })
+          .where(eq(performers.id, id));
+      } catch {
+        // Image download failed — non-fatal, other fields still applied
+      }
+    }
+
+    return { ok: true, id };
+  });
+
   // ─── GET /scrapers/results ──────────────────────────────────────
   // List scrape results (tagger queue)
   app.get("/scrapers/results", async (request) => {
@@ -610,21 +837,87 @@ export async function scrapersRoutes(app: FastifyInstance) {
         .set(sceneUpdate)
         .where(eq(scenes.id, result.sceneId));
 
-      // Performers: find or create, then link
+      // Performers: find or create, then link — also apply scraped metadata
       if (fieldsToApply.has("performers") && result.proposedPerformerNames?.length) {
+        // Build a lookup of raw performer data from the scrape result
+        const rawScene = result.rawResult as StashScrapedScene | null;
+        const rawPerformers = (rawScene?.performers ?? []) as StashScrapedPerformer[];
+        const rawByName = new Map<string, StashScrapedPerformer>();
+        for (const rp of rawPerformers) {
+          if (rp.name) rawByName.set(rp.name.toLowerCase(), rp);
+        }
+
         for (const name of result.proposedPerformerNames) {
           const [existing] = await tx
-            .select({ id: performers.id })
+            .select({ id: performers.id, gender: performers.gender, imagePath: performers.imagePath })
             .from(performers)
             .where(ilike(performers.name, name))
             .limit(1);
 
+          const isNew = !existing;
           const performerId = existing?.id ?? (
             await tx
               .insert(performers)
               .values({ name })
               .returning({ id: performers.id })
           )[0].id;
+
+          // Apply rich metadata from scraper if performer is new or sparse
+          const rawPerf = rawByName.get(name.toLowerCase());
+          if (rawPerf && (isNew || !existing?.gender)) {
+            const normalized = normalizePerformerResult(rawPerf);
+            const perfUpdates: Record<string, any> = { updatedAt: new Date() };
+            if (normalized.gender) perfUpdates.gender = normalized.gender;
+            if (normalized.birthdate) perfUpdates.birthdate = normalized.birthdate;
+            if (normalized.country) perfUpdates.country = normalized.country;
+            if (normalized.ethnicity) perfUpdates.ethnicity = normalized.ethnicity;
+            if (normalized.eyeColor) perfUpdates.eyeColor = normalized.eyeColor;
+            if (normalized.hairColor) perfUpdates.hairColor = normalized.hairColor;
+            if (normalized.measurements) perfUpdates.measurements = normalized.measurements;
+            if (normalized.tattoos) perfUpdates.tattoos = normalized.tattoos;
+            if (normalized.piercings) perfUpdates.piercings = normalized.piercings;
+            if (normalized.aliases) perfUpdates.aliases = normalized.aliases;
+            if (normalized.details) perfUpdates.details = normalized.details;
+            if (normalized.disambiguation) perfUpdates.disambiguation = normalized.disambiguation;
+            if (normalized.height) {
+              const h = parseInt(normalized.height, 10);
+              if (Number.isFinite(h)) perfUpdates.height = h;
+            }
+            if (normalized.weight) {
+              const w = parseInt(normalized.weight, 10);
+              if (Number.isFinite(w)) perfUpdates.weight = w;
+            }
+
+            if (Object.keys(perfUpdates).length > 1) {
+              await tx.update(performers).set(perfUpdates).where(eq(performers.id, performerId));
+            }
+
+            // Download performer image if available and not already set
+            if (normalized.imageUrl && (isNew || !existing?.imagePath)) {
+              try {
+                let buffer: Buffer;
+                if (normalized.imageUrl.startsWith("data:image/")) {
+                  const b64 = normalized.imageUrl.split(",")[1];
+                  if (b64) buffer = Buffer.from(b64, "base64");
+                  else throw new Error("bad data url");
+                } else {
+                  const imgRes = await fetch(normalized.imageUrl);
+                  if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
+                  buffer = Buffer.from(await imgRes.arrayBuffer());
+                }
+                const genDir = getGeneratedPerformerDir(performerId);
+                await mkdir(genDir, { recursive: true });
+                await writeFile(path.join(genDir, "image.jpg"), buffer);
+                const assetUrl = `/assets/performers/${performerId}/image`;
+                await tx
+                  .update(performers)
+                  .set({ imagePath: assetUrl, imageUrl: normalized.imageUrl, updatedAt: new Date() })
+                  .where(eq(performers.id, performerId));
+              } catch {
+                // Image download failed — non-fatal
+              }
+            }
+          }
 
           await tx
             .insert(scenePerformers)
