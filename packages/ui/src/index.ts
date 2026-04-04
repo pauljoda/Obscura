@@ -26,6 +26,13 @@ export { MediaCard, type MediaCardProps } from "./composed/media-card";
 // Navigation sections for the app shell sidebar
 export const appShellSections = [
   {
+    id: "overview",
+    kicker: "Overview",
+    items: [
+      { label: "Dashboard", href: "/", icon: "layout-dashboard" },
+    ],
+  },
+  {
     id: "browse",
     kicker: "Browse",
     items: [

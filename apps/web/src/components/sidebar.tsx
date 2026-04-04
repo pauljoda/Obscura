@@ -12,6 +12,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +21,7 @@ import { appShellSections } from "@obscura/ui";
 import { Logo, LogoMark } from "./logo";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  "layout-dashboard": LayoutDashboard,
   film: Film,
   images: Images,
   users: Users,
@@ -51,11 +53,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo + collapse toggle */}
       <div className="flex h-14 items-center justify-between px-3 border-b border-border-subtle">
-        {collapsed ? (
-          <LogoMark size={24} />
-        ) : (
-          <Logo size={24} />
-        )}
+        <Link href="/" aria-label="Dashboard">
+          {collapsed ? (
+            <LogoMark size={24} />
+          ) : (
+            <Logo size={24} />
+          )}
+        </Link>
         <button
           onClick={onToggle}
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
@@ -83,7 +87,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 const href = item.href as string;
                 const isActive =
                   pathname === href ||
-                  pathname.startsWith(href + "/");
+                  (href !== "/" && pathname.startsWith(href + "/"));
 
                 return (
                   <li key={item.href}>
