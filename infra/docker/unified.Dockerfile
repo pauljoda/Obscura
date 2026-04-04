@@ -55,21 +55,22 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# ── Web: copy Next.js standalone output FIRST ────────────────────
-# Standalone includes a minimal node_modules and package.json that will
-# be overwritten by the full copies below
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
-
-# ── API + Worker: overlay full source and dependencies ───────────
-# These COPY commands run after standalone so the full node_modules
-# and package.json overwrite the standalone's minimal versions
+# ── Full node_modules and workspace packages ─────────────────────
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/packages ./packages
+
+# ── API + Worker source ──────────────────────────────────────────
 COPY --from=builder /app/apps/api ./apps/api
 COPY --from=builder /app/apps/worker ./apps/worker
-COPY --from=builder /app/packages ./packages
+
+# ── Web: extract only apps/web/ from standalone (NOT the root) ───
+# The standalone output at .next/standalone/ contains its own node_modules/
+# and package.json at the root. We must NOT copy those — only the web app
+# directory which has server.js and the .next/server/ chunks.
+COPY --from=builder /app/apps/web/.next/standalone/apps/web ./apps/web
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # ── nginx config and entrypoint ──────────────────────────────────
 COPY infra/docker/nginx.conf /etc/nginx/nginx.conf
