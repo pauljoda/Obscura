@@ -48,25 +48,28 @@ RUN apk add --no-cache \
     redis \
     nginx \
     su-exec \
-  && mkdir -p /data/postgres /data/redis /data/cache /media \
-  && chown -R postgres:postgres /data/postgres
+  && mkdir -p /data/postgres /data/redis /data/cache /media /run/postgresql \
+  && chown -R postgres:postgres /data/postgres /run/postgresql
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# ── API + Worker: copy source, node_modules, and packages ────────
-# API and worker run via tsx (TypeScript runtime) — no dist/ needed
+# ── Web: copy Next.js standalone output FIRST ────────────────────
+# Standalone includes a minimal node_modules and package.json that will
+# be overwritten by the full copies below
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+
+# ── API + Worker: overlay full source and dependencies ───────────
+# These COPY commands run after standalone so the full node_modules
+# and package.json overwrite the standalone's minimal versions
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/apps/api ./apps/api
 COPY --from=builder /app/apps/worker ./apps/worker
 COPY --from=builder /app/packages ./packages
-
-# ── Web: copy Next.js standalone output ──────────────────────────
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # ── nginx config and entrypoint ──────────────────────────────────
 COPY infra/docker/nginx.conf /etc/nginx/nginx.conf

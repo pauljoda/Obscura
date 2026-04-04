@@ -6,25 +6,40 @@ REDIS_DIR="/data/redis"
 CACHE_DIR="/data/cache"
 
 # ── Ensure directories exist ──────────────────────────────────────
-mkdir -p "$PGDATA" "$REDIS_DIR" "$CACHE_DIR"
-chown -R postgres:postgres "$PGDATA"
+mkdir -p "$PGDATA" "$REDIS_DIR" "$CACHE_DIR" /run/postgresql
+chown -R postgres:postgres "$PGDATA" /run/postgresql
 
 # ── Initialize PostgreSQL if fresh ────────────────────────────────
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   echo "[obscura] Initializing PostgreSQL database..."
-  su-exec postgres initdb -D "$PGDATA" --auth=trust --no-locale --encoding=UTF8
-  # Allow local connections without password
-  echo "host all all 127.0.0.1/32 trust" >> "$PGDATA/pg_hba.conf"
-  echo "local all all trust" >> "$PGDATA/pg_hba.conf"
+  su-exec postgres initdb -D "$PGDATA" --auth=trust --encoding=UTF8
+
+  # Configure for local-only access
+  cat > "$PGDATA/pg_hba.conf" <<CONF
+local   all   all                 trust
+host    all   all   127.0.0.1/32  trust
+host    all   all   ::1/128       trust
+CONF
+
+  # Tune for embedded single-user usage
+  cat >> "$PGDATA/postgresql.conf" <<CONF
+listen_addresses = '127.0.0.1'
+unix_socket_directories = '/run/postgresql'
+shared_buffers = 128MB
+work_mem = 4MB
+max_connections = 20
+logging_collector = off
+log_destination = 'stderr'
+CONF
 fi
 
 # ── Start PostgreSQL ──────────────────────────────────────────────
 echo "[obscura] Starting PostgreSQL..."
-su-exec postgres pg_ctl -D "$PGDATA" -l /dev/null -w start
+su-exec postgres pg_ctl -D "$PGDATA" -l /data/postgres/log -w -t 30 start
 
 # Create database if it doesn't exist
-su-exec postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
-  su-exec postgres createdb obscura
+su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
+  su-exec postgres createdb -h 127.0.0.1 obscura
 
 # ── Start Redis ───────────────────────────────────────────────────
 echo "[obscura] Starting Redis..."
