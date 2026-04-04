@@ -20,9 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `GET /studios/:id` API endpoint returning studio detail (name, URL, image).
 - `fetchPerformerDetail` and `fetchStudioDetail` helper functions added to `api.ts`.
 - Galleries and Collections pages upgraded to properly styled Dark Control Room empty states with contextual links.
+- `GET /galleries` API returning an empty typed list until gallery persistence exists; `GalleryListItemDto` and `apiRoutes.galleries` in contracts; `fetchGalleries` on the web client.
 
 ### Changed
 
+- Dashboard: removed redundant “System channels” row; added “Recent additions” ingest strip (motion vs stills labels, merged sort by `createdAt`, horizontal snap scroll, optional dashed “stills slot” when no galleries); hero and “Library” labels tightened.
 - Dashboard UI aligned with the scene gallery and player: glass hero with brass glow, sharp `surface-card-sharp` panels, gradient meter strips on stats, per-queue telemetry rack, and browse tiles with glass icon wells and gradient accents; logic split into `components/dashboard/*` modules.
 - Unified Docker deployment into a single all-in-one image (`ghcr.io/pauljoda/obscura`) with PostgreSQL, Redis, nginx, and all application services bundled together.
 - Simplified docker-compose.yml to a single service with two volume mounts (`/data` and `/media`).

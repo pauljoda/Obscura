@@ -23,3 +23,17 @@ export function formatRelativeTime(isoString: string): string {
 export function formatQueueName(name: string): string {
   return name.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** Short label for “tape stamp” style timestamps on ingest tiles. */
+export function formatIngestStamp(isoString: string): string {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "—";
+  const diff = Date.now() - d.getTime();
+  const days = diff / 86400000;
+  if (days < 7) return formatRelativeTime(isoString);
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}

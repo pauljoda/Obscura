@@ -5,93 +5,50 @@ import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
 import {
   fetchSceneStats,
   fetchJobsDashboard,
+  fetchScenes,
+  fetchGalleries,
   type SceneStats,
   type JobsDashboard,
+  type SceneListItem,
+  type GalleryListItem,
 } from "../../lib/api";
 import { DashboardHero } from "../../components/dashboard/dashboard-hero";
 import { DashboardStatTile } from "../../components/dashboard/dashboard-stat-tile";
-import { DashboardStatusChannel } from "../../components/dashboard/dashboard-status-channel";
 import { DashboardQueueRack } from "../../components/dashboard/dashboard-queue-rack";
+import { DashboardRecentAdditions } from "../../components/dashboard/dashboard-recent-additions";
 import { DashboardRecentActivity } from "../../components/dashboard/dashboard-recent-activity";
 import { DashboardQuickNav } from "../../components/dashboard/dashboard-quick-nav";
-import {
-  DASHBOARD_STAT_GRADIENTS,
-  formatRelativeTime,
-} from "../../components/dashboard/dashboard-utils";
-
-const STATUS_BACKDROPS = [
-  "gradient-thumb-2",
-  "gradient-thumb-4",
-  "gradient-thumb-7",
-] as const;
+import { DASHBOARD_STAT_GRADIENTS } from "../../components/dashboard/dashboard-utils";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<SceneStats | null>(null);
   const [jobs, setJobs] = useState<JobsDashboard | null>(null);
+  const [recentScenes, setRecentScenes] = useState<SceneListItem[]>([]);
+  const [recentGalleries, setRecentGalleries] = useState<GalleryListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetchSceneStats().catch(() => null),
       fetchJobsDashboard().catch(() => null),
-    ]).then(([statsData, jobsData]) => {
+      fetchScenes({ sort: "recent", order: "desc", limit: 16 }).catch(() => ({
+        scenes: [] as SceneListItem[],
+        total: 0,
+        limit: 0,
+        offset: 0,
+      })),
+      fetchGalleries({ limit: 16 }).catch(() => ({ galleries: [] as GalleryListItem[], total: 0 })),
+    ]).then(([statsData, jobsData, scenesRes, galleriesRes]) => {
       setStats(statsData);
       setJobs(jobsData);
+      setRecentScenes(scenesRes.scenes);
+      setRecentGalleries(galleriesRes.galleries);
       setLoading(false);
     });
   }, []);
 
-  const hasActiveJobs = jobs?.queues.some((q) => q.status === "active") ?? false;
-  const hasWarnings = jobs?.queues.some((q) => q.status === "warning") ?? false;
-
-  const workerLed = loading
-    ? "led-idle"
-    : hasActiveJobs
-      ? "led-active"
-      : hasWarnings
-        ? "led-warning"
-        : "led-idle";
-  const workerLabel = loading
-    ? "—"
-    : hasActiveJobs
-      ? "Active"
-      : hasWarnings
-        ? "Warning"
-        : "Idle";
-  const workerDetail = loading
-    ? "Loading…"
-    : hasActiveJobs
-      ? `${jobs!.activeJobs.length} job${jobs!.activeJobs.length !== 1 ? "s" : ""} running`
-      : hasWarnings
-        ? "Queue has failed jobs"
-        : "No active jobs";
-
-  const libraryLed = loading
-    ? "led-idle"
-    : jobs?.lastScanAt
-      ? "led-active"
-      : "led-idle";
-  const libraryLabel = loading ? "—" : jobs?.lastScanAt ? "Scanned" : "Not scanned";
-  const libraryDetail = loading
-    ? "Loading…"
-    : jobs?.lastScanAt
-      ? `Last scan ${formatRelativeTime(jobs.lastScanAt)}`
-      : "Add library roots in Settings";
-
-  const storageLed = loading
-    ? "led-idle"
-    : stats?.totalSize
-      ? "led-accent"
-      : "led-idle";
-  const storageLabel = loading ? "—" : (stats?.totalSizeFormatted ?? "—");
-  const storageDetail = loading
-    ? "Loading…"
-    : stats?.totalScenes
-      ? `${stats.totalScenes} file${stats.totalScenes !== 1 ? "s" : ""} indexed`
-      : "No media indexed";
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <DashboardHero
         loading={loading}
         sceneCount={stats?.totalScenes ?? null}
@@ -101,7 +58,7 @@ export default function DashboardPage() {
       />
 
       <section>
-        <h4 className="text-kicker mb-3">Library metrics</h4>
+        <h4 className="text-kicker mb-3">Library</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <DashboardStatTile
             icon={<Film className="h-3.5 w-3.5" />}
@@ -131,32 +88,11 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section>
-        <h4 className="text-kicker mb-3">System channels</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          <DashboardStatusChannel
-            section="Workers"
-            ledClass={workerLed}
-            label={workerLabel}
-            detail={workerDetail}
-            gradientClass={STATUS_BACKDROPS[0]}
-          />
-          <DashboardStatusChannel
-            section="Library"
-            ledClass={libraryLed}
-            label={libraryLabel}
-            detail={libraryDetail}
-            gradientClass={STATUS_BACKDROPS[1]}
-          />
-          <DashboardStatusChannel
-            section="Storage"
-            ledClass={storageLed}
-            label={storageLabel}
-            detail={storageDetail}
-            gradientClass={STATUS_BACKDROPS[2]}
-          />
-        </div>
-      </section>
+      <DashboardRecentAdditions
+        loading={loading}
+        scenes={recentScenes}
+        galleries={recentGalleries}
+      />
 
       {jobs && jobs.queues.length > 0 && (
         <DashboardQueueRack queues={jobs.queues} />

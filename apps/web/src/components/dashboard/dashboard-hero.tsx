@@ -57,13 +57,12 @@ export function DashboardHero({
                 <Activity className="h-7 w-7 text-accent-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-kicker text-accent-400/90 mb-1">Control overview</p>
+                <p className="text-kicker text-accent-400/90 mb-1">Overview</p>
                 <h1 className="text-2xl font-semibold tracking-tight md:text-[1.65rem]">
                   Dashboard
                 </h1>
-                <p className="mt-1.5 max-w-xl text-[0.8rem] text-text-muted leading-relaxed">
-                  Live readout for the library, workers, and job queues — glass panels, square
-                  corners, and brass glow aligned with the scene gallery and player.
+                <p className="mt-1.5 max-w-md text-[0.8rem] text-text-muted leading-relaxed">
+                  Quick readout: counts, what just landed, queues, and jobs.
                 </p>
               </div>
             </div>

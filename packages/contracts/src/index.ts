@@ -10,6 +10,7 @@ export const apiRoutes = {
   scenes: "/scenes",
   sceneDetail: "/scenes/:id",
   sceneStats: "/scenes/stats",
+  galleries: "/galleries",
   studios: "/studios",
   performers: "/performers",
   tags: "/tags",
@@ -92,6 +93,15 @@ export interface StorageStatsDto {
   previewsBytes: number;
   trickplayBytes: number;
   totalBytes: number;
+}
+
+/** Image gallery folder discovered by the library (list endpoint; empty until gallery ingest ships). */
+export interface GalleryListItemDto {
+  id: string;
+  title: string;
+  coverImagePath: string | null;
+  imageCount: number;
+  createdAt: string;
 }
 
 export interface QueueSummaryDto {

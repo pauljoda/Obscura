@@ -8,6 +8,7 @@ import type {
   ScraperPackageDto,
   CommunityIndexEntryDto,
   ScrapeResultDto,
+  GalleryListItemDto,
 } from "@obscura/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -85,6 +86,8 @@ export interface SceneDetail extends SceneListItem {
   }[];
   updatedAt: string;
 }
+
+export type GalleryListItem = GalleryListItemDto;
 
 export interface SceneStats {
   totalScenes: number;
@@ -256,6 +259,15 @@ export async function trackOrgasm(
 
 export async function fetchSceneStats(): Promise<SceneStats> {
   return fetchApi("/scenes/stats");
+}
+
+export async function fetchGalleries(params?: {
+  limit?: number;
+}): Promise<{ galleries: GalleryListItem[]; total: number }> {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set("limit", String(params.limit));
+  const qs = sp.toString();
+  return fetchApi(`/galleries${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchStudios(): Promise<{ studios: StudioItem[] }> {
