@@ -29,35 +29,47 @@ export const studiosRelations = relations(studios, ({ many, one }) => ({
 }));
 
 // ─── Performers ─────────────────────────────────────────────────────
-export const performers = pgTable("performers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  disambiguation: text("disambiguation"),
-  aliases: text("aliases"),
-  gender: text("gender"),
-  birthdate: text("birthdate"),
-  country: text("country"),
-  ethnicity: text("ethnicity"),
-  eyeColor: text("eye_color"),
-  hairColor: text("hair_color"),
-  height: integer("height"),
-  weight: integer("weight"),
-  measurements: text("measurements"),
-  tattoos: text("tattoos"),
-  piercings: text("piercings"),
-  careerStart: integer("career_start"),
-  careerEnd: integer("career_end"),
-  details: text("details"),
-  imageUrl: text("image_url"),
-  favorite: boolean("favorite").default(false).notNull(),
-  rating: integer("rating"),
-  sceneCount: integer("scene_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const performers = pgTable(
+  "performers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    disambiguation: text("disambiguation"),
+    aliases: text("aliases"),
+    gender: text("gender"),
+    birthdate: text("birthdate"),
+    country: text("country"),
+    ethnicity: text("ethnicity"),
+    eyeColor: text("eye_color"),
+    hairColor: text("hair_color"),
+    height: integer("height"),
+    weight: integer("weight"),
+    measurements: text("measurements"),
+    tattoos: text("tattoos"),
+    piercings: text("piercings"),
+    careerStart: integer("career_start"),
+    careerEnd: integer("career_end"),
+    details: text("details"),
+    imageUrl: text("image_url"),
+    imagePath: text("image_path"),
+    favorite: boolean("favorite").default(false).notNull(),
+    rating: integer("rating"),
+    sceneCount: integer("scene_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("performers_name_idx").on(table.name),
+    index("performers_gender_idx").on(table.gender),
+    index("performers_favorite_idx").on(table.favorite),
+    index("performers_rating_idx").on(table.rating),
+    index("performers_created_at_idx").on(table.createdAt),
+  ]
+);
 
 export const performersRelations = relations(performers, ({ many }) => ({
   scenePerformers: many(scenePerformers),
+  performerTags: many(performerTags),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -81,6 +93,7 @@ export const tags = pgTable(
 
 export const tagsRelations = relations(tags, ({ many, one }) => ({
   sceneTags: many(sceneTags),
+  performerTags: many(performerTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -240,6 +253,34 @@ export const scenePerformersRelations = relations(
     }),
   })
 );
+
+// ─── Performer ↔ Tag join ───────────────────────────────────────────
+export const performerTags = pgTable(
+  "performer_tags",
+  {
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("performer_tags_pk").on(table.performerId, table.tagId),
+    index("performer_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const performerTagsRelations = relations(performerTags, ({ one }) => ({
+  performer: one(performers, {
+    fields: [performerTags.performerId],
+    references: [performers.id],
+  }),
+  tag: one(tags, {
+    fields: [performerTags.tagId],
+    references: [tags.id],
+  }),
+}));
 
 // ─── Scene ↔ Tag join ───────────────────────────────────────────────
 export const sceneTags = pgTable(

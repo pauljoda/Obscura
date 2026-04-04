@@ -13,6 +13,9 @@ export const apiRoutes = {
   galleries: "/galleries",
   studios: "/studios",
   performers: "/performers",
+  performerDetail: "/performers/:id",
+  performerAssets: "/assets/performers/:id/*",
+  scraperScrapePerformer: "/scrapers/:id/scrape-performer",
   tags: "/tags",
   scrapers: "/scrapers",
   scraperPackages: "/scrapers/packages",
@@ -184,6 +187,94 @@ export interface ScraperCapabilities {
   performerByURL: boolean;
   performerByName: boolean;
   performerByFragment: boolean;
+}
+
+// ─── Performer DTOs ─────────────────────────────────────────────
+
+export interface PerformerListItemDto {
+  id: string;
+  name: string;
+  disambiguation: string | null;
+  gender: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
+  country: string | null;
+  createdAt: string;
+}
+
+export interface PerformerDetailDto {
+  id: string;
+  name: string;
+  disambiguation: string | null;
+  aliases: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  country: string | null;
+  ethnicity: string | null;
+  eyeColor: string | null;
+  hairColor: string | null;
+  height: number | null;
+  weight: number | null;
+  measurements: string | null;
+  tattoos: string | null;
+  piercings: string | null;
+  careerStart: number | null;
+  careerEnd: number | null;
+  details: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
+  tags: { id: string; name: string }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PerformerUpdateDto {
+  name?: string;
+  disambiguation?: string | null;
+  aliases?: string | null;
+  gender?: string | null;
+  birthdate?: string | null;
+  country?: string | null;
+  ethnicity?: string | null;
+  eyeColor?: string | null;
+  hairColor?: string | null;
+  height?: number | null;
+  weight?: number | null;
+  measurements?: string | null;
+  tattoos?: string | null;
+  piercings?: string | null;
+  careerStart?: number | null;
+  careerEnd?: number | null;
+  details?: string | null;
+  imageUrl?: string | null;
+  favorite?: boolean;
+  rating?: number | null;
+  tagNames?: string[];
+}
+
+export interface NormalizedPerformerResult {
+  name: string | null;
+  disambiguation: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  country: string | null;
+  ethnicity: string | null;
+  eyeColor: string | null;
+  hairColor: string | null;
+  height: string | null;
+  weight: string | null;
+  measurements: string | null;
+  tattoos: string | null;
+  piercings: string | null;
+  aliases: string | null;
+  details: string | null;
+  imageUrl: string | null;
+  tagNames: string[];
 }
 
 // ─── Jobs DTOs ───────────────────────────────────────────────────
