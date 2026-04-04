@@ -61,8 +61,8 @@ export function DashboardHero({
         <div className="px-5 py-6 md:px-8 md:py-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <Logo size={30} className="gap-3" />
-              <p className="mt-2 text-[0.72rem] text-text-muted tracking-wide">Home</p>
+              <Logo size={48} className="gap-4" textClassName="text-2xl tracking-[0.18em]" />
+              <p className="mt-2 text-xs text-text-muted tracking-wide">Home</p>
             </div>
 
             <div className="flex flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
