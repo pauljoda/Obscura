@@ -47,4 +47,4 @@ VOLUME ["/data/cache"]
 
 EXPOSE 4000
 
-CMD ["node", "apps/api/dist/index.js"]
+CMD ["node", "--import", "tsx/esm", "apps/api/src/index.ts"]

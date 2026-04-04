@@ -43,4 +43,4 @@ RUN mkdir -p /data/cache
 
 VOLUME ["/data/cache", "/media"]
 
-CMD ["node", "apps/worker/dist/index.js"]
+CMD ["node", "--import", "tsx/esm", "apps/worker/src/index.ts"]

@@ -55,17 +55,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# ── API + Worker: copy full built app with node_modules ──────────
+# ── API + Worker: copy source, node_modules, and packages ────────
+# API and worker run via tsx (TypeScript runtime) — no dist/ needed
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
-COPY --from=builder /app/apps/api/src/db ./apps/api/src/db
-COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
-COPY --from=builder /app/apps/worker/package.json ./apps/worker/package.json
-COPY --from=builder /app/apps/worker/node_modules ./apps/worker/node_modules
+COPY --from=builder /app/apps/api ./apps/api
+COPY --from=builder /app/apps/worker ./apps/worker
 COPY --from=builder /app/packages ./packages
 
 # ── Web: copy Next.js standalone output ──────────────────────────

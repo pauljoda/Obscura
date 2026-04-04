@@ -45,7 +45,7 @@ OBSCURA_CACHE_DIR="$CACHE_DIR" \
 PORT=4000 \
 HOST=127.0.0.1 \
 NODE_ENV=production \
-  node apps/api/dist/index.js &
+  node --import tsx/esm apps/api/src/index.ts &
 
 # ── Start worker ──────────────────────────────────────────────────
 echo "[obscura] Starting background worker..."
@@ -53,7 +53,7 @@ DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
 REDIS_URL="redis://127.0.0.1:6379" \
 OBSCURA_CACHE_DIR="$CACHE_DIR" \
 NODE_ENV=production \
-  node apps/worker/dist/index.js &
+  node --import tsx/esm apps/worker/src/index.ts &
 
 # ── Start Next.js ─────────────────────────────────────────────────
 echo "[obscura] Starting web frontend..."
