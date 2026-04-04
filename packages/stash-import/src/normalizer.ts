@@ -1,4 +1,5 @@
-import type { StashScrapedScene, NormalizedScrapeResult } from "./types";
+import type { StashScrapedScene, StashScrapedPerformer, NormalizedScrapeResult } from "./types";
+import type { NormalizedPerformerResult } from "@obscura/contracts";
 
 /**
  * Normalize a raw Stash scraper scene result into Obscura domain types.
@@ -86,4 +87,33 @@ function normalizeDate(value: string | undefined | null): string | null {
 
   // Return as-is if we can't parse it
   return trimmed;
+}
+
+/**
+ * Normalize a raw Stash scraper performer result into Obscura domain types.
+ */
+export function normalizePerformerResult(
+  raw: StashScrapedPerformer
+): NormalizedPerformerResult {
+  return {
+    name: trimOrNull(raw.name),
+    disambiguation: trimOrNull(raw.disambiguation),
+    gender: trimOrNull(raw.gender),
+    birthdate: normalizeDate(raw.birthdate),
+    country: trimOrNull(raw.country),
+    ethnicity: trimOrNull(raw.ethnicity),
+    eyeColor: trimOrNull(raw.eye_color),
+    hairColor: trimOrNull(raw.hair_color),
+    height: trimOrNull(raw.height),
+    weight: trimOrNull(raw.weight),
+    measurements: trimOrNull(raw.measurements),
+    tattoos: trimOrNull(raw.tattoos),
+    piercings: trimOrNull(raw.piercings),
+    aliases: trimOrNull(raw.aliases),
+    details: trimOrNull(raw.details),
+    imageUrl: trimToUrl(raw.image) ?? trimToUrl(raw.images?.[0]),
+    tagNames: deduplicateNames(
+      (raw.tags ?? []).map((t) => t.name).filter(Boolean)
+    ),
+  };
 }

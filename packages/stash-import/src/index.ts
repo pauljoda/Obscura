@@ -35,7 +35,7 @@ export {
 } from "./executor";
 
 // Normalizer
-export { normalizeSceneResult } from "./normalizer";
+export { normalizeSceneResult, normalizePerformerResult } from "./normalizer";
 
 // Legacy types (kept for compatibility)
 import type { FingerprintKind } from "@obscura/media-core";
