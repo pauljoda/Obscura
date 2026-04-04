@@ -6,6 +6,12 @@ export { spacing, radii } from "./tokens/spacing";
 
 // Utilities
 export { cn } from "./lib/utils";
+export {
+  type TrickplayFrame,
+  parseTrickplayVtt,
+  loadTrickplayFrames,
+  findFrameAtTime,
+} from "./lib/trickplay";
 
 // Primitives
 export { Button, type ButtonProps } from "./primitives/button";

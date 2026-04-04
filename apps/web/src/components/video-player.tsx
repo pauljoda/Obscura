@@ -16,6 +16,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { cn } from "@obscura/ui";
+import { FilmStrip } from "./film-strip";
 
 interface Marker {
   id: string;
@@ -31,6 +32,8 @@ interface VideoPlayerProps {
   markers?: Marker[];
   duration?: number;
   onMarkerClick?: (marker: Marker) => void;
+  trickplaySprite?: string;
+  trickplayVtt?: string;
 }
 
 type QualityMode = "auto" | number;
@@ -83,6 +86,8 @@ export function VideoPlayer({
   markers = [],
   duration: propDuration,
   onMarkerClick,
+  trickplaySprite,
+  trickplayVtt,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -469,7 +474,10 @@ export function VideoPlayer({
   const selectedQualityLabel =
     qualityMode === "auto" ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}` : activeQualityLabel;
 
+  const hasFilmStrip = Boolean(trickplaySprite && trickplayVtt && duration > 0);
+
   return (
+    <div className="space-y-1">
     <div
       ref={containerRef}
       className="relative overflow-hidden rounded-xl border border-border-subtle bg-black shadow-[0_18px_70px_rgba(0,0,0,0.45)]"
@@ -716,6 +724,18 @@ export function VideoPlayer({
           </div>
         </div>
       </div>
+    </div>
+    {hasFilmStrip && (
+      <div className="rounded-lg border border-border-subtle bg-black overflow-hidden">
+        <FilmStrip
+          spriteUrl={trickplaySprite!}
+          vttUrl={trickplayVtt!}
+          videoRef={videoRef}
+          duration={duration}
+          onSeek={seekTo}
+        />
+      </div>
+    )}
     </div>
   );
 }

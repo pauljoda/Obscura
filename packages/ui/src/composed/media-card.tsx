@@ -1,87 +1,9 @@
+"use client";
+
 import { useRef, useState } from "react";
 import { cn } from "../lib/utils";
+import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
 import { Play, Clock, HardDrive, Eye } from "lucide-react";
-
-interface TrickplayFrame {
-  start: number;
-  end: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  url: string;
-}
-
-const trickplayCache = new Map<string, Promise<TrickplayFrame[]>>();
-
-function parseTimestamp(value: string) {
-  const [timePart, msPart = "0"] = value.trim().split(".");
-  const segments = timePart.split(":").map(Number);
-  if (segments.length !== 3 || segments.some((segment) => Number.isNaN(segment))) {
-    return 0;
-  }
-
-  const [hours, minutes, seconds] = segments;
-  return hours * 3600 + minutes * 60 + seconds + Number(msPart) / 1000;
-}
-
-function parseTrickplayVtt(raw: string) {
-  const frames: TrickplayFrame[] = [];
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  for (let index = 0; index < lines.length - 1; index += 1) {
-    const line = lines[index];
-    if (!line.includes("-->")) {
-      continue;
-    }
-
-    const [startRaw, endRaw] = line.split("-->").map((part) => part.trim());
-    const assetLine = lines[index + 1];
-    const [url, fragment] = assetLine.split("#xywh=");
-    if (!fragment) {
-      continue;
-    }
-
-    const [x, y, width, height] = fragment.split(",").map(Number);
-    if ([x, y, width, height].some((value) => Number.isNaN(value))) {
-      continue;
-    }
-
-    frames.push({
-      start: parseTimestamp(startRaw),
-      end: parseTimestamp(endRaw),
-      x,
-      y,
-      width,
-      height,
-      url,
-    });
-  }
-
-  return frames;
-}
-
-async function loadTrickplayFrames(vttUrl: string) {
-  const cached = trickplayCache.get(vttUrl);
-  if (cached) {
-    return cached;
-  }
-
-  const pending = fetch(vttUrl)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load trickplay map (${response.status})`);
-      }
-      return response.text();
-    })
-    .then(parseTrickplayVtt);
-
-  trickplayCache.set(vttUrl, pending);
-  return pending;
-}
 
 function formatHoverTime(seconds: number) {
   const wholeSeconds = Math.max(0, Math.floor(seconds));
@@ -249,17 +171,22 @@ export function MediaCard({
 
         {activeFrame && trickplaySprite && spriteWidth > 0 && spriteHeight > 0 && (
           <div className="absolute inset-0 overflow-hidden">
-            <img
-              src={trickplaySprite}
-              alt=""
+            <div
               aria-hidden="true"
-              className="absolute max-w-none select-none"
-              draggable={false}
+              className="absolute inset-0"
               style={{
-                width: `${(spriteWidth / activeFrame.width) * 100}%`,
-                height: `${(spriteHeight / activeFrame.height) * 100}%`,
-                left: `-${(activeFrame.x / activeFrame.width) * 100}%`,
-                top: `-${(activeFrame.y / activeFrame.height) * 100}%`,
+                backgroundImage: `url(${trickplaySprite})`,
+                backgroundSize: `${(spriteWidth / activeFrame.width) * 100}% ${(spriteHeight / activeFrame.height) * 100}%`,
+                backgroundPosition: `${
+                  spriteWidth <= activeFrame.width
+                    ? 0
+                    : (activeFrame.x / (spriteWidth - activeFrame.width)) * 100
+                }% ${
+                  spriteHeight <= activeFrame.height
+                    ? 0
+                    : (activeFrame.y / (spriteHeight - activeFrame.height)) * 100
+                }%`,
+                backgroundRepeat: "no-repeat",
               }}
             />
             <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/70 via-black/30 to-transparent pointer-events-none" />

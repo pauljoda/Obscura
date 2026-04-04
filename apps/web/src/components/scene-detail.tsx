@@ -94,6 +94,8 @@ export function SceneDetail({ id }: { id: string }) {
           tag: m.primaryTag?.name,
         }))}
         duration={scene.duration ?? undefined}
+        trickplaySprite={toApiUrl(scene.spritePath)}
+        trickplayVtt={toApiUrl(scene.trickplayVttPath)}
       />
 
       {/* Scene header */}
