@@ -18,8 +18,7 @@ import {
   X,
   SlidersHorizontal,
   Film,
-  ChevronLeft,
-  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
@@ -65,18 +64,22 @@ export function PerformersPageClient({
   const [performers, setPerformers] = useState(initialPerformers);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scenes");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [gender, setGender] = useState("");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [page, setPage] = useState(0);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search);
   const hydratedRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
+  const hasMore = performers.length < total;
+
+  // Full reload when filters/sort change
   const loadPerformers = useCallback(async () => {
     setLoading(true);
 
@@ -88,7 +91,7 @@ export function PerformersPageClient({
         gender: gender || undefined,
         favorite: favoriteOnly ? "true" : undefined,
         limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        offset: 0,
       });
 
       setPerformers(result.performers);
@@ -98,7 +101,32 @@ export function PerformersPageClient({
     } finally {
       setLoading(false);
     }
-  }, [deferredSearch, favoriteOnly, gender, page, sortDir, sortKey]);
+  }, [deferredSearch, favoriteOnly, gender, sortDir, sortKey]);
+
+  // Load more (append) for infinite scroll
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading) return;
+    setLoadingMore(true);
+
+    try {
+      const result = await fetchPerformers({
+        search: deferredSearch || undefined,
+        sort: sortKey,
+        order: sortDir,
+        gender: gender || undefined,
+        favorite: favoriteOnly ? "true" : undefined,
+        limit: PAGE_SIZE,
+        offset: performers.length,
+      });
+
+      setPerformers((prev) => [...prev, ...result.performers]);
+      setTotal(result.total);
+    } catch (error) {
+      console.error("Failed to load more performers:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [deferredSearch, favoriteOnly, gender, loading, loadingMore, performers.length, sortDir, sortKey]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -110,17 +138,23 @@ export function PerformersPageClient({
     return () => window.clearTimeout(timer);
   }, [deferredSearch, loadPerformers]);
 
+  // Infinite scroll sentinel
   useEffect(() => {
-    if (!hydratedRef.current || page === 0) {
-      return;
-    }
+    if (!hasMore || loadingMore || loading || !sentinelRef.current) return;
 
-    startTransition(() => {
-      setPage(0);
-    });
-  }, [deferredSearch, favoriteOnly, gender, sortDir, sortKey, page]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "400px" },
+    );
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, loadMore]);
+
   const currentSort = sortOptions.find((option) => option.value === sortKey);
   const hasFilters = gender !== "" || favoriteOnly;
   const favoriteCount = performers.filter((performer) => performer.favorite).length;
@@ -350,27 +384,16 @@ export function PerformersPageClient({
         </div>
       )}
 
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-            disabled={page === 0}
-            className="surface-well px-2 py-1.5 text-xs text-text-muted disabled:opacity-40"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
-          <span className="text-mono-sm text-text-disabled">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
-            disabled={page >= totalPages - 1}
-            className="surface-well px-2 py-1.5 text-xs text-text-muted disabled:opacity-40"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+      {/* Infinite scroll sentinel */}
+      {hasMore && !loading && <div ref={sentinelRef} className="h-1" />}
+      {loadingMore && (
+        <div className="flex justify-center py-4">
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading more...
+          </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -386,6 +409,8 @@ function PerformerCard({ performer }: { performer: PerformerItem }) {
             <img
               src={imageUrl}
               alt={performer.name}
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-moderate group-hover:scale-[1.02]"
             />
           ) : (
