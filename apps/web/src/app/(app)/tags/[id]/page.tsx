@@ -152,12 +152,12 @@ export default function TagPage({ params }: TagPageProps) {
       </Link>
 
       {/* Hero banner image */}
-      <div className="relative rounded-lg overflow-hidden bg-surface-3 group">
+      <div className="relative rounded-lg overflow-hidden group">
         <div className={imageUrl ? "aspect-[21/9] sm:aspect-[21/7]" : "aspect-[21/5]"}>
           {imageUrl ? (
-            <img src={imageUrl} alt={tagName} className="w-full h-full object-contain p-4 sm:p-6" />
+            <img src={imageUrl} alt={tagName} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-3 to-surface-2">
+            <div className="w-full h-full flex items-center justify-center bg-surface-3">
               <Tag className="h-14 w-14 text-text-disabled/15" />
             </div>
           )}
