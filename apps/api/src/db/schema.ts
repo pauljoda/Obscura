@@ -375,6 +375,27 @@ export const scraperPackagesRelations = relations(scraperPackages, ({ many }) =>
   scrapeResults: many(scrapeResults),
 }));
 
+// ─── Stash-Box Endpoints ───────────────────────────────────────────
+export const stashBoxEndpoints = pgTable(
+  "stash_box_endpoints",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    endpoint: text("endpoint").notNull(),
+    apiKey: text("api_key").notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("stash_box_endpoints_endpoint_idx").on(table.endpoint),
+  ]
+);
+
+export const stashBoxEndpointsRelations = relations(stashBoxEndpoints, ({ many }) => ({
+  scrapeResults: many(scrapeResults),
+}));
+
 // ─── Scrape Results ─────────────────────────────────────────────────
 export const scrapeResults = pgTable(
   "scrape_results",
@@ -385,7 +406,10 @@ export const scrapeResults = pgTable(
       .references(() => scenes.id, { onDelete: "cascade" }),
     scraperPackageId: uuid("scraper_package_id")
       .references(() => scraperPackages.id, { onDelete: "set null" }),
+    stashBoxEndpointId: uuid("stash_box_endpoint_id")
+      .references(() => stashBoxEndpoints.id, { onDelete: "set null" }),
     action: text("action").notNull(),
+    matchType: text("match_type"),
     status: text("status").notNull().default("pending"),
     rawResult: jsonb("raw_result"),
     proposedTitle: text("proposed_title"),
@@ -415,6 +439,10 @@ export const scrapeResultsRelations = relations(scrapeResults, ({ one }) => ({
   scraperPackage: one(scraperPackages, {
     fields: [scrapeResults.scraperPackageId],
     references: [scraperPackages.id],
+  }),
+  stashBoxEndpoint: one(stashBoxEndpoints, {
+    fields: [scrapeResults.stashBoxEndpointId],
+    references: [stashBoxEndpoints.id],
   }),
 }));
 

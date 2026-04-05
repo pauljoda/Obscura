@@ -37,6 +37,17 @@ export const apiRoutes = {
   scrapeResultAccept: "/scrapers/results/:id/accept",
   scrapeResultReject: "/scrapers/results/:id/reject",
   sceneScrape: "/scenes/:id/scrape",
+  // Stash-Box endpoints
+  stashBoxEndpoints: "/stashbox-endpoints",
+  stashBoxEndpointDetail: "/stashbox-endpoints/:id",
+  stashBoxEndpointTest: "/stashbox-endpoints/:id/test",
+  stashBoxIdentify: "/stashbox-endpoints/:id/identify",
+  stashBoxIdentifyPerformer: "/stashbox-endpoints/:id/identify-performer",
+  stashBoxLookupStudio: "/stashbox-endpoints/:id/lookup/studio",
+  stashBoxLookupTag: "/stashbox-endpoints/:id/lookup/tag",
+  stashBoxLookupPerformer: "/stashbox-endpoints/:id/lookup/performer",
+  // Unified metadata providers
+  metadataProviders: "/metadata-providers",
 } as const;
 
 export const API_BASE_URL =
@@ -296,7 +307,9 @@ export interface ScrapeResultDto {
   id: string;
   sceneId: string;
   scraperPackageId: string | null;
+  stashBoxEndpointId: string | null;
   action: string;
+  matchType: string | null;
   status: "pending" | "accepted" | "rejected";
   rawResult: unknown;
   proposedTitle: string | null;
@@ -319,6 +332,35 @@ export interface ScraperCapabilities {
   performerByURL: boolean;
   performerByName: boolean;
   performerByFragment: boolean;
+}
+
+// ─── Stash-Box DTOs ─────────────────────────────────────────────
+
+export interface StashBoxEndpointDto {
+  id: string;
+  name: string;
+  endpoint: string;
+  /** Masked — only last 4 chars shown */
+  apiKeyPreview: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StashBoxEndpointCreateDto {
+  name: string;
+  endpoint: string;
+  apiKey: string;
+}
+
+export type MetadataProviderType = "scraper" | "stashbox";
+
+export interface MetadataProviderDto {
+  id: string;
+  name: string;
+  type: MetadataProviderType;
+  enabled: boolean;
+  capabilities: Record<string, boolean>;
 }
 
 // ─── Performer DTOs ─────────────────────────────────────────────
