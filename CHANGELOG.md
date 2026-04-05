@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Bulk scrape: performer detail shows portrait images with selection thumbnails when multiple images returned.
 - Bulk scrape: performer scraper results now require exact name match to reduce false positives from partial/first-name matches.
 - Scene scrape accept now downloads thumbnail from scraped imageUrl when the "image" field is selected.
+- Scene expanded detail redesigned: large thumbnail on left with toggle, fields on right in 2-column grid, performers as accent tag-chips and tags as default tag-chips, each individually removable with X buttons.
+- API accept endpoint supports `excludePerformers` and `excludeTags` arrays to skip specific items during import.
 
 ### Fixed
 
