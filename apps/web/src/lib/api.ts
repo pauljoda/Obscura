@@ -606,11 +606,16 @@ export async function fetchScrapeResults(params?: {
 
 export async function acceptScrapeResult(
   id: string,
-  fields?: string[]
+  fields?: string[],
+  options?: { excludePerformers?: string[]; excludeTags?: string[] }
 ): Promise<{ ok: true; sceneId: string }> {
   return fetchApi(`/scrapers/results/${id}/accept`, {
     method: "POST",
-    body: JSON.stringify({ fields }),
+    body: JSON.stringify({
+      fields,
+      excludePerformers: options?.excludePerformers,
+      excludeTags: options?.excludeTags,
+    }),
   });
 }
 

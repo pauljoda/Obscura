@@ -48,6 +48,8 @@ interface SceneRow {
   error?: string;
   matchedScraper?: string;
   selectedFields: Set<SceneField>;
+  excludedPerformers: Set<string>;
+  excludedTags: Set<string>;
 }
 
 interface PerformerRow {
@@ -141,6 +143,30 @@ export function BulkScrape() {
     );
   }
 
+  function toggleSceneExcludePerformer(idx: number, name: string) {
+    setSceneRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const next = new Set(r.excludedPerformers);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        return { ...r, excludedPerformers: next };
+      })
+    );
+  }
+
+  function toggleSceneExcludeTag(idx: number, name: string) {
+    setSceneRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const next = new Set(r.excludedTags);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        return { ...r, excludedTags: next };
+      })
+    );
+  }
+
   function togglePerfField(idx: number, field: string) {
     setPerfRows((prev) =>
       prev.map((r, i) => {
@@ -163,7 +189,7 @@ export function BulkScrape() {
       ]);
 
       const unorganized = scenesRes.scenes.filter((s) => !s.organized);
-      setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS) })));
+      setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() })));
 
       const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
       setPerfRows(sparse.map((performer) => ({ performer, status: "pending", selectedFields: new Set() })));
@@ -202,7 +228,7 @@ export function BulkScrape() {
     const filteredScenes = showAll ? allScenes : allScenes.filter((s) => !s.organized);
     setSceneRows((prev) => {
       const existing = new Map(prev.map((r) => [r.scene.id, r]));
-      return filteredScenes.map((scene) => existing.get(scene.id) ?? { scene, status: "pending", selectedFields: new Set(SCENE_FIELDS) });
+      return filteredScenes.map((scene) => existing.get(scene.id) ?? { scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() });
     });
     const filteredPerfs = showAll ? allPerformers : allPerformers.filter((p) => !p.imagePath || !p.gender);
     setPerfRows((prev) => {
@@ -413,7 +439,10 @@ export function BulkScrape() {
     const row = sceneRows[idx];
     if (!row.result) return;
     try {
-      await acceptScrapeResult(row.result.id, Array.from(row.selectedFields));
+      await acceptScrapeResult(row.result.id, Array.from(row.selectedFields), {
+        excludePerformers: Array.from(row.excludedPerformers),
+        excludeTags: Array.from(row.excludedTags),
+      });
       setSceneRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
       );
@@ -695,6 +724,8 @@ export function BulkScrape() {
                   onAccept={() => void acceptScene(idx)}
                   onReject={() => void rejectScene(idx)}
                   onToggleField={(field) => toggleSceneField(idx, field)}
+                  onTogglePerformer={(name) => toggleSceneExcludePerformer(idx, name)}
+                  onToggleTag={(name) => toggleSceneExcludeTag(idx, name)}
                 />
               ))
             : perfRows.map((row, idx) => (
@@ -723,6 +754,8 @@ function SceneRowCard({
   onAccept,
   onReject,
   onToggleField,
+  onTogglePerformer,
+  onToggleTag,
 }: {
   row: SceneRow;
   expanded: boolean;
@@ -730,6 +763,8 @@ function SceneRowCard({
   onAccept: () => void;
   onReject: () => void;
   onToggleField: (field: SceneField) => void;
+  onTogglePerformer: (name: string) => void;
+  onToggleTag: (name: string) => void;
 }) {
   return (
     <div>
@@ -809,58 +844,139 @@ function SceneRowCard({
 
       {/* Expanded detail */}
       {expanded && row.normalized && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
-            {row.normalized.title && (
-              <ToggleableField field="title" label="Title" value={row.normalized.title} enabled={row.selectedFields.has("title")} onToggle={() => onToggleField("title")} />
-            )}
-            {row.normalized.date && (
-              <ToggleableField field="date" label="Date" value={row.normalized.date} enabled={row.selectedFields.has("date")} onToggle={() => onToggleField("date")} />
-            )}
-            {row.normalized.studioName && (
-              <ToggleableField field="studio" label="Studio" value={row.normalized.studioName} enabled={row.selectedFields.has("studio")} onToggle={() => onToggleField("studio")} />
-            )}
-            {row.normalized.url && (
-              <ToggleableField field="url" label="URL" value={row.normalized.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />
-            )}
-            {row.normalized.performerNames.length > 0 && (
-              <ToggleableField field="performers" label="Performers" value={row.normalized.performerNames.join(", ")} enabled={row.selectedFields.has("performers")} onToggle={() => onToggleField("performers")} />
-            )}
-            {row.normalized.tagNames.length > 0 && (
-              <ToggleableField field="tags" label="Tags" value={row.normalized.tagNames.join(", ")} enabled={row.selectedFields.has("tags")} onToggle={() => onToggleField("tags")} />
-            )}
+        <div className="surface-card-sharp no-lift ml-1 mr-1 mb-1 p-4 border-border-accent/20">
+          <div className="flex gap-4">
+            {/* Large thumbnail on left */}
             {row.normalized.imageUrl && (
               <div
                 className={cn(
-                  "col-span-2 flex items-start gap-2 cursor-pointer transition-opacity",
+                  "flex-shrink-0 cursor-pointer transition-opacity",
                   !row.selectedFields.has("image") && "opacity-40"
                 )}
                 onClick={(e) => { e.stopPropagation(); onToggleField("image"); }}
               >
-                <input
-                  type="checkbox"
-                  checked={row.selectedFields.has("image")}
-                  onChange={() => onToggleField("image")}
-                  className="accent-[#c79b5c] mt-0.5 flex-shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <div className="min-w-0">
-                  <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">Thumbnail</span>
-                  <div className="mt-1">
-                    <img
-                      src={row.normalized.imageUrl}
-                      alt=""
-                      className={cn(
-                        "w-24 h-14 object-cover rounded-[2px] border transition-all",
-                        row.selectedFields.has("image")
-                          ? "border-border-accent/40"
-                          : "border-border-subtle grayscale"
-                      )}
+                <div className="relative">
+                  <img
+                    src={row.normalized.imageUrl}
+                    alt=""
+                    className={cn(
+                      "w-40 h-24 object-cover rounded-[3px] border transition-all",
+                      row.selectedFields.has("image")
+                        ? "border-border-accent/40"
+                        : "border-border-subtle grayscale"
+                    )}
+                  />
+                  <div className="absolute top-1 left-1">
+                    <input
+                      type="checkbox"
+                      checked={row.selectedFields.has("image")}
+                      onChange={() => onToggleField("image")}
+                      className="accent-[#c79b5c]"
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Fields on right */}
+            <div className="flex-1 min-w-0 space-y-3">
+              {/* Row 1: Title + Date */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {row.normalized.title && (
+                  <ToggleableField field="title" label="Title" value={row.normalized.title} enabled={row.selectedFields.has("title")} onToggle={() => onToggleField("title")} />
+                )}
+                {row.normalized.date && (
+                  <ToggleableField field="date" label="Date" value={row.normalized.date} enabled={row.selectedFields.has("date")} onToggle={() => onToggleField("date")} />
+                )}
+                {row.normalized.studioName && (
+                  <ToggleableField field="studio" label="Studio" value={row.normalized.studioName} enabled={row.selectedFields.has("studio")} onToggle={() => onToggleField("studio")} />
+                )}
+                {row.normalized.url && (
+                  <ToggleableField field="url" label="URL" value={row.normalized.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />
+                )}
+              </div>
+
+              {/* Performers as removable chips */}
+              {row.normalized.performerNames.length > 0 && (
+                <div className={cn("transition-opacity", !row.selectedFields.has("performers") && "opacity-40")}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <input
+                      type="checkbox"
+                      checked={row.selectedFields.has("performers")}
+                      onChange={() => onToggleField("performers")}
+                      className="accent-[#c79b5c]"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-kicker">Performers</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {row.normalized.performerNames.map((name) => {
+                      const excluded = row.excludedPerformers.has(name);
+                      return (
+                        <span
+                          key={name}
+                          className={cn(
+                            "inline-flex items-center gap-1 tag-chip transition-all",
+                            excluded
+                              ? "tag-chip-default opacity-40 line-through"
+                              : "tag-chip-accent"
+                          )}
+                        >
+                          {name}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onTogglePerformer(name); }}
+                            className="hover:text-status-error-text transition-colors"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Tags as removable chips */}
+              {row.normalized.tagNames.length > 0 && (
+                <div className={cn("transition-opacity", !row.selectedFields.has("tags") && "opacity-40")}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <input
+                      type="checkbox"
+                      checked={row.selectedFields.has("tags")}
+                      onChange={() => onToggleField("tags")}
+                      className="accent-[#c79b5c]"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-kicker">Tags</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {row.normalized.tagNames.map((name) => {
+                      const excluded = row.excludedTags.has(name);
+                      return (
+                        <span
+                          key={name}
+                          className={cn(
+                            "inline-flex items-center gap-1 tag-chip transition-all",
+                            excluded
+                              ? "tag-chip-default opacity-40 line-through"
+                              : "tag-chip-default"
+                          )}
+                        >
+                          {name}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onToggleTag(name); }}
+                            className="hover:text-status-error-text transition-colors"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

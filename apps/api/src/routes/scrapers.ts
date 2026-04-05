@@ -777,6 +777,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const body = request.body as {
       fields?: string[];
+      excludePerformers?: string[];
+      excludeTags?: string[];
     };
 
     const [result] = await db
@@ -854,6 +856,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
         .where(eq(scenes.id, result.sceneId));
 
       // Performers: find or create, then link — also apply scraped metadata
+      const excludedPerformers = new Set((body.excludePerformers ?? []).map((n) => n.toLowerCase()));
       if (fieldsToApply.has("performers") && result.proposedPerformerNames?.length) {
         // Build a lookup of raw performer data from the scrape result
         const rawScene = result.rawResult as StashScrapedScene | null;
@@ -864,6 +867,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
         }
 
         for (const name of result.proposedPerformerNames) {
+          if (excludedPerformers.has(name.toLowerCase())) continue;
+
           const [existing] = await tx
             .select({ id: performers.id, gender: performers.gender, imagePath: performers.imagePath })
             .from(performers)
@@ -953,8 +958,10 @@ export async function scrapersRoutes(app: FastifyInstance) {
       }
 
       // Tags: find or create, then link
+      const excludedTags = new Set((body.excludeTags ?? []).map((n) => n.toLowerCase()));
       if (fieldsToApply.has("tags") && result.proposedTagNames?.length) {
         for (const name of result.proposedTagNames) {
+          if (excludedTags.has(name.toLowerCase())) continue;
           const [existing] = await tx
             .select({ id: tags.id })
             .from(tags)
