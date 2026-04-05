@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@obscura/ui";
 import {
   FolderOpen,
@@ -80,8 +80,20 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Track saved state for dirty detection
+  const savedSettings = useRef<LibrarySettings>(defaultSettings);
+
   // Scrapers summary
   const [scraperCount, setScraperCount] = useState(0);
+
+  const settingsKeys = [
+    "autoScanEnabled", "scanIntervalMinutes", "autoGenerateMetadata",
+    "autoGenerateFingerprints", "autoGeneratePreview", "generateTrickplay",
+    "trickplayIntervalSeconds", "previewClipDurationSeconds",
+  ] as const;
+  const isDirty = settingsKeys.some(
+    (k) => settings[k] !== savedSettings.current[k]
+  );
 
   async function loadConfig() {
     setLoading(true);
@@ -93,6 +105,7 @@ export default function SettingsPage() {
         fetchInstalledScrapers(),
       ]);
       setSettings(response.settings);
+      savedSettings.current = response.settings;
       setRoots(response.roots);
       setStorage(response.storage);
       setScraperCount(scrapersRes.packages.length);
@@ -204,7 +217,7 @@ export default function SettingsPage() {
   const totalBytes = storage?.totalBytes ?? 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -233,13 +246,13 @@ export default function SettingsPage() {
           </button>
           <button
             onClick={() => void handleSaveSettings()}
-            disabled={saving}
+            disabled={saving || !isDirty}
             className={cn(
               "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
-              "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
-              "text-accent-200 border border-border-accent shadow-[var(--shadow-glow-accent)]",
-              "hover:shadow-[var(--shadow-glow-accent-strong)] hover:border-border-accent-strong",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+              isDirty
+                ? "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 border border-border-accent shadow-[var(--shadow-glow-accent)] hover:shadow-[var(--shadow-glow-accent-strong)] hover:border-border-accent-strong"
+                : "bg-surface-3 text-text-disabled border border-border-subtle cursor-not-allowed",
+              "disabled:opacity-60"
             )}
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -261,7 +274,7 @@ export default function SettingsPage() {
       )}
 
       {/* ─── Watched Libraries ────────────────────────────────── */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 px-1">
           <div className="flex items-center gap-2.5">
             <FolderOpen className="h-4 w-4 text-text-accent" />
@@ -419,6 +432,7 @@ export default function SettingsPage() {
       </section>
 
       {/* ─── Scrapers Link ────────────────────────────────────── */}
+      <div className="border-t border-border-subtle" />
       <Link href="/scrapers" className="block group">
         <div className={cn(
           "surface-card-sharp no-lift p-4 transition-all duration-normal",
@@ -443,7 +457,8 @@ export default function SettingsPage() {
       </Link>
 
       {/* ─── Generation Pipeline ──────────────────────────────── */}
-      <section className="space-y-2">
+      <div className="border-t border-border-subtle" />
+      <section className="space-y-3">
         <div className="flex items-center gap-2.5 px-1">
           <ScanSearch className="h-4 w-4 text-text-accent" />
           <div>
@@ -544,7 +559,8 @@ export default function SettingsPage() {
       </section>
 
       {/* ─── Generated Storage ────────────────────────────────── */}
-      <section className="space-y-2">
+      <div className="border-t border-border-subtle" />
+      <section className="space-y-3">
         <div className="flex items-center gap-2.5 px-1">
           <HardDrive className="h-4 w-4 text-text-accent" />
           <div>
