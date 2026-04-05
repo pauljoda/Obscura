@@ -35,6 +35,7 @@ interface ImageLightboxProps {
   initialIndex: number;
   chapters?: GalleryChapterDto[];
   onClose: () => void;
+  onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
 }
 
 export function ImageLightbox({
@@ -42,6 +43,7 @@ export function ImageLightbox({
   initialIndex,
   chapters = [],
   onClose,
+  onImageUpdate,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
@@ -403,6 +405,7 @@ export function ImageLightbox({
         image={currentImage}
         open={showInfo}
         onClose={() => setShowInfo(false)}
+        onImageUpdate={onImageUpdate}
       />
     </div>
   );
