@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Full performer CRUD API: `POST /performers`, `PATCH /performers/:id`, `DELETE /performers/:id`, favorite/rating quick toggles.
+- Performer image pipeline: upload, download from URL (including base64 data URLs), and asset serving at `/assets/performers/:id/image`.
+- Performer scraping API: `POST /scrapers/:id/scrape-performer` with action cascade (performerByURL, performerByName, performerByFragment).
+- `POST /performers/:id/apply-scrape` for applying scrape results with selective field application.
+- Enhanced scene scrape acceptance: when accepting a scene scrape, performer metadata (gender, birthdate, country, image, etc.) is now applied from raw scraper data instead of discarding everything except names.
+- `performerTags` join table for tagging performers independently of scenes.
+- `imagePath` column on performers for locally-stored portrait images.
+- Database indexes on performers: name, gender, favorite, rating, created_at.
+- Performer normalizer (`normalizePerformerResult`) in stash-import package.
+- Performer list page with portrait grid cards (3:4 aspect), server-side filtering (gender, favorites), sorting (name, scenes, rating, recent), pagination, and debounced search.
+- Performer detail page with sidebar portrait layout, interactive favorite/rating, metadata grid with age calculation, tags, biography, and scene filmography.
+- Performer edit component with full form fields, scraper integration panel with result preview and selective field application, image upload/delete, and tag management.
+- Bulk performer scrape page at `/performers/scrape` with sequential scraping, auto-accept option, and per-row accept/reject.
+- Performer route constants and DTOs (`PerformerListItemDto`, `PerformerDetailDto`, `PerformerUpdateDto`, `NormalizedPerformerResult`) in contracts.
+- Frontend API client functions for all performer CRUD, image, and scraping operations.
+
 - Dashboard added to sidebar nav as first item under a new "Overview" section; logo/logomark now link to `/` so clicking the logo always navigates home.
 - Dashboard page now displays live library stats (scene count, total duration, storage, weekly additions) and job activity feed from the API, replacing hardcoded zeroes.
 - Performers listing page wired to `GET /performers` with client-side search/sort, performer card grid, and links to detail pages.
