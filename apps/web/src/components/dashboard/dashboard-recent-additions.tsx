@@ -54,6 +54,7 @@ function SceneIngestTile({
           title={scene.title}
           thumbnail={toApiUrl(scene.thumbnailPath)}
           cardThumbnail={scene.thumbnailPath?.includes("thumb-custom") ? undefined : toApiUrl(scene.cardThumbnailPath)}
+          imageLoading="lazy"
           trickplaySprite={toApiUrl(scene.spritePath)}
           trickplayVtt={toApiUrl(scene.trickplayVttPath)}
           scrubDurationSeconds={scene.duration ?? undefined}
@@ -113,11 +114,11 @@ function GalleryIngestTile({
           />
         )}
         <div className="absolute left-1.5 top-1.5">
-          <span className="glass-chip-accent rounded-sm px-1.5 py-0.5 text-[0.55rem] font-mono font-semibold uppercase tracking-[0.14em] text-accent-100">
+          <span className="media-chip-accent rounded-sm px-1.5 py-0.5 text-[0.55rem] font-mono font-semibold uppercase tracking-[0.14em] text-accent-100">
             Stills
           </span>
         </div>
-        <div className="absolute inset-x-0 bottom-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--color-overlay-glass)_88%,transparent)] px-2 py-1.5 backdrop-blur-md">
+        <div className="absolute inset-x-0 bottom-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--color-overlay-glass)_94%,transparent)] px-2 py-1.5">
           <p className="truncate text-[0.78rem] font-medium leading-tight text-text-primary">
             {gallery.title}
           </p>

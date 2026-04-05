@@ -65,6 +65,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
             title={scene.title}
             thumbnail={toApiUrl(scene.thumbnailPath)}
             cardThumbnail={scene.thumbnailPath?.includes("thumb-custom") ? undefined : toApiUrl(scene.cardThumbnailPath)}
+            imageLoading={i < 8 ? "eager" : "lazy"}
             trickplaySprite={toApiUrl(scene.spritePath)}
             trickplayVtt={toApiUrl(scene.trickplayVttPath)}
             scrubDurationSeconds={scene.duration ?? undefined}
@@ -111,6 +112,7 @@ function SceneListItem({
             <img
               src={scene.thumbnailPath?.includes("thumb-custom") ? toApiUrl(scene.thumbnailPath) : (toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath))}
               alt={scene.title}
+              loading={index < 6 ? "eager" : "lazy"}
               decoding="async"
               className="h-full w-full object-cover"
             />
