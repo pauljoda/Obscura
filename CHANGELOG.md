@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Web UI package now exposes direct subpath entry points for utilities, primitives, composed components, and app-shell navigation data; the web app now imports those paths directly instead of pulling from the root barrel.
 - Scene detail now lazy-loads the player component, and adaptive playback only imports `hls.js` when the user actually enters the HLS path.
+- Video player timeline now shows all markers instead of truncating at four, and hover tooltips include the hovered timestamp plus nearby marker titles for faster navigation.
 
 - Web app: dashboard, scenes, performers, performer detail, scene detail, and settings now fetch initial route data on the server and hydrate client views from seeded props instead of bootstrapping the first render through `useEffect`.
 - Web API client no longer forces `cache: "no-store"` for every request, allowing server-rendered routes to choose their own fetch strategy.

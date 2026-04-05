@@ -120,6 +120,11 @@ export function VideoPlayer({
   const [droppedFrames, setDroppedFrames] = useState<number | null>(null);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
+  const [timelineHover, setTimelineHover] = useState<{
+    markerTitles: string[];
+    percent: number;
+    time: number;
+  } | null>(null);
   const [usingAdaptiveStream, setUsingAdaptiveStream] = useState(false);
   const [playerNotice, setPlayerNotice] = useState<string | null>(null);
 
@@ -558,6 +563,26 @@ export function VideoPlayer({
     setSpeedMenuOpen(false);
   }
 
+  function updateTimelineHover(clientX: number, rect: DOMRect) {
+    if (duration <= 0) {
+      setTimelineHover(null);
+      return;
+    }
+
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const time = percent * duration;
+    const markerWindowSeconds = Math.max(duration * 0.01, 1.5);
+    const markerTitles = markers
+      .filter((marker) => Math.abs(marker.time - time) <= markerWindowSeconds)
+      .map((marker) => marker.title);
+
+    setTimelineHover({
+      markerTitles,
+      percent: percent * 100,
+      time,
+    });
+  }
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const selectedQualityLabel =
     qualityMode === "direct"
@@ -637,12 +662,14 @@ export function VideoPlayer({
               isDraggingRef.current = true;
               setIsDragging(true);
               const rect = event.currentTarget.getBoundingClientRect();
+              updateTimelineHover(event.clientX, rect);
               const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
               seekTo(nextPercent * duration);
             }}
             onPointerMove={(event) => {
-              if (!isDraggingRef.current) return;
               const rect = event.currentTarget.getBoundingClientRect();
+              updateTimelineHover(event.clientX, rect);
+              if (!isDraggingRef.current) return;
               const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
               seekTo(nextPercent * duration);
             }}
@@ -655,7 +682,27 @@ export function VideoPlayer({
               isDraggingRef.current = false;
               setIsDragging(false);
             }}
+            onPointerLeave={() => {
+              if (!isDraggingRef.current) {
+                setTimelineHover(null);
+              }
+            }}
           >
+            {timelineHover && (
+              <div
+                className="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 -translate-x-1/2 rounded-sm border border-white/10 bg-black/88 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+                style={{ left: `${timelineHover.percent}%` }}
+              >
+                <div className="text-mono-tabular text-[0.65rem] text-white/82">
+                  {formatTime(timelineHover.time)}
+                </div>
+                {timelineHover.markerTitles.length > 0 && (
+                  <div className="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
+                    {timelineHover.markerTitles.join(" • ")}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="video-progress-buffered" style={{ width: `${bufferedProgress}%` }} />
             <div className="video-progress-fill" style={{ width: `${progress}%` }} />
             {markers.map((marker) => {
@@ -679,7 +726,7 @@ export function VideoPlayer({
 
           {markers.length > 0 && (
             <div className="hidden sm:flex flex-wrap gap-1.5">
-              {markers.slice(0, 4).map((marker) => (
+              {markers.map((marker) => (
                 <button
                   key={marker.id}
                   type="button"
