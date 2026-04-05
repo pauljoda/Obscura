@@ -187,6 +187,21 @@ export interface NormalizedPerformerScrapeResult {
   tagNames: string[];
 }
 
+export interface StudioParentRef {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+}
+
+export interface StudioChildRef {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+  sceneCount: number;
+}
+
 export interface StudioDetail {
   id: string;
   name: string;
@@ -194,6 +209,8 @@ export interface StudioDetail {
   aliases: string | null;
   url: string | null;
   parentId: string | null;
+  parent: StudioParentRef | null;
+  childStudios: StudioChildRef[];
   imageUrl: string | null;
   imagePath: string | null;
   favorite: boolean;
@@ -443,6 +460,20 @@ export async function updateImage(
 
 export async function fetchStudios(): Promise<{ studios: StudioItem[] }> {
   return fetchApi("/studios");
+}
+
+export async function findOrCreateStudio(data: {
+  name: string;
+  url?: string | null;
+  imageUrl?: string | null;
+  parentName?: string | null;
+  parentUrl?: string | null;
+  parentImageUrl?: string | null;
+}): Promise<{ ok: true; id: string }> {
+  return fetchApi("/studios/find-or-create", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchPerformers(params?: {
