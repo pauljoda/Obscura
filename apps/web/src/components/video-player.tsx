@@ -459,7 +459,11 @@ export function VideoPlayer({
 
       switch (event.key.toLowerCase()) {
         case " ":
+          event.preventDefault();
+          togglePlay();
+          break;
         case "k":
+          if (event.metaKey || event.ctrlKey) break;
           event.preventDefault();
           togglePlay();
           break;
