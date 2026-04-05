@@ -5,8 +5,6 @@ import {
   useCallback,
   useRef,
   useEffect,
-  createContext,
-  useContext,
 } from "react";
 import {
   Loader2,
@@ -30,41 +28,6 @@ function formatFileSize(bytes: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// Active-video context: only one video plays at a time across the whole feed.
-// Each FeedCard calls `claim(id)` when it scrolls into the activation zone.
-// ---------------------------------------------------------------------------
-
-interface ActiveVideoCtx {
-  activeId: string | null;
-  claim: (id: string) => void;
-  release: (id: string) => void;
-}
-
-const ActiveVideoContext = createContext<ActiveVideoCtx>({
-  activeId: null,
-  claim: () => {},
-  release: () => {},
-});
-
-function ActiveVideoProvider({ children }: { children: React.ReactNode }) {
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const claim = useCallback((id: string) => {
-    setActiveId(id);
-  }, []);
-
-  const release = useCallback((id: string) => {
-    setActiveId((prev) => (prev === id ? null : prev));
-  }, []);
-
-  return (
-    <ActiveVideoContext.Provider value={{ activeId, claim, release }}>
-      {children}
-    </ActiveVideoContext.Provider>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // ImageFeed
 // ---------------------------------------------------------------------------
 
@@ -76,15 +39,7 @@ interface ImageFeedProps {
   loadingMore?: boolean;
 }
 
-export function ImageFeed(props: ImageFeedProps) {
-  return (
-    <ActiveVideoProvider>
-      <ImageFeedInner {...props} />
-    </ActiveVideoProvider>
-  );
-}
-
-function ImageFeedInner({
+export function ImageFeed({
   images,
   onImageClick,
   hasMore = false,
@@ -142,21 +97,14 @@ function ImageFeedInner({
 }
 
 // ---------------------------------------------------------------------------
-// FeedCard — single post in the feed
+// FeedCard
 //
-// Visibility tiers:
-//   render zone  (rootMargin 400px) — card mounts real DOM instead of placeholder
-//   activate zone (rootMargin 0px, threshold 0.5) — video swaps from preview to full
-//
-// For video items the lifecycle is:
-//   off-screen → placeholder div
-//   render zone → thumbnail (images) or poster frame (videos via preview.mp4)
-//   activate zone → full-quality video autoplay (only one at a time)
-//   leaves render zone → back to placeholder
+// All cards are always rendered (no virtualization placeholders). Videos use
+// an IntersectionObserver to switch between poster/thumbnail (off-screen) and
+// full-quality autoplay (on-screen). All visible videos play simultaneously.
 // ---------------------------------------------------------------------------
 
-const RENDER_MARGIN = "400px";
-const ACTIVATE_THRESHOLD = 0.5;
+const ACTIVATE_THRESHOLD = 0.3;
 
 function FeedCard({
   image,
@@ -168,43 +116,17 @@ function FeedCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const [rendered, setRendered] = useState(false);
   const [activated, setActivated] = useState(false);
   const [error, setError] = useState(false);
-  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
-
-  const { activeId, claim, release } = useContext(ActiveVideoContext);
 
   const thumbUrl = toApiUrl(image.thumbnailPath);
   const previewUrl = toApiUrl(image.previewPath);
   const fullUrl = toApiUrl(image.fullPath);
   const isVideo = isVideoImage(image);
-  const isActiveVideo = activeId === image.id;
 
   const handleError = useCallback(() => setError(true), []);
 
-  // --- Render-zone observer (wide margin) ---
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const entering = Boolean(entry?.isIntersecting);
-        setRendered(entering);
-        if (!entering) {
-          setActivated(false);
-          if (isVideo) release(image.id);
-        }
-      },
-      { rootMargin: RENDER_MARGIN, threshold: 0.01 },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [image.id, isVideo, release]);
-
-  // --- Activate-zone observer (tight, center-biased) ---
+  // --- Activation observer: video plays at full quality when visible ---
   useEffect(() => {
     if (!isVideo) return;
     const node = containerRef.current;
@@ -212,59 +134,38 @@ function FeedCard({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
-          setActivated(true);
-          claim(image.id);
-        } else {
-          setActivated(false);
-          release(image.id);
-        }
+        setActivated(Boolean(entry?.isIntersecting));
       },
-      { threshold: ACTIVATE_THRESHOLD },
+      { rootMargin: "200px", threshold: ACTIVATE_THRESHOLD },
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [image.id, isVideo, claim, release]);
+  }, [isVideo]);
 
-  // --- Play/pause the video element based on active state ---
+  // --- Play/pause based on activation ---
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
 
-    if (isActiveVideo && activated) {
+    if (activated) {
       vid.play().catch(() => {});
     } else {
       vid.pause();
     }
-  }, [isActiveVideo, activated]);
-
-  // --- Measure height so placeholder preserves scroll position ---
-  useEffect(() => {
-    if (rendered && containerRef.current) {
-      const h = containerRef.current.getBoundingClientRect().height;
-      if (h > 0) setMeasuredHeight(h);
-    }
-  }, [rendered]);
+  }, [activated]);
 
   const ratingStars = image.rating ? Math.round(image.rating / 20) : 0;
   const sizeStr = formatFileSize(image.fileSize);
 
-  // Choose which video src to use: full quality when activated and claimed, preview otherwise
-  const videoSrc = isActiveVideo && activated ? fullUrl : previewUrl;
-
-  if (!rendered) {
-    return (
-      <div
-        ref={containerRef}
-        className="surface-card-sharp"
-        style={{ height: measuredHeight ?? 320, contain: "strict" }}
-      />
-    );
-  }
+  const videoSrc = activated ? fullUrl : previewUrl;
 
   return (
-    <div ref={containerRef} className="surface-card-sharp overflow-hidden">
+    <div
+      ref={containerRef}
+      className="surface-card-sharp overflow-hidden"
+      style={{ overflowAnchor: "none" }}
+    >
       {/* Media area */}
       <button
         type="button"
@@ -279,12 +180,12 @@ function FeedCard({
           ) : isVideo && videoSrc ? (
             <video
               ref={videoRef}
-              key={isActiveVideo ? "full" : "preview"}
+              key={activated ? "full" : "preview"}
               src={videoSrc}
               loop
               muted
               playsInline
-              preload={isActiveVideo ? "auto" : "none"}
+              preload={activated ? "auto" : "none"}
               poster={thumbUrl}
               onError={() => setError(true)}
               className="w-full object-contain bg-black"
