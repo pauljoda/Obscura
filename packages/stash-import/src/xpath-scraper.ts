@@ -106,11 +106,20 @@ export async function runXPathScraper(
     );
   }
 
-  // Parse HTML and evaluate XPath selectors
-  const dom = new JSDOM(html, { url: fetchUrl });
-  const doc = dom.window.document;
+  try {
+    // Parse HTML and evaluate XPath selectors
+    const dom = new JSDOM(html, { url: fetchUrl });
+    const doc = dom.window.document;
 
-  return evaluateSceneSelectors(doc, xpathScraperDef);
+    return evaluateSceneSelectors(doc, xpathScraperDef);
+  } catch (err) {
+    if (err instanceof ScraperExecutionError) throw err;
+    throw new ScraperExecutionError(
+      `XPath evaluation failed for ${fetchUrl}: ${(err as Error).message}`,
+      definition.name,
+      action
+    );
+  }
 }
 
 /**
