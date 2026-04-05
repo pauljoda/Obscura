@@ -606,9 +606,22 @@ export async function scrapersRoutes(app: FastifyInstance) {
         }
 
         // For performerByName, return array of search results
+        // but try to find an exact or close match first
         if (Array.isArray(rawResult)) {
+          const normalizedResults = rawResult.map((r) => normalizePerformerResult(r));
+          const queryName = (body.query || performer.name || "").toLowerCase().trim();
+
+          // Try exact match first
+          const exactMatch = normalizedResults.find(
+            (r) => r.name?.toLowerCase().trim() === queryName
+          );
+          if (exactMatch) {
+            return { result: exactMatch, rawResult: rawResult[normalizedResults.indexOf(exactMatch)], action, triedActions };
+          }
+
+          // Fall back to returning the array for user selection
           return {
-            results: rawResult.map((r) => normalizePerformerResult(r)),
+            results: normalizedResults,
             rawResults: rawResult,
             action,
             triedActions,

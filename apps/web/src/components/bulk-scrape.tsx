@@ -244,15 +244,30 @@ export function BulkScrape() {
     result?: NormalizedPerformerScrapeResult;
     matchedScraper?: string;
   }> {
+    const performerName = row.performer.name.toLowerCase().trim();
+
     for (const scraper of scraperList) {
       try {
         const res = await withTimeout(
           scrapePerformerApi(scraper.id, row.performer.id, { action: "auto" }),
           SEEK_TIMEOUT_MS
         );
-        const result = res.result ?? res.results?.[0] ?? null;
-        if (result) {
-          return { result, matchedScraper: scraper.name };
+
+        // If the API found an exact match, use it directly
+        if (res.result) {
+          return { result: res.result, matchedScraper: scraper.name };
+        }
+
+        // If we got an array of search results, find the best match
+        if (res.results && res.results.length > 0) {
+          // Exact match
+          const exact = res.results.find(
+            (r) => r.name?.toLowerCase().trim() === performerName
+          );
+          if (exact) {
+            return { result: exact, matchedScraper: scraper.name };
+          }
+          // Skip partial matches — too high false positive rate
         }
       } catch {
         // Timeout or error — try next
