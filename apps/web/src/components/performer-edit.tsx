@@ -21,6 +21,8 @@ import {
   fetchPerformerDetail,
   updatePerformer,
   fetchInstalledScrapers,
+  fetchStashBoxEndpoints,
+  identifyPerformerViaStashBox,
   fetchTags,
   scrapePerformerApi,
   applyPerformerScrape,
@@ -30,9 +32,12 @@ import {
   toApiUrl,
   type PerformerDetail,
   type ScraperPackage,
+  type StashBoxEndpoint,
   type NormalizedPerformerScrapeResult,
   type TagItem,
 } from "../lib/api";
+import { ImagePickerModal } from "./image-picker-modal";
+import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
 
 interface PerformerEditProps {
   id: string;
@@ -79,9 +84,12 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
   // Scraper state
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
-  const [selectedScraper, setSelectedScraper] = useState("");
+  const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState(""); // "scraper:id" or "stashbox:id"
   const [scraping, setScraping] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<NormalizedPerformerScrapeResult | null>(null);
+  const [scrapeRemoteId, setScrapeRemoteId] = useState<string | null>(null); // stashbox remote ID
+  const [scrapeEndpointId, setScrapeEndpointId] = useState<string | null>(null); // stashbox endpoint ID
   const [selectedScrapeFields, setSelectedScrapeFields] = useState<Set<string>>(new Set());
   const [seekIndex, setSeekIndex] = useState(0);
   const [seeking, setSeeking] = useState(false);
@@ -101,8 +109,9 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     Promise.all([
       fetchPerformerDetail(id),
       fetchInstalledScrapers(),
+      fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
       fetchTags(),
-    ]).then(([p, s, t]) => {
+    ]).then(([p, s, sbRes, t]) => {
       setPerformer(p);
       // Initialize form
       setName(p.name);
@@ -130,7 +139,17 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
         return caps && (caps.performerByURL || caps.performerByName || caps.performerByFragment);
       });
       setScrapers(perfScrapers);
-      if (perfScrapers.length > 0) setSelectedScraper(perfScrapers[0].id);
+
+      // StashBox endpoints
+      const enabledEndpoints = sbRes.endpoints.filter((e) => e.enabled);
+      setStashBoxEndpoints(enabledEndpoints);
+
+      // Set default provider: first stashbox, then first scraper
+      if (enabledEndpoints.length > 0) {
+        setSelectedProvider(`stashbox:${enabledEndpoints[0].id}`);
+      } else if (perfScrapers.length > 0) {
+        setSelectedProvider(`scraper:${perfScrapers[0].id}`);
+      }
 
       setAllTags(t.tags);
       setLoading(false);
@@ -189,17 +208,40 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   }
 
   async function handleScrape() {
-    if (!selectedScraper) return;
+    if (!selectedProvider) return;
     setScraping(true);
     setError(null);
     setScrapeResult(null);
+    setScrapeRemoteId(null);
+    setScrapeEndpointId(null);
+
+    const isStashBox = selectedProvider.startsWith("stashbox:");
+    const realId = selectedProvider.replace(/^(stashbox|scraper):/, "");
+
     try {
-      const res = await scrapePerformerApi(selectedScraper, id);
-      const result = res.result ?? res.results?.[0] ?? null;
-      if (result) {
-        applyScrapeResultToPreview(result);
+      if (isStashBox) {
+        const res = await identifyPerformerViaStashBox(realId, id);
+        if (res.results && res.results.length > 0) {
+          // Prefer exact name match
+          const performerName = name.toLowerCase().trim();
+          const exact = res.results.find(
+            (r) => r.name?.toLowerCase().trim() === performerName
+          );
+          const result = exact ?? res.results[0];
+          applyScrapeResultToPreview(result);
+          // Store remote stashbox ID if available from raw results
+          setScrapeEndpointId(realId);
+        } else {
+          setError(res.message || "No results found");
+        }
       } else {
-        setError(res.message || "Scraper returned no results");
+        const res = await scrapePerformerApi(realId, id);
+        const result = res.result ?? res.results?.[0] ?? null;
+        if (result) {
+          applyScrapeResultToPreview(result);
+        } else {
+          setError(res.message || "Scraper returned no results");
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scrape failed");
@@ -209,17 +251,50 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   }
 
   async function handleSeek() {
-    if (scrapers.length === 0) return;
+    const totalProviders = stashBoxEndpoints.length + scrapers.length;
+    if (totalProviders === 0) return;
     setSeeking(true);
     setError(null);
     setScrapeResult(null);
+    setScrapeRemoteId(null);
+    setScrapeEndpointId(null);
 
-    let tried = 0;
+    const performerName = name.toLowerCase().trim();
+
+    // Try StashBox endpoints first (higher confidence)
+    for (const ep of stashBoxEndpoints) {
+      setSelectedProvider(`stashbox:${ep.id}`);
+      setMessage(`Trying ${ep.name}...`);
+      try {
+        const res = await Promise.race([
+          identifyPerformerViaStashBox(ep.id, id),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 5000)
+          ),
+        ]);
+        if (res?.results && res.results.length > 0) {
+          const exact = res.results.find(
+            (r) => r.name?.toLowerCase().trim() === performerName
+          );
+          if (exact) {
+            applyScrapeResultToPreview(exact);
+            setScrapeEndpointId(ep.id);
+            setMessage(`Found result from ${ep.name}`);
+            setSeeking(false);
+            return;
+          }
+        }
+      } catch {
+        // Timeout or error — try next
+      }
+    }
+
+    // Fall back to community scrapers
     let idx = seekIndex;
-
+    let tried = 0;
     while (tried < scrapers.length) {
       const scraper = scrapers[idx];
-      setSelectedScraper(scraper.id);
+      setSelectedProvider(`scraper:${scraper.id}`);
       setMessage(`Trying ${scraper.name}...`);
 
       try {
@@ -248,7 +323,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     }
 
     setMessage(null);
-    setError("No scrapers returned results");
+    setError("No providers returned results");
     setSeekIndex(0);
     setSeeking(false);
   }
@@ -292,7 +367,14 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
       setDetails(updated.details ?? "");
       setTagNames(updated.tags?.map((t) => t.name) ?? []);
 
+      // Auto-save stash ID if this came from a stashbox endpoint
+      if (scrapeEndpointId && scrapeRemoteId) {
+        await autoSaveStashId("performer", id, scrapeEndpointId, scrapeRemoteId);
+      }
+
       setScrapeResult(null);
+      setScrapeRemoteId(null);
+      setScrapeEndpointId(null);
       setMessage("Scrape result applied");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to apply scrape");
@@ -466,25 +548,39 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
           />
 
           {/* Scraper panel */}
-          {scrapers.length > 0 && (
+          {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
             <div className="surface-well p-3 space-y-2">
               <div className="text-kicker">Scrape Metadata</div>
               <select
-                value={selectedScraper}
+                value={selectedProvider}
                 onChange={(e) => {
-                  setSelectedScraper(e.target.value);
-                  setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
+                  setSelectedProvider(e.target.value);
+                  if (e.target.value.startsWith("scraper:")) {
+                    const scraperId = e.target.value.replace("scraper:", "");
+                    setSeekIndex(scrapers.findIndex((s) => s.id === scraperId));
+                  }
                 }}
                 className="control-input w-full py-1.5 text-xs"
               >
-                {scrapers.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                {stashBoxEndpoints.length > 0 && (
+                  <optgroup label="Stash-Box">
+                    {stashBoxEndpoints.map((ep) => (
+                      <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {scrapers.length > 0 && (
+                  <optgroup label="Community Scrapers">
+                    {scrapers.map((s) => (
+                      <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={handleScrape}
-                  disabled={scraping || seeking || !selectedScraper}
+                  disabled={scraping || seeking || !selectedProvider}
                   className={cn(
                     "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
                     "bg-accent-950 text-text-accent border border-border-accent",
@@ -508,10 +604,16 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                 </button>
               </div>
               <p className="text-[0.6rem] text-text-disabled leading-snug">
-                Seek tries each scraper until one returns results
+                Seek tries each provider until one returns results
               </p>
             </div>
           )}
+
+          {/* StashBox IDs */}
+          <div className="surface-well p-3 space-y-2">
+            <div className="text-kicker">StashBox IDs</div>
+            <StashIdChips entityType="performer" entityId={id} compact />
+          </div>
         </div>
 
         {/* Right column — form fields */}
@@ -615,63 +717,13 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                 if (allImages.length === 0) return null;
 
                 return (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="relative max-w-5xl w-full max-h-[90vh] mx-4 flex flex-col">
-                      {/* Header */}
-                      <div className="flex items-center justify-between px-4 py-3 surface-elevated rounded-t-lg">
-                        <span className="text-sm font-medium text-text-primary">
-                          Select Image ({selectedImageIndex + 1} of {allImages.length})
-                        </span>
-                        <button
-                          onClick={() => setImagePickerOpen(false)}
-                          className="text-text-muted hover:text-text-primary transition-colors"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-
-                      {/* Large preview */}
-                      <div className="flex-1 min-h-0 surface-panel flex items-center justify-center p-4 overflow-hidden">
-                        <img
-                          src={allImages[selectedImageIndex] ?? allImages[0]}
-                          alt={`Image ${selectedImageIndex + 1}`}
-                          className="max-w-full max-h-[60vh] object-contain rounded"
-                        />
-                      </div>
-
-                      {/* Thumbnail grid */}
-                      <div className="surface-elevated rounded-b-lg p-4">
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-48 overflow-y-auto">
-                          {allImages.map((url, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setSelectedImageIndex(i)}
-                              className={cn(
-                                "aspect-[3/4] rounded overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
-                                i === selectedImageIndex
-                                  ? "border-border-accent ring-2 ring-accent-500/30"
-                                  : "border-transparent hover:border-border-subtle opacity-60 hover:opacity-100"
-                              )}
-                            >
-                              <img src={url} alt={`Option ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex justify-end mt-3 gap-2">
-                          <button
-                            onClick={() => setImagePickerOpen(false)}
-                            className={cn(
-                              "flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all duration-fast",
-                              "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900"
-                            )}
-                          >
-                            <Check className="h-3 w-3" />
-                            Use Selected
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ImagePickerModal
+                    images={allImages}
+                    selectedIndex={selectedImageIndex}
+                    onSelect={setSelectedImageIndex}
+                    onClose={() => setImagePickerOpen(false)}
+                    title="Select Performer Image"
+                  />
                 );
               })()}
 

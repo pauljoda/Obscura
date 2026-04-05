@@ -37,6 +37,7 @@ import {
   type NormalizedScrapeResult,
   type NormalizedPerformerScrapeResult,
 } from "../lib/api";
+import { ImagePickerModal } from "./image-picker-modal";
 
 /** Unified provider that can be either a community scraper or StashBox endpoint */
 interface Provider {
@@ -1108,7 +1109,8 @@ function PerformerRowCard({
   onReject: () => void;
   onToggleField: (field: string) => void;
 }) {
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
 
   // All available images: imageUrls array + imageUrl single
   const allImages = row.result
@@ -1118,7 +1120,7 @@ function PerformerRowCard({
       ].filter((u) => u.startsWith("http") || u.startsWith("data:image/")))]
     : [];
 
-  const effectiveImageUrl = selectedImageUrl ?? allImages[0] ?? null;
+  const effectiveImageUrl = allImages[selectedImageIndex] ?? allImages[0] ?? null;
   return (
     <div>
       <div
@@ -1204,33 +1206,31 @@ function PerformerRowCard({
             {/* Image selection */}
             {allImages.length > 0 && (
               <div className="flex-shrink-0 space-y-2">
-                {/* Selected/primary image */}
-                <div className="w-24 h-32 rounded-[3px] overflow-hidden bg-surface-3 border border-border-subtle">
+                {/* Selected/primary image — click to browse */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); if (allImages.length > 1) setImagePickerOpen(true); }}
+                  className="w-24 h-32 rounded-[3px] overflow-hidden bg-surface-3 border border-border-subtle hover:border-border-accent transition-all"
+                >
                   {effectiveImageUrl && (
                     <img src={effectiveImageUrl} alt="" className="w-full h-full object-cover" />
                   )}
-                </div>
-                {/* Thumbnails for selection (only if multiple) */}
+                </button>
                 {allImages.length > 1 && (
-                  <div className="flex gap-1 flex-wrap max-w-[120px]">
-                    {allImages.slice(0, 8).map((url, i) => (
-                      <button
-                        key={i}
-                        onClick={(e) => { e.stopPropagation(); setSelectedImageUrl(url); }}
-                        className={cn(
-                          "w-7 h-9 rounded-[2px] overflow-hidden bg-surface-3 transition-all duration-fast flex-shrink-0",
-                          (selectedImageUrl ?? allImages[0]) === url
-                            ? "border-2 border-border-accent shadow-[var(--shadow-glow-accent)]"
-                            : "border border-border-subtle hover:border-text-muted opacity-70 hover:opacity-100"
-                        )}
-                      >
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                    {allImages.length > 8 && (
-                      <span className="text-[0.55rem] text-text-disabled self-center">+{allImages.length - 8}</span>
-                    )}
-                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setImagePickerOpen(true); }}
+                    className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors w-full text-center"
+                  >
+                    Browse all ({allImages.length})
+                  </button>
+                )}
+                {imagePickerOpen && (
+                  <ImagePickerModal
+                    images={allImages}
+                    selectedIndex={selectedImageIndex}
+                    onSelect={setSelectedImageIndex}
+                    onClose={() => setImagePickerOpen(false)}
+                    title="Select Performer Image"
+                  />
                 )}
               </div>
             )}
