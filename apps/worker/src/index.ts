@@ -325,6 +325,25 @@ async function processLibraryScan(job: Job) {
       .update(libraryRoots)
       .set({ lastScannedAt: new Date(), updatedAt: new Date() })
       .where(eq(libraryRoots.id, root.id));
+
+    // Still trigger gallery scan even if no video files were found
+    const scanImages = root.scanImages ?? true;
+    if (scanImages) {
+      const galleryScanQueue = new Queue("gallery-scan", {
+        connection: redis,
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+      });
+      const galleryScanJob = await galleryScanQueue.add("gallery-root-scan", {
+        libraryRootId: root.id,
+      });
+      await upsertJobRun(galleryScanJob, "gallery-scan", {
+        status: "waiting",
+        targetType: "library-root",
+        targetId: root.id,
+        targetLabel: root.label,
+      });
+      await galleryScanQueue.close();
+    }
     return;
   }
 

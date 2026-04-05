@@ -20,6 +20,15 @@ import { ImageLightboxFilmstrip } from "./image-lightbox-filmstrip";
 import { ImageLightboxInfo } from "./image-lightbox-info";
 import type { ImageListItemDto, GalleryChapterDto } from "@obscura/contracts";
 
+const VIDEO_FORMATS = new Set(["webm", "mp4", "mkv", "mov", "h264", "hevc", "vp8", "vp9", "av1", "matroska"]);
+
+function isVideoMedia(image: ImageListItemDto): boolean {
+  if (image.format && VIDEO_FORMATS.has(image.format.toLowerCase())) return true;
+  // Fallback: check title for video extension
+  const ext = image.title?.split(".").pop()?.toLowerCase() ?? "";
+  return new Set(["webm", "mp4", "mkv", "mov"]).has(ext);
+}
+
 interface ImageLightboxProps {
   images: ImageListItemDto[];
   initialIndex: number;
@@ -312,17 +321,35 @@ export function ImageLightbox({
         style={{ touchAction: "none" }}
       >
         {fullUrl && (
-          <img
-            src={fullUrl}
-            alt={currentImage.title}
-            className="max-h-full max-w-full object-contain"
-            style={{
-              transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-              willChange: "transform",
-              transition: isDragging ? "none" : "transform 0.15s ease-out",
-            }}
-            draggable={false}
-          />
+          isVideoMedia(currentImage) ? (
+            <video
+              key={currentImage.id}
+              src={fullUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="max-h-full max-w-full object-contain"
+              style={{
+                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                willChange: "transform",
+                transition: isDragging ? "none" : "transform 0.15s ease-out",
+              }}
+              draggable={false}
+            />
+          ) : (
+            <img
+              src={fullUrl}
+              alt={currentImage.title}
+              className="max-h-full max-w-full object-contain"
+              style={{
+                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                willChange: "transform",
+                transition: isDragging ? "none" : "transform 0.15s ease-out",
+              }}
+              draggable={false}
+            />
+          )
         )}
 
         {/* Nav arrows */}

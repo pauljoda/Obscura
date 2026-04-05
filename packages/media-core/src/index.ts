@@ -507,17 +507,34 @@ export const supportedImageExtensions = new Set([
   ".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".bmp", ".tiff", ".tif",
 ]);
 
+/** Video/animated formats that can appear as gallery items (animated images, short clips). */
+export const supportedAnimatedExtensions = new Set([
+  ".webm", ".mp4", ".mkv", ".mov",
+]);
+
+/** All extensions eligible for gallery discovery (static images + animated). */
+export const supportedGalleryMediaExtensions = new Set([
+  ...supportedImageExtensions,
+  ...supportedAnimatedExtensions,
+]);
+
 export const supportedZipExtensions = new Set([
   ".zip", ".cbz", ".cbr",
 ]);
 
 export function isImageFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
-  if (!supportedImageExtensions.has(ext)) return false;
+  if (!supportedGalleryMediaExtensions.has(ext)) return false;
 
   // Skip generated preview/thumbnail/sample files
   const stem = path.basename(filePath, ext);
   return !generatedSuffixPattern.test(stem);
+}
+
+/** Check if a gallery media file is an animated/video format rather than a static image. */
+export function isAnimatedFormat(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  return supportedAnimatedExtensions.has(ext) || ext === ".gif";
 }
 
 export interface ImageDiscoveryResult {
