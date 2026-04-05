@@ -14,9 +14,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
+  LayoutGrid,
+  Newspaper,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
 import { cn } from "@obscura/ui/lib/utils";
 import { Logo, LogoMark } from "./logo";
@@ -42,8 +44,14 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+const imageViewSubItems = [
+  { label: "Grid", href: "/images?view=grid", icon: LayoutGrid },
+  { label: "Feed", href: "/images?view=feed", icon: Newspaper },
+] as const;
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   return (
     <aside
@@ -93,6 +101,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   pathname === href ||
                   (href !== "/" && pathname.startsWith(href + "/"));
 
+                const isImagesRoute = href === "/images";
+                const imagesActive = isImagesRoute && isActive;
+                const currentView = searchParams.get("view") ?? "grid";
+
                 return (
                   <li key={item.href}>
                     <Link
@@ -123,6 +135,31 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         <span className="truncate">{item.label}</span>
                       )}
                     </Link>
+                    {imagesActive && !collapsed && (
+                      <ul className="ml-7 mt-0.5 space-y-0.5">
+                        {imageViewSubItems.map((sub) => {
+                          const subIsActive =
+                            (sub.href.includes("grid") && currentView === "grid") ||
+                            (sub.href.includes("feed") && currentView === "feed");
+                          return (
+                            <li key={sub.href}>
+                              <Link
+                                href={sub.href}
+                                className={cn(
+                                  "flex items-center gap-2 rounded-md px-2 py-1 text-[0.72rem] transition-colors duration-fast",
+                                  subIsActive
+                                    ? "text-text-accent"
+                                    : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+                                )}
+                              >
+                                <sub.icon className="h-3 w-3" />
+                                <span>{sub.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </li>
                 );
               })}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ArrowLeft, Images, LayoutGrid, LayoutList } from "lucide-react";
+import { ArrowLeft, Images, LayoutGrid, LayoutList, Newspaper } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
+import { ImageFeed } from "../image-feed";
 import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
 import { GalleryCard } from "../gallery-card";
@@ -25,6 +26,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [subGalleryView, setSubGalleryView] = useState<"grid" | "list">("grid");
+  const [imageViewMode, setImageViewMode] = useState<"grid" | "feed">("grid");
 
   const backHref = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
 
@@ -162,16 +164,54 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
           {/* Images section */}
           {images.length > 0 && (
             <div>
-              {gallery.children.length > 0 && (
-                <h3 className="text-kicker mb-3">Images</h3>
+              <div className="flex items-center justify-between mb-3">
+                {gallery.children.length > 0 && (
+                  <h3 className="text-kicker">Images</h3>
+                )}
+                <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden ml-auto">
+                  <button
+                    onClick={() => setImageViewMode("grid")}
+                    title="Grid view"
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center transition-colors duration-fast",
+                      imageViewMode === "grid"
+                        ? "text-text-accent bg-accent-950"
+                        : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+                    )}
+                  >
+                    <LayoutGrid className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setImageViewMode("feed")}
+                    title="Feed view"
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center transition-colors duration-fast",
+                      imageViewMode === "feed"
+                        ? "text-text-accent bg-accent-950"
+                        : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+                    )}
+                  >
+                    <Newspaper className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+              {imageViewMode === "feed" ? (
+                <ImageFeed
+                  images={images}
+                  onImageClick={handleImageClick}
+                  hasMore={images.length < imageTotal}
+                  onLoadMore={handleLoadMore}
+                  loadingMore={loadingMore}
+                />
+              ) : (
+                <ImageGrid
+                  images={images}
+                  onImageClick={handleImageClick}
+                  hasMore={images.length < imageTotal}
+                  onLoadMore={handleLoadMore}
+                  loadingMore={loadingMore}
+                />
               )}
-              <ImageGrid
-                images={images}
-                onImageClick={handleImageClick}
-                hasMore={images.length < imageTotal}
-                onLoadMore={handleLoadMore}
-                loadingMore={loadingMore}
-              />
             </div>
           )}
 

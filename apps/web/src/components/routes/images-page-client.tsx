@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Image as ImageIcon,
   Search,
@@ -15,13 +16,18 @@ import {
   ChevronDown,
   Check,
   SlidersHorizontal,
+  LayoutGrid,
+  Newspaper,
   X,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
+import { ImageFeed } from "../image-feed";
 import { ImageLightbox } from "../image-lightbox";
 import { fetchImages, type TagItem } from "../../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
+
+export type ImageViewMode = "grid" | "feed";
 
 type ImageSortOption = "recent" | "title" | "date" | "rating";
 type SortDir = "asc" | "desc";
@@ -57,6 +63,18 @@ export function ImagesPageClient({
   initialTags,
   initialTotal,
 }: ImagesPageClientProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialView = (searchParams.get("view") === "feed" ? "feed" : "grid") as ImageViewMode;
+  const [viewMode, setViewMode] = useState<ImageViewMode>(initialView);
+
+  const handleViewModeChange = useCallback(
+    (mode: ImageViewMode) => {
+      setViewMode(mode);
+      router.replace(`/images?view=${mode}`, { scroll: false });
+    },
+    [router],
+  );
   const [sortBy, setSortBy] = useState<ImageSortOption>("recent");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,6 +254,34 @@ export function ImagesPageClient({
 
           <div className="flex-1" />
 
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
+            <button
+              onClick={() => handleViewModeChange("grid")}
+              title="Grid view"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+                viewMode === "grid"
+                  ? "text-text-accent bg-accent-950"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => handleViewModeChange("feed")}
+              title="Feed view"
+              className={cn(
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+                viewMode === "feed"
+                  ? "text-text-accent bg-accent-950"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+              )}
+            >
+              <Newspaper className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           {/* Filter toggle */}
           <button
             onClick={() => setFilterPanelOpen(!filterPanelOpen)}
@@ -308,6 +354,17 @@ export function ImagesPageClient({
             Loading...
           </div>
         </div>
+      ) : viewMode === "feed" ? (
+        <ImageFeed
+          images={images}
+          onImageClick={(index) => {
+            setLightboxIndex(index);
+            setLightboxOpen(true);
+          }}
+          hasMore={images.length < total}
+          onLoadMore={handleLoadMore}
+          loadingMore={loadingMore}
+        />
       ) : (
         <ImageGrid
           images={images}
