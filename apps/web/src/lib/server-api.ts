@@ -10,7 +10,7 @@ import type {
   ScrapeResultDto,
 } from "@obscura/contracts";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = process.env.INTERNAL_API_URL ?? "http://localhost:4000";
 
 /**
  * Server-side fetch with explicit Next.js caching semantics.

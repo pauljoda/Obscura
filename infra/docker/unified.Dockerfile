@@ -56,6 +56,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV INTERNAL_API_URL=http://localhost:4000
 
 # Copy the ENTIRE built workspace — pnpm virtual store and symlinks intact
 COPY --from=builder /app ./
