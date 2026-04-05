@@ -354,11 +354,12 @@ export class StashBoxClient {
 
   // ── Test Connection ────────────────────────────────────────────
 
-  /** Verify connection and credentials by querying the server version. */
+  /** Verify connection and credentials using a spec-compliant introspection query. */
   async testConnection(): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.query<{ version: { version: string } }>(
-        "query { version { version } }",
+      // Use __typename which is valid on any GraphQL server (not just StashDB)
+      await this.query<{ __typename: string }>(
+        "query { __typename }",
         {},
       );
       return { valid: true };
