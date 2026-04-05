@@ -1,11 +1,24 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Loader2, ImageOff, Film, Star, Tag, Calendar, HardDrive } from "lucide-react";
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  createContext,
+  useContext,
+} from "react";
+import {
+  Loader2,
+  ImageOff,
+  Film,
+  Star,
+  Calendar,
+  HardDrive,
+} from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
-import { useElementInView } from "../hooks/use-element-in-view";
-import { isVideoImage, canUseInlineVideoPreview } from "../lib/image-media";
+import { isVideoImage } from "../lib/image-media";
 import type { ImageListItemDto } from "@obscura/contracts";
 
 function formatFileSize(bytes: number | null): string {
@@ -16,6 +29,45 @@ function formatFileSize(bytes: number | null): string {
   return `${kb.toFixed(0)} KB`;
 }
 
+// ---------------------------------------------------------------------------
+// Active-video context: only one video plays at a time across the whole feed.
+// Each FeedCard calls `claim(id)` when it scrolls into the activation zone.
+// ---------------------------------------------------------------------------
+
+interface ActiveVideoCtx {
+  activeId: string | null;
+  claim: (id: string) => void;
+  release: (id: string) => void;
+}
+
+const ActiveVideoContext = createContext<ActiveVideoCtx>({
+  activeId: null,
+  claim: () => {},
+  release: () => {},
+});
+
+function ActiveVideoProvider({ children }: { children: React.ReactNode }) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const claim = useCallback((id: string) => {
+    setActiveId(id);
+  }, []);
+
+  const release = useCallback((id: string) => {
+    setActiveId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  return (
+    <ActiveVideoContext.Provider value={{ activeId, claim, release }}>
+      {children}
+    </ActiveVideoContext.Provider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ImageFeed
+// ---------------------------------------------------------------------------
+
 interface ImageFeedProps {
   images: ImageListItemDto[];
   onImageClick?: (index: number) => void;
@@ -24,7 +76,15 @@ interface ImageFeedProps {
   loadingMore?: boolean;
 }
 
-export function ImageFeed({
+export function ImageFeed(props: ImageFeedProps) {
+  return (
+    <ActiveVideoProvider>
+      <ImageFeedInner {...props} />
+    </ActiveVideoProvider>
+  );
+}
+
+function ImageFeedInner({
   images,
   onImageClick,
   hasMore = false,
@@ -42,7 +102,7 @@ export function ImageFeed({
           onLoadMore();
         }
       },
-      { rootMargin: "600px" }
+      { rootMargin: "600px" },
     );
 
     observer.observe(sentinelRef.current);
@@ -81,6 +141,23 @@ export function ImageFeed({
   );
 }
 
+// ---------------------------------------------------------------------------
+// FeedCard — single post in the feed
+//
+// Visibility tiers:
+//   render zone  (rootMargin 400px) — card mounts real DOM instead of placeholder
+//   activate zone (rootMargin 0px, threshold 0.5) — video swaps from preview to full
+//
+// For video items the lifecycle is:
+//   off-screen → placeholder div
+//   render zone → thumbnail (images) or poster frame (videos via preview.mp4)
+//   activate zone → full-quality video autoplay (only one at a time)
+//   leaves render zone → back to placeholder
+// ---------------------------------------------------------------------------
+
+const RENDER_MARGIN = "400px";
+const ACTIVATE_THRESHOLD = 0.5;
+
 function FeedCard({
   image,
   onClick,
@@ -88,28 +165,106 @@ function FeedCard({
   image: ImageListItemDto;
   onClick: () => void;
 }) {
-  const [error, setError] = useState(false);
-  const [previewFailed, setPreviewFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useElementInView(containerRef, { rootMargin: "400px" });
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const [rendered, setRendered] = useState(false);
+  const [activated, setActivated] = useState(false);
+  const [error, setError] = useState(false);
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+
+  const { activeId, claim, release } = useContext(ActiveVideoContext);
 
   const thumbUrl = toApiUrl(image.thumbnailPath);
   const previewUrl = toApiUrl(image.previewPath);
   const fullUrl = toApiUrl(image.fullPath);
   const isVideo = isVideoImage(image);
-  const canPreview = canUseInlineVideoPreview(image) && !previewFailed;
-  const showVideoPreview = isVideo && canPreview && isInView;
+  const isActiveVideo = activeId === image.id;
 
   const handleError = useCallback(() => setError(true), []);
+
+  // --- Render-zone observer (wide margin) ---
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const entering = Boolean(entry?.isIntersecting);
+        setRendered(entering);
+        if (!entering) {
+          setActivated(false);
+          if (isVideo) release(image.id);
+        }
+      },
+      { rootMargin: RENDER_MARGIN, threshold: 0.01 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [image.id, isVideo, release]);
+
+  // --- Activate-zone observer (tight, center-biased) ---
+  useEffect(() => {
+    if (!isVideo) return;
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setActivated(true);
+          claim(image.id);
+        } else {
+          setActivated(false);
+          release(image.id);
+        }
+      },
+      { threshold: ACTIVATE_THRESHOLD },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [image.id, isVideo, claim, release]);
+
+  // --- Play/pause the video element based on active state ---
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    if (isActiveVideo && activated) {
+      vid.play().catch(() => {});
+    } else {
+      vid.pause();
+    }
+  }, [isActiveVideo, activated]);
+
+  // --- Measure height so placeholder preserves scroll position ---
+  useEffect(() => {
+    if (rendered && containerRef.current) {
+      const h = containerRef.current.getBoundingClientRect().height;
+      if (h > 0) setMeasuredHeight(h);
+    }
+  }, [rendered]);
 
   const ratingStars = image.rating ? Math.round(image.rating / 20) : 0;
   const sizeStr = formatFileSize(image.fileSize);
 
+  // Choose which video src to use: full quality when activated and claimed, preview otherwise
+  const videoSrc = isActiveVideo && activated ? fullUrl : previewUrl;
+
+  if (!rendered) {
+    return (
+      <div
+        ref={containerRef}
+        className="surface-card-sharp"
+        style={{ height: measuredHeight ?? 320, contain: "strict" }}
+      />
+    );
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="surface-card-sharp overflow-hidden"
-    >
+    <div ref={containerRef} className="surface-card-sharp overflow-hidden">
       {/* Media area */}
       <button
         type="button"
@@ -117,22 +272,21 @@ function FeedCard({
         className="block w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-inset"
       >
         <div className="relative bg-surface-2">
-          {!isInView ? (
-            <div className="aspect-video" />
-          ) : error || !thumbUrl ? (
+          {error || !thumbUrl ? (
             <div className="flex items-center justify-center bg-surface-2 aspect-video">
               <ImageOff className="h-8 w-8 text-text-disabled" />
             </div>
-          ) : showVideoPreview && previewUrl ? (
+          ) : isVideo && videoSrc ? (
             <video
-              src={previewUrl}
-              autoPlay
+              ref={videoRef}
+              key={isActiveVideo ? "full" : "preview"}
+              src={videoSrc}
               loop
               muted
               playsInline
-              preload="none"
+              preload={isActiveVideo ? "auto" : "none"}
               poster={thumbUrl}
-              onError={() => setPreviewFailed(true)}
+              onError={() => setError(true)}
               className="w-full object-contain bg-black"
               style={{ maxHeight: "70vh" }}
             />
@@ -158,12 +312,10 @@ function FeedCard({
 
       {/* Metadata area */}
       <div className="px-4 py-3 space-y-2">
-        {/* Title */}
         <h3 className="text-sm font-medium text-text-primary truncate">
           {image.title}
         </h3>
 
-        {/* Meta row */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.72rem] text-text-muted">
           {image.date && (
             <span className="flex items-center gap-1">
@@ -189,7 +341,6 @@ function FeedCard({
           )}
         </div>
 
-        {/* Rating */}
         {ratingStars > 0 && (
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }, (_, i) => (
@@ -199,14 +350,13 @@ function FeedCard({
                   "h-3.5 w-3.5",
                   i < ratingStars
                     ? "text-accent-500 fill-accent-500"
-                    : "text-text-disabled"
+                    : "text-text-disabled",
                 )}
               />
             ))}
           </div>
         )}
 
-        {/* Tags */}
         {image.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-0.5">
             {image.tags.map((tag) => (
