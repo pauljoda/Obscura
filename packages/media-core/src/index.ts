@@ -77,16 +77,33 @@ export interface ProbeVideoMetadata {
   audio: ProbeAudioMetadata | null;
 }
 
+/** Filename suffixes that mark generated/preview files we should skip during scan. */
+const generatedSuffixes = [".preview", ".thumb", ".sprite"];
+
 export function isVideoFile(filePath: string) {
-  return supportedVideoExtensions.has(path.extname(filePath).toLowerCase());
+  const ext = path.extname(filePath).toLowerCase();
+  if (!supportedVideoExtensions.has(ext)) return false;
+
+  // Skip generated preview/thumbnail files (e.g. scene.preview.mp4)
+  const stem = path.basename(filePath, ext).toLowerCase();
+  return !generatedSuffixes.some((suffix) => stem.endsWith(suffix));
 }
+
+/** Common HTML entities that appear in filenames downloaded from websites. */
+const htmlEntities: Record<string, string> = {
+  "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
+  "&#39;": "'", "&apos;": "'", "&#x27;": "'", "&#x2F;": "/",
+  "&nbsp;": " ",
+};
+const htmlEntityPattern = new RegExp(Object.keys(htmlEntities).join("|"), "gi");
 
 export function fileNameToTitle(filePath: string) {
   return path
     .basename(filePath, path.extname(filePath))
     .replace(/[._-]+/g, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(htmlEntityPattern, (match) => htmlEntities[match.toLowerCase()] ?? match);
 }
 
 export async function runProcess(

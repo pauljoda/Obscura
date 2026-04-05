@@ -40,9 +40,21 @@ function trimToUrl(value: string | undefined | null): string | null {
   return null;
 }
 
+/** Common HTML entities that scrapers return in metadata fields. */
+const htmlEntities: Record<string, string> = {
+  "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
+  "&#39;": "'", "&apos;": "'", "&#x27;": "'", "&#x2F;": "/",
+  "&nbsp;": " ",
+};
+const htmlEntityPattern = new RegExp(Object.keys(htmlEntities).join("|"), "gi");
+
+function decodeHtmlEntities(value: string): string {
+  return value.replace(htmlEntityPattern, (match) => htmlEntities[match.toLowerCase()] ?? match);
+}
+
 function trimOrNull(value: string | undefined | null): string | null {
   if (!value) return null;
-  const trimmed = value.trim();
+  const trimmed = decodeHtmlEntities(value.trim());
   return trimmed || null;
 }
 
