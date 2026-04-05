@@ -532,10 +532,10 @@ export function BulkScrape() {
         <div>
           <h1 className="flex items-center gap-2.5">
             <ScanSearch className="h-5 w-5 text-text-accent" />
-            Bulk Scrape
+            Identify
           </h1>
           <p className="mt-1 text-text-muted text-[0.78rem]">
-            Seek through all installed scrapers to enrich metadata
+            Match scenes and performers against metadata providers
           </p>
         </div>
       </div>
@@ -604,7 +604,7 @@ export function BulkScrape() {
               className="control-input py-1.5 text-xs min-w-[200px]"
               disabled={running}
             >
-              <option value="">Seek all ({scrapersForTab.length} scrapers)</option>
+              <option value="">Seek all ({scrapersForTab.length} sources)</option>
               {scrapersForTab.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -658,7 +658,7 @@ export function BulkScrape() {
                 )}
               >
                 {selectedScraperId ? <Play className="h-3 w-3" /> : <SkipForward className="h-3 w-3" />}
-                {selectedScraperId ? `Scrape All (${totalCount - acceptedCount})` : `Seek All (${totalCount - acceptedCount})`}
+                {selectedScraperId ? `Identify All (${totalCount - acceptedCount})` : `Seek All (${totalCount - acceptedCount})`}
               </button>
             </div>
           ) : (

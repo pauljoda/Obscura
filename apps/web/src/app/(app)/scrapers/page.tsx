@@ -242,7 +242,7 @@ export default function ScrapersPage() {
         <div>
           <h1 className="flex items-center gap-2.5">
             <Package className="h-5 w-5 text-text-accent" />
-            Scrapers
+            Community Scrapers
           </h1>
           <p className="text-text-muted text-[0.78rem] mt-1">
             Install and manage community metadata scrapers

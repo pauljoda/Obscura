@@ -4,6 +4,7 @@ import { SettingsPageClient } from "../../../components/routes/settings-page-cli
 import {
   fetchInstalledScrapers,
   fetchLibraryConfig,
+  fetchStashBoxEndpointsServer,
   type LibraryRoot,
   type LibrarySettings,
   type StorageStats,
@@ -26,13 +27,14 @@ const defaultSettings: LibrarySettings = {
 };
 
 export default async function SettingsPage() {
-  const [config, scrapersResponse] = await Promise.all([
+  const [config, scrapersResponse, stashBoxResponse] = await Promise.all([
     fetchLibraryConfig().catch(() => ({
       roots: [] as LibraryRoot[],
       settings: defaultSettings,
       storage: null as StorageStats | null,
     })),
     fetchInstalledScrapers().catch(() => ({ packages: [] })),
+    fetchStashBoxEndpointsServer().catch(() => ({ endpoints: [] })),
   ]);
 
   return (
@@ -41,6 +43,7 @@ export default async function SettingsPage() {
       initialScraperCount={scrapersResponse.packages.length}
       initialSettings={config.settings}
       initialStorage={config.storage}
+      initialStashBoxEndpoints={stashBoxResponse.endpoints as any}
     />
   );
 }

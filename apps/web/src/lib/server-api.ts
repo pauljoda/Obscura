@@ -6,6 +6,7 @@ import type {
   LibraryRootDto,
   StorageStatsDto,
   ScraperPackageDto,
+  StashBoxEndpointDto,
   GalleryListItemDto,
   GalleryDetailDto,
   GalleryStatsDto,
@@ -233,6 +234,12 @@ export async function fetchLibraryConfig() {
 export async function fetchInstalledScrapers() {
   return serverFetch<{ packages: ScraperPackageDto[] }>("/scrapers/packages", {
     tags: ["scrapers"],
+  });
+}
+
+export async function fetchStashBoxEndpointsServer() {
+  return serverFetch<{ endpoints: StashBoxEndpointDto[] }>("/stashbox-endpoints", {
+    tags: ["stashbox"],
   });
 }
 

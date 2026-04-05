@@ -804,6 +804,103 @@ export async function generateThumbnailFromFrame(
   });
 }
 
+// ─── StashBox API functions ─────────────────────────────────────
+
+export interface StashBoxEndpoint {
+  id: string;
+  name: string;
+  endpoint: string;
+  apiKeyPreview: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchStashBoxEndpoints(): Promise<{
+  endpoints: StashBoxEndpoint[];
+}> {
+  return fetchApi("/stashbox-endpoints");
+}
+
+export async function createStashBoxEndpoint(data: {
+  name: string;
+  endpoint: string;
+  apiKey: string;
+}): Promise<StashBoxEndpoint> {
+  return fetchApi("/stashbox-endpoints", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateStashBoxEndpoint(
+  id: string,
+  data: { name?: string; endpoint?: string; apiKey?: string; enabled?: boolean }
+): Promise<StashBoxEndpoint> {
+  return fetchApi(`/stashbox-endpoints/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteStashBoxEndpoint(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/stashbox-endpoints/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function testStashBoxEndpoint(
+  id: string
+): Promise<{ valid: boolean; error?: string }> {
+  return fetchApi(`/stashbox-endpoints/${id}/test`, {
+    method: "POST",
+  });
+}
+
+export async function identifyViaStashBox(
+  endpointId: string,
+  sceneId: string
+): Promise<{
+  result?: ScrapeResult;
+  normalized?: NormalizedScrapeResult;
+  matchType?: string;
+  message?: string;
+  triedMethods?: string[];
+}> {
+  return fetchApi(`/stashbox-endpoints/${endpointId}/identify`, {
+    method: "POST",
+    body: JSON.stringify({ sceneId }),
+  });
+}
+
+export async function identifyPerformerViaStashBox(
+  endpointId: string,
+  performerId: string
+): Promise<{
+  results?: NormalizedPerformerScrapeResult[];
+  result?: null;
+  message?: string;
+}> {
+  return fetchApi(`/stashbox-endpoints/${endpointId}/identify-performer`, {
+    method: "POST",
+    body: JSON.stringify({ performerId }),
+  });
+}
+
+export interface MetadataProvider {
+  id: string;
+  name: string;
+  type: "scraper" | "stashbox";
+  enabled: boolean;
+  capabilities: Record<string, boolean>;
+}
+
+export async function fetchMetadataProviders(): Promise<{
+  providers: MetadataProvider[];
+}> {
+  return fetchApi("/metadata-providers");
+}
+
 export function toApiUrl(assetPath: string | null | undefined) {
   if (!assetPath) {
     return undefined;
