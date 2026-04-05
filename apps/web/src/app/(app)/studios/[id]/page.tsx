@@ -32,6 +32,7 @@ import {
   toApiUrl,
   type SceneListItem,
   type StudioDetail,
+  type StudioChildRef,
 } from "../../../../lib/api";
 import { use, useEffect } from "react";
 
@@ -180,6 +181,17 @@ export default function StudioPage({ params }: StudioPageProps) {
         <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
       </div>
 
+      {/* Parent studio link */}
+      {studio.parent && (
+        <div className="flex items-center gap-1.5 text-[0.72rem] text-text-muted">
+          <Building2 className="h-3 w-3" />
+          <span>Sub-studio of</span>
+          <Link href={`/studios/${studio.parent.id}`} className="text-text-accent hover:underline">
+            {studio.parent.name}
+          </Link>
+        </div>
+      )}
+
       {/* Title + favorite (below banner, not overlaid) */}
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="flex items-center gap-2.5">
@@ -234,6 +246,40 @@ export default function StudioPage({ params }: StudioPageProps) {
       )}
 
       <StashIdChips entityType="studio" entityId={id} compact />
+
+      {/* Child studios */}
+      {studio.childStudios && studio.childStudios.length > 0 && (
+        <>
+          <div className="separator" />
+          <section>
+            <h4 className="text-kicker mb-3">Sub-Studios ({studio.childStudios.length})</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {studio.childStudios.map((child) => {
+                const childImg = child.imagePath ? toApiUrl(child.imagePath) : child.imageUrl;
+                return (
+                  <Link
+                    key={child.id}
+                    href={`/studios/${child.id}`}
+                    className="group surface-well rounded-lg overflow-hidden hover:border-border-accent transition-all duration-fast"
+                  >
+                    <div className="aspect-video bg-surface-3 flex items-center justify-center overflow-hidden">
+                      {childImg ? (
+                        <img src={childImg} alt={child.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <Building2 className="h-8 w-8 text-text-disabled/20" />
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[0.78rem] font-medium truncate group-hover:text-text-accent transition-colors">{child.name}</p>
+                      <p className="text-[0.65rem] text-text-disabled">{child.sceneCount} scene{child.sceneCount !== 1 ? "s" : ""}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        </>
+      )}
 
       <div className="separator" />
 
