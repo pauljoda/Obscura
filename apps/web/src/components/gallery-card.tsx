@@ -55,8 +55,9 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
   const staticDisplayUrl = previews.length > 0 ? (previews[currentPreviewIndex] ?? previews[0]) : coverUrl;
   const TypeIcon = typeIcons[gallery.galleryType] ?? FolderOpen;
 
-  // Show video on hover if available and not failed
-  const showVideo = hovering && previewVideoUrl && !videoFailed;
+  // Show video on hover only if there's just 1 preview (no cycling needed)
+  // When there are multiple previews, cycle through them with the stepper instead
+  const showVideo = hovering && previewVideoUrl && !videoFailed && previews.length <= 1;
 
   return (
     <div
@@ -101,8 +102,8 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
           <TypeIcon className="h-3 w-3 text-white/80" />
         </div>
 
-        {/* Scrub progress bar — only for static image cycling */}
-        {!showVideo && previews.length > 1 && (
+        {/* Scrub progress bar — visible on hover during image cycling */}
+        {hovering && !showVideo && previews.length > 1 && (
           <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 px-1 pb-0.5">
             {previews.map((_, i) => (
               <div
