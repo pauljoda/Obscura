@@ -22,7 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { fetchPerformers, toApiUrl, type PerformerItem } from "../../lib/api";
 
 type SortKey = "name" | "scenes" | "rating" | "recent";

@@ -1,7 +1,7 @@
 "use client";
 
-import { MediaCard } from "@obscura/ui";
-import { cn } from "@obscura/ui";
+import { MediaCard } from "@obscura/ui/composed/media-card";
+import { cn } from "@obscura/ui/lib/utils";
 import { Film, Clock, HardDrive, Eye, Star, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ViewMode } from "./filter-bar";

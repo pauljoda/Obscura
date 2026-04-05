@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { cn } from "@obscura/ui/lib/utils";
 import { Sidebar } from "./sidebar";
 import { CanvasHeader } from "./canvas-header";
 import { MobileNav } from "./mobile-nav";
-import { cn } from "@obscura/ui";
 
 function getSidebarState(): boolean {
   if (typeof document === "undefined") return false;

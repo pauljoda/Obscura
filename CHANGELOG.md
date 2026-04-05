@@ -8,10 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Web UI package now exposes direct subpath entry points for utilities, primitives, composed components, and app-shell navigation data; the web app now imports those paths directly instead of pulling from the root barrel.
+- Scene detail now lazy-loads the player component, and adaptive playback only imports `hls.js` when the user actually enters the HLS path.
+
 - Web app: dashboard, scenes, performers, performer detail, scene detail, and settings now fetch initial route data on the server and hydrate client views from seeded props instead of bootstrapping the first render through `useEffect`.
 - Web API client no longer forces `cache: "no-store"` for every request, allowing server-rendered routes to choose their own fetch strategy.
-
-### Changed
 
 - Tags page: full visual redesign — 4-column stats strip, sort/search toolbar matching scene gallery, grid view with gradient-backed tag cards, cloud view toggle, intensity bars and scene count badges.
 - Tag detail page: surface-card-sharp header with inline metadata, stats strip (scenes/duration/tag accent), separator, empty state for tagless results.

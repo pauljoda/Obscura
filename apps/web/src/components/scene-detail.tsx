@@ -1,10 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback, useRef, type ComponentType } from "react";
-import { VideoPlayer } from "./video-player";
 import { SceneEdit } from "./scene-edit";
-import { cn } from "@obscura/ui";
-import { Button } from "@obscura/ui";
+import { Button } from "@obscura/ui/primitives/button";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   Star,
   Clock,
@@ -45,6 +45,18 @@ import {
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
+
+const VideoPlayer = dynamic(
+  () => import("./video-player").then((module) => module.VideoPlayer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="surface-well flex items-center justify-center py-16 text-sm text-text-muted">
+        Loading player...
+      </div>
+    ),
+  },
+);
 
 function formatBitRate(bps: number | null): string {
   if (!bps) return "—";

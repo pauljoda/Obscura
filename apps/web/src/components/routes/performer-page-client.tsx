@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { SceneGrid } from "../scene-grid";
 import { PerformerEdit } from "../performer-edit";
 import {

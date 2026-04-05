@@ -1,4 +1,4 @@
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 
 interface LogoMarkProps {
   className?: string;

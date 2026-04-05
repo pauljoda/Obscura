@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Film, Users, Building2, Tag } from "lucide-react";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "./dashboard-utils";
 
 function NavTile({

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 
 export function DashboardStatTile({
   icon,

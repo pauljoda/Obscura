@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
   X,

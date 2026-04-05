@@ -1,7 +1,7 @@
 "use client";
 
 import type { QueueSummaryDto } from "@obscura/contracts";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { formatQueueName } from "./dashboard-utils";
 
 const QUEUE_GRADIENTS = [

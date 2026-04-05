@@ -6,7 +6,7 @@ import {
   loadTrickplayFrames,
   findFrameAtTime,
   type TrickplayFrame,
-} from "@obscura/ui";
+} from "@obscura/ui/lib/trickplay";
 
 interface FilmStripMarker {
   id: string;

@@ -16,7 +16,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchPerformerDetail,
   updatePerformer,

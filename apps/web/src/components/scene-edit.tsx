@@ -7,8 +7,8 @@ import {
   useCallback,
   type KeyboardEvent,
 } from "react";
-import { Button } from "@obscura/ui";
-import { cn } from "@obscura/ui";
+import { Button } from "@obscura/ui/primitives/button";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   ArrowLeft,
   Save,
@@ -1365,4 +1365,3 @@ function formatSecondsLabel(seconds: number) {
   const secs = Math.floor(safe % 60);
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
-

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Images, Film } from "lucide-react";
-import { MediaCard, cn } from "@obscura/ui";
+import { MediaCard } from "@obscura/ui/composed/media-card";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   toApiUrl,
   type GalleryListItem,

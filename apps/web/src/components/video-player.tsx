@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import Hls from "hls.js";
+import type Hls from "hls.js";
 import {
   ChevronDown,
   Gauge,
@@ -15,7 +15,7 @@ import {
   VolumeX,
   Wifi,
 } from "lucide-react";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { FilmStrip } from "./film-strip";
 
 interface Marker {
@@ -160,6 +160,8 @@ export function VideoPlayer({
       return;
     }
 
+    let cancelled = false;
+
     setDuration(propDuration ?? 0);
     setCurrentTime(0);
     setBufferedProgress(0);
@@ -178,8 +180,12 @@ export function VideoPlayer({
     setPlayerNotice(null);
     setUsingAdaptiveStream(false);
 
-    hlsRef.current?.destroy();
-    hlsRef.current = null;
+    const destroyHls = () => {
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+    };
+
+    destroyHls();
     video.pause();
     setPlaying(false);
     video.removeAttribute("src");
@@ -201,86 +207,107 @@ export function VideoPlayer({
 
     // HLS / adaptive mode
     if (src?.endsWith(".m3u8")) {
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          startLevel: -1,
-          capLevelToPlayerSize: true,
-          maxBufferLength: 30,
-          backBufferLength: 90,
-        });
+      void (async () => {
+        const { default: Hls } = await import("hls.js");
+        if (cancelled) {
+          return;
+        }
 
-        hlsRef.current = hls;
-        hls.attachMedia(video);
-        setUsingAdaptiveStream(true);
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            startLevel: -1,
+            capLevelToPlayerSize: true,
+            maxBufferLength: 30,
+            backBufferLength: 90,
+          });
 
-        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-          hls.loadSource(src);
-        });
+          hlsRef.current = hls;
+          hls.attachMedia(video);
+          setUsingAdaptiveStream(true);
 
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          const hlsLevels = hls.levels
-            .map((level, index) => ({
-              value: index,
-              label: getLevelLabel(level, index),
-            }))
-            .reverse();
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+            hls.loadSource(src);
+          });
 
-          const options: QualityOption[] = [
-            ...(directSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
-            { value: "auto" as const, label: "Auto" },
-            ...hlsLevels,
-          ];
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            const hlsLevels = hls.levels
+              .map((level, index) => ({
+                value: index,
+                label: getLevelLabel(level, index),
+              }))
+              .reverse();
 
-          setQualityOptions(options);
-          const highestLevel = Math.max(hls.levels.length - 1, 0);
-          hls.startLevel = highestLevel;
-          hls.nextAutoLevel = highestLevel;
-          setActiveQualityLabel(getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel));
-          setBandwidthEstimate(Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null);
-        });
+            const options: QualityOption[] = [
+              ...(directSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
+              { value: "auto" as const, label: "Auto" },
+              ...hlsLevels,
+            ];
 
-        hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-          const level = hls.levels[data.level];
-          setActiveQualityLabel(getLevelLabel(level ?? {}, data.level));
-          setBandwidthEstimate(Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null);
-        });
+            setQualityOptions(options);
+            const highestLevel = Math.max(hls.levels.length - 1, 0);
+            hls.startLevel = highestLevel;
+            hls.nextAutoLevel = highestLevel;
+            setActiveQualityLabel(getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel));
+            setBandwidthEstimate(
+              Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null,
+            );
+          });
 
-        hls.on(Hls.Events.FRAG_BUFFERED, () => {
-          setBandwidthEstimate(Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null);
-        });
+          hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+            const level = hls.levels[data.level];
+            setActiveQualityLabel(getLevelLabel(level ?? {}, data.level));
+            setBandwidthEstimate(
+              Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null,
+            );
+          });
 
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (!data.fatal) {
-            return;
-          }
+          hls.on(Hls.Events.FRAG_BUFFERED, () => {
+            setBandwidthEstimate(
+              Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null,
+            );
+          });
 
-          hls.destroy();
-          hlsRef.current = null;
-          setUsingAdaptiveStream(false);
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            if (!data.fatal) {
+              return;
+            }
 
-          if (directSrc) {
-            setQualityMode("direct");
-            setPlayerNotice("Adaptive stream failed — switched to direct.");
-            video.src = directSrc;
-            video.load();
-            return;
-          }
+            hls.destroy();
+            hlsRef.current = null;
+            setUsingAdaptiveStream(false);
 
-          setPlayerNotice("Adaptive playback failed.");
-        });
+            if (directSrc) {
+              setQualityMode("direct");
+              setPlayerNotice("Adaptive stream failed — switched to direct.");
+              video.src = directSrc;
+              video.load();
+              return;
+            }
 
-        return () => {
-          hls.destroy();
-          hlsRef.current = null;
-        };
-      }
+            setPlayerNotice("Adaptive playback failed.");
+          });
 
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        setUsingAdaptiveStream(true);
-        video.src = src;
-        video.load();
-        return;
-      }
+          return;
+        }
+
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          setUsingAdaptiveStream(true);
+          video.src = src;
+          video.load();
+          return;
+        }
+
+        const fallbackSource = directSrc ?? src;
+        if (fallbackSource) {
+          video.src = fallbackSource;
+          video.load();
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+        destroyHls();
+      };
     }
 
     // Non-HLS fallback in adaptive mode
@@ -289,6 +316,11 @@ export function VideoPlayer({
       video.src = fallbackSource;
       video.load();
     }
+
+    return () => {
+      cancelled = true;
+      destroyHls();
+    };
   }, [src, directSrc, propDuration, streamMode]);
 
   // Sync streamMode from qualityMode — only triggers source re-init when

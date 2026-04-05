@@ -12,7 +12,7 @@ import {
   Check,
   Tag,
 } from "lucide-react";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
 
 export type ViewMode = "grid" | "list";

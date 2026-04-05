@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   FolderOpen,
   HardDrive,

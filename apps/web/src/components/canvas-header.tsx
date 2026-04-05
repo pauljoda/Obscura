@@ -3,7 +3,7 @@
 import { Search, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

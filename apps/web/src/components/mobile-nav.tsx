@@ -3,7 +3,7 @@
 import { Film, Users, Tags, Activity, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 
 const navItems = [
   { label: "Scenes", href: "/scenes", icon: Film },

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Badge, cn } from "@obscura/ui";
+import { Badge } from "@obscura/ui/primitives/badge";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
   X,

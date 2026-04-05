@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { StatusLed, Meter, Badge, cn } from "@obscura/ui";
+import { Meter } from "@obscura/ui/composed/meter";
+import { StatusLed, type LedStatus } from "@obscura/ui/composed/status-led";
+import { Badge } from "@obscura/ui/primitives/badge";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   FolderSearch,
   FileSearch,
@@ -16,7 +19,6 @@ import {
   AlertTriangle,
   ListChecks,
 } from "lucide-react";
-import type { LedStatus } from "@obscura/ui";
 import {
   fetchJobsDashboard,
   runQueue,

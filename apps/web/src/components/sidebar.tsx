@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@obscura/ui";
-import { appShellSections } from "@obscura/ui";
+import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
+import { cn } from "@obscura/ui/lib/utils";
 import { Logo, LogoMark } from "./logo";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {

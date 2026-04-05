@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, StatusLed } from "@obscura/ui";
-import { cn } from "@obscura/ui";
+import { StatusLed } from "@obscura/ui/composed/status-led";
+import { Badge } from "@obscura/ui/primitives/badge";
+import { Button } from "@obscura/ui/primitives/button";
+import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
   X,

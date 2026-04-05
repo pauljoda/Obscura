@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@obscura/ui";
+import { cn } from "@obscura/ui/lib/utils";
 import { Logo } from "../logo";
 
 export interface DashboardHeroProps {
