@@ -4,8 +4,10 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import {
+  Film,
   FolderOpen,
   HardDrive,
+  Image,
   Loader2,
   Package,
   Plus,
@@ -95,6 +97,8 @@ export function SettingsPageClient({
   const [newRootPath, setNewRootPath] = useState("");
   const [newRootLabel, setNewRootLabel] = useState("");
   const [newRootRecursive, setNewRootRecursive] = useState(true);
+  const [newRootScanVideos, setNewRootScanVideos] = useState(true);
+  const [newRootScanImages, setNewRootScanImages] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scraperCount, setScraperCount] = useState(initialScraperCount);
@@ -180,6 +184,8 @@ export function SettingsPageClient({
         path: newRootPath,
         label: newRootLabel || undefined,
         recursive: newRootRecursive,
+        scanVideos: newRootScanVideos,
+        scanImages: newRootScanImages,
       });
 
       setMessage("Library root added.");
@@ -198,6 +204,15 @@ export function SettingsPageClient({
   async function handleToggleRoot(root: LibraryRoot) {
     try {
       await updateLibraryRoot(root.id, { enabled: !root.enabled });
+      await loadConfig();
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : "Failed to update root");
+    }
+  }
+
+  async function handleToggleMediaType(root: LibraryRoot, field: "scanVideos" | "scanImages") {
+    try {
+      await updateLibraryRoot(root.id, { [field]: !root[field] });
       await loadConfig();
     } catch (toggleError) {
       setError(toggleError instanceof Error ? toggleError.message : "Failed to update root");
@@ -356,6 +371,24 @@ export function SettingsPageClient({
                 />
                 Recursive
               </label>
+              <label className="cursor-pointer pb-2 text-xs text-text-secondary">
+                <input
+                  type="checkbox"
+                  className="mr-2 accent-[#c79b5c]"
+                  checked={newRootScanVideos}
+                  onChange={(event) => setNewRootScanVideos(event.target.checked)}
+                />
+                Videos
+              </label>
+              <label className="cursor-pointer pb-2 text-xs text-text-secondary">
+                <input
+                  type="checkbox"
+                  className="mr-2 accent-[#c79b5c]"
+                  checked={newRootScanImages}
+                  onChange={(event) => setNewRootScanImages(event.target.checked)}
+                />
+                Images
+              </label>
               <button
                 onClick={() => void handleAddRoot()}
                 disabled={addingRoot || !newRootPath}
@@ -414,6 +447,35 @@ export function SettingsPageClient({
                     <span className="text-[0.62rem] text-text-disabled">
                       {formatTimestamp(root.lastScannedAt)}
                     </span>
+                    {/* Media type toggles */}
+                    <div className="flex items-center gap-1 border-l border-border-subtle pl-3">
+                      <button
+                        onClick={() => void handleToggleMediaType(root, "scanVideos")}
+                        title={root.scanVideos ? "Videos: scanning" : "Videos: skipped"}
+                        className={cn(
+                          "flex items-center gap-1 rounded-[3px] px-1.5 py-1 text-[0.65rem] transition-colors",
+                          root.scanVideos
+                            ? "text-text-accent bg-accent-950/50"
+                            : "text-text-disabled hover:text-text-muted"
+                        )}
+                      >
+                        <Film className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Video</span>
+                      </button>
+                      <button
+                        onClick={() => void handleToggleMediaType(root, "scanImages")}
+                        title={root.scanImages ? "Images: scanning" : "Images: skipped"}
+                        className={cn(
+                          "flex items-center gap-1 rounded-[3px] px-1.5 py-1 text-[0.65rem] transition-colors",
+                          root.scanImages
+                            ? "text-text-accent bg-accent-950/50"
+                            : "text-text-disabled hover:text-text-muted"
+                        )}
+                      >
+                        <Image className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Image</span>
+                      </button>
+                    </div>
                     <button
                       onClick={() => void handleToggleRoot(root)}
                       className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary"

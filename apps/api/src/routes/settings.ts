@@ -79,6 +79,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       label?: string;
       enabled?: boolean;
       recursive?: boolean;
+      scanVideos?: boolean;
+      scanImages?: boolean;
     };
 
     try {
@@ -92,6 +94,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           label: body.label?.trim() || labelForPath(resolvedPath),
           enabled: body.enabled ?? true,
           recursive: body.recursive ?? true,
+          scanVideos: body.scanVideos ?? true,
+          scanImages: body.scanImages ?? true,
         })
         .returning();
 
