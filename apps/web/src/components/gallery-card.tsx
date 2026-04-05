@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Images, FolderOpen, Archive, Sparkles } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
@@ -18,9 +18,8 @@ interface GalleryCardProps {
 
 export function GalleryCard({ gallery }: GalleryCardProps) {
   const [hovering, setHovering] = useState(false);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(-1);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [videoFailed, setVideoFailed] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const coverUrl = toApiUrl(gallery.coverImagePath);
   const previews = gallery.previewImagePaths?.map(toApiUrl).filter(Boolean) ?? [];
@@ -30,29 +29,26 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
     ? previews[0].replace(/\/thumb$/, "/preview")
     : null;
 
+  // Auto-cycle through preview images every 3 seconds
+  useEffect(() => {
+    if (previews.length <= 1) return;
+    let idx = 0;
+    const timer = setInterval(() => {
+      idx = (idx + 1) % previews.length;
+      setCurrentPreviewIndex(idx);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [previews.length]);
+
   const startHover = useCallback(() => {
     setHovering(true);
-    // Also start cycling through static previews as fallback
-    if (previews.length > 1) {
-      let idx = 0;
-      setCurrentPreviewIndex(0);
-      intervalRef.current = setInterval(() => {
-        idx = (idx + 1) % previews.length;
-        setCurrentPreviewIndex(idx);
-      }, 800);
-    }
-  }, [previews.length]);
+  }, []);
 
   const stopHover = useCallback(() => {
     setHovering(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setCurrentPreviewIndex(-1);
   }, []);
 
-  const staticDisplayUrl = currentPreviewIndex >= 0 ? previews[currentPreviewIndex] : coverUrl;
+  const staticDisplayUrl = previews.length > 0 ? (previews[currentPreviewIndex] ?? previews[0]) : coverUrl;
   const TypeIcon = typeIcons[gallery.galleryType] ?? FolderOpen;
 
   // Show video on hover if available and not failed
@@ -102,7 +98,7 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
         </div>
 
         {/* Scrub progress bar — only for static image cycling */}
-        {currentPreviewIndex >= 0 && !showVideo && previews.length > 1 && (
+        {!showVideo && previews.length > 1 && (
           <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 px-1 pb-0.5">
             {previews.map((_, i) => (
               <div

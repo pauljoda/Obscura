@@ -55,6 +55,7 @@ export function ImageLightbox({
 
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const currentImage = images[currentIndex];
   const fullUrl = currentImage ? toApiUrl(currentImage.fullPath) ?? null : null;
@@ -325,13 +326,22 @@ export function ImageLightbox({
         {fullUrl && (
           isVideoMedia(currentImage) ? (
             <video
+              ref={videoRef}
               key={currentImage.id}
               src={fullUrl}
               autoPlay
               loop
-              muted
               playsInline
-              className="max-h-full max-w-full object-contain"
+              onClick={(e) => {
+                e.stopPropagation();
+                const vid = e.currentTarget;
+                if (vid.paused) {
+                  vid.play();
+                } else {
+                  vid.pause();
+                }
+              }}
+              className="max-h-full max-w-full object-contain cursor-pointer"
               style={{
                 transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
                 willChange: "transform",
