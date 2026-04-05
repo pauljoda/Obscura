@@ -1,8 +1,8 @@
 "use client";
 
-import { MediaCard } from "@obscura/ui";
+import { MediaCard, LazyImage } from "@obscura/ui";
 import { cn } from "@obscura/ui";
-import { Film, Clock, HardDrive, Eye, Loader2 } from "lucide-react";
+import { Film, Clock, HardDrive, Eye, Star, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { ViewMode } from "./filter-bar";
 import { toApiUrl, type SceneListItem } from "../lib/api";
@@ -80,6 +80,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
             performers={scene.performers.map((p) => ({ name: p.name, imagePath: toApiUrl(p.imagePath) ?? undefined }))}
             tags={scene.tags.map((t) => t.name)}
             tagColors={SCENE_TAG_COLORS}
+            rating={scene.rating ?? undefined}
             views={scene.playCount}
             gradientClass={gradientClasses[i % gradientClasses.length]}
           />
@@ -107,11 +108,9 @@ function SceneListItem({
           )}
         >
           {scene.thumbnailPath && (
-            <img
+            <LazyImage
               src={toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath)}
               alt={scene.title}
-              loading="lazy"
-              decoding="async"
               className="h-full w-full object-cover"
             />
           )}
@@ -145,7 +144,7 @@ function SceneListItem({
                 {scene.performers.slice(0, 3).map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1">
                     {p.imagePath && (
-                      <img src={toApiUrl(p.imagePath)!} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                      <LazyImage src={toApiUrl(p.imagePath)!} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
                     )}
                     <span>{p.name}</span>
                   </span>
@@ -175,6 +174,12 @@ function SceneListItem({
 
         {/* Right side stats */}
         <div className="hidden md:flex items-center gap-4 text-[0.65rem] text-text-disabled flex-shrink-0">
+          {scene.rating != null && scene.rating > 0 && (
+            <span className="flex items-center gap-0.5 text-text-accent">
+              <Star className="h-3 w-3 fill-current" />
+              {Math.round(scene.rating / 20)}
+            </span>
+          )}
           {scene.fileSizeFormatted && (
             <span className="flex items-center gap-1">
               <HardDrive className="h-3 w-3" />

@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
-import { Film, Clock, HardDrive, Eye } from "lucide-react";
+import { LazyImage } from "./lazy-image";
+import { Film, Clock, HardDrive, Eye, Star } from "lucide-react";
 
 function formatHoverTime(seconds: number) {
   const wholeSeconds = Math.max(0, Math.floor(seconds));
@@ -56,6 +57,7 @@ export function MediaCard({
   performers,
   tags,
   tagColors,
+  rating,
   views,
   className,
 }: MediaCardProps) {
@@ -214,11 +216,9 @@ export function MediaCard({
         onTouchEnd={handleTouchEnd}
       >
         {thumbnail ? (
-          <img
+          <LazyImage
             src={cardThumbnail || thumbnail}
             alt={title}
-            loading="lazy"
-            decoding="async"
             className={cn(
               "h-full w-full object-cover transition-transform duration-normal",
               activeFrame ? "scale-[1.01] opacity-0" : "group-hover:scale-[1.03]"
@@ -330,7 +330,7 @@ export function MediaCard({
                     <span key={i} className="inline-flex items-center gap-1">
                       {i > 0 && <span className="text-text-disabled">,</span>}
                       {imgPath && (
-                        <img src={imgPath} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                        <LazyImage src={imgPath} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
                       )}
                       <span>{name}</span>
                     </span>
@@ -365,8 +365,14 @@ export function MediaCard({
           </div>
         )}
 
-        {(fileSize || views !== undefined) && (
+        {(fileSize || views !== undefined || (rating != null && rating > 0)) && (
           <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">
+            {rating != null && rating > 0 && (
+              <span className="flex items-center gap-0.5 text-[0.62rem] text-text-accent">
+                <Star className="h-2.5 w-2.5 fill-current" />
+                {Math.round(rating / 20)}
+              </span>
+            )}
             {fileSize && (
               <span className="flex items-center gap-1 text-[0.62rem] text-text-disabled">
                 <HardDrive className="h-2.5 w-2.5" />

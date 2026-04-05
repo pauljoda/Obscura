@@ -22,6 +22,7 @@ export { StatusLed, type LedStatus, type LedSize } from "./composed/status-led";
 export { Meter } from "./composed/meter";
 export { Panel } from "./composed/panel";
 export { MediaCard, type MediaCardProps } from "./composed/media-card";
+export { LazyImage } from "./composed/lazy-image";
 
 // Navigation sections for the app shell sidebar
 export const appShellSections = [

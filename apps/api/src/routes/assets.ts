@@ -55,7 +55,7 @@ export async function assetsRoutes(app: FastifyInstance) {
     if (kind === "thumb-custom") {
       const customPath = path.join(getGeneratedSceneDir(id), "thumbnail-custom.jpg");
       if (existsSync(customPath)) {
-        reply.header("Cache-Control", "public, max-age=86400, immutable");
+        reply.header("Cache-Control", "no-cache");
         reply.header("Content-Type", "image/jpeg");
         return reply.send(createReadStream(customPath));
       }
@@ -92,9 +92,17 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     const assetPath = kindToPath[resolvedKind];
 
+    // Thumbnails can change (user re-picks frame), so use no-cache to allow
+    // revalidation.  Sprites, previews, and trickplay maps are immutable once
+    // generated, so they keep aggressive caching.
+    const cacheHeader =
+      resolvedKind === "thumb" || resolvedKind === "card"
+        ? "no-cache"
+        : "public, max-age=86400, immutable";
+
     // Try sidecar path first, then fall back to legacy cache dir
     if (existsSync(assetPath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Cache-Control", cacheHeader);
       reply.header("Content-Type", SIDECAR_MIME[resolvedKind]);
       return reply.send(createReadStream(assetPath));
     }
@@ -111,7 +119,7 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     const legacyPath = path.join(legacyDir, legacyNames[resolvedKind]);
     if (existsSync(legacyPath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Cache-Control", cacheHeader);
       reply.header("Content-Type", mimeForFile(legacyNames[resolvedKind]));
       return reply.send(createReadStream(legacyPath));
     }
