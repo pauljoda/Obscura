@@ -106,6 +106,8 @@ export interface SceneStats {
 export interface StudioItem {
   id: string;
   name: string;
+  url: string | null;
+  imageUrl: string | null;
 }
 
 export interface PerformerItem {
@@ -568,8 +570,46 @@ export async function applyPerformerScrape(
   });
 }
 
+export interface TagDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string | null;
+  parentId: string | null;
+  imageUrl: string | null;
+  favorite: boolean;
+  ignoreAutoTag: boolean;
+  sceneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function fetchStudioDetail(id: string): Promise<StudioDetail> {
   return fetchApi(`/studios/${id}`);
+}
+
+export async function updateStudio(
+  id: string,
+  data: { name?: string; url?: string | null; imageUrl?: string | null; parentId?: string | null }
+): Promise<StudioDetail> {
+  return fetchApi(`/studios/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchTagDetail(id: string): Promise<TagDetail> {
+  return fetchApi(`/tags/${id}`);
+}
+
+export async function updateTag(
+  id: string,
+  data: { name?: string; description?: string | null; aliases?: string | null; imageUrl?: string | null; parentId?: string | null }
+): Promise<TagDetail> {
+  return fetchApi(`/tags/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchLibraryConfig(): Promise<{
@@ -899,6 +939,21 @@ export async function fetchMetadataProviders(): Promise<{
   providers: MetadataProvider[];
 }> {
   return fetchApi("/metadata-providers");
+}
+
+// ─── Normalized scrape result types ─────────────────────────────
+
+export interface NormalizedStudioScrapeResult {
+  name: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  parentName: string | null;
+}
+
+export interface NormalizedTagScrapeResult {
+  name: string | null;
+  description: string | null;
+  aliases: string | null;
 }
 
 // ─── Stash ID API functions ─────────────────────────────────────

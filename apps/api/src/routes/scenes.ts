@@ -723,7 +723,12 @@ export async function scenesRoutes(app: FastifyInstance) {
   // ─── GET /studios (for filter dropdowns) ──────────────────────
   app.get("/studios", async () => {
     const rows = await db
-      .select({ id: studios.id, name: studios.name })
+      .select({
+        id: studios.id,
+        name: studios.name,
+        url: studios.url,
+        imageUrl: studios.imageUrl,
+      })
       .from(studios)
       .orderBy(asc(studios.name));
     return { studios: rows };
@@ -747,6 +752,47 @@ export async function scenesRoutes(app: FastifyInstance) {
       parentId: row.parentId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+    };
+  });
+
+  // ─── PATCH /studios/:id ───────────────────────────────────────
+  app.patch("/studios/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      name?: string;
+      url?: string | null;
+      imageUrl?: string | null;
+      parentId?: string | null;
+    };
+
+    const [existing] = await db
+      .select()
+      .from(studios)
+      .where(eq(studios.id, id))
+      .limit(1);
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Studio not found" };
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name.trim();
+    if (body.url !== undefined) updates.url = body.url?.trim() || null;
+    if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl?.trim() || null;
+    if (body.parentId !== undefined) updates.parentId = body.parentId || null;
+
+    await db.update(studios).set(updates).where(eq(studios.id, id));
+
+    const [updated] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
+    return {
+      id: updated.id,
+      name: updated.name,
+      url: updated.url,
+      imageUrl: updated.imageUrl,
+      parentId: updated.parentId,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
     };
   });
 
@@ -776,6 +822,78 @@ export async function scenesRoutes(app: FastifyInstance) {
         ...tag,
         imageCount: imageCountMap.get(tag.id) ?? 0,
       })),
+    };
+  });
+
+  // ─── GET /tags/:id ───────────────────────────────────────────
+  app.get("/tags/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const row = await db.query.tags.findFirst({
+      where: eq(tags.id, id),
+    });
+    if (!row) {
+      reply.code(404);
+      return { error: "Tag not found" };
+    }
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      aliases: row.aliases,
+      parentId: row.parentId,
+      imageUrl: row.imageUrl,
+      favorite: row.favorite,
+      ignoreAutoTag: row.ignoreAutoTag,
+      sceneCount: row.sceneCount,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  });
+
+  // ─── PATCH /tags/:id ──────────────────────────────────────────
+  app.patch("/tags/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as {
+      name?: string;
+      description?: string | null;
+      aliases?: string | null;
+      imageUrl?: string | null;
+      parentId?: string | null;
+    };
+
+    const [existing] = await db
+      .select()
+      .from(tags)
+      .where(eq(tags.id, id))
+      .limit(1);
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Tag not found" };
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name.trim();
+    if (body.description !== undefined) updates.description = body.description?.trim() || null;
+    if (body.aliases !== undefined) updates.aliases = body.aliases?.trim() || null;
+    if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl?.trim() || null;
+    if (body.parentId !== undefined) updates.parentId = body.parentId || null;
+
+    await db.update(tags).set(updates).where(eq(tags.id, id));
+
+    const [updated] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
+    return {
+      id: updated.id,
+      name: updated.name,
+      description: updated.description,
+      aliases: updated.aliases,
+      parentId: updated.parentId,
+      imageUrl: updated.imageUrl,
+      favorite: updated.favorite,
+      ignoreAutoTag: updated.ignoreAutoTag,
+      sceneCount: updated.sceneCount,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
     };
   });
 
