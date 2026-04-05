@@ -1,26 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@obscura/ui/lib/utils";
 import { Sidebar } from "./sidebar";
 import { CanvasHeader } from "./canvas-header";
 import { MobileNav } from "./mobile-nav";
 
-function getSidebarState(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.cookie.includes("obscura-sidebar=collapsed");
-}
-
 function setSidebarCookie(collapsed: boolean) {
   document.cookie = `obscura-sidebar=${collapsed ? "collapsed" : "expanded"};path=/;max-age=${60 * 60 * 24 * 365}`;
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+interface AppShellProps {
+  children: React.ReactNode;
+  initialCollapsed?: boolean;
+}
 
-  useEffect(() => {
-    setCollapsed(getSidebarState());
-  }, []);
+export function AppShell({ children, initialCollapsed = false }: AppShellProps) {
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const toggle = () => {
     const next = !collapsed;
@@ -40,7 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={cn(
           "flex flex-1 flex-col transition-[margin-left] duration-moderate pb-14 md:pb-0",
           "h-dvh overflow-y-auto",
-          collapsed ? "md:ml-14" : "md:ml-60"
+          collapsed ? "md:ml-14" : "md:ml-60",
         )}
         style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
       >
