@@ -1,6 +1,6 @@
 import { cn } from "../lib/utils";
 
-export type LedStatus = "active" | "warning" | "error" | "info" | "idle" | "accent";
+export type LedStatus = "active" | "warning" | "error" | "info" | "idle" | "accent" | "phosphor";
 export type LedSize = "sm" | "md" | "lg";
 
 interface StatusLedProps {
@@ -23,6 +23,7 @@ const statusClasses: Record<LedStatus, string> = {
   info: "led-info",
   idle: "led-idle",
   accent: "led-accent",
+  phosphor: "led-phosphor",
 };
 
 export function StatusLed({

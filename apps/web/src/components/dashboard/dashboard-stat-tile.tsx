@@ -43,7 +43,7 @@ export function DashboardStatTile({
       <div
         className={cn(
           "relative text-lg font-semibold leading-tight tracking-tight",
-          accent ? "text-text-accent" : "text-text-primary"
+          accent ? "text-glow-accent" : "text-text-primary"
         )}
       >
         {value}

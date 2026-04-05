@@ -368,19 +368,19 @@ export function MediaCard({
         {(fileSize || views !== undefined || (rating != null && rating > 0)) && (
           <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">
             {rating != null && rating > 0 && (
-              <span className="flex items-center gap-0.5 text-[0.62rem] text-text-accent">
+              <span className="flex items-center gap-0.5 text-[0.62rem] text-glow-accent">
                 <Star className="h-2.5 w-2.5 fill-current" />
                 {Math.round(rating / 20)}
               </span>
             )}
             {fileSize && (
-              <span className="flex items-center gap-1 text-[0.62rem] text-text-disabled">
+              <span className="flex items-center gap-1 text-ephemeral">
                 <HardDrive className="h-2.5 w-2.5" />
                 {fileSize}
               </span>
             )}
             {views !== undefined && (
-              <span className="flex items-center gap-1 text-[0.62rem] text-text-disabled">
+              <span className="flex items-center gap-1 text-ephemeral">
                 <Eye className="h-2.5 w-2.5" />
                 {views}
               </span>

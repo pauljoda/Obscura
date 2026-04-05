@@ -39,7 +39,7 @@ function RecentJobRow({ job }: { job: JobRun }) {
           </span>
         )}
       </div>
-      <span className="glass-chip rounded-sm px-2 py-0.5 text-mono-sm text-text-secondary flex-shrink-0 border border-white/5">
+      <span className="glass-chip rounded-sm px-2 py-0.5 text-ephemeral flex-shrink-0 border border-white/5">
         {job.finishedAt
           ? formatRelativeTime(job.finishedAt)
           : job.startedAt

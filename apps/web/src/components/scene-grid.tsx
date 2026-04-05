@@ -176,25 +176,25 @@ function SceneListItem({
         {/* Right side stats */}
         <div className="hidden md:flex items-center gap-4 text-[0.65rem] text-text-disabled flex-shrink-0">
           {scene.rating != null && scene.rating > 0 && (
-            <span className="flex items-center gap-0.5 text-text-accent">
+            <span className="flex items-center gap-0.5 text-glow-accent">
               <Star className="h-3 w-3 fill-current" />
               {Math.round(scene.rating / 20)}
             </span>
           )}
           {scene.fileSizeFormatted && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-ephemeral">
               <HardDrive className="h-3 w-3" />
               {scene.fileSizeFormatted}
             </span>
           )}
           {scene.playCount > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-ephemeral">
               <Eye className="h-3 w-3" />
               {scene.playCount}
             </span>
           )}
           {scene.durationFormatted && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-ephemeral">
               <Clock className="h-3 w-3" />
               {scene.durationFormatted}
             </span>

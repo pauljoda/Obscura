@@ -538,7 +538,7 @@ export function VideoPlayer({
     <div className="space-y-1">
     <div
       ref={containerRef}
-      className="relative overflow-hidden rounded-sm border border-border-subtle bg-black shadow-[0_18px_70px_rgba(0,0,0,0.45)]"
+      className="relative surface-media-well"
       onMouseMove={surfaceControls}
       onMouseLeave={() => playing && setShowControls(false)}
       onTouchStart={surfaceControls}
@@ -604,7 +604,7 @@ export function VideoPlayer({
             }}
           >
             <div className="absolute inset-y-0 left-0 rounded-sm bg-white/15" style={{ width: `${bufferedProgress}%` }} />
-            <div className="absolute inset-y-0 left-0 rounded-sm bg-accent-500" style={{ width: `${progress}%` }} />
+            <div className="absolute inset-y-0 left-0 rounded-sm meter-fill-phosphor" style={{ width: `${progress}%` }} />
             {markers.map((marker) => {
               const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0;
               return (
@@ -687,7 +687,7 @@ export function VideoPlayer({
               />
             </div>
 
-            <span className="text-[0.68rem] sm:text-xs text-white/80">
+            <span className="text-mono-tabular text-glow-phosphor text-[0.68rem] sm:text-xs">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
@@ -805,7 +805,7 @@ function MetricChip({
         {icon}
         <span className="text-[0.58rem] uppercase tracking-[0.16em]">{label}</span>
       </div>
-      <div className="truncate text-[0.72rem] font-medium text-white/88">{value}</div>
+      <div className="truncate text-mono-tabular text-glow-phosphor text-[0.72rem] font-medium">{value}</div>
     </div>
   );
 }

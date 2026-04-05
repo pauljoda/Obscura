@@ -262,16 +262,16 @@ export function SceneDetail({ id }: { id: string }) {
                 </Link>
               )}
               {scene.date && (
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-ephemeral">
                   <Calendar className="h-3.5 w-3.5" />
                   {scene.date}
                 </span>
               )}
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-ephemeral">
                 <Clock className="h-3.5 w-3.5" />
                 {scene.durationFormatted}
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-ephemeral">
                 <Eye className="h-3.5 w-3.5" />
                 {scene.playCount} plays
               </span>
@@ -304,7 +304,7 @@ export function SceneDetail({ id }: { id: string }) {
                       className={cn(
                         "h-4 w-4 transition-colors duration-fast",
                         starIdx <= activeStars
-                          ? "fill-accent-500 text-accent-500"
+                          ? "fill-accent-500 text-glow-accent"
                           : "text-text-disabled hover:text-accent-800"
                       )}
                     />

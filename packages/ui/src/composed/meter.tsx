@@ -5,6 +5,7 @@ interface MeterProps {
   max?: number;
   label?: string;
   showValue?: boolean;
+  variant?: "accent" | "phosphor";
   className?: string;
 }
 
@@ -13,6 +14,7 @@ export function Meter({
   max = 100,
   label,
   showValue = false,
+  variant = "accent",
   className,
 }: MeterProps) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
@@ -25,14 +27,14 @@ export function Meter({
             <span className="text-label text-text-muted">{label}</span>
           )}
           {showValue && (
-            <span className="text-mono-sm text-text-muted">
+            <span className={cn("text-mono-sm", variant === "phosphor" ? "text-phosphor-400 text-glow-phosphor" : "text-text-muted")}>
               {Math.round(pct)}%
             </span>
           )}
         </div>
       )}
       <div className="meter-track">
-        <div className="meter-fill" style={{ width: `${pct}%` }} />
+        <div className={variant === "phosphor" ? "meter-fill-phosphor" : "meter-fill"} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

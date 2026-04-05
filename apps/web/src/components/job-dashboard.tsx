@@ -46,7 +46,7 @@ function formatStamp(value: string | null) {
 }
 
 function ledForStatus(status: string): LedStatus {
-  if (status === "active") return "active";
+  if (status === "active") return "phosphor";
   if (status === "warning") return "warning";
   if (status === "failed") return "error";
   return "idle";
@@ -147,7 +147,7 @@ export function JobDashboard() {
           </div>
           <div className={cn(
             "text-lg font-semibold leading-tight",
-            totalActive > 0 ? "text-text-accent" : "text-text-primary"
+            totalActive > 0 ? "text-glow-accent" : "text-text-primary"
           )}>
             {totalActive}
           </div>
@@ -180,7 +180,7 @@ export function JobDashboard() {
           </div>
           <div className="text-[0.8rem] font-medium text-text-secondary leading-tight mt-0.5 font-mono">
             {dashboard?.lastScanAt
-              ? new Date(dashboard.lastScanAt).toLocaleTimeString()
+              ? <span className="text-ephemeral">{new Date(dashboard.lastScanAt).toLocaleTimeString()}</span>
               : "Never"}
           </div>
           <div className="text-[0.62rem] text-text-disabled mt-0.5">
@@ -373,11 +373,11 @@ function JobCard({ job }: { job: JobRun }) {
   return (
     <div className={cn(
       "surface-card-sharp no-lift p-3.5 transition-all duration-normal",
-      job.status === "failed" ? "border-status-error/30" : "border-border-accent/30"
+      job.status === "failed" ? "border-status-error/30" : "border-phosphor-500/30"
     )}>
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <StatusLed status={job.status === "failed" ? "error" : "active"} pulse={job.status !== "failed"} />
+          <StatusLed status={job.status === "failed" ? "error" : "phosphor"} pulse={job.status !== "failed"} />
           <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">
             {job.queueName}
           </Badge>
@@ -385,11 +385,11 @@ function JobCard({ job }: { job: JobRun }) {
             {job.targetLabel ?? "Background work"}
           </p>
         </div>
-        <span className="text-mono-sm text-text-disabled flex-shrink-0">
+        <span className="text-ephemeral flex-shrink-0">
           {formatElapsed(job.startedAt)}
         </span>
       </div>
-      <Meter value={job.progress} showValue />
+      <Meter value={job.progress} showValue variant={job.status === "failed" ? "accent" : "phosphor"} />
     </div>
   );
 }
