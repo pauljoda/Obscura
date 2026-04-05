@@ -1532,7 +1532,7 @@ function PerformerRowCard({
           <div className="flex gap-4">
             {/* Image selection */}
             {allImages.length > 0 && (
-              <div className="flex-shrink-0 space-y-2">
+              <div className="flex-shrink-0 space-y-2 flex flex-col items-center">
                 {/* Selected/primary image — click to browse */}
                 <button
                   onClick={(e) => { e.stopPropagation(); if (allImages.length > 1) setImagePickerOpen(true); }}
@@ -1545,7 +1545,7 @@ function PerformerRowCard({
                 {allImages.length > 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setImagePickerOpen(true); }}
-                    className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors w-full text-center"
+                    className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors text-center"
                   >
                     Browse all ({allImages.length})
                   </button>
