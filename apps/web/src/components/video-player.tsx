@@ -16,6 +16,11 @@ import {
   Wifi,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
+import {
+  enterMediaFullscreen,
+  exitDocumentFullscreen,
+  isDocumentFullscreen,
+} from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
 
 interface Marker {
@@ -540,16 +545,18 @@ export function VideoPlayer({
 
   function toggleFullscreen() {
     const container = containerRef.current;
+    const video = videoRef.current;
+
+    if (isDocumentFullscreen()) {
+      exitDocumentFullscreen();
+      return;
+    }
+
     if (!container) {
       return;
     }
 
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-      return;
-    }
-
-    void container.requestFullscreen();
+    enterMediaFullscreen(container, video);
   }
 
   function applyPlaybackRate(nextRate: number) {
