@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, not, like, or } from "drizzle-orm";
 import { queueDefinitions, type QueueName } from "@obscura/contracts";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
@@ -80,6 +80,8 @@ async function enqueueMissingSceneJobs(queueName: QueueName) {
       .from(scenes)
       .where(or(isNull(scenes.checksumMd5), isNull(scenes.oshash))!);
   } else if (queueName === "preview") {
+    // Regenerate previews for scenes missing assets OR scenes without
+    // a user-set custom thumbnail so quality setting changes take effect.
     sceneRows = await db
       .select({ id: scenes.id, title: scenes.title })
       .from(scenes)
@@ -88,7 +90,8 @@ async function enqueueMissingSceneJobs(queueName: QueueName) {
           isNull(scenes.thumbnailPath),
           isNull(scenes.previewPath),
           isNull(scenes.spritePath),
-          isNull(scenes.trickplayVttPath)
+          isNull(scenes.trickplayVttPath),
+          not(like(scenes.thumbnailPath, "%thumb-custom%"))
         )!
       );
   } else if (queueName === "metadata-import") {

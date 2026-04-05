@@ -47,6 +47,18 @@ export interface XPathScraperDef {
   performer?: Record<string, XPathFieldDef | XPathSubObjectDef>;
 }
 
+export interface ScraperCookieDef {
+  Name: string;
+  Value: string;
+  Domain?: string;
+  Path?: string;
+}
+
+export interface ScraperDriverCookieGroup {
+  CookieURL: string;
+  Cookies: ScraperCookieDef[];
+}
+
 export interface ScraperYamlDef {
   name: string;
   requires?: string[];
@@ -67,6 +79,11 @@ export interface ScraperYamlDef {
 
   /** Named XPath scraper definitions referenced by scrapeXPath actions */
   xPathScrapers?: Record<string, XPathScraperDef>;
+
+  /** Driver configuration including cookies for age gates etc. */
+  driver?: {
+    cookies?: ScraperDriverCookieGroup[];
+  };
 }
 
 // ─── Scraper Capabilities ───────────────────────────────────────────

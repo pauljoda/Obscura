@@ -74,17 +74,24 @@ export async function runXPathScraper(
     return null;
   }
 
+  // Build cookie header from driver.cookies that match the fetch URL
+  const cookieHeader = buildCookieHeader(definition, fetchUrl);
+
   // Fetch the page
   let html: string;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers: Record<string, string> = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    };
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
     const res = await fetch(fetchUrl, {
       signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
+      headers,
     });
     clearTimeout(timer);
 
@@ -353,4 +360,29 @@ function applyPostProcess(value: string, rules: XPathPostProcess[]): string {
   }
 
   return result;
+}
+
+/**
+ * Build a Cookie header string from the scraper definition's driver.cookies
+ * that match the given fetch URL.
+ */
+function buildCookieHeader(definition: ScraperYamlDef, fetchUrl: string): string | null {
+  const groups = definition.driver?.cookies;
+  if (!groups || groups.length === 0) return null;
+
+  const pairs: string[] = [];
+  for (const group of groups) {
+    try {
+      const cookieOrigin = new URL(group.CookieURL).hostname.replace(/^www\./, "");
+      const fetchOrigin = new URL(fetchUrl).hostname.replace(/^www\./, "");
+      if (!fetchOrigin.endsWith(cookieOrigin)) continue;
+    } catch {
+      continue;
+    }
+    for (const cookie of group.Cookies) {
+      pairs.push(`${cookie.Name}=${cookie.Value}`);
+    }
+  }
+
+  return pairs.length > 0 ? pairs.join("; ") : null;
 }

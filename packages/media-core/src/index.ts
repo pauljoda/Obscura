@@ -364,10 +364,22 @@ function xmlEscape(text: string): string {
     .replace(/'/g, "&apos;");
 }
 
+/** Decode standard XML entities that appear in NFO sidecar files. */
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&amp;/gi, "&"); // must be last
+}
+
 function extractTag(xml: string, tag: string): string | null {
   const regex = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`);
   const match = xml.match(regex);
-  return match ? match[1].trim() : null;
+  return match ? decodeXmlEntities(match[1].trim()) : null;
 }
 
 function extractAllTags(xml: string, tag: string): string[] {
@@ -378,6 +390,19 @@ function extractAllTags(xml: string, tag: string): string[] {
     results.push(match[1].trim());
   }
   return results;
+}
+
+/**
+ * Normalize a raw NFO rating to the 0-100 scale used by the database.
+ * Common NFO scales: 0-5 (stars), 0-10 (decimal), 0-100 (percentage).
+ * Values above 100 are treated as vote counts and ignored.
+ */
+export function normalizeNfoRating(raw: number): number | null {
+  if (!Number.isFinite(raw) || raw < 0) return null;
+  if (raw > 100) return null; // likely a vote count, not a rating
+  if (raw <= 5) return Math.round(raw * 20);
+  if (raw <= 10) return Math.round(raw * 10);
+  return Math.round(raw);
 }
 
 export async function readNfo(videoFilePath: string): Promise<NfoMetadata | null> {

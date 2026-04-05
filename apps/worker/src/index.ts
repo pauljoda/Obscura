@@ -15,6 +15,7 @@ import {
   getGeneratedSceneDir,
   getSidecarPaths,
   probeVideoFile,
+  normalizeNfoRating,
   readNfo,
   runProcess,
 } from "@obscura/media-core";
@@ -303,7 +304,7 @@ async function processLibraryScan(job: Job) {
           title,
           details: nfo?.plot ?? null,
           date: nfo?.aired ?? null,
-          rating: nfo?.rating != null ? Math.round(nfo.rating) : null,
+          rating: nfo?.rating != null ? normalizeNfoRating(nfo.rating) : null,
           url: nfo?.url ?? null,
           filePath,
           organized: false,
@@ -337,7 +338,10 @@ async function processLibraryScan(job: Job) {
         const patch: Record<string, unknown> = {};
         if (!current.details && nfo.plot) patch.details = nfo.plot;
         if (!current.date && nfo.aired) patch.date = nfo.aired;
-        if (current.rating == null && nfo.rating != null) patch.rating = Math.round(nfo.rating);
+        if (current.rating == null && nfo.rating != null) {
+          const normalized = normalizeNfoRating(nfo.rating);
+          if (normalized != null) patch.rating = normalized;
+        }
         if (!current.url && nfo.url) patch.url = nfo.url;
 
         if (Object.keys(patch).length > 0) {
@@ -361,14 +365,18 @@ async function processLibraryScan(job: Job) {
       await enqueuePendingSceneJob("fingerprint", scene.id);
     }
 
-    if (
-      settings.autoGeneratePreview &&
-      (!scene.thumbnailPath ||
+    {
+      const hasCustomThumb = scene.thumbnailPath?.includes("thumb-custom") ?? false;
+      const isMissing =
+        !scene.thumbnailPath ||
         !scene.previewPath ||
         !scene.spritePath ||
-        !scene.trickplayVttPath)
-    ) {
-      await enqueuePendingSceneJob("preview", scene.id);
+        !scene.trickplayVttPath;
+      // Always regenerate if the user hasn't set a custom thumbnail so
+      // quality setting changes take effect on the next scan.
+      if (settings.autoGeneratePreview && (isMissing || !hasCustomThumb)) {
+        await enqueuePendingSceneJob("preview", scene.id);
+      }
     }
 
     await markJobProgress(

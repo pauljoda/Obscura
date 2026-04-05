@@ -99,12 +99,16 @@ export function PerformerPageClient({
     }
 
     const nextRating = performer.rating === rating ? null : rating;
+    const previousRating = performer.rating;
+    // Optimistic update — show change immediately
+    setPerformer((current) => (current ? { ...current, rating: nextRating } : current));
 
     try {
       await setPerformerRating(id, nextRating);
-      setPerformer((current) => (current ? { ...current, rating: nextRating } : current));
     } catch (error) {
       console.error(error);
+      // Revert on failure
+      setPerformer((current) => (current ? { ...current, rating: previousRating } : current));
     }
   }
 

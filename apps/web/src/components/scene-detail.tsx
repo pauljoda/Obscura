@@ -183,12 +183,15 @@ export function SceneDetail({
     if (!scene || savingRating) return;
     const currentStars = scene.rating ? Math.round(scene.rating / 20) : 0;
     const newRating = starIdx === currentStars ? null : starIdx * 20;
+    const previousRating = scene.rating;
+    // Optimistic update — show change immediately
+    setScene((prev) => prev ? { ...prev, rating: newRating } : prev);
     setSavingRating(true);
     try {
       await updateScene(id, { rating: newRating });
-      setScene((prev) => prev ? { ...prev, rating: newRating } : prev);
     } catch {
-      // silent
+      // Revert on failure
+      setScene((prev) => prev ? { ...prev, rating: previousRating } : prev);
     } finally {
       setSavingRating(false);
     }
