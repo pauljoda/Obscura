@@ -63,6 +63,14 @@ const settingsKeys = [
   "trickplayQuality",
 ] as const;
 
+function normalizeSettings(s: LibrarySettings): LibrarySettings {
+  return {
+    ...s,
+    thumbnailQuality: s.thumbnailQuality ?? 2,
+    trickplayQuality: s.trickplayQuality ?? 2,
+  };
+}
+
 interface SettingsPageClientProps {
   initialRoots: LibraryRoot[];
   initialScraperCount: number;
@@ -76,7 +84,7 @@ export function SettingsPageClient({
   initialSettings,
   initialStorage,
 }: SettingsPageClientProps) {
-  const [settings, setSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState(() => normalizeSettings(initialSettings));
   const [roots, setRoots] = useState(initialRoots);
   const [storage, setStorage] = useState<StorageStats | null>(initialStorage);
   const [browser, setBrowser] = useState<LibraryBrowse | null>(null);
@@ -91,7 +99,7 @@ export function SettingsPageClient({
   const [error, setError] = useState<string | null>(null);
   const [scraperCount, setScraperCount] = useState(initialScraperCount);
 
-  const savedSettings = useRef(initialSettings);
+  const savedSettings = useRef(normalizeSettings(initialSettings));
   const isDirty = settingsKeys.some((key) => settings[key] !== savedSettings.current[key]);
 
   async function loadConfig() {
@@ -104,8 +112,9 @@ export function SettingsPageClient({
         fetchInstalledScrapers(),
       ]);
 
-      setSettings(response.settings);
-      savedSettings.current = response.settings;
+      const normalized = normalizeSettings(response.settings);
+      setSettings(normalized);
+      savedSettings.current = normalized;
       setRoots(response.roots);
       setStorage(response.storage);
       setScraperCount(scrapersResponse.packages.length);
@@ -145,8 +154,9 @@ export function SettingsPageClient({
         trickplayQuality: settings.trickplayQuality,
       });
 
-      setSettings(updated);
-      savedSettings.current = updated;
+      const normalized = normalizeSettings(updated);
+      setSettings(normalized);
+      savedSettings.current = normalized;
       setMessage("Library settings saved.");
       await loadConfig();
     } catch (saveError) {
@@ -565,46 +575,20 @@ export function SettingsPageClient({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card-sharp no-lift p-3.5">
-            <label className="control-label mb-1.5">Thumbnail Quality</label>
-            <input
-              className="control-input w-full py-1.5 text-sm"
-              type="number"
-              min={1}
-              max={31}
-              step={1}
-              value={settings.thumbnailQuality}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  thumbnailQuality: Math.max(1, Math.min(31, Number(event.target.value) || 2)),
-                }))
-              }
-            />
-            <p className="mt-1.5 text-[0.62rem] text-text-disabled">
-              JPEG quality for thumbnails (1 = best, 31 = worst)
-            </p>
-          </div>
-          <div className="surface-card-sharp no-lift p-3.5">
-            <label className="control-label mb-1.5">Trickplay Quality</label>
-            <input
-              className="control-input w-full py-1.5 text-sm"
-              type="number"
-              min={1}
-              max={31}
-              step={1}
-              value={settings.trickplayQuality}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  trickplayQuality: Math.max(1, Math.min(31, Number(event.target.value) || 2)),
-                }))
-              }
-            />
-            <p className="mt-1.5 text-[0.62rem] text-text-disabled">
-              JPEG quality for trickplay sprites (1 = best, 31 = worst)
-            </p>
-          </div>
+          <QualitySlider
+            label="Thumbnail Quality"
+            value={settings.thumbnailQuality}
+            onChange={(value) =>
+              setSettings((current) => ({ ...current, thumbnailQuality: value }))
+            }
+          />
+          <QualitySlider
+            label="Trickplay Quality"
+            value={settings.trickplayQuality}
+            onChange={(value) =>
+              setSettings((current) => ({ ...current, trickplayQuality: value }))
+            }
+          />
         </div>
       </section>
 
@@ -668,6 +652,47 @@ function ToggleCard({
         <div className={cn("led", checked ? "led-active" : "led-idle")} />
       </div>
     </button>
+  );
+}
+
+function qualityLabel(value: number): string {
+  if (value <= 2) return "High";
+  if (value <= 5) return "Good";
+  if (value <= 10) return "Medium";
+  if (value <= 15) return "Low";
+  if (value <= 20) return "Very Low";
+  return "Minimum";
+}
+
+function QualitySlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="surface-card-sharp no-lift p-3.5">
+      <div className="flex items-center justify-between mb-2">
+        <label className="control-label">{label}</label>
+        <span className="text-mono-sm text-text-accent">{qualityLabel(value)}</span>
+      </div>
+      <input
+        type="range"
+        min={1}
+        max={31}
+        step={1}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full h-1.5 appearance-none rounded-full bg-surface-4 accent-accent-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent-500 [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(199,155,92,0.5)]"
+      />
+      <div className="flex justify-between mt-1.5">
+        <span className="text-[0.58rem] text-text-disabled">Best (1)</span>
+        <span className="text-[0.58rem] text-text-disabled">Smallest (31)</span>
+      </div>
+    </div>
   );
 }
 

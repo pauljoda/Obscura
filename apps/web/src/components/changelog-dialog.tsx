@@ -90,7 +90,7 @@ export function ChangelogDialog({
         ref={dialogRef}
         onClick={handleBackdropClick}
         onClose={() => setOpen(false)}
-        className="w-[90vw] max-w-3xl h-[85vh] sm:h-[80vh] rounded-[3px] border border-border-subtle bg-surface-1 text-text-primary backdrop:bg-black/70 p-0 open:flex flex-col"
+        className="fixed inset-0 m-auto w-[90vw] max-w-3xl h-[85vh] sm:h-[80vh] rounded-[3px] border border-border-subtle bg-surface-1 text-text-primary backdrop:bg-black/70 p-0 open:flex flex-col"
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3.5">
           <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-text-accent">
