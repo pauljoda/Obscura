@@ -109,6 +109,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       label?: string;
       enabled?: boolean;
       recursive?: boolean;
+      scanVideos?: boolean;
+      scanImages?: boolean;
     };
 
     const [existing] = await db.select().from(libraryRoots).where(eq(libraryRoots.id, id));
@@ -130,6 +132,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           label: body.label?.trim() || existing.label,
           enabled: body.enabled ?? existing.enabled,
           recursive: body.recursive ?? existing.recursive,
+          scanVideos: body.scanVideos ?? existing.scanVideos,
+          scanImages: body.scanImages ?? existing.scanImages,
           updatedAt: new Date(),
         })
         .where(eq(libraryRoots.id, id))

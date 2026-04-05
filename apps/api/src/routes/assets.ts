@@ -2,10 +2,16 @@ import { createReadStream, existsSync } from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq } from "drizzle-orm";
-import { getSidecarPaths, getGeneratedSceneDir, getGeneratedPerformerDir } from "@obscura/media-core";
+import { eq, asc } from "drizzle-orm";
+import {
+  getSidecarPaths,
+  getGeneratedSceneDir,
+  getGeneratedPerformerDir,
+  getGeneratedImageDir,
+  extractZipMember,
+} from "@obscura/media-core";
 
-const { scenes } = schema;
+const { scenes, galleries, images } = schema;
 
 const SIDECAR_MIME: Record<string, string> = {
   thumb: "image/jpeg",
@@ -29,14 +35,27 @@ const LEGACY_NAME_MAP: Record<string, SidecarKind> = {
   "trickplay.vtt": "trickplay",
 };
 
-function mimeForFile(fileName: string) {
-  const ext = path.extname(fileName).toLowerCase();
+function mimeForFile(extOrFileName: string) {
+  const ext = extOrFileName.startsWith(".") ? extOrFileName : path.extname(extOrFileName).toLowerCase();
   switch (ext) {
     case ".jpg":
     case ".jpeg":
       return "image/jpeg";
     case ".png":
       return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".avif":
+      return "image/avif";
+    case ".heic":
+      return "image/heic";
+    case ".bmp":
+      return "image/bmp";
+    case ".tiff":
+    case ".tif":
+      return "image/tiff";
     case ".mp4":
       return "video/mp4";
     case ".vtt":
@@ -146,5 +165,105 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     reply.code(404);
     return { error: "Performer image not found" };
+  });
+
+  // ─── Gallery cover: /assets/galleries/:id/cover ──────────────────
+  app.get("/assets/galleries/:id/cover", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const gallery = await db.query.galleries.findFirst({
+      where: eq(galleries.id, id),
+      columns: { coverImageId: true },
+    });
+
+    if (!gallery) {
+      reply.code(404);
+      return { error: "Gallery not found" };
+    }
+
+    // Resolve cover image: explicit coverImageId, or first image by sort order
+    let coverImageId = gallery.coverImageId;
+    if (!coverImageId) {
+      const [firstImage] = await db
+        .select({ id: images.id })
+        .from(images)
+        .where(eq(images.galleryId, id))
+        .orderBy(asc(images.sortOrder))
+        .limit(1);
+      coverImageId = firstImage?.id ?? null;
+    }
+
+    if (!coverImageId) {
+      reply.code(404);
+      return { error: "No cover image available" };
+    }
+
+    // Serve the cover image's thumbnail
+    const thumbPath = path.join(getGeneratedImageDir(coverImageId), "thumb.jpg");
+    if (existsSync(thumbPath)) {
+      reply.header("Cache-Control", "no-cache");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(thumbPath));
+    }
+
+    reply.code(404);
+    return { error: "Cover thumbnail not yet generated" };
+  });
+
+  // ─── Image thumbnail: /assets/images/:id/thumb ───────────────────
+  app.get("/assets/images/:id/thumb", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const thumbPath = path.join(getGeneratedImageDir(id), "thumb.jpg");
+    if (existsSync(thumbPath)) {
+      reply.header("Cache-Control", "no-cache");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(thumbPath));
+    }
+
+    reply.code(404);
+    return { error: "Image thumbnail not found" };
+  });
+
+  // ─── Image full-size: /assets/images/:id/full ────────────────────
+  app.get("/assets/images/:id/full", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const image = await db.query.images.findFirst({
+      where: eq(images.id, id),
+      columns: { filePath: true, format: true },
+    });
+
+    if (!image) {
+      reply.code(404);
+      return { error: "Image not found" };
+    }
+
+    const isZipMember = image.filePath.includes("::");
+
+    if (isZipMember) {
+      const [zipPath, memberPath] = image.filePath.split("::");
+      const data = extractZipMember(zipPath, memberPath);
+      if (!data) {
+        reply.code(404);
+        return { error: "Image not available" };
+      }
+
+      const ext = path.extname(memberPath).toLowerCase();
+      reply.header("Cache-Control", "public, max-age=3600");
+      reply.header("Content-Type", mimeForFile(ext));
+      return reply.send(data);
+    }
+
+    // Regular file
+    if (!existsSync(image.filePath)) {
+      reply.code(404);
+      return { error: "Image file not found" };
+    }
+
+    const ext = path.extname(image.filePath).toLowerCase();
+    reply.header("Cache-Control", "public, max-age=3600");
+    reply.header("Content-Type", mimeForFile(ext));
+    return reply.send(createReadStream(image.filePath));
   });
 }
