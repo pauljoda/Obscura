@@ -395,10 +395,11 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     if (actionsToTry.length === 0) {
-      return reply.code(400).send({
-        error: "No compatible scrape actions available for this scraper and scene.",
+      return {
+        result: null,
+        message: "No compatible scrape actions available for this scraper.",
         triedActions: [],
-      });
+      };
     }
 
     // Helper to build input for a given action
@@ -566,10 +567,11 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     if (actionsToTry.length === 0) {
-      return reply.code(400).send({
-        error: "No compatible performer scrape actions available for this scraper.",
+      return {
+        result: null,
+        message: "No compatible performer scrape actions available for this scraper.",
         triedActions: [],
-      });
+      };
     }
 
     function buildInput(action: PerformerAction): ScraperPerformerFragment | { name: string } {

@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Check,
   ChevronDown,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui";
@@ -81,6 +82,8 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const [scraping, setScraping] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<NormalizedPerformerScrapeResult | null>(null);
   const [selectedScrapeFields, setSelectedScrapeFields] = useState<Set<string>>(new Set());
+  const [seekIndex, setSeekIndex] = useState(0);
+  const [seeking, setSeeking] = useState(false);
 
   // Image upload
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +170,18 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     }
   }
 
+  function applyScrapeResultToPreview(result: NormalizedPerformerScrapeResult) {
+    setScrapeResult(result);
+    const fields = new Set<string>();
+    for (const [key, value] of Object.entries(result)) {
+      if (value != null && value !== "" && key !== "tagNames") {
+        fields.add(key);
+      }
+    }
+    if (result.tagNames?.length) fields.add("tagNames");
+    setSelectedScrapeFields(fields);
+  }
+
   async function handleScrape() {
     if (!selectedScraper) return;
     setScraping(true);
@@ -174,33 +189,56 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     setScrapeResult(null);
     try {
       const res = await scrapePerformerApi(selectedScraper, id);
-      if (res.result) {
-        setScrapeResult(res.result);
-        // Pre-select all non-null fields
-        const fields = new Set<string>();
-        for (const [key, value] of Object.entries(res.result)) {
-          if (value != null && value !== "" && key !== "tagNames") {
-            fields.add(key);
-          }
-        }
-        if (res.result.tagNames?.length) fields.add("tagNames");
-        setSelectedScrapeFields(fields);
-      } else if (res.results && res.results.length > 0) {
-        setScrapeResult(res.results[0]);
-        const fields = new Set<string>();
-        for (const [key, value] of Object.entries(res.results[0])) {
-          if (value != null && value !== "" && key !== "tagNames") fields.add(key);
-        }
-        if (res.results[0].tagNames?.length) fields.add("tagNames");
-        setSelectedScrapeFields(fields);
+      const result = res.result ?? res.results?.[0] ?? null;
+      if (result) {
+        applyScrapeResultToPreview(result);
       } else {
-        setError("Scraper returned no results");
+        setError(res.message || "Scraper returned no results");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scrape failed");
     } finally {
       setScraping(false);
     }
+  }
+
+  async function handleSeek() {
+    if (scrapers.length === 0) return;
+    setSeeking(true);
+    setError(null);
+    setScrapeResult(null);
+
+    // Start from the current seekIndex, wrap around once
+    let tried = 0;
+    let idx = seekIndex;
+
+    while (tried < scrapers.length) {
+      const scraper = scrapers[idx];
+      setSelectedScraper(scraper.id);
+      setMessage(`Trying ${scraper.name}...`);
+
+      try {
+        const res = await scrapePerformerApi(scraper.id, id);
+        const result = res.result ?? res.results?.[0] ?? null;
+        if (result) {
+          applyScrapeResultToPreview(result);
+          setMessage(`Found result from ${scraper.name}`);
+          setSeekIndex((idx + 1) % scrapers.length);
+          setSeeking(false);
+          return;
+        }
+      } catch {
+        // Scraper failed — continue to next
+      }
+
+      idx = (idx + 1) % scrapers.length;
+      tried++;
+    }
+
+    setMessage(null);
+    setError("No scrapers returned results");
+    setSeekIndex(0);
+    setSeeking(false);
   }
 
   async function handleApplyScrape() {
@@ -415,25 +453,45 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
               <div className="text-kicker">Scrape Metadata</div>
               <select
                 value={selectedScraper}
-                onChange={(e) => setSelectedScraper(e.target.value)}
+                onChange={(e) => {
+                  setSelectedScraper(e.target.value);
+                  setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
+                }}
                 className="control-input w-full py-1.5 text-xs"
               >
                 {scrapers.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-              <button
-                onClick={handleScrape}
-                disabled={scraping || !selectedScraper}
-                className={cn(
-                  "w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
-                  "bg-accent-950 text-text-accent border border-border-accent",
-                  "hover:bg-accent-900 disabled:opacity-50"
-                )}
-              >
-                {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-                {scraping ? "Scraping..." : "Scrape"}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleScrape}
+                  disabled={scraping || seeking || !selectedScraper}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                    "bg-accent-950 text-text-accent border border-border-accent",
+                    "hover:bg-accent-900 disabled:opacity-50"
+                  )}
+                >
+                  {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                  Scrape
+                </button>
+                <button
+                  onClick={handleSeek}
+                  disabled={scraping || seeking}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                    "text-text-muted border border-border-subtle",
+                    "hover:text-text-accent hover:border-border-accent disabled:opacity-50"
+                  )}
+                >
+                  {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                  {seeking ? "Seeking..." : "Seek"}
+                </button>
+              </div>
+              <p className="text-[0.6rem] text-text-disabled leading-snug">
+                Seek tries each scraper until one returns results
+              </p>
             </div>
           )}
         </div>

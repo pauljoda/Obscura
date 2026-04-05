@@ -388,6 +388,8 @@ export function SceneEdit({
     performers: Set<string>;
     studio: boolean;
   }>({ tags: new Set(), performers: new Set(), studio: false });
+  const [seekIndex, setSeekIndex] = useState(0);
+  const [seeking, setSeeking] = useState(false);
 
   // Thumbnail upload
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -589,6 +591,117 @@ export function SceneEdit({
     } finally {
       setScraping(false);
     }
+  }
+
+  async function handleSeek() {
+    if (scrapers.length === 0) return;
+    setSeeking(true);
+    setError(null);
+
+    let tried = 0;
+    let idx = seekIndex;
+
+    while (tried < scrapers.length) {
+      const scraper = scrapers[idx];
+      setSelectedScraper(scraper.id);
+      setMessage(`Trying ${scraper.name}...`);
+
+      try {
+        const res = await scrapeScene(scraper.id, id, "auto", {
+          url: url || undefined,
+        });
+
+        let result: NormalizedScrapeResult | null = null;
+        if (res.normalized) result = res.normalized;
+        else if (res.results && res.results.length > 0) result = res.results[0];
+
+        if (result) {
+          // Apply the same logic as handleScrape
+          const tagNamesLower = new Set(allTags.map((t) => t.name.toLowerCase()));
+          const perfNamesLower = new Set(allPerformers.map((p) => p.name.toLowerCase()));
+          const studioNamesLower = new Set(allStudios.map((s) => s.name.toLowerCase()));
+
+          const newTags = new Set<string>();
+          const newPerfs = new Set<string>();
+          let isNewStudio = false;
+
+          for (const t of result.tagNames) {
+            if (!tagNamesLower.has(t.toLowerCase())) newTags.add(t.toLowerCase());
+          }
+          for (const p of result.performerNames) {
+            if (!perfNamesLower.has(p.toLowerCase())) newPerfs.add(p.toLowerCase());
+          }
+          if (result.studioName && !studioNamesLower.has(result.studioName.toLowerCase())) {
+            isNewStudio = true;
+          }
+
+          setNewFromScrape({ tags: newTags, performers: newPerfs, studio: isNewStudio });
+
+          if (result.title) setTitle(result.title);
+          if (result.details) setDetails(result.details);
+          if (result.date) setDate(result.date);
+          if (result.url) setUrl(result.url);
+          if (result.studioName) setStudioName(result.studioName);
+
+          if (result.performerNames.length > 0) {
+            setPerformerNames((prev) => {
+              const existing = new Set(prev.map((n) => n.toLowerCase()));
+              const merged = [...prev];
+              for (const name of result!.performerNames) {
+                if (!existing.has(name.toLowerCase())) {
+                  merged.push(name);
+                  existing.add(name.toLowerCase());
+                }
+              }
+              return merged;
+            });
+          }
+
+          if (result.tagNames.length > 0) {
+            setTagNames((prev) => {
+              const existing = new Set(prev.map((n) => n.toLowerCase()));
+              const merged = [...prev];
+              for (const name of result!.tagNames) {
+                if (!existing.has(name.toLowerCase())) {
+                  merged.push(name);
+                  existing.add(name.toLowerCase());
+                }
+              }
+              return merged;
+            });
+          }
+
+          if (
+            result.imageUrl &&
+            (result.imageUrl.startsWith("http://") || result.imageUrl.startsWith("https://"))
+          ) {
+            try {
+              await uploadThumbnailFromUrl(id, result.imageUrl);
+              const updated = await fetchSceneDetail(id);
+              setScene(updated);
+              onSaved?.();
+            } catch {
+              // Non-fatal
+            }
+          }
+
+          setMessage(`Found result from ${scraper.name}. Review and save to persist.`);
+          setSeekIndex((idx + 1) % scrapers.length);
+          setSeeking(false);
+          return;
+        }
+      } catch {
+        // Scraper failed — continue to next
+      }
+
+      idx = (idx + 1) % scrapers.length;
+      tried++;
+    }
+
+    setMessage(null);
+    setError("No scrapers returned results");
+    setSeekIndex(0);
+    setSeeking(false);
   }
 
   async function handleThumbnailUpload(file: File) {
@@ -924,7 +1037,10 @@ export function SceneEdit({
               <select
                 className="control-input text-sm py-1.5 w-auto min-w-[140px]"
                 value={selectedScraper}
-                onChange={(e) => setSelectedScraper(e.target.value)}
+                onChange={(e) => {
+                  setSelectedScraper(e.target.value);
+                  setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
+                }}
               >
                 {scrapers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -936,7 +1052,7 @@ export function SceneEdit({
                 variant="primary"
                 size="sm"
                 onClick={() => void handleScrape()}
-                disabled={scraping}
+                disabled={scraping || seeking}
               >
                 {scraping ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -945,8 +1061,20 @@ export function SceneEdit({
                 )}
                 {scraping ? "Scraping..." : "Scrape"}
               </Button>
+              <button
+                onClick={() => void handleSeek()}
+                disabled={scraping || seeking}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted border border-border-subtle hover:text-text-accent hover:border-border-accent disabled:opacity-50 transition-all duration-fast"
+              >
+                {seeking ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                {seeking ? "Seeking..." : "Seek"}
+              </button>
               <span className="text-text-disabled text-xs hidden sm:inline">
-                Auto-fills fields below
+                {seeking ? "Trying scrapers..." : "Seek tries each scraper until one returns results"}
               </span>
             </section>
           )}
