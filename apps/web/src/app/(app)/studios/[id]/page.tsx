@@ -159,15 +159,13 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden group">
-        <div className="aspect-[21/9] sm:aspect-[21/7]">
-          {imageUrl ? (
-            <img src={imageUrl} alt={studio.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-surface-3">
-              <Building2 className="h-16 w-16 text-text-disabled/15" />
-            </div>
-          )}
-        </div>
+        {imageUrl ? (
+          <img src={imageUrl} alt={studio.name} className="w-full max-h-[280px] object-contain" />
+        ) : (
+          <div className="aspect-[21/5] flex items-center justify-center bg-surface-3">
+            <Building2 className="h-16 w-16 text-text-disabled/15" />
+          </div>
+        )}
         {/* Image actions (hover) */}
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-colors">

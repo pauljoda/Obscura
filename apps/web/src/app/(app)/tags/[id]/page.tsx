@@ -153,15 +153,13 @@ export default function TagPage({ params }: TagPageProps) {
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden group">
-        <div className={imageUrl ? "aspect-[21/9] sm:aspect-[21/7]" : "aspect-[21/5]"}>
-          {imageUrl ? (
-            <img src={imageUrl} alt={tagName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-surface-3">
-              <Tag className="h-14 w-14 text-text-disabled/15" />
-            </div>
-          )}
-        </div>
+        {imageUrl ? (
+          <img src={imageUrl} alt={tagName} className="w-full max-h-[280px] object-contain" />
+        ) : (
+          <div className="aspect-[21/5] flex items-center justify-center bg-surface-3">
+            <Tag className="h-14 w-14 text-text-disabled/15" />
+          </div>
+        )}
         {/* Image actions (hover) */}
         {tagDetail && (
           <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
