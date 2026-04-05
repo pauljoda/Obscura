@@ -4,16 +4,14 @@ import { useState, useMemo } from "react";
 import {
   Tag,
   Search,
-  Hash,
   Film,
   Image,
-  TrendingUp,
   ArrowUpDown,
   ChevronDown,
   Check,
   X,
-  LayoutGrid,
   List,
+  Cloud,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
@@ -21,7 +19,7 @@ import type { TagItem } from "../../lib/api";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
-type ViewMode = "grid" | "cloud";
+type ViewMode = "list" | "cloud";
 
 const defaultSortDir: Record<SortKey, SortDir> = {
   scenes: "desc",
@@ -34,17 +32,6 @@ const sortOptions: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A-Z" },
 ];
 
-const gradientClasses = [
-  "gradient-thumb-1",
-  "gradient-thumb-2",
-  "gradient-thumb-3",
-  "gradient-thumb-4",
-  "gradient-thumb-5",
-  "gradient-thumb-6",
-  "gradient-thumb-7",
-  "gradient-thumb-8",
-];
-
 interface TagsPageClientProps {
   initialTags: TagItem[];
 }
@@ -54,7 +41,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scenes");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortOpen, setSortOpen] = useState(false);
 
   const sorted = useMemo(() => {
@@ -80,7 +67,6 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
   const maxCount = tags.length > 0 ? Math.max(...tags.map(totalCount)) : 1;
   const totalScenes = tags.reduce((sum, t) => sum + t.sceneCount, 0);
   const totalImages = tags.reduce((sum, t) => sum + (t.imageCount ?? 0), 0);
-  const avgPerTag = tags.length > 0 ? Math.round((totalScenes + totalImages) / tags.length) : 0;
   const topTag = tags.length > 0 ? [...tags].sort((a, b) => totalCount(b) - totalCount(a))[0] : null;
 
   const currentSort = sortOptions.find((s) => s.value === sortKey);
@@ -103,13 +89,12 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         </span>
       </div>
 
-      {/* Stats strip */}
+      {/* Inline stats */}
       {tags.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <StatCard icon={<Tag className="h-3.5 w-3.5" />} label="Total Tags" value={String(tags.length)} />
-          <StatCard icon={<Film className="h-3.5 w-3.5" />} label="Tagged Scenes" value={String(totalScenes)} />
-          <StatCard icon={<Image className="h-3.5 w-3.5" />} label="Tagged Images" value={String(totalImages)} />
-          <StatCard icon={<TrendingUp className="h-3.5 w-3.5" />} label="Top Tag" value={topTag ? topTag.name : "—"} accent />
+        <div className="flex items-center gap-4 text-[0.72rem] text-text-disabled">
+          <span className="flex items-center gap-1"><Film className="h-3 w-3" />{totalScenes} scenes</span>
+          <span className="flex items-center gap-1"><Image className="h-3 w-3" />{totalImages} images</span>
+          {topTag && <span>Top: <span className="text-text-muted">{topTag.name}</span></span>}
         </div>
       )}
 
@@ -208,16 +193,16 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
           {/* View mode toggle */}
           <div className="flex items-center">
             <button
-              onClick={() => setViewMode("grid")}
+              onClick={() => setViewMode("list")}
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded-sm transition-colors duration-fast",
-                viewMode === "grid"
+                viewMode === "list"
                   ? "text-text-accent bg-accent-950"
                   : "text-text-muted hover:text-text-primary hover:bg-surface-2",
               )}
-              title="Grid view"
+              title="List view"
             >
-              <LayoutGrid className="h-3.5 w-3.5" />
+              <List className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => setViewMode("cloud")}
@@ -229,7 +214,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
               )}
               title="Cloud view"
             >
-              <Hash className="h-3.5 w-3.5" />
+              <Cloud className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -253,10 +238,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         </div>
       ) : viewMode === "cloud" ? (
         <div className="surface-panel p-6">
-          <h4 className="text-kicker mb-4">
-            {search ? `Results (${filtered.length})` : "Tag Cloud"}
-          </h4>
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-1.5 justify-center">
             {filtered.map((tag) => {
               const total = tag.sceneCount + (tag.imageCount ?? 0);
               const intensity = total / maxCount;
@@ -265,7 +247,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
                   key={tag.id}
                   href={`/tags/${encodeURIComponent(tag.name)}`}
                   className={cn(
-                    "border px-3 py-1.5 transition-all duration-fast",
+                    "border px-2.5 py-1 transition-all duration-fast",
                     "hover:border-border-accent hover:bg-accent-950 hover:text-text-accent hover:shadow-[0_0_12px_rgba(199,155,92,0.15)]",
                     intensity > 0.6
                       ? "border-border-accent text-accent-400 text-base font-medium bg-accent-950/30"
@@ -282,74 +264,42 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {filtered.map((tag, i) => (
-            <TagCard key={tag.id} tag={tag} maxCount={maxCount} gradientClass={gradientClasses[i % 8]} />
-          ))}
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
+          {filtered.map((tag) => {
+            const total = tag.sceneCount + (tag.imageCount ?? 0);
+            return (
+              <Link
+                key={tag.id}
+                href={`/tags/${encodeURIComponent(tag.name)}`}
+                className={cn(
+                  "flex items-center justify-between gap-2 px-3 py-1.5",
+                  "border-b border-border-subtle/50",
+                  "hover:bg-surface-2 hover:text-text-accent transition-colors duration-fast",
+                  "break-inside-avoid",
+                )}
+              >
+                <span className="text-[0.8rem] text-text-primary truncate">{tag.name}</span>
+                <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
+                  {tag.sceneCount > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      <Film className="h-2.5 w-2.5" />
+                      {tag.sceneCount}
+                    </span>
+                  )}
+                  {(tag.imageCount ?? 0) > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      <Image className="h-2.5 w-2.5" />
+                      {tag.imageCount}
+                    </span>
+                  )}
+                  {total === 0 && <span className="text-text-disabled/50">—</span>}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-function TagCard({ tag, maxCount, gradientClass }: { tag: TagItem; maxCount: number; gradientClass: string }) {
-  const total = tag.sceneCount + (tag.imageCount ?? 0);
-  const intensity = total / maxCount;
-
-  return (
-    <Link href={`/tags/${encodeURIComponent(tag.name)}`}>
-      <article className="surface-card group cursor-pointer h-full overflow-hidden">
-        <div className={cn("relative h-20 overflow-hidden", gradientClass)}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Tag className="h-10 w-10 text-white/[0.06]" />
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-surface-1">
-            <div
-              className="h-full bg-accent-500/60 transition-all duration-moderate"
-              style={{ width: `${Math.max(intensity * 100, 4)}%` }}
-            />
-          </div>
-          <div className="absolute top-2 right-2 flex items-center gap-1">
-            {tag.sceneCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[0.65rem] font-mono text-text-secondary">
-                <Film className="h-2.5 w-2.5" />
-                {tag.sceneCount}
-              </span>
-            )}
-            {(tag.imageCount ?? 0) > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[0.65rem] font-mono text-text-secondary">
-                <Image className="h-2.5 w-2.5" />
-                {tag.imageCount}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="px-3 py-2.5">
-          <h3 className="text-sm font-medium truncate group-hover:text-text-accent transition-colors duration-fast">
-            {tag.name}
-          </h3>
-          <p className="text-[0.65rem] text-text-disabled mt-0.5">
-            {[
-              tag.sceneCount > 0 ? `${tag.sceneCount} scene${tag.sceneCount !== 1 ? "s" : ""}` : null,
-              (tag.imageCount ?? 0) > 0 ? `${tag.imageCount} image${tag.imageCount !== 1 ? "s" : ""}` : null,
-            ].filter(Boolean).join(" · ") || "unused"}
-          </p>
-        </div>
-      </article>
-    </Link>
-  );
-}
-
-function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
-  return (
-    <div className={accent ? "surface-stat-accent px-3 py-2.5" : "surface-stat px-3 py-2.5"}>
-      <div className={`flex items-center gap-1.5 mb-1 ${accent ? "text-text-accent" : "text-text-disabled"}`}>
-        {icon}
-        <span className="text-kicker" style={{ color: "inherit" }}>{label}</span>
-      </div>
-      <div className={accent ? "text-lg font-semibold text-text-accent leading-tight truncate" : "text-lg font-semibold text-text-primary leading-tight truncate"}>
-        {value}
-      </div>
-    </div>
-  );
-}
