@@ -12,6 +12,7 @@ import { scrapersRoutes } from "./routes/scrapers";
 import { stashboxRoutes } from "./routes/stashbox";
 import { galleriesRoutes } from "./routes/galleries";
 import { imagesRoutes } from "./routes/images";
+import { searchRoutes } from "./routes/search";
 
 const app = Fastify({
   logger: true,
@@ -46,6 +47,7 @@ await app.register(imagesRoutes);
 await app.register(streamRoutes);
 await app.register(scrapersRoutes);
 await app.register(stashboxRoutes);
+await app.register(searchRoutes);
 
 // ─── Start ────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 4000);
