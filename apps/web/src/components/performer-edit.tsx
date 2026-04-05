@@ -86,6 +86,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const [seekIndex, setSeekIndex] = useState(0);
   const [seeking, setSeeking] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
 
   // Image upload
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -544,34 +545,111 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
               {/* Image picker */}
               {(() => {
                 const images = scrapeResult.imageUrls ?? [];
-                const singleImage = !images.length && scrapeResult.imageUrl ? [scrapeResult.imageUrl] : images;
-                if (singleImage.length > 0) {
-                  return (
-                    <div className="flex items-start gap-2">
-                      <button
-                        onClick={() => toggleScrapeField("imageUrl")}
-                        className={cn(
-                          "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
-                          selectedScrapeFields.has("imageUrl")
-                            ? "bg-accent-800 border-border-accent"
-                            : "border-border-subtle"
+                const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
+                if (allImages.length === 0) return null;
+
+                const currentImage = allImages[selectedImageIndex] ?? allImages[0];
+
+                return (
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => toggleScrapeField("imageUrl")}
+                      className={cn(
+                        "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
+                        selectedScrapeFields.has("imageUrl")
+                          ? "bg-accent-800 border-border-accent"
+                          : "border-border-subtle"
+                      )}
+                    >
+                      {selectedScrapeFields.has("imageUrl") && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[0.65rem] text-text-disabled uppercase tracking-wider">
+                          Image{allImages.length > 1 ? ` (${selectedImageIndex + 1} of ${allImages.length})` : ""}
+                        </span>
+                        {allImages.length > 1 && (
+                          <button
+                            onClick={() => setImagePickerOpen(true)}
+                            className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors"
+                          >
+                            Browse all
+                          </button>
                         )}
+                      </div>
+                      {/* Selected image preview — click to open large view */}
+                      <button
+                        onClick={() => setImagePickerOpen(true)}
+                        className="w-24 h-32 rounded overflow-hidden bg-surface-3 border-2 border-border-accent/40 hover:border-border-accent transition-all duration-fast"
                       >
-                        {selectedScrapeFields.has("imageUrl") && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                        <img src={currentImage} alt="Selected" className="w-full h-full object-cover" loading="lazy" />
                       </button>
-                      <div className="min-w-0">
-                        <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider mb-1.5">
-                          Image{singleImage.length > 1 ? ` (${selectedImageIndex + 1} of ${singleImage.length})` : ""}
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hidden pb-1">
-                          {singleImage.map((url, i) => (
+                      {/* Thumbnail strip for quick selection */}
+                      {allImages.length > 1 && (
+                        <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hidden pb-1">
+                          {allImages.map((url, i) => (
                             <button
                               key={i}
                               onClick={() => setSelectedImageIndex(i)}
                               className={cn(
-                                "flex-shrink-0 w-20 h-28 rounded overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
+                                "flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-surface-3 border transition-all duration-fast",
                                 i === selectedImageIndex
-                                  ? "border-border-accent ring-1 ring-accent-500/30"
+                                  ? "border-border-accent"
+                                  : "border-transparent opacity-50 hover:opacity-80"
+                              )}
+                            >
+                              <img src={url} alt={`${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Image picker modal */}
+              {imagePickerOpen && scrapeResult && (() => {
+                const images = scrapeResult.imageUrls ?? [];
+                const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
+                if (allImages.length === 0) return null;
+
+                return (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="relative max-w-5xl w-full max-h-[90vh] mx-4 flex flex-col">
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-3 surface-elevated rounded-t-lg">
+                        <span className="text-sm font-medium text-text-primary">
+                          Select Image ({selectedImageIndex + 1} of {allImages.length})
+                        </span>
+                        <button
+                          onClick={() => setImagePickerOpen(false)}
+                          className="text-text-muted hover:text-text-primary transition-colors"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      {/* Large preview */}
+                      <div className="flex-1 min-h-0 surface-panel flex items-center justify-center p-4 overflow-hidden">
+                        <img
+                          src={allImages[selectedImageIndex] ?? allImages[0]}
+                          alt={`Image ${selectedImageIndex + 1}`}
+                          className="max-w-full max-h-[60vh] object-contain rounded"
+                        />
+                      </div>
+
+                      {/* Thumbnail grid */}
+                      <div className="surface-elevated rounded-b-lg p-4">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-48 overflow-y-auto">
+                          {allImages.map((url, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedImageIndex(i)}
+                              className={cn(
+                                "aspect-[3/4] rounded overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
+                                i === selectedImageIndex
+                                  ? "border-border-accent ring-2 ring-accent-500/30"
                                   : "border-transparent hover:border-border-subtle opacity-60 hover:opacity-100"
                               )}
                             >
@@ -579,11 +657,22 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                             </button>
                           ))}
                         </div>
+                        <div className="flex justify-end mt-3 gap-2">
+                          <button
+                            onClick={() => setImagePickerOpen(false)}
+                            className={cn(
+                              "flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all duration-fast",
+                              "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900"
+                            )}
+                          >
+                            <Check className="h-3 w-3" />
+                            Use Selected
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  );
-                }
-                return null;
+                  </div>
+                );
               })()}
 
               {/* Other fields */}

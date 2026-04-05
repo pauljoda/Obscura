@@ -46,6 +46,19 @@ function trimOrNull(value: string | undefined | null): string | null {
   return trimmed || null;
 }
 
+function deduplicateUrls(urls: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const url of urls) {
+    // For data URLs, use first 100 chars as key to avoid huge string comparisons
+    const key = url.startsWith("data:") ? url.slice(0, 100) : url;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(url);
+  }
+  return result;
+}
+
 function deduplicateNames(names: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -112,10 +125,10 @@ export function normalizePerformerResult(
     aliases: trimOrNull(raw.aliases),
     details: trimOrNull(raw.details),
     imageUrl: trimToUrl(raw.image) ?? trimToUrl(raw.images?.[0]),
-    imageUrls: [
+    imageUrls: deduplicateUrls([
       ...(raw.image ? [trimToUrl(raw.image)] : []),
       ...(raw.images ?? []).map((img) => trimToUrl(img)),
-    ].filter((u): u is string => u !== null),
+    ].filter((u): u is string => u !== null)),
     tagNames: deduplicateNames(
       (raw.tags ?? []).map((t) => t.name).filter(Boolean)
     ),
