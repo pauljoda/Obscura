@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { sql } from "drizzle-orm";
 import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 import postgres from "postgres";
@@ -11,10 +13,15 @@ import {
   computeMd5,
   computeOsHash,
   discoverVideoFiles,
+  discoverImageFilesAndDirs,
+  extractZipMember,
   fileNameToTitle,
   getGeneratedSceneDir,
+  getGeneratedImageDir,
   getSidecarPaths,
+  parseZipImageMembers,
   probeVideoFile,
+  probeImageFile,
   normalizeNfoRating,
   readNfo,
   runProcess,
@@ -38,6 +45,13 @@ const {
   libraryRoots,
   librarySettings,
   jobRuns,
+  galleries,
+  images,
+  galleryChapters,
+  galleryPerformers,
+  galleryTags,
+  imagePerformers,
+  imageTags,
 } = schema;
 
 function sceneAssetUrl(sceneId: string, fileName: string) {
@@ -179,6 +193,45 @@ async function enqueuePendingSceneJob(queueName: QueueName, sceneId: string) {
   await queue.close();
 }
 
+async function enqueuePendingImageJob(queueName: QueueName, imageId: string) {
+  const [pending] = await db
+    .select({ id: jobRuns.id })
+    .from(jobRuns)
+    .where(
+      and(
+        eq(jobRuns.queueName, queueName),
+        eq(jobRuns.targetId, imageId),
+        inArray(jobRuns.status, ["waiting", "active", "delayed"])
+      )
+    )
+    .limit(1);
+
+  if (pending) return;
+
+  const [image] = await db
+    .select({ id: images.id, title: images.title })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+
+  if (!image) return;
+
+  const queue = new Queue(queueName, {
+    connection: redis,
+    defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+  });
+
+  const job = await queue.add(`image-${queueName}`, { imageId });
+  await upsertJobRun(job, queueName, {
+    status: "waiting",
+    targetType: "image",
+    targetId: image.id,
+    targetLabel: image.title,
+  });
+
+  await queue.close();
+}
+
 async function processLibraryScan(job: Job) {
   const libraryRootId = String(job.data.libraryRootId);
   const [root] = await db
@@ -198,7 +251,10 @@ async function processLibraryScan(job: Job) {
   });
 
   const settings = await ensureLibrarySettingsRow();
-  const files = await discoverVideoFiles(root.path, root.recursive);
+
+  // Only scan for videos if this root has video scanning enabled
+  const scanVideos = root.scanVideos ?? true;
+  const files = scanVideos ? await discoverVideoFiles(root.path, root.recursive) : [];
   const discoveredSet = new Set(files);
 
   const allKnownScenes = await db
@@ -390,6 +446,25 @@ async function processLibraryScan(job: Job) {
     .update(libraryRoots)
     .set({ lastScannedAt: new Date(), updatedAt: new Date() })
     .where(eq(libraryRoots.id, root.id));
+
+  // Trigger gallery scan if this root has image scanning enabled
+  const scanImages = root.scanImages ?? true;
+  if (scanImages) {
+    const galleryScanQueue = new Queue("gallery-scan", {
+      connection: redis,
+      defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+    });
+    const galleryScanJob = await galleryScanQueue.add("gallery-root-scan", {
+      libraryRootId: root.id,
+    });
+    await upsertJobRun(galleryScanJob, "gallery-scan", {
+      status: "waiting",
+      targetType: "library-root",
+      targetId: root.id,
+      targetLabel: root.label,
+    });
+    await galleryScanQueue.close();
+  }
 }
 
 async function processMediaProbe(job: Job) {
@@ -690,6 +765,431 @@ async function processMetadataImport(job: Job) {
   await markJobProgress(job, "metadata-import", 100);
 }
 
+// ─── Gallery Scan ──────────────────────────────────────────────────
+
+async function processGalleryScan(job: Job) {
+  const libraryRootId = String(job.data.libraryRootId);
+  const [root] = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.id, libraryRootId))
+    .limit(1);
+
+  if (!root) {
+    throw new Error("Library root not found");
+  }
+
+  if (!(root.scanImages ?? true)) {
+    return;
+  }
+
+  await markJobActive(job, "gallery-scan", {
+    type: "library-root",
+    id: root.id,
+    label: root.label,
+  });
+
+  const settings = await ensureLibrarySettingsRow();
+  const discovery = await discoverImageFilesAndDirs(root.path, root.recursive);
+
+  // ── Cleanup stale folder-based galleries ──
+  const knownFolderGalleries = await db
+    .select({ id: galleries.id, folderPath: galleries.folderPath })
+    .from(galleries)
+    .where(
+      and(
+        eq(galleries.galleryType, "folder"),
+        like(galleries.folderPath, `${root.path}%`)
+      )
+    );
+
+  const discoveredDirSet = new Set(discovery.dirs);
+  const staleFolderIds = knownFolderGalleries
+    .filter((g) => g.folderPath && !discoveredDirSet.has(g.folderPath))
+    .map((g) => g.id);
+
+  if (staleFolderIds.length > 0) {
+    await db.delete(galleries).where(inArray(galleries.id, staleFolderIds));
+  }
+
+  // ── Cleanup stale zip-based galleries ──
+  const knownZipGalleries = await db
+    .select({ id: galleries.id, zipFilePath: galleries.zipFilePath })
+    .from(galleries)
+    .where(
+      and(
+        eq(galleries.galleryType, "zip"),
+        like(galleries.zipFilePath, `${root.path}%`)
+      )
+    );
+
+  const discoveredZipSet = new Set(discovery.zipFiles);
+  const staleZipIds = knownZipGalleries
+    .filter((g) => g.zipFilePath && !discoveredZipSet.has(g.zipFilePath))
+    .map((g) => g.id);
+
+  if (staleZipIds.length > 0) {
+    await db.delete(galleries).where(inArray(galleries.id, staleZipIds));
+  }
+
+  // ── Cleanup stale images ──
+  const knownImagesInRoot = await db
+    .select({ id: images.id, filePath: images.filePath })
+    .from(images)
+    .where(like(images.filePath, `${root.path}%`));
+
+  const discoveredImageSet = new Set(discovery.imageFiles);
+  const staleImageIds = knownImagesInRoot
+    .filter((img) => {
+      // Regular file: check if discovered
+      if (!img.filePath.includes("::")) {
+        return !discoveredImageSet.has(img.filePath);
+      }
+      // Zip member: check if parent zip was discovered
+      const zipPath = img.filePath.split("::")[0];
+      return !discoveredZipSet.has(zipPath);
+    })
+    .map((img) => img.id);
+
+  if (staleImageIds.length > 0) {
+    for (const staleId of staleImageIds) {
+      await rm(getGeneratedImageDir(staleId), { recursive: true, force: true });
+    }
+    await db.delete(images).where(inArray(images.id, staleImageIds));
+  }
+
+  const totalWork = discovery.dirs.length + discovery.zipFiles.length;
+  let processed = 0;
+
+  // ── Process folder-based galleries ──
+  // Group image files by directory
+  const imagesByDir = new Map<string, string[]>();
+  for (const file of discovery.imageFiles) {
+    const dir = path.dirname(file);
+    const existing = imagesByDir.get(dir);
+    if (existing) {
+      existing.push(file);
+    } else {
+      imagesByDir.set(dir, [file]);
+    }
+  }
+
+  // Sort directories by path depth (parent before child) to ensure parentId resolution works
+  const sortedDirs = [...discovery.dirs].sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
+
+  for (const dirPath of sortedDirs) {
+    const dirImages = imagesByDir.get(dirPath) ?? [];
+    if (dirImages.length === 0) continue;
+
+    // Upsert gallery
+    const [existingGallery] = await db
+      .select({ id: galleries.id })
+      .from(galleries)
+      .where(
+        and(
+          eq(galleries.galleryType, "folder"),
+          eq(galleries.folderPath, dirPath)
+        )
+      )
+      .limit(1);
+
+    let galleryId: string;
+
+    if (existingGallery) {
+      galleryId = existingGallery.id;
+    } else {
+      // Find parent gallery
+      const parentDir = path.dirname(dirPath);
+      let parentId: string | null = null;
+      if (parentDir !== dirPath && parentDir.startsWith(root.path)) {
+        const [parentGallery] = await db
+          .select({ id: galleries.id })
+          .from(galleries)
+          .where(
+            and(
+              eq(galleries.galleryType, "folder"),
+              eq(galleries.folderPath, parentDir)
+            )
+          )
+          .limit(1);
+        parentId = parentGallery?.id ?? null;
+      }
+
+      const [created] = await db
+        .insert(galleries)
+        .values({
+          title: path.basename(dirPath),
+          galleryType: "folder",
+          folderPath: dirPath,
+          parentId,
+          imageCount: 0,
+        })
+        .returning({ id: galleries.id });
+      galleryId = created.id;
+    }
+
+    // Upsert images
+    const sortedImages = [...dirImages].sort((a, b) => a.localeCompare(b));
+    for (let i = 0; i < sortedImages.length; i++) {
+      const filePath = sortedImages[i];
+
+      const [existingImage] = await db
+        .select({ id: images.id })
+        .from(images)
+        .where(eq(images.filePath, filePath))
+        .limit(1);
+
+      let imageId: string;
+      if (existingImage) {
+        imageId = existingImage.id;
+        await db
+          .update(images)
+          .set({ galleryId, sortOrder: i, updatedAt: new Date() })
+          .where(eq(images.id, imageId));
+      } else {
+        const [created] = await db
+          .insert(images)
+          .values({
+            title: fileNameToTitle(filePath),
+            filePath,
+            galleryId,
+            sortOrder: i,
+          })
+          .returning({ id: images.id });
+        imageId = created.id;
+
+        // Enqueue thumbnail and fingerprint jobs for new images
+        await enqueuePendingImageJob("image-thumbnail", imageId);
+        if (settings.autoGenerateFingerprints) {
+          await enqueuePendingImageJob("image-fingerprint", imageId);
+        }
+      }
+    }
+
+    // Update gallery image count
+    await db.execute(sql`
+      UPDATE galleries SET image_count = (
+        SELECT count(*) FROM images WHERE gallery_id = ${galleryId}
+      ), updated_at = NOW() WHERE id = ${galleryId}
+    `);
+
+    processed++;
+    if (totalWork > 0) {
+      await markJobProgress(job, "gallery-scan", Math.round((processed / totalWork) * 100));
+    }
+  }
+
+  // ── Process zip-based galleries ──
+  for (const zipPath of discovery.zipFiles) {
+    const [existingGallery] = await db
+      .select({ id: galleries.id })
+      .from(galleries)
+      .where(
+        and(
+          eq(galleries.galleryType, "zip"),
+          eq(galleries.zipFilePath, zipPath)
+        )
+      )
+      .limit(1);
+
+    let galleryId: string;
+
+    if (existingGallery) {
+      galleryId = existingGallery.id;
+    } else {
+      const [created] = await db
+        .insert(galleries)
+        .values({
+          title: fileNameToTitle(zipPath),
+          galleryType: "zip",
+          zipFilePath: zipPath,
+          imageCount: 0,
+        })
+        .returning({ id: galleries.id });
+      galleryId = created.id;
+    }
+
+    // Index zip members
+    let members: string[];
+    try {
+      members = parseZipImageMembers(zipPath);
+    } catch {
+      processed++;
+      continue;
+    }
+
+    for (let i = 0; i < members.length; i++) {
+      const memberPath = members[i];
+      const fullPath = `${zipPath}::${memberPath}`;
+
+      const [existingImage] = await db
+        .select({ id: images.id })
+        .from(images)
+        .where(eq(images.filePath, fullPath))
+        .limit(1);
+
+      if (!existingImage) {
+        const [created] = await db
+          .insert(images)
+          .values({
+            title: fileNameToTitle(memberPath),
+            filePath: fullPath,
+            galleryId,
+            sortOrder: i,
+          })
+          .returning({ id: images.id });
+
+        await enqueuePendingImageJob("image-thumbnail", created.id);
+        if (settings.autoGenerateFingerprints) {
+          await enqueuePendingImageJob("image-fingerprint", created.id);
+        }
+      } else {
+        await db
+          .update(images)
+          .set({ galleryId, sortOrder: i, updatedAt: new Date() })
+          .where(eq(images.id, existingImage.id));
+      }
+    }
+
+    // Update gallery image count
+    await db.execute(sql`
+      UPDATE galleries SET image_count = (
+        SELECT count(*) FROM images WHERE gallery_id = ${galleryId}
+      ), updated_at = NOW() WHERE id = ${galleryId}
+    `);
+
+    processed++;
+    if (totalWork > 0) {
+      await markJobProgress(job, "gallery-scan", Math.round((processed / totalWork) * 100));
+    }
+  }
+}
+
+// ─── Image Thumbnail ──────────────────────────────────────────────
+
+async function processImageThumbnail(job: Job) {
+  const imageId = String(job.data.imageId);
+  const [image] = await db
+    .select({ id: images.id, title: images.title, filePath: images.filePath })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+
+  if (!image) {
+    throw new Error("Image not found");
+  }
+
+  await markJobActive(job, "image-thumbnail", {
+    type: "image",
+    id: image.id,
+    label: image.title,
+  });
+
+  const outputDir = getGeneratedImageDir(image.id);
+  await mkdir(outputDir, { recursive: true });
+  const thumbPath = path.join(outputDir, "thumb.jpg");
+
+  const isZipMember = image.filePath.includes("::");
+  let inputPath = image.filePath;
+  let tempFile: string | null = null;
+
+  if (isZipMember) {
+    // Extract zip member to a temp file
+    const [zipPath, memberPath] = image.filePath.split("::");
+    const data = extractZipMember(zipPath, memberPath);
+    if (!data) {
+      throw new Error("Failed to extract zip member");
+    }
+    tempFile = path.join(tmpdir(), `obscura-thumb-${image.id}${path.extname(memberPath)}`);
+    await writeFile(tempFile, data);
+    inputPath = tempFile;
+  }
+
+  try {
+    // Generate thumbnail with ffmpeg
+    await runProcess("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y",
+      "-i", inputPath,
+      "-vf", "scale=640:-1",
+      "-q:v", "3",
+      thumbPath,
+    ]);
+
+    // Probe for dimensions and format
+    const probe = await probeImageFile(inputPath);
+
+    await db
+      .update(images)
+      .set({
+        thumbnailPath: `/assets/images/${image.id}/thumb`,
+        width: probe.width,
+        height: probe.height,
+        format: probe.format,
+        updatedAt: new Date(),
+      })
+      .where(eq(images.id, image.id));
+  } finally {
+    if (tempFile) {
+      await rm(tempFile, { force: true });
+    }
+  }
+}
+
+// ─── Image Fingerprint ────────────────────────────────────────────
+
+async function processImageFingerprint(job: Job) {
+  const imageId = String(job.data.imageId);
+  const [image] = await db
+    .select({ id: images.id, title: images.title, filePath: images.filePath })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+
+  if (!image) {
+    throw new Error("Image not found");
+  }
+
+  await markJobActive(job, "image-fingerprint", {
+    type: "image",
+    id: image.id,
+    label: image.title,
+  });
+
+  const isZipMember = image.filePath.includes("::");
+  let inputPath = image.filePath;
+  let tempFile: string | null = null;
+
+  if (isZipMember) {
+    const [zipPath, memberPath] = image.filePath.split("::");
+    const data = extractZipMember(zipPath, memberPath);
+    if (!data) {
+      throw new Error("Failed to extract zip member");
+    }
+    tempFile = path.join(tmpdir(), `obscura-fp-${image.id}${path.extname(memberPath)}`);
+    await writeFile(tempFile, data);
+    inputPath = tempFile;
+  }
+
+  try {
+    const md5 = await computeMd5(inputPath);
+    await markJobProgress(job, "image-fingerprint", 50);
+    const oshash = await computeOsHash(inputPath);
+
+    await db
+      .update(images)
+      .set({
+        checksumMd5: md5,
+        oshash,
+        updatedAt: new Date(),
+      })
+      .where(eq(images.id, image.id));
+  } finally {
+    if (tempFile) {
+      await rm(tempFile, { force: true });
+    }
+  }
+}
+
 function createWorker(queueName: QueueName, processor: (job: Job) => Promise<void>) {
   return new Worker(
     queueName,
@@ -704,7 +1204,12 @@ function createWorker(queueName: QueueName, processor: (job: Job) => Promise<voi
     },
     {
       connection: redis,
-      concurrency: queueName === "library-scan" ? 1 : 2,
+      concurrency:
+        queueName === "library-scan" || queueName === "gallery-scan"
+          ? 1
+          : queueName === "image-thumbnail"
+            ? 3
+            : 2,
     }
   );
 }
@@ -782,6 +1287,9 @@ const workers = [
   createWorker("fingerprint", processFingerprint),
   createWorker("preview", processPreview),
   createWorker("metadata-import", processMetadataImport),
+  createWorker("gallery-scan", processGalleryScan),
+  createWorker("image-thumbnail", processImageThumbnail),
+  createWorker("image-fingerprint", processImageFingerprint),
 ];
 
 await scheduleRecurringScans();
