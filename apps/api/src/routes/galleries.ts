@@ -303,6 +303,28 @@ export async function galleriesRoutes(app: FastifyInstance) {
       .where(eq(galleries.parentId, id))
       .orderBy(asc(galleries.title));
 
+    // Fetch preview images for children
+    const childIds = children.map((c) => c.id);
+    const childPreviewImages =
+      childIds.length > 0
+        ? await db
+            .select({
+              galleryId: images.galleryId,
+              imageId: images.id,
+              sortOrder: images.sortOrder,
+            })
+            .from(images)
+            .where(inArray(images.galleryId, childIds))
+            .orderBy(asc(images.sortOrder))
+        : [];
+    const childPreviewMap = new Map<string, string[]>();
+    for (const img of childPreviewImages) {
+      if (!img.galleryId) continue;
+      const arr = childPreviewMap.get(img.galleryId) ?? [];
+      if (arr.length < 4) arr.push(`/assets/images/${img.imageId}/thumb`);
+      childPreviewMap.set(img.galleryId, arr);
+    }
+
     return {
       id: gallery.id,
       title: gallery.title,
@@ -364,6 +386,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
         title: ch.title,
         imageCount: ch.imageCount,
         coverImagePath: `/assets/galleries/${ch.id}/cover`,
+        previewImagePaths: childPreviewMap.get(ch.id) ?? [],
       })),
       createdAt: gallery.createdAt,
       updatedAt: gallery.updatedAt,

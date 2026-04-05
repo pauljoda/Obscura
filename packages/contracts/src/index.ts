@@ -160,7 +160,7 @@ export interface GalleryDetailDto {
   imageTotal: number;
   imageLimit: number;
   imageOffset: number;
-  children: { id: string; title: string; imageCount: number; coverImagePath: string | null }[];
+  children: { id: string; title: string; imageCount: number; coverImagePath: string | null; previewImagePaths: string[] }[];
   createdAt: string;
   updatedAt: string;
 }

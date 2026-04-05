@@ -67,7 +67,7 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
     title: child.title,
     galleryType: "folder" as const,
     coverImagePath: child.coverImagePath,
-    previewImagePaths: [],
+    previewImagePaths: child.previewImagePaths ?? [],
     imageCount: child.imageCount,
     rating: null,
     organized: false,

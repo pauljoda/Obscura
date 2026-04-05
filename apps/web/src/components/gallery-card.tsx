@@ -17,6 +17,7 @@ interface GalleryCardProps {
 }
 
 export function GalleryCard({ gallery }: GalleryCardProps) {
+  const [hovering, setHovering] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(-1);
   const [videoFailed, setVideoFailed] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -25,22 +26,25 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
   const previews = gallery.previewImagePaths?.map(toApiUrl).filter(Boolean) ?? [];
 
   // Derive animated preview URL from the first preview thumb path
-  // /assets/images/:id/thumb → /assets/images/:id/preview
   const previewVideoUrl = previews[0]
     ? previews[0].replace(/\/thumb$/, "/preview")
     : null;
 
-  const startScrub = useCallback(() => {
-    if (previews.length <= 1) return;
-    let idx = 0;
-    setCurrentPreviewIndex(0);
-    intervalRef.current = setInterval(() => {
-      idx = (idx + 1) % previews.length;
-      setCurrentPreviewIndex(idx);
-    }, 800);
+  const startHover = useCallback(() => {
+    setHovering(true);
+    // Also start cycling through static previews as fallback
+    if (previews.length > 1) {
+      let idx = 0;
+      setCurrentPreviewIndex(0);
+      intervalRef.current = setInterval(() => {
+        idx = (idx + 1) % previews.length;
+        setCurrentPreviewIndex(idx);
+      }, 800);
+    }
   }, [previews.length]);
 
-  const stopScrub = useCallback(() => {
+  const stopHover = useCallback(() => {
+    setHovering(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -48,21 +52,23 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
     setCurrentPreviewIndex(-1);
   }, []);
 
-  const displayUrl = currentPreviewIndex >= 0 ? previews[currentPreviewIndex] : coverUrl;
+  const staticDisplayUrl = currentPreviewIndex >= 0 ? previews[currentPreviewIndex] : coverUrl;
   const TypeIcon = typeIcons[gallery.galleryType] ?? FolderOpen;
+
+  // Show video on hover if available and not failed
+  const showVideo = hovering && previewVideoUrl && !videoFailed;
 
   return (
     <div
       className="surface-card-sharp media-card-shell group relative overflow-hidden"
-      onPointerEnter={startScrub}
-      onPointerLeave={stopScrub}
+      onPointerEnter={startHover}
+      onPointerLeave={stopHover}
     >
       {/* Cover image / video */}
       <div className="relative aspect-[4/3] bg-surface-2 overflow-hidden">
-        {/* Try animated video preview first, fall back to static image */}
-        {previewVideoUrl && !videoFailed ? (
+        {showVideo ? (
           <video
-            src={previewVideoUrl}
+            src={previewVideoUrl!}
             autoPlay
             loop
             muted
@@ -70,9 +76,9 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
             onError={() => setVideoFailed(true)}
             className="h-full w-full object-cover"
           />
-        ) : displayUrl ? (
+        ) : staticDisplayUrl ? (
           <img
-            src={displayUrl}
+            src={staticDisplayUrl}
             alt={gallery.title}
             className="h-full w-full object-cover transition-opacity duration-fast"
             loading="lazy"
@@ -95,8 +101,8 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
           <TypeIcon className="h-3 w-3 text-white/80" />
         </div>
 
-        {/* Scrub progress bar */}
-        {currentPreviewIndex >= 0 && previews.length > 1 && videoFailed && (
+        {/* Scrub progress bar — only for static image cycling */}
+        {currentPreviewIndex >= 0 && !showVideo && previews.length > 1 && (
           <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 px-1 pb-0.5">
             {previews.map((_, i) => (
               <div
