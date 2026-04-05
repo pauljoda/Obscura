@@ -81,13 +81,13 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
             playsInline
             preload="none"
             onError={() => setVideoFailed(true)}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         ) : staticDisplayUrl ? (
           <img
             src={staticDisplayUrl}
             alt={gallery.title}
-            className="h-full w-full object-cover transition-opacity duration-fast"
+            className="h-full w-full object-contain transition-opacity duration-fast"
             loading="lazy"
             decoding="async"
           />
