@@ -8,7 +8,7 @@ import {
   type JobsDashboard,
   type SceneListItem,
   type SceneStats,
-} from "../../lib/api";
+} from "../../lib/server-api";
 
 export default async function DashboardPage() {
   const [stats, jobs, scenesResponse, galleriesResponse] = await Promise.all([

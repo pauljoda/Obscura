@@ -1,5 +1,5 @@
 import { PerformersPageClient } from "../../../components/routes/performers-page-client";
-import { fetchPerformers } from "../../../lib/api";
+import { fetchPerformers } from "../../../lib/server-api";
 
 export default async function PerformersPage() {
   const performersResponse = await fetchPerformers({

@@ -5,7 +5,7 @@ import {
   type LibraryRoot,
   type LibrarySettings,
   type StorageStats,
-} from "../../../lib/api";
+} from "../../../lib/server-api";
 
 const defaultSettings: LibrarySettings = {
   id: "pending",

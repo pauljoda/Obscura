@@ -4,7 +4,7 @@ import {
   fetchScenes,
   fetchStudios,
   fetchTags,
-} from "../../../lib/api";
+} from "../../../lib/server-api";
 
 export default async function ScenesPage() {
   const [scenesResponse, stats, studiosResponse, tagsResponse] = await Promise.all([

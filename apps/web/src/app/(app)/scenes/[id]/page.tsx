@@ -4,7 +4,7 @@ import {
   fetchTags,
   type SceneDetail as SceneDetailType,
   type TagItem,
-} from "../../../../lib/api";
+} from "../../../../lib/server-api";
 
 interface ScenePageProps {
   params: Promise<{ id: string }>;

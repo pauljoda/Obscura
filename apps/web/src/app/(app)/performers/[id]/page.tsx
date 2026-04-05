@@ -4,7 +4,7 @@ import {
   fetchScenes,
   type PerformerDetail,
   type SceneListItem,
-} from "../../../../lib/api";
+} from "../../../../lib/server-api";
 
 interface PerformerPageProps {
   params: Promise<{ id: string }>;
