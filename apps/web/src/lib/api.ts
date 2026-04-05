@@ -14,6 +14,8 @@ import type {
   GalleryStatsDto,
   ImageListItemDto,
   ImageDetailDto,
+  SearchResponseDto,
+  EntityKind,
 } from "@obscura/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -1199,6 +1201,30 @@ export async function lookupTagViaStashBox(
     method: "POST",
     body: JSON.stringify({ query }),
   });
+}
+
+export async function fetchSearch(params: {
+  q: string;
+  kinds?: EntityKind[];
+  kind?: EntityKind;
+  limit?: number;
+  offset?: number;
+  rating?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  tags?: string[];
+}, signal?: AbortSignal): Promise<SearchResponseDto> {
+  const sp = new URLSearchParams();
+  sp.set("q", params.q);
+  if (params.kinds?.length) sp.set("kinds", params.kinds.join(","));
+  if (params.kind) sp.set("kind", params.kind);
+  if (params.limit) sp.set("limit", String(params.limit));
+  if (params.offset) sp.set("offset", String(params.offset));
+  if (params.rating) sp.set("rating", String(params.rating));
+  if (params.dateFrom) sp.set("dateFrom", params.dateFrom);
+  if (params.dateTo) sp.set("dateTo", params.dateTo);
+  if (params.tags?.length) sp.set("tags", params.tags.join(","));
+  return fetchApi(`/search?${sp}`, { signal });
 }
 
 export function toApiUrl(assetPath: string | null | undefined) {
