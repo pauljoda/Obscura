@@ -752,6 +752,13 @@ export async function scenesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const row = await db.query.studios.findFirst({
       where: eq(studios.id, id),
+      with: {
+        parent: { columns: { id: true, name: true, imagePath: true, imageUrl: true } },
+        children: {
+          columns: { id: true, name: true, imagePath: true, imageUrl: true, sceneCount: true },
+          orderBy: asc(studios.name),
+        },
+      },
     });
     if (!row) {
       reply.code(404);
@@ -764,6 +771,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       aliases: row.aliases,
       url: row.url,
       parentId: row.parentId,
+      parent: row.parent ? { id: row.parent.id, name: row.parent.name, imagePath: row.parent.imagePath, imageUrl: row.parent.imageUrl } : null,
+      childStudios: row.children.map((c) => ({ id: c.id, name: c.name, imagePath: c.imagePath, imageUrl: c.imageUrl, sceneCount: c.sceneCount })),
       imageUrl: row.imageUrl,
       imagePath: row.imagePath,
       favorite: row.favorite,
@@ -821,6 +830,82 @@ export async function scenesRoutes(app: FastifyInstance) {
       parentId: body.parentId || null,
     }).returning();
     return reply.code(201).send({ ok: true, id: created.id });
+  });
+
+  // ─── POST /studios/find-or-create ────────────────────────────
+  // Used when applying scraped parent studios — finds by name or creates.
+  // Accepts optional scrape enrichment data (url, imageUrl) and a parentName
+  // with loop-prevention via a visited set.
+  app.post("/studios/find-or-create", async (request, reply) => {
+    const body = request.body as {
+      name: string;
+      url?: string | null;
+      imageUrl?: string | null;
+      parentName?: string | null;
+      parentUrl?: string | null;
+      parentImageUrl?: string | null;
+      scrapedEndpointId?: string | null;
+      scrapedRemoteId?: string | null;
+    };
+    if (!body.name?.trim()) { reply.code(400); return { error: "name is required" }; }
+
+    // Loop-prevention: track visited studio names during recursive parent resolution
+    const visited = new Set<string>();
+
+    const resolve = async (
+      name: string,
+      data?: { url?: string | null; imageUrl?: string | null; parentName?: string | null; parentUrl?: string | null; parentImageUrl?: string | null },
+    ): Promise<string> => {
+      const key = name.toLowerCase();
+      if (visited.has(key)) {
+        // Circular reference — find or create without parent to break the loop
+        const [existing] = await db.select({ id: studios.id }).from(studios).where(ilike(studios.name, name)).limit(1);
+        if (existing) return existing.id;
+        const [created] = await db.insert(studios).values({ name }).returning({ id: studios.id });
+        return created.id;
+      }
+      visited.add(key);
+
+      const [existing] = await db
+        .select({ id: studios.id, url: studios.url, imageUrl: studios.imageUrl, parentId: studios.parentId })
+        .from(studios).where(ilike(studios.name, name)).limit(1);
+
+      if (existing) {
+        const backfill: Record<string, unknown> = {};
+        if (!existing.url && data?.url) backfill.url = data.url;
+        if (!existing.imageUrl && data?.imageUrl) backfill.imageUrl = data.imageUrl;
+        if (!existing.parentId && data?.parentName) {
+          backfill.parentId = await resolve(data.parentName, { url: data.parentUrl, imageUrl: data.parentImageUrl });
+        }
+        if (Object.keys(backfill).length > 0) {
+          await db.update(studios).set({ ...backfill, updatedAt: new Date() }).where(eq(studios.id, existing.id));
+        }
+        return existing.id;
+      }
+
+      let parentId: string | null = null;
+      if (data?.parentName) {
+        parentId = await resolve(data.parentName, { url: data.parentUrl, imageUrl: data.parentImageUrl });
+      }
+
+      const [created] = await db.insert(studios).values({
+        name,
+        url: data?.url?.trim() || null,
+        imageUrl: data?.imageUrl?.trim() || null,
+        parentId,
+      }).returning({ id: studios.id });
+      return created.id;
+    };
+
+    const studioId = await resolve(body.name.trim(), {
+      url: body.url,
+      imageUrl: body.imageUrl,
+      parentName: body.parentName?.trim() || null,
+      parentUrl: body.parentUrl,
+      parentImageUrl: body.parentImageUrl,
+    });
+
+    return { ok: true, id: studioId };
   });
 
   // ─── DELETE /studios/:id ────────────────────────────────────

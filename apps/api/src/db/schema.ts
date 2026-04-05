@@ -41,7 +41,12 @@ export const studiosRelations = relations(studios, ({ many, one }) => ({
   scenes: many(scenes),
   galleries: many(galleries),
   images: many(images),
-  parent: one(studios, { fields: [studios.parentId], references: [studios.id] }),
+  parent: one(studios, {
+    fields: [studios.parentId],
+    references: [studios.id],
+    relationName: "studioParent",
+  }),
+  children: many(studios, { relationName: "studioParent" }),
 }));
 
 // ─── Performers ─────────────────────────────────────────────────────
