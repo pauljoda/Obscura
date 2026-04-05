@@ -17,6 +17,7 @@ import {
   Users,
   Image,
   X,
+  Globe,
 } from "lucide-react";
 import {
   fetchCommunityIndex,
@@ -68,6 +69,8 @@ export default function ScrapersPage() {
   const [error, setError] = useState<string | null>(null);
   const [showIndex, setShowIndex] = useState(false);
   const [capFilter, setCapFilter] = useState<CapFilter>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkInstalling, setBulkInstalling] = useState(false);
 
   async function loadInstalled() {
     try {
@@ -149,6 +152,63 @@ export default function ScrapersPage() {
         return true;
       });
 
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllUninstalled() {
+    const uninstalled = filteredIndex.filter((e) => !e.installed).map((e) => e.id);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allSelected = uninstalled.every((id) => next.has(id));
+      if (allSelected) {
+        // Deselect all
+        for (const id of uninstalled) next.delete(id);
+      } else {
+        // Select all
+        for (const id of uninstalled) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkInstall() {
+    if (selected.size === 0) return;
+    setBulkInstalling(true);
+    setError(null);
+
+    const toInstall = Array.from(selected).filter(
+      (id) => !indexEntries.find((e) => e.id === id)?.installed
+    );
+
+    let installedCount = 0;
+    for (const packageId of toInstall) {
+      try {
+        await installScraper(packageId);
+        installedCount++;
+        setIndexEntries((prev) =>
+          prev.map((e) => (e.id === packageId ? { ...e, installed: true } : e))
+        );
+      } catch (err) {
+        setError(`Failed to install ${packageId}: ${err instanceof Error ? err.message : String(err)}`);
+        break;
+      }
+    }
+
+    if (installedCount > 0) {
+      setMessage(`Installed ${installedCount} scraper${installedCount !== 1 ? "s" : ""}`);
+      await loadInstalled();
+    }
+
+    setSelected(new Set());
+    setBulkInstalling(false);
+  }
+
   const filteredIndex = search
     ? indexEntries.filter(
         (e) =>
@@ -156,6 +216,11 @@ export default function ScrapersPage() {
           e.id.toLowerCase().includes(search.toLowerCase())
       )
     : indexEntries;
+
+  const selectableCount = filteredIndex.filter((e) => !e.installed).length;
+  const selectedUninstalledCount = Array.from(selected).filter(
+    (id) => !indexEntries.find((e) => e.id === id)?.installed
+  ).length;
 
   // Count scrapers by capability type
   const sceneCount = installed.filter((pkg) => {
@@ -188,8 +253,10 @@ export default function ScrapersPage() {
         >
           {indexLoading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
+          ) : showIndex ? (
             <RefreshCw className="h-3.5 w-3.5" />
+          ) : (
+            <Globe className="h-3.5 w-3.5" />
           )}
           {showIndex ? "Refresh Index" : "Browse Community Index"}
         </Button>
@@ -322,13 +389,95 @@ export default function ScrapersPage() {
             </div>
           </div>
 
+          {/* Bulk action bar */}
+          <div className="surface-well flex items-center gap-3 px-3 py-2">
+            <button
+              onClick={selectAllUninstalled}
+              disabled={selectableCount === 0}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors disabled:opacity-40"
+            >
+              <div className={cn(
+                "h-4 w-4 rounded border flex items-center justify-center transition-colors",
+                selectableCount > 0 && selectedUninstalledCount === selectableCount
+                  ? "bg-accent-800 border-border-accent"
+                  : selectedUninstalledCount > 0
+                    ? "bg-accent-950 border-border-accent"
+                    : "border-border-subtle"
+              )}>
+                {selectedUninstalledCount > 0 && (
+                  <Check className="h-2.5 w-2.5 text-text-accent" />
+                )}
+              </div>
+              {selectedUninstalledCount > 0
+                ? `${selectedUninstalledCount} selected`
+                : "Select all"}
+            </button>
+
+            <div className="flex-1" />
+
+            {selectedUninstalledCount > 0 && (
+              <button
+                onClick={() => setSelected(new Set())}
+                className="text-xs text-text-muted hover:text-text-primary transition-colors"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              onClick={() => void handleBulkInstall()}
+              disabled={selectedUninstalledCount === 0 || bulkInstalling}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+                selectedUninstalledCount > 0
+                  ? "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900"
+                  : "text-text-disabled border border-transparent cursor-not-allowed"
+              )}
+            >
+              {bulkInstalling ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="h-3 w-3" />
+              )}
+              {bulkInstalling
+                ? "Installing..."
+                : selectedUninstalledCount > 0
+                  ? `Install ${selectedUninstalledCount} Scraper${selectedUninstalledCount !== 1 ? "s" : ""}`
+                  : "Install Selected"}
+            </button>
+          </div>
+
           <div className="space-y-1 max-h-[500px] overflow-y-auto scrollbar-hidden">
             {filteredIndex.map((entry) => (
               <div
                 key={entry.id}
-                className="surface-well px-4 py-3 flex items-center justify-between gap-3"
+                className={cn(
+                  "surface-well px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
+                  !entry.installed && selected.has(entry.id) && "border-border-accent/40"
+                )}
               >
-                <div className="min-w-0">
+                {/* Checkbox */}
+                {!entry.installed ? (
+                  <button
+                    onClick={() => toggleSelected(entry.id)}
+                    className="flex-shrink-0"
+                  >
+                    <div className={cn(
+                      "h-4 w-4 rounded border flex items-center justify-center transition-colors",
+                      selected.has(entry.id)
+                        ? "bg-accent-800 border-border-accent"
+                        : "border-border-subtle hover:border-text-muted"
+                    )}>
+                      {selected.has(entry.id) && (
+                        <Check className="h-2.5 w-2.5 text-text-accent" />
+                      )}
+                    </div>
+                  </button>
+                ) : (
+                  <div className="w-4 flex-shrink-0" />
+                )}
+
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{entry.name}</p>
                   <p className="text-text-disabled text-[0.65rem] mt-0.5 font-mono">
                     {entry.id}
@@ -338,17 +487,17 @@ export default function ScrapersPage() {
                       : ""}
                   </p>
                 </div>
+
                 {entry.installed ? (
                   <Badge variant="accent" className="text-[0.6rem] flex-shrink-0">
                     <Check className="h-2.5 w-2.5 mr-1" />
                     Installed
                   </Badge>
                 ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  <button
                     onClick={() => void handleInstall(entry.id)}
-                    disabled={installingId === entry.id}
+                    disabled={installingId === entry.id || bulkInstalling}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-accent transition-colors duration-fast flex-shrink-0 disabled:opacity-40"
                   >
                     {installingId === entry.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -356,7 +505,7 @@ export default function ScrapersPage() {
                       <Download className="h-3.5 w-3.5" />
                     )}
                     Install
-                  </Button>
+                  </button>
                 )}
               </div>
             ))}
