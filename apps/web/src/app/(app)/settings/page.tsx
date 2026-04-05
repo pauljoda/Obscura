@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Badge } from "@obscura/ui";
+import { Button } from "@obscura/ui";
+import { cn } from "@obscura/ui";
 import {
-  Check,
-  Download,
   FolderOpen,
   HardDrive,
   Loader2,
@@ -13,25 +12,20 @@ import {
   RefreshCw,
   Save,
   ScanSearch,
-  Search,
-  ToggleLeft,
-  ToggleRight,
+  Settings,
   Trash2,
+  ChevronRight,
 } from "lucide-react";
+import Link from "next/link";
 import {
   browseLibraryPath,
   createLibraryRoot,
   deleteLibraryRoot,
-  fetchCommunityIndex,
   fetchInstalledScrapers,
   fetchLibraryConfig,
-  installScraper,
   runQueue,
-  toggleScraper,
-  uninstallScraper,
   updateLibraryRoot,
   updateLibrarySettings,
-  type CommunityIndexEntry,
   type LibraryBrowse,
   type LibraryRoot,
   type LibrarySettings,
@@ -85,13 +79,8 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Scrapers state
-  const [scraperPkgs, setScraperPkgs] = useState<ScraperPackage[]>([]);
-  const [indexEntries, setIndexEntries] = useState<CommunityIndexEntry[]>([]);
-  const [indexLoading, setIndexLoading] = useState(false);
-  const [installingId, setInstallingId] = useState<string | null>(null);
-  const [showIndex, setShowIndex] = useState(false);
-  const [scraperSearch, setScraperSearch] = useState("");
+  // Scrapers summary
+  const [scraperCount, setScraperCount] = useState(0);
 
   async function loadConfig() {
     setLoading(true);
@@ -105,7 +94,7 @@ export default function SettingsPage() {
       setSettings(response.settings);
       setRoots(response.roots);
       setStorage(response.storage);
-      setScraperPkgs(scrapersRes.packages);
+      setScraperCount(scrapersRes.packages.length);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load settings");
     } finally {
@@ -210,185 +199,149 @@ export default function SettingsPage() {
     }
   }
 
-  async function loadScraperIndex(force = false) {
-    setIndexLoading(true);
-    setError(null);
-    try {
-      const res = await fetchCommunityIndex(force);
-      // Mark already-installed entries
-      const installedIds = new Set(scraperPkgs.map((p) => p.packageId));
-      setIndexEntries(
-        res.entries.map((e) => ({ ...e, installed: installedIds.has(e.id) }))
-      );
-      setShowIndex(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch community index");
-    } finally {
-      setIndexLoading(false);
-    }
-  }
-
-  async function handleInstallScraper(packageId: string) {
-    setInstallingId(packageId);
-    setError(null);
-    try {
-      await installScraper(packageId);
-      setMessage(`Installed ${packageId}`);
-      const res = await fetchInstalledScrapers();
-      setScraperPkgs(res.packages);
-      setIndexEntries((prev) =>
-        prev.map((e) => (e.id === packageId ? { ...e, installed: true } : e))
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to install ${packageId}`);
-    } finally {
-      setInstallingId(null);
-    }
-  }
-
-  async function handleUninstallScraper(pkg: ScraperPackage) {
-    setError(null);
-    try {
-      await uninstallScraper(pkg.id);
-      setMessage(`Removed ${pkg.name}`);
-      const res = await fetchInstalledScrapers();
-      setScraperPkgs(res.packages);
-      setIndexEntries((prev) =>
-        prev.map((e) => (e.id === pkg.packageId ? { ...e, installed: false } : e))
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove scraper");
-    }
-  }
-
-  async function handleToggleScraper(pkg: ScraperPackage) {
-    try {
-      const updated = await toggleScraper(pkg.id, !pkg.enabled);
-      setScraperPkgs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to toggle scraper");
-    }
-  }
-
-  const filteredIndex = scraperSearch
-    ? indexEntries.filter(
-        (e) =>
-          e.name.toLowerCase().includes(scraperSearch.toLowerCase()) ||
-          e.id.toLowerCase().includes(scraperSearch.toLowerCase())
-      )
-    : indexEntries;
-
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>Settings</h1>
-          <p className="mt-1 text-text-muted text-sm">
-            Configure watched libraries and the background generation pipeline.
+          <h1 className="flex items-center gap-2.5">
+            <Settings className="h-5 w-5 text-text-accent" />
+            Settings
+          </h1>
+          <p className="text-text-muted text-[0.78rem] mt-1">
+            Configure libraries, generation pipeline, and scrapers
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => void loadConfig()}>
+          <button
+            onClick={() => void loadConfig()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary transition-colors duration-fast"
+          >
             <RefreshCw className="h-3.5 w-3.5" />
-            Reload
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => void handleRunScan()}>
+            <span className="hidden sm:inline">Reload</span>
+          </button>
+          <button
+            onClick={() => void handleRunScan()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary transition-colors duration-fast"
+          >
             <ScanSearch className="h-3.5 w-3.5" />
-            Run Scan
-          </Button>
-          <Button size="sm" onClick={() => void handleSaveSettings()} disabled={saving}>
-            <Save className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Run Scan</span>
+          </button>
+          <button
+            onClick={() => void handleSaveSettings()}
+            disabled={saving}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+              "bg-accent-950 text-text-accent border border-border-accent",
+              "hover:bg-accent-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {saving ? "Saving..." : "Save Changes"}
-          </Button>
+          </button>
         </div>
       </div>
 
-      {(message || error) && (
-        <div className={error ? "surface-panel border border-error/20 p-3 text-error-text text-sm" : "surface-panel border border-border-accent p-3 text-text-secondary text-sm"}>
-          {error ?? message}
+      {/* Messages */}
+      {error && (
+        <div className="surface-well border-l-2 border-status-error px-3 py-2 text-sm text-status-error">
+          {error}
+        </div>
+      )}
+      {message && !error && (
+        <div className="surface-well border-l-2 border-status-success px-3 py-2 text-sm text-status-success">
+          {message}
         </div>
       )}
 
+      {/* ─── Watched Libraries ────────────────────────────────── */}
       <section className="surface-panel p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <FolderOpen className="h-5 w-5 text-accent-500" />
+            <FolderOpen className="h-5 w-5 text-text-accent" />
             <div>
-              <h2 className="text-base">Watched Libraries</h2>
-              <p className="text-text-muted text-sm">
-                Add mounted folders that should be scanned for media files.
+              <h2 className="text-base font-heading font-semibold">Watched Libraries</h2>
+              <p className="text-text-muted text-[0.72rem]">
+                Add mounted folders to scan for media files
               </p>
             </div>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => void openBrowser(browser?.path)}>
+          <button
+            onClick={() => void openBrowser(browser?.path)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs text-text-muted hover:text-text-accent transition-colors duration-fast surface-well"
+          >
             <Plus className="h-3.5 w-3.5" />
             Browse Folder
-          </Button>
+          </button>
         </div>
 
+        {/* Folder browser */}
         {browserVisible && (
           <div className="surface-well p-4 space-y-4">
             <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
               <div>
-                <label className="control-label">Selected Folder</label>
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block uppercase tracking-wider">Selected Folder</label>
                 <input
-                  className="control-input"
+                  className="control-input w-full py-1.5 text-sm"
                   value={newRootPath}
-                  onChange={(event) => setNewRootPath(event.target.value)}
+                  onChange={(e) => setNewRootPath(e.target.value)}
                   placeholder="/mnt/library/scenes"
                 />
               </div>
               <div>
-                <label className="control-label">Label</label>
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block uppercase tracking-wider">Label</label>
                 <input
-                  className="control-input"
+                  className="control-input w-full py-1.5 text-sm"
                   value={newRootLabel}
-                  onChange={(event) => setNewRootLabel(event.target.value)}
+                  onChange={(e) => setNewRootLabel(e.target.value)}
                   placeholder="Primary scenes"
                 />
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
                 <input
-                  className="control-checkbox"
                   type="checkbox"
+                  className="accent-[#c79b5c]"
                   checked={newRootRecursive}
-                  onChange={(event) => setNewRootRecursive(event.target.checked)}
+                  onChange={(e) => setNewRootRecursive(e.target.checked)}
                 />
                 Scan subfolders recursively
               </label>
-              <Button
-                variant="ghost"
-                size="sm"
+              <div className="flex-1" />
+              <button
                 onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
                 disabled={!browser?.parentPath}
+                className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary disabled:opacity-40 transition-colors"
               >
                 Up One Level
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (browser) setNewRootPath(browser.path);
-                }}
+              </button>
+              <button
+                onClick={() => { if (browser) setNewRootPath(browser.path); }}
+                className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-accent transition-colors"
               >
                 Use Current Folder
-              </Button>
-              <Button size="sm" onClick={() => void handleAddRoot()} disabled={addingRoot}>
+              </button>
+              <button
+                onClick={() => void handleAddRoot()}
+                disabled={addingRoot}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+                  "bg-accent-950 text-text-accent border border-border-accent",
+                  "hover:bg-accent-900 disabled:opacity-50"
+                )}
+              >
                 {addingRoot ? "Adding..." : "Add Library"}
-              </Button>
+              </button>
             </div>
 
+            {/* Directory listing */}
             <div className="surface-panel p-3">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <p className="text-label text-text-muted">Folder Browser</p>
-                  <p className="text-mono text-text-secondary">{browser?.path ?? "Loading..."}</p>
-                </div>
+              <div className="mb-2">
+                <span className="text-mono-sm text-text-secondary">{browser?.path ?? "Loading..."}</span>
               </div>
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-1.5 md:grid-cols-2">
                 {browser?.directories.map((directory) => (
                   <button
                     key={directory.path}
@@ -397,45 +350,58 @@ export default function SettingsPage() {
                     onClick={() => void openBrowser(directory.path)}
                   >
                     <p className="text-sm font-medium truncate">{directory.name}</p>
-                    <p className="text-mono-sm text-text-muted truncate">{directory.path}</p>
+                    <p className="text-mono-sm text-text-disabled truncate">{directory.path}</p>
                   </button>
                 ))}
                 {browser && browser.directories.length === 0 && (
-                  <p className="text-text-muted text-sm">No child directories found in this folder.</p>
+                  <p className="text-text-disabled text-xs col-span-full py-3 text-center">No child directories found.</p>
                 )}
               </div>
             </div>
           </div>
         )}
 
+        {/* Library roots */}
         {loading ? (
-          <div className="surface-well p-4 text-text-muted text-sm">Loading library roots...</div>
+          <div className="surface-well p-8 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 text-text-disabled animate-spin" />
+          </div>
         ) : roots.length === 0 ? (
-          <div className="surface-well p-4 text-center">
+          <div className="surface-well p-8 text-center">
+            <FolderOpen className="h-8 w-8 text-text-disabled mx-auto mb-2" />
             <p className="text-text-muted text-sm">
-              No library roots configured. Browse to a mounted folder to begin scanning.
+              No library roots configured. Browse to a mounted folder to begin.
             </p>
           </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="space-y-2">
             {roots.map((root) => (
-              <div key={root.id} className="surface-well p-4">
+              <div key={root.id} className={cn(
+                "surface-well p-4 transition-opacity duration-fast",
+                !root.enabled && "opacity-60"
+              )}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold">{root.label}</p>
-                    <p className="text-mono-sm text-text-muted mt-1">{root.path}</p>
-                    <p className="text-text-disabled text-xs mt-2">
+                    <p className="text-mono-sm text-text-disabled mt-0.5">{root.path}</p>
+                    <p className="text-[0.65rem] text-text-disabled mt-1.5">
                       Last scanned: {formatTimestamp(root.lastScannedAt)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => void handleToggleRoot(root)}>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => void handleToggleRoot(root)}
+                      className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary transition-colors"
+                    >
                       {root.enabled ? "Disable" : "Enable"}
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => void handleDeleteRoot(root)}>
+                    </button>
+                    <button
+                      onClick={() => void handleDeleteRoot(root)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-status-error transition-colors"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -444,122 +410,99 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      {/* ─── Generation + Storage ─────────────────────────────── */}
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="surface-panel p-5 space-y-4">
           <div>
-            <h2 className="text-base">Generation Schedule</h2>
-            <p className="text-text-muted text-sm mt-1">
-              Control automatic scanning and how newly discovered files are enriched.
+            <h2 className="text-base font-heading font-semibold">Generation Pipeline</h2>
+            <p className="text-text-muted text-[0.72rem] mt-1">
+              Control automatic scanning and how new files are enriched
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
+            <ToggleCard
+              label="Automatic library scans"
+              description="Queue scans on a recurring interval."
+              checked={settings.autoScanEnabled}
+              onChange={(checked) =>
+                setSettings((c) => ({ ...c, autoScanEnabled: checked }))
+              }
+            />
             <div className="surface-well p-4">
-              <label className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">Automatic library scans</p>
-                  <p className="text-text-muted text-xs mt-1">
-                    Queue scans on a recurring interval without manual intervention.
-                  </p>
-                </div>
-                <input
-                  className="control-checkbox"
-                  type="checkbox"
-                  checked={settings.autoScanEnabled}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      autoScanEnabled: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-
-            <div>
-              <label className="control-label">Scan Interval (minutes)</label>
+              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Scan Interval (min)</label>
               <input
-                className="control-input"
+                className="control-input w-full py-1.5 text-sm"
                 type="number"
                 min={5}
                 step={5}
                 value={settings.scanIntervalMinutes}
-                onChange={(event) =>
-                  setSettings((current) => ({
-                    ...current,
-                    scanIntervalMinutes: Number(event.target.value) || 5,
-                  }))
+                onChange={(e) =>
+                  setSettings((c) => ({ ...c, scanIntervalMinutes: Number(e.target.value) || 5 }))
                 }
               />
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
             <ToggleCard
-              label="Generate technical metadata"
-              description="Use ffprobe to fill runtime, resolution, codec, and bitrate fields."
+              label="Technical metadata"
+              description="ffprobe: runtime, resolution, codec, bitrate."
               checked={settings.autoGenerateMetadata}
               onChange={(checked) =>
-                setSettings((current) => ({ ...current, autoGenerateMetadata: checked }))
+                setSettings((c) => ({ ...c, autoGenerateMetadata: checked }))
               }
             />
             <ToggleCard
-              label="Generate fingerprints"
-              description="Calculate md5 and OpenSubtitles hashes for duplicate and match workflows."
+              label="Fingerprints"
+              description="MD5 and OpenSubtitles hashes for matching."
               checked={settings.autoGenerateFingerprints}
               onChange={(checked) =>
-                setSettings((current) => ({ ...current, autoGenerateFingerprints: checked }))
+                setSettings((c) => ({ ...c, autoGenerateFingerprints: checked }))
               }
             />
             <ToggleCard
-              label="Generate preview assets"
-              description="Render thumbnail posters and short preview clips for the library."
+              label="Preview assets"
+              description="Thumbnails and short preview clips."
               checked={settings.autoGeneratePreview}
               onChange={(checked) =>
-                setSettings((current) => ({ ...current, autoGeneratePreview: checked }))
+                setSettings((c) => ({ ...c, autoGeneratePreview: checked }))
               }
             />
             <ToggleCard
-              label="Generate trickplay strips"
-              description="Build sprite sheets and VTT maps so the player can support scrub previews."
+              label="Trickplay strips"
+              description="Sprite sheets for player scrub previews."
               checked={settings.generateTrickplay}
               onChange={(checked) =>
-                setSettings((current) => ({ ...current, generateTrickplay: checked }))
+                setSettings((c) => ({ ...c, generateTrickplay: checked }))
               }
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="control-label">Trickplay Interval (seconds)</label>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="surface-well p-4">
+              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Trickplay Interval (sec)</label>
               <input
-                className="control-input"
+                className="control-input w-full py-1.5 text-sm"
                 type="number"
                 min={3}
                 step={1}
                 value={settings.trickplayIntervalSeconds}
-                onChange={(event) =>
-                  setSettings((current) => ({
-                    ...current,
-                    trickplayIntervalSeconds: Number(event.target.value) || 3,
-                  }))
+                onChange={(e) =>
+                  setSettings((c) => ({ ...c, trickplayIntervalSeconds: Number(e.target.value) || 3 }))
                 }
               />
             </div>
-
-            <div>
-              <label className="control-label">Preview Clip Length (seconds)</label>
+            <div className="surface-well p-4">
+              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Preview Clip Length (sec)</label>
               <input
-                className="control-input"
+                className="control-input w-full py-1.5 text-sm"
                 type="number"
                 min={4}
                 step={1}
                 value={settings.previewClipDurationSeconds}
-                onChange={(event) =>
-                  setSettings((current) => ({
-                    ...current,
-                    previewClipDurationSeconds: Number(event.target.value) || 4,
-                  }))
+                onChange={(e) =>
+                  setSettings((c) => ({ ...c, previewClipDurationSeconds: Number(e.target.value) || 4 }))
                 }
               />
             </div>
@@ -568,184 +511,43 @@ export default function SettingsPage() {
 
         <section className="surface-panel p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <HardDrive className="h-5 w-5 text-accent-500" />
+            <HardDrive className="h-5 w-5 text-text-accent" />
             <div>
-              <h2 className="text-base">Generated Storage</h2>
-              <p className="text-text-muted text-sm">
-                Disk usage for rendered assets managed by the worker.
+              <h2 className="text-base font-heading font-semibold">Generated Storage</h2>
+              <p className="text-text-muted text-[0.72rem]">
+                Disk usage for rendered assets
               </p>
             </div>
           </div>
-          <div className="surface-well p-4 space-y-3 text-mono-sm">
+          <div className="surface-well p-4 space-y-3">
             <StorageRow label="Thumbnails" value={formatBytes(storage?.thumbnailsBytes ?? 0)} />
             <div className="separator" />
             <StorageRow label="Preview clips" value={formatBytes(storage?.previewsBytes ?? 0)} />
             <div className="separator" />
             <StorageRow label="Trickplay sprites" value={formatBytes(storage?.trickplayBytes ?? 0)} />
             <div className="separator" />
-            <StorageRow label="Total" value={formatBytes(storage?.totalBytes ?? 0)} />
+            <StorageRow label="Total" value={formatBytes(storage?.totalBytes ?? 0)} accent />
           </div>
         </section>
       </div>
 
-      {/* ─── Scrapers Section ─────────────────────────────────── */}
-      <section className="surface-panel p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Package className="h-5 w-5 text-accent-500" />
-            <div>
-              <h2 className="text-base">Scrapers</h2>
-              <p className="text-text-muted text-sm">
-                {scraperPkgs.length} scraper{scraperPkgs.length !== 1 ? "s" : ""} installed
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => void loadScraperIndex(true)}
-            disabled={indexLoading}
-          >
-            {indexLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {showIndex ? "Refresh Index" : "Browse Community Index"}
-          </Button>
-        </div>
-
-        {scraperPkgs.length === 0 ? (
-          <div className="surface-well p-6 text-center">
-            <p className="text-text-muted text-sm">
-              No scrapers installed yet. Browse the community index to get started.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {scraperPkgs.map((pkg) => (
-              <div key={pkg.id} className="surface-well p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">{pkg.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-mono-sm text-text-muted">{pkg.packageId}</span>
-                      <Badge
-                        variant={pkg.enabled ? "accent" : "default"}
-                        className="text-[0.6rem]"
-                      >
-                        {pkg.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
-                    </div>
-                    {pkg.capabilities && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {Object.entries(pkg.capabilities)
-                          .filter(([, v]) => v)
-                          .map(([key]) => (
-                            <span
-                              key={key}
-                              className="tag-chip-default text-[0.6rem] px-1.5 py-0.5"
-                            >
-                              {key}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void handleToggleScraper(pkg)}
-                    >
-                      {pkg.enabled ? (
-                        <ToggleRight className="h-3.5 w-3.5" />
-                      ) : (
-                        <ToggleLeft className="h-3.5 w-3.5" />
-                      )}
-                      {pkg.enabled ? "Disable" : "Enable"}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => void handleUninstallScraper(pkg)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {showIndex && (
-          <div className="space-y-3 mt-4">
-            <div className="flex items-center justify-between gap-3">
+      {/* ─── Scrapers Link ────────────────────────────────────── */}
+      <Link href="/scrapers" className="block">
+        <section className="surface-panel p-5 group cursor-pointer hover:border-border-accent transition-colors duration-fast">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-text-accent" />
               <div>
-                <h3 className="text-sm font-medium">Community Index</h3>
-                <p className="text-text-muted text-xs">
-                  {indexEntries.length} scrapers available
+                <h2 className="text-base font-heading font-semibold group-hover:text-text-accent transition-colors duration-fast">Scrapers</h2>
+                <p className="text-text-muted text-[0.72rem]">
+                  {scraperCount} scraper{scraperCount !== 1 ? "s" : ""} installed — manage scrapers, browse community index, and configure capabilities
                 </p>
               </div>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
-                <input
-                  className="control-input pl-8 w-64"
-                  placeholder="Filter scrapers..."
-                  value={scraperSearch}
-                  onChange={(e) => setScraperSearch(e.target.value)}
-                />
-              </div>
             </div>
-
-            <div className="grid gap-2 max-h-[400px] overflow-y-auto scrollbar-hidden">
-              {filteredIndex.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="surface-well px-4 py-3 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{entry.name}</p>
-                    <p className="text-text-disabled text-xs mt-0.5">
-                      {entry.date}
-                      {entry.requires?.length
-                        ? ` · requires: ${entry.requires.join(", ")}`
-                        : ""}
-                    </p>
-                  </div>
-                  {entry.installed ? (
-                    <Badge variant="accent" className="text-[0.6rem] flex-shrink-0">
-                      <Check className="h-2.5 w-2.5 mr-1" />
-                      Installed
-                    </Badge>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void handleInstallScraper(entry.id)}
-                      disabled={installingId === entry.id}
-                    >
-                      {installingId === entry.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Download className="h-3.5 w-3.5" />
-                      )}
-                      Install
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {filteredIndex.length === 0 && (
-                <div className="text-text-muted text-sm text-center py-6">
-                  {scraperSearch ? "No scrapers match your search." : "Index is empty."}
-                </div>
-              )}
-            </div>
+            <ChevronRight className="h-5 w-5 text-text-disabled group-hover:text-text-accent transition-colors duration-fast" />
           </div>
-        )}
-      </section>
+        </section>
+      </Link>
     </div>
   );
 }
@@ -763,27 +565,27 @@ function ToggleCard({
 }) {
   return (
     <div className="surface-well p-4">
-      <label className="flex items-start justify-between gap-3">
+      <label className="flex items-start justify-between gap-3 cursor-pointer">
         <div>
           <p className="text-sm font-medium">{label}</p>
-          <p className="text-text-muted text-xs mt-1">{description}</p>
+          <p className="text-text-disabled text-[0.68rem] mt-0.5">{description}</p>
         </div>
         <input
-          className="control-checkbox mt-1"
           type="checkbox"
+          className="accent-[#c79b5c] mt-0.5"
           checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
+          onChange={(e) => onChange(e.target.checked)}
         />
       </label>
     </div>
   );
 }
 
-function StorageRow({ label, value }: { label: string; value: string }) {
+function StorageRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-text-muted">{label}</span>
-      <span>{value}</span>
+      <span className={accent ? "text-text-secondary text-sm font-medium" : "text-text-muted text-sm"}>{label}</span>
+      <span className={cn("text-mono-sm", accent ? "text-text-accent font-medium" : "text-text-secondary")}>{value}</span>
     </div>
   );
 }
