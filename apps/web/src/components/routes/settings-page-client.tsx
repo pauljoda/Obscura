@@ -164,6 +164,20 @@ export function SettingsPageClient({
     }
   }
 
+  /** Auto-save a single setting immediately (for toggles). */
+  async function autoSaveSetting(patch: Partial<LibrarySettings>) {
+    try {
+      const updated = await updateLibrarySettings({ ...settings, ...patch });
+      const normalized = normalizeSettings(updated);
+      setSettings(normalized);
+      savedSettings.current = normalized;
+      setMessage("Setting saved.");
+      setTimeout(() => setMessage(null), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save setting");
+    }
+  }
+
   async function handleSaveSettings() {
     setSaving(true);
     setError(null);
@@ -632,6 +646,8 @@ export function SettingsPageClient({
                       setStashBoxEndpoints((prev) =>
                         prev.map((e) => (e.id === ep.id ? { ...e, enabled: !e.enabled } : e))
                       );
+                      setMessage(`${ep.name} ${ep.enabled ? "disabled" : "enabled"}.`);
+                      setTimeout(() => setMessage(null), 2000);
                     }}
                     className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
                     title={ep.enabled ? "Disable" : "Enable"}
@@ -830,7 +846,10 @@ export function SettingsPageClient({
             label="Automatic library scans"
             description="Queue scans on a recurring interval."
             checked={settings.autoScanEnabled}
-            onChange={(checked) => setSettings((current) => ({ ...current, autoScanEnabled: checked }))}
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, autoScanEnabled: checked }));
+              void autoSaveSetting({ autoScanEnabled: checked });
+            }}
           />
           <div className="surface-card-sharp no-lift p-3.5">
             <label className="control-label mb-1.5">Scan Interval (min)</label>
@@ -855,33 +874,37 @@ export function SettingsPageClient({
             label="Technical metadata"
             description="ffprobe: runtime, resolution, codec, bitrate."
             checked={settings.autoGenerateMetadata}
-            onChange={(checked) =>
-              setSettings((current) => ({ ...current, autoGenerateMetadata: checked }))
-            }
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, autoGenerateMetadata: checked }));
+              void autoSaveSetting({ autoGenerateMetadata: checked });
+            }}
           />
           <ToggleCard
             label="Fingerprints"
             description="MD5 and OpenSubtitles hashes for matching."
             checked={settings.autoGenerateFingerprints}
-            onChange={(checked) =>
-              setSettings((current) => ({ ...current, autoGenerateFingerprints: checked }))
-            }
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, autoGenerateFingerprints: checked }));
+              void autoSaveSetting({ autoGenerateFingerprints: checked });
+            }}
           />
           <ToggleCard
             label="Preview assets"
             description="Thumbnails and short preview clips."
             checked={settings.autoGeneratePreview}
-            onChange={(checked) =>
-              setSettings((current) => ({ ...current, autoGeneratePreview: checked }))
-            }
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, autoGeneratePreview: checked }));
+              void autoSaveSetting({ autoGeneratePreview: checked });
+            }}
           />
           <ToggleCard
             label="Trickplay strips"
             description="Sprite sheets for player scrub previews."
             checked={settings.generateTrickplay}
-            onChange={(checked) =>
-              setSettings((current) => ({ ...current, generateTrickplay: checked }))
-            }
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, generateTrickplay: checked }));
+              void autoSaveSetting({ generateTrickplay: checked });
+            }}
           />
         </div>
 

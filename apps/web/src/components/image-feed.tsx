@@ -15,7 +15,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl } from "../lib/api";
+import { toApiUrl, updateImage } from "../lib/api";
 import { isVideoImage } from "../lib/image-media";
 import type { ImageListItemDto } from "@obscura/contracts";
 
@@ -34,6 +34,7 @@ function formatFileSize(bytes: number | null): string {
 interface ImageFeedProps {
   images: ImageListItemDto[];
   onImageClick?: (index: number) => void;
+  onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
@@ -42,6 +43,7 @@ interface ImageFeedProps {
 export function ImageFeed({
   images,
   onImageClick,
+  onImageUpdate,
   hasMore = false,
   onLoadMore,
   loadingMore = false,
@@ -80,6 +82,7 @@ export function ImageFeed({
           key={image.id}
           image={image}
           onClick={() => onImageClick?.(index)}
+          onImageUpdate={onImageUpdate}
         />
       ))}
 
@@ -109,9 +112,11 @@ const ACTIVATE_THRESHOLD = 0.3;
 function FeedCard({
   image,
   onClick,
+  onImageUpdate,
 }: {
   image: ImageListItemDto;
   onClick: () => void;
+  onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -242,21 +247,29 @@ function FeedCard({
           )}
         </div>
 
-        {ratingStars > 0 && (
-          <div className="flex gap-0.5">
-            {Array.from({ length: 5 }, (_, i) => (
+        <div className="flex gap-0.5">
+          {[20, 40, 60, 80, 100].map((v) => (
+            <button
+              key={v}
+              onClick={(e) => {
+                e.stopPropagation();
+                const newRating = image.rating === v ? null : v;
+                void updateImage(image.id, { rating: newRating });
+                onImageUpdate?.(image.id, { rating: newRating });
+              }}
+              className="p-0.5 transition-colors"
+            >
               <Star
-                key={i}
                 className={cn(
                   "h-3.5 w-3.5",
-                  i < ratingStars
+                  image.rating != null && image.rating >= v
                     ? "text-accent-500 fill-accent-500"
-                    : "text-text-disabled",
+                    : "text-text-disabled hover:text-accent-500/50",
                 )}
               />
-            ))}
-          </div>
-        )}
+            </button>
+          ))}
+        </div>
 
         {image.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-0.5">

@@ -361,6 +361,11 @@ export function ImagesPageClient({
             setLightboxIndex(index);
             setLightboxOpen(true);
           }}
+          onImageUpdate={(imageId, patch) => {
+            setImages((prev) =>
+              prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))
+            );
+          }}
           hasMore={images.length < total}
           onLoadMore={handleLoadMore}
           loadingMore={loadingMore}
@@ -384,6 +389,11 @@ export function ImagesPageClient({
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
           availableTags={initialTags}
+          onImageUpdate={(imageId, patch) => {
+            setImages((prev) =>
+              prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))
+            );
+          }}
         />
       )}
     </div>

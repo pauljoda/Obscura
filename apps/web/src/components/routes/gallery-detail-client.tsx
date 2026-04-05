@@ -243,6 +243,11 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
           chapters={gallery.chapters}
           onClose={() => setLightboxOpen(false)}
           availableTags={availableTags}
+          onImageUpdate={(imageId, patch) => {
+            setImages((prev) =>
+              prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))
+            );
+          }}
         />
       )}
     </div>
