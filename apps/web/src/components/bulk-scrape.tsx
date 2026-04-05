@@ -1684,11 +1684,34 @@ function StudioRowCard({
 
       {expanded && row.result && (
         <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
-            {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
-            {row.result.url && <ToggleableField field="url" label="URL" value={row.result.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />}
-            {row.result.imageUrl && <ToggleableField field="imageUrl" label="Image" value="Available" enabled={row.selectedFields.has("imageUrl")} onToggle={() => onToggleField("imageUrl")} />}
-            {row.result.parentName && <ToggleableField field="parentName" label="Parent" value={row.result.parentName} enabled={false} onToggle={() => {}} />}
+          <div className="flex gap-4">
+            {/* Image preview */}
+            {row.result.imageUrl && (
+              <div
+                className={cn("flex-shrink-0 cursor-pointer transition-opacity", !row.selectedFields.has("imageUrl") && "opacity-40")}
+                onClick={(e) => { e.stopPropagation(); onToggleField("imageUrl"); }}
+              >
+                <div className="relative">
+                  <img
+                    src={row.result.imageUrl}
+                    alt=""
+                    className={cn(
+                      "w-32 h-20 object-contain rounded-[3px] border transition-all",
+                      row.selectedFields.has("imageUrl") ? "border-border-accent/40" : "border-border-subtle grayscale"
+                    )}
+                  />
+                  <div className="absolute top-1 left-1">
+                    <input type="checkbox" checked={row.selectedFields.has("imageUrl")} onChange={() => onToggleField("imageUrl")} className="accent-[#c79b5c]" onClick={(e) => e.stopPropagation()} />
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Fields */}
+            <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
+              {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
+              {row.result.url && <ToggleableField field="url" label="URL" value={row.result.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />}
+              {row.result.parentName && <ToggleableField field="parentName" label="Parent" value={row.result.parentName} enabled={false} onToggle={() => {}} />}
+            </div>
           </div>
         </div>
       )}
