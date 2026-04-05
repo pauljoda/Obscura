@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
+import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
 
 const {
   galleries,
@@ -12,6 +13,30 @@ const {
   tags,
   studios,
 } = schema;
+
+function toGalleryImageListItem(img: typeof images.$inferSelect) {
+  return {
+    id: img.id,
+    title: img.title,
+    date: img.date,
+    rating: img.rating,
+    organized: img.organized,
+    width: img.width,
+    height: img.height,
+    format: img.format,
+    isVideo: isVideoImageFormat(img.format),
+    fileSize: img.fileSize,
+    thumbnailPath: img.thumbnailPath,
+    previewPath: getImagePreviewPath(img.id, img.format),
+    fullPath: `/assets/images/${img.id}/full`,
+    galleryId: img.galleryId,
+    sortOrder: img.sortOrder,
+    studioId: img.studioId,
+    performers: [],
+    tags: [],
+    createdAt: img.createdAt,
+  };
+}
 
 export async function galleriesRoutes(app: FastifyInstance) {
   // ─── GET /galleries ──────────────────────────────────────────────
@@ -256,6 +281,44 @@ export async function galleriesRoutes(app: FastifyInstance) {
     };
   });
 
+  // ─── GET /galleries/:id/images ───────────────────────────────────
+  app.get("/galleries/:id/images", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as { limit?: string; offset?: string };
+    const limit = Math.min(Number(query.limit) || 60, 200);
+    const offset = Number(query.offset) || 0;
+
+    const gallery = await db.query.galleries.findFirst({
+      where: eq(galleries.id, id),
+      columns: { id: true },
+    });
+
+    if (!gallery) {
+      reply.code(404);
+      return { error: "Gallery not found" };
+    }
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(images)
+      .where(eq(images.galleryId, id));
+
+    const imageRows = await db
+      .select()
+      .from(images)
+      .where(eq(images.galleryId, id))
+      .orderBy(asc(images.sortOrder))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      images: imageRows.map(toGalleryImageListItem),
+      total: Number(countResult.count),
+      limit,
+      offset,
+    };
+  });
+
   // ─── GET /galleries/:id ──────────────────────────────────────────
   app.get("/galleries/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
@@ -359,25 +422,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
         title: ch.title,
         imageIndex: ch.imageIndex,
       })),
-      images: imageRows.map((img) => ({
-        id: img.id,
-        title: img.title,
-        date: img.date,
-        rating: img.rating,
-        organized: img.organized,
-        width: img.width,
-        height: img.height,
-        format: img.format,
-        fileSize: img.fileSize,
-        thumbnailPath: img.thumbnailPath,
-        fullPath: `/assets/images/${img.id}/full`,
-        galleryId: img.galleryId,
-        sortOrder: img.sortOrder,
-        studioId: img.studioId,
-        performers: [],
-        tags: [],
-        createdAt: img.createdAt,
-      })),
+      images: imageRows.map(toGalleryImageListItem),
       imageTotal: Number(imageCountResult.count),
       imageLimit,
       imageOffset,

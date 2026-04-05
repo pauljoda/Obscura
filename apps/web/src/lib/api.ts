@@ -10,6 +10,7 @@ import type {
   ScrapeResultDto,
   GalleryListItemDto,
   GalleryDetailDto,
+  GalleryImagesPageDto,
   GalleryStatsDto,
   ImageListItemDto,
   ImageDetailDto,
@@ -330,12 +331,12 @@ export async function fetchGalleryDetail(id: string): Promise<GalleryDetailDto> 
 export async function fetchGalleryImages(
   id: string,
   params?: { limit?: number; offset?: number }
-): Promise<GalleryDetailDto> {
+): Promise<GalleryImagesPageDto> {
   const sp = new URLSearchParams();
-  if (params?.limit) sp.set("imageLimit", String(params.limit));
-  if (params?.offset) sp.set("imageOffset", String(params.offset));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
   const qs = sp.toString();
-  return fetchApi(`/galleries/${id}${qs ? `?${qs}` : ""}`);
+  return fetchApi(`/galleries/${id}/images${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchGalleryStats(): Promise<GalleryStatsDto> {

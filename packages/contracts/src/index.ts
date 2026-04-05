@@ -189,8 +189,10 @@ export interface ImageListItemDto {
   width: number | null;
   height: number | null;
   format: string | null;
+  isVideo: boolean;
   fileSize: number | null;
   thumbnailPath: string | null;
+  previewPath: string | null;
   fullPath: string | null;
   galleryId: string | null;
   sortOrder: number;
@@ -207,6 +209,13 @@ export interface ImageDetailDto extends ImageListItemDto {
   filePath: string;
   studio: { id: string; name: string } | null;
   updatedAt: string;
+}
+
+export interface GalleryImagesPageDto {
+  images: ImageListItemDto[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface ImageUpdateDto {

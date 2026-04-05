@@ -1,25 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Loader2, ImageOff } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Loader2, ImageOff, Film } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
+import { useElementInView } from "../hooks/use-element-in-view";
+import { canUseInlineVideoPreview, isVideoImage } from "../lib/image-media";
 import type { ImageListItemDto } from "@obscura/contracts";
-
-// Codec names that ffprobe returns for video streams
-const VIDEO_CODECS = new Set(["h264", "hevc", "h265", "vp8", "vp9", "av1", "mpeg4", "mpeg2video", "wmv3", "flv1", "theora", "vp6f"]);
-// Container/file extensions
-const VIDEO_EXTENSIONS = new Set(["webm", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "flv"]);
-
-function isVideoItem(image: ImageListItemDto): boolean {
-  // Check codec name stored in format field
-  if (image.format && VIDEO_CODECS.has(image.format.toLowerCase())) return true;
-  // Check container extension in format field
-  if (image.format && VIDEO_EXTENSIONS.has(image.format.toLowerCase())) return true;
-  // Check title for extension (may not work if fileNameToTitle stripped it)
-  const ext = image.title?.split(".").pop()?.toLowerCase() ?? "";
-  return VIDEO_EXTENSIONS.has(ext);
-}
 
 interface ImageGridProps {
   images: ImageListItemDto[];
@@ -48,14 +35,13 @@ export function ImageGrid({
   return (
     <div>
       <div
-        className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-1"
+        className="columns-2 sm:columns-3 md:columns-4 xl:columns-5 gap-1"
         style={{ contentVisibility: "auto" }}
       >
         {images.map((image, index) => (
           <ImageCell
             key={image.id}
             image={image}
-            index={index}
             onClick={() => onImageClick?.(index)}
           />
         ))}
@@ -84,49 +70,69 @@ export function ImageGrid({
 
 function ImageCell({
   image,
-  index,
   onClick,
 }: {
   image: ImageListItemDto;
-  index: number;
   onClick: () => void;
 }) {
   const [error, setError] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useElementInView(containerRef, { rootMargin: "320px" });
   const thumbUrl = toApiUrl(image.thumbnailPath);
-  const fullUrl = toApiUrl(image.fullPath);
-  const isVideo = isVideoItem(image);
+  const previewUrl = toApiUrl(image.previewPath);
+  const isVideo = isVideoImage(image);
 
   const handleError = useCallback(() => setError(true), []);
+  const canPreview = canUseInlineVideoPreview(image) && !previewFailed;
+  const showVideoPreview = canPreview && isInView && hovering;
 
   return (
-    <button
-      onClick={onClick}
-      className="block w-full mb-1 break-inside-avoid cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-sm overflow-hidden"
+    <div
+      ref={containerRef}
+      className="group relative mb-1 break-inside-avoid"
+      onPointerEnter={() => setHovering(true)}
+      onPointerLeave={() => setHovering(false)}
     >
-      {error || (!thumbUrl && !fullUrl) ? (
-        <div className="flex items-center justify-center bg-surface-2 aspect-square">
-          <ImageOff className="h-6 w-6 text-text-disabled" />
+      <button
+        type="button"
+        onClick={onClick}
+        className="block w-full cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-sm overflow-hidden"
+      >
+        {error || !thumbUrl ? (
+          <div className="flex items-center justify-center bg-surface-2 aspect-square">
+            <ImageOff className="h-6 w-6 text-text-disabled" />
+          </div>
+        ) : showVideoPreview && previewUrl ? (
+          <video
+            src={previewUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="none"
+            poster={thumbUrl}
+            onError={() => setPreviewFailed(true)}
+            className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
+          />
+        ) : (
+          <img
+            src={thumbUrl}
+            alt={image.title}
+            loading="lazy"
+            decoding="async"
+            onError={handleError}
+            className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
+          />
+        )}
+      </button>
+
+      {isVideo && (
+        <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
+          <Film className="h-3 w-3" />
         </div>
-      ) : isVideo && fullUrl ? (
-        <video
-          src={fullUrl}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onError={handleError}
-          className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
-        />
-      ) : (
-        <img
-          src={thumbUrl!}
-          alt={image.title}
-          loading={index < 8 ? "eager" : "lazy"}
-          decoding="async"
-          onError={handleError}
-          className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
-        />
       )}
-    </button>
+    </div>
   );
 }

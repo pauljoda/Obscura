@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
+import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
 
 const {
   images,
@@ -164,8 +165,10 @@ export async function imagesRoutes(app: FastifyInstance) {
       width: img.width,
       height: img.height,
       format: img.format,
+      isVideo: isVideoImageFormat(img.format),
       fileSize: img.fileSize,
       thumbnailPath: img.thumbnailPath,
+      previewPath: getImagePreviewPath(img.id, img.format),
       fullPath: `/assets/images/${img.id}/full`,
       galleryId: img.galleryId,
       sortOrder: img.sortOrder,
@@ -215,8 +218,10 @@ export async function imagesRoutes(app: FastifyInstance) {
       width: image.width,
       height: image.height,
       format: image.format,
+      isVideo: isVideoImageFormat(image.format),
       fileSize: image.fileSize,
       thumbnailPath: image.thumbnailPath,
+      previewPath: getImagePreviewPath(image.id, image.format),
       fullPath: `/assets/images/${image.id}/full`,
       galleryId: image.galleryId,
       sortOrder: image.sortOrder,

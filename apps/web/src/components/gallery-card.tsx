@@ -4,6 +4,7 @@ import { useRef, useState, useCallback } from "react";
 import { Images, FolderOpen, Archive, Sparkles } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
+import { useElementInView } from "../hooks/use-element-in-view";
 import type { GalleryListItemDto } from "@obscura/contracts";
 
 const typeIcons = {
@@ -17,9 +18,11 @@ interface GalleryCardProps {
 }
 
 export function GalleryCard({ gallery }: GalleryCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [videoFailed, setVideoFailed] = useState(false);
+  const isInView = useElementInView(cardRef, { rootMargin: "240px" });
 
   const coverUrl = toApiUrl(gallery.coverImagePath);
   const previews = gallery.previewImagePaths?.map(toApiUrl).filter(Boolean) ?? [];
@@ -57,10 +60,12 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
 
   // Show video on hover only if there's just 1 preview (no cycling needed)
   // When there are multiple previews, cycle through them with the stepper instead
-  const showVideo = hovering && previewVideoUrl && !videoFailed && previews.length <= 1;
+  const showVideo =
+    hovering && isInView && previewVideoUrl && !videoFailed && previews.length <= 1;
 
   return (
     <div
+      ref={cardRef}
       className="surface-card-sharp media-card-shell group relative overflow-hidden"
       onPointerEnter={startHover}
       onPointerLeave={stopHover}
@@ -74,6 +79,7 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
             loop
             muted
             playsInline
+            preload="none"
             onError={() => setVideoFailed(true)}
             className="h-full w-full object-cover"
           />
