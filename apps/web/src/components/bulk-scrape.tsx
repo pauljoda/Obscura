@@ -830,7 +830,36 @@ function SceneRowCard({
               <ToggleableField field="tags" label="Tags" value={row.normalized.tagNames.join(", ")} enabled={row.selectedFields.has("tags")} onToggle={() => onToggleField("tags")} />
             )}
             {row.normalized.imageUrl && (
-              <ToggleableField field="image" label="Thumbnail" value="Available" enabled={row.selectedFields.has("image")} onToggle={() => onToggleField("image")} />
+              <div
+                className={cn(
+                  "col-span-2 flex items-start gap-2 cursor-pointer transition-opacity",
+                  !row.selectedFields.has("image") && "opacity-40"
+                )}
+                onClick={(e) => { e.stopPropagation(); onToggleField("image"); }}
+              >
+                <input
+                  type="checkbox"
+                  checked={row.selectedFields.has("image")}
+                  onChange={() => onToggleField("image")}
+                  className="accent-[#c79b5c] mt-0.5 flex-shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="min-w-0">
+                  <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">Thumbnail</span>
+                  <div className="mt-1">
+                    <img
+                      src={row.normalized.imageUrl}
+                      alt=""
+                      className={cn(
+                        "w-24 h-14 object-cover rounded-[2px] border transition-all",
+                        row.selectedFields.has("image")
+                          ? "border-border-accent/40"
+                          : "border-border-subtle grayscale"
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
