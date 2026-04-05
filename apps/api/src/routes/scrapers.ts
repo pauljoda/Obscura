@@ -162,8 +162,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     // Validate packageId to prevent path traversal
-    if (!/^[\w.-]+$/.test(body.packageId)) {
-      return reply.code(400).send({ error: "Invalid packageId: only alphanumeric, dots, hyphens, and underscores allowed" });
+    if (body.packageId.includes("..") || body.packageId.includes("/") || body.packageId.includes("\\")) {
+      return reply.code(400).send({ error: "Invalid packageId: path traversal characters not allowed" });
     }
 
     // Look up from community index if zip URL not provided
