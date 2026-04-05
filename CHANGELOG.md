@@ -18,6 +18,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Scrapers page: scraper cards and community index entries use `surface-card-sharp` for better visibility against the dark background.
 - Jobs page: full visual redesign — stats strip (Active/Completed/Failed/Last Scan), queues in responsive grid with LED indicators and dark stat cells, scrollable Recent Runs table with error row tinting, section separators with accent icons.
 - Bulk scrape page: unified Scenes + Performers tabs in one view, seek mode cycles all capable scrapers per item (5s timeout), auto-accept option, stats strip with progress meter, shows matched scraper name, sharp card design language.
+- Bulk scrape: each scraped field is toggleable via checkbox (defaults all enabled), allowing users to exclude specific fields before accepting. Disabled fields shown struck-through.
+- Bulk scrape: scraper selector dropdown to choose a specific scraper or "Seek all" mode.
+- Bulk scrape: "Show all" toggle to include organized scenes and complete performers.
+- Bulk scrape: expand all / collapse all for reviewing results in bulk.
+- Bulk scrape: performer detail shows portrait images with selection thumbnails when multiple images returned.
+- Bulk scrape: performer scraper results now require exact name match to reduce false positives from partial/first-name matches.
+- Scene scrape accept now downloads thumbnail from scraped imageUrl when the "image" field is selected.
 
 ### Fixed
 
