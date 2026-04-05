@@ -710,18 +710,12 @@ export function BulkScrape() {
       try {
         const { result, remoteId, endpointId, matchedScraper } = await seekStudio(studioRows[i], sbEndpoints);
         if (result) {
-          const fields = new Set(Object.entries(result).filter(([, v]) => v != null && v !== "").map(([k]) => k));
+          // Don't auto-select parentName — data quality varies across endpoints
+          const fields = new Set(Object.entries(result).filter(([k, v]) => v != null && v !== "" && k !== "parentName").map(([k]) => k));
           if (autoAccept) {
             try {
               const data: Record<string, unknown> = {};
               if (result.url) data.url = result.url;
-              // Auto-accept parent studio
-              if (result.parentName) {
-                try {
-                  const parentResult = await findOrCreateStudio({ name: result.parentName });
-                  data.parentId = parentResult.id;
-                } catch (e) { console.error("Parent studio resolution failed:", e); }
-              }
               await updateStudio(studioRows[i].studio.id, data);
               // Download image from URL
               if (result.imageUrl) {

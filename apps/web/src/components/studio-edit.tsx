@@ -136,7 +136,6 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
         if (result.url) fields.add("url");
         if (result.imageUrl) fields.add("imageUrl");
         if (result.name) fields.add("name");
-        if (result.parentName) fields.add("parentName");
         setSelectedFields(fields);
       } else {
         setError("No results found");
