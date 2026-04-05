@@ -20,8 +20,11 @@ import {
   fetchScenes,
   fetchPerformers,
   fetchInstalledScrapers,
+  fetchStashBoxEndpoints,
   scrapeScene,
   scrapePerformerApi,
+  identifyViaStashBox,
+  identifyPerformerViaStashBox,
   acceptScrapeResult,
   rejectScrapeResult,
   applyPerformerScrape,
@@ -29,10 +32,18 @@ import {
   type SceneListItem,
   type PerformerItem,
   type ScraperPackage,
+  type StashBoxEndpoint,
   type ScrapeResult,
   type NormalizedScrapeResult,
   type NormalizedPerformerScrapeResult,
 } from "../lib/api";
+
+/** Unified provider that can be either a community scraper or StashBox endpoint */
+interface Provider {
+  id: string;
+  name: string;
+  type: "scraper" | "stashbox";
+}
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
@@ -87,6 +98,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export function BulkScrape() {
   const [tab, setTab] = useState<Tab>("scenes");
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
+  const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Scene state
@@ -183,11 +195,14 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, perfRes, scrapersRes] = await Promise.all([
+      const [scenesRes, perfRes, scrapersRes, stashBoxRes] = await Promise.all([
         fetchScenes({ sort: "created_at", limit: 500 }),
         fetchPerformers({ sort: "name", order: "asc", limit: 200 }),
         fetchInstalledScrapers(),
+        fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
       ]);
+
+      setStashBoxEndpoints(stashBoxRes.endpoints.filter((e) => e.enabled));
 
       const unorganized = scenesRes.scenes.filter((s) => !s.organized);
       setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() })));
@@ -240,11 +255,46 @@ export function BulkScrape() {
 
   /* ─── Scene seek ────────────────────────────────────────────── */
 
-  async function seekScene(row: SceneRow, scraperList: ScraperPackage[]): Promise<{
+  async function seekSceneViaStashBox(row: SceneRow, endpoints: StashBoxEndpoint[]): Promise<{
     result?: ScrapeResult;
     normalized?: NormalizedScrapeResult;
     matchedScraper?: string;
+    matchType?: string;
   }> {
+    for (const ep of endpoints) {
+      try {
+        const res = await withTimeout(
+          identifyViaStashBox(ep.id, row.scene.id),
+          SEEK_TIMEOUT_MS
+        );
+        if (res.result && res.normalized) {
+          return {
+            result: res.result,
+            normalized: res.normalized,
+            matchedScraper: `${ep.name}${res.matchType === "fingerprint" ? " (fingerprint)" : ""}`,
+            matchType: res.matchType,
+          };
+        }
+      } catch {
+        // Timeout or error — try next
+      }
+    }
+    return {};
+  }
+
+  async function seekScene(row: SceneRow, scraperList: ScraperPackage[], sbEndpoints: StashBoxEndpoint[]): Promise<{
+    result?: ScrapeResult;
+    normalized?: NormalizedScrapeResult;
+    matchedScraper?: string;
+    matchType?: string;
+  }> {
+    // Try StashBox endpoints first (fingerprint matching is highest confidence)
+    if (sbEndpoints.length > 0) {
+      const sbResult = await seekSceneViaStashBox(row, sbEndpoints);
+      if (sbResult.result) return sbResult;
+    }
+
+    // Fall back to community scrapers
     for (const scraper of scraperList) {
       try {
         const res = await withTimeout(
@@ -265,10 +315,18 @@ export function BulkScrape() {
     setRunning(true);
     abortRef.current = false;
 
-    // Determine scraper list: single selected or seek through all
-    const scraperList = selectedScraperId
-      ? sceneScrapers.filter((s) => s.id === selectedScraperId)
-      : sceneScrapers;
+    // Parse selected provider
+    const isStashBox = selectedScraperId.startsWith("stashbox:");
+    const isScraper = selectedScraperId.startsWith("scraper:");
+    const realId = selectedScraperId.replace(/^(stashbox|scraper):/, "");
+
+    // Determine which sources to use
+    const scraperList = isScraper
+      ? sceneScrapers.filter((s) => s.id === realId)
+      : selectedScraperId === "" ? sceneScrapers : [];
+    const sbEndpoints = isStashBox
+      ? stashBoxEndpoints.filter((e) => e.id === realId)
+      : selectedScraperId === "" ? stashBoxEndpoints : [];
 
     // Reset non-accepted rows
     setSceneRows((prev) =>
@@ -286,7 +344,7 @@ export function BulkScrape() {
       );
 
       try {
-        const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList);
+        const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList, sbEndpoints);
         if (result && normalized) {
           if (autoAccept) {
             try {
@@ -328,12 +386,33 @@ export function BulkScrape() {
 
   /* ─── Performer seek ─────────────────────────────────────────── */
 
-  async function seekPerformer(row: PerformerRow, scraperList: ScraperPackage[]): Promise<{
+  async function seekPerformer(row: PerformerRow, scraperList: ScraperPackage[], sbEndpoints: StashBoxEndpoint[]): Promise<{
     result?: NormalizedPerformerScrapeResult;
     matchedScraper?: string;
   }> {
     const performerName = row.performer.name.toLowerCase().trim();
 
+    // Try StashBox endpoints first
+    for (const ep of sbEndpoints) {
+      try {
+        const res = await withTimeout(
+          identifyPerformerViaStashBox(ep.id, row.performer.id),
+          SEEK_TIMEOUT_MS
+        );
+        if (res.results && res.results.length > 0) {
+          const exact = res.results.find(
+            (r) => r.name?.toLowerCase().trim() === performerName
+          );
+          if (exact) {
+            return { result: exact, matchedScraper: ep.name };
+          }
+        }
+      } catch {
+        // Timeout or error — try next
+      }
+    }
+
+    // Fall back to community scrapers
     for (const scraper of scraperList) {
       try {
         const res = await withTimeout(
@@ -341,21 +420,17 @@ export function BulkScrape() {
           SEEK_TIMEOUT_MS
         );
 
-        // If the API found an exact match, use it directly
         if (res.result) {
           return { result: res.result, matchedScraper: scraper.name };
         }
 
-        // If we got an array of search results, find the best match
         if (res.results && res.results.length > 0) {
-          // Exact match
           const exact = res.results.find(
             (r) => r.name?.toLowerCase().trim() === performerName
           );
           if (exact) {
             return { result: exact, matchedScraper: scraper.name };
           }
-          // Skip partial matches — too high false positive rate
         }
       } catch {
         // Timeout or error — try next
@@ -368,9 +443,16 @@ export function BulkScrape() {
     setRunning(true);
     abortRef.current = false;
 
-    const scraperList = selectedScraperId
-      ? perfScrapers.filter((s) => s.id === selectedScraperId)
-      : perfScrapers;
+    const isStashBox = selectedScraperId.startsWith("stashbox:");
+    const isScraper = selectedScraperId.startsWith("scraper:");
+    const realId = selectedScraperId.replace(/^(stashbox|scraper):/, "");
+
+    const scraperList = isScraper
+      ? perfScrapers.filter((s) => s.id === realId)
+      : selectedScraperId === "" ? perfScrapers : [];
+    const sbEndpoints = isStashBox
+      ? stashBoxEndpoints.filter((e) => e.id === realId)
+      : selectedScraperId === "" ? stashBoxEndpoints : [];
 
     setPerfRows((prev) =>
       prev.map((r) =>
@@ -387,7 +469,7 @@ export function BulkScrape() {
       );
 
       try {
-        const { result, matchedScraper } = await seekPerformer(perfRows[i], scraperList);
+        const { result, matchedScraper } = await seekPerformer(perfRows[i], scraperList, sbEndpoints);
         if (result) {
           if (autoAccept) {
             const allFields = Object.entries(result)
@@ -515,6 +597,13 @@ export function BulkScrape() {
   const totalCount = rows.length;
   const scrapersForTab = tab === "scenes" ? sceneScrapers : perfScrapers;
 
+  // Build unified provider list: StashBox first (fingerprint-capable), then scrapers
+  const providersForTab: Provider[] = [
+    ...stashBoxEndpoints.map((ep) => ({ id: `stashbox:${ep.id}`, name: ep.name, type: "stashbox" as const })),
+    ...scrapersForTab.map((s) => ({ id: `scraper:${s.id}`, name: s.name, type: "scraper" as const })),
+  ];
+  const totalProviderCount = providersForTab.length;
+
   /* ─── Render ─────────────────────────────────────────────────── */
 
   if (loading) {
@@ -604,10 +693,21 @@ export function BulkScrape() {
               className="control-input py-1.5 text-xs min-w-[200px]"
               disabled={running}
             >
-              <option value="">Seek all ({scrapersForTab.length} sources)</option>
-              {scrapersForTab.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
+              <option value="">Seek all ({totalProviderCount} sources)</option>
+              {stashBoxEndpoints.length > 0 && (
+                <optgroup label="Stash-Box">
+                  {stashBoxEndpoints.map((ep) => (
+                    <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {totalProviderCount > 0 && (
+                <optgroup label="Community Scrapers">
+                  {scrapersForTab.map((s) => (
+                    <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
 
@@ -648,7 +748,7 @@ export function BulkScrape() {
               )}
               <button
                 onClick={() => void (tab === "scenes" ? runSceneScrape() : runPerformerScrape())}
-                disabled={totalCount === 0 || scrapersForTab.length === 0}
+                disabled={totalCount === 0 || totalProviderCount === 0}
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
                   "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
@@ -681,19 +781,19 @@ export function BulkScrape() {
       </div>
 
       {/* Empty state */}
-      {scrapersForTab.length === 0 && (
+      {totalProviderCount === 0 && (
         <div className="surface-card-sharp no-lift p-12 text-center">
           <ScanSearch className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">
-            No {tab === "scenes" ? "scene" : "performer"} scrapers installed.
+            No metadata providers configured for {tab === "scenes" ? "scenes" : "performers"}.
           </p>
           <p className="text-text-disabled text-xs mt-1">
-            Install scrapers from Settings to begin matching.
+            Add a Stash-Box endpoint or install scrapers in Settings.
           </p>
         </div>
       )}
 
-      {totalCount === 0 && scrapersForTab.length > 0 && (
+      {totalCount === 0 && totalProviderCount > 0 && (
         <div className="surface-card-sharp no-lift p-12 text-center">
           <Check className="h-8 w-8 text-status-success-text mx-auto mb-2" />
           <p className="text-text-muted text-sm">
@@ -703,7 +803,7 @@ export function BulkScrape() {
       )}
 
       {/* Row list */}
-      {totalCount > 0 && scrapersForTab.length > 0 && (
+      {totalCount > 0 && totalProviderCount > 0 && (
         <div className="space-y-1">
           {/* Expand all / collapse all */}
           <div className="flex items-center justify-end gap-2 px-1 mb-1">
