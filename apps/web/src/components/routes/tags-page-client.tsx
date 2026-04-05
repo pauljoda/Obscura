@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import type { TagItem } from "../../lib/api";
+import { toApiUrl, type TagItem } from "../../lib/api";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
@@ -267,18 +267,24 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
           {filtered.map((tag) => {
             const total = tag.sceneCount + (tag.imageCount ?? 0);
+            const tagImage = tag.imagePath ? toApiUrl(tag.imagePath) : null;
             return (
               <Link
                 key={tag.id}
                 href={`/tags/${encodeURIComponent(tag.name)}`}
                 className={cn(
-                  "flex items-center justify-between gap-2 px-3 py-1.5",
+                  "flex items-center gap-2 px-3 py-1.5",
                   "border-b border-border-subtle/50",
                   "hover:bg-surface-2 hover:text-text-accent transition-colors duration-fast",
                   "break-inside-avoid",
                 )}
               >
-                <span className="text-[0.8rem] text-text-primary truncate">{tag.name}</span>
+                {tagImage && (
+                  <div className="flex-shrink-0 w-8 h-5 rounded-[2px] overflow-hidden bg-surface-3">
+                    <img src={tagImage} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <span className="text-[0.8rem] text-text-primary truncate flex-1">{tag.name}</span>
                 <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
                   {tag.sceneCount > 0 && (
                     <span className="flex items-center gap-0.5">

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Building2, Search, SortAsc, SortDesc } from "lucide-react";
+import { Building2, Search, SortAsc, SortDesc, Star, Heart, Film } from "lucide-react";
 import Link from "next/link";
-import type { StudioItem } from "../../lib/api";
+import { cn } from "@obscura/ui/lib/utils";
+import { toApiUrl, type StudioItem } from "../../lib/api";
 
 type SortDir = "asc" | "desc";
 
@@ -95,6 +96,7 @@ export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
 }
 
 function StudioCard({ studio }: { studio: StudioItem }) {
+  const imageUrl = studio.imagePath ? toApiUrl(studio.imagePath) : studio.imageUrl;
   const initials = studio.name
     .split(" ")
     .map((w) => w[0])
@@ -104,19 +106,45 @@ function StudioCard({ studio }: { studio: StudioItem }) {
 
   return (
     <Link href={`/studios/${studio.id}`}>
-      <article className="surface-card p-4 flex items-center gap-4 group cursor-pointer h-full">
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-surface-3 group-hover:bg-accent-950 transition-all duration-fast">
-          <span className="text-sm font-semibold font-heading text-text-muted group-hover:text-text-accent transition-colors duration-fast">
-            {initials}
-          </span>
+      <article className="surface-card overflow-hidden group cursor-pointer h-full">
+        {/* Banner image on top */}
+        <div className="relative aspect-[16/7] bg-surface-3 overflow-hidden">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={studio.name}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-normal"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Building2 className="h-10 w-10 text-text-disabled/20" />
+            </div>
+          )}
+          {/* Gradient overlay */}
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-medium truncate group-hover:text-text-accent transition-colors duration-fast">
-            {studio.name}
-          </h3>
-          <p className="text-mono-sm text-text-disabled mt-0.5">Browse scenes</p>
+
+        {/* Info */}
+        <div className="p-3 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium truncate group-hover:text-text-accent transition-colors duration-fast">
+              {studio.name}
+            </h3>
+            {studio.favorite && <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />}
+          </div>
+          <div className="flex items-center gap-3 text-[0.65rem] text-text-disabled">
+            <span className="flex items-center gap-1">
+              <Film className="h-2.5 w-2.5" />
+              {studio.sceneCount}
+            </span>
+            {studio.rating != null && studio.rating > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Star className="h-2.5 w-2.5 text-accent-500 fill-accent-500" />
+                {Math.round(studio.rating / 20)}
+              </span>
+            )}
+          </div>
         </div>
-        <Building2 className="h-4 w-4 text-text-disabled flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-fast" />
       </article>
     </Link>
   );

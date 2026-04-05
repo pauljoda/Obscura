@@ -151,94 +151,97 @@ export default function TagPage({ params }: TagPageProps) {
         <ArrowLeft className="h-3 w-3" /> Tags
       </Link>
 
-      {/* Hero header */}
-      <div className="flex items-start gap-5">
-        {/* Image */}
-        <div className="flex-shrink-0 relative group">
-          <div className="h-20 w-20 rounded-xl overflow-hidden bg-surface-3">
-            {imageUrl ? (
-              <img src={imageUrl} alt={tagName} className="w-full h-full object-contain" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Tag className="h-8 w-8 text-text-disabled/30" />
-              </div>
-            )}
-          </div>
-          {tagDetail && (
-            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-xl">
-              <button onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} className="p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
-                {uploadingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              </button>
-              {imageUrl && (
-                <button onClick={handleDeleteImage} disabled={uploadingImage} className="p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition-colors">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+      {/* Hero banner image */}
+      <div className="relative rounded-lg overflow-hidden bg-surface-3 group">
+        <div className={imageUrl ? "aspect-[21/7]" : "aspect-[21/5]"}>
+          {imageUrl ? (
+            <img src={imageUrl} alt={tagName} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-3 to-surface-2">
+              <Tag className="h-14 w-14 text-text-disabled/15" />
             </div>
           )}
-          <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
         </div>
-
-        <div className="flex-1 min-w-0">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        {/* Image actions (hover) */}
+        {tagDetail && (
+          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-colors">
+              {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            </button>
+            {imageUrl && (
+              <button onClick={handleDeleteImage} disabled={uploadingImage} className="p-2 rounded-full bg-black/50 text-white hover:bg-red-500/70 backdrop-blur-sm transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+        <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+        {/* Overlaid title */}
+        <div className="absolute bottom-0 left-0 right-0 p-5">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="flex items-center gap-2.5">
-              <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
+            <h1 className="text-white flex items-center gap-2.5 drop-shadow-lg">
+              <Tag className="h-5 w-5 text-accent-400" />
               {tagName}
             </h1>
             {tagDetail && (
-              <>
-                <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
-                  <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />
-                </button>
-                <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast">
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-                <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-status-error border border-border-subtle hover:border-status-error/50 transition-all duration-fast">
-                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
-                </button>
-              </>
+              <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-white/50 hover:text-red-400")}>
+                <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />
+              </button>
             )}
           </div>
-
-          {/* Rating */}
-          {tagDetail && (
-            <div className="flex items-center gap-1 mt-2">
-              {[20, 40, 60, 80, 100].map((v) => (
-                <button key={v} onClick={() => handleSetRating(v)} className="p-0.5 transition-colors">
-                  <Star className={cn("h-4 w-4", tagDetail.rating != null && tagDetail.rating >= v ? "text-accent-500 fill-accent-500" : "text-text-disabled hover:text-accent-500/50")} />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Meta */}
-          {!loading && (
-            <div className="flex items-center gap-4 mt-2 flex-wrap text-sm text-text-muted">
-              <span className="flex items-center gap-1.5"><Film className="h-3.5 w-3.5" /> {total} scene{total !== 1 ? "s" : ""}</span>
-              {totalDuration > 0 && (
-                <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {durationFormatted}</span>
-              )}
-            </div>
-          )}
-
-          {/* Description */}
-          {tagDetail?.description && (
-            <p className="text-[0.78rem] text-text-muted mt-2 max-w-prose">{tagDetail.description}</p>
-          )}
-
-          {/* Aliases */}
-          {tagDetail?.aliases && (
-            <div className="text-[0.72rem] text-text-disabled mt-1">Aliases: {tagDetail.aliases}</div>
-          )}
-
-          {/* StashBox IDs */}
-          {tagDetail && (
-            <div className="mt-2">
-              <StashIdChips entityType="tag" entityId={tagDetail.id} compact />
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Actions + metadata row */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {tagDetail && (
+          <div className="flex items-center gap-1">
+            {[20, 40, 60, 80, 100].map((v) => (
+              <button key={v} onClick={() => handleSetRating(v)} className="p-0.5 transition-colors">
+                <Star className={cn("h-4 w-4", tagDetail.rating != null && tagDetail.rating >= v ? "text-accent-500 fill-accent-500" : "text-text-disabled hover:text-accent-500/50")} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="h-4 w-px bg-border-subtle" />
+
+        {!loading && (
+          <>
+            <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {total} scene{total !== 1 ? "s" : ""}</span>
+            {totalDuration > 0 && (
+              <>
+                <div className="h-4 w-px bg-border-subtle" />
+                <span className="flex items-center gap-1.5 text-sm text-text-muted"><Clock className="h-3.5 w-3.5" /> {durationFormatted}</span>
+              </>
+            )}
+          </>
+        )}
+
+        <div className="flex-1" />
+
+        {tagDetail && (
+          <>
+            <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast">
+              <Pencil className="h-3 w-3" /> Edit
+            </button>
+            <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-status-error border border-border-subtle hover:border-status-error/50 transition-all duration-fast">
+              {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Description, aliases, stash IDs */}
+      {(tagDetail?.description || tagDetail?.aliases) && (
+        <div className="space-y-1">
+          {tagDetail.description && <p className="text-[0.82rem] text-text-muted max-w-prose">{tagDetail.description}</p>}
+          {tagDetail.aliases && <p className="text-[0.72rem] text-text-disabled">Aliases: {tagDetail.aliases}</p>}
+        </div>
+      )}
+
+      {tagDetail && <StashIdChips entityType="tag" entityId={tagDetail.id} compact />}
 
       <div className="separator" />
 
