@@ -86,7 +86,30 @@ export function BulkScrape() {
   const [autoAccept, setAutoAccept] = useState(false);
   const [selectedScraperId, setSelectedScraperId] = useState<string>(""); // "" = seek all
   const abortRef = useRef(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function expandAll() {
+    if (tab === "performers") {
+      const allIds = perfRows.map((r) => r.performer.id);
+      setExpandedIds(new Set(allIds));
+    } else {
+      const allIds = sceneRows.map((r) => r.scene.id);
+      setExpandedIds(new Set(allIds));
+    }
+  }
+
+  function collapseAll() {
+    setExpandedIds(new Set());
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -344,17 +367,21 @@ export function BulkScrape() {
     }
   }
 
-  async function acceptPerformer(idx: number) {
+  async function acceptPerformer(idx: number, overrideImageUrl?: string) {
     const row = perfRows[idx];
     if (!row.result) return;
-    const allFields = Object.entries(row.result)
+    const fields = { ...row.result } as Record<string, unknown>;
+    if (overrideImageUrl) {
+      fields.imageUrl = overrideImageUrl;
+    }
+    const allFieldKeys = Object.entries(fields)
       .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
       .map(([k]) => k);
     try {
       await applyPerformerScrape(
         row.performer.id,
-        row.result as unknown as Record<string, unknown>,
-        allFields
+        fields,
+        allFieldKeys
       );
       setPerfRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
@@ -564,13 +591,23 @@ export function BulkScrape() {
       {/* Row list */}
       {totalCount > 0 && scrapersForTab.length > 0 && (
         <div className="space-y-1">
+          {/* Expand all / collapse all */}
+          <div className="flex items-center justify-end gap-2 px-1 mb-1">
+            <button
+              onClick={expandedIds.size > 0 ? collapseAll : expandAll}
+              className="text-[0.65rem] text-text-muted hover:text-text-primary transition-colors"
+            >
+              {expandedIds.size > 0 ? "Collapse all" : "Expand all"}
+            </button>
+          </div>
+
           {tab === "scenes"
             ? sceneRows.map((row, idx) => (
                 <SceneRowCard
                   key={row.scene.id}
                   row={row}
-                  expanded={expandedId === row.scene.id}
-                  onToggleExpand={() => setExpandedId(expandedId === row.scene.id ? null : row.scene.id)}
+                  expanded={expandedIds.has(row.scene.id)}
+                  onToggleExpand={() => toggleExpanded(row.scene.id)}
                   onAccept={() => void acceptScene(idx)}
                   onReject={() => void rejectScene(idx)}
                 />
@@ -579,9 +616,9 @@ export function BulkScrape() {
                 <PerformerRowCard
                   key={row.performer.id}
                   row={row}
-                  expanded={expandedId === row.performer.id}
-                  onToggleExpand={() => setExpandedId(expandedId === row.performer.id ? null : row.performer.id)}
-                  onAccept={() => void acceptPerformer(idx)}
+                  expanded={expandedIds.has(row.performer.id)}
+                  onToggleExpand={() => toggleExpanded(row.performer.id)}
+                  onAccept={(imageUrl) => void acceptPerformer(idx, imageUrl)}
                   onReject={() => rejectPerformer(idx)}
                 />
               ))}
@@ -721,9 +758,20 @@ function PerformerRowCard({
   row: PerformerRow;
   expanded: boolean;
   onToggleExpand: () => void;
-  onAccept: () => void;
+  onAccept: (imageUrl?: string) => void;
   onReject: () => void;
 }) {
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // All available images: imageUrls array + imageUrl single
+  const allImages = row.result
+    ? [...new Set([
+        ...(row.result.imageUrl ? [row.result.imageUrl] : []),
+        ...(row.result.imageUrls ?? []),
+      ].filter((u) => u.startsWith("http") || u.startsWith("data:image/")))]
+    : [];
+
+  const effectiveImageUrl = selectedImageUrl ?? allImages[0] ?? null;
   return (
     <div>
       <div
@@ -772,7 +820,7 @@ function PerformerRowCard({
           {row.status === "found" && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                onClick={(e) => { e.stopPropagation(); onAccept(effectiveImageUrl ?? undefined); }}
                 className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors"
               >
                 <Check className="h-2.5 w-2.5" />
@@ -805,27 +853,66 @@ function PerformerRowCard({
       {/* Expanded performer detail */}
       {expanded && row.result && (
         <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-[0.8rem]">
-            {row.result.name && <MetaRow label="Name" value={row.result.name} />}
-            {row.result.gender && <MetaRow label="Gender" value={row.result.gender} />}
-            {row.result.birthdate && <MetaRow label="Birthdate" value={row.result.birthdate} />}
-            {row.result.country && <MetaRow label="Country" value={row.result.country} />}
-            {row.result.ethnicity && <MetaRow label="Ethnicity" value={row.result.ethnicity} />}
-            {row.result.height && <MetaRow label="Height" value={row.result.height} />}
-            {row.result.weight && <MetaRow label="Weight" value={String(row.result.weight)} />}
-            {row.result.hairColor && <MetaRow label="Hair" value={row.result.hairColor} />}
-            {row.result.eyeColor && <MetaRow label="Eyes" value={row.result.eyeColor} />}
-            {row.result.measurements && <MetaRow label="Measurements" value={row.result.measurements} />}
-            {row.result.aliases && <MetaRow label="Aliases" value={row.result.aliases} />}
-            {row.result.tattoos && <MetaRow label="Tattoos" value={row.result.tattoos} />}
-            {row.result.piercings && <MetaRow label="Piercings" value={row.result.piercings} />}
-            {row.result.tagNames.length > 0 && (
-              <MetaRow label="Tags" value={row.result.tagNames.join(", ")} />
+          <div className="flex gap-4">
+            {/* Image selection */}
+            {allImages.length > 0 && (
+              <div className="flex-shrink-0 space-y-2">
+                {/* Selected/primary image */}
+                <div className="w-24 h-32 rounded-[3px] overflow-hidden bg-surface-3 border border-border-subtle">
+                  {effectiveImageUrl && (
+                    <img src={effectiveImageUrl} alt="" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                {/* Thumbnails for selection (only if multiple) */}
+                {allImages.length > 1 && (
+                  <div className="flex gap-1 flex-wrap max-w-[120px]">
+                    {allImages.slice(0, 8).map((url, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => { e.stopPropagation(); setSelectedImageUrl(url); }}
+                        className={cn(
+                          "w-7 h-9 rounded-[2px] overflow-hidden bg-surface-3 transition-all duration-fast flex-shrink-0",
+                          (selectedImageUrl ?? allImages[0]) === url
+                            ? "border-2 border-border-accent shadow-[var(--shadow-glow-accent)]"
+                            : "border border-border-subtle hover:border-text-muted opacity-70 hover:opacity-100"
+                        )}
+                      >
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                    {allImages.length > 8 && (
+                      <span className="text-[0.55rem] text-text-disabled self-center">+{allImages.length - 8}</span>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
+
+            {/* Metadata fields */}
+            <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-[0.8rem]">
+                {row.result.name && <MetaRow label="Name" value={row.result.name} />}
+                {row.result.gender && <MetaRow label="Gender" value={row.result.gender} />}
+                {row.result.birthdate && <MetaRow label="Birthdate" value={row.result.birthdate} />}
+                {row.result.country && <MetaRow label="Country" value={row.result.country} />}
+                {row.result.ethnicity && <MetaRow label="Ethnicity" value={row.result.ethnicity} />}
+                {row.result.height && <MetaRow label="Height" value={row.result.height} />}
+                {row.result.weight && <MetaRow label="Weight" value={String(row.result.weight)} />}
+                {row.result.hairColor && <MetaRow label="Hair" value={row.result.hairColor} />}
+                {row.result.eyeColor && <MetaRow label="Eyes" value={row.result.eyeColor} />}
+                {row.result.measurements && <MetaRow label="Measurements" value={row.result.measurements} />}
+                {row.result.aliases && <MetaRow label="Aliases" value={row.result.aliases} />}
+                {row.result.tattoos && <MetaRow label="Tattoos" value={row.result.tattoos} />}
+                {row.result.piercings && <MetaRow label="Piercings" value={row.result.piercings} />}
+                {row.result.tagNames.length > 0 && (
+                  <MetaRow label="Tags" value={row.result.tagNames.join(", ")} />
+                )}
+              </div>
+              {row.result.details && (
+                <p className="text-[0.72rem] text-text-muted mt-2 line-clamp-3">{row.result.details}</p>
+              )}
+            </div>
           </div>
-          {row.result.details && (
-            <p className="text-[0.72rem] text-text-muted mt-2 line-clamp-3">{row.result.details}</p>
-          )}
         </div>
       )}
 
