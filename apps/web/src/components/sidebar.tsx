@@ -19,6 +19,8 @@ import { usePathname } from "next/navigation";
 import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
 import { cn } from "@obscura/ui/lib/utils";
 import { Logo, LogoMark } from "./logo";
+import { ChangelogDialog } from "./changelog-dialog";
+import { APP_VERSION } from "../lib/version";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "layout-dashboard": LayoutDashboard,
@@ -127,16 +129,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom status cluster */}
+      {/* Bottom version indicator */}
       <div className="border-t border-border-subtle px-3 py-3">
-        <div className="flex items-center gap-2">
-          <span className="led led-sm led-idle" />
-          {!collapsed && (
-            <span className="text-mono-sm text-text-disabled">
-              Workers idle
-            </span>
-          )}
-        </div>
+        <ChangelogDialog version={APP_VERSION}>
+          <div className="flex items-center gap-2 group">
+            <span className="led led-sm led-idle" />
+            {!collapsed && (
+              <span className="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
+                v{APP_VERSION}
+              </span>
+            )}
+          </div>
+        </ChangelogDialog>
       </div>
     </aside>
   );

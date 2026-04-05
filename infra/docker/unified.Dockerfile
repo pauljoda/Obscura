@@ -37,7 +37,8 @@ RUN pnpm turbo run build
 RUN mkdir -p /web-standalone && \
     cp -r apps/web/.next/standalone/apps/web /web-standalone/web && \
     cp -r apps/web/.next/static /web-standalone/web/.next/static && \
-    cp -r apps/web/public /web-standalone/web/public
+    cp -r apps/web/public /web-standalone/web/public && \
+    cp CHANGELOG.md /web-standalone/web/CHANGELOG.md
 
 # ── Stage 3: Unified production image ────────────────────────────
 FROM node:22-alpine AS runner
