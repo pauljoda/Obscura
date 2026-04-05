@@ -31,7 +31,7 @@ export interface MediaCardProps {
   codec?: string;
   fileSize?: string;
   studio?: string;
-  performers?: string[];
+  performers?: (string | { name: string; imagePath?: string | null })[];
   tags?: string[];
   tagColors?: Record<string, string>;
   rating?: number;
@@ -322,8 +322,20 @@ export function MediaCard({
               <span className="text-text-disabled text-[0.6rem]">/</span>
             ) : null}
             {performers && performers.length > 0 && (
-              <span className="text-[0.7rem] truncate">
-                {performers.slice(0, 2).join(", ")}
+              <span className="inline-flex items-center gap-1 text-[0.7rem] truncate">
+                {performers.slice(0, 2).map((p, i) => {
+                  const name = typeof p === "string" ? p : p.name;
+                  const imgPath = typeof p === "string" ? null : p.imagePath;
+                  return (
+                    <span key={i} className="inline-flex items-center gap-1">
+                      {i > 0 && <span className="text-text-disabled">,</span>}
+                      {imgPath && (
+                        <img src={imgPath} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                      )}
+                      <span>{name}</span>
+                    </span>
+                  );
+                })}
                 {performers.length > 2 && (
                   <span className="text-text-disabled">
                     {" "}+{performers.length - 2}

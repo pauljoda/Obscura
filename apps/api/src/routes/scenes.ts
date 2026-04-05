@@ -191,6 +191,7 @@ export async function scenesRoutes(app: FastifyInstance) {
               sceneId: scenePerformers.sceneId,
               performerId: performers.id,
               performerName: performers.name,
+              performerImagePath: performers.imagePath,
             })
             .from(scenePerformers)
             .innerJoin(performers, eq(scenePerformers.performerId, performers.id))
@@ -240,7 +241,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       studioId: scene.studioId,
       performers: perfJoins
         .filter((p) => p.sceneId === scene.id)
-        .map((p) => ({ id: p.performerId, name: p.performerName })),
+        .map((p) => ({ id: p.performerId, name: p.performerName, imagePath: p.performerImagePath })),
       tags: tagJoins
         .filter((t) => t.sceneId === scene.id)
         .map((t) => ({ id: t.tagId, name: t.tagName })),
@@ -357,6 +358,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         name: sp.performer.name,
         gender: sp.performer.gender,
         imageUrl: sp.performer.imageUrl,
+        imagePath: sp.performer.imagePath,
         favorite: sp.performer.favorite,
       })),
       tags: scene.sceneTags.map((st) => ({

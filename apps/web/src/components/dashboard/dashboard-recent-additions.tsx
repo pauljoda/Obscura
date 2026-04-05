@@ -61,7 +61,7 @@ function SceneIngestTile({
           resolution={scene.resolution ?? undefined}
           codec={scene.codec ?? undefined}
           fileSize={scene.fileSizeFormatted ?? undefined}
-          performers={scene.performers.map((p) => p.name)}
+          performers={scene.performers.map((p) => ({ name: p.name, imagePath: toApiUrl(p.imagePath) ?? undefined }))}
           tags={scene.tags.map((t) => t.name)}
           tagColors={SCENE_TAG_COLORS}
           views={scene.playCount}

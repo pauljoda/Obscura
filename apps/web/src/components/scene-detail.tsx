@@ -390,35 +390,42 @@ export function SceneDetail({ id }: { id: string }) {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {scene.performers.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/performers/${p.id}`}
-                      className="surface-card-sharp flex items-center gap-3 p-3 hover:border-border-accent transition-colors"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xs bg-surface-3 text-sm font-mono font-medium text-text-muted border border-border-subtle">
-                        {p.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-text-primary">
-                          {p.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {p.gender && (
-                            <span className="text-xs text-text-disabled capitalize">
-                              {p.gender}
-                            </span>
-                          )}
-                          {p.favorite && (
-                            <Star className="h-3 w-3 fill-accent-500 text-accent-500" />
+                  {scene.performers.map((p) => {
+                    const imgUrl = toApiUrl(p.imagePath);
+                    const initials = p.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+                    return (
+                      <Link
+                        key={p.id}
+                        href={`/performers/${p.id}`}
+                        className="surface-card-sharp flex items-center gap-3 p-2.5 pr-4 hover:border-border-accent transition-colors"
+                      >
+                        <div className="flex-shrink-0 h-12 w-9 rounded overflow-hidden bg-surface-3 border border-border-subtle">
+                          {imgUrl ? (
+                            <img src={imgUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[0.6rem] font-mono font-medium text-text-muted">
+                              {initials}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                        <div>
+                          <p className="text-sm font-medium text-text-primary">
+                            {p.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {p.gender && (
+                              <span className="text-xs text-text-disabled capitalize">
+                                {p.gender}
+                              </span>
+                            )}
+                            {p.favorite && (
+                              <Star className="h-3 w-3 fill-accent-500 text-accent-500" />
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </section>

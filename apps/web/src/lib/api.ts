@@ -62,7 +62,7 @@ export interface SceneListItem {
   playCount: number;
   orgasmCount: number;
   studioId: string | null;
-  performers: { id: string; name: string; gender?: string | null; favorite?: boolean }[];
+  performers: { id: string; name: string; gender?: string | null; imagePath?: string | null; favorite?: boolean }[];
   tags: { id: string; name: string }[];
   createdAt: string;
 }

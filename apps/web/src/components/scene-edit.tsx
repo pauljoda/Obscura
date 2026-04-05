@@ -895,15 +895,21 @@ export function SceneEdit({
                 <span className="text-sm text-text-disabled">--</span>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {scene.performers.map((p) => (
-                    <Link
-                      key={p.id}
-                      href={`/performers/${p.id}`}
-                      className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
-                    >
-                      {p.name}
-                    </Link>
-                  ))}
+                  {scene.performers.map((p) => {
+                    const imgUrl = toApiUrl(p.imagePath);
+                    return (
+                      <Link
+                        key={p.id}
+                        href={`/performers/${p.id}`}
+                        className="inline-flex items-center gap-1.5 tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
+                      >
+                        {imgUrl ? (
+                          <img src={imgUrl} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                        ) : null}
+                        {p.name}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </MetadataRow>

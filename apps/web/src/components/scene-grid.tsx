@@ -77,7 +77,7 @@ export function SceneGrid({ scenes, viewMode, loading }: SceneGridProps) {
                 ? undefined
                 : undefined
             }
-            performers={scene.performers.map((p) => p.name)}
+            performers={scene.performers.map((p) => ({ name: p.name, imagePath: toApiUrl(p.imagePath) ?? undefined }))}
             tags={scene.tags.map((t) => t.name)}
             tagColors={SCENE_TAG_COLORS}
             views={scene.playCount}
@@ -141,8 +141,18 @@ function SceneListItem({
           </div>
           <div className="flex items-center gap-2 text-[0.7rem] text-text-muted">
             {scene.performers.length > 0 && (
-              <span className="truncate">
-                {scene.performers.map((p) => p.name).join(", ")}
+              <span className="inline-flex items-center gap-1.5 truncate">
+                {scene.performers.slice(0, 3).map((p) => (
+                  <span key={p.id} className="inline-flex items-center gap-1">
+                    {p.imagePath && (
+                      <img src={toApiUrl(p.imagePath)!} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                    )}
+                    <span>{p.name}</span>
+                  </span>
+                ))}
+                {scene.performers.length > 3 && (
+                  <span className="text-text-disabled">+{scene.performers.length - 3}</span>
+                )}
               </span>
             )}
           </div>
