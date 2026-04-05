@@ -512,7 +512,7 @@ export const supportedImageExtensions = new Set([
 
 /** Video/animated formats that can appear as gallery items (animated images, short clips). */
 export const supportedAnimatedExtensions = new Set([
-  ".webm", ".mp4", ".mkv", ".mov",
+  ".webm", ".mp4", ".m4v", ".mkv", ".mov", ".avi", ".wmv", ".flv",
 ]);
 
 /** All extensions eligible for gallery discovery (static images + animated). */

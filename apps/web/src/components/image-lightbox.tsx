@@ -20,13 +20,14 @@ import { ImageLightboxFilmstrip } from "./image-lightbox-filmstrip";
 import { ImageLightboxInfo } from "./image-lightbox-info";
 import type { ImageListItemDto, GalleryChapterDto } from "@obscura/contracts";
 
-const VIDEO_FORMATS = new Set(["webm", "mp4", "mkv", "mov", "h264", "hevc", "vp8", "vp9", "av1", "matroska"]);
+const VIDEO_FORMATS = new Set(["webm", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "flv", "h264", "hevc", "vp8", "vp9", "av1", "matroska"]);
+const VIDEO_EXTENSIONS = new Set(["webm", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "flv"]);
 
 function isVideoMedia(image: ImageListItemDto): boolean {
   if (image.format && VIDEO_FORMATS.has(image.format.toLowerCase())) return true;
   // Fallback: check title for video extension
   const ext = image.title?.split(".").pop()?.toLowerCase() ?? "";
-  return new Set(["webm", "mp4", "mkv", "mov"]).has(ext);
+  return VIDEO_EXTENSIONS.has(ext);
 }
 
 interface ImageLightboxProps {

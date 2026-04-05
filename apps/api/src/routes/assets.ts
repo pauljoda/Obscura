@@ -57,6 +57,7 @@ function mimeForFile(extOrFileName: string) {
     case ".tif":
       return "image/tiff";
     case ".mp4":
+    case ".m4v":
       return "video/mp4";
     case ".webm":
       return "video/webm";
@@ -64,6 +65,12 @@ function mimeForFile(extOrFileName: string) {
       return "video/x-matroska";
     case ".mov":
       return "video/quicktime";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".wmv":
+      return "video/x-ms-wmv";
+    case ".flv":
+      return "video/x-flv";
     case ".vtt":
       return "text/vtt";
     default:
