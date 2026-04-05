@@ -18,10 +18,17 @@ interface GalleryCardProps {
 
 export function GalleryCard({ gallery }: GalleryCardProps) {
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(-1);
+  const [videoFailed, setVideoFailed] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const coverUrl = toApiUrl(gallery.coverImagePath);
   const previews = gallery.previewImagePaths?.map(toApiUrl).filter(Boolean) ?? [];
+
+  // Derive animated preview URL from the first preview thumb path
+  // /assets/images/:id/thumb → /assets/images/:id/preview
+  const previewVideoUrl = previews[0]
+    ? previews[0].replace(/\/thumb$/, "/preview")
+    : null;
 
   const startScrub = useCallback(() => {
     if (previews.length <= 1) return;
@@ -50,9 +57,20 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
       onPointerEnter={startScrub}
       onPointerLeave={stopScrub}
     >
-      {/* Cover image */}
+      {/* Cover image / video */}
       <div className="relative aspect-[4/3] bg-surface-2 overflow-hidden">
-        {displayUrl ? (
+        {/* Try animated video preview first, fall back to static image */}
+        {previewVideoUrl && !videoFailed ? (
+          <video
+            src={previewVideoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            onError={() => setVideoFailed(true)}
+            className="h-full w-full object-cover"
+          />
+        ) : displayUrl ? (
           <img
             src={displayUrl}
             alt={gallery.title}
@@ -78,7 +96,7 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
         </div>
 
         {/* Scrub progress bar */}
-        {currentPreviewIndex >= 0 && previews.length > 1 && (
+        {currentPreviewIndex >= 0 && previews.length > 1 && videoFailed && (
           <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 px-1 pb-0.5">
             {previews.map((_, i) => (
               <div

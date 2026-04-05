@@ -238,6 +238,21 @@ export async function assetsRoutes(app: FastifyInstance) {
     return { error: "Image thumbnail not found" };
   });
 
+  // ─── Image animated preview: /assets/images/:id/preview ──────────
+  app.get("/assets/images/:id/preview", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const previewPath = path.join(getGeneratedImageDir(id), "preview.mp4");
+    if (existsSync(previewPath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", "video/mp4");
+      return reply.send(createReadStream(previewPath));
+    }
+
+    reply.code(404);
+    return { error: "Image preview not found" };
+  });
+
   // ─── Image full-size: /assets/images/:id/full ────────────────────
   app.get("/assets/images/:id/full", async (request, reply) => {
     const { id } = request.params as { id: string };

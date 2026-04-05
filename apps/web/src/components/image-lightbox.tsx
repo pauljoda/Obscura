@@ -206,14 +206,6 @@ export function ImageLightbox({
           <span className="text-white/50 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">{currentImage.title}</span>
         </div>
         <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-          {/* Close — always visible, especially on mobile */}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-sm text-white/80 hover:text-white bg-white/10 sm:bg-transparent transition-colors order-last sm:order-none"
-            title="Close (Esc)"
-          >
-            <X className="h-5 w-5 sm:h-4 sm:w-4" />
-          </button>
           {/* Slideshow toggle */}
           <button
             onClick={() => setSlideshowActive((v) => !v)}
@@ -305,6 +297,14 @@ export function ImageLightbox({
             <Maximize className="h-4 w-4" />
           </button>
 
+          {/* Close — always last, prominent on mobile */}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-sm text-white/80 hover:text-white bg-white/10 sm:bg-transparent transition-colors"
+            title="Close (Esc)"
+          >
+            <X className="h-5 w-5 sm:h-4 sm:w-4" />
+          </button>
         </div>
       </div>
 

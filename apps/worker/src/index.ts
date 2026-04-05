@@ -1164,6 +1164,27 @@ async function processImageThumbnail(job: Job) {
 
     await runProcess("ffmpeg", ffmpegArgs);
 
+    // For video/animated formats, also generate a small looping preview
+    if (isVideo) {
+      const previewPath = path.join(outputDir, "preview.mp4");
+      try {
+        await runProcess("ffmpeg", [
+          "-hide_banner", "-loglevel", "error", "-y",
+          "-i", inputPath,
+          "-vf", "scale=320:-2",
+          "-an",
+          "-c:v", "libx264",
+          "-preset", "veryfast",
+          "-crf", "28",
+          "-movflags", "+faststart",
+          "-t", "8",
+          previewPath,
+        ]);
+      } catch {
+        // Preview generation is non-fatal
+      }
+    }
+
     // Probe for dimensions and format
     const probe = await probeImageFile(inputPath);
 
