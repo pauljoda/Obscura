@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { X, Star, Pencil, Save, XCircle, CheckCircle2, Plus } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { X, Star, Pencil, Save, XCircle, CheckCircle2, Search } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { updateImage } from "../lib/api";
+import { updateImage, type TagItem } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
 
 interface ImageLightboxInfoProps {
@@ -11,6 +11,7 @@ interface ImageLightboxInfoProps {
   open: boolean;
   onClose: () => void;
   onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
+  availableTags?: TagItem[];
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -21,12 +22,13 @@ function formatFileSize(bytes: number | null): string {
   return `${kb.toFixed(0)} KB`;
 }
 
-export function ImageLightboxInfo({ image, open, onClose, onImageUpdate }: ImageLightboxInfoProps) {
+export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availableTags = [] }: ImageLightboxInfoProps) {
   const [editing, setEditing] = useState(false);
   const [editRating, setEditRating] = useState<number | null>(image.rating);
   const [editOrganized, setEditOrganized] = useState(image.organized);
   const [editTags, setEditTags] = useState(image.tags.map((t) => t.name));
-  const [newTag, setNewTag] = useState("");
+  const [tagSearch, setTagSearch] = useState("");
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Reset edit state when image changes
@@ -34,7 +36,8 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate }: Image
     setEditRating(image.rating);
     setEditOrganized(image.organized);
     setEditTags(image.tags.map((t) => t.name));
-    setNewTag("");
+    setTagSearch("");
+    setTagPickerOpen(false);
     setEditing(true);
   }, [image]);
 
@@ -72,17 +75,25 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate }: Image
     }
   }, [editing, image.id, image.rating, onImageUpdate]);
 
-  const addTag = useCallback(() => {
-    const trimmed = newTag.trim();
+  const addTag = useCallback((name: string) => {
+    const trimmed = name.trim();
     if (trimmed && !editTags.includes(trimmed)) {
       setEditTags((prev) => [...prev, trimmed]);
     }
-    setNewTag("");
-  }, [newTag, editTags]);
+    setTagSearch("");
+    setTagPickerOpen(false);
+  }, [editTags]);
 
   const removeTag = useCallback((index: number) => {
     setEditTags((prev) => prev.filter((_, i) => i !== index));
   }, []);
+
+  const filteredAvailableTags = useMemo(() => {
+    const query = tagSearch.toLowerCase();
+    return availableTags
+      .filter((t) => !editTags.includes(t.name))
+      .filter((t) => !query || t.name.toLowerCase().includes(query));
+  }, [availableTags, editTags, tagSearch]);
 
   const displayRating = editing ? editRating : image.rating;
   const displayTags = editing ? editTags.map((name, i) => ({ id: `edit-${i}`, name })) : image.tags;
@@ -192,26 +203,57 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate }: Image
             )}
           </div>
           {editing && (
-            <div className="flex items-center gap-1 mt-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-                placeholder="Add tag..."
-                className="flex-1 bg-surface-1 border border-border-subtle rounded-sm px-2 py-1 text-[0.72rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-500"
-              />
-              <button
-                onClick={addTag}
-                className="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:text-text-accent hover:bg-surface-3 transition-colors"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
+            <div className="relative mt-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-text-disabled pointer-events-none" />
+                <input
+                  type="text"
+                  value={tagSearch}
+                  onChange={(e) => {
+                    setTagSearch(e.target.value);
+                    setTagPickerOpen(true);
+                  }}
+                  onFocus={() => setTagPickerOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tagSearch.trim()) {
+                      e.preventDefault();
+                      addTag(tagSearch);
+                    }
+                    if (e.key === "Escape") {
+                      setTagPickerOpen(false);
+                    }
+                  }}
+                  placeholder="Search or add tag..."
+                  className="w-full bg-surface-1 border border-border-subtle rounded-sm pl-7 pr-2 py-1.5 text-[0.72rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-500"
+                />
+              </div>
+              {tagPickerOpen && (filteredAvailableTags.length > 0 || tagSearch.trim()) && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-3 border border-border-subtle rounded-sm shadow-lg max-h-40 overflow-y-auto">
+                  {filteredAvailableTags.slice(0, 20).map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => addTag(tag.name)}
+                      className="flex items-center justify-between w-full px-2.5 py-1.5 text-[0.72rem] text-left text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                    >
+                      <span>{tag.name}</span>
+                      <span className="text-text-disabled text-[0.6rem]">
+                        {tag.sceneCount + (tag.imageCount ?? 0)}
+                      </span>
+                    </button>
+                  ))}
+                  {tagSearch.trim() && !availableTags.some((t) => t.name.toLowerCase() === tagSearch.trim().toLowerCase()) && (
+                    <button
+                      onClick={() => addTag(tagSearch)}
+                      className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-[0.72rem] text-left text-text-accent hover:bg-surface-2 transition-colors border-t border-border-subtle"
+                    >
+                      Create &ldquo;{tagSearch.trim()}&rdquo;
+                    </button>
+                  )}
+                  {filteredAvailableTags.length === 0 && !tagSearch.trim() && (
+                    <div className="px-2.5 py-2 text-[0.68rem] text-text-disabled">No more tags available</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import {
   Search,
   Hash,
   Film,
+  Image,
   TrendingUp,
   ArrowUpDown,
   ChevronDown,
@@ -29,7 +30,7 @@ const defaultSortDir: Record<SortKey, SortDir> = {
 };
 
 const sortOptions: { value: SortKey; label: string }[] = [
-  { value: "scenes", label: "Scene Count" },
+  { value: "scenes", label: "Usage Count" },
   { value: "name", label: "Name A-Z" },
 ];
 
@@ -63,7 +64,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         const cmp = a.name.localeCompare(b.name);
         return sortDir === "asc" ? cmp : -cmp;
       }
-      const cmp = a.sceneCount - b.sceneCount;
+      const cmp = (a.sceneCount + (a.imageCount ?? 0)) - (b.sceneCount + (b.imageCount ?? 0));
       return sortDir === "asc" ? cmp : -cmp;
     });
     return copy;
@@ -75,10 +76,12 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
     return sorted.filter((t) => t.name.toLowerCase().includes(term));
   }, [sorted, search]);
 
-  const maxCount = tags.length > 0 ? Math.max(...tags.map((t) => t.sceneCount)) : 1;
+  const totalCount = (t: TagItem) => t.sceneCount + (t.imageCount ?? 0);
+  const maxCount = tags.length > 0 ? Math.max(...tags.map(totalCount)) : 1;
   const totalScenes = tags.reduce((sum, t) => sum + t.sceneCount, 0);
-  const avgPerTag = tags.length > 0 ? Math.round(totalScenes / tags.length) : 0;
-  const topTag = tags.length > 0 ? [...tags].sort((a, b) => b.sceneCount - a.sceneCount)[0] : null;
+  const totalImages = tags.reduce((sum, t) => sum + (t.imageCount ?? 0), 0);
+  const avgPerTag = tags.length > 0 ? Math.round((totalScenes + totalImages) / tags.length) : 0;
+  const topTag = tags.length > 0 ? [...tags].sort((a, b) => totalCount(b) - totalCount(a))[0] : null;
 
   const currentSort = sortOptions.find((s) => s.value === sortKey);
 
@@ -105,7 +108,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <StatCard icon={<Tag className="h-3.5 w-3.5" />} label="Total Tags" value={String(tags.length)} />
           <StatCard icon={<Film className="h-3.5 w-3.5" />} label="Tagged Scenes" value={String(totalScenes)} />
-          <StatCard icon={<Hash className="h-3.5 w-3.5" />} label="Avg / Tag" value={String(avgPerTag)} />
+          <StatCard icon={<Image className="h-3.5 w-3.5" />} label="Tagged Images" value={String(totalImages)} />
           <StatCard icon={<TrendingUp className="h-3.5 w-3.5" />} label="Top Tag" value={topTag ? topTag.name : "—"} accent />
         </div>
       )}
@@ -255,7 +258,8 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
           </h4>
           <div className="flex flex-wrap gap-2 justify-center">
             {filtered.map((tag) => {
-              const intensity = tag.sceneCount / maxCount;
+              const total = tag.sceneCount + (tag.imageCount ?? 0);
+              const intensity = total / maxCount;
               return (
                 <Link
                   key={tag.id}
@@ -271,7 +275,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
                   )}
                 >
                   {tag.name}
-                  <span className="ml-1.5 text-text-disabled text-xs">{tag.sceneCount}</span>
+                  <span className="ml-1.5 text-text-disabled text-xs">{total}</span>
                 </Link>
               );
             })}
@@ -289,7 +293,8 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
 }
 
 function TagCard({ tag, maxCount, gradientClass }: { tag: TagItem; maxCount: number; gradientClass: string }) {
-  const intensity = tag.sceneCount / maxCount;
+  const total = tag.sceneCount + (tag.imageCount ?? 0);
+  const intensity = total / maxCount;
 
   return (
     <Link href={`/tags/${encodeURIComponent(tag.name)}`}>
@@ -304,11 +309,19 @@ function TagCard({ tag, maxCount, gradientClass }: { tag: TagItem; maxCount: num
               style={{ width: `${Math.max(intensity * 100, 4)}%` }}
             />
           </div>
-          <div className="absolute top-2 right-2">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[0.65rem] font-mono text-text-secondary">
-              <Film className="h-2.5 w-2.5" />
-              {tag.sceneCount}
-            </span>
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {tag.sceneCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[0.65rem] font-mono text-text-secondary">
+                <Film className="h-2.5 w-2.5" />
+                {tag.sceneCount}
+              </span>
+            )}
+            {(tag.imageCount ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[0.65rem] font-mono text-text-secondary">
+                <Image className="h-2.5 w-2.5" />
+                {tag.imageCount}
+              </span>
+            )}
           </div>
         </div>
         <div className="px-3 py-2.5">
@@ -316,7 +329,10 @@ function TagCard({ tag, maxCount, gradientClass }: { tag: TagItem; maxCount: num
             {tag.name}
           </h3>
           <p className="text-[0.65rem] text-text-disabled mt-0.5">
-            {tag.sceneCount} scene{tag.sceneCount !== 1 ? "s" : ""}
+            {[
+              tag.sceneCount > 0 ? `${tag.sceneCount} scene${tag.sceneCount !== 1 ? "s" : ""}` : null,
+              (tag.imageCount ?? 0) > 0 ? `${tag.imageCount} image${tag.imageCount !== 1 ? "s" : ""}` : null,
+            ].filter(Boolean).join(" · ") || "unused"}
           </p>
         </div>
       </article>

@@ -9,14 +9,15 @@ import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
 import { GalleryCard } from "../gallery-card";
 import { GalleryListItem } from "../gallery-list-item";
-import { fetchGalleryImages, toApiUrl } from "../../lib/api";
+import { fetchGalleryImages, toApiUrl, type TagItem } from "../../lib/api";
 import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
 
 interface GalleryDetailClientProps {
   initialGallery: GalleryDetailDto;
+  availableTags?: TagItem[];
 }
 
-export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps) {
+export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDetailClientProps) {
   const [gallery, setGallery] = useState(initialGallery);
   const [images, setImages] = useState<ImageListItemDto[]>(initialGallery.images);
   const [imageTotal] = useState(initialGallery.imageTotal);
@@ -201,6 +202,7 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
           initialIndex={lightboxIndex}
           chapters={gallery.chapters}
           onClose={() => setLightboxOpen(false)}
+          availableTags={availableTags}
         />
       )}
     </div>

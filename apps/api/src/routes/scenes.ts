@@ -760,7 +760,23 @@ export async function scenesRoutes(app: FastifyInstance) {
       })
       .from(tags)
       .orderBy(desc(tags.sceneCount));
-    return { tags: rows };
+
+    // Count images per tag
+    const imageTagCounts = await db
+      .select({
+        tagId: schema.imageTags.tagId,
+        count: sql<number>`count(*)`,
+      })
+      .from(schema.imageTags)
+      .groupBy(schema.imageTags.tagId);
+    const imageCountMap = new Map(imageTagCounts.map((r) => [r.tagId, Number(r.count)]));
+
+    return {
+      tags: rows.map((tag) => ({
+        ...tag,
+        imageCount: imageCountMap.get(tag.id) ?? 0,
+      })),
+    };
   });
 
   // ─── POST /scenes/:id/thumbnail ──────────────────────────────

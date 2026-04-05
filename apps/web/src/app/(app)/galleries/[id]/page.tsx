@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { fetchGalleryDetail } from "../../../../lib/server-api";
+import { fetchGalleryDetail, fetchTags } from "../../../../lib/server-api";
 import { GalleryDetailClient } from "../../../../components/routes/gallery-detail-client";
 
 interface GalleryDetailPageProps {
@@ -9,7 +9,10 @@ interface GalleryDetailPageProps {
 
 export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
   const { id } = await params;
-  const gallery = await fetchGalleryDetail(id);
+  const [gallery, tagsData] = await Promise.all([
+    fetchGalleryDetail(id),
+    fetchTags(),
+  ]);
 
-  return <GalleryDetailClient initialGallery={gallery} />;
+  return <GalleryDetailClient initialGallery={gallery} availableTags={tagsData.tags} />;
 }

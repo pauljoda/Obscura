@@ -36,6 +36,7 @@ interface ImageLightboxProps {
   chapters?: GalleryChapterDto[];
   onClose: () => void;
   onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
+  availableTags?: import("../lib/api").TagItem[];
 }
 
 export function ImageLightbox({
@@ -44,6 +45,7 @@ export function ImageLightbox({
   chapters = [],
   onClose,
   onImageUpdate,
+  availableTags,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
@@ -406,6 +408,7 @@ export function ImageLightbox({
         open={showInfo}
         onClose={() => setShowInfo(false)}
         onImageUpdate={onImageUpdate}
+        availableTags={availableTags}
       />
     </div>
   );

@@ -124,6 +124,7 @@ export interface TagItem {
   id: string;
   name: string;
   sceneCount: number;
+  imageCount: number;
 }
 
 export interface PerformerDetail {

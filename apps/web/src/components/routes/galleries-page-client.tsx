@@ -238,6 +238,7 @@ export function GalleriesPageClient({
               images={flatImages}
               initialIndex={lightboxIndex}
               onClose={() => setLightboxOpen(false)}
+              availableTags={initialTags}
             />
           )}
         </>
