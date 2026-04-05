@@ -29,10 +29,10 @@
   --color-text-accent: #c79b5c;
   --color-text-accent-bright: #ddb477;
 
-  /* ── Phosphor / Digital Accent ── */
-  --color-phosphor-400: #33d6ff;
-  --color-phosphor-500: #00c3ff;
-  --color-phosphor-600: #0099cc;
+  /* ── Phosphor / Digital Accent (Silver/Platinum) ── */
+  --color-phosphor-400: #ffffff;
+  --color-phosphor-500: #e2e8f0;
+  --color-phosphor-600: #94a3b8;
 
   /* ── Brass / Accent Scale ── */
   --color-accent-950: #1a1408;
@@ -101,7 +101,7 @@
   --shadow-focus-accent: 0 0 0 2px rgba(199, 155, 92, 0.15);
   --shadow-glow-accent: 0 0 20px rgba(199, 155, 92, 0.08), 0 0 6px rgba(199, 155, 92, 0.12);
   --shadow-glow-accent-strong: 0 0 30px rgba(199, 155, 92, 0.15), 0 0 8px rgba(199, 155, 92, 0.2);
-  --shadow-glow-phosphor: 0 0 20px rgba(0, 195, 255, 0.1), 0 0 6px rgba(0, 195, 255, 0.15);
+  --shadow-glow-phosphor: 0 0 20px rgba(255, 255, 255, 0.1), 0 0 6px rgba(255, 255, 255, 0.15);
 
   /* ── Transitions ── */
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
@@ -474,7 +474,7 @@
 
   .text-glow-phosphor {
     color: var(--color-phosphor-400);
-    text-shadow: 0 0 12px rgba(0, 195, 255, 0.4), 0 0 2px rgba(0, 195, 255, 0.8);
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.4), 0 0 2px rgba(255, 255, 255, 0.8);
   }
 
   .text-label {
@@ -495,11 +495,12 @@
 
   /* ── Progress / Meter Bar ── */
   .meter-track {
-    height: 3px;
+    height: 4px;
     border-radius: var(--radius-full);
-    background: var(--color-surface-1);
-    box-shadow: var(--shadow-well);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     overflow: hidden;
+    backdrop-filter: blur(4px);
   }
 
   .meter-fill {
@@ -511,7 +512,7 @@
       var(--color-accent-500),
       var(--color-accent-400)
     );
-    box-shadow: 0 0 6px rgba(199, 155, 92, 0.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 6px rgba(199, 155, 92, 0.25);
     transition: width var(--duration-moderate) var(--ease-default);
   }
 
@@ -524,8 +525,72 @@
       var(--color-phosphor-500),
       var(--color-phosphor-400)
     );
-    box-shadow: 0 0 8px rgba(0, 195, 255, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.3);
     transition: width var(--duration-moderate) var(--ease-default);
+  }
+
+  /* Video player specific progress bar */
+  .video-progress-track {
+    position: relative;
+    height: 6px;
+    width: 100%;
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    transition: height var(--duration-fast) var(--ease-default);
+  }
+
+  .video-progress-track:hover,
+  .video-progress-track[data-dragging="true"] {
+    height: 8px;
+  }
+
+  .video-progress-buffered {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .video-progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: var(--radius-full);
+    background: linear-gradient(
+      90deg,
+      var(--color-accent-700),
+      var(--color-accent-500),
+      var(--color-accent-400)
+    );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 12px rgba(199, 155, 92, 0.5);
+    transition: width 100ms linear;
+  }
+
+  .video-progress-fill::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(50%, -50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent-200);
+    box-shadow: 0 0 10px rgba(199, 155, 92, 0.8), 0 2px 4px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-default), transform var(--duration-fast) var(--ease-default);
+  }
+
+  .video-progress-track:hover .video-progress-fill::after,
+  .video-progress-track[data-dragging="true"] .video-progress-fill::after {
+    opacity: 1;
+    transform: translate(50%, -50%) scale(1.2);
   }
 
   /* ── Focus Ring (brass glow) ── */

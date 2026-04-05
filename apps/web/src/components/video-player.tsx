@@ -98,8 +98,10 @@ export function VideoPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
   const playTrackedRef = useRef(false);
+  const isDraggingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(propDuration ?? 0);
   const [muted, setMuted] = useState(false);
@@ -594,24 +596,43 @@ export function VideoPlayer({
           showControls ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       >
-        <div className="mb-2 sm:mb-3 space-y-2">
+        <div className="mb-3 sm:mb-4 space-y-2">
           <div
-            className="relative h-2 sm:h-2.5 w-full cursor-pointer overflow-hidden rounded-sm bg-white/14"
-            onClick={(event) => {
+            className="video-progress-track group/track"
+            data-dragging={isDragging}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              isDraggingRef.current = true;
+              setIsDragging(true);
               const rect = event.currentTarget.getBoundingClientRect();
-              const nextPercent = (event.clientX - rect.left) / rect.width;
+              const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
               seekTo(nextPercent * duration);
             }}
+            onPointerMove={(event) => {
+              if (!isDraggingRef.current) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+              seekTo(nextPercent * duration);
+            }}
+            onPointerUp={(event) => {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+              isDraggingRef.current = false;
+              setIsDragging(false);
+            }}
+            onPointerCancel={(event) => {
+              isDraggingRef.current = false;
+              setIsDragging(false);
+            }}
           >
-            <div className="absolute inset-y-0 left-0 rounded-sm bg-white/15" style={{ width: `${bufferedProgress}%` }} />
-            <div className="absolute inset-y-0 left-0 rounded-sm meter-fill-phosphor" style={{ width: `${progress}%` }} />
+            <div className="video-progress-buffered" style={{ width: `${bufferedProgress}%` }} />
+            <div className="video-progress-fill" style={{ width: `${progress}%` }} />
             {markers.map((marker) => {
               const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0;
               return (
                 <button
                   key={marker.id}
                   type="button"
-                  className="absolute top-1/2 h-4 w-1.5 -translate-y-1/2 rounded-sm bg-accent-200/90 transition-colors hover:bg-white"
+                  className="absolute top-1/2 h-full w-1 -translate-y-1/2 bg-white/60 transition-all hover:bg-white hover:w-1.5 hover:scale-y-150 z-10"
                   style={{ left: `${markerPercent}%` }}
                   onClick={(event) => {
                     event.stopPropagation();
