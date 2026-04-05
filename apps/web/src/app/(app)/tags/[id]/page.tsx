@@ -153,16 +153,15 @@ export default function TagPage({ params }: TagPageProps) {
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden bg-surface-3 group">
-        <div className={imageUrl ? "aspect-[21/7]" : "aspect-[21/5]"}>
+        <div className={imageUrl ? "aspect-[21/9] sm:aspect-[21/7]" : "aspect-[21/5]"}>
           {imageUrl ? (
-            <img src={imageUrl} alt={tagName} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={tagName} className="w-full h-full object-contain p-4 sm:p-6" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-3 to-surface-2">
               <Tag className="h-14 w-14 text-text-disabled/15" />
             </div>
           )}
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         {/* Image actions (hover) */}
         {tagDetail && (
           <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -177,20 +176,19 @@ export default function TagPage({ params }: TagPageProps) {
           </div>
         )}
         <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
-        {/* Overlaid title */}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-white flex items-center gap-2.5 drop-shadow-lg">
-              <Tag className="h-5 w-5 text-accent-400" />
-              {tagName}
-            </h1>
-            {tagDetail && (
-              <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-white/50 hover:text-red-400")}>
-                <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />
-              </button>
-            )}
-          </div>
-        </div>
+      </div>
+
+      {/* Title + favorite (below banner, not overlaid) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="flex items-center gap-2.5">
+          <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
+          {tagName}
+        </h1>
+        {tagDetail && (
+          <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
+            <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />
+          </button>
+        )}
       </div>
 
       {/* Actions + metadata row */}

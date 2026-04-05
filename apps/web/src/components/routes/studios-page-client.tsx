@@ -113,7 +113,7 @@ function StudioCard({ studio }: { studio: StudioItem }) {
             <img
               src={imageUrl}
               alt={studio.name}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-normal"
+              className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-normal"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

@@ -159,17 +159,15 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden bg-surface-3 group">
-        <div className="aspect-[21/7]">
+        <div className="aspect-[21/9] sm:aspect-[21/7]">
           {imageUrl ? (
-            <img src={imageUrl} alt={studio.name} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={studio.name} className="w-full h-full object-contain p-4 sm:p-6" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-3 to-surface-2">
               <Building2 className="h-16 w-16 text-text-disabled/15" />
             </div>
           )}
         </div>
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         {/* Image actions (hover) */}
         <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-colors">
@@ -182,18 +180,17 @@ export default function StudioPage({ params }: StudioPageProps) {
           )}
         </div>
         <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
-        {/* Overlaid title */}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-white flex items-center gap-2.5 drop-shadow-lg">
-              <Building2 className="h-5 w-5 text-accent-400" />
-              {studio.name}
-            </h1>
-            <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", studio.favorite ? "text-red-400 hover:text-red-300" : "text-white/50 hover:text-red-400")}>
-              <Heart className={cn("h-4 w-4", studio.favorite && "fill-current")} />
-            </button>
-          </div>
-        </div>
+      </div>
+
+      {/* Title + favorite (below banner, not overlaid) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="flex items-center gap-2.5">
+          <Building2 className="h-5 w-5 text-text-accent" />
+          {studio.name}
+        </h1>
+        <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", studio.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
+          <Heart className={cn("h-4 w-4", studio.favorite && "fill-current")} />
+        </button>
       </div>
 
       {/* Actions + metadata row */}
