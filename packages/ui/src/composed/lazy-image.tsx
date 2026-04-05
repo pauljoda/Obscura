@@ -12,23 +12,28 @@ interface LazyImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>,
  * Image component that uses IntersectionObserver to preload images before
  * they enter the viewport, avoiding the browser's native `loading="lazy"`
  * behavior that pauses loads during active scrolling.
+ *
+ * Observes a wrapper div rather than the img itself so that the observer
+ * target always has dimensions (an img without src can collapse to 0×0).
  */
 export function LazyImage({
   src,
   rootMargin = "300px",
-  ...props
+  className,
+  style,
+  ...imgProps
 }: LazyImageProps) {
-  const ref = useRef<HTMLImageElement>(null);
-  const [activeSrc, setActiveSrc] = useState<string | undefined>(undefined);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el || !src) return;
+    const el = wrapperRef.current;
+    if (!el) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setActiveSrc(src);
+          setVisible(true);
           observer.disconnect();
         }
       },
@@ -37,14 +42,18 @@ export function LazyImage({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [src, rootMargin]);
+  }, [rootMargin]);
 
   return (
-    <img
-      ref={ref}
-      src={activeSrc}
-      decoding="async"
-      {...props}
-    />
+    <div ref={wrapperRef} className={className} style={style}>
+      {visible && src && (
+        <img
+          src={src}
+          decoding="async"
+          className="h-full w-full object-cover"
+          {...imgProps}
+        />
+      )}
+    </div>
   );
 }

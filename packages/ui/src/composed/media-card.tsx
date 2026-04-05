@@ -220,7 +220,7 @@ export function MediaCard({
             src={cardThumbnail || thumbnail}
             alt={title}
             className={cn(
-              "h-full w-full object-cover transition-transform duration-normal",
+              "h-full w-full transition-transform duration-normal",
               activeFrame ? "scale-[1.01] opacity-0" : "group-hover:scale-[1.03]"
             )}
           />
