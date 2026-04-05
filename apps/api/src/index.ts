@@ -9,6 +9,7 @@ import { settingsRoutes } from "./routes/settings";
 import { jobsRoutes } from "./routes/jobs";
 import { assetsRoutes } from "./routes/assets";
 import { scrapersRoutes } from "./routes/scrapers";
+import { stashboxRoutes } from "./routes/stashbox";
 import { galleriesRoutes } from "./routes/galleries";
 import { imagesRoutes } from "./routes/images";
 
@@ -44,6 +45,7 @@ await app.register(galleriesRoutes);
 await app.register(imagesRoutes);
 await app.register(streamRoutes);
 await app.register(scrapersRoutes);
+await app.register(stashboxRoutes);
 
 // ─── Start ────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 4000);
