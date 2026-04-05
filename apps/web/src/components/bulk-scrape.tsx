@@ -717,7 +717,7 @@ export function BulkScrape() {
               await updateStudio(studioRows[i].studio.id, data);
               // Download image from URL
               if (result.imageUrl) {
-                try { await uploadStudioImageFromUrl(studioRows[i].studio.id, result.imageUrl); } catch { /* non-fatal */ }
+                try { await uploadStudioImageFromUrl(studioRows[i].studio.id, result.imageUrl); } catch (e) { console.error("Studio image download failed:", e); }
               }
               if (endpointId && remoteId) await autoSaveStashId("studio", studioRows[i].studio.id, endpointId, remoteId);
               setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "accepted", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
@@ -747,7 +747,7 @@ export function BulkScrape() {
       await updateStudio(row.studio.id, data);
       // Download image from URL (stores locally)
       if (row.selectedFields.has("imageUrl") && row.result.imageUrl) {
-        try { await uploadStudioImageFromUrl(row.studio.id, row.result.imageUrl); } catch { /* non-fatal */ }
+        try { await uploadStudioImageFromUrl(row.studio.id, row.result.imageUrl); } catch (e) { console.error("Studio image download failed:", e); }
       }
       if (row.endpointId && row.remoteId) await autoSaveStashId("studio", row.studio.id, row.endpointId, row.remoteId);
       setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
@@ -776,18 +776,23 @@ export function BulkScrape() {
       try {
         const res = await withTimeout(lookupTagViaStashBox(ep.id, row.tag.name), SEEK_TIMEOUT_MS);
         if (res.tags && res.tags.length > 0) {
-          const exact = res.tags.find((t) => t.name.toLowerCase().trim() === tagLower);
-          const match = exact ?? res.tags[0];
-          return {
-            result: {
-              name: match.name,
-              description: match.description ?? null,
-              aliases: match.aliases?.join(", ") ?? null,
-            },
-            remoteId: match.id,
-            endpointId: ep.id,
-            matchedScraper: ep.name,
-          };
+          // Strict matching: only accept exact name match or alias match to avoid false positives
+          const match = res.tags.find((t) =>
+            t.name.toLowerCase().trim() === tagLower ||
+            t.aliases?.some((a) => a.toLowerCase().trim() === tagLower)
+          );
+          if (match) {
+            return {
+              result: {
+                name: match.name,
+                description: match.description ?? null,
+                aliases: match.aliases?.join(", ") ?? null,
+              },
+              remoteId: match.id,
+              endpointId: ep.id,
+              matchedScraper: ep.name,
+            };
+          }
         }
       } catch { /* next */ }
     }

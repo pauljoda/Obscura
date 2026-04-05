@@ -33,6 +33,7 @@ import {
   type PerformerDetail,
   type SceneListItem,
 } from "../../lib/api";
+import { StashIdChips } from "../stash-id-chips";
 
 interface PerformerPageClientProps {
   id: string;
@@ -407,6 +408,12 @@ export function PerformerPageClient({
               </p>
             </div>
           ) : null}
+
+          {/* StashBox IDs */}
+          <div className="surface-well p-4">
+            <div className="mb-2 text-kicker">StashBox IDs</div>
+            <StashIdChips entityType="performer" entityId={id} compact />
+          </div>
 
           <div className="separator" />
 

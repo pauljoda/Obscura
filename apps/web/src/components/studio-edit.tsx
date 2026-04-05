@@ -177,7 +177,12 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
       // Download image from URL if selected
       if (selectedFields.has("imageUrl") && scrapeResult.imageUrl) {
-        try { await uploadStudioImageFromUrl(id, scrapeResult.imageUrl); } catch { /* non-fatal */ }
+        try {
+          await uploadStudioImageFromUrl(id, scrapeResult.imageUrl);
+        } catch (imgErr) {
+          console.error("Studio image download failed:", imgErr);
+          setError(`Image download failed: ${imgErr instanceof Error ? imgErr.message : "Unknown error"}`);
+        }
       }
 
       const updated = await updateStudio(id, data);

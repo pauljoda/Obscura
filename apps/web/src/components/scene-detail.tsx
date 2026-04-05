@@ -42,6 +42,7 @@ import {
   type SceneDetail as SceneDetailType,
   type TagItem,
 } from "../lib/api";
+import { StashIdChips } from "./stash-id-chips";
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -525,6 +526,12 @@ export function SceneDetail({
                 label="Play Count"
                 value={String(scene.playCount)}
               />
+            </div>
+
+            {/* StashBox IDs */}
+            <div className="pt-2 border-t border-border-subtle">
+              <h4 className="text-kicker mb-2">StashBox IDs</h4>
+              <StashIdChips entityType="scene" entityId={scene.id} compact />
             </div>
           </div>
         </div>

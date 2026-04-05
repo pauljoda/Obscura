@@ -85,10 +85,13 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
     remoteId: string | null;
   } {
     if (!tags || tags.length === 0) return { result: null, remoteId: null };
-    // Prefer exact name match
+    // Strict matching: only accept exact name or alias match
     const lower = name.toLowerCase().trim();
-    const exact = tags.find((t) => t.name.toLowerCase().trim() === lower);
-    const match = exact ?? tags[0];
+    const match = tags.find((t) =>
+      t.name.toLowerCase().trim() === lower ||
+      t.aliases?.some((a) => a.toLowerCase().trim() === lower)
+    );
+    if (!match) return { result: null, remoteId: null };
     return {
       result: {
         name: match.name,
