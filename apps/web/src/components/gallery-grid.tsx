@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { Images } from "lucide-react";
+import { Images, Loader2 } from "lucide-react";
+import { cn } from "@obscura/ui/lib/utils";
 import { GalleryCard } from "./gallery-card";
 import { GalleryListItem } from "./gallery-list-item";
 import { GalleryBrowser } from "./gallery-browser";
@@ -13,9 +15,38 @@ interface GalleryGridProps {
   galleries: GalleryListItemDto[];
   viewMode: GalleryViewMode;
   loading?: boolean;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-export function GalleryGrid({ galleries, viewMode, loading }: GalleryGridProps) {
+export function GalleryGrid({
+  galleries,
+  viewMode,
+  loading,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
+}: GalleryGridProps) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // IntersectionObserver for auto-loading more galleries
+  useEffect(() => {
+    if (!hasMore || loadingMore || !onLoadMore || !sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: "400px" }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, onLoadMore]);
+
   if (loading) {
     return (
       <div className="surface-well flex items-center justify-center py-20">
@@ -43,39 +74,70 @@ export function GalleryGrid({ galleries, viewMode, loading }: GalleryGridProps) 
     );
   }
 
+  const loadMoreSentinel = (
+    <>
+      {/* Invisible sentinel that triggers loading when scrolled into view */}
+      {hasMore && <div ref={sentinelRef} className="h-1" />}
+      {loadingMore && (
+        <div className="flex justify-center py-6">
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading more galleries...
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   if (viewMode === "browser") {
-    return <GalleryBrowser galleries={galleries} />;
+    return (
+      <>
+        <GalleryBrowser galleries={galleries} />
+        {loadMoreSentinel}
+      </>
+    );
   }
 
   if (viewMode === "timeline") {
-    return <GalleryTimeline galleries={galleries} />;
+    return (
+      <>
+        <GalleryTimeline galleries={galleries} />
+        {loadMoreSentinel}
+      </>
+    );
   }
 
   if (viewMode === "list") {
     return (
-      <div className="space-y-1">
-        {galleries.map((gallery) => (
-          <Link key={gallery.id} href={`/galleries/${gallery.id}`}>
-            <GalleryListItem gallery={gallery} />
-          </Link>
-        ))}
-      </div>
+      <>
+        <div className="space-y-1">
+          {galleries.map((gallery) => (
+            <Link key={gallery.id} href={`/galleries/${gallery.id}`}>
+              <GalleryListItem gallery={gallery} />
+            </Link>
+          ))}
+        </div>
+        {loadMoreSentinel}
+      </>
     );
   }
 
   // Grid view (default)
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-      {galleries.map((gallery, index) => (
-        <Link
-          key={gallery.id}
-          href={`/galleries/${gallery.id}`}
-          style={{ animationDelay: `${index * 20}ms` }}
-          className="animate-vault-enter"
-        >
-          <GalleryCard gallery={gallery} />
-        </Link>
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+        {galleries.map((gallery, index) => (
+          <Link
+            key={gallery.id}
+            href={`/galleries/${gallery.id}`}
+            style={{ animationDelay: `${Math.min(index, 20) * 20}ms` }}
+            className="animate-vault-enter"
+          >
+            <GalleryCard gallery={gallery} />
+          </Link>
+        ))}
+      </div>
+      {loadMoreSentinel}
+    </>
   );
 }

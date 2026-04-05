@@ -50,31 +50,38 @@ export function ScenesPageClient({
   const [scenes, setScenes] = useState(initialScenes);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
+
+  const buildParams = useCallback(() => {
+    const tagFilters = activeFilters
+      .filter((filter) => filter.type === "tag")
+      .map((filter) => filter.value);
+    const performerFilters = activeFilters
+      .filter((filter) => filter.type === "performer")
+      .map((filter) => filter.value);
+    const resolutionFilter = activeFilters.find((filter) => filter.type === "resolution");
+    const studioFilter = activeFilters.find((filter) => filter.type === "studio");
+
+    return {
+      search: deferredSearchQuery || undefined,
+      sort: sortBy,
+      order: sortDir,
+      tag: tagFilters.length > 0 ? tagFilters : undefined,
+      performer: performerFilters.length > 0 ? performerFilters : undefined,
+      resolution: resolutionFilter?.value,
+      studio: studioFilter?.value,
+    };
+  }, [activeFilters, deferredSearchQuery, sortBy, sortDir]);
 
   const loadScenes = useCallback(async () => {
     setLoading(true);
 
     try {
-      const tagFilters = activeFilters
-        .filter((filter) => filter.type === "tag")
-        .map((filter) => filter.value);
-      const performerFilters = activeFilters
-        .filter((filter) => filter.type === "performer")
-        .map((filter) => filter.value);
-      const resolutionFilter = activeFilters.find((filter) => filter.type === "resolution");
-      const studioFilter = activeFilters.find((filter) => filter.type === "studio");
-
       const result = await fetchScenes({
-        search: deferredSearchQuery || undefined,
-        sort: sortBy,
-        order: sortDir,
-        tag: tagFilters.length > 0 ? tagFilters : undefined,
-        performer: performerFilters.length > 0 ? performerFilters : undefined,
-        resolution: resolutionFilter?.value,
-        studio: studioFilter?.value,
+        ...buildParams(),
         limit: 50,
       });
 
@@ -85,7 +92,26 @@ export function ScenesPageClient({
     } finally {
       setLoading(false);
     }
-  }, [activeFilters, deferredSearchQuery, sortBy, sortDir]);
+  }, [buildParams]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || scenes.length >= total) return;
+    setLoadingMore(true);
+
+    try {
+      const result = await fetchScenes({
+        ...buildParams(),
+        limit: 50,
+        offset: scenes.length,
+      });
+
+      setScenes((prev) => [...prev, ...result.scenes]);
+    } catch (error) {
+      console.error("Failed to load more scenes:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [buildParams, scenes.length, total, loadingMore]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -187,7 +213,14 @@ export function ScenesPageClient({
         onAddFilter={addFilter}
       />
 
-      <SceneGrid scenes={scenes} viewMode={viewMode} loading={loading} />
+      <SceneGrid
+        scenes={scenes}
+        viewMode={viewMode}
+        loading={loading}
+        hasMore={scenes.length < total}
+        loadingMore={loadingMore}
+        onLoadMore={loadMore}
+      />
     </div>
   );
 }

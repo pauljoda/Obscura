@@ -19,6 +19,8 @@ import {
 } from "../../lib/api";
 import type { GalleryListItemDto } from "@obscura/contracts";
 
+const PAGE_SIZE = 60;
+
 interface ActiveFilter {
   label: string;
   type: string;
@@ -46,28 +48,35 @@ export function GalleriesPageClient({
   const [galleries, setGalleries] = useState(initialGalleries);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
+
+  const buildParams = useCallback(() => {
+    const tagFilters = activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
+    const perfFilters = activeFilters.filter((f) => f.type === "performer").map((f) => f.value);
+    const studioFilter = activeFilters.find((f) => f.type === "studio")?.value;
+    const typeFilter = activeFilters.find((f) => f.type === "type")?.value;
+
+    return {
+      search: deferredSearchQuery || undefined,
+      sort: sortBy,
+      order: sortDir as "asc" | "desc",
+      tag: tagFilters.length > 0 ? tagFilters : undefined,
+      performer: perfFilters.length > 0 ? perfFilters : undefined,
+      studio: studioFilter,
+      type: typeFilter,
+    };
+  }, [deferredSearchQuery, sortBy, sortDir, activeFilters]);
 
   const loadGalleries = useCallback(async () => {
     setLoading(true);
 
     try {
-      const tagFilters = activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
-      const perfFilters = activeFilters.filter((f) => f.type === "performer").map((f) => f.value);
-      const studioFilter = activeFilters.find((f) => f.type === "studio")?.value;
-      const typeFilter = activeFilters.find((f) => f.type === "type")?.value;
-
       const result = await fetchGalleries({
-        search: deferredSearchQuery || undefined,
-        sort: sortBy,
-        order: sortDir,
-        tag: tagFilters.length > 0 ? tagFilters : undefined,
-        performer: perfFilters.length > 0 ? perfFilters : undefined,
-        studio: studioFilter,
-        type: typeFilter,
-        limit: viewMode === "browser" ? 2000 : 60,
+        ...buildParams(),
+        limit: viewMode === "browser" ? 2000 : PAGE_SIZE,
       });
 
       startTransition(() => {
@@ -79,7 +88,28 @@ export function GalleriesPageClient({
     } finally {
       setLoading(false);
     }
-  }, [deferredSearchQuery, sortBy, sortDir, activeFilters, viewMode]);
+  }, [buildParams, viewMode]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || galleries.length >= total) return;
+    setLoadingMore(true);
+
+    try {
+      const result = await fetchGalleries({
+        ...buildParams(),
+        limit: PAGE_SIZE,
+        offset: galleries.length,
+      });
+
+      startTransition(() => {
+        setGalleries((prev) => [...prev, ...result.galleries]);
+      });
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [buildParams, galleries.length, total, loadingMore]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -108,6 +138,8 @@ export function GalleriesPageClient({
       return [...prev, { label, type, value }];
     });
   };
+
+  const hasMore = galleries.length < total;
 
   return (
     <div className="space-y-4">
@@ -142,6 +174,9 @@ export function GalleriesPageClient({
         galleries={galleries}
         viewMode={viewMode}
         loading={loading}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={loadMore}
       />
     </div>
   );
