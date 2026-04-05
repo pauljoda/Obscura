@@ -15,6 +15,28 @@ import {
 
 const { scenes, galleries, images } = schema;
 
+const IMAGE_EXTENSIONS = ["jpg", "png", "svg", "webp"] as const;
+const CONTENT_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  png: "image/png",
+  svg: "image/svg+xml",
+  webp: "image/webp",
+};
+
+/** Serve an entity image from a directory, detecting format automatically. */
+async function serveEntityImage(dir: string, entityLabel: string, reply: import("fastify").FastifyReply) {
+  for (const ext of IMAGE_EXTENSIONS) {
+    const filePath = path.join(dir, `image.${ext}`);
+    if (existsSync(filePath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", CONTENT_TYPES[ext] ?? "application/octet-stream");
+      return reply.send(createReadStream(filePath));
+    }
+  }
+  reply.code(404);
+  return { error: `${entityLabel} image not found` };
+}
+
 const SIDECAR_MIME: Record<string, string> = {
   thumb: "image/jpeg",
   card: "image/jpeg",
@@ -165,49 +187,22 @@ export async function assetsRoutes(app: FastifyInstance) {
   // ─── Performer assets: /assets/performers/:id/:kind ─────────────
   app.get("/assets/performers/:id/:kind", async (request, reply) => {
     const { id, kind } = request.params as { id: string; kind: string };
-
-    if (kind !== "image") {
-      reply.code(404);
-      return { error: "Unknown asset kind" };
-    }
-
-    const imagePath = path.join(getGeneratedPerformerDir(id), "image.jpg");
-    if (existsSync(imagePath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(imagePath));
-    }
-
-    reply.code(404);
-    return { error: "Performer image not found" };
+    if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
+    return serveEntityImage(getGeneratedPerformerDir(id), "Performer", reply);
   });
 
   // ─── Studio assets: /assets/studios/:id/:kind ───────────────────
   app.get("/assets/studios/:id/:kind", async (request, reply) => {
     const { id, kind } = request.params as { id: string; kind: string };
     if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
-    const imagePath = path.join(getGeneratedStudioDir(id), "image.jpg");
-    if (existsSync(imagePath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(imagePath));
-    }
-    reply.code(404);
-    return { error: "Studio image not found" };
+    return serveEntityImage(getGeneratedStudioDir(id), "Studio", reply);
   });
 
   // ─── Tag assets: /assets/tags/:id/:kind ────────────────────────
   app.get("/assets/tags/:id/:kind", async (request, reply) => {
     const { id, kind } = request.params as { id: string; kind: string };
     if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
-    const imagePath = path.join(getGeneratedTagDir(id), "image.jpg");
-    if (existsSync(imagePath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(imagePath));
-    }
-    reply.code(404);
-    return { error: "Tag image not found" };
+    return serveEntityImage(getGeneratedTagDir(id), "Tag", reply);
   });
 
   // ─── Gallery cover: /assets/galleries/:id/cover ──────────────────

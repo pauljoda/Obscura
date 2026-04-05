@@ -880,18 +880,31 @@ export async function scenesRoutes(app: FastifyInstance) {
     if (!existing) { reply.code(404); return { error: "Studio not found" }; }
     try {
       let buffer: Buffer;
+      let contentType = "image/jpeg";
       if (imageUrl.startsWith("data:image/")) {
+        const match = imageUrl.match(/^data:(image\/\w+);/);
+        if (match) contentType = match[1];
         const base64Data = imageUrl.split(",")[1];
         if (!base64Data) { reply.code(400); return { error: "Invalid data URL" }; }
         buffer = Buffer.from(base64Data, "base64");
       } else {
         const res = await fetch(imageUrl);
         if (!res.ok) { reply.code(502); return { error: `Failed to fetch image: ${res.status}` }; }
+        contentType = res.headers.get("content-type") ?? "image/jpeg";
         buffer = Buffer.from(await res.arrayBuffer());
       }
+      // Detect format by content: SVG starts with < or <?xml
+      const head = buffer.subarray(0, 100).toString("utf8").trim();
+      if (head.startsWith("<") || head.startsWith("<?xml")) contentType = "image/svg+xml";
+      const ext = contentType.includes("svg") ? "svg" : contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
       const genDir = getGeneratedStudioDir(id);
       await mkdir(genDir, { recursive: true });
-      await writeFile(path.join(genDir, "image.jpg"), buffer);
+      // Remove old image files of any extension
+      for (const old of ["jpg", "png", "svg", "webp"]) {
+        const oldPath = path.join(genDir, `image.${old}`);
+        if (existsSync(oldPath)) try { await unlink(oldPath); } catch { /* ok */ }
+      }
+      await writeFile(path.join(genDir, `image.${ext}`), buffer);
       const assetUrl = `/assets/studios/${id}/image`;
       await db.update(studios).set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() }).where(eq(studios.id, id));
       return { ok: true, imagePath: assetUrl };
@@ -1049,18 +1062,29 @@ export async function scenesRoutes(app: FastifyInstance) {
     if (!existing) { reply.code(404); return { error: "Tag not found" }; }
     try {
       let buffer: Buffer;
+      let contentType = "image/jpeg";
       if (imageUrl.startsWith("data:image/")) {
+        const match = imageUrl.match(/^data:(image\/\w+);/);
+        if (match) contentType = match[1];
         const base64Data = imageUrl.split(",")[1];
         if (!base64Data) { reply.code(400); return { error: "Invalid data URL" }; }
         buffer = Buffer.from(base64Data, "base64");
       } else {
         const res = await fetch(imageUrl);
         if (!res.ok) { reply.code(502); return { error: `Failed to fetch image: ${res.status}` }; }
+        contentType = res.headers.get("content-type") ?? "image/jpeg";
         buffer = Buffer.from(await res.arrayBuffer());
       }
+      const head = buffer.subarray(0, 100).toString("utf8").trim();
+      if (head.startsWith("<") || head.startsWith("<?xml")) contentType = "image/svg+xml";
+      const ext = contentType.includes("svg") ? "svg" : contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
       const genDir = getGeneratedTagDir(id);
       await mkdir(genDir, { recursive: true });
-      await writeFile(path.join(genDir, "image.jpg"), buffer);
+      for (const old of ["jpg", "png", "svg", "webp"]) {
+        const oldPath = path.join(genDir, `image.${old}`);
+        if (existsSync(oldPath)) try { await unlink(oldPath); } catch { /* ok */ }
+      }
+      await writeFile(path.join(genDir, `image.${ext}`), buffer);
       const assetUrl = `/assets/tags/${id}/image`;
       await db.update(tags).set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() }).where(eq(tags.id, id));
       return { ok: true, imagePath: assetUrl };
