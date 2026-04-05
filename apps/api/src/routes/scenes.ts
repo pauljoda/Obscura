@@ -795,7 +795,7 @@ export async function scenesRoutes(app: FastifyInstance) {
     const assetUrl = `/assets/scenes/${id}/thumb-custom`;
     await db
       .update(scenes)
-      .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+      .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
       .where(eq(scenes.id, id));
 
     return { ok: true, thumbnailPath: assetUrl };
@@ -838,7 +838,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       const assetUrl = `/assets/scenes/${id}/thumb-custom`;
       await db
         .update(scenes)
-        .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+        .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
         .where(eq(scenes.id, id));
 
       return { ok: true, thumbnailPath: assetUrl };
@@ -900,7 +900,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       const assetUrl = `/assets/scenes/${id}/thumb-custom`;
       await db
         .update(scenes)
-        .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+        .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
         .where(eq(scenes.id, id));
 
       return { ok: true, thumbnailPath: assetUrl, seconds };
@@ -933,11 +933,12 @@ export async function scenesRoutes(app: FastifyInstance) {
       // non-fatal
     }
 
-    // Revert to the standard generated thumbnail URL
+    // Revert to the standard generated thumbnail/card URLs
     const defaultUrl = `/assets/scenes/${id}/thumb`;
+    const defaultCardUrl = `/assets/scenes/${id}/card`;
     await db
       .update(scenes)
-      .set({ thumbnailPath: defaultUrl, updatedAt: new Date() })
+      .set({ thumbnailPath: defaultUrl, cardThumbnailPath: defaultCardUrl, updatedAt: new Date() })
       .where(eq(scenes.id, id));
 
     return { ok: true, thumbnailPath: defaultUrl };

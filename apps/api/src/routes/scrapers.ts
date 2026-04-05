@@ -1021,7 +1021,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const assetUrl = `/assets/scenes/${result.sceneId}/thumb-custom`;
           await tx
             .update(scenes)
-            .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+            .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
             .where(eq(scenes.id, result.sceneId));
         } catch {
           // Image download failed — non-fatal
