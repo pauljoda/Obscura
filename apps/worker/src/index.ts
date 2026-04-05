@@ -966,13 +966,22 @@ async function processGalleryScan(job: Job) {
           .update(images)
           .set({ galleryId, sortOrder: i, updatedAt: new Date() })
           .where(eq(images.id, imageId));
-        // Check if existing image is missing a thumbnail
+        // Check if existing image is missing thumbnail or animated preview
         const [imgRow] = await db
           .select({ thumbnailPath: images.thumbnailPath })
           .from(images)
           .where(eq(images.id, imageId))
           .limit(1);
-        needsThumbnail = !imgRow?.thumbnailPath;
+        if (!imgRow?.thumbnailPath) {
+          needsThumbnail = true;
+        } else {
+          // For video formats, also check if the preview.mp4 has been generated
+          const ext = path.extname(filePath).toLowerCase();
+          const isVideoFormat = [".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv"].includes(ext);
+          if (isVideoFormat && !existsSync(path.join(getGeneratedImageDir(imageId), "preview.mp4"))) {
+            needsThumbnail = true;
+          }
+        }
       } else {
         const [created] = await db
           .insert(images)
@@ -1079,13 +1088,16 @@ async function processGalleryScan(job: Job) {
           .update(images)
           .set({ galleryId, sortOrder: i, updatedAt: new Date() })
           .where(eq(images.id, existingImage.id));
-        // Re-enqueue thumbnail if missing
+        // Re-enqueue thumbnail if missing or preview missing for video formats
         const [imgRow] = await db
           .select({ thumbnailPath: images.thumbnailPath })
           .from(images)
           .where(eq(images.id, existingImage.id))
           .limit(1);
-        if (!imgRow?.thumbnailPath) {
+        const zipMemberExt = path.extname(memberPath).toLowerCase();
+        const isZipVideoFormat = [".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv"].includes(zipMemberExt);
+        if (!imgRow?.thumbnailPath ||
+            (isZipVideoFormat && !existsSync(path.join(getGeneratedImageDir(existingImage.id), "preview.mp4")))) {
           await enqueuePendingImageJob("image-thumbnail", existingImage.id);
         }
       }
