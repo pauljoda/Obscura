@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { DashboardPageClient } from "../../components/routes/dashboard-page-client";
 import {
   fetchGalleries,

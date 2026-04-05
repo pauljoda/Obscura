@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { StudiosPageClient } from "../../../components/routes/studios-page-client";
 import { fetchStudios } from "../../../lib/server-api";
 

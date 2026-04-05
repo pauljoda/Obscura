@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ScenesPageClient } from "../../../components/routes/scenes-page-client";
 import {
   fetchSceneStats,

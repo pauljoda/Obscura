@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { SceneDetail } from "../../../../components/scene-detail";
 import {
   fetchSceneDetail,

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { SettingsPageClient } from "../../../components/routes/settings-page-client";
 import {
   fetchInstalledScrapers,

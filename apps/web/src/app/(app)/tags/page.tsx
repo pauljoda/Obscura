@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { TagsPageClient } from "../../../components/routes/tags-page-client";
 import { fetchTags } from "../../../lib/server-api";
 

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ReviewPageClient } from "../../../../components/routes/review-page-client";
 import { fetchScrapeResults } from "../../../../lib/server-api";
 

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { PerformerPageClient } from "../../../../components/routes/performer-page-client";
 import {
   fetchPerformerDetail,
