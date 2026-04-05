@@ -656,6 +656,7 @@ function ToggleCard({
 }
 
 function qualityLabel(value: number): string {
+  if (value <= 1) return "Native";
   if (value <= 2) return "High";
   if (value <= 5) return "Good";
   if (value <= 10) return "Medium";
@@ -689,7 +690,7 @@ function QualitySlider({
         className="w-full h-1.5 appearance-none rounded-full bg-surface-4 accent-accent-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent-500 [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(199,155,92,0.5)]"
       />
       <div className="flex justify-between mt-1.5">
-        <span className="text-[0.58rem] text-text-disabled">Best (1)</span>
+        <span className="text-[0.58rem] text-text-disabled">Native (1)</span>
         <span className="text-[0.58rem] text-text-disabled">Smallest (31)</span>
       </div>
     </div>

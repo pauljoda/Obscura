@@ -461,6 +461,18 @@ async function processFingerprint(job: Job) {
     .where(eq(scenes.id, scene.id));
 }
 
+/**
+ * Linearly interpolate resolution based on quality setting.
+ * quality 1 → nativeSize (no downscale), quality 31 → minSize.
+ */
+function scaleResolution(nativeSize: number, minSize: number, quality: number): number {
+  if (quality <= 1) return nativeSize;
+  if (quality >= 31) return minSize;
+  // Linear interpolation: q=1 → native, q=31 → min
+  const t = (quality - 1) / 30;
+  return Math.round(nativeSize - t * (nativeSize - minSize));
+}
+
 function toTimestamp(seconds: number) {
   const totalMilliseconds = Math.max(0, Math.floor(seconds * 1000));
   const hours = Math.floor(totalMilliseconds / 3_600_000);
@@ -519,27 +531,35 @@ async function processPreview(job: Job) {
   const frameCount = Math.max(1, Math.ceil((duration || frameInterval) / frameInterval));
   const columns = Math.min(5, frameCount);
   const rows = Math.max(1, Math.ceil(frameCount / columns));
-  const thumbWidth = 640;
-  const thumbHeight =
-    metadata.width && metadata.height
-      ? Math.max(360, Math.round((metadata.height / metadata.width) * thumbWidth))
-      : 360;
+  // Resolution scales with the quality slider:
+  //   quality 1  → native video resolution (no downscale)
+  //   quality 31 → minimum (320px thumb, 160px card, 160px sprite)
+  const nativeW = metadata.width ?? 1920;
+  const nativeH = metadata.height ?? 1080;
+  const thumbQualityClamped = Math.max(1, Math.min(31, settings.thumbnailQuality));
+  const trickQualityClamped = Math.max(1, Math.min(31, settings.trickplayQuality));
+
+  const thumbWidth = scaleResolution(nativeW, 320, thumbQualityClamped);
+  const thumbHeight = Math.max(
+    Math.round((nativeH / nativeW) * thumbWidth),
+    Math.round(scaleResolution(nativeH, 180, thumbQualityClamped))
+  );
 
   const cardFile = sidecar.cardThumbnail;
-  const cardWidth = 320;
-  const cardHeight =
-    metadata.width && metadata.height
-      ? Math.max(180, Math.round((metadata.height / metadata.width) * cardWidth))
-      : 180;
+  const cardWidth = scaleResolution(nativeW, 160, thumbQualityClamped);
+  const cardHeight = Math.max(
+    Math.round((nativeH / nativeW) * cardWidth),
+    Math.round(scaleResolution(nativeH, 90, thumbQualityClamped))
+  );
 
-  // Trickplay sprite frames stay smaller since they're only for the scrubber
-  const spriteThumbWidth = 320;
-  const spriteThumbHeight =
-    metadata.width && metadata.height
-      ? Math.max(180, Math.round((metadata.height / metadata.width) * spriteThumbWidth))
-      : 180;
+  // Trickplay sprite frames scale independently with their own quality setting
+  const spriteThumbWidth = scaleResolution(nativeW, 160, trickQualityClamped);
+  const spriteThumbHeight = Math.max(
+    Math.round((nativeH / nativeW) * spriteThumbWidth),
+    Math.round(scaleResolution(nativeH, 90, trickQualityClamped))
+  );
 
-  const thumbQuality = String(Math.max(1, Math.min(31, settings.thumbnailQuality)));
+  const thumbQuality = String(thumbQualityClamped);
 
   await runProcess("ffmpeg", [
     "-hide_banner",
@@ -604,7 +624,7 @@ async function processPreview(job: Job) {
   ]);
   await markJobProgress(job, "preview", 65);
 
-  const spriteQuality = String(Math.max(1, Math.min(31, settings.trickplayQuality)));
+  const spriteQuality = String(trickQualityClamped);
 
   await runProcess("ffmpeg", [
     "-hide_banner",
