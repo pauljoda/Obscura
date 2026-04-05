@@ -15,29 +15,42 @@ import {
   Users,
   SkipForward,
   Image as ImageIcon,
+  Building2,
+  Tag,
 } from "lucide-react";
 import {
   fetchScenes,
   fetchPerformers,
+  fetchStudios,
+  fetchTags,
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
   scrapeScene,
   scrapePerformerApi,
   identifyViaStashBox,
   identifyPerformerViaStashBox,
+  lookupStudioViaStashBox,
+  lookupTagViaStashBox,
   acceptScrapeResult,
   rejectScrapeResult,
   applyPerformerScrape,
+  updateStudio,
+  updateTag,
   toApiUrl,
   type SceneListItem,
   type PerformerItem,
+  type StudioItem,
+  type TagItem,
   type ScraperPackage,
   type StashBoxEndpoint,
   type ScrapeResult,
   type NormalizedScrapeResult,
   type NormalizedPerformerScrapeResult,
+  type NormalizedStudioScrapeResult,
+  type NormalizedTagScrapeResult,
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
+import { autoSaveStashId } from "./stash-id-chips";
 
 /** Unified provider that can be either a community scraper or StashBox endpoint */
 interface Provider {
@@ -48,7 +61,7 @@ interface Provider {
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
-type Tab = "scenes" | "performers";
+type Tab = "scenes" | "performers" | "studios" | "tags";
 
 const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image"] as const;
 type SceneField = typeof SCENE_FIELDS[number];
@@ -69,6 +82,28 @@ interface PerformerRow {
   performer: PerformerItem;
   status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
   result?: NormalizedPerformerScrapeResult;
+  error?: string;
+  matchedScraper?: string;
+  selectedFields: Set<string>;
+}
+
+interface StudioRow {
+  studio: StudioItem;
+  status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
+  result?: NormalizedStudioScrapeResult;
+  remoteId?: string;
+  endpointId?: string;
+  error?: string;
+  matchedScraper?: string;
+  selectedFields: Set<string>;
+}
+
+interface TagRow {
+  tag: TagItem;
+  status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
+  result?: NormalizedTagScrapeResult;
+  remoteId?: string;
+  endpointId?: string;
   error?: string;
   matchedScraper?: string;
   selectedFields: Set<string>;
@@ -110,9 +145,17 @@ export function BulkScrape() {
   const [perfRows, setPerfRows] = useState<PerformerRow[]>([]);
   const [perfScrapers, setPerfScrapers] = useState<ScraperPackage[]>([]);
 
+  // Studio state
+  const [studioRows, setStudioRows] = useState<StudioRow[]>([]);
+
+  // Tag state
+  const [tagRows, setTagRows] = useState<TagRow[]>([]);
+
   // All items for show-all toggle
   const [allScenes, setAllScenes] = useState<SceneListItem[]>([]);
   const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
+  const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
+  const [allTags, setAllTags] = useState<TagItem[]>([]);
 
   // Shared
   const [running, setRunning] = useState(false);
@@ -133,11 +176,13 @@ export function BulkScrape() {
 
   function expandAll() {
     if (tab === "performers") {
-      const allIds = perfRows.map((r) => r.performer.id);
-      setExpandedIds(new Set(allIds));
+      setExpandedIds(new Set(perfRows.map((r) => r.performer.id)));
+    } else if (tab === "studios") {
+      setExpandedIds(new Set(studioRows.map((r) => r.studio.id)));
+    } else if (tab === "tags") {
+      setExpandedIds(new Set(tagRows.map((r) => r.tag.id)));
     } else {
-      const allIds = sceneRows.map((r) => r.scene.id);
-      setExpandedIds(new Set(allIds));
+      setExpandedIds(new Set(sceneRows.map((r) => r.scene.id)));
     }
   }
 
@@ -196,9 +241,11 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, perfRes, scrapersRes, stashBoxRes] = await Promise.all([
+      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes] = await Promise.all([
         fetchScenes({ sort: "created_at", limit: 500 }),
         fetchPerformers({ sort: "name", order: "asc", limit: 200 }),
+        fetchStudios(),
+        fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
       ]);
@@ -211,9 +258,19 @@ export function BulkScrape() {
       const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
       setPerfRows(sparse.map((performer) => ({ performer, status: "pending", selectedFields: new Set() })));
 
+      // Studios missing url or image
+      const sparseStudios = studiosRes.studios.filter((s) => !s.url || !s.imageUrl);
+      setStudioRows(sparseStudios.map((studio) => ({ studio, status: "pending", selectedFields: new Set() })));
+
+      // Tags missing description
+      const sparseTags = tagsRes.tags.filter(() => true); // Show all tags for identification
+      setTagRows(sparseTags.map((tag) => ({ tag, status: "pending", selectedFields: new Set() })));
+
       // Store all for show-all toggle
       setAllScenes(scenesRes.scenes);
       setAllPerformers(perfRes.performers);
+      setAllStudios(studiosRes.studios);
+      setAllTags(tagsRes.tags);
 
       const enabled = scrapersRes.packages.filter((s) => s.enabled);
       setScrapers(enabled);
@@ -241,7 +298,7 @@ export function BulkScrape() {
 
   // Rebuild rows when showAll toggles
   useEffect(() => {
-    if (!allScenes.length && !allPerformers.length) return;
+    if (!allScenes.length && !allPerformers.length && !allStudios.length && !allTags.length) return;
     const filteredScenes = showAll ? allScenes : allScenes.filter((s) => !s.organized);
     setSceneRows((prev) => {
       const existing = new Map(prev.map((r) => [r.scene.id, r]));
@@ -252,7 +309,17 @@ export function BulkScrape() {
       const existing = new Map(prev.map((r) => [r.performer.id, r]));
       return filteredPerfs.map((performer) => existing.get(performer.id) ?? { performer, status: "pending", selectedFields: new Set() });
     });
-  }, [showAll, allScenes, allPerformers]);
+    const filteredStudios = showAll ? allStudios : allStudios.filter((s) => !s.url || !s.imageUrl);
+    setStudioRows((prev) => {
+      const existing = new Map(prev.map((r) => [r.studio.id, r]));
+      return filteredStudios.map((studio) => existing.get(studio.id) ?? { studio, status: "pending", selectedFields: new Set() });
+    });
+    // Tags: show all since we can't easily filter "needs enrichment" without description
+    setTagRows((prev) => {
+      const existing = new Map(prev.map((r) => [r.tag.id, r]));
+      return allTags.map((tag) => existing.get(tag.id) ?? { tag, status: "pending", selectedFields: new Set() });
+    });
+  }, [showAll, allScenes, allPerformers, allStudios, allTags]);
 
   /* ─── Scene seek ────────────────────────────────────────────── */
 
@@ -588,15 +655,236 @@ export function BulkScrape() {
     }
   }
 
+  /* ─── Studio seek ─────────────────────────────────────────────── */
+
+  async function seekStudio(row: StudioRow, sbEndpoints: StashBoxEndpoint[]): Promise<{
+    result?: NormalizedStudioScrapeResult;
+    remoteId?: string;
+    endpointId?: string;
+    matchedScraper?: string;
+  }> {
+    for (const ep of sbEndpoints) {
+      try {
+        const res = await withTimeout(lookupStudioViaStashBox(ep.id, row.studio.name), SEEK_TIMEOUT_MS);
+        if (res.studio) {
+          return {
+            result: {
+              name: res.studio.name,
+              url: res.studio.urls?.[0]?.url ?? null,
+              imageUrl: res.studio.images?.[0]?.url ?? null,
+              parentName: res.studio.parent?.name ?? null,
+            },
+            remoteId: res.studio.id,
+            endpointId: ep.id,
+            matchedScraper: ep.name,
+          };
+        }
+      } catch { /* next */ }
+    }
+    return {};
+  }
+
+  async function runStudioScrape() {
+    setRunning(true);
+    abortRef.current = false;
+
+    const isStashBox = selectedScraperId.startsWith("stashbox:");
+    const realId = selectedScraperId.replace(/^stashbox:/, "");
+    const sbEndpoints = isStashBox
+      ? stashBoxEndpoints.filter((e) => e.id === realId)
+      : selectedScraperId === "" ? stashBoxEndpoints : [];
+
+    setStudioRows((prev) =>
+      prev.map((r) => r.status === "accepted" ? r : { ...r, status: "pending", result: undefined, error: undefined })
+    );
+
+    for (let i = 0; i < studioRows.length; i++) {
+      if (abortRef.current) break;
+      if (studioRows[i].status === "accepted") continue;
+
+      setStudioRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "scraping" } : r)));
+
+      try {
+        const { result, remoteId, endpointId, matchedScraper } = await seekStudio(studioRows[i], sbEndpoints);
+        if (result) {
+          const fields = new Set(Object.entries(result).filter(([, v]) => v != null && v !== "").map(([k]) => k));
+          if (autoAccept) {
+            try {
+              const data: Record<string, unknown> = {};
+              if (result.url) data.url = result.url;
+              if (result.imageUrl) data.imageUrl = result.imageUrl;
+              await updateStudio(studioRows[i].studio.id, data);
+              if (endpointId && remoteId) await autoSaveStashId("studio", studioRows[i].studio.id, endpointId, remoteId);
+              setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "accepted", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+            } catch {
+              setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "found", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+            }
+          } else {
+            setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "found", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+          }
+        } else {
+          setStudioRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "no-result" } : r)));
+        }
+      } catch (err) {
+        setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "error", error: err instanceof Error ? err.message : "Failed" } : r));
+      }
+    }
+    setRunning(false);
+  }
+
+  async function acceptStudio(idx: number) {
+    const row = studioRows[idx];
+    if (!row.result) return;
+    try {
+      const data: Record<string, unknown> = {};
+      if (row.selectedFields.has("url") && row.result.url) data.url = row.result.url;
+      if (row.selectedFields.has("imageUrl") && row.result.imageUrl) data.imageUrl = row.result.imageUrl;
+      if (row.selectedFields.has("name") && row.result.name) data.name = row.result.name;
+      await updateStudio(row.studio.id, data);
+      if (row.endpointId && row.remoteId) await autoSaveStashId("studio", row.studio.id, row.endpointId, row.remoteId);
+      setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
+    } catch { /* keep as found */ }
+  }
+
+  function rejectStudio(idx: number) {
+    setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "rejected" } : r)));
+  }
+
+  async function acceptAllStudios() {
+    const found = studioRows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.status === "found" && row.result);
+    for (const { idx } of found) { await acceptStudio(idx); }
+  }
+
+  /* ─── Tag seek ──────────────────────────────────────────────── */
+
+  async function seekTag(row: TagRow, sbEndpoints: StashBoxEndpoint[]): Promise<{
+    result?: NormalizedTagScrapeResult;
+    remoteId?: string;
+    endpointId?: string;
+    matchedScraper?: string;
+  }> {
+    const tagLower = row.tag.name.toLowerCase().trim();
+    for (const ep of sbEndpoints) {
+      try {
+        const res = await withTimeout(lookupTagViaStashBox(ep.id, row.tag.name), SEEK_TIMEOUT_MS);
+        if (res.tags && res.tags.length > 0) {
+          const exact = res.tags.find((t) => t.name.toLowerCase().trim() === tagLower);
+          const match = exact ?? res.tags[0];
+          return {
+            result: {
+              name: match.name,
+              description: match.description ?? null,
+              aliases: match.aliases?.join(", ") ?? null,
+            },
+            remoteId: match.id,
+            endpointId: ep.id,
+            matchedScraper: ep.name,
+          };
+        }
+      } catch { /* next */ }
+    }
+    return {};
+  }
+
+  async function runTagScrape() {
+    setRunning(true);
+    abortRef.current = false;
+
+    const isStashBox = selectedScraperId.startsWith("stashbox:");
+    const realId = selectedScraperId.replace(/^stashbox:/, "");
+    const sbEndpoints = isStashBox
+      ? stashBoxEndpoints.filter((e) => e.id === realId)
+      : selectedScraperId === "" ? stashBoxEndpoints : [];
+
+    setTagRows((prev) =>
+      prev.map((r) => r.status === "accepted" ? r : { ...r, status: "pending", result: undefined, error: undefined })
+    );
+
+    for (let i = 0; i < tagRows.length; i++) {
+      if (abortRef.current) break;
+      if (tagRows[i].status === "accepted") continue;
+
+      setTagRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "scraping" } : r)));
+
+      try {
+        const { result, remoteId, endpointId, matchedScraper } = await seekTag(tagRows[i], sbEndpoints);
+        if (result) {
+          const fields = new Set(Object.entries(result).filter(([, v]) => v != null && v !== "").map(([k]) => k));
+          if (autoAccept) {
+            try {
+              const data: Record<string, unknown> = {};
+              if (result.description) data.description = result.description;
+              if (result.aliases) data.aliases = result.aliases;
+              await updateTag(tagRows[i].tag.id, data);
+              if (endpointId && remoteId) await autoSaveStashId("tag", tagRows[i].tag.id, endpointId, remoteId);
+              setTagRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "accepted", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+            } catch {
+              setTagRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "found", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+            }
+          } else {
+            setTagRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "found", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
+          }
+        } else {
+          setTagRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "no-result" } : r)));
+        }
+      } catch (err) {
+        setTagRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "error", error: err instanceof Error ? err.message : "Failed" } : r));
+      }
+    }
+    setRunning(false);
+  }
+
+  async function acceptTag(idx: number) {
+    const row = tagRows[idx];
+    if (!row.result) return;
+    try {
+      const data: Record<string, unknown> = {};
+      if (row.selectedFields.has("description") && row.result.description) data.description = row.result.description;
+      if (row.selectedFields.has("aliases") && row.result.aliases) data.aliases = row.result.aliases;
+      await updateTag(row.tag.id, data);
+      if (row.endpointId && row.remoteId) await autoSaveStashId("tag", row.tag.id, row.endpointId, row.remoteId);
+      setTagRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
+    } catch { /* keep as found */ }
+  }
+
+  function rejectTag(idx: number) {
+    setTagRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "rejected" } : r)));
+  }
+
+  async function acceptAllTags() {
+    const found = tagRows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.status === "found" && row.result);
+    for (const { idx } of found) { await acceptTag(idx); }
+  }
+
+  function toggleStudioField(idx: number, field: string) {
+    setStudioRows((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const next = new Set(r.selectedFields);
+      if (next.has(field)) next.delete(field); else next.add(field);
+      return { ...r, selectedFields: next };
+    }));
+  }
+
+  function toggleTagField(idx: number, field: string) {
+    setTagRows((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const next = new Set(r.selectedFields);
+      if (next.has(field)) next.delete(field); else next.add(field);
+      return { ...r, selectedFields: next };
+    }));
+  }
+
   /* ─── Stats ──────────────────────────────────────────────────── */
 
-  const rows = tab === "scenes" ? sceneRows : perfRows;
+  const rows = tab === "scenes" ? sceneRows : tab === "performers" ? perfRows : tab === "studios" ? studioRows : tagRows;
   const foundCount = rows.filter((r) => r.status === "found").length;
   const acceptedCount = rows.filter((r) => r.status === "accepted").length;
   const missedCount = rows.filter((r) => r.status === "no-result" || r.status === "error").length;
   const processedCount = rows.filter((r) => r.status !== "pending" && r.status !== "scraping").length;
   const totalCount = rows.length;
-  const scrapersForTab = tab === "scenes" ? sceneScrapers : perfScrapers;
+
+  // Studios/tags only use stashbox; scenes/performers also use community scrapers
+  const scrapersForTab = tab === "scenes" ? sceneScrapers : tab === "performers" ? perfScrapers : [];
 
   // Build unified provider list: StashBox first (fingerprint-capable), then scrapers
   const providersForTab: Provider[] = [
@@ -631,10 +919,12 @@ export function BulkScrape() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         {([
           { key: "scenes" as Tab, label: "Scenes", icon: Film, count: sceneRows.length },
           { key: "performers" as Tab, label: "Performers", icon: Users, count: perfRows.length },
+          { key: "studios" as Tab, label: "Studios", icon: Building2, count: studioRows.length },
+          { key: "tags" as Tab, label: "Tags", icon: Tag, count: tagRows.length },
         ]).map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
@@ -740,7 +1030,12 @@ export function BulkScrape() {
             <div className="flex items-center gap-2">
               {foundCount > 0 && (
                 <button
-                  onClick={() => void (tab === "scenes" ? acceptAllScenes() : acceptAllPerformers())}
+                  onClick={() => void (
+                    tab === "scenes" ? acceptAllScenes() :
+                    tab === "performers" ? acceptAllPerformers() :
+                    tab === "studios" ? acceptAllStudios() :
+                    acceptAllTags()
+                  )}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-[3px] text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
                 >
                   <Check className="h-3 w-3" />
@@ -748,7 +1043,12 @@ export function BulkScrape() {
                 </button>
               )}
               <button
-                onClick={() => void (tab === "scenes" ? runSceneScrape() : runPerformerScrape())}
+                onClick={() => void (
+                  tab === "scenes" ? runSceneScrape() :
+                  tab === "performers" ? runPerformerScrape() :
+                  tab === "studios" ? runStudioScrape() :
+                  runTagScrape()
+                )}
                 disabled={totalCount === 0 || totalProviderCount === 0}
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
@@ -786,7 +1086,7 @@ export function BulkScrape() {
         <div className="surface-card-sharp no-lift p-12 text-center">
           <ScanSearch className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">
-            No metadata providers configured for {tab === "scenes" ? "scenes" : "performers"}.
+            No metadata providers configured for {tab}.
           </p>
           <p className="text-text-disabled text-xs mt-1">
             Add a Stash-Box endpoint or install scrapers in Settings.
@@ -798,7 +1098,10 @@ export function BulkScrape() {
         <div className="surface-card-sharp no-lift p-12 text-center">
           <Check className="h-8 w-8 text-status-success-text mx-auto mb-2" />
           <p className="text-text-muted text-sm">
-            {tab === "scenes" ? "All scenes are organized!" : "All performers have complete metadata."}
+            {tab === "scenes" ? "All scenes are organized!" :
+             tab === "performers" ? "All performers have complete metadata." :
+             tab === "studios" ? "All studios have complete metadata." :
+             "All tags loaded."}
           </p>
         </div>
       )}
@@ -830,7 +1133,8 @@ export function BulkScrape() {
                   onToggleTag={(name) => toggleSceneExcludeTag(idx, name)}
                 />
               ))
-            : perfRows.map((row, idx) => (
+            : tab === "performers"
+            ? perfRows.map((row, idx) => (
                 <PerformerRowCard
                   key={row.performer.id}
                   row={row}
@@ -839,6 +1143,29 @@ export function BulkScrape() {
                   onAccept={(imageUrl) => void acceptPerformer(idx, imageUrl)}
                   onReject={() => rejectPerformer(idx)}
                   onToggleField={(field) => togglePerfField(idx, field)}
+                />
+              ))
+            : tab === "studios"
+            ? studioRows.map((row, idx) => (
+                <StudioRowCard
+                  key={row.studio.id}
+                  row={row}
+                  expanded={expandedIds.has(row.studio.id)}
+                  onToggleExpand={() => toggleExpanded(row.studio.id)}
+                  onAccept={() => void acceptStudio(idx)}
+                  onReject={() => rejectStudio(idx)}
+                  onToggleField={(field) => toggleStudioField(idx, field)}
+                />
+              ))
+            : tagRows.map((row, idx) => (
+                <TagRowCard
+                  key={row.tag.id}
+                  row={row}
+                  expanded={expandedIds.has(row.tag.id)}
+                  onToggleExpand={() => toggleExpanded(row.tag.id)}
+                  onAccept={() => void acceptTag(idx)}
+                  onReject={() => rejectTag(idx)}
+                  onToggleField={(field) => toggleTagField(idx, field)}
                 />
               ))}
         </div>
@@ -1264,6 +1591,175 @@ function PerformerRowCard({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {expanded && row.error && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+          <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Studio row ──────────────────────────────────────────────── */
+
+function StudioRowCard({
+  row,
+  expanded,
+  onToggleExpand,
+  onAccept,
+  onReject,
+  onToggleField,
+}: {
+  row: StudioRow;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onAccept: () => void;
+  onReject: () => void;
+  onToggleField: (field: string) => void;
+}) {
+  return (
+    <div>
+      <div
+        onClick={onToggleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
+        className={cn(
+          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          expanded && "border-border-accent/40",
+          row.status === "accepted" && "opacity-50",
+          row.status === "rejected" && "opacity-30"
+        )}
+      >
+        <StatusDot status={row.status} />
+        <Building2 className="h-4 w-4 text-text-disabled flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[0.8rem] font-medium text-text-primary truncate">{row.studio.name}</div>
+          {row.result && row.status === "found" && (
+            <div className="text-[0.62rem] text-text-muted truncate mt-0.5">
+              {[row.result.url, row.result.parentName].filter(Boolean).join(" | ")}
+            </div>
+          )}
+          {row.matchedScraper && row.status !== "pending" && (
+            <span className="text-text-disabled text-[0.58rem] font-mono">via {row.matchedScraper}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {row.status === "scraping" && <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />}
+          {row.status === "found" && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
+                <Check className="h-2.5 w-2.5" /> Accept
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors">
+                <X className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          {row.status === "no-result" && <span className="text-[0.62rem] text-text-disabled">No result</span>}
+          {row.status === "error" && <span className="text-[0.62rem] text-status-error-text">Error</span>}
+          {row.status === "accepted" && <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>}
+        </div>
+
+        <ChevronDown className={cn("h-3 w-3 text-text-disabled flex-shrink-0 transition-transform duration-fast", expanded && "rotate-180")} />
+      </div>
+
+      {expanded && row.result && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
+            {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
+            {row.result.url && <ToggleableField field="url" label="URL" value={row.result.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />}
+            {row.result.imageUrl && <ToggleableField field="imageUrl" label="Image" value="Available" enabled={row.selectedFields.has("imageUrl")} onToggle={() => onToggleField("imageUrl")} />}
+            {row.result.parentName && <ToggleableField field="parentName" label="Parent" value={row.result.parentName} enabled={false} onToggle={() => {}} />}
+          </div>
+        </div>
+      )}
+
+      {expanded && row.error && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+          <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Tag row ─────────────────────────────────────────────────── */
+
+function TagRowCard({
+  row,
+  expanded,
+  onToggleExpand,
+  onAccept,
+  onReject,
+  onToggleField,
+}: {
+  row: TagRow;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onAccept: () => void;
+  onReject: () => void;
+  onToggleField: (field: string) => void;
+}) {
+  return (
+    <div>
+      <div
+        onClick={onToggleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
+        className={cn(
+          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          expanded && "border-border-accent/40",
+          row.status === "accepted" && "opacity-50",
+          row.status === "rejected" && "opacity-30"
+        )}
+      >
+        <StatusDot status={row.status} />
+        <Tag className="h-4 w-4 text-text-disabled flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[0.8rem] font-medium text-text-primary truncate">{row.tag.name}</div>
+          {row.result && row.status === "found" && row.result.description && (
+            <div className="text-[0.62rem] text-text-muted truncate mt-0.5">
+              {row.result.description.slice(0, 80)}
+            </div>
+          )}
+          {row.matchedScraper && row.status !== "pending" && (
+            <span className="text-text-disabled text-[0.58rem] font-mono">via {row.matchedScraper}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {row.status === "scraping" && <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />}
+          {row.status === "found" && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
+                <Check className="h-2.5 w-2.5" /> Accept
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors">
+                <X className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          {row.status === "no-result" && <span className="text-[0.62rem] text-text-disabled">No result</span>}
+          {row.status === "error" && <span className="text-[0.62rem] text-status-error-text">Error</span>}
+          {row.status === "accepted" && <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>}
+        </div>
+
+        <ChevronDown className={cn("h-3 w-3 text-text-disabled flex-shrink-0 transition-transform duration-fast", expanded && "rotate-180")} />
+      </div>
+
+      {expanded && row.result && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
+            {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
+            {row.result.description && <ToggleableField field="description" label="Description" value={row.result.description.slice(0, 200)} enabled={row.selectedFields.has("description")} onToggle={() => onToggleField("description")} />}
+            {row.result.aliases && <ToggleableField field="aliases" label="Aliases" value={row.result.aliases} enabled={row.selectedFields.has("aliases")} onToggle={() => onToggleField("aliases")} />}
           </div>
         </div>
       )}
