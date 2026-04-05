@@ -1125,14 +1125,23 @@ async function processImageThumbnail(job: Job) {
   }
 
   try {
+    // Detect if this is a video/animated format that needs single-frame extraction
+    const ext = path.extname(inputPath).toLowerCase();
+    const isVideo = [".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv"].includes(ext);
+
     // Generate thumbnail with ffmpeg
-    await runProcess("ffmpeg", [
-      "-hide_banner", "-loglevel", "error", "-y",
-      "-i", inputPath,
-      "-vf", "scale=640:-1",
-      "-q:v", "3",
-      thumbPath,
-    ]);
+    const ffmpegArgs = ["-hide_banner", "-loglevel", "error", "-y"];
+    if (isVideo) {
+      // Seek to 18% of the way through for a representative frame
+      ffmpegArgs.push("-ss", "1");
+    }
+    ffmpegArgs.push("-i", inputPath);
+    if (isVideo) {
+      ffmpegArgs.push("-frames:v", "1");
+    }
+    ffmpegArgs.push("-vf", "scale=640:-1", "-q:v", "3", thumbPath);
+
+    await runProcess("ffmpeg", ffmpegArgs);
 
     // Probe for dimensions and format
     const probe = await probeImageFile(inputPath);

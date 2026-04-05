@@ -110,6 +110,8 @@ export async function fetchGalleries(params?: {
   performer?: string[];
   studio?: string;
   type?: string;
+  parent?: string;
+  root?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -119,6 +121,8 @@ export async function fetchGalleries(params?: {
   if (params?.order) sp.set("order", params.order);
   if (params?.studio) sp.set("studio", params.studio);
   if (params?.type) sp.set("type", params.type);
+  if (params?.parent) sp.set("parent", params.parent);
+  if (params?.root) sp.set("root", params.root);
   if (params?.limit) sp.set("limit", String(params.limit));
   if (params?.offset) sp.set("offset", String(params.offset));
   params?.tag?.forEach((t) => sp.append("tag", t));

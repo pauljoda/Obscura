@@ -24,6 +24,8 @@ export async function galleriesRoutes(app: FastifyInstance) {
       performer?: string | string[];
       studio?: string;
       type?: string;
+      parent?: string;
+      root?: string;
       limit?: string;
       offset?: string;
     };
@@ -32,6 +34,15 @@ export async function galleriesRoutes(app: FastifyInstance) {
     const offset = Number(query.offset) || 0;
 
     const conditions = [];
+
+    // By default, only show root-level galleries (no parent).
+    // Use parent=<id> to list children of a specific gallery.
+    // Use root=all to show all galleries regardless of hierarchy.
+    if (query.parent) {
+      conditions.push(eq(galleries.parentId, query.parent));
+    } else if (query.root !== "all" && !query.search) {
+      conditions.push(sql`${galleries.parentId} IS NULL`);
+    }
 
     if (query.search) {
       const term = `%${query.search}%`;

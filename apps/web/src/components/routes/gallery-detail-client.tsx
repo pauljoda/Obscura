@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ArrowLeft, Images } from "lucide-react";
+import { ArrowLeft, Images, LayoutGrid, LayoutList } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
 import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
-import { fetchGalleryImages } from "../../lib/api";
-import type { GalleryDetailDto, ImageListItemDto } from "@obscura/contracts";
+import { GalleryCard } from "../gallery-card";
+import { GalleryListItem } from "../gallery-list-item";
+import { fetchGalleryImages, toApiUrl } from "../../lib/api";
+import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
 
 interface GalleryDetailClientProps {
   initialGallery: GalleryDetailDto;
@@ -20,6 +23,9 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
   const [loadingMore, setLoadingMore] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [subGalleryView, setSubGalleryView] = useState<"grid" | "list">("grid");
+
+  const backHref = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
 
   const handleGalleryUpdate = useCallback((patch: Partial<GalleryDetailDto>) => {
     setGallery((prev) => ({ ...prev, ...patch }));
@@ -37,14 +43,17 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
         limit: 60,
         offset: images.length,
       });
-      setImages((prev) => [...prev, ...result.images]);
+      setImages((prev) => {
+        const existingIds = new Set(prev.map((img) => img.id));
+        const newItems = result.images.filter((img) => !existingIds.has(img.id));
+        return [...prev, ...newItems];
+      });
     } finally {
       setLoadingMore(false);
     }
   }, [gallery.id, images.length]);
 
   const handleChapterJump = useCallback((imageIndex: number) => {
-    // Open lightbox at the chapter's image index (1-based to 0-based)
     const idx = Math.max(0, imageIndex - 1);
     if (idx < images.length) {
       setLightboxIndex(idx);
@@ -52,12 +61,31 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
     }
   }, [images.length]);
 
+  // Build child gallery DTOs for card rendering
+  const childGalleries: GalleryListItemDto[] = gallery.children.map((child) => ({
+    id: child.id,
+    title: child.title,
+    galleryType: "folder" as const,
+    coverImagePath: child.coverImagePath,
+    previewImagePaths: [],
+    imageCount: child.imageCount,
+    rating: null,
+    organized: false,
+    date: null,
+    studioId: null,
+    studioName: null,
+    performers: [],
+    tags: [],
+    parentId: gallery.id,
+    createdAt: gallery.createdAt,
+  }));
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/galleries"
+          href={backHref}
           className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -69,6 +97,7 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
           </h1>
           <p className="text-text-muted text-[0.78rem] mt-0.5">
             {gallery.imageCount} images
+            {gallery.children.length > 0 && ` \u00B7 ${gallery.children.length} sub-galleries`}
             {gallery.galleryType !== "virtual" && ` \u00B7 ${gallery.galleryType}`}
           </p>
         </div>
@@ -76,35 +105,79 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-        {/* Left: Images + sub-galleries */}
+        {/* Left: Sub-galleries + Images */}
         <div className="space-y-6">
-          <ImageGrid
-            images={images}
-            onImageClick={handleImageClick}
-            hasMore={images.length < imageTotal}
-            onLoadMore={handleLoadMore}
-            loadingMore={loadingMore}
-          />
-
-          {/* Sub-galleries */}
+          {/* Sub-galleries section (above images) */}
           {gallery.children.length > 0 && (
             <div>
-              <h3 className="text-kicker mb-3">Sub-galleries</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {gallery.children.map((child) => (
-                  <Link key={child.id} href={`/galleries/${child.id}`}>
-                    <div className="surface-card-sharp p-3 hover:bg-surface-2 transition-colors">
-                      <h4 className="text-[0.78rem] font-medium text-text-primary truncate">
-                        {child.title}
-                      </h4>
-                      <span className="text-[0.65rem] text-text-muted flex items-center gap-1 mt-0.5">
-                        <Images className="h-3 w-3" />
-                        {child.imageCount} images
-                      </span>
-                    </div>
-                  </Link>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-kicker">Sub-galleries</h3>
+                <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
+                  <button
+                    onClick={() => setSubGalleryView("grid")}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center transition-colors duration-fast",
+                      subGalleryView === "grid"
+                        ? "text-text-accent bg-accent-950"
+                        : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+                    )}
+                  >
+                    <LayoutGrid className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => setSubGalleryView("list")}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center transition-colors duration-fast",
+                      subGalleryView === "list"
+                        ? "text-text-accent bg-accent-950"
+                        : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+                    )}
+                  >
+                    <LayoutList className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
+
+              {subGalleryView === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {childGalleries.map((child) => (
+                    <Link key={child.id} href={`/galleries/${child.id}`}>
+                      <GalleryCard gallery={child} />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {childGalleries.map((child) => (
+                    <Link key={child.id} href={`/galleries/${child.id}`}>
+                      <GalleryListItem gallery={child} />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Images section */}
+          {images.length > 0 && (
+            <div>
+              {gallery.children.length > 0 && (
+                <h3 className="text-kicker mb-3">Images</h3>
+              )}
+              <ImageGrid
+                images={images}
+                onImageClick={handleImageClick}
+                hasMore={images.length < imageTotal}
+                onLoadMore={handleLoadMore}
+                loadingMore={loadingMore}
+              />
+            </div>
+          )}
+
+          {images.length === 0 && gallery.children.length === 0 && (
+            <div className="surface-well flex flex-col items-center justify-center py-16 text-center">
+              <Images className="h-8 w-8 text-text-disabled mb-2" />
+              <p className="text-text-muted text-sm">This gallery is empty</p>
             </div>
           )}
         </div>

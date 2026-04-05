@@ -76,6 +76,8 @@ export function GalleriesPageClient({
     try {
       const result = await fetchGalleries({
         ...buildParams(),
+        // Browser view needs ALL galleries (including sub-galleries) for the tree
+        root: viewMode === "browser" ? "all" : undefined,
         limit: viewMode === "browser" ? 2000 : PAGE_SIZE,
       });
 
