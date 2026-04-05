@@ -46,6 +46,7 @@ FROM node:22-alpine AS runner
 # Install runtime dependencies
 RUN apk add --no-cache \
     ffmpeg \
+    libheif \
     postgresql16 \
     postgresql16-contrib \
     redis \
