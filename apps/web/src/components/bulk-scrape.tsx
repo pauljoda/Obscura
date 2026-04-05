@@ -36,6 +36,8 @@ import {
   applyPerformerScrape,
   updateStudio,
   updateTag,
+  uploadStudioImageFromUrl,
+  uploadTagImageFromUrl,
   toApiUrl,
   type SceneListItem,
   type PerformerItem,
@@ -712,8 +714,11 @@ export function BulkScrape() {
             try {
               const data: Record<string, unknown> = {};
               if (result.url) data.url = result.url;
-              if (result.imageUrl) data.imageUrl = result.imageUrl;
               await updateStudio(studioRows[i].studio.id, data);
+              // Download image from URL
+              if (result.imageUrl) {
+                try { await uploadStudioImageFromUrl(studioRows[i].studio.id, result.imageUrl); } catch { /* non-fatal */ }
+              }
               if (endpointId && remoteId) await autoSaveStashId("studio", studioRows[i].studio.id, endpointId, remoteId);
               setStudioRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "accepted", result, remoteId, endpointId, matchedScraper, selectedFields: fields } : r));
             } catch {
@@ -738,9 +743,12 @@ export function BulkScrape() {
     try {
       const data: Record<string, unknown> = {};
       if (row.selectedFields.has("url") && row.result.url) data.url = row.result.url;
-      if (row.selectedFields.has("imageUrl") && row.result.imageUrl) data.imageUrl = row.result.imageUrl;
       if (row.selectedFields.has("name") && row.result.name) data.name = row.result.name;
       await updateStudio(row.studio.id, data);
+      // Download image from URL (stores locally)
+      if (row.selectedFields.has("imageUrl") && row.result.imageUrl) {
+        try { await uploadStudioImageFromUrl(row.studio.id, row.result.imageUrl); } catch { /* non-fatal */ }
+      }
       if (row.endpointId && row.remoteId) await autoSaveStashId("studio", row.studio.id, row.endpointId, row.remoteId);
       setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
     } catch { /* keep as found */ }
