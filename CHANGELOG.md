@@ -17,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Scrapers page: installed scrapers section is now collapsible with chevron toggle; capability filter merged into the collapsible header bar.
 - Scrapers page: scraper cards and community index entries use `surface-card-sharp` for better visibility against the dark background.
 - Jobs page: full visual redesign — stats strip (Active/Completed/Failed/Last Scan), queues in responsive grid with LED indicators and dark stat cells, scrollable Recent Runs table with error row tinting, section separators with accent icons.
+- Bulk scrape page: unified Scenes + Performers tabs in one view, seek mode cycles all capable scrapers per item (5s timeout), auto-accept option, stats strip with progress meter, shows matched scraper name, sharp card design language.
+
+### Fixed
+
+- Library scan now skips generated preview files (`.preview.mp4`, `.thumb.mp4`, `.sprite.mp4`) preventing duplicate scene entries. Previously imported preview files are cleaned up on next scan.
+- HTML entities (`&amp;`, `&quot;`, etc.) in filenames and scraper results are now decoded correctly in titles and metadata fields.
 
 ### Added
 
