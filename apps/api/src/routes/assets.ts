@@ -7,6 +7,8 @@ import {
   getSidecarPaths,
   getGeneratedSceneDir,
   getGeneratedPerformerDir,
+  getGeneratedStudioDir,
+  getGeneratedTagDir,
   getGeneratedImageDir,
   extractZipMember,
 } from "@obscura/media-core";
@@ -178,6 +180,34 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     reply.code(404);
     return { error: "Performer image not found" };
+  });
+
+  // ─── Studio assets: /assets/studios/:id/:kind ───────────────────
+  app.get("/assets/studios/:id/:kind", async (request, reply) => {
+    const { id, kind } = request.params as { id: string; kind: string };
+    if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
+    const imagePath = path.join(getGeneratedStudioDir(id), "image.jpg");
+    if (existsSync(imagePath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(imagePath));
+    }
+    reply.code(404);
+    return { error: "Studio image not found" };
+  });
+
+  // ─── Tag assets: /assets/tags/:id/:kind ────────────────────────
+  app.get("/assets/tags/:id/:kind", async (request, reply) => {
+    const { id, kind } = request.params as { id: string; kind: string };
+    if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
+    const imagePath = path.join(getGeneratedTagDir(id), "image.jpg");
+    if (existsSync(imagePath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(imagePath));
+    }
+    reply.code(404);
+    return { error: "Tag image not found" };
   });
 
   // ─── Gallery cover: /assets/galleries/:id/cover ──────────────────

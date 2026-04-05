@@ -326,6 +326,14 @@ export function getGeneratedPerformerDir(performerId: string) {
   return path.join(getCacheRootDir(), "performers", performerId);
 }
 
+export function getGeneratedStudioDir(studioId: string) {
+  return path.join(getCacheRootDir(), "studios", studioId);
+}
+
+export function getGeneratedTagDir(tagId: string) {
+  return path.join(getCacheRootDir(), "tags", tagId);
+}
+
 /**
  * Get sidecar file paths for a video file.
  * E.g. `/media/video.mp4` → `/media/video-thumb.jpg`

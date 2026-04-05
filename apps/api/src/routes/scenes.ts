@@ -2,12 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 import { existsSync } from "node:fs";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
 import {
   writeNfo,
   getSidecarPaths,
   getGeneratedSceneDir,
+  getGeneratedStudioDir,
+  getGeneratedTagDir,
   runProcess,
 } from "@obscura/media-core";
 
@@ -720,18 +722,29 @@ export async function scenesRoutes(app: FastifyInstance) {
     return { ok: true, orgasmCount: updated.orgasmCount };
   });
 
-  // ─── GET /studios (for filter dropdowns) ──────────────────────
+  // ─── GET /studios ────────────────────────────────────────────
   app.get("/studios", async () => {
     const rows = await db
-      .select({
-        id: studios.id,
-        name: studios.name,
-        url: studios.url,
-        imageUrl: studios.imageUrl,
-      })
+      .select()
       .from(studios)
       .orderBy(asc(studios.name));
-    return { studios: rows };
+    return {
+      studios: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        aliases: r.aliases,
+        url: r.url,
+        parentId: r.parentId,
+        imageUrl: r.imageUrl,
+        imagePath: r.imagePath,
+        favorite: r.favorite,
+        rating: r.rating,
+        sceneCount: r.sceneCount,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      })),
+    };
   });
 
   // ─── GET /studios/:id ─────────────────────────────────────────
@@ -747,9 +760,15 @@ export async function scenesRoutes(app: FastifyInstance) {
     return {
       id: row.id,
       name: row.name,
+      description: row.description,
+      aliases: row.aliases,
       url: row.url,
-      imageUrl: row.imageUrl,
       parentId: row.parentId,
+      imageUrl: row.imageUrl,
+      imagePath: row.imagePath,
+      favorite: row.favorite,
+      rating: row.rating,
+      sceneCount: row.sceneCount,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -760,52 +779,138 @@ export async function scenesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const body = request.body as {
       name?: string;
+      description?: string | null;
+      aliases?: string | null;
       url?: string | null;
       imageUrl?: string | null;
       parentId?: string | null;
+      favorite?: boolean;
+      rating?: number | null;
     };
 
-    const [existing] = await db
-      .select()
-      .from(studios)
-      .where(eq(studios.id, id))
-      .limit(1);
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Studio not found" };
-    }
+    const [existing] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name.trim();
+    if (body.description !== undefined) updates.description = body.description?.trim() || null;
+    if (body.aliases !== undefined) updates.aliases = body.aliases?.trim() || null;
     if (body.url !== undefined) updates.url = body.url?.trim() || null;
     if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl?.trim() || null;
     if (body.parentId !== undefined) updates.parentId = body.parentId || null;
+    if (body.favorite !== undefined) updates.favorite = body.favorite;
+    if (body.rating !== undefined) updates.rating = body.rating;
 
     await db.update(studios).set(updates).where(eq(studios.id, id));
-
     const [updated] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
     return {
-      id: updated.id,
-      name: updated.name,
-      url: updated.url,
-      imageUrl: updated.imageUrl,
-      parentId: updated.parentId,
-      createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt,
+      id: updated.id, name: updated.name, description: updated.description, aliases: updated.aliases,
+      url: updated.url, parentId: updated.parentId, imageUrl: updated.imageUrl, imagePath: updated.imagePath,
+      favorite: updated.favorite, rating: updated.rating, sceneCount: updated.sceneCount,
+      createdAt: updated.createdAt, updatedAt: updated.updatedAt,
     };
   });
 
-  // ─── GET /tags (for filter dropdowns) ─────────────────────────
+  // ─── POST /studios ──────────────────────────────────────────
+  app.post("/studios", async (request, reply) => {
+    const body = request.body as { name: string; description?: string; aliases?: string; url?: string; parentId?: string };
+    if (!body.name?.trim()) { reply.code(400); return { error: "name is required" }; }
+    const [created] = await db.insert(studios).values({
+      name: body.name.trim(), description: body.description?.trim() || null,
+      aliases: body.aliases?.trim() || null, url: body.url?.trim() || null,
+      parentId: body.parentId || null,
+    }).returning();
+    return reply.code(201).send({ ok: true, id: created.id });
+  });
+
+  // ─── DELETE /studios/:id ────────────────────────────────────
+  app.delete("/studios/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [deleted] = await db.delete(studios).where(eq(studios.id, id)).returning({ id: studios.id });
+    if (!deleted) { reply.code(404); return { error: "Studio not found" }; }
+    // Cleanup image
+    try { const dir = getGeneratedStudioDir(id); if (existsSync(dir)) await rm(dir, { recursive: true }); } catch { /* non-fatal */ }
+    return { ok: true };
+  });
+
+  // ─── PATCH /studios/:id/favorite ────────────────────────────
+  app.patch("/studios/:id/favorite", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { favorite } = request.body as { favorite: boolean };
+    const [existing] = await db.select({ id: studios.id }).from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
+    await db.update(studios).set({ favorite, updatedAt: new Date() }).where(eq(studios.id, id));
+    return { ok: true, favorite };
+  });
+
+  // ─── PATCH /studios/:id/rating ──────────────────────────────
+  app.patch("/studios/:id/rating", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { rating } = request.body as { rating: number | null };
+    const [existing] = await db.select({ id: studios.id }).from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
+    await db.update(studios).set({ rating, updatedAt: new Date() }).where(eq(studios.id, id));
+    return { ok: true, rating };
+  });
+
+  // ─── POST /studios/:id/image (multipart upload) ─────────────
+  app.post("/studios/:id/image", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [existing] = await db.select({ id: studios.id }).from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
+    const file = await request.file();
+    if (!file) { reply.code(400); return { error: "No file uploaded" }; }
+    const buffer = await file.toBuffer();
+    const genDir = getGeneratedStudioDir(id);
+    await mkdir(genDir, { recursive: true });
+    await writeFile(path.join(genDir, "image.jpg"), buffer);
+    const assetUrl = `/assets/studios/${id}/image`;
+    await db.update(studios).set({ imagePath: assetUrl, updatedAt: new Date() }).where(eq(studios.id, id));
+    return { ok: true, imagePath: assetUrl };
+  });
+
+  // ─── POST /studios/:id/image/from-url ───────────────────────
+  app.post("/studios/:id/image/from-url", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { imageUrl } = request.body as { imageUrl: string };
+    if (!imageUrl || (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:image/"))) {
+      reply.code(400); return { error: "Invalid image URL" };
+    }
+    const [existing] = await db.select({ id: studios.id }).from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
+    try {
+      let buffer: Buffer;
+      if (imageUrl.startsWith("data:image/")) {
+        const base64Data = imageUrl.split(",")[1];
+        if (!base64Data) { reply.code(400); return { error: "Invalid data URL" }; }
+        buffer = Buffer.from(base64Data, "base64");
+      } else {
+        const res = await fetch(imageUrl);
+        if (!res.ok) { reply.code(502); return { error: `Failed to fetch image: ${res.status}` }; }
+        buffer = Buffer.from(await res.arrayBuffer());
+      }
+      const genDir = getGeneratedStudioDir(id);
+      await mkdir(genDir, { recursive: true });
+      await writeFile(path.join(genDir, "image.jpg"), buffer);
+      const assetUrl = `/assets/studios/${id}/image`;
+      await db.update(studios).set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() }).where(eq(studios.id, id));
+      return { ok: true, imagePath: assetUrl };
+    } catch { reply.code(502); return { error: "Failed to download image" }; }
+  });
+
+  // ─── DELETE /studios/:id/image ──────────────────────────────
+  app.delete("/studios/:id/image", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [existing] = await db.select({ id: studios.id }).from(studios).where(eq(studios.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Studio not found" }; }
+    try { const p = path.join(getGeneratedStudioDir(id), "image.jpg"); if (existsSync(p)) await unlink(p); } catch { /* non-fatal */ }
+    await db.update(studios).set({ imagePath: null, imageUrl: null, updatedAt: new Date() }).where(eq(studios.id, id));
+    return { ok: true };
+  });
+
+  // ─── GET /tags ───────────────────────────────────────────────
   app.get("/tags", async () => {
-    const rows = await db
-      .select({
-        id: tags.id,
-        name: tags.name,
-        sceneCount: tags.sceneCount,
-      })
-      .from(tags)
-      .orderBy(desc(tags.sceneCount));
+    const rows = await db.select().from(tags).orderBy(desc(tags.sceneCount));
 
     // Count images per tag
     const imageTagCounts = await db
@@ -819,7 +924,14 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     return {
       tags: rows.map((tag) => ({
-        ...tag,
+        id: tag.id,
+        name: tag.name,
+        description: tag.description,
+        aliases: tag.aliases,
+        imagePath: tag.imagePath,
+        favorite: tag.favorite,
+        rating: tag.rating,
+        sceneCount: tag.sceneCount,
         imageCount: imageCountMap.get(tag.id) ?? 0,
       })),
     };
@@ -828,25 +940,13 @@ export async function scenesRoutes(app: FastifyInstance) {
   // ─── GET /tags/:id ───────────────────────────────────────────
   app.get("/tags/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const row = await db.query.tags.findFirst({
-      where: eq(tags.id, id),
-    });
-    if (!row) {
-      reply.code(404);
-      return { error: "Tag not found" };
-    }
+    const row = await db.query.tags.findFirst({ where: eq(tags.id, id) });
+    if (!row) { reply.code(404); return { error: "Tag not found" }; }
     return {
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      aliases: row.aliases,
-      parentId: row.parentId,
-      imageUrl: row.imageUrl,
-      favorite: row.favorite,
-      ignoreAutoTag: row.ignoreAutoTag,
-      sceneCount: row.sceneCount,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      id: row.id, name: row.name, description: row.description, aliases: row.aliases,
+      parentId: row.parentId, imageUrl: row.imageUrl, imagePath: row.imagePath,
+      favorite: row.favorite, rating: row.rating, ignoreAutoTag: row.ignoreAutoTag,
+      sceneCount: row.sceneCount, createdAt: row.createdAt, updatedAt: row.updatedAt,
     };
   });
 
@@ -854,23 +954,12 @@ export async function scenesRoutes(app: FastifyInstance) {
   app.patch("/tags/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as {
-      name?: string;
-      description?: string | null;
-      aliases?: string | null;
-      imageUrl?: string | null;
-      parentId?: string | null;
+      name?: string; description?: string | null; aliases?: string | null;
+      imageUrl?: string | null; parentId?: string | null;
+      favorite?: boolean; rating?: number | null; ignoreAutoTag?: boolean;
     };
-
-    const [existing] = await db
-      .select()
-      .from(tags)
-      .where(eq(tags.id, id))
-      .limit(1);
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Tag not found" };
-    }
+    const [existing] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name.trim();
@@ -878,23 +967,114 @@ export async function scenesRoutes(app: FastifyInstance) {
     if (body.aliases !== undefined) updates.aliases = body.aliases?.trim() || null;
     if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl?.trim() || null;
     if (body.parentId !== undefined) updates.parentId = body.parentId || null;
+    if (body.favorite !== undefined) updates.favorite = body.favorite;
+    if (body.rating !== undefined) updates.rating = body.rating;
+    if (body.ignoreAutoTag !== undefined) updates.ignoreAutoTag = body.ignoreAutoTag;
 
     await db.update(tags).set(updates).where(eq(tags.id, id));
-
     const [updated] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
     return {
-      id: updated.id,
-      name: updated.name,
-      description: updated.description,
-      aliases: updated.aliases,
-      parentId: updated.parentId,
-      imageUrl: updated.imageUrl,
-      favorite: updated.favorite,
-      ignoreAutoTag: updated.ignoreAutoTag,
-      sceneCount: updated.sceneCount,
-      createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt,
+      id: updated.id, name: updated.name, description: updated.description, aliases: updated.aliases,
+      parentId: updated.parentId, imageUrl: updated.imageUrl, imagePath: updated.imagePath,
+      favorite: updated.favorite, rating: updated.rating, ignoreAutoTag: updated.ignoreAutoTag,
+      sceneCount: updated.sceneCount, createdAt: updated.createdAt, updatedAt: updated.updatedAt,
     };
+  });
+
+  // ─── POST /tags ─────────────────────────────────────────────
+  app.post("/tags", async (request, reply) => {
+    const body = request.body as { name: string; description?: string; aliases?: string };
+    if (!body.name?.trim()) { reply.code(400); return { error: "name is required" }; }
+    const [created] = await db.insert(tags).values({
+      name: body.name.trim(),
+      description: body.description?.trim() || null,
+      aliases: body.aliases?.trim() || null,
+    }).returning();
+    return reply.code(201).send({ ok: true, id: created.id });
+  });
+
+  // ─── DELETE /tags/:id ───────────────────────────────────────
+  app.delete("/tags/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [deleted] = await db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
+    if (!deleted) { reply.code(404); return { error: "Tag not found" }; }
+    try { const dir = getGeneratedTagDir(id); if (existsSync(dir)) await rm(dir, { recursive: true }); } catch { /* non-fatal */ }
+    return { ok: true };
+  });
+
+  // ─── PATCH /tags/:id/favorite ───────────────────────────────
+  app.patch("/tags/:id/favorite", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { favorite } = request.body as { favorite: boolean };
+    const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
+    await db.update(tags).set({ favorite, updatedAt: new Date() }).where(eq(tags.id, id));
+    return { ok: true, favorite };
+  });
+
+  // ─── PATCH /tags/:id/rating ─────────────────────────────────
+  app.patch("/tags/:id/rating", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { rating } = request.body as { rating: number | null };
+    const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
+    await db.update(tags).set({ rating, updatedAt: new Date() }).where(eq(tags.id, id));
+    return { ok: true, rating };
+  });
+
+  // ─── POST /tags/:id/image (multipart upload) ────────────────
+  app.post("/tags/:id/image", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
+    const file = await request.file();
+    if (!file) { reply.code(400); return { error: "No file uploaded" }; }
+    const buffer = await file.toBuffer();
+    const genDir = getGeneratedTagDir(id);
+    await mkdir(genDir, { recursive: true });
+    await writeFile(path.join(genDir, "image.jpg"), buffer);
+    const assetUrl = `/assets/tags/${id}/image`;
+    await db.update(tags).set({ imagePath: assetUrl, updatedAt: new Date() }).where(eq(tags.id, id));
+    return { ok: true, imagePath: assetUrl };
+  });
+
+  // ─── POST /tags/:id/image/from-url ──────────────────────────
+  app.post("/tags/:id/image/from-url", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { imageUrl } = request.body as { imageUrl: string };
+    if (!imageUrl || (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:image/"))) {
+      reply.code(400); return { error: "Invalid image URL" };
+    }
+    const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
+    try {
+      let buffer: Buffer;
+      if (imageUrl.startsWith("data:image/")) {
+        const base64Data = imageUrl.split(",")[1];
+        if (!base64Data) { reply.code(400); return { error: "Invalid data URL" }; }
+        buffer = Buffer.from(base64Data, "base64");
+      } else {
+        const res = await fetch(imageUrl);
+        if (!res.ok) { reply.code(502); return { error: `Failed to fetch image: ${res.status}` }; }
+        buffer = Buffer.from(await res.arrayBuffer());
+      }
+      const genDir = getGeneratedTagDir(id);
+      await mkdir(genDir, { recursive: true });
+      await writeFile(path.join(genDir, "image.jpg"), buffer);
+      const assetUrl = `/assets/tags/${id}/image`;
+      await db.update(tags).set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() }).where(eq(tags.id, id));
+      return { ok: true, imagePath: assetUrl };
+    } catch { reply.code(502); return { error: "Failed to download image" }; }
+  });
+
+  // ─── DELETE /tags/:id/image ─────────────────────────────────
+  app.delete("/tags/:id/image", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
+    if (!existing) { reply.code(404); return { error: "Tag not found" }; }
+    try { const p = path.join(getGeneratedTagDir(id), "image.jpg"); if (existsSync(p)) await unlink(p); } catch { /* non-fatal */ }
+    await db.update(tags).set({ imagePath: null, imageUrl: null, updatedAt: new Date() }).where(eq(tags.id, id));
+    return { ok: true };
   });
 
   // ─── POST /scenes/:id/thumbnail ──────────────────────────────

@@ -605,12 +605,67 @@ export async function fetchStudioDetail(id: string): Promise<StudioDetail> {
 
 export async function updateStudio(
   id: string,
-  data: { name?: string; url?: string | null; imageUrl?: string | null; parentId?: string | null }
+  data: Record<string, unknown>
 ): Promise<StudioDetail> {
   return fetchApi(`/studios/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function createStudio(
+  data: { name: string; description?: string; aliases?: string; url?: string; parentId?: string }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi("/studios", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function deleteStudio(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/studios/${id}`, { method: "DELETE" });
+}
+
+export async function toggleStudioFavorite(
+  id: string,
+  favorite: boolean
+): Promise<{ ok: true; favorite: boolean }> {
+  return fetchApi(`/studios/${id}/favorite`, {
+    method: "PATCH",
+    body: JSON.stringify({ favorite }),
+  });
+}
+
+export async function setStudioRating(
+  id: string,
+  rating: number | null
+): Promise<{ ok: true; rating: number | null }> {
+  return fetchApi(`/studios/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
+  });
+}
+
+export async function uploadStudioImage(
+  id: string,
+  file: File
+): Promise<{ ok: true; imagePath: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/studios/${id}/image`, { method: "POST", body: form });
+  if (!res.ok) { const msg = await res.text(); throw new Error(msg || `Upload failed: ${res.status}`); }
+  return res.json();
+}
+
+export async function uploadStudioImageFromUrl(
+  id: string,
+  imageUrl: string
+): Promise<{ ok: true; imagePath: string }> {
+  return fetchApi(`/studios/${id}/image/from-url`, {
+    method: "POST",
+    body: JSON.stringify({ imageUrl }),
+  });
+}
+
+export async function deleteStudioImage(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/studios/${id}/image`, { method: "DELETE" });
 }
 
 export async function fetchTagDetail(id: string): Promise<TagDetail> {
@@ -619,12 +674,67 @@ export async function fetchTagDetail(id: string): Promise<TagDetail> {
 
 export async function updateTag(
   id: string,
-  data: { name?: string; description?: string | null; aliases?: string | null; imageUrl?: string | null; parentId?: string | null }
+  data: Record<string, unknown>
 ): Promise<TagDetail> {
   return fetchApi(`/tags/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function createTag(
+  data: { name: string; description?: string; aliases?: string }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi("/tags", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function deleteTag(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/tags/${id}`, { method: "DELETE" });
+}
+
+export async function toggleTagFavorite(
+  id: string,
+  favorite: boolean
+): Promise<{ ok: true; favorite: boolean }> {
+  return fetchApi(`/tags/${id}/favorite`, {
+    method: "PATCH",
+    body: JSON.stringify({ favorite }),
+  });
+}
+
+export async function setTagRating(
+  id: string,
+  rating: number | null
+): Promise<{ ok: true; rating: number | null }> {
+  return fetchApi(`/tags/${id}/rating`, {
+    method: "PATCH",
+    body: JSON.stringify({ rating }),
+  });
+}
+
+export async function uploadTagImage(
+  id: string,
+  file: File
+): Promise<{ ok: true; imagePath: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/tags/${id}/image`, { method: "POST", body: form });
+  if (!res.ok) { const msg = await res.text(); throw new Error(msg || `Upload failed: ${res.status}`); }
+  return res.json();
+}
+
+export async function uploadTagImageFromUrl(
+  id: string,
+  imageUrl: string
+): Promise<{ ok: true; imagePath: string }> {
+  return fetchApi(`/tags/${id}/image/from-url`, {
+    method: "POST",
+    body: JSON.stringify({ imageUrl }),
+  });
+}
+
+export async function deleteTagImage(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/tags/${id}/image`, { method: "DELETE" });
 }
 
 export async function fetchLibraryConfig(): Promise<{
