@@ -4,6 +4,7 @@ import { createReadStream } from "node:fs";
 import { readdir, readFile, stat, open, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import AdmZip from "adm-zip";
 
 export const supportedFingerprintKinds = [
   "md5",
@@ -498,4 +499,139 @@ export async function writeNfo(videoFilePath: string, data: NfoWriteData): Promi
   lines.push(`</episodedetails>`);
 
   await writeFile(nfoPath, lines.join("\n") + "\n", "utf8");
+}
+
+// ─── Image discovery ──────────────────────────────────────────────
+
+export const supportedImageExtensions = new Set([
+  ".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".bmp", ".tiff", ".tif",
+]);
+
+export const supportedZipExtensions = new Set([
+  ".zip", ".cbz", ".cbr",
+]);
+
+export function isImageFile(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  if (!supportedImageExtensions.has(ext)) return false;
+
+  // Skip generated preview/thumbnail/sample files
+  const stem = path.basename(filePath, ext);
+  return !generatedSuffixPattern.test(stem);
+}
+
+export interface ImageDiscoveryResult {
+  /** Directories containing at least one image file directly */
+  dirs: string[];
+  /** All image files found (absolute paths) */
+  imageFiles: string[];
+  /** All zip/cbz/cbr files found (absolute paths) */
+  zipFiles: string[];
+}
+
+export async function discoverImageFilesAndDirs(
+  rootPath: string,
+  recursive = true
+): Promise<ImageDiscoveryResult> {
+  const dirs: Set<string> = new Set();
+  const imageFiles: string[] = [];
+  const zipFiles: string[] = [];
+
+  async function walk(dirPath: string) {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name);
+
+      if (entry.isDirectory()) {
+        if (recursive) {
+          await walk(entryPath);
+        }
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+
+      const ext = path.extname(entry.name).toLowerCase();
+
+      if (supportedZipExtensions.has(ext)) {
+        zipFiles.push(entryPath);
+        continue;
+      }
+
+      if (isImageFile(entryPath)) {
+        imageFiles.push(entryPath);
+        dirs.add(dirPath);
+      }
+    }
+  }
+
+  await walk(rootPath);
+
+  return {
+    dirs: [...dirs].sort(),
+    imageFiles: imageFiles.sort(),
+    zipFiles: zipFiles.sort(),
+  };
+}
+
+export function getGeneratedImageDir(imageId: string) {
+  return path.join(getCacheRootDir(), "images", imageId);
+}
+
+/**
+ * Parse a zip/cbz/cbr file and return sorted member paths for image entries.
+ */
+export function parseZipImageMembers(zipPath: string): string[] {
+  const zip = new AdmZip(zipPath);
+  const entries = zip.getEntries();
+
+  return entries
+    .filter((entry) => {
+      if (entry.isDirectory) return false;
+      const ext = path.extname(entry.entryName).toLowerCase();
+      return supportedImageExtensions.has(ext);
+    })
+    .map((entry) => entry.entryName)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Extract a single member from a zip file as a Buffer.
+ */
+export function extractZipMember(zipPath: string, memberPath: string): Buffer | null {
+  const zip = new AdmZip(zipPath);
+  const entry = zip.getEntry(memberPath);
+  if (!entry) return null;
+  return entry.getData();
+}
+
+/**
+ * Probe an image file to extract width, height, and format using ffprobe.
+ */
+export async function probeImageFile(filePath: string): Promise<{
+  width: number | null;
+  height: number | null;
+  format: string | null;
+}> {
+  try {
+    const { stdout } = await runProcess("ffprobe", [
+      "-v", "error",
+      "-select_streams", "v:0",
+      "-show_entries", "stream=width,height,codec_name",
+      "-of", "json",
+      filePath,
+    ]);
+
+    const parsed = JSON.parse(stdout) as { streams?: Array<{ width?: number; height?: number; codec_name?: string }> };
+    const stream = parsed.streams?.[0];
+
+    return {
+      width: stream?.width ?? null,
+      height: stream?.height ?? null,
+      format: stream?.codec_name ?? null,
+    };
+  } catch {
+    return { width: null, height: null, format: null };
+  }
 }

@@ -11,8 +11,11 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^22.19.17",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17"
   }
 }
-

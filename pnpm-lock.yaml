@@ -165,7 +165,14 @@ importers:
         version: 5.9.3
 
   packages/media-core:
+    dependencies:
+      adm-zip:
+        specifier: ^0.5.17
+        version: 0.5.17
     devDependencies:
+      '@types/adm-zip':
+        specifier: ^0.5.8
+        version: 0.5.8
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.17
@@ -1184,6 +1191,9 @@ packages:
     cpu: [arm64]
     os: [win32]
 
+  '@types/adm-zip@0.5.8':
+    resolution: {integrity: sha512-RVVH7QvZYbN+ihqZ4kX/dMiowf6o+Jk1fNwiSdx0NahBJLU787zkULhGhJM8mf/obmLGmgdMM0bXsQTmyfbR7Q==}
+
   '@types/js-yaml@4.0.9':
     resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
@@ -1206,6 +1216,10 @@ packages:
 
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
+
+  adm-zip@0.5.17:
+    resolution: {integrity: sha512-+Ut8d9LLqwEvHHJl1+PIHqoyDxFgVN847JTVM3Izi3xHDWPE4UtzzXysMZQs64DMcrJfBeS/uoEP4AD3HQHnQQ==}
+    engines: {node: '>=12.0'}
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
@@ -2592,6 +2606,10 @@ snapshots:
   '@turbo/windows-arm64@2.9.3':
     optional: true
 
+  '@types/adm-zip@0.5.8':
+    dependencies:
+      '@types/node': 22.19.17
+
   '@types/js-yaml@4.0.9': {}
 
   '@types/jsdom@28.0.1':
@@ -2616,6 +2634,8 @@ snapshots:
   '@types/tough-cookie@4.0.5': {}
 
   abstract-logging@2.0.1: {}
+
+  adm-zip@0.5.17: {}
 
   ajv-formats@3.0.1(ajv@8.18.0):
     optionalDependencies:
