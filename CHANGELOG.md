@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Thumbnail & trickplay quality settings** — new `thumbnailQuality` and `trickplayQuality` controls in Settings (ffmpeg `-q:v` scale, 1 = best, 31 = worst, default 2). All preview thumbnails, card thumbnails, and trickplay sprites now respect the configured quality level.
+- **App version in sidebar** — the sidebar footer now shows the semver version (from root `package.json`) instead of "Workers idle". Clicking the version opens a changelog dialog.
+- **Changelog dialog** — lazy-loads `CHANGELOG.md` into a styled modal with parsed markdown headings, lists, and inline code. Available in Docker builds via a new `/api/changelog` route.
+
 ### Fixed
 
 - Scene video player: fullscreen control now falls back to video-element and WebKit native fullscreen so it works on mobile browsers (notably iOS) where `requestFullscreen` on the player wrapper is unsupported or unreliable.
