@@ -84,11 +84,14 @@ export function resolveActionDef(
   const defs = entry as ScraperActionDef[];
 
   if (inputUrl) {
+    const genericDef = defs.find((def) => !!def.action && (!def.url || def.url.length === 0));
+
     for (const def of defs) {
       if (!def.action) continue;
-      if (!def.url || def.url.length === 0) return def;
-      if (def.url.some((pattern) => inputUrl.includes(pattern))) return def;
+      if (def.url?.some((pattern) => inputUrl.includes(pattern))) return def;
     }
+
+    return genericDef ?? null;
   }
 
   // Fallback to first valid action

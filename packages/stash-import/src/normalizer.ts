@@ -30,6 +30,21 @@ export function normalizeSceneResult(
   };
 }
 
+export function hasUsableNormalizedSceneResult(
+  result: NormalizedScrapeResult
+): boolean {
+  return Boolean(
+    result.title ||
+      result.date ||
+      result.details ||
+      result.url ||
+      result.studioName ||
+      result.imageUrl ||
+      result.performerNames.length > 0 ||
+      result.tagNames.length > 0
+  );
+}
+
 /** Only return the value if it looks like a valid URL, otherwise null */
 function trimToUrl(value: string | undefined | null): string | null {
   const trimmed = trimOrNull(value);
@@ -92,13 +107,28 @@ function deduplicateNames(names: string[]): string[] {
  * Handles common formats: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, etc.
  */
 function normalizeDate(value: string | undefined | null): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
+  const trimmed = trimOrNull(value);
   if (!trimmed) return null;
+
+  // Preserve partial dates rather than coercing them to the first of the month/year.
+  if (/^\d{4}$/.test(trimmed) || /^\d{4}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
 
   // Already YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return trimmed;
+  }
+
+  // Structured payloads from misconfigured selectors should not leak into the date field.
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[") ||
+    trimmed.startsWith("<") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    return null;
   }
 
   // Try parsing as a date
@@ -110,8 +140,7 @@ function normalizeDate(value: string | undefined | null): string | null {
     return `${year}-${month}-${day}`;
   }
 
-  // Return as-is if we can't parse it
-  return trimmed;
+  return null;
 }
 
 /**

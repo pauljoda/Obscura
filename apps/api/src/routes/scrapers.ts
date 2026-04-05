@@ -13,6 +13,7 @@ import {
   scrapePerformer,
   normalizeSceneResult,
   normalizePerformerResult,
+  hasUsableNormalizedSceneResult,
   ScraperExecutionError,
   type ScraperSceneFragment,
   type ScraperPerformerFragment,
@@ -447,15 +448,23 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
         // For sceneByName, return array of search results
         if (Array.isArray(rawResult)) {
+          const normalizedResults = rawResult
+            .map((raw) => ({ raw, normalized: normalizeSceneResult(raw) }))
+            .filter(({ normalized }) => hasUsableNormalizedSceneResult(normalized));
+
           return {
-            results: rawResult.map((r) => normalizeSceneResult(r)),
-            rawResults: rawResult,
+            results: normalizedResults.map(({ normalized }) => normalized),
+            rawResults: normalizedResults.map(({ raw }) => raw),
             action,
             triedActions,
           };
         }
 
         const normalized = normalizeSceneResult(rawResult);
+        if (!hasUsableNormalizedSceneResult(normalized)) {
+          errors.push(`${action}: no usable fields`);
+          continue;
+        }
 
         // Store the result
         const [result] = await db
