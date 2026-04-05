@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Settings page: scrapers link moved higher (after Watched Libraries, before Generation Pipeline).
+- Settings page: file browser simplified — navigating auto-selects the current folder, removing the extra "Use Current Folder" step. Added cancel button and scrollable directory listing.
+- Settings page: form labels use design system `control-label` class consistently.
+- Scrapers page: installed scrapers section is now collapsible with chevron toggle; capability filter merged into the collapsible header bar.
+- Scrapers page: scraper cards and community index entries use `surface-card-sharp` for better visibility against the dark background.
+
 ### Added
 
 - Full performer CRUD API: `POST /performers`, `PATCH /performers/:id`, `DELETE /performers/:id`, favorite/rating quick toggles.
