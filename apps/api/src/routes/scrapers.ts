@@ -1018,7 +1018,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const genDir = getGeneratedSceneDir(result.sceneId);
           await mkdir(genDir, { recursive: true });
           await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
-          const assetUrl = `/assets/scenes/${result.sceneId}/thumbnail`;
+          const assetUrl = `/assets/scenes/${result.sceneId}/thumb-custom`;
           await tx
             .update(scenes)
             .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
