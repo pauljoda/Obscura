@@ -11,6 +11,16 @@ export const apiRoutes = {
   sceneDetail: "/scenes/:id",
   sceneStats: "/scenes/stats",
   galleries: "/galleries",
+  galleryDetail: "/galleries/:id",
+  galleryStats: "/galleries/stats",
+  galleryCover: "/galleries/:id/cover",
+  galleryChapters: "/galleries/:id/chapters",
+  galleryChapterDetail: "/galleries/chapters/:id",
+  images: "/images",
+  imageDetail: "/images/:id",
+  imagesBulk: "/images/bulk",
+  imageAssets: "/assets/images/:id/*",
+  galleryCoverAsset: "/assets/galleries/:id/cover",
   studios: "/studios",
   performers: "/performers",
   performerDetail: "/performers/:id",
@@ -40,6 +50,9 @@ export const queueDefinitions = [
   { name: "fingerprint", description: "Generates md5, oshash, and perceptual fingerprints" },
   { name: "preview", description: "Builds thumbnails, previews, and trickplay sprites" },
   { name: "metadata-import", description: "Coordinates stash bootstrap imports and provider application" },
+  { name: "gallery-scan", description: "Discovers images and galleries in configured media roots" },
+  { name: "image-thumbnail", description: "Generates thumbnails for images" },
+  { name: "image-fingerprint", description: "Computes MD5/oshash for images" },
 ] as const;
 
 export type QueueName = (typeof queueDefinitions)[number]["name"];
@@ -61,6 +74,8 @@ export interface LibraryRootDto {
   label: string;
   enabled: boolean;
   recursive: boolean;
+  scanVideos: boolean;
+  scanImages: boolean;
   lastScannedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -100,13 +115,119 @@ export interface StorageStatsDto {
   totalBytes: number;
 }
 
-/** Image gallery folder discovered by the library (list endpoint; empty until gallery ingest ships). */
+// ─── Gallery DTOs ────────────────────────────────────────────────
+
+export type GalleryType = "folder" | "zip" | "virtual";
+
 export interface GalleryListItemDto {
   id: string;
   title: string;
+  galleryType: GalleryType;
+  coverImagePath: string | null;
+  previewImagePaths: string[];
+  imageCount: number;
+  rating: number | null;
+  organized: boolean;
+  date: string | null;
+  studioId: string | null;
+  studioName: string | null;
+  performers: { id: string; name: string }[];
+  tags: { id: string; name: string }[];
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface GalleryDetailDto {
+  id: string;
+  title: string;
+  details: string | null;
+  galleryType: GalleryType;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  photographer: string | null;
+  folderPath: string | null;
+  zipFilePath: string | null;
+  parentId: string | null;
+  coverImageId: string | null;
   coverImagePath: string | null;
   imageCount: number;
+  studio: { id: string; name: string; url: string | null } | null;
+  performers: { id: string; name: string; gender: string | null; imagePath: string | null }[];
+  tags: { id: string; name: string }[];
+  chapters: GalleryChapterDto[];
+  images: ImageListItemDto[];
+  imageTotal: number;
+  imageLimit: number;
+  imageOffset: number;
+  children: { id: string; title: string; imageCount: number; coverImagePath: string | null }[];
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface GalleryChapterDto {
+  id: string;
+  galleryId: string;
+  title: string;
+  imageIndex: number;
+}
+
+export interface GalleryStatsDto {
+  totalGalleries: number;
+  totalImages: number;
+  recentCount: number;
+}
+
+// ─── Image DTOs ──────────────────────────────────────────────────
+
+export interface ImageListItemDto {
+  id: string;
+  title: string;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  fileSize: number | null;
+  thumbnailPath: string | null;
+  fullPath: string | null;
+  galleryId: string | null;
+  sortOrder: number;
+  studioId: string | null;
+  performers: { id: string; name: string }[];
+  tags: { id: string; name: string }[];
+  createdAt: string;
+}
+
+export interface ImageDetailDto extends ImageListItemDto {
+  details: string | null;
+  checksumMd5: string | null;
+  oshash: string | null;
+  filePath: string;
+  studio: { id: string; name: string } | null;
+  updatedAt: string;
+}
+
+export interface ImageUpdateDto {
+  title?: string;
+  details?: string | null;
+  date?: string | null;
+  rating?: number | null;
+  organized?: boolean;
+  studioName?: string | null;
+  performerNames?: string[];
+  tagNames?: string[];
+}
+
+export interface ImageBulkUpdateDto {
+  ids: string[];
+  patch: {
+    rating?: number | null;
+    organized?: boolean;
+    tagNames?: string[];
+    galleryId?: string | null;
+  };
 }
 
 export interface QueueSummaryDto {

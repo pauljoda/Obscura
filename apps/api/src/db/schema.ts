@@ -25,6 +25,8 @@ export const studios = pgTable("studios", {
 
 export const studiosRelations = relations(studios, ({ many, one }) => ({
   scenes: many(scenes),
+  galleries: many(galleries),
+  images: many(images),
   parent: one(studios, { fields: [studios.parentId], references: [studios.id] }),
 }));
 
@@ -70,6 +72,8 @@ export const performers = pgTable(
 export const performersRelations = relations(performers, ({ many }) => ({
   scenePerformers: many(scenePerformers),
   performerTags: many(performerTags),
+  galleryPerformers: many(galleryPerformers),
+  imagePerformers: many(imagePerformers),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -94,6 +98,8 @@ export const tags = pgTable(
 export const tagsRelations = relations(tags, ({ many, one }) => ({
   sceneTags: many(sceneTags),
   performerTags: many(performerTags),
+  galleryTags: many(galleryTags),
+  imageTags: many(imageTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -106,6 +112,8 @@ export const libraryRoots = pgTable(
     label: text("label").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
+    scanVideos: boolean("scan_videos").default(true).notNull(),
+    scanImages: boolean("scan_images").default(true).notNull(),
     lastScannedAt: timestamp("last_scanned_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -407,5 +415,252 @@ export const scrapeResultsRelations = relations(scrapeResults, ({ one }) => ({
   scraperPackage: one(scraperPackages, {
     fields: [scrapeResults.scraperPackageId],
     references: [scraperPackages.id],
+  }),
+}));
+
+// ─── Galleries ─────────────────────────────────────────────────────
+export const galleries = pgTable(
+  "galleries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    details: text("details"),
+    date: text("date"),
+    rating: integer("rating"),
+    organized: boolean("organized").default(false).notNull(),
+    photographer: text("photographer"),
+
+    // Gallery type discriminator: "folder" | "zip" | "virtual"
+    galleryType: text("gallery_type").notNull().default("virtual"),
+
+    // Folder-based galleries
+    folderPath: text("folder_path"),
+
+    // Zip-based galleries (.zip/.cbz/.cbr)
+    zipFilePath: text("zip_file_path"),
+
+    // Hierarchy (sub-galleries)
+    parentId: uuid("parent_id").references((): any => galleries.id),
+
+    // Explicit cover image (plain UUID — no FK to avoid circular dep with images)
+    coverImageId: uuid("cover_image_id"),
+
+    // Denormalized count
+    imageCount: integer("image_count").default(0).notNull(),
+
+    // Relations
+    studioId: uuid("studio_id").references(() => studios.id),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("galleries_studio_idx").on(table.studioId),
+    index("galleries_parent_idx").on(table.parentId),
+    index("galleries_type_idx").on(table.galleryType),
+    index("galleries_date_idx").on(table.date),
+    index("galleries_rating_idx").on(table.rating),
+    index("galleries_created_at_idx").on(table.createdAt),
+    index("galleries_folder_path_idx").on(table.folderPath),
+    index("galleries_zip_path_idx").on(table.zipFilePath),
+  ]
+);
+
+export const galleriesRelations = relations(galleries, ({ one, many }) => ({
+  studio: one(studios, { fields: [galleries.studioId], references: [studios.id] }),
+  parent: one(galleries, { fields: [galleries.parentId], references: [galleries.id] }),
+  children: many(galleries),
+  galleryPerformers: many(galleryPerformers),
+  galleryTags: many(galleryTags),
+  chapters: many(galleryChapters),
+  images: many(images),
+}));
+
+// ─── Images ────────────────────────────────────────────────────────
+export const images = pgTable(
+  "images",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    details: text("details"),
+    date: text("date"),
+    rating: integer("rating"),
+    organized: boolean("organized").default(false).notNull(),
+
+    // File info — for zip members: "/path/archive.cbz::member/file.jpg"
+    filePath: text("file_path").notNull(),
+    fileSize: real("file_size"),
+    width: integer("width"),
+    height: integer("height"),
+    format: text("format"),
+
+    // Generated thumbnail (cache dir)
+    thumbnailPath: text("thumbnail_path"),
+
+    // Fingerprints
+    checksumMd5: text("checksum_md5"),
+    oshash: text("oshash"),
+
+    // Gallery membership
+    galleryId: uuid("gallery_id").references(() => galleries.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+
+    // Relations
+    studioId: uuid("studio_id").references(() => studios.id),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("images_file_path_idx").on(table.filePath),
+    index("images_gallery_idx").on(table.galleryId),
+    index("images_gallery_sort_idx").on(table.galleryId, table.sortOrder),
+    index("images_studio_idx").on(table.studioId),
+    index("images_rating_idx").on(table.rating),
+    index("images_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const imagesRelations = relations(images, ({ one, many }) => ({
+  gallery: one(galleries, { fields: [images.galleryId], references: [galleries.id] }),
+  studio: one(studios, { fields: [images.studioId], references: [studios.id] }),
+  imagePerformers: many(imagePerformers),
+  imageTags: many(imageTags),
+}));
+
+// ─── Gallery Chapters ──────────────────────────────────────────────
+export const galleryChapters = pgTable(
+  "gallery_chapters",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    galleryId: uuid("gallery_id")
+      .notNull()
+      .references(() => galleries.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    imageIndex: integer("image_index").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("gallery_chapters_gallery_idx").on(table.galleryId),
+  ]
+);
+
+export const galleryChaptersRelations = relations(galleryChapters, ({ one }) => ({
+  gallery: one(galleries, {
+    fields: [galleryChapters.galleryId],
+    references: [galleries.id],
+  }),
+}));
+
+// ─── Gallery ↔ Performer join ──────────────────────────────────────
+export const galleryPerformers = pgTable(
+  "gallery_performers",
+  {
+    galleryId: uuid("gallery_id")
+      .notNull()
+      .references(() => galleries.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("gallery_performers_pk").on(table.galleryId, table.performerId),
+    index("gallery_performers_performer_idx").on(table.performerId),
+  ]
+);
+
+export const galleryPerformersRelations = relations(galleryPerformers, ({ one }) => ({
+  gallery: one(galleries, {
+    fields: [galleryPerformers.galleryId],
+    references: [galleries.id],
+  }),
+  performer: one(performers, {
+    fields: [galleryPerformers.performerId],
+    references: [performers.id],
+  }),
+}));
+
+// ─── Gallery ↔ Tag join ────────────────────────────────────────────
+export const galleryTags = pgTable(
+  "gallery_tags",
+  {
+    galleryId: uuid("gallery_id")
+      .notNull()
+      .references(() => galleries.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("gallery_tags_pk").on(table.galleryId, table.tagId),
+    index("gallery_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const galleryTagsRelations = relations(galleryTags, ({ one }) => ({
+  gallery: one(galleries, {
+    fields: [galleryTags.galleryId],
+    references: [galleries.id],
+  }),
+  tag: one(tags, {
+    fields: [galleryTags.tagId],
+    references: [tags.id],
+  }),
+}));
+
+// ─── Image ↔ Performer join ───────────────────────────────────────
+export const imagePerformers = pgTable(
+  "image_performers",
+  {
+    imageId: uuid("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("image_performers_pk").on(table.imageId, table.performerId),
+    index("image_performers_performer_idx").on(table.performerId),
+  ]
+);
+
+export const imagePerformersRelations = relations(imagePerformers, ({ one }) => ({
+  image: one(images, {
+    fields: [imagePerformers.imageId],
+    references: [images.id],
+  }),
+  performer: one(performers, {
+    fields: [imagePerformers.performerId],
+    references: [performers.id],
+  }),
+}));
+
+// ─── Image ↔ Tag join ─────────────────────────────────────────────
+export const imageTags = pgTable(
+  "image_tags",
+  {
+    imageId: uuid("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("image_tags_pk").on(table.imageId, table.tagId),
+    index("image_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const imageTagsRelations = relations(imageTags, ({ one }) => ({
+  image: one(images, {
+    fields: [imageTags.imageId],
+    references: [images.id],
+  }),
+  tag: one(tags, {
+    fields: [imageTags.tagId],
+    references: [tags.id],
   }),
 }));
