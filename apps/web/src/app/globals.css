@@ -270,16 +270,6 @@
     overflow: hidden;
   }
 
-  /* CRT inner vignette effect for media wells */
-  .surface-media-well::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9);
-    pointer-events: none;
-    z-index: 10;
-  }
-
   /* Well: recessed inset container */
   .surface-well {
     background: rgba(0, 0, 0, 0.25);
