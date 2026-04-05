@@ -524,6 +524,8 @@ async function processPreview(job: Job) {
       ? Math.max(90, Math.round((metadata.height / metadata.width) * cardWidth))
       : 90;
 
+  const thumbQuality = String(Math.max(1, Math.min(31, settings.thumbnailQuality)));
+
   await runProcess("ffmpeg", [
     "-hide_banner",
     "-loglevel",
@@ -537,6 +539,8 @@ async function processPreview(job: Job) {
     "1",
     "-vf",
     `scale=${thumbWidth}:${thumbHeight}`,
+    "-q:v",
+    thumbQuality,
     thumbnailFile,
   ]);
 
@@ -554,7 +558,7 @@ async function processPreview(job: Job) {
     "-vf",
     `scale=${cardWidth}:${cardHeight}`,
     "-q:v",
-    "8",
+    thumbQuality,
     cardFile,
   ]);
   await markJobProgress(job, "preview", 30);
@@ -585,6 +589,8 @@ async function processPreview(job: Job) {
   ]);
   await markJobProgress(job, "preview", 65);
 
+  const spriteQuality = String(Math.max(1, Math.min(31, settings.trickplayQuality)));
+
   await runProcess("ffmpeg", [
     "-hide_banner",
     "-loglevel",
@@ -596,6 +602,8 @@ async function processPreview(job: Job) {
     `fps=1/${frameInterval},scale=${thumbWidth}:${thumbHeight},tile=${columns}x${rows}`,
     "-frames:v",
     "1",
+    "-q:v",
+    spriteQuality,
     spriteFile,
   ]);
 

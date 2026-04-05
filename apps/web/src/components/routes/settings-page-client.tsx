@@ -59,6 +59,8 @@ const settingsKeys = [
   "generateTrickplay",
   "trickplayIntervalSeconds",
   "previewClipDurationSeconds",
+  "thumbnailQuality",
+  "trickplayQuality",
 ] as const;
 
 interface SettingsPageClientProps {
@@ -139,6 +141,8 @@ export function SettingsPageClient({
         generateTrickplay: settings.generateTrickplay,
         trickplayIntervalSeconds: settings.trickplayIntervalSeconds,
         previewClipDurationSeconds: settings.previewClipDurationSeconds,
+        thumbnailQuality: settings.thumbnailQuality,
+        trickplayQuality: settings.trickplayQuality,
       });
 
       setSettings(updated);
@@ -557,6 +561,49 @@ export function SettingsPageClient({
                 }))
               }
             />
+          </div>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          <div className="surface-card-sharp no-lift p-3.5">
+            <label className="control-label mb-1.5">Thumbnail Quality</label>
+            <input
+              className="control-input w-full py-1.5 text-sm"
+              type="number"
+              min={1}
+              max={31}
+              step={1}
+              value={settings.thumbnailQuality}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  thumbnailQuality: Math.max(1, Math.min(31, Number(event.target.value) || 2)),
+                }))
+              }
+            />
+            <p className="mt-1.5 text-[0.62rem] text-text-disabled">
+              JPEG quality for thumbnails (1 = best, 31 = worst)
+            </p>
+          </div>
+          <div className="surface-card-sharp no-lift p-3.5">
+            <label className="control-label mb-1.5">Trickplay Quality</label>
+            <input
+              className="control-input w-full py-1.5 text-sm"
+              type="number"
+              min={1}
+              max={31}
+              step={1}
+              value={settings.trickplayQuality}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  trickplayQuality: Math.max(1, Math.min(31, Number(event.target.value) || 2)),
+                }))
+              }
+            />
+            <p className="mt-1.5 text-[0.62rem] text-text-disabled">
+              JPEG quality for trickplay sprites (1 = best, 31 = worst)
+            </p>
           </div>
         </div>
       </section>

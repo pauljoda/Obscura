@@ -124,6 +124,8 @@ export const librarySettings = pgTable("library_settings", {
   generateTrickplay: boolean("generate_trickplay").default(true).notNull(),
   trickplayIntervalSeconds: integer("trickplay_interval_seconds").default(10).notNull(),
   previewClipDurationSeconds: integer("preview_clip_duration_seconds").default(8).notNull(),
+  thumbnailQuality: integer("thumbnail_quality").default(2).notNull(),
+  trickplayQuality: integer("trickplay_quality").default(2).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

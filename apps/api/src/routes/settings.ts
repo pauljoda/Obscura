@@ -47,6 +47,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.trickplayIntervalSeconds ?? settings.trickplayIntervalSeconds,
         previewClipDurationSeconds:
           payload.previewClipDurationSeconds ?? settings.previewClipDurationSeconds,
+        thumbnailQuality: payload.thumbnailQuality ?? settings.thumbnailQuality,
+        trickplayQuality: payload.trickplayQuality ?? settings.trickplayQuality,
         updatedAt: new Date(),
       })
       .where(eq(librarySettings.id, settings.id))

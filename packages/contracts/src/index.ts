@@ -87,6 +87,8 @@ export interface LibrarySettingsDto {
   generateTrickplay: boolean;
   trickplayIntervalSeconds: number;
   previewClipDurationSeconds: number;
+  thumbnailQuality: number;
+  trickplayQuality: number;
   createdAt: string;
   updatedAt: string;
 }

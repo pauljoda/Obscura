@@ -19,6 +19,8 @@ const defaultSettings: LibrarySettings = {
   generateTrickplay: true,
   trickplayIntervalSeconds: 10,
   previewClipDurationSeconds: 8,
+  thumbnailQuality: 2,
+  trickplayQuality: 2,
   createdAt: "",
   updatedAt: "",
 };
