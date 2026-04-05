@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from "react";
 import {
   Film,
+  Image,
   Images,
   Users,
   Building2,
@@ -30,6 +31,7 @@ const sections = [
     items: [
       { label: "Scenes", href: "/scenes", Icon: Film },
       { label: "Galleries", href: "/galleries", Icon: Images },
+      { label: "Images", href: "/images", Icon: Image },
       { label: "Performers", href: "/performers", Icon: Users },
       { label: "Studios", href: "/studios", Icon: Building2 },
       { label: "Tags", href: "/tags", Icon: Tags },

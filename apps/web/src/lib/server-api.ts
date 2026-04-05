@@ -7,6 +7,9 @@ import type {
   StorageStatsDto,
   ScraperPackageDto,
   GalleryListItemDto,
+  GalleryDetailDto,
+  GalleryStatsDto,
+  ImageListItemDto,
   ScrapeResultDto,
 } from "@obscura/contracts";
 
@@ -99,13 +102,72 @@ export async function fetchSceneStats() {
   });
 }
 
-export async function fetchGalleries(params?: { limit?: number }) {
+export async function fetchGalleries(params?: {
+  search?: string;
+  sort?: string;
+  order?: string;
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  type?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const sp = new URLSearchParams();
-  if (params?.limit != null) sp.set("limit", String(params.limit));
+  if (params?.search) sp.set("search", params.search);
+  if (params?.sort) sp.set("sort", params.sort);
+  if (params?.order) sp.set("order", params.order);
+  if (params?.studio) sp.set("studio", params.studio);
+  if (params?.type) sp.set("type", params.type);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  params?.tag?.forEach((t) => sp.append("tag", t));
+  params?.performer?.forEach((p) => sp.append("performer", p));
   const qs = sp.toString();
-  return serverFetch<{ galleries: GalleryListItemDto[]; total: number }>(
+  return serverFetch<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }>(
     `/galleries${qs ? `?${qs}` : ""}`,
     { tags: ["galleries"] },
+  );
+}
+
+export async function fetchGalleryDetail(id: string) {
+  return serverFetch<GalleryDetailDto>(`/galleries/${id}`, {
+    revalidate: 15,
+    tags: ["galleries", `gallery-${id}`],
+  });
+}
+
+export async function fetchGalleryStats() {
+  return serverFetch<GalleryStatsDto>("/galleries/stats", {
+    tags: ["galleries"],
+  });
+}
+
+export async function fetchImages(params?: {
+  search?: string;
+  sort?: string;
+  order?: string;
+  gallery?: string;
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.sort) sp.set("sort", params.sort);
+  if (params?.order) sp.set("order", params.order);
+  if (params?.gallery) sp.set("gallery", params.gallery);
+  if (params?.studio) sp.set("studio", params.studio);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  params?.tag?.forEach((t) => sp.append("tag", t));
+  params?.performer?.forEach((p) => sp.append("performer", p));
+  const qs = sp.toString();
+  return serverFetch<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }>(
+    `/images${qs ? `?${qs}` : ""}`,
+    { tags: ["images"] },
   );
 }
 

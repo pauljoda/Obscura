@@ -2,6 +2,7 @@
 
 import {
   Film,
+  Image,
   Images,
   Users,
   Building2,
@@ -26,6 +27,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "layout-dashboard": LayoutDashboard,
   film: Film,
   images: Images,
+  image: Image,
   users: Users,
   building: Building2,
   tags: Tags,

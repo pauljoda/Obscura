@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Film, Users, Tags, Activity, MoreHorizontal } from "lucide-react";
+import { Film, Images, Users, Activity, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
@@ -9,12 +9,12 @@ import { MobileMoreSheet } from "./mobile-more-sheet";
 
 const primaryTabs = [
   { label: "Scenes", href: "/scenes", icon: Film },
+  { label: "Galleries", href: "/galleries", icon: Images },
   { label: "Performers", href: "/performers", icon: Users },
-  { label: "Tags", href: "/tags", icon: Tags },
   { label: "Jobs", href: "/jobs", icon: Activity },
 ] as const;
 
-const moreRoutes = ["/", "/galleries", "/studios", "/collections", "/scrape", "/settings"];
+const moreRoutes = ["/", "/images", "/studios", "/tags", "/collections", "/scrape", "/settings"];
 
 export function MobileNav() {
   const pathname = usePathname();

@@ -9,6 +9,10 @@ import type {
   CommunityIndexEntryDto,
   ScrapeResultDto,
   GalleryListItemDto,
+  GalleryDetailDto,
+  GalleryStatsDto,
+  ImageListItemDto,
+  ImageDetailDto,
 } from "@obscura/contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -290,12 +294,130 @@ export async function fetchSceneStats(): Promise<SceneStats> {
 }
 
 export async function fetchGalleries(params?: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  type?: string;
   limit?: number;
-}): Promise<{ galleries: GalleryListItem[]; total: number }> {
+  offset?: number;
+}): Promise<{ galleries: GalleryListItem[]; total: number; limit: number; offset: number }> {
   const sp = new URLSearchParams();
-  if (params?.limit != null) sp.set("limit", String(params.limit));
+  if (params?.search) sp.set("search", params.search);
+  if (params?.sort) sp.set("sort", params.sort);
+  if (params?.order) sp.set("order", params.order);
+  if (params?.studio) sp.set("studio", params.studio);
+  if (params?.type) sp.set("type", params.type);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  params?.tag?.forEach((t) => sp.append("tag", t));
+  params?.performer?.forEach((p) => sp.append("performer", p));
   const qs = sp.toString();
   return fetchApi(`/galleries${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchGalleryDetail(id: string): Promise<GalleryDetailDto> {
+  return fetchApi(`/galleries/${id}`);
+}
+
+export async function fetchGalleryImages(
+  id: string,
+  params?: { limit?: number; offset?: number }
+): Promise<GalleryDetailDto> {
+  const sp = new URLSearchParams();
+  if (params?.limit) sp.set("imageLimit", String(params.limit));
+  if (params?.offset) sp.set("imageOffset", String(params.offset));
+  const qs = sp.toString();
+  return fetchApi(`/galleries/${id}${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchGalleryStats(): Promise<GalleryStatsDto> {
+  return fetchApi("/galleries/stats");
+}
+
+export async function updateGallery(
+  id: string,
+  data: {
+    title?: string;
+    details?: string | null;
+    date?: string | null;
+    rating?: number | null;
+    organized?: boolean;
+    photographer?: string | null;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+  }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/galleries/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createGallery(data: {
+  title: string;
+  details?: string | null;
+  date?: string | null;
+}): Promise<{ ok: true; id: string }> {
+  return fetchApi("/galleries", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteGallery(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/galleries/${id}`, { method: "DELETE" });
+}
+
+export async function fetchImages(params?: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  gallery?: string;
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.sort) sp.set("sort", params.sort);
+  if (params?.order) sp.set("order", params.order);
+  if (params?.gallery) sp.set("gallery", params.gallery);
+  if (params?.studio) sp.set("studio", params.studio);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  params?.tag?.forEach((t) => sp.append("tag", t));
+  params?.performer?.forEach((p) => sp.append("performer", p));
+  const qs = sp.toString();
+  return fetchApi(`/images${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchImageDetail(id: string): Promise<ImageDetailDto> {
+  return fetchApi(`/images/${id}`);
+}
+
+export async function updateImage(
+  id: string,
+  data: {
+    title?: string;
+    details?: string | null;
+    date?: string | null;
+    rating?: number | null;
+    organized?: boolean;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+  }
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/images/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchStudios(): Promise<{ studios: StudioItem[] }> {
