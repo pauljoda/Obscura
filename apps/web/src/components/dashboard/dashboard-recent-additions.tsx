@@ -53,7 +53,7 @@ function SceneIngestTile({
         <MediaCard
           title={scene.title}
           thumbnail={toApiUrl(scene.thumbnailPath)}
-          cardThumbnail={toApiUrl(scene.cardThumbnailPath)}
+          cardThumbnail={scene.thumbnailPath?.includes("thumb-custom") ? undefined : toApiUrl(scene.cardThumbnailPath)}
           trickplaySprite={toApiUrl(scene.spritePath)}
           trickplayVtt={toApiUrl(scene.trickplayVttPath)}
           scrubDurationSeconds={scene.duration ?? undefined}
@@ -64,6 +64,7 @@ function SceneIngestTile({
           performers={scene.performers.map((p) => ({ name: p.name, imagePath: toApiUrl(p.imagePath) ?? undefined }))}
           tags={scene.tags.map((t) => t.name)}
           tagColors={SCENE_TAG_COLORS}
+          rating={scene.rating ?? undefined}
           views={scene.playCount}
           gradientClass={gradientClass}
         />
