@@ -17,16 +17,20 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchStudioDetail,
+  fetchStudios,
   updateStudio,
   uploadStudioImage,
   uploadStudioImageFromUrl,
   deleteStudioImage,
   fetchStashBoxEndpoints,
   lookupStudioViaStashBox,
+  findOrCreateStudio,
   toApiUrl,
   type StudioDetail,
+  type StudioItem,
   type StashBoxEndpoint,
   type NormalizedStudioScrapeResult,
+  type StashBoxStudioResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
 
@@ -48,6 +52,10 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
   const [description, setDescription] = useState("");
   const [aliases, setAliases] = useState("");
   const [url, setUrl] = useState("");
+  const [parentId, setParentId] = useState<string | null>(null);
+  const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
+  const [parentSearch, setParentSearch] = useState("");
+  const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
 
   // Image
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +67,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
   const [scraping, setScraping] = useState(false);
   const [seeking, setSeeking] = useState(false);
   const [scrapeResult, setScrapeResult] = useState<NormalizedStudioScrapeResult | null>(null);
+  const [scrapeRawStudio, setScrapeRawStudio] = useState<StashBoxStudioResult | null>(null);
   const [scrapeRemoteId, setScrapeRemoteId] = useState<string | null>(null);
   const [scrapeEndpointId, setScrapeEndpointId] = useState<string | null>(null);
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
@@ -67,12 +76,18 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
     Promise.all([
       fetchStudioDetail(id),
       fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
-    ]).then(([s, epRes]) => {
+      fetchStudios().catch(() => ({ studios: [] })),
+    ]).then(([s, epRes, stRes]) => {
       setStudio(s);
       setName(s.name);
       setDescription(s.description ?? "");
       setAliases(s.aliases ?? "");
       setUrl(s.url ?? "");
+      setParentId(s.parentId);
+      setParentSearch(s.parent?.name ?? "");
+
+      // Exclude self from parent candidates
+      setAllStudios(stRes.studios.filter((st) => st.id !== id));
 
       const enabled = epRes.endpoints.filter((e) => e.enabled);
       setEndpoints(enabled);
@@ -106,6 +121,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
     setScraping(true);
     setError(null);
     setScrapeResult(null);
+    setScrapeRawStudio(null);
     setScrapeRemoteId(null);
     setScrapeEndpointId(null);
     try {
@@ -113,12 +129,14 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       const { result, remoteId } = normalizeResult(res);
       if (result) {
         setScrapeResult(result);
+        setScrapeRawStudio(res.studio);
         setScrapeRemoteId(remoteId);
         setScrapeEndpointId(selectedEndpoint);
         const fields = new Set<string>();
         if (result.url) fields.add("url");
         if (result.imageUrl) fields.add("imageUrl");
         if (result.name) fields.add("name");
+        if (result.parentName) fields.add("parentName");
         setSelectedFields(fields);
       } else {
         setError("No results found");
@@ -135,6 +153,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
     setSeeking(true);
     setError(null);
     setScrapeResult(null);
+    setScrapeRawStudio(null);
 
     for (const ep of endpoints) {
       setSelectedEndpoint(ep.id);
@@ -147,11 +166,13 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
         const { result, remoteId } = normalizeResult(res);
         if (result) {
           setScrapeResult(result);
+          setScrapeRawStudio(res.studio);
           setScrapeRemoteId(remoteId);
           setScrapeEndpointId(ep.id);
           const fields = new Set<string>();
           if (result.url) fields.add("url");
           if (result.imageUrl) fields.add("imageUrl");
+          if (result.parentName) fields.add("parentName");
           setSelectedFields(fields);
           setMessage(`Found result from ${ep.name}`);
           setSeeking(false);
@@ -185,7 +206,20 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
         }
       }
 
-      const updated = await updateStudio(id, data);
+      // Resolve parent studio if selected — find or create with loop prevention
+      if (selectedFields.has("parentName") && scrapeResult.parentName) {
+        try {
+          const parentResult = await findOrCreateStudio({
+            name: scrapeResult.parentName,
+          });
+          data.parentId = parentResult.id;
+        } catch (parentErr) {
+          console.error("Parent studio resolution failed:", parentErr);
+          setError(`Parent studio failed: ${parentErr instanceof Error ? parentErr.message : "Unknown error"}`);
+        }
+      }
+
+      await updateStudio(id, data);
       // Re-fetch to get updated imagePath
       const refreshed = await fetchStudioDetail(id);
       setStudio(refreshed);
@@ -193,6 +227,8 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       setDescription(refreshed.description ?? "");
       setAliases(refreshed.aliases ?? "");
       setUrl(refreshed.url ?? "");
+      setParentId(refreshed.parentId);
+      setParentSearch(refreshed.parent?.name ?? "");
 
       if (scrapeEndpointId && scrapeRemoteId) {
         await autoSaveStashId("studio", id, scrapeEndpointId, scrapeRemoteId);
@@ -217,6 +253,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
         description: description.trim() || null,
         aliases: aliases.trim() || null,
         url: url.trim() || null,
+        parentId: parentId,
       });
       setMessage("Changes saved");
       onSaved?.();
@@ -420,7 +457,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
                   </div>
                 )}
                 {scrapeResult.parentName && (
-                  <ScrapeField field="parentName" label="Parent Studio" value={scrapeResult.parentName} enabled={false} onToggle={() => {}} />
+                  <ScrapeField field="parentName" label="Parent Studio" value={scrapeResult.parentName} enabled={selectedFields.has("parentName")} onToggle={() => toggleField("parentName")} />
                 )}
               </div>
             </div>
@@ -438,6 +475,57 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
               <div>
                 <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">URL</label>
                 <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="control-input w-full py-1.5 text-sm" />
+              </div>
+              <div className="relative">
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Parent Studio</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={parentSearch}
+                    onChange={(e) => { setParentSearch(e.target.value); setParentDropdownOpen(true); }}
+                    onFocus={() => setParentDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setParentDropdownOpen(false), 200)}
+                    placeholder="Search studios..."
+                    className="control-input w-full py-1.5 text-sm"
+                  />
+                  {parentId && (
+                    <button
+                      type="button"
+                      onClick={() => { setParentId(null); setParentSearch(""); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {parentDropdownOpen && parentSearch.length > 0 && (
+                  <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-surface-2 border border-border-subtle rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {allStudios
+                      .filter((s) => s.name.toLowerCase().includes(parentSearch.toLowerCase()))
+                      .slice(0, 20)
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setParentId(s.id);
+                            setParentSearch(s.name);
+                            setParentDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-sm hover:bg-surface-3 transition-colors",
+                            s.id === parentId && "text-text-accent"
+                          )}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    {allStudios.filter((s) => s.name.toLowerCase().includes(parentSearch.toLowerCase())).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-text-disabled">No studios found</div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="col-span-full">
                 <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Aliases</label>
