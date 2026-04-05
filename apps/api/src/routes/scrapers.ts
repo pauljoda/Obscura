@@ -835,24 +835,60 @@ export async function scrapersRoutes(app: FastifyInstance) {
         sceneUpdate.url = result.proposedUrl;
       }
 
-      // Studio: find or create
+      // Studio: find or create, enriching with URL/image/parent from raw result
       if (fieldsToApply.has("studio") && result.proposedStudioName) {
         const studioName = result.proposedStudioName;
-        const [existing] = await tx
-          .select({ id: studios.id })
-          .from(studios)
-          .where(ilike(studios.name, studioName))
-          .limit(1);
+        const rawScene = result.rawResult as StashScrapedScene | null;
+        const rawStudio = rawScene?.studio;
 
-        if (existing) {
-          sceneUpdate.studioId = existing.id;
-        } else {
+        // Helper: find or create a studio by name, with optional enrichment data
+        const findOrCreateStudio = async (
+          name: string,
+          studioData?: { url?: string; urls?: string[]; image?: string; parent?: { name: string; url?: string; urls?: string[]; image?: string } } | null,
+        ): Promise<string> => {
+          const studioUrl = studioData?.url ?? studioData?.urls?.[0] ?? null;
+          const studioImage = studioData?.image ?? null;
+
+          const [existing] = await tx
+            .select({ id: studios.id, url: studios.url, imageUrl: studios.imageUrl, parentId: studios.parentId })
+            .from(studios)
+            .where(ilike(studios.name, name))
+            .limit(1);
+
+          if (existing) {
+            // Backfill missing fields on existing studio
+            const backfill: Record<string, unknown> = {};
+            if (!existing.url && studioUrl) backfill.url = studioUrl;
+            if (!existing.imageUrl && studioImage) backfill.imageUrl = studioImage;
+            if (!existing.parentId && studioData?.parent?.name) {
+              const parentId = await findOrCreateStudio(studioData.parent.name, studioData.parent);
+              backfill.parentId = parentId;
+            }
+            if (Object.keys(backfill).length > 0) {
+              await tx.update(studios).set({ ...backfill, updatedAt: new Date() }).where(eq(studios.id, existing.id));
+            }
+            return existing.id;
+          }
+
+          // Resolve parent if present
+          let parentId: string | null = null;
+          if (studioData?.parent?.name) {
+            parentId = await findOrCreateStudio(studioData.parent.name, studioData.parent);
+          }
+
           const [created] = await tx
             .insert(studios)
-            .values({ name: studioName })
+            .values({
+              name,
+              url: studioUrl,
+              imageUrl: studioImage,
+              parentId,
+            })
             .returning({ id: studios.id });
-          sceneUpdate.studioId = created.id;
-        }
+          return created.id;
+        };
+
+        sceneUpdate.studioId = await findOrCreateStudio(studioName, rawStudio);
       }
 
       // Mark organized
