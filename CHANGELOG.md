@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- Settings page: scrapers link moved higher (after Watched Libraries, before Generation Pipeline).
+- Settings page: full visual redesign to match scene gallery design language — sharp 3px corners, `surface-card-sharp` cards, LED indicators on toggles and library roots, gradient glow on Save button, floating section headers with accent icons.
+- Settings page: storage section uses `surface-stat` cards with meter bars and accent Total card instead of flat rows.
+- Settings page: scrapers link gets pill-accent count badge and hover glow effect.
+- Settings page: toggle cards are full clickable buttons instead of checkbox labels.
 - Settings page: file browser simplified — navigating auto-selects the current folder, removing the extra "Use Current Folder" step. Added cancel button and scrollable directory listing.
-- Settings page: form labels use design system `control-label` class consistently.
 - Scrapers page: installed scrapers section is now collapsible with chevron toggle; capability filter merged into the collapsible header bar.
 - Scrapers page: scraper cards and community index entries use `surface-card-sharp` for better visibility against the dark background.
 
