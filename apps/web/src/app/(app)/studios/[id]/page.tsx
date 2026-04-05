@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, ArrowLeft, Loader2, Globe } from "lucide-react";
+import { Building2, ArrowLeft, Loader2, Globe, Pencil } from "lucide-react";
 import Link from "next/link";
 import { SceneGrid } from "../../../../components/scene-grid";
+import { StudioEdit } from "../../../../components/studio-edit";
+import { StashIdChips } from "../../../../components/stash-id-chips";
 import {
   fetchScenes,
   fetchStudioDetail,
@@ -24,8 +26,10 @@ export default function StudioPage({ params }: StudioPageProps) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  useEffect(() => {
+  function loadData() {
+    setLoading(true);
     fetchStudioDetail(id)
       .then(async (data) => {
         setStudio(data);
@@ -38,6 +42,10 @@ export default function StudioPage({ params }: StudioPageProps) {
         setNotFound(true);
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadData();
   }, [id]);
 
   if (loading) {
@@ -66,6 +74,16 @@ export default function StudioPage({ params }: StudioPageProps) {
     );
   }
 
+  if (editing) {
+    return (
+      <StudioEdit
+        id={id}
+        onSaved={() => { setEditing(false); loadData(); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
   const initials = studio.name
     .split(" ")
     .map((w) => w[0])
@@ -86,14 +104,29 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       {/* Hero header */}
       <div className="flex items-start gap-5">
-        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-surface-3 text-xl font-semibold font-heading text-text-muted">
-          {initials}
-        </div>
+        {studio.imageUrl ? (
+          <div className="flex-shrink-0 h-16 w-16 rounded-xl overflow-hidden bg-surface-3">
+            <img src={studio.imageUrl} alt={studio.name} className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-surface-3 text-xl font-semibold font-heading text-text-muted">
+            {initials}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <h1 className="flex items-center gap-2.5">
-            <Building2 className="h-5 w-5 text-text-accent" />
-            {studio.name}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="flex items-center gap-2.5">
+              <Building2 className="h-5 w-5 text-text-accent" />
+              {studio.name}
+            </h1>
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </button>
+          </div>
           <div className="flex items-center gap-4 mt-2 flex-wrap">
             <p className="text-mono-sm text-text-muted">
               {total} scene{total !== 1 ? "s" : ""}
@@ -109,6 +142,10 @@ export default function StudioPage({ params }: StudioPageProps) {
                 {studio.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
               </a>
             )}
+          </div>
+          {/* StashBox IDs */}
+          <div className="mt-2">
+            <StashIdChips entityType="studio" entityId={id} compact />
           </div>
         </div>
       </div>

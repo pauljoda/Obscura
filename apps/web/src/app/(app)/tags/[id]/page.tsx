@@ -8,10 +8,18 @@ import {
   Film,
   Hash,
   Clock,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { SceneGrid } from "../../../../components/scene-grid";
-import { fetchScenes, type SceneListItem } from "../../../../lib/api";
+import { TagEdit } from "../../../../components/tag-edit";
+import { StashIdChips } from "../../../../components/stash-id-chips";
+import {
+  fetchScenes,
+  fetchTags,
+  type SceneListItem,
+  type TagItem,
+} from "../../../../lib/api";
 import { use } from "react";
 
 interface TagPageProps {
@@ -22,24 +30,48 @@ export default function TagPage({ params }: TagPageProps) {
   const { id } = use(params);
   const tagName = decodeURIComponent(id);
 
+  const [tagItem, setTagItem] = useState<TagItem | null>(null);
   const [scenes, setScenes] = useState<SceneListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
 
-  useEffect(() => {
+  function loadData() {
     setLoading(true);
-    fetchScenes({ tag: [tagName], limit: 100 })
-      .then((r) => {
-        setScenes(r.scenes);
-        setTotal(r.total);
+    Promise.all([
+      fetchScenes({ tag: [tagName], limit: 100 }),
+      fetchTags(),
+    ])
+      .then(([scenesRes, tagsRes]) => {
+        setScenes(scenesRes.scenes);
+        setTotal(scenesRes.total);
+        // Resolve tag name to tag item (for UUID)
+        const match = tagsRes.tags.find(
+          (t) => t.name.toLowerCase() === tagName.toLowerCase()
+        );
+        setTagItem(match ?? null);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadData();
   }, [tagName]);
 
   // Compute stats from loaded scenes
   const totalDuration = scenes.reduce((sum, s) => sum + (s.duration ?? 0), 0);
   const durationFormatted = formatDuration(totalDuration);
+
+  if (editing && tagItem) {
+    return (
+      <TagEdit
+        id={tagItem.id}
+        onSaved={() => { setEditing(false); loadData(); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -56,10 +88,21 @@ export default function TagPage({ params }: TagPageProps) {
       <div className="surface-card-sharp p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2.5">
-              <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
-              {tagName}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="flex items-center gap-2.5">
+                <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
+                {tagName}
+              </h1>
+              {tagItem && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Edit
+                </button>
+              )}
+            </div>
             <p className="text-text-muted text-[0.78rem] mt-1">
               Scenes tagged with this label
             </p>
@@ -77,6 +120,13 @@ export default function TagPage({ params }: TagPageProps) {
                     <span className="text-mono-sm">{durationFormatted}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* StashBox IDs */}
+            {tagItem && (
+              <div className="mt-2">
+                <StashIdChips entityType="tag" entityId={tagItem.id} compact />
               </div>
             )}
           </div>
