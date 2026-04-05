@@ -52,17 +52,25 @@ function formatBitRate(bps: number | null): string {
   return `${(bps / 1000).toFixed(0)} Kbps`;
 }
 
-export function SceneDetail({ id }: { id: string }) {
+export function SceneDetail({
+  id,
+  initialScene = null,
+  initialTags = [],
+}: {
+  id: string;
+  initialScene?: SceneDetailType | null;
+  initialTags?: TagItem[];
+}) {
   const [activeTab, setActiveTab] = useState<Tab>("Details");
-  const [scene, setScene] = useState<SceneDetailType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [scene, setScene] = useState<SceneDetailType | null>(initialScene);
+  const [loading, setLoading] = useState(initialScene == null);
   const [error, setError] = useState<string | null>(null);
   const [ratingHover, setRatingHover] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
   const currentTimeRef = useRef(0);
 
   // Marker editor state
-  const [allTags, setAllTags] = useState<TagItem[]>([]);
+  const [allTags, setAllTags] = useState<TagItem[]>(initialTags);
   const [editingMarker, setEditingMarker] = useState<string | null>(null); // marker id or "new"
   const [markerTitle, setMarkerTitle] = useState("");
   const [markerSeconds, setMarkerSeconds] = useState(0);
@@ -77,6 +85,10 @@ export function SceneDetail({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
+    if (initialScene?.id === id) {
+      return;
+    }
+
     setLoading(true);
     Promise.all([fetchSceneDetail(id), fetchTags()])
       .then(([sceneData, tagsData]) => {
@@ -85,7 +97,7 @@ export function SceneDetail({ id }: { id: string }) {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, initialScene]);
 
   const handlePlayStarted = useCallback(() => {
     trackPlay(id).catch(() => {});
