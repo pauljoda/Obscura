@@ -13,15 +13,29 @@ import {
 import { relations } from "drizzle-orm";
 
 // ─── Studios ────────────────────────────────────────────────────────
-export const studios = pgTable("studios", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  url: text("url"),
-  parentId: uuid("parent_id").references((): any => studios.id),
-  imageUrl: text("image_url"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const studios = pgTable(
+  "studios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    aliases: text("aliases"),
+    url: text("url"),
+    parentId: uuid("parent_id").references((): any => studios.id),
+    imageUrl: text("image_url"),
+    imagePath: text("image_path"),
+    favorite: boolean("favorite").default(false).notNull(),
+    rating: integer("rating"),
+    sceneCount: integer("scene_count").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("studios_name_idx").on(table.name),
+    index("studios_favorite_idx").on(table.favorite),
+    index("studios_rating_idx").on(table.rating),
+  ]
+);
 
 export const studiosRelations = relations(studios, ({ many, one }) => ({
   scenes: many(scenes),
@@ -88,11 +102,17 @@ export const tags = pgTable(
     favorite: boolean("favorite").default(false).notNull(),
     ignoreAutoTag: boolean("ignore_auto_tag").default(false).notNull(),
     imageUrl: text("image_url"),
+    imagePath: text("image_path"),
+    rating: integer("rating"),
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("tags_name_idx").on(table.name)]
+  (table) => [
+    uniqueIndex("tags_name_idx").on(table.name),
+    index("tags_favorite_idx").on(table.favorite),
+    index("tags_rating_idx").on(table.rating),
+  ]
 );
 
 export const tagsRelations = relations(tags, ({ many, one }) => ({

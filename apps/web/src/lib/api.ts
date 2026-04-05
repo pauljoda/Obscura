@@ -108,6 +108,10 @@ export interface StudioItem {
   name: string;
   url: string | null;
   imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
 }
 
 export interface PerformerItem {
@@ -128,6 +132,9 @@ export interface TagItem {
   name: string;
   sceneCount: number;
   imageCount: number;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
 }
 
 export interface PerformerDetail {
@@ -183,9 +190,15 @@ export interface NormalizedPerformerScrapeResult {
 export interface StudioDetail {
   id: string;
   name: string;
+  description: string | null;
+  aliases: string | null;
   url: string | null;
-  imageUrl: string | null;
   parentId: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  sceneCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -577,7 +590,9 @@ export interface TagDetail {
   aliases: string | null;
   parentId: string | null;
   imageUrl: string | null;
+  imagePath: string | null;
   favorite: boolean;
+  rating: number | null;
   ignoreAutoTag: boolean;
   sceneCount: number;
   createdAt: string;
