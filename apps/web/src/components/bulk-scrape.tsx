@@ -37,6 +37,9 @@ import {
 
 type Tab = "scenes" | "performers";
 
+const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image"] as const;
+type SceneField = typeof SCENE_FIELDS[number];
+
 interface SceneRow {
   scene: SceneListItem;
   status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
@@ -44,6 +47,7 @@ interface SceneRow {
   normalized?: NormalizedScrapeResult;
   error?: string;
   matchedScraper?: string;
+  selectedFields: Set<SceneField>;
 }
 
 interface PerformerRow {
@@ -52,10 +56,19 @@ interface PerformerRow {
   result?: NormalizedPerformerScrapeResult;
   error?: string;
   matchedScraper?: string;
+  selectedFields: Set<string>;
 }
 
 /* ─── Seek timeout ──────────────────────────────────────────────── */
 const SEEK_TIMEOUT_MS = 5_000;
+
+function perfFieldsFromResult(result: NormalizedPerformerScrapeResult): Set<string> {
+  return new Set(
+    Object.entries(result)
+      .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
+      .map(([k]) => k)
+  );
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -81,10 +94,15 @@ export function BulkScrape() {
   const [perfRows, setPerfRows] = useState<PerformerRow[]>([]);
   const [perfScrapers, setPerfScrapers] = useState<ScraperPackage[]>([]);
 
+  // All items for show-all toggle
+  const [allScenes, setAllScenes] = useState<SceneListItem[]>([]);
+  const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
+
   // Shared
   const [running, setRunning] = useState(false);
   const [autoAccept, setAutoAccept] = useState(false);
   const [selectedScraperId, setSelectedScraperId] = useState<string>(""); // "" = seek all
+  const [showAll, setShowAll] = useState(false);
   const abortRef = useRef(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -111,6 +129,30 @@ export function BulkScrape() {
     setExpandedIds(new Set());
   }
 
+  function toggleSceneField(idx: number, field: SceneField) {
+    setSceneRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const next = new Set(r.selectedFields);
+        if (next.has(field)) next.delete(field);
+        else next.add(field);
+        return { ...r, selectedFields: next };
+      })
+    );
+  }
+
+  function togglePerfField(idx: number, field: string) {
+    setPerfRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const next = new Set(r.selectedFields);
+        if (next.has(field)) next.delete(field);
+        else next.add(field);
+        return { ...r, selectedFields: next };
+      })
+    );
+  }
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -121,10 +163,14 @@ export function BulkScrape() {
       ]);
 
       const unorganized = scenesRes.scenes.filter((s) => !s.organized);
-      setSceneRows(unorganized.map((scene) => ({ scene, status: "pending" })));
+      setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS) })));
 
       const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
-      setPerfRows(sparse.map((performer) => ({ performer, status: "pending" })));
+      setPerfRows(sparse.map((performer) => ({ performer, status: "pending", selectedFields: new Set() })));
+
+      // Store all for show-all toggle
+      setAllScenes(scenesRes.scenes);
+      setAllPerformers(perfRes.performers);
 
       const enabled = scrapersRes.packages.filter((s) => s.enabled);
       setScrapers(enabled);
@@ -149,6 +195,21 @@ export function BulkScrape() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  // Rebuild rows when showAll toggles
+  useEffect(() => {
+    if (!allScenes.length && !allPerformers.length) return;
+    const filteredScenes = showAll ? allScenes : allScenes.filter((s) => !s.organized);
+    setSceneRows((prev) => {
+      const existing = new Map(prev.map((r) => [r.scene.id, r]));
+      return filteredScenes.map((scene) => existing.get(scene.id) ?? { scene, status: "pending", selectedFields: new Set(SCENE_FIELDS) });
+    });
+    const filteredPerfs = showAll ? allPerformers : allPerformers.filter((p) => !p.imagePath || !p.gender);
+    setPerfRows((prev) => {
+      const existing = new Map(prev.map((r) => [r.performer.id, r]));
+      return filteredPerfs.map((performer) => existing.get(performer.id) ?? { performer, status: "pending", selectedFields: new Set() });
+    });
+  }, [showAll, allScenes, allPerformers]);
 
   /* ─── Scene seek ────────────────────────────────────────────── */
 
@@ -319,14 +380,14 @@ export function BulkScrape() {
             } catch {
               setPerfRows((prev) =>
                 prev.map((r, idx) =>
-                  idx === i ? { ...r, status: "found", result, matchedScraper } : r
+                  idx === i ? { ...r, status: "found", result, matchedScraper, selectedFields: perfFieldsFromResult(result) } : r
                 )
               );
             }
           } else {
             setPerfRows((prev) =>
               prev.map((r, idx) =>
-                idx === i ? { ...r, status: "found", result, matchedScraper } : r
+                idx === i ? { ...r, status: "found", result, matchedScraper, selectedFields: perfFieldsFromResult(result) } : r
               )
             );
           }
@@ -352,7 +413,7 @@ export function BulkScrape() {
     const row = sceneRows[idx];
     if (!row.result) return;
     try {
-      await acceptScrapeResult(row.result.id);
+      await acceptScrapeResult(row.result.id, Array.from(row.selectedFields));
       setSceneRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
       );
@@ -389,14 +450,11 @@ export function BulkScrape() {
     if (overrideImageUrl) {
       fields.imageUrl = overrideImageUrl;
     }
-    const allFieldKeys = Object.entries(fields)
-      .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
-      .map(([k]) => k);
     try {
       await applyPerformerScrape(
         row.performer.id,
         fields,
-        allFieldKeys
+        Array.from(row.selectedFields)
       );
       setPerfRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
@@ -534,6 +592,17 @@ export function BulkScrape() {
             Auto-accept
           </label>
 
+          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={(e) => setShowAll(e.target.checked)}
+              className="accent-[#c79b5c]"
+              disabled={running}
+            />
+            Show all
+          </label>
+
           <div className="flex-1" />
 
           {!running ? (
@@ -625,6 +694,7 @@ export function BulkScrape() {
                   onToggleExpand={() => toggleExpanded(row.scene.id)}
                   onAccept={() => void acceptScene(idx)}
                   onReject={() => void rejectScene(idx)}
+                  onToggleField={(field) => toggleSceneField(idx, field)}
                 />
               ))
             : perfRows.map((row, idx) => (
@@ -635,6 +705,7 @@ export function BulkScrape() {
                   onToggleExpand={() => toggleExpanded(row.performer.id)}
                   onAccept={(imageUrl) => void acceptPerformer(idx, imageUrl)}
                   onReject={() => rejectPerformer(idx)}
+                  onToggleField={(field) => togglePerfField(idx, field)}
                 />
               ))}
         </div>
@@ -651,12 +722,14 @@ function SceneRowCard({
   onToggleExpand,
   onAccept,
   onReject,
+  onToggleField,
 }: {
   row: SceneRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onAccept: () => void;
   onReject: () => void;
+  onToggleField: (field: SceneField) => void;
 }) {
   return (
     <div>
@@ -738,15 +811,26 @@ function SceneRowCard({
       {expanded && row.normalized && (
         <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
-            {row.normalized.title && <MetaRow label="Title" value={row.normalized.title} />}
-            {row.normalized.date && <MetaRow label="Date" value={row.normalized.date} />}
-            {row.normalized.studioName && <MetaRow label="Studio" value={row.normalized.studioName} />}
-            {row.normalized.url && <MetaRow label="URL" value={row.normalized.url} />}
+            {row.normalized.title && (
+              <ToggleableField field="title" label="Title" value={row.normalized.title} enabled={row.selectedFields.has("title")} onToggle={() => onToggleField("title")} />
+            )}
+            {row.normalized.date && (
+              <ToggleableField field="date" label="Date" value={row.normalized.date} enabled={row.selectedFields.has("date")} onToggle={() => onToggleField("date")} />
+            )}
+            {row.normalized.studioName && (
+              <ToggleableField field="studio" label="Studio" value={row.normalized.studioName} enabled={row.selectedFields.has("studio")} onToggle={() => onToggleField("studio")} />
+            )}
+            {row.normalized.url && (
+              <ToggleableField field="url" label="URL" value={row.normalized.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />
+            )}
             {row.normalized.performerNames.length > 0 && (
-              <MetaRow label="Performers" value={row.normalized.performerNames.join(", ")} />
+              <ToggleableField field="performers" label="Performers" value={row.normalized.performerNames.join(", ")} enabled={row.selectedFields.has("performers")} onToggle={() => onToggleField("performers")} />
             )}
             {row.normalized.tagNames.length > 0 && (
-              <MetaRow label="Tags" value={row.normalized.tagNames.join(", ")} />
+              <ToggleableField field="tags" label="Tags" value={row.normalized.tagNames.join(", ")} enabled={row.selectedFields.has("tags")} onToggle={() => onToggleField("tags")} />
+            )}
+            {row.normalized.imageUrl && (
+              <ToggleableField field="image" label="Thumbnail" value="Available" enabled={row.selectedFields.has("image")} onToggle={() => onToggleField("image")} />
             )}
           </div>
         </div>
@@ -769,12 +853,14 @@ function PerformerRowCard({
   onToggleExpand,
   onAccept,
   onReject,
+  onToggleField,
 }: {
   row: PerformerRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onAccept: (imageUrl?: string) => void;
   onReject: () => void;
+  onToggleField: (field: string) => void;
 }) {
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
@@ -906,25 +992,30 @@ function PerformerRowCard({
             {/* Metadata fields */}
             <div className="flex-1 min-w-0">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-[0.8rem]">
-                {row.result.name && <MetaRow label="Name" value={row.result.name} />}
-                {row.result.gender && <MetaRow label="Gender" value={row.result.gender} />}
-                {row.result.birthdate && <MetaRow label="Birthdate" value={row.result.birthdate} />}
-                {row.result.country && <MetaRow label="Country" value={row.result.country} />}
-                {row.result.ethnicity && <MetaRow label="Ethnicity" value={row.result.ethnicity} />}
-                {row.result.height && <MetaRow label="Height" value={row.result.height} />}
-                {row.result.weight && <MetaRow label="Weight" value={String(row.result.weight)} />}
-                {row.result.hairColor && <MetaRow label="Hair" value={row.result.hairColor} />}
-                {row.result.eyeColor && <MetaRow label="Eyes" value={row.result.eyeColor} />}
-                {row.result.measurements && <MetaRow label="Measurements" value={row.result.measurements} />}
-                {row.result.aliases && <MetaRow label="Aliases" value={row.result.aliases} />}
-                {row.result.tattoos && <MetaRow label="Tattoos" value={row.result.tattoos} />}
-                {row.result.piercings && <MetaRow label="Piercings" value={row.result.piercings} />}
+                {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
+                {row.result.gender && <ToggleableField field="gender" label="Gender" value={row.result.gender} enabled={row.selectedFields.has("gender")} onToggle={() => onToggleField("gender")} />}
+                {row.result.birthdate && <ToggleableField field="birthdate" label="Birthdate" value={row.result.birthdate} enabled={row.selectedFields.has("birthdate")} onToggle={() => onToggleField("birthdate")} />}
+                {row.result.country && <ToggleableField field="country" label="Country" value={row.result.country} enabled={row.selectedFields.has("country")} onToggle={() => onToggleField("country")} />}
+                {row.result.ethnicity && <ToggleableField field="ethnicity" label="Ethnicity" value={row.result.ethnicity} enabled={row.selectedFields.has("ethnicity")} onToggle={() => onToggleField("ethnicity")} />}
+                {row.result.height && <ToggleableField field="height" label="Height" value={row.result.height} enabled={row.selectedFields.has("height")} onToggle={() => onToggleField("height")} />}
+                {row.result.weight && <ToggleableField field="weight" label="Weight" value={String(row.result.weight)} enabled={row.selectedFields.has("weight")} onToggle={() => onToggleField("weight")} />}
+                {row.result.hairColor && <ToggleableField field="hairColor" label="Hair" value={row.result.hairColor} enabled={row.selectedFields.has("hairColor")} onToggle={() => onToggleField("hairColor")} />}
+                {row.result.eyeColor && <ToggleableField field="eyeColor" label="Eyes" value={row.result.eyeColor} enabled={row.selectedFields.has("eyeColor")} onToggle={() => onToggleField("eyeColor")} />}
+                {row.result.measurements && <ToggleableField field="measurements" label="Measurements" value={row.result.measurements} enabled={row.selectedFields.has("measurements")} onToggle={() => onToggleField("measurements")} />}
+                {row.result.aliases && <ToggleableField field="aliases" label="Aliases" value={row.result.aliases} enabled={row.selectedFields.has("aliases")} onToggle={() => onToggleField("aliases")} />}
+                {row.result.tattoos && <ToggleableField field="tattoos" label="Tattoos" value={row.result.tattoos} enabled={row.selectedFields.has("tattoos")} onToggle={() => onToggleField("tattoos")} />}
+                {row.result.piercings && <ToggleableField field="piercings" label="Piercings" value={row.result.piercings} enabled={row.selectedFields.has("piercings")} onToggle={() => onToggleField("piercings")} />}
                 {row.result.tagNames.length > 0 && (
-                  <MetaRow label="Tags" value={row.result.tagNames.join(", ")} />
+                  <ToggleableField field="tagNames" label="Tags" value={row.result.tagNames.join(", ")} enabled={row.selectedFields.has("tagNames")} onToggle={() => onToggleField("tagNames")} />
+                )}
+                {allImages.length > 0 && (
+                  <ToggleableField field="imageUrl" label="Image" value={`${allImages.length} available`} enabled={row.selectedFields.has("imageUrl")} onToggle={() => onToggleField("imageUrl")} />
                 )}
               </div>
               {row.result.details && (
-                <p className="text-[0.72rem] text-text-muted mt-2 line-clamp-3">{row.result.details}</p>
+                <div className="mt-2">
+                  <ToggleableField field="details" label="Details" value={row.result.details.slice(0, 200) + (row.result.details.length > 200 ? "..." : "")} enabled={row.selectedFields.has("details")} onToggle={() => onToggleField("details")} />
+                </div>
               )}
             </div>
           </div>
@@ -955,11 +1046,38 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function ToggleableField({
+  field,
+  label,
+  value,
+  enabled,
+  onToggle,
+}: {
+  field: string;
+  label: string;
+  value: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="col-span-2 sm:col-span-1">
-      <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">{label}</span>
-      <p className="text-text-primary truncate text-[0.78rem]">{value}</p>
+    <div
+      className={cn(
+        "col-span-2 sm:col-span-1 flex items-start gap-2 cursor-pointer transition-opacity",
+        !enabled && "opacity-40"
+      )}
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+    >
+      <input
+        type="checkbox"
+        checked={enabled}
+        onChange={onToggle}
+        className="accent-[#c79b5c] mt-0.5 flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      />
+      <div className="min-w-0">
+        <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">{label}</span>
+        <p className={cn("truncate text-[0.78rem]", enabled ? "text-text-primary" : "text-text-disabled line-through")}>{value}</p>
+      </div>
     </div>
   );
 }

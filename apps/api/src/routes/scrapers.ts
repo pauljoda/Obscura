@@ -19,7 +19,7 @@ import {
   type StashScrapedScene,
   type StashScrapedPerformer,
 } from "@obscura/stash-import";
-import { getGeneratedPerformerDir } from "@obscura/media-core";
+import { getGeneratedPerformerDir, getGeneratedSceneDir } from "@obscura/media-core";
 import yaml from "js-yaml";
 
 const {
@@ -803,6 +803,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
         "studio",
         "performers",
         "tags",
+        "image",
       ]
     );
 
@@ -982,6 +983,33 @@ export async function scrapersRoutes(app: FastifyInstance) {
             SELECT tag_id FROM scene_tags WHERE scene_id = ${result.sceneId}
           )
         `);
+      }
+
+      // Download scene thumbnail if available
+      if (fieldsToApply.has("image") && result.proposedImageUrl) {
+        try {
+          const imageUrl = result.proposedImageUrl;
+          let buffer: Buffer;
+          if (imageUrl.startsWith("data:image/")) {
+            const b64 = imageUrl.split(",")[1];
+            if (b64) buffer = Buffer.from(b64, "base64");
+            else throw new Error("bad data url");
+          } else {
+            const imgRes = await fetch(imageUrl);
+            if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
+            buffer = Buffer.from(await imgRes.arrayBuffer());
+          }
+          const genDir = getGeneratedSceneDir(result.sceneId);
+          await mkdir(genDir, { recursive: true });
+          await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
+          const assetUrl = `/assets/scenes/${result.sceneId}/thumbnail`;
+          await tx
+            .update(scenes)
+            .set({ thumbnailPath: assetUrl, updatedAt: new Date() })
+            .where(eq(scenes.id, result.sceneId));
+        } catch {
+          // Image download failed — non-fatal
+        }
       }
 
       // Mark result as accepted
