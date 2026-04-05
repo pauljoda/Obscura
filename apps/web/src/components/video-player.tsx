@@ -625,16 +625,16 @@ export function VideoPlayer({
         showControls ? "opacity-100" : "opacity-0"
       )}>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          <span className="glass-chip rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
+          <span className="player-chip rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
             {usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
           </span>
           {selectedQualityLabel && (
-            <span className="glass-chip-accent rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
+            <span className="player-chip-accent rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
             </span>
           )}
           {playerNotice && (
-            <span className="glass-chip rounded-sm border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
+            <span className="player-chip rounded-sm border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
               {playerNotice}
             </span>
           )}
@@ -734,7 +734,7 @@ export function VideoPlayer({
                     seekTo(marker.time);
                     onMarkerClick?.(marker);
                   }}
-                  className="glass-chip rounded-sm px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
+                  className="player-chip rounded-sm px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
                 >
                   {marker.title}
                 </button>
@@ -800,13 +800,13 @@ export function VideoPlayer({
                   setQualityMenuOpen((open) => !open);
                   setSpeedMenuOpen(false);
                 }}
-                className="glass-chip flex items-center gap-1 sm:gap-1.5 rounded-sm px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="player-chip flex items-center gap-1 sm:gap-1.5 rounded-sm px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {selectedQualityLabel ?? "Quality"}
                 <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               </button>
               {qualityMenuOpen && (
-                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] rounded-sm glass-dropdown p-1">
+                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] rounded-sm player-dropdown p-1">
                   {qualityOptions.map((option) => (
                     <button
                       key={String(option.value)}
@@ -837,13 +837,13 @@ export function VideoPlayer({
                   setSpeedMenuOpen((open) => !open);
                   setQualityMenuOpen(false);
                 }}
-                className="glass-chip flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="player-chip flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {playbackRate}x
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {speedMenuOpen && (
-                <div className="absolute bottom-12 right-0 min-w-[112px] rounded-sm glass-dropdown p-1">
+                <div className="absolute bottom-12 right-0 min-w-[112px] rounded-sm player-dropdown p-1">
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
@@ -866,7 +866,7 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="glass-chip rounded-sm p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+              className="player-chip rounded-sm p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             >
               <Maximize className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
             </button>
@@ -900,7 +900,7 @@ function MetricChip({
   value: string;
 }) {
   return (
-    <div className="pointer-events-none glass-chip rounded-sm px-2 py-1.5">
+    <div className="pointer-events-none player-chip rounded-sm px-2 py-1.5">
       <div className="mb-0.5 flex items-center justify-end gap-1 text-white/50">
         {icon}
         <span className="text-[0.58rem] uppercase tracking-[0.16em]">{label}</span>
