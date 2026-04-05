@@ -2,6 +2,7 @@ export const apiRoutes = {
   health: "/health",
   jobs: "/jobs",
   jobQueueRun: "/jobs/queues/:queueName/run",
+  jobAcknowledgeFailed: "/jobs/acknowledge-failed",
   sceneAssets: "/assets/scenes/:id/*",
   libraries: "/libraries",
   libraryDetail: "/libraries/:id",
@@ -73,6 +74,7 @@ export const jobStatuses = [
   "active",
   "completed",
   "failed",
+  "dismissed",
   "delayed",
   "paused",
 ] as const;

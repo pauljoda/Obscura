@@ -14,6 +14,7 @@ import { formatQueueName, formatRelativeTime } from "./dashboard-utils";
 function RecentJobRow({ job }: { job: JobRun }) {
   const isSuccess = job.status === "completed";
   const isError = job.status === "failed";
+  const isDismissed = job.status === "dismissed";
   const isActive = job.status === "active";
 
   return (
@@ -23,6 +24,8 @@ function RecentJobRow({ job }: { job: JobRun }) {
           <CheckCircle2 className="h-3.5 w-3.5 text-success-text drop-shadow-[0_0_6px_rgba(90,150,112,0.35)]" />
         ) : isError ? (
           <AlertCircle className="h-3.5 w-3.5 text-error-text drop-shadow-[0_0_6px_rgba(179,79,86,0.35)]" />
+        ) : isDismissed ? (
+          <Circle className="h-3.5 w-3.5 text-text-disabled" />
         ) : isActive ? (
           <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />
         ) : (

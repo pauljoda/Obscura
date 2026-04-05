@@ -199,4 +199,54 @@ export async function jobsRoutes(app: FastifyInstance) {
       jobIds,
     };
   });
+
+  app.post("/jobs/acknowledge-failed", async (request, reply) => {
+    const body = (request.body ?? {}) as { queueName?: QueueName };
+    const queueName = body.queueName;
+
+    if (
+      queueName !== undefined &&
+      !queueDefinitions.find((definition) => definition.name === queueName)
+    ) {
+      reply.code(400);
+      return { error: "Unknown queue" };
+    }
+
+    const targetQueues = queueName
+      ? [queueName]
+      : (queueDefinitions.map((definition) => definition.name) as QueueName[]);
+
+    const redisRemovedByQueue: Record<string, number> = {};
+    let redisRemovedTotal = 0;
+
+    for (const name of targetQueues) {
+      const queue = getQueue(name);
+      const removedIds = await queue.clean(0, 100_000, "failed");
+      redisRemovedByQueue[name] = removedIds.length;
+      redisRemovedTotal += removedIds.length;
+    }
+
+    const whereClause =
+      queueName !== undefined
+        ? and(eq(jobRuns.status, "failed"), eq(jobRuns.queueName, queueName))
+        : eq(jobRuns.status, "failed");
+
+    const updatedRows = await db
+      .update(jobRuns)
+      .set({
+        status: "dismissed",
+        error: null,
+        updatedAt: new Date(),
+      })
+      .where(whereClause)
+      .returning({ id: jobRuns.id });
+
+    return {
+      ok: true,
+      queueName: queueName ?? null,
+      redisRemoved: redisRemovedTotal,
+      redisRemovedByQueue,
+      runsUpdated: updatedRows.length,
+    };
+  });
 }

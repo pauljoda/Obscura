@@ -18,8 +18,10 @@ import {
   Activity,
   AlertTriangle,
   ListChecks,
+  Ban,
 } from "lucide-react";
 import {
+  acknowledgeJobFailures,
   fetchJobsDashboard,
   runQueue,
   type JobRun,
@@ -58,6 +60,7 @@ export function JobDashboard() {
   const [dashboard, setDashboard] = useState<JobsDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [runningQueue, setRunningQueue] = useState<string | null>(null);
+  const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -98,6 +101,33 @@ export function JobDashboard() {
     }
   }
 
+  async function handleAcknowledgeFailures(scope: "all" | string) {
+    setAcknowledging(scope);
+    setMessage(null);
+
+    try {
+      const result = await acknowledgeJobFailures(scope === "all" ? undefined : scope);
+      const parts: string[] = [];
+      if (result.redisRemoved > 0) {
+        parts.push(`cleared ${result.redisRemoved} failed job${result.redisRemoved === 1 ? "" : "s"} from queue storage`);
+      }
+      if (result.runsUpdated > 0) {
+        parts.push(`acknowledged ${result.runsUpdated} run${result.runsUpdated === 1 ? "" : "s"} in history`);
+      }
+      setMessage(
+        parts.length > 0
+          ? parts.join("; ").replace(/^\w/, (c) => c.toUpperCase()) + "."
+          : "Nothing to acknowledge."
+      );
+      setError(null);
+      await loadDashboard();
+    } catch (ackError) {
+      setError(ackError instanceof Error ? ackError.message : "Failed to acknowledge failures");
+    } finally {
+      setAcknowledging(null);
+    }
+  }
+
   const failedCount = useMemo(
     () => dashboard?.recentJobs.filter((job) => job.status === "failed").length ?? 0,
     [dashboard]
@@ -105,6 +135,8 @@ export function JobDashboard() {
 
   const totalActive = dashboard?.activeJobs.length ?? 0;
   const totalCompleted = dashboard?.queues.reduce((sum, q) => sum + q.completed, 0) ?? 0;
+  const redisFailedTotal = dashboard?.queues.reduce((sum, q) => sum + q.failed, 0) ?? 0;
+  const canAcknowledgeFailures = redisFailedTotal > 0 || failedCount > 0;
 
   return (
     <div className="space-y-6">
@@ -119,13 +151,27 @@ export function JobDashboard() {
             Queue health, active work, and manual generation controls.
           </p>
         </div>
-        <button
-          onClick={() => void loadDashboard()}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] text-xs text-text-muted hover:text-text-primary hover:bg-surface-3/60 transition-all duration-fast"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {canAcknowledgeFailures && (
+            <button
+              type="button"
+              onClick={() => void handleAcknowledgeFailures("all")}
+              disabled={acknowledging !== null}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] text-xs text-text-muted hover:text-status-error-text hover:bg-status-error/10 transition-all duration-fast disabled:opacity-40"
+            >
+              <Ban className="h-3.5 w-3.5" />
+              {acknowledging === "all" ? "Clearing…" : "Acknowledge errors"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void loadDashboard()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] text-xs text-text-muted hover:text-text-primary hover:bg-surface-3/60 transition-all duration-fast"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -227,14 +273,28 @@ export function JobDashboard() {
                       <p className="text-text-disabled text-[0.62rem] mt-0.5 truncate">{queue.description}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => void handleRun(queue.name)}
-                    disabled={runningQueue === queue.name}
-                    className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-text-accent transition-colors flex-shrink-0 disabled:opacity-40"
-                  >
-                    <Play className="h-3 w-3" />
-                    Run
-                  </button>
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    {queue.failed > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void handleAcknowledgeFailures(queue.name)}
+                        disabled={acknowledging !== null}
+                        className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-status-error-text transition-colors disabled:opacity-40"
+                        title="Remove failed jobs from this queue and mark matching history as acknowledged"
+                      >
+                        {acknowledging === queue.name ? "…" : "Clear"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleRun(queue.name)}
+                      disabled={runningQueue === queue.name}
+                      className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-text-accent transition-colors disabled:opacity-40"
+                    >
+                      <Play className="h-3 w-3" />
+                      Run
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 gap-1">
                   {[
@@ -324,7 +384,8 @@ export function JobDashboard() {
                 key={job.id}
                 className={cn(
                   "grid grid-cols-[1.3fr_0.8fr_0.7fr_0.5fr] gap-3 px-4 py-2.5 text-[0.8rem] transition-colors",
-                  job.status === "failed" && "bg-status-error/[0.04]"
+                  job.status === "failed" && "bg-status-error/[0.04]",
+                  job.status === "dismissed" && "opacity-75"
                 )}
               >
                 <div className="min-w-0">
@@ -344,10 +405,12 @@ export function JobDashboard() {
                         ? "text-status-error-text"
                         : job.status === "completed"
                           ? "text-status-success-text"
-                          : "text-text-accent"
+                          : job.status === "dismissed"
+                            ? "text-text-disabled"
+                            : "text-text-accent"
                     )}
                   >
-                    {job.status}
+                    {job.status === "dismissed" ? "acknowledged" : job.status}
                   </span>
                 </div>
                 <div className="text-mono-sm text-text-muted flex items-center justify-end">
@@ -372,14 +435,15 @@ export function JobDashboard() {
 }
 
 function JobCard({ job }: { job: JobRun }) {
+  const isFailed = job.status === "failed";
   return (
     <div className={cn(
       "surface-card-sharp no-lift p-3.5 transition-all duration-normal",
-      job.status === "failed" ? "border-status-error/30" : "border-phosphor-500/30"
+      isFailed ? "border-status-error/30" : "border-phosphor-500/30"
     )}>
       <div className="flex items-center justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <StatusLed status={job.status === "failed" ? "error" : "phosphor"} pulse={job.status !== "failed"} />
+          <StatusLed status={isFailed ? "error" : "phosphor"} pulse={!isFailed} />
           <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">
             {job.queueName}
           </Badge>
@@ -391,7 +455,7 @@ function JobCard({ job }: { job: JobRun }) {
           {formatElapsed(job.startedAt)}
         </span>
       </div>
-      <Meter value={job.progress} showValue variant={job.status === "failed" ? "accent" : "phosphor"} />
+      <Meter value={job.progress} showValue variant={isFailed ? "accent" : "phosphor"} />
     </div>
   );
 }

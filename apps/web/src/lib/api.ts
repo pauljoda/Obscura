@@ -804,6 +804,19 @@ export async function runQueue(queueName: string): Promise<{
   });
 }
 
+export async function acknowledgeJobFailures(queueName?: string): Promise<{
+  ok: boolean;
+  queueName: string | null;
+  redisRemoved: number;
+  redisRemovedByQueue: Record<string, number>;
+  runsUpdated: number;
+}> {
+  return fetchApi("/jobs/acknowledge-failed", {
+    method: "POST",
+    body: JSON.stringify(queueName ? { queueName } : {}),
+  });
+}
+
 // ─── Scraper types ───────────────────────────────────────────────
 
 export type ScraperPackage = ScraperPackageDto;
