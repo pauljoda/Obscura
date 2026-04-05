@@ -38,6 +38,7 @@ import {
   updateTag,
   uploadStudioImageFromUrl,
   uploadTagImageFromUrl,
+  findOrCreateStudio,
   toApiUrl,
   type SceneListItem,
   type PerformerItem,
@@ -714,6 +715,13 @@ export function BulkScrape() {
             try {
               const data: Record<string, unknown> = {};
               if (result.url) data.url = result.url;
+              // Auto-accept parent studio
+              if (result.parentName) {
+                try {
+                  const parentResult = await findOrCreateStudio({ name: result.parentName });
+                  data.parentId = parentResult.id;
+                } catch (e) { console.error("Parent studio resolution failed:", e); }
+              }
               await updateStudio(studioRows[i].studio.id, data);
               // Download image from URL
               if (result.imageUrl) {
@@ -744,6 +752,13 @@ export function BulkScrape() {
       const data: Record<string, unknown> = {};
       if (row.selectedFields.has("url") && row.result.url) data.url = row.result.url;
       if (row.selectedFields.has("name") && row.result.name) data.name = row.result.name;
+      // Resolve parent studio if selected
+      if (row.selectedFields.has("parentName") && row.result.parentName) {
+        try {
+          const parentResult = await findOrCreateStudio({ name: row.result.parentName });
+          data.parentId = parentResult.id;
+        } catch (e) { console.error("Parent studio resolution failed:", e); }
+      }
       await updateStudio(row.studio.id, data);
       // Download image from URL (stores locally)
       if (row.selectedFields.has("imageUrl") && row.result.imageUrl) {
@@ -1722,7 +1737,7 @@ function StudioRowCard({
             <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
               {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
               {row.result.url && <ToggleableField field="url" label="URL" value={row.result.url} enabled={row.selectedFields.has("url")} onToggle={() => onToggleField("url")} />}
-              {row.result.parentName && <ToggleableField field="parentName" label="Parent" value={row.result.parentName} enabled={false} onToggle={() => {}} />}
+              {row.result.parentName && <ToggleableField field="parentName" label="Parent" value={row.result.parentName} enabled={row.selectedFields.has("parentName")} onToggle={() => onToggleField("parentName")} />}
             </div>
           </div>
         </div>
