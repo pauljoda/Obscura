@@ -4,8 +4,8 @@ import { useState, useCallback } from "react";
 import { ArrowLeft, Images } from "lucide-react";
 import Link from "next/link";
 import { ImageGrid } from "../image-grid";
+import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
-import { GalleryCard } from "../gallery-card";
 import { fetchGalleryImages } from "../../lib/api";
 import type { GalleryDetailDto, ImageListItemDto } from "@obscura/contracts";
 
@@ -121,23 +121,14 @@ export function GalleryDetailClient({ initialGallery }: GalleryDetailClientProps
         </div>
       </div>
 
-      {/* Lightbox placeholder — will be implemented in Phase 9 */}
+      {/* Image lightbox */}
       {lightboxOpen && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center cursor-pointer"
-          onClick={() => setLightboxOpen(false)}
-        >
-          {images[lightboxIndex] && (
-            <img
-              src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/assets/images/${images[lightboxIndex].id}/full`}
-              alt={images[lightboxIndex].title}
-              className="max-h-[90vh] max-w-[90vw] object-contain"
-            />
-          )}
-          <div className="absolute top-4 right-4 text-white/70 text-sm">
-            {lightboxIndex + 1} / {images.length} — ESC to close
-          </div>
-        </div>
+        <ImageLightbox
+          images={images}
+          initialIndex={lightboxIndex}
+          chapters={gallery.chapters}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
     </div>
   );
