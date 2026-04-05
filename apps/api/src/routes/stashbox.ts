@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   StashBoxClient,
   StashBoxError,
@@ -13,6 +13,7 @@ import {
 
 const {
   stashBoxEndpoints,
+  stashIds,
   scrapeResults,
   scenes,
   performers,
@@ -474,6 +475,111 @@ export async function stashboxRoutes(app: FastifyInstance) {
       }
       throw err;
     }
+  });
+
+  // ─── Stash ID CRUD ──────────────────────────────────────────────
+
+  // GET /stash-ids?entityType=performer&entityId=xxx
+  app.get("/stash-ids", async (request) => {
+    const query = request.query as { entityType?: string; entityId?: string };
+    const conditions = [];
+    if (query.entityType) conditions.push(eq(stashIds.entityType, query.entityType));
+    if (query.entityId) conditions.push(eq(stashIds.entityId, query.entityId));
+
+    const rows = await db
+      .select({
+        id: stashIds.id,
+        entityType: stashIds.entityType,
+        entityId: stashIds.entityId,
+        stashBoxEndpointId: stashIds.stashBoxEndpointId,
+        stashId: stashIds.stashId,
+        endpointName: stashBoxEndpoints.name,
+        createdAt: stashIds.createdAt,
+      })
+      .from(stashIds)
+      .innerJoin(stashBoxEndpoints, eq(stashIds.stashBoxEndpointId, stashBoxEndpoints.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(stashIds.createdAt);
+
+    return {
+      stashIds: rows.map((r) => ({
+        id: r.id,
+        entityType: r.entityType,
+        entityId: r.entityId,
+        endpointId: r.stashBoxEndpointId,
+        endpointName: r.endpointName,
+        stashId: r.stashId,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  });
+
+  // POST /stash-ids
+  app.post("/stash-ids", async (request, reply) => {
+    const body = request.body as {
+      entityType: string;
+      entityId: string;
+      stashBoxEndpointId: string;
+      stashId: string;
+    };
+
+    if (!body.entityType || !body.entityId || !body.stashBoxEndpointId || !body.stashId) {
+      return reply.code(400).send({ error: "entityType, entityId, stashBoxEndpointId, and stashId are required" });
+    }
+
+    const validTypes = ["scene", "performer", "studio", "tag"];
+    if (!validTypes.includes(body.entityType)) {
+      return reply.code(400).send({ error: `entityType must be one of: ${validTypes.join(", ")}` });
+    }
+
+    try {
+      const [created] = await db
+        .insert(stashIds)
+        .values({
+          entityType: body.entityType,
+          entityId: body.entityId,
+          stashBoxEndpointId: body.stashBoxEndpointId,
+          stashId: body.stashId.trim(),
+        })
+        .onConflictDoUpdate({
+          target: [stashIds.entityType, stashIds.entityId, stashIds.stashBoxEndpointId],
+          set: { stashId: body.stashId.trim(), updatedAt: new Date() },
+        })
+        .returning();
+
+      // Fetch endpoint name for the response
+      const [ep] = await db
+        .select({ name: stashBoxEndpoints.name })
+        .from(stashBoxEndpoints)
+        .where(eq(stashBoxEndpoints.id, body.stashBoxEndpointId))
+        .limit(1);
+
+      return reply.code(201).send({
+        id: created.id,
+        entityType: created.entityType,
+        entityId: created.entityId,
+        endpointId: created.stashBoxEndpointId,
+        endpointName: ep?.name ?? "Unknown",
+        stashId: created.stashId,
+        createdAt: created.createdAt.toISOString(),
+      });
+    } catch (err) {
+      return reply.code(500).send({ error: err instanceof Error ? err.message : "Failed to create stash ID" });
+    }
+  });
+
+  // DELETE /stash-ids/:id
+  app.delete("/stash-ids/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [deleted] = await db
+      .delete(stashIds)
+      .where(eq(stashIds.id, id))
+      .returning({ id: stashIds.id });
+
+    if (!deleted) {
+      return reply.code(404).send({ error: "Stash ID not found" });
+    }
+    return { ok: true };
   });
 
   // ─── GET /metadata-providers ─────────────────────────────────────

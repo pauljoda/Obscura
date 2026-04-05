@@ -394,6 +394,39 @@ export const stashBoxEndpoints = pgTable(
 
 export const stashBoxEndpointsRelations = relations(stashBoxEndpoints, ({ many }) => ({
   scrapeResults: many(scrapeResults),
+  stashIds: many(stashIds),
+}));
+
+// ─── Stash IDs (remote entity links) ─────────────────────────────────
+export const stashIds = pgTable(
+  "stash_ids",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entityType: text("entity_type").notNull(), // "scene" | "performer" | "studio" | "tag"
+    entityId: uuid("entity_id").notNull(),
+    stashBoxEndpointId: uuid("stash_box_endpoint_id")
+      .notNull()
+      .references(() => stashBoxEndpoints.id, { onDelete: "cascade" }),
+    stashId: text("stash_id").notNull(), // remote ID on the StashBox instance
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("stash_ids_entity_endpoint_idx").on(
+      table.entityType,
+      table.entityId,
+      table.stashBoxEndpointId,
+    ),
+    index("stash_ids_entity_idx").on(table.entityType, table.entityId),
+    index("stash_ids_endpoint_idx").on(table.stashBoxEndpointId),
+  ]
+);
+
+export const stashIdsRelations = relations(stashIds, ({ one }) => ({
+  stashBoxEndpoint: one(stashBoxEndpoints, {
+    fields: [stashIds.stashBoxEndpointId],
+    references: [stashBoxEndpoints.id],
+  }),
 }));
 
 // ─── Scrape Results ─────────────────────────────────────────────────

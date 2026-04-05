@@ -901,6 +901,82 @@ export async function fetchMetadataProviders(): Promise<{
   return fetchApi("/metadata-providers");
 }
 
+// ─── Stash ID API functions ─────────────────────────────────────
+
+export interface StashIdEntry {
+  id: string;
+  entityType: string;
+  entityId: string;
+  endpointId: string;
+  endpointName: string;
+  stashId: string;
+  createdAt: string;
+}
+
+export async function fetchStashIds(
+  entityType: string,
+  entityId: string
+): Promise<{ stashIds: StashIdEntry[] }> {
+  return fetchApi(
+    `/stash-ids?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`
+  );
+}
+
+export async function createStashId(data: {
+  entityType: string;
+  entityId: string;
+  stashBoxEndpointId: string;
+  stashId: string;
+}): Promise<StashIdEntry> {
+  return fetchApi("/stash-ids", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteStashId(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/stash-ids/${id}`, { method: "DELETE" });
+}
+
+// ─── StashBox Lookup functions ──────────────────────────────────
+
+export interface StashBoxStudioResult {
+  id: string;
+  name: string;
+  aliases: string[];
+  urls: { url: string; type: string }[];
+  parent: { id: string; name: string } | null;
+  images: { id: string; url: string; width: number; height: number }[];
+}
+
+export interface StashBoxTagResult {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string[];
+  category: { id: string; name: string; description: string | null } | null;
+}
+
+export async function lookupStudioViaStashBox(
+  endpointId: string,
+  query: string
+): Promise<{ studio: StashBoxStudioResult | null }> {
+  return fetchApi(`/stashbox-endpoints/${endpointId}/lookup/studio`, {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
+
+export async function lookupTagViaStashBox(
+  endpointId: string,
+  query: string
+): Promise<{ tags: StashBoxTagResult[] }> {
+  return fetchApi(`/stashbox-endpoints/${endpointId}/lookup/tag`, {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
+
 export function toApiUrl(assetPath: string | null | undefined) {
   if (!assetPath) {
     return undefined;
