@@ -15,6 +15,7 @@ export const appShellSections = [
       { label: "Studios", href: "/studios", icon: "building" },
       { label: "Tags", href: "/tags", icon: "tags" },
       { label: "Collections", href: "/collections", icon: "folder" },
+      { label: "Search", href: "/search", icon: "search" },
     ],
   },
   {

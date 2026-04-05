@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +36,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "scan-search": ScanSearch,
   activity: Activity,
   settings: Settings,
+  search: Search,
 };
 
 interface SidebarProps {
