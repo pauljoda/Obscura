@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Tag,
   ArrowLeft,
@@ -9,16 +9,32 @@ import {
   Hash,
   Clock,
   Pencil,
+  Trash2,
+  Star,
+  Heart,
+  Upload,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { cn } from "@obscura/ui/lib/utils";
 import { SceneGrid } from "../../../../components/scene-grid";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import {
   fetchScenes,
   fetchTags,
+  fetchTagDetail,
+  deleteTag,
+  toggleTagFavorite,
+  setTagRating,
+  uploadTagImage,
+  deleteTagImage,
+  toApiUrl,
   type SceneListItem,
   type TagItem,
+  type TagDetail,
 } from "../../../../lib/api";
 import { use } from "react";
 
@@ -29,150 +45,200 @@ interface TagPageProps {
 export default function TagPage({ params }: TagPageProps) {
   const { id } = use(params);
   const tagName = decodeURIComponent(id);
+  const router = useRouter();
 
-  const [tagItem, setTagItem] = useState<TagItem | null>(null);
+  const [tagDetail, setTagDetail] = useState<TagDetail | null>(null);
   const [scenes, setScenes] = useState<SceneListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
-  function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    Promise.all([
-      fetchScenes({ tag: [tagName], limit: 100 }),
-      fetchTags(),
-    ])
-      .then(([scenesRes, tagsRes]) => {
-        setScenes(scenesRes.scenes);
-        setTotal(scenesRes.total);
-        // Resolve tag name to tag item (for UUID)
-        const match = tagsRes.tags.find(
-          (t) => t.name.toLowerCase() === tagName.toLowerCase()
-        );
-        setTagItem(match ?? null);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }
+    try {
+      const [scenesRes, tagsRes] = await Promise.all([
+        fetchScenes({ tag: [tagName], limit: 100 }),
+        fetchTags(),
+      ]);
+      setScenes(scenesRes.scenes);
+      setTotal(scenesRes.total);
 
-  useEffect(() => {
-    loadData();
+      // Resolve tag name to UUID, then fetch full detail
+      const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
+      if (match) {
+        const detail = await fetchTagDetail(match.id);
+        setTagDetail(detail);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, [tagName]);
 
-  // Compute stats from loaded scenes
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function handleToggleFavorite() {
+    if (!tagDetail) return;
+    try {
+      const result = await toggleTagFavorite(tagDetail.id, !tagDetail.favorite);
+      setTagDetail((c) => c ? { ...c, favorite: result.favorite } : c);
+    } catch { /* ignore */ }
+  }
+
+  async function handleSetRating(rating: number) {
+    if (!tagDetail) return;
+    const next = tagDetail.rating === rating ? null : rating;
+    const prev = tagDetail.rating;
+    setTagDetail((c) => c ? { ...c, rating: next } : c);
+    try { await setTagRating(tagDetail.id, next); }
+    catch { setTagDetail((c) => c ? { ...c, rating: prev } : c); }
+  }
+
+  async function handleDelete() {
+    if (!tagDetail) return;
+    if (!confirm("Delete this tag? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      await deleteTag(tagDetail.id);
+      router.push("/tags");
+    } catch { setDeleting(false); }
+  }
+
+  async function handleImageUpload(file: File) {
+    if (!tagDetail) return;
+    setUploadingImage(true);
+    try {
+      await uploadTagImage(tagDetail.id, file);
+      const updated = await fetchTagDetail(tagDetail.id);
+      setTagDetail(updated);
+    } catch { /* ignore */ }
+    finally { setUploadingImage(false); }
+  }
+
+  async function handleDeleteImage() {
+    if (!tagDetail) return;
+    setUploadingImage(true);
+    try {
+      await deleteTagImage(tagDetail.id);
+      const updated = await fetchTagDetail(tagDetail.id);
+      setTagDetail(updated);
+    } catch { /* ignore */ }
+    finally { setUploadingImage(false); }
+  }
+
   const totalDuration = scenes.reduce((sum, s) => sum + (s.duration ?? 0), 0);
   const durationFormatted = formatDuration(totalDuration);
 
-  if (editing && tagItem) {
+  if (editing && tagDetail) {
     return (
       <TagEdit
-        id={tagItem.id}
+        id={tagDetail.id}
         onSaved={() => { setEditing(false); loadData(); }}
         onCancel={() => setEditing(false)}
       />
     );
   }
 
+  const imageUrl = tagDetail?.imagePath ? toApiUrl(tagDetail.imagePath) : tagDetail?.imageUrl;
+
   return (
     <div className="space-y-5">
-      {/* Back link */}
-      <Link
-        href="/tags"
-        className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast"
-      >
-        <ArrowLeft className="h-3 w-3" />
-        Tags
+      <Link href="/tags" className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast">
+        <ArrowLeft className="h-3 w-3" /> Tags
       </Link>
 
-      {/* Header card */}
-      <div className="surface-card-sharp p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h1 className="flex items-center gap-2.5">
-                <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
-                {tagName}
-              </h1>
-              {tagItem && (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Edit
+      {/* Hero header */}
+      <div className="flex items-start gap-5">
+        {/* Image */}
+        <div className="flex-shrink-0 relative group">
+          <div className="h-20 w-20 rounded-xl overflow-hidden bg-surface-3">
+            {imageUrl ? (
+              <img src={imageUrl} alt={tagName} className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Tag className="h-8 w-8 text-text-disabled/30" />
+              </div>
+            )}
+          </div>
+          {tagDetail && (
+            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-xl">
+              <button onClick={() => imageInputRef.current?.click()} disabled={uploadingImage} className="p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
+                {uploadingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              </button>
+              {imageUrl && (
+                <button onClick={handleDeleteImage} disabled={uploadingImage} className="p-1.5 rounded-full bg-black/60 text-white hover:bg-red-500/80 transition-colors">
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
-            <p className="text-text-muted text-[0.78rem] mt-1">
-              Scenes tagged with this label
-            </p>
+          )}
+          <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+        </div>
 
-            {/* Inline metadata row */}
-            {!loading && (
-              <div className="flex items-center gap-4 mt-3 flex-wrap">
-                <div className="flex items-center gap-1.5 text-text-muted text-sm">
-                  <Film className="h-4 w-4" />
-                  <span className="text-mono-sm">{total} scene{total !== 1 ? "s" : ""}</span>
-                </div>
-                {totalDuration > 0 && (
-                  <div className="flex items-center gap-1.5 text-text-muted text-sm">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-mono-sm">{durationFormatted}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* StashBox IDs */}
-            {tagItem && (
-              <div className="mt-2">
-                <StashIdChips entityType="tag" entityId={tagItem.id} compact />
-              </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="flex items-center gap-2.5">
+              <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
+              {tagName}
+            </h1>
+            {tagDetail && (
+              <>
+                <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
+                  <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />
+                </button>
+                <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-text-accent border border-border-subtle hover:border-border-accent transition-all duration-fast">
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+                <button onClick={handleDelete} disabled={deleting} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.68rem] text-text-muted hover:text-status-error border border-border-subtle hover:border-status-error/50 transition-all duration-fast">
+                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
+                </button>
+              </>
             )}
           </div>
 
-          {/* Tag chip accent */}
+          {/* Rating */}
+          {tagDetail && (
+            <div className="flex items-center gap-1 mt-2">
+              {[20, 40, 60, 80, 100].map((v) => (
+                <button key={v} onClick={() => handleSetRating(v)} className="p-0.5 transition-colors">
+                  <Star className={cn("h-4 w-4", tagDetail.rating != null && tagDetail.rating >= v ? "text-accent-500 fill-accent-500" : "text-text-disabled hover:text-accent-500/50")} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Meta */}
           {!loading && (
-            <span className="tag-chip tag-chip-accent flex-shrink-0 mt-1">
-              <Hash className="h-3 w-3 mr-1" />
-              {total}
-            </span>
+            <div className="flex items-center gap-4 mt-2 flex-wrap text-sm text-text-muted">
+              <span className="flex items-center gap-1.5"><Film className="h-3.5 w-3.5" /> {total} scene{total !== 1 ? "s" : ""}</span>
+              {totalDuration > 0 && (
+                <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {durationFormatted}</span>
+              )}
+            </div>
+          )}
+
+          {/* Description */}
+          {tagDetail?.description && (
+            <p className="text-[0.78rem] text-text-muted mt-2 max-w-prose">{tagDetail.description}</p>
+          )}
+
+          {/* Aliases */}
+          {tagDetail?.aliases && (
+            <div className="text-[0.72rem] text-text-disabled mt-1">Aliases: {tagDetail.aliases}</div>
+          )}
+
+          {/* StashBox IDs */}
+          {tagDetail && (
+            <div className="mt-2">
+              <StashIdChips entityType="tag" entityId={tagDetail.id} compact />
+            </div>
           )}
         </div>
       </div>
-
-      {/* Stats strip */}
-      {!loading && total > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <div className="surface-stat px-3 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1 text-text-disabled">
-              <Film className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Scenes</span>
-            </div>
-            <div className="text-lg font-semibold text-text-primary leading-tight">
-              {total}
-            </div>
-          </div>
-          <div className="surface-stat px-3 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1 text-text-disabled">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Duration</span>
-            </div>
-            <div className="text-lg font-semibold text-text-primary leading-tight">
-              {totalDuration > 0 ? durationFormatted : "—"}
-            </div>
-          </div>
-          <div className="surface-stat-accent px-3 py-2.5 hidden sm:block">
-            <div className="flex items-center gap-1.5 mb-1 text-text-accent">
-              <Tag className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Tag</span>
-            </div>
-            <div className="text-lg font-semibold text-text-accent leading-tight truncate">
-              {tagName}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="separator" />
 

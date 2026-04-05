@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRef } from "react";
 import {
   ArrowLeft,
   Save,
@@ -9,13 +10,20 @@ import {
   Check,
   SkipForward,
   Building2,
+  Upload,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchStudioDetail,
   updateStudio,
+  uploadStudioImage,
+  uploadStudioImageFromUrl,
+  deleteStudioImage,
   fetchStashBoxEndpoints,
   lookupStudioViaStashBox,
+  toApiUrl,
   type StudioDetail,
   type StashBoxEndpoint,
   type NormalizedStudioScrapeResult,
@@ -37,8 +45,13 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
   // Form state
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [aliases, setAliases] = useState("");
   const [url, setUrl] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+
+  // Image
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Scraper state
   const [endpoints, setEndpoints] = useState<StashBoxEndpoint[]>([]);
@@ -57,8 +70,9 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
     ]).then(([s, epRes]) => {
       setStudio(s);
       setName(s.name);
+      setDescription(s.description ?? "");
+      setAliases(s.aliases ?? "");
       setUrl(s.url ?? "");
-      setImageUrl(s.imageUrl ?? "");
 
       const enabled = epRes.endpoints.filter((e) => e.enabled);
       setEndpoints(enabled);
@@ -160,13 +174,20 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       const data: Record<string, unknown> = {};
       if (selectedFields.has("name") && scrapeResult.name) data.name = scrapeResult.name;
       if (selectedFields.has("url") && scrapeResult.url) data.url = scrapeResult.url;
-      if (selectedFields.has("imageUrl") && scrapeResult.imageUrl) data.imageUrl = scrapeResult.imageUrl;
+
+      // Download image from URL if selected
+      if (selectedFields.has("imageUrl") && scrapeResult.imageUrl) {
+        try { await uploadStudioImageFromUrl(id, scrapeResult.imageUrl); } catch { /* non-fatal */ }
+      }
 
       const updated = await updateStudio(id, data);
-      setStudio(updated);
-      setName(updated.name);
-      setUrl(updated.url ?? "");
-      setImageUrl(updated.imageUrl ?? "");
+      // Re-fetch to get updated imagePath
+      const refreshed = await fetchStudioDetail(id);
+      setStudio(refreshed);
+      setName(refreshed.name);
+      setDescription(refreshed.description ?? "");
+      setAliases(refreshed.aliases ?? "");
+      setUrl(refreshed.url ?? "");
 
       if (scrapeEndpointId && scrapeRemoteId) {
         await autoSaveStashId("studio", id, scrapeEndpointId, scrapeRemoteId);
@@ -188,8 +209,9 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
     try {
       await updateStudio(id, {
         name: name.trim(),
+        description: description.trim() || null,
+        aliases: aliases.trim() || null,
         url: url.trim() || null,
-        imageUrl: imageUrl.trim() || null,
       });
       setMessage("Changes saved");
       onSaved?.();
@@ -260,15 +282,51 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image + scraper */}
         <div className="flex-shrink-0 lg:w-72 space-y-3">
-          <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-3">
-            {imageUrl ? (
-              <img src={imageUrl} alt={name} className="absolute inset-0 w-full h-full object-contain" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Building2 className="h-12 w-12 text-text-disabled/30" />
-              </div>
-            )}
-          </div>
+          {(() => {
+            const displayUrl = studio?.imagePath ? toApiUrl(studio.imagePath) : studio?.imageUrl;
+            return (
+              <>
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-3">
+                  {displayUrl ? (
+                    <img src={displayUrl} alt={name} className="absolute inset-0 w-full h-full object-contain" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Building2 className="h-12 w-12 text-text-disabled/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="flex-1 flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast"
+                  >
+                    {uploadingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    Upload
+                  </button>
+                  {displayUrl && (
+                    <button
+                      onClick={async () => {
+                        setUploadingImage(true);
+                        try { await deleteStudioImage(id); const u = await fetchStudioDetail(id); setStudio(u); } catch {} finally { setUploadingImage(false); }
+                      }}
+                      disabled={uploadingImage}
+                      className="flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-status-error transition-colors duration-fast"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  e.target.value = "";
+                  setUploadingImage(true);
+                  try { await uploadStudioImage(id, file); const u = await fetchStudioDetail(id); setStudio(u); } catch {} finally { setUploadingImage(false); }
+                }} />
+              </>
+            );
+          })()}
 
           {/* Scraper panel */}
           {endpoints.length > 0 && (
@@ -365,8 +423,8 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
           <div className="surface-well p-4 space-y-4">
             <div className="text-kicker mb-1">Studio Info</div>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-full sm:col-span-1">
                 <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">
                   Name <span className="text-status-error ml-0.5">*</span>
                 </label>
@@ -376,9 +434,13 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
                 <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">URL</label>
                 <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="control-input w-full py-1.5 text-sm" />
               </div>
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Image URL</label>
-                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="control-input w-full py-1.5 text-sm" />
+              <div className="col-span-full">
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Aliases</label>
+                <input type="text" value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="Comma-separated" className="control-input w-full py-1.5 text-sm" />
+              </div>
+              <div className="col-span-full">
+                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Description</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="control-input w-full py-2 text-sm resize-y" placeholder="Studio description..." />
               </div>
             </div>
           </div>

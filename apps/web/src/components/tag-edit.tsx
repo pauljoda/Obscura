@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRef } from "react";
 import {
   ArrowLeft,
   Save,
@@ -9,13 +10,18 @@ import {
   Check,
   SkipForward,
   Tag,
+  Upload,
+  X,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchTagDetail,
   updateTag,
+  uploadTagImage,
+  deleteTagImage,
   fetchStashBoxEndpoints,
   lookupTagViaStashBox,
+  toApiUrl,
   type TagDetail,
   type StashBoxEndpoint,
   type NormalizedTagScrapeResult,
@@ -39,6 +45,10 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [aliases, setAliases] = useState("");
+
+  // Image
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Scraper state
   const [endpoints, setEndpoints] = useState<StashBoxEndpoint[]>([]);
@@ -257,8 +267,55 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
       )}
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left column — scraper panel */}
+        {/* Left column — image + scraper panel */}
         <div className="flex-shrink-0 lg:w-72 space-y-3">
+          {/* Image */}
+          {(() => {
+            const displayUrl = tag?.imagePath ? toApiUrl(tag.imagePath) : tag?.imageUrl;
+            return (
+              <>
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-3">
+                  {displayUrl ? (
+                    <img src={displayUrl} alt={name} className="absolute inset-0 w-full h-full object-contain" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Tag className="h-12 w-12 text-text-disabled/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="flex-1 flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast"
+                  >
+                    {uploadingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    Upload
+                  </button>
+                  {displayUrl && (
+                    <button
+                      onClick={async () => {
+                        setUploadingImage(true);
+                        try { await deleteTagImage(id); const u = await fetchTagDetail(id); setTag(u); } catch {} finally { setUploadingImage(false); }
+                      }}
+                      disabled={uploadingImage}
+                      className="flex items-center justify-center gap-1.5 surface-well px-3 py-2 text-xs text-text-muted hover:text-status-error transition-colors duration-fast"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  e.target.value = "";
+                  setUploadingImage(true);
+                  try { await uploadTagImage(id, file); const u = await fetchTagDetail(id); setTag(u); } catch {} finally { setUploadingImage(false); }
+                }} />
+              </>
+            );
+          })()}
+
           {/* Scraper panel */}
           {endpoints.length > 0 && (
             <div className="surface-well p-3 space-y-2">
