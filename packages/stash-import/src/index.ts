@@ -41,6 +41,23 @@ export {
   hasUsableNormalizedSceneResult,
 } from "./normalizer";
 
+// StashBox Client
+export {
+  StashBoxClient,
+  StashBoxError,
+  normalizeStashBoxScene,
+  normalizeStashBoxPerformer,
+  stashBoxSceneToRawResult,
+} from "./stashbox";
+export type {
+  StashBoxFingerprint,
+  StashBoxScene,
+  StashBoxPerformer,
+  StashBoxStudio,
+  StashBoxTag,
+  FingerprintAlgorithm,
+} from "./stashbox";
+
 // Legacy types (kept for compatibility)
 import type { FingerprintKind } from "@obscura/media-core";
 
