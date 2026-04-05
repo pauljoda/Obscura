@@ -8,7 +8,6 @@ import {
   LayoutList,
   FolderTree,
   CalendarDays,
-  Layers,
   X,
   Search,
   ChevronDown,
@@ -17,7 +16,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
 
-export type GalleryViewMode = "grid" | "list" | "browser" | "timeline" | "flat";
+export type GalleryViewMode = "grid" | "list" | "browser" | "timeline";
 export type GallerySortOption = "recent" | "title" | "date" | "rating" | "imageCount" | "created";
 export type SortDir = "asc" | "desc";
 
@@ -59,7 +58,6 @@ const viewModes: { mode: GalleryViewMode; Icon: typeof LayoutGrid; title: string
   { mode: "list", Icon: LayoutList, title: "List" },
   { mode: "browser", Icon: FolderTree, title: "Browser" },
   { mode: "timeline", Icon: CalendarDays, title: "Timeline" },
-  { mode: "flat", Icon: Layers, title: "All Images" },
 ];
 
 export function GalleryFilterBar({

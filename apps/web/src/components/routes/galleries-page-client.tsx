@@ -10,17 +10,14 @@ import {
 } from "react";
 import { Images } from "lucide-react";
 import { GalleryGrid } from "../gallery-grid";
-import { ImageGrid } from "../image-grid";
-import { ImageLightbox } from "../image-lightbox";
 import { GalleryFilterBar } from "../gallery-filter-bar";
 import type { GalleryViewMode, GallerySortOption, SortDir } from "../gallery-filter-bar";
 import {
   fetchGalleries,
-  fetchImages,
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
-import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
+import type { GalleryListItemDto } from "@obscura/contracts";
 
 const PAGE_SIZE = 60;
 
@@ -53,16 +50,8 @@ export function GalleriesPageClient({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Flat view state (all images)
-  const [flatImages, setFlatImages] = useState<ImageListItemDto[]>([]);
-  const [flatTotal, setFlatTotal] = useState(0);
-  const [flatLoadingMore, setFlatLoadingMore] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
-  const isFlat = viewMode === "flat";
 
   const buildParams = useCallback(() => {
     const tagFilters = activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
@@ -79,93 +68,55 @@ export function GalleriesPageClient({
     };
   }, [deferredSearchQuery, sortBy, sortDir, activeFilters]);
 
-  const loadData = useCallback(async () => {
+  const loadGalleries = useCallback(async () => {
     setLoading(true);
-
     try {
-      if (isFlat) {
-        const result = await fetchImages({
-          search: deferredSearchQuery || undefined,
-          sort: sortBy,
-          order: sortDir as "asc" | "desc",
-          tag: buildParams().tag,
-          limit: 80,
-        });
-        startTransition(() => {
-          setFlatImages(result.images);
-          setFlatTotal(result.total);
-          setTotal(result.total);
-        });
-      } else {
-        const result = await fetchGalleries({
-          ...buildParams(),
-          root: viewMode === "browser" ? "all" : undefined,
-          limit: viewMode === "browser" ? 2000 : PAGE_SIZE,
-        });
-        startTransition(() => {
-          setGalleries(result.galleries);
-          setTotal(result.total);
-        });
-      }
+      const result = await fetchGalleries({
+        ...buildParams(),
+        root: viewMode === "browser" ? "all" : undefined,
+        limit: viewMode === "browser" ? 2000 : PAGE_SIZE,
+      });
+      startTransition(() => {
+        setGalleries(result.galleries);
+        setTotal(result.total);
+      });
     } catch {
       // silently fail
     } finally {
       setLoading(false);
     }
-  }, [buildParams, viewMode, isFlat, deferredSearchQuery, sortBy, sortDir]);
+  }, [buildParams, viewMode]);
 
   const loadMore = useCallback(async () => {
-    if (isFlat) {
-      if (flatLoadingMore || flatImages.length >= flatTotal) return;
-      setFlatLoadingMore(true);
-      try {
-        const result = await fetchImages({
-          search: deferredSearchQuery || undefined,
-          sort: sortBy,
-          order: sortDir as "asc" | "desc",
-          tag: buildParams().tag,
-          limit: 80,
-          offset: flatImages.length,
+    if (loadingMore || galleries.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const result = await fetchGalleries({
+        ...buildParams(),
+        limit: PAGE_SIZE,
+        offset: galleries.length,
+      });
+      startTransition(() => {
+        setGalleries((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newItems = result.galleries.filter((g) => !existingIds.has(g.id));
+          return [...prev, ...newItems];
         });
-        startTransition(() => {
-          setFlatImages((prev) => {
-            const existingIds = new Set(prev.map((img) => img.id));
-            const newItems = result.images.filter((img) => !existingIds.has(img.id));
-            return [...prev, ...newItems];
-          });
-        });
-      } finally {
-        setFlatLoadingMore(false);
-      }
-    } else {
-      if (loadingMore || galleries.length >= total) return;
-      setLoadingMore(true);
-      try {
-        const result = await fetchGalleries({
-          ...buildParams(),
-          limit: PAGE_SIZE,
-          offset: galleries.length,
-        });
-        startTransition(() => {
-          setGalleries((prev) => {
-            const existingIds = new Set(prev.map((g) => g.id));
-            const newItems = result.galleries.filter((g) => !existingIds.has(g.id));
-            return [...prev, ...newItems];
-          });
-        });
-      } finally {
-        setLoadingMore(false);
-      }
+      });
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingMore(false);
     }
-  }, [buildParams, isFlat, galleries.length, total, loadingMore, flatImages.length, flatTotal, flatLoadingMore, deferredSearchQuery, sortBy, sortDir]);
+  }, [buildParams, galleries.length, total, loadingMore]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
       hydratedRef.current = true;
       return;
     }
-    void loadData();
-  }, [loadData]);
+    void loadGalleries();
+  }, [loadGalleries]);
 
   const handleSortChange = (sort: GallerySortOption, dir?: SortDir) => {
     setSortBy(sort);
@@ -185,10 +136,6 @@ export function GalleriesPageClient({
     });
   };
 
-  const hasMore = isFlat
-    ? flatImages.length < flatTotal
-    : galleries.length < total;
-
   return (
     <div className="space-y-4">
       <div>
@@ -197,13 +144,9 @@ export function GalleriesPageClient({
           Galleries
         </h1>
         <p className="text-text-muted text-[0.78rem] mt-1">
-          {isFlat
-            ? flatTotal > 0
-              ? `${flatTotal} ${flatTotal === 1 ? "image" : "images"} across all galleries`
-              : "No images found"
-            : total > 0
-              ? `${total} ${total === 1 ? "gallery" : "galleries"} in your library`
-              : "Browse image galleries from your library"}
+          {total > 0
+            ? `${total} ${total === 1 ? "gallery" : "galleries"} in your library`
+            : "Browse image galleries from your library"}
         </p>
       </div>
 
@@ -221,37 +164,14 @@ export function GalleriesPageClient({
         onAddFilter={handleAddFilter}
       />
 
-      {isFlat ? (
-        <>
-          <ImageGrid
-            images={flatImages}
-            onImageClick={(index) => {
-              setLightboxIndex(index);
-              setLightboxOpen(true);
-            }}
-            hasMore={flatImages.length < flatTotal}
-            onLoadMore={loadMore}
-            loadingMore={flatLoadingMore}
-          />
-          {lightboxOpen && (
-            <ImageLightbox
-              images={flatImages}
-              initialIndex={lightboxIndex}
-              onClose={() => setLightboxOpen(false)}
-              availableTags={initialTags}
-            />
-          )}
-        </>
-      ) : (
-        <GalleryGrid
-          galleries={galleries}
-          viewMode={viewMode}
-          loading={loading}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
-          onLoadMore={loadMore}
-        />
-      )}
+      <GalleryGrid
+        galleries={galleries}
+        viewMode={viewMode}
+        loading={loading}
+        hasMore={galleries.length < total}
+        loadingMore={loadingMore}
+        onLoadMore={loadMore}
+      />
     </div>
   );
 }
