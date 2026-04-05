@@ -107,6 +107,8 @@ export default function SettingsPage() {
       const response = await browseLibraryPath(targetPath);
       setBrowser(response);
       setBrowserVisible(true);
+      // Auto-track browsed path as the selected folder
+      setNewRootPath(response.path);
     } catch (browseError) {
       setError(browseError instanceof Error ? browseError.message : "Failed to browse folders");
     }
@@ -278,70 +280,19 @@ export default function SettingsPage() {
         {/* Folder browser */}
         {browserVisible && (
           <div className="surface-well p-4 space-y-4">
-            <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block uppercase tracking-wider">Selected Folder</label>
-                <input
-                  className="control-input w-full py-1.5 text-sm"
-                  value={newRootPath}
-                  onChange={(e) => setNewRootPath(e.target.value)}
-                  placeholder="/mnt/library/scenes"
-                />
-              </div>
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block uppercase tracking-wider">Label</label>
-                <input
-                  className="control-input w-full py-1.5 text-sm"
-                  value={newRootLabel}
-                  onChange={(e) => setNewRootLabel(e.target.value)}
-                  placeholder="Primary scenes"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="accent-[#c79b5c]"
-                  checked={newRootRecursive}
-                  onChange={(e) => setNewRootRecursive(e.target.checked)}
-                />
-                Scan subfolders recursively
-              </label>
-              <div className="flex-1" />
-              <button
-                onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
-                disabled={!browser?.parentPath}
-                className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary disabled:opacity-40 transition-colors"
-              >
-                Up One Level
-              </button>
-              <button
-                onClick={() => { if (browser) setNewRootPath(browser.path); }}
-                className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-accent transition-colors"
-              >
-                Use Current Folder
-              </button>
-              <button
-                onClick={() => void handleAddRoot()}
-                disabled={addingRoot}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all duration-fast",
-                  "bg-accent-950 text-text-accent border border-border-accent",
-                  "hover:bg-accent-900 disabled:opacity-50"
-                )}
-              >
-                {addingRoot ? "Adding..." : "Add Library"}
-              </button>
-            </div>
-
             {/* Directory listing */}
             <div className="surface-panel p-3">
-              <div className="mb-2">
-                <span className="text-mono-sm text-text-secondary">{browser?.path ?? "Loading..."}</span>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-mono-sm text-text-secondary truncate">{browser?.path ?? "Loading..."}</span>
+                <button
+                  onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
+                  disabled={!browser?.parentPath}
+                  className="px-2.5 py-1 rounded text-xs text-text-muted hover:text-text-primary disabled:opacity-40 transition-colors flex-shrink-0"
+                >
+                  Up One Level
+                </button>
               </div>
-              <div className="grid gap-1.5 md:grid-cols-2">
+              <div className="grid gap-1.5 md:grid-cols-2 max-h-[280px] overflow-y-auto scrollbar-hidden">
                 {browser?.directories.map((directory) => (
                   <button
                     key={directory.path}
@@ -357,6 +308,45 @@ export default function SettingsPage() {
                   <p className="text-text-disabled text-xs col-span-full py-3 text-center">No child directories found.</p>
                 )}
               </div>
+            </div>
+
+            {/* Add controls */}
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="control-label mb-1">Label (optional)</label>
+                <input
+                  className="control-input w-full py-1.5 text-sm"
+                  value={newRootLabel}
+                  onChange={(e) => setNewRootLabel(e.target.value)}
+                  placeholder="Primary scenes"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer pb-2">
+                <input
+                  type="checkbox"
+                  className="accent-[#c79b5c]"
+                  checked={newRootRecursive}
+                  onChange={(e) => setNewRootRecursive(e.target.checked)}
+                />
+                Recursive
+              </label>
+              <button
+                onClick={() => void handleAddRoot()}
+                disabled={addingRoot || !newRootPath}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+                  "bg-accent-950 text-text-accent border border-border-accent",
+                  "hover:bg-accent-900 disabled:opacity-50"
+                )}
+              >
+                {addingRoot ? "Adding..." : "Add Library"}
+              </button>
+              <button
+                onClick={() => { setBrowserVisible(false); setNewRootPath(""); setNewRootLabel(""); }}
+                className="px-2.5 py-1.5 rounded text-xs text-text-muted hover:text-text-primary transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}
@@ -410,6 +400,24 @@ export default function SettingsPage() {
         )}
       </section>
 
+      {/* ─── Scrapers Link ────────────────────────────────────── */}
+      <Link href="/scrapers" className="block">
+        <section className="surface-panel p-5 group cursor-pointer hover:border-border-accent transition-colors duration-fast">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-text-accent" />
+              <div>
+                <h2 className="text-base font-heading font-semibold group-hover:text-text-accent transition-colors duration-fast">Scrapers</h2>
+                <p className="text-text-muted text-[0.72rem]">
+                  {scraperCount} scraper{scraperCount !== 1 ? "s" : ""} installed — manage scrapers, browse community index, and configure capabilities
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-text-disabled group-hover:text-text-accent transition-colors duration-fast" />
+          </div>
+        </section>
+      </Link>
+
       {/* ─── Generation + Storage ─────────────────────────────── */}
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="surface-panel p-5 space-y-4">
@@ -430,7 +438,7 @@ export default function SettingsPage() {
               }
             />
             <div className="surface-well p-4">
-              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Scan Interval (min)</label>
+              <label className="control-label mb-1.5">Scan Interval (min)</label>
               <input
                 className="control-input w-full py-1.5 text-sm"
                 type="number"
@@ -481,7 +489,7 @@ export default function SettingsPage() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="surface-well p-4">
-              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Trickplay Interval (sec)</label>
+              <label className="control-label mb-1.5">Trickplay Interval (sec)</label>
               <input
                 className="control-input w-full py-1.5 text-sm"
                 type="number"
@@ -494,7 +502,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="surface-well p-4">
-              <label className="text-[0.68rem] text-text-muted font-medium mb-1.5 block uppercase tracking-wider">Preview Clip Length (sec)</label>
+              <label className="control-label mb-1.5">Preview Clip Length (sec)</label>
               <input
                 className="control-input w-full py-1.5 text-sm"
                 type="number"
@@ -530,24 +538,6 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
-
-      {/* ─── Scrapers Link ────────────────────────────────────── */}
-      <Link href="/scrapers" className="block">
-        <section className="surface-panel p-5 group cursor-pointer hover:border-border-accent transition-colors duration-fast">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Package className="h-5 w-5 text-text-accent" />
-              <div>
-                <h2 className="text-base font-heading font-semibold group-hover:text-text-accent transition-colors duration-fast">Scrapers</h2>
-                <p className="text-text-muted text-[0.72rem]">
-                  {scraperCount} scraper{scraperCount !== 1 ? "s" : ""} installed — manage scrapers, browse community index, and configure capabilities
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-text-disabled group-hover:text-text-accent transition-colors duration-fast" />
-          </div>
-        </section>
-      </Link>
     </div>
   );
 }

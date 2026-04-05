@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Button, Badge } from "@obscura/ui";
 import { cn } from "@obscura/ui";
 import {
+  ChevronDown,
+  ChevronRight,
   Download,
   Trash2,
   RefreshCw,
@@ -71,6 +73,7 @@ export default function ScrapersPage() {
   const [capFilter, setCapFilter] = useState<CapFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkInstalling, setBulkInstalling] = useState(false);
+  const [installedCollapsed, setInstalledCollapsed] = useState(false);
 
   async function loadInstalled() {
     try {
@@ -307,35 +310,7 @@ export default function ScrapersPage() {
         </div>
       )}
 
-      {/* Capability filter toolbar */}
-      {!loading && installed.length > 0 && (
-        <div className="surface-well flex items-center gap-2 px-3 py-2">
-          <span className="text-[0.68rem] text-text-disabled uppercase tracking-wider font-bold mr-1">Show:</span>
-          {(["all", "scene", "performer"] as CapFilter[]).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setCapFilter(filter)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs transition-all duration-fast",
-                capFilter === filter
-                  ? "bg-accent-950 text-text-accent border border-border-accent"
-                  : "text-text-muted hover:text-text-secondary border border-transparent"
-              )}
-            >
-              {filter === "all" && <Package className="h-3 w-3" />}
-              {filter === "scene" && <Film className="h-3 w-3" />}
-              {filter === "performer" && <Users className="h-3 w-3" />}
-              {filter === "all" ? "All" : filter === "scene" ? "Scenes" : "Performers"}
-            </button>
-          ))}
-          <div className="flex-1" />
-          <span className="text-mono-sm text-text-disabled">
-            {filteredInstalled.length} scraper{filteredInstalled.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      )}
-
-      {/* Installed scrapers */}
+      {/* Installed scrapers (collapsible) */}
       {loading ? (
         <div className="surface-well p-12 flex items-center justify-center">
           <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
@@ -348,16 +323,70 @@ export default function ScrapersPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredInstalled.map((pkg) => (
-            <ScraperCard
-              key={pkg.id}
-              pkg={pkg}
-              onToggle={() => void handleToggle(pkg)}
-              onRemove={() => void handleUninstall(pkg)}
-            />
-          ))}
-        </div>
+        <section className="space-y-2">
+          {/* Collapsible header with filter toolbar */}
+          <div className="surface-well flex items-center gap-2 px-3 py-2">
+            <button
+              onClick={() => setInstalledCollapsed((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors font-medium"
+            >
+              {installedCollapsed ? (
+                <ChevronRight className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+              Installed
+            </button>
+            <span className="text-mono-sm text-text-disabled">
+              {installed.length}
+            </span>
+
+            {!installedCollapsed && (
+              <>
+                <div className="w-px h-4 bg-border-subtle mx-1" />
+                <span className="text-[0.68rem] text-text-disabled uppercase tracking-wider font-bold mr-1">Show:</span>
+                {(["all", "scene", "performer"] as CapFilter[]).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setCapFilter(filter)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs transition-all duration-fast",
+                      capFilter === filter
+                        ? "bg-accent-950 text-text-accent border border-border-accent"
+                        : "text-text-muted hover:text-text-secondary border border-transparent"
+                    )}
+                  >
+                    {filter === "all" && <Package className="h-3 w-3" />}
+                    {filter === "scene" && <Film className="h-3 w-3" />}
+                    {filter === "performer" && <Users className="h-3 w-3" />}
+                    {filter === "all" ? "All" : filter === "scene" ? "Scenes" : "Performers"}
+                  </button>
+                ))}
+              </>
+            )}
+
+            <div className="flex-1" />
+            {!installedCollapsed && (
+              <span className="text-mono-sm text-text-disabled">
+                {filteredInstalled.length} shown
+              </span>
+            )}
+          </div>
+
+          {/* Scraper cards */}
+          {!installedCollapsed && (
+            <div className="space-y-2">
+              {filteredInstalled.map((pkg) => (
+                <ScraperCard
+                  key={pkg.id}
+                  pkg={pkg}
+                  onToggle={() => void handleToggle(pkg)}
+                  onRemove={() => void handleUninstall(pkg)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {/* Community index browser */}
@@ -452,7 +481,7 @@ export default function ScrapersPage() {
               <div
                 key={entry.id}
                 className={cn(
-                  "surface-well px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
+                  "surface-card-sharp no-lift px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
                   !entry.installed && selected.has(entry.id) && "border-border-accent/40"
                 )}
               >
@@ -543,7 +572,7 @@ function ScraperCard({
 
   return (
     <div className={cn(
-      "surface-well p-4 transition-opacity duration-fast",
+      "surface-card-sharp no-lift p-4 transition-opacity duration-fast",
       !pkg.enabled && "opacity-60"
     )}>
       <div className="flex flex-wrap items-start justify-between gap-3">
