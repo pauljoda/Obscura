@@ -102,7 +102,11 @@ export function GalleriesPageClient({
       });
 
       startTransition(() => {
-        setGalleries((prev) => [...prev, ...result.galleries]);
+        setGalleries((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newItems = result.galleries.filter((g) => !existingIds.has(g.id));
+          return [...prev, ...newItems];
+        });
       });
     } catch {
       // silently fail

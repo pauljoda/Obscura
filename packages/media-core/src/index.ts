@@ -205,6 +205,9 @@ export async function discoverVideoFiles(rootPath: string, recursive = true): Pr
   const files: string[] = [];
 
   for (const entry of entries) {
+    // Skip hidden files/directories (unix-style dot-prefixed: .thumbs, .git, etc.)
+    if (entry.name.startsWith(".")) continue;
+
     const entryPath = path.join(rootPath, entry.name);
 
     if (entry.isDirectory()) {
@@ -558,6 +561,9 @@ export async function discoverImageFilesAndDirs(
     const entries = await readdir(dirPath, { withFileTypes: true });
 
     for (const entry of entries) {
+      // Skip hidden files/directories (unix-style dot-prefixed: .thumbs, .git, etc.)
+      if (entry.name.startsWith(".")) continue;
+
       const entryPath = path.join(dirPath, entry.name);
 
       if (entry.isDirectory()) {

@@ -105,7 +105,11 @@ export function ScenesPageClient({
         offset: scenes.length,
       });
 
-      setScenes((prev) => [...prev, ...result.scenes]);
+      setScenes((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const newItems = result.scenes.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...newItems];
+      });
     } catch (error) {
       console.error("Failed to load more scenes:", error);
     } finally {

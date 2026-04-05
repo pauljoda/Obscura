@@ -89,7 +89,11 @@ export function ImagesPageClient({
         limit: 80,
         offset: images.length,
       });
-      setImages((prev) => [...prev, ...result.images]);
+      setImages((prev) => {
+        const existingIds = new Set(prev.map((img) => img.id));
+        const newItems = result.images.filter((img) => !existingIds.has(img.id));
+        return [...prev, ...newItems];
+      });
     } finally {
       setLoadingMore(false);
     }
