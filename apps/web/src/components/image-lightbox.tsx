@@ -57,9 +57,7 @@ export function ImageLightbox({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentImage = images[currentIndex];
-  const fullUrl = currentImage
-    ? `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/assets/images/${currentImage.id}/full`
-    : null;
+  const fullUrl = currentImage ? toApiUrl(currentImage.fullPath) ?? null : null;
 
   // Reset zoom/pan on index change
   useEffect(() => {
@@ -73,8 +71,11 @@ export function ImageLightbox({
     [-2, -1, 1, 2].forEach((offset) => {
       const idx = currentIndex + offset;
       if (idx >= 0 && idx < images.length) {
-        const img = new Image();
-        img.src = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/assets/images/${images[idx].id}/full`;
+        const url = toApiUrl(images[idx].fullPath);
+        if (url) {
+          const img = new Image();
+          img.src = url;
+        }
       }
     });
   }, [currentIndex, images]);
@@ -197,14 +198,22 @@ export function ImageLightbox({
   const content = (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col select-none">
       {/* Top toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-black/50 z-10">
-        <div className="flex items-center gap-3 text-white/80 text-sm">
-          <span className="text-mono-sm">
+      <div className="flex items-center justify-between px-2 sm:px-4 py-2 bg-black/50 z-10">
+        <div className="flex items-center gap-2 sm:gap-3 text-white/80 text-sm min-w-0">
+          <span className="text-mono-sm flex-shrink-0">
             {currentIndex + 1} / {images.length}
           </span>
-          <span className="text-white/50 truncate max-w-[200px]">{currentImage.title}</span>
+          <span className="text-white/50 truncate max-w-[120px] sm:max-w-[200px] hidden sm:inline">{currentImage.title}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+          {/* Close — always visible, especially on mobile */}
+          <button
+            onClick={onClose}
+            className="p-2 rounded-sm text-white/80 hover:text-white bg-white/10 sm:bg-transparent transition-colors order-last sm:order-none"
+            title="Close (Esc)"
+          >
+            <X className="h-5 w-5 sm:h-4 sm:w-4" />
+          </button>
           {/* Slideshow toggle */}
           <button
             onClick={() => setSlideshowActive((v) => !v)}
@@ -250,20 +259,20 @@ export function ImageLightbox({
             </div>
           )}
 
-          {/* Zoom controls */}
+          {/* Zoom controls — hidden on mobile */}
           <button
             onClick={() => setZoom(clampZoom(zoom - 0.5))}
-            className="p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+            className="hidden sm:flex p-2 rounded-sm text-white/60 hover:text-white transition-colors"
             title="Zoom out"
           >
             <ZoomOut className="h-4 w-4" />
           </button>
-          <span className="text-mono-sm text-white/50 w-10 text-center">
+          <span className="hidden sm:inline text-mono-sm text-white/50 w-10 text-center">
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={() => setZoom(clampZoom(zoom + 0.5))}
-            className="p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+            className="hidden sm:flex p-2 rounded-sm text-white/60 hover:text-white transition-colors"
             title="Zoom in"
           >
             <ZoomIn className="h-4 w-4" />
@@ -296,14 +305,6 @@ export function ImageLightbox({
             <Maximize className="h-4 w-4" />
           </button>
 
-          {/* Close */}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-sm text-white/60 hover:text-white transition-colors"
-            title="Close (Esc)"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
       </div>
 

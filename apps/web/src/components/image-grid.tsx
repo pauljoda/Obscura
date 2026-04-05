@@ -6,6 +6,14 @@ import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
 
+const VIDEO_EXTENSIONS = new Set(["webm", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "flv"]);
+
+function isVideoItem(image: ImageListItemDto): boolean {
+  if (image.format && VIDEO_EXTENSIONS.has(image.format.toLowerCase())) return true;
+  const ext = image.title?.split(".").pop()?.toLowerCase() ?? "";
+  return VIDEO_EXTENSIONS.has(ext);
+}
+
 interface ImageGridProps {
   images: ImageListItemDto[];
   onImageClick?: (index: number) => void;
@@ -78,6 +86,8 @@ function ImageCell({
 }) {
   const [error, setError] = useState(false);
   const thumbUrl = toApiUrl(image.thumbnailPath);
+  const fullUrl = toApiUrl(image.fullPath);
+  const isVideo = isVideoItem(image);
 
   const handleError = useCallback(() => setError(true), []);
 
@@ -86,13 +96,23 @@ function ImageCell({
       onClick={onClick}
       className="block w-full mb-1 break-inside-avoid cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-sm overflow-hidden"
     >
-      {error || !thumbUrl ? (
+      {error || (!thumbUrl && !fullUrl) ? (
         <div className="flex items-center justify-center bg-surface-2 aspect-square">
           <ImageOff className="h-6 w-6 text-text-disabled" />
         </div>
+      ) : isVideo && fullUrl ? (
+        <video
+          src={fullUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          onError={handleError}
+          className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
+        />
       ) : (
         <img
-          src={thumbUrl}
+          src={thumbUrl!}
           alt={image.title}
           loading={index < 8 ? "eager" : "lazy"}
           decoding="async"

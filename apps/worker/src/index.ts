@@ -959,12 +959,20 @@ async function processGalleryScan(job: Job) {
         .limit(1);
 
       let imageId: string;
+      let needsThumbnail = false;
       if (existingImage) {
         imageId = existingImage.id;
         await db
           .update(images)
           .set({ galleryId, sortOrder: i, updatedAt: new Date() })
           .where(eq(images.id, imageId));
+        // Check if existing image is missing a thumbnail
+        const [imgRow] = await db
+          .select({ thumbnailPath: images.thumbnailPath })
+          .from(images)
+          .where(eq(images.id, imageId))
+          .limit(1);
+        needsThumbnail = !imgRow?.thumbnailPath;
       } else {
         const [created] = await db
           .insert(images)
@@ -976,12 +984,14 @@ async function processGalleryScan(job: Job) {
           })
           .returning({ id: images.id });
         imageId = created.id;
+        needsThumbnail = true;
+      }
 
-        // Enqueue thumbnail and fingerprint jobs for new images
+      if (needsThumbnail) {
         await enqueuePendingImageJob("image-thumbnail", imageId);
-        if (settings.autoGenerateFingerprints) {
-          await enqueuePendingImageJob("image-fingerprint", imageId);
-        }
+      }
+      if (!existingImage && settings.autoGenerateFingerprints) {
+        await enqueuePendingImageJob("image-fingerprint", imageId);
       }
     }
 
@@ -1047,6 +1057,7 @@ async function processGalleryScan(job: Job) {
         .where(eq(images.filePath, fullPath))
         .limit(1);
 
+      let needsThumbnail = false;
       if (!existingImage) {
         const [created] = await db
           .insert(images)
@@ -1058,6 +1069,7 @@ async function processGalleryScan(job: Job) {
           })
           .returning({ id: images.id });
 
+        needsThumbnail = true;
         await enqueuePendingImageJob("image-thumbnail", created.id);
         if (settings.autoGenerateFingerprints) {
           await enqueuePendingImageJob("image-fingerprint", created.id);
@@ -1067,6 +1079,15 @@ async function processGalleryScan(job: Job) {
           .update(images)
           .set({ galleryId, sortOrder: i, updatedAt: new Date() })
           .where(eq(images.id, existingImage.id));
+        // Re-enqueue thumbnail if missing
+        const [imgRow] = await db
+          .select({ thumbnailPath: images.thumbnailPath })
+          .from(images)
+          .where(eq(images.id, existingImage.id))
+          .limit(1);
+        if (!imgRow?.thumbnailPath) {
+          await enqueuePendingImageJob("image-thumbnail", existingImage.id);
+        }
       }
     }
 
