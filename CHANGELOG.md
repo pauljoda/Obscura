@@ -8,9 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Thumbnail & trickplay quality settings** — new `thumbnailQuality` and `trickplayQuality` controls in Settings (ffmpeg `-q:v` scale, 1 = best, 31 = worst, default 2). All preview thumbnails, card thumbnails, and trickplay sprites now respect the configured quality level.
+- **Thumbnail & trickplay quality settings** — new `thumbnailQuality` and `trickplayQuality` slider controls in Settings (ffmpeg `-q:v` scale, 1 = best, 31 = worst, default 2). All preview thumbnails, card thumbnails, and trickplay sprites now respect the configured quality level.
 - **App version in sidebar** — the sidebar footer now shows the semver version (from root `package.json`) instead of "Workers idle". Clicking the version opens a changelog dialog.
-- **Changelog dialog** — lazy-loads `CHANGELOG.md` into a styled modal with parsed markdown headings, lists, and inline code. Available in Docker builds via a new `/api/changelog` route.
+- **Changelog dialog** — lazy-loads `CHANGELOG.md` into a centered modal with parsed markdown headings, lists, and inline code. Available in Docker builds via a new `/api/changelog` route. Route resolves CHANGELOG.md in both dev (monorepo) and production (standalone) layouts.
 
 ### Fixed
 
