@@ -1,6 +1,6 @@
 "use client";
 
-import { MediaCard, LazyImage } from "@obscura/ui";
+import { MediaCard } from "@obscura/ui";
 import { cn } from "@obscura/ui";
 import { Film, Clock, HardDrive, Eye, Star, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -108,9 +108,11 @@ function SceneListItem({
           )}
         >
           {scene.thumbnailPath && (
-            <LazyImage
+            <img
               src={scene.thumbnailPath?.includes("thumb-custom") ? toApiUrl(scene.thumbnailPath) : (toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath))}
               alt={scene.title}
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           )}
@@ -144,7 +146,7 @@ function SceneListItem({
                 {scene.performers.slice(0, 3).map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1">
                     {p.imagePath && (
-                      <LazyImage src={toApiUrl(p.imagePath)!} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
+                      <img src={toApiUrl(p.imagePath)!} alt="" loading="lazy" decoding="async" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
                     )}
                     <span>{p.name}</span>
                   </span>

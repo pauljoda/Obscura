@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
-import { LazyImage } from "./lazy-image";
 import { Film, Clock, HardDrive, Eye, Star } from "lucide-react";
 
 function formatHoverTime(seconds: number) {
@@ -216,11 +215,13 @@ export function MediaCard({
         onTouchEnd={handleTouchEnd}
       >
         {thumbnail ? (
-          <LazyImage
+          <img
             src={cardThumbnail || thumbnail}
             alt={title}
+            loading="lazy"
+            decoding="async"
             className={cn(
-              "h-full w-full transition-transform duration-normal",
+              "h-full w-full object-cover transition-transform duration-normal",
               activeFrame ? "scale-[1.01] opacity-0" : "group-hover:scale-[1.03]"
             )}
           />
@@ -330,7 +331,7 @@ export function MediaCard({
                     <span key={i} className="inline-flex items-center gap-1">
                       {i > 0 && <span className="text-text-disabled">,</span>}
                       {imgPath && (
-                        <LazyImage src={imgPath} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
+                        <img src={imgPath} alt="" loading="lazy" decoding="async" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" />
                       )}
                       <span>{name}</span>
                     </span>
