@@ -49,6 +49,7 @@ export const apiRoutes = {
   stashBoxLookupPerformer: "/stashbox-endpoints/:id/lookup/performer",
   // Unified metadata providers
   metadataProviders: "/metadata-providers",
+  search: "/search",
 } as const;
 
 export const API_BASE_URL =
@@ -452,6 +453,36 @@ export interface NormalizedPerformerResult {
   imageUrl: string | null;
   imageUrls: string[];
   tagNames: string[];
+}
+
+// ─── Search DTOs ────────────────────────────────────────────────
+
+export type EntityKind = "scene" | "performer" | "studio" | "tag" | "gallery" | "image";
+
+export interface SearchResultItem {
+  id: string;
+  kind: EntityKind;
+  title: string;
+  subtitle: string | null;
+  imagePath: string | null;
+  href: string;
+  rating: number | null;
+  score: number;
+  meta: Record<string, string | number | boolean | null>;
+}
+
+export interface SearchResultGroup {
+  kind: EntityKind;
+  label: string;
+  items: SearchResultItem[];
+  total: number;
+  hasMore: boolean;
+}
+
+export interface SearchResponseDto {
+  query: string;
+  groups: SearchResultGroup[];
+  durationMs: number;
 }
 
 // ─── Jobs DTOs ───────────────────────────────────────────────────
