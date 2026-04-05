@@ -177,6 +177,48 @@ function buildQueryURL(
 }
 
 /**
+ * Replace $variable references in a selector string using the common block.
+ * Mirrors Stash's applyCommon() — simple string replacement.
+ */
+function applyCommon(selector: string, common: Record<string, string> | undefined): string {
+  if (!common) return selector;
+  let result = selector;
+  for (const [key, value] of Object.entries(common)) {
+    result = result.replaceAll(key, value);
+  }
+  return result;
+}
+
+/**
+ * Apply common variable substitution to a field definition.
+ */
+function applyCommonToFieldDef(
+  fieldDef: XPathFieldDef,
+  common: Record<string, string> | undefined
+): XPathFieldDef {
+  if (!common) return fieldDef;
+  if (typeof fieldDef === "string") {
+    return applyCommon(fieldDef, common);
+  }
+  return { ...fieldDef, selector: applyCommon(fieldDef.selector, common) };
+}
+
+/**
+ * Apply common variable substitution to all fields in a sub-object definition.
+ */
+function applyCommonToSubObject(
+  subDef: Record<string, XPathFieldDef>,
+  common: Record<string, string> | undefined
+): Record<string, XPathFieldDef> {
+  if (!common) return subDef;
+  const result: Record<string, XPathFieldDef> = {};
+  for (const [key, fieldDef] of Object.entries(subDef)) {
+    result[key] = applyCommonToFieldDef(fieldDef, common);
+  }
+  return result;
+}
+
+/**
  * Evaluate XPath scene selectors against a parsed document.
  */
 function evaluateSceneSelectors(
@@ -185,6 +227,7 @@ function evaluateSceneSelectors(
 ): StashScrapedScene | null {
   const sceneDef = scraperDef.scene;
   if (!sceneDef) return null;
+  const common = scraperDef.common;
 
   const result: StashScrapedScene = {};
 
@@ -193,34 +236,34 @@ function evaluateSceneSelectors(
 
     switch (fieldLower) {
       case "title":
-        result.title = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.title = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "date":
-        result.date = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.date = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "details":
-        result.details = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.details = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "url":
-        result.url = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.url = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "image":
-        result.image = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.image = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "code":
-        result.code = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.code = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "director":
-        result.director = evaluateStringField(doc, selectorDef as XPathFieldDef) ?? undefined;
+        result.director = evaluateStringField(doc, applyCommonToFieldDef(selectorDef as XPathFieldDef, common)) ?? undefined;
         break;
       case "tags":
-        result.tags = evaluateSubObjectArray(doc, selectorDef as Record<string, XPathFieldDef>);
+        result.tags = evaluateSubObjectArray(doc, applyCommonToSubObject(selectorDef as Record<string, XPathFieldDef>, common));
         break;
       case "performers":
-        result.performers = evaluateSubObjectArray(doc, selectorDef as Record<string, XPathFieldDef>);
+        result.performers = evaluateSubObjectArray(doc, applyCommonToSubObject(selectorDef as Record<string, XPathFieldDef>, common));
         break;
       case "studio":
-        result.studio = evaluateSubObject(doc, selectorDef as Record<string, XPathFieldDef>);
+        result.studio = evaluateSubObject(doc, applyCommonToSubObject(selectorDef as Record<string, XPathFieldDef>, common));
         break;
     }
   }

@@ -519,18 +519,25 @@ async function processPreview(job: Job) {
   const frameCount = Math.max(1, Math.ceil((duration || frameInterval) / frameInterval));
   const columns = Math.min(5, frameCount);
   const rows = Math.max(1, Math.ceil(frameCount / columns));
-  const thumbWidth = 320;
+  const thumbWidth = 640;
   const thumbHeight =
     metadata.width && metadata.height
-      ? Math.max(180, Math.round((metadata.height / metadata.width) * thumbWidth))
-      : 180;
+      ? Math.max(360, Math.round((metadata.height / metadata.width) * thumbWidth))
+      : 360;
 
   const cardFile = sidecar.cardThumbnail;
-  const cardWidth = 160;
+  const cardWidth = 320;
   const cardHeight =
     metadata.width && metadata.height
-      ? Math.max(90, Math.round((metadata.height / metadata.width) * cardWidth))
-      : 90;
+      ? Math.max(180, Math.round((metadata.height / metadata.width) * cardWidth))
+      : 180;
+
+  // Trickplay sprite frames stay smaller since they're only for the scrubber
+  const spriteThumbWidth = 320;
+  const spriteThumbHeight =
+    metadata.width && metadata.height
+      ? Math.max(180, Math.round((metadata.height / metadata.width) * spriteThumbWidth))
+      : 180;
 
   const thumbQuality = String(Math.max(1, Math.min(31, settings.thumbnailQuality)));
 
@@ -607,7 +614,7 @@ async function processPreview(job: Job) {
     "-i",
     scene.filePath,
     "-vf",
-    `fps=1/${frameInterval},scale=${thumbWidth}:${thumbHeight},tile=${columns}x${rows}`,
+    `fps=1/${frameInterval},scale=${spriteThumbWidth}:${spriteThumbHeight},tile=${columns}x${rows}`,
     "-frames:v",
     "1",
     "-q:v",
@@ -621,11 +628,11 @@ async function processPreview(job: Job) {
     const end = start + frameInterval;
     const column = index % columns;
     const row = Math.floor(index / columns);
-    const x = column * thumbWidth;
-    const y = row * thumbHeight;
+    const x = column * spriteThumbWidth;
+    const y = row * spriteThumbHeight;
 
     vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-    vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${thumbWidth},${thumbHeight}`);
+    vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${spriteThumbWidth},${spriteThumbHeight}`);
     vttLines.push("");
   }
 

@@ -43,6 +43,8 @@ export type XPathSubObjectDef = Record<string, XPathFieldDef>;
 
 /** A full scene/performer scraper definition from the xPathScrapers block */
 export interface XPathScraperDef {
+  /** Common variable definitions — keys like "$foo" are replaced in selectors before evaluation */
+  common?: Record<string, string>;
   scene?: Record<string, XPathFieldDef | XPathSubObjectDef>;
   performer?: Record<string, XPathFieldDef | XPathSubObjectDef>;
 }
