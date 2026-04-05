@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Images, FolderOpen, Archive, Sparkles } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
@@ -29,23 +29,27 @@ export function GalleryCard({ gallery }: GalleryCardProps) {
     ? previews[0].replace(/\/thumb$/, "/preview")
     : null;
 
-  // Auto-cycle through preview images every 3 seconds
-  useEffect(() => {
-    if (previews.length <= 1) return;
-    let idx = 0;
-    const timer = setInterval(() => {
-      idx = (idx + 1) % previews.length;
-      setCurrentPreviewIndex(idx);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [previews.length]);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startHover = useCallback(() => {
     setHovering(true);
-  }, []);
+    if (previews.length > 1) {
+      let idx = 0;
+      setCurrentPreviewIndex(0);
+      intervalRef.current = setInterval(() => {
+        idx = (idx + 1) % previews.length;
+        setCurrentPreviewIndex(idx);
+      }, 800);
+    }
+  }, [previews.length]);
 
   const stopHover = useCallback(() => {
     setHovering(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setCurrentPreviewIndex(0);
   }, []);
 
   const staticDisplayUrl = previews.length > 0 ? (previews[currentPreviewIndex] ?? previews[0]) : coverUrl;

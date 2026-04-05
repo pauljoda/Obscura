@@ -6,10 +6,17 @@ import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
 
+// Codec names that ffprobe returns for video streams
+const VIDEO_CODECS = new Set(["h264", "hevc", "h265", "vp8", "vp9", "av1", "mpeg4", "mpeg2video", "wmv3", "flv1", "theora", "vp6f"]);
+// Container/file extensions
 const VIDEO_EXTENSIONS = new Set(["webm", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "flv"]);
 
 function isVideoItem(image: ImageListItemDto): boolean {
+  // Check codec name stored in format field
+  if (image.format && VIDEO_CODECS.has(image.format.toLowerCase())) return true;
+  // Check container extension in format field
   if (image.format && VIDEO_EXTENSIONS.has(image.format.toLowerCase())) return true;
+  // Check title for extension (may not work if fileNameToTitle stripped it)
   const ext = image.title?.split(".").pop()?.toLowerCase() ?? "";
   return VIDEO_EXTENSIONS.has(ext);
 }
