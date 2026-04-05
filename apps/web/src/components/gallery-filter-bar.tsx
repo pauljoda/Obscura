@@ -8,6 +8,7 @@ import {
   LayoutList,
   FolderTree,
   CalendarDays,
+  Layers,
   X,
   Search,
   ChevronDown,
@@ -16,7 +17,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
 
-export type GalleryViewMode = "grid" | "list" | "browser" | "timeline";
+export type GalleryViewMode = "grid" | "list" | "browser" | "timeline" | "flat";
 export type GallerySortOption = "recent" | "title" | "date" | "rating" | "imageCount" | "created";
 export type SortDir = "asc" | "desc";
 
@@ -53,6 +54,14 @@ interface GalleryFilterBarProps {
   onAddFilter?: (type: string, label: string, value: string) => void;
 }
 
+const viewModes: { mode: GalleryViewMode; Icon: typeof LayoutGrid; title: string }[] = [
+  { mode: "grid", Icon: LayoutGrid, title: "Grid" },
+  { mode: "list", Icon: LayoutList, title: "List" },
+  { mode: "browser", Icon: FolderTree, title: "Browser" },
+  { mode: "timeline", Icon: CalendarDays, title: "Timeline" },
+  { mode: "flat", Icon: Layers, title: "All Images" },
+];
+
 export function GalleryFilterBar({
   viewMode,
   onViewModeChange,
@@ -75,8 +84,8 @@ export function GalleryFilterBar({
 
   return (
     <div className="space-y-0">
+      {/* Search row — full width on mobile */}
       <div className="surface-well flex items-center gap-2 px-3 py-2">
-        {/* Search */}
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           <input
@@ -93,7 +102,7 @@ export function GalleryFilterBar({
           />
         </div>
 
-        {/* Active filter chips */}
+        {/* Active filter chips — desktop only inline */}
         {activeFilters.length > 0 && (
           <div className="hidden sm:flex items-center gap-1.5 border-l border-border-subtle pl-2">
             {activeFilters.map((filter, i) => (
@@ -113,10 +122,11 @@ export function GalleryFilterBar({
             ))}
           </div>
         )}
+      </div>
 
-        <div className="h-5 w-px bg-border-subtle" />
-
-        {/* Sort dropdown */}
+      {/* Controls row — sort, view modes, filters */}
+      <div className="surface-well mt-px flex items-center gap-2 px-3 py-1.5">
+        {/* Sort dropdown + direction */}
         <div className="flex items-center">
           <div className="relative">
             <button
@@ -135,7 +145,7 @@ export function GalleryFilterBar({
             {sortOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-50 w-44 surface-elevated py-1">
+                <div className="absolute left-0 top-full mt-1 z-50 w-44 surface-elevated py-1">
                   {sortOptions.map((opt) => (
                     <button
                       key={opt.value}
@@ -172,17 +182,15 @@ export function GalleryFilterBar({
           </button>
         </div>
 
-        {/* 4 View modes */}
+        <div className="flex-1" />
+
+        {/* View modes */}
         <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
-          {([
-            { mode: "grid" as const, Icon: LayoutGrid },
-            { mode: "list" as const, Icon: LayoutList },
-            { mode: "browser" as const, Icon: FolderTree },
-            { mode: "timeline" as const, Icon: CalendarDays },
-          ]).map(({ mode, Icon }) => (
+          {viewModes.map(({ mode, Icon, title }) => (
             <button
               key={mode}
               onClick={() => onViewModeChange(mode)}
+              title={title}
               className={cn(
                 "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
                 viewMode === mode
@@ -219,10 +227,10 @@ export function GalleryFilterBar({
       {/* Filter panel */}
       {filterPanelOpen && (
         <div className="surface-well mt-px p-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Gallery Type */}
             <div>
-              <div className="text-kicker mb-2">Type</div>
+              <div className="text-kicker mb-2">Gallery Type</div>
               <div className="flex flex-wrap gap-1">
                 {[
                   { value: "folder", label: "Folder" },
@@ -246,46 +254,27 @@ export function GalleryFilterBar({
             </div>
 
             {/* Tags */}
-            <div>
-              <div className="text-kicker mb-2">Tags</div>
-              <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag.id}
-                    onClick={() => onAddFilter?.("tag", "Tag", tag.name)}
-                    className={cn(
-                      "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.label === "Tag" && f.value === tag.name)
-                        ? "tag-chip-info"
-                        : "tag-chip-default hover:tag-chip-info"
-                    )}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
+            {availableTags.length > 0 && (
+              <div>
+                <div className="text-kicker mb-2">Tags</div>
+                <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                  {availableTags.map((tag) => (
+                    <button
+                      key={tag.id}
+                      onClick={() => onAddFilter?.("tag", "Tag", tag.name)}
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        activeFilters.some((f) => f.label === "Tag" && f.value === tag.name)
+                          ? "tag-chip-info"
+                          : "tag-chip-default hover:tag-chip-info"
+                      )}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Studios */}
-            <div>
-              <div className="text-kicker mb-2">Studio</div>
-              <div className="flex flex-wrap gap-1">
-                {availableStudios.map((studio) => (
-                  <button
-                    key={studio.id}
-                    onClick={() => onAddFilter?.("studio", "Studio", studio.id)}
-                    className={cn(
-                      "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.label === "Studio" && f.value === studio.id)
-                        ? "tag-chip-accent"
-                        : "tag-chip-default hover:tag-chip-accent"
-                    )}
-                  >
-                    {studio.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
