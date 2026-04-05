@@ -771,30 +771,42 @@ export function BulkScrape() {
     endpointId?: string;
     matchedScraper?: string;
   }> {
-    const tagLower = row.tag.name.toLowerCase().trim();
+    // Build search variants: original name + normalized versions (e.g. "1-on-1" → "1 on 1")
+    const original = row.tag.name.trim();
+    const variants = new Set([original]);
+    if (original.includes("-")) variants.add(original.replace(/-/g, " "));
+    if (original.includes("_")) variants.add(original.replace(/_/g, " "));
+    if (original.includes(" ")) {
+      variants.add(original.replace(/ /g, "-"));
+      variants.add(original.replace(/ /g, "_"));
+    }
+
     for (const ep of sbEndpoints) {
-      try {
-        const res = await withTimeout(lookupTagViaStashBox(ep.id, row.tag.name), SEEK_TIMEOUT_MS);
-        if (res.tags && res.tags.length > 0) {
-          // Strict matching: only accept exact name match or alias match to avoid false positives
-          const match = res.tags.find((t) =>
-            t.name.toLowerCase().trim() === tagLower ||
-            t.aliases?.some((a) => a.toLowerCase().trim() === tagLower)
-          );
-          if (match) {
-            return {
-              result: {
-                name: match.name,
-                description: match.description ?? null,
-                aliases: match.aliases?.join(", ") ?? null,
-              },
-              remoteId: match.id,
-              endpointId: ep.id,
-              matchedScraper: ep.name,
-            };
+      for (const query of variants) {
+        try {
+          const res = await withTimeout(lookupTagViaStashBox(ep.id, query), SEEK_TIMEOUT_MS);
+          if (res.tags && res.tags.length > 0) {
+            const queryLower = query.toLowerCase();
+            // Strict matching: exact name or alias match against the query variant
+            const match = res.tags.find((t) =>
+              t.name.toLowerCase().trim() === queryLower ||
+              t.aliases?.some((a) => a.toLowerCase().trim() === queryLower)
+            );
+            if (match) {
+              return {
+                result: {
+                  name: match.name,
+                  description: match.description ?? null,
+                  aliases: match.aliases?.join(", ") ?? null,
+                },
+                remoteId: match.id,
+                endpointId: ep.id,
+                matchedScraper: ep.name,
+              };
+            }
           }
-        }
-      } catch { /* next */ }
+        } catch { /* next */ }
+      }
     }
     return {};
   }

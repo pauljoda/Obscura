@@ -80,13 +80,12 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
     });
   }, [id]);
 
-  function normalizeResult(tags: Awaited<ReturnType<typeof lookupTagViaStashBox>>["tags"]): {
+  function normalizeResult(tags: Awaited<ReturnType<typeof lookupTagViaStashBox>>["tags"], query: string): {
     result: NormalizedTagScrapeResult | null;
     remoteId: string | null;
   } {
     if (!tags || tags.length === 0) return { result: null, remoteId: null };
-    // Strict matching: only accept exact name or alias match
-    const lower = name.toLowerCase().trim();
+    const lower = query.toLowerCase().trim();
     const match = tags.find((t) =>
       t.name.toLowerCase().trim() === lower ||
       t.aliases?.some((a) => a.toLowerCase().trim() === lower)
@@ -102,6 +101,18 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
     };
   }
 
+  /** Build search variants: "1-on-1" → also try "1 on 1", etc. */
+  function tagSearchVariants(tag: string): string[] {
+    const variants = new Set([tag]);
+    if (tag.includes("-")) variants.add(tag.replace(/-/g, " "));
+    if (tag.includes("_")) variants.add(tag.replace(/_/g, " "));
+    if (tag.includes(" ")) {
+      variants.add(tag.replace(/ /g, "-"));
+      variants.add(tag.replace(/ /g, "_"));
+    }
+    return Array.from(variants);
+  }
+
   async function handleScrape() {
     if (!selectedEndpoint) return;
     setScraping(true);
@@ -110,25 +121,33 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
     setScrapeRemoteId(null);
     setScrapeEndpointId(null);
     try {
-      const res = await lookupTagViaStashBox(selectedEndpoint, name);
-      const { result, remoteId } = normalizeResult(res.tags);
-      if (result) {
-        setScrapeResult(result);
-        setScrapeRemoteId(remoteId);
-        setScrapeEndpointId(selectedEndpoint);
-        const fields = new Set<string>();
-        if (result.description) fields.add("description");
-        if (result.aliases) fields.add("aliases");
-        setSelectedFields(fields);
-      } else {
-        setError("No results found");
+      // Try original name, then normalized variants
+      for (const query of tagSearchVariants(name.trim())) {
+        const res = await lookupTagViaStashBox(selectedEndpoint, query);
+        const { result, remoteId } = normalizeResult(res.tags, query);
+        if (result) {
+          setScrapeResult(result);
+          setScrapeRemoteId(remoteId);
+          setScrapeEndpointId(selectedEndpoint);
+          const fields = new Set<string>();
+          if (result.description) fields.add("description");
+          if (result.aliases) fields.add("aliases");
+          // If the matched name differs from our tag name, auto-select it for rename
+          if (result.name && result.name.toLowerCase() !== name.toLowerCase()) fields.add("name");
+          setSelectedFields(fields);
+          setScraping(false);
+          return;
+        }
       }
+      setError("No results found");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lookup failed");
     } finally {
       setScraping(false);
     }
   }
+
+
 
   async function handleSeek() {
     if (endpoints.length === 0) return;
@@ -139,26 +158,29 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
     for (const ep of endpoints) {
       setSelectedEndpoint(ep.id);
       setMessage(`Trying ${ep.name}...`);
-      try {
-        const res = await Promise.race([
-          lookupTagViaStashBox(ep.id, name),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
-        ]);
-        const { result, remoteId } = normalizeResult(res.tags);
-        if (result) {
-          setScrapeResult(result);
-          setScrapeRemoteId(remoteId);
-          setScrapeEndpointId(ep.id);
-          const fields = new Set<string>();
-          if (result.description) fields.add("description");
-          if (result.aliases) fields.add("aliases");
-          setSelectedFields(fields);
-          setMessage(`Found result from ${ep.name}`);
-          setSeeking(false);
-          return;
+      for (const query of tagSearchVariants(name.trim())) {
+        try {
+          const res = await Promise.race([
+            lookupTagViaStashBox(ep.id, query),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+          ]);
+          const { result, remoteId } = normalizeResult(res.tags, query);
+          if (result) {
+            setScrapeResult(result);
+            setScrapeRemoteId(remoteId);
+            setScrapeEndpointId(ep.id);
+            const fields = new Set<string>();
+            if (result.description) fields.add("description");
+            if (result.aliases) fields.add("aliases");
+            if (result.name && result.name.toLowerCase() !== name.toLowerCase()) fields.add("name");
+            setSelectedFields(fields);
+            setMessage(`Found result from ${ep.name}`);
+            setSeeking(false);
+            return;
+          }
+        } catch {
+          // next
         }
-      } catch {
-        // next
       }
     }
     setMessage(null);
