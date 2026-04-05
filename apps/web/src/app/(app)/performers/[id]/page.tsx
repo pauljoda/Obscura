@@ -165,7 +165,7 @@ export default function PerformerPage({ params }: PerformerPageProps) {
   if (performer.country) metaItems.push({ icon: <Globe className="h-3.5 w-3.5" />, label: "Country", value: performer.country });
   if (performer.ethnicity) metaItems.push({ icon: <Heart className="h-3.5 w-3.5" />, label: "Ethnicity", value: performer.ethnicity });
   if (performer.height) metaItems.push({ icon: <Ruler className="h-3.5 w-3.5" />, label: "Height", value: `${performer.height} cm` });
-  if (performer.weight) metaItems.push({ icon: <Weight className="h-3.5 w-3.5" />, label: "Weight", value: `${performer.weight} lbs` });
+  if (performer.weight) metaItems.push({ icon: <Weight className="h-3.5 w-3.5" />, label: "Weight", value: `${performer.weight} kg` });
   if (performer.measurements) metaItems.push({ icon: <Ruler className="h-3.5 w-3.5" />, label: "Measurements", value: performer.measurements });
   if (performer.eyeColor) metaItems.push({ icon: <Eye className="h-3.5 w-3.5" />, label: "Eye Color", value: performer.eyeColor });
   if (performer.hairColor) metaItems.push({ icon: <Palette className="h-3.5 w-3.5" />, label: "Hair Color", value: performer.hairColor });

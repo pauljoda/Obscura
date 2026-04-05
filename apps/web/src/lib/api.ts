@@ -169,6 +169,7 @@ export interface NormalizedPerformerScrapeResult {
   aliases: string | null;
   details: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   tagNames: string[];
 }
 

@@ -274,6 +274,7 @@ export interface NormalizedPerformerResult {
   aliases: string | null;
   details: string | null;
   imageUrl: string | null;
+  imageUrls: string[];
   tagNames: string[];
 }
 

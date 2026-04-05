@@ -112,6 +112,10 @@ export function normalizePerformerResult(
     aliases: trimOrNull(raw.aliases),
     details: trimOrNull(raw.details),
     imageUrl: trimToUrl(raw.image) ?? trimToUrl(raw.images?.[0]),
+    imageUrls: [
+      ...(raw.image ? [trimToUrl(raw.image)] : []),
+      ...(raw.images ?? []).map((img) => trimToUrl(img)),
+    ].filter((u): u is string => u !== null),
     tagNames: deduplicateNames(
       (raw.tags ?? []).map((t) => t.name).filter(Boolean)
     ),

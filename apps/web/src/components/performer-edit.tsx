@@ -13,6 +13,7 @@ import {
   Check,
   ChevronDown,
   Search,
+  SkipForward,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui";
@@ -84,6 +85,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const [selectedScrapeFields, setSelectedScrapeFields] = useState<Set<string>>(new Set());
   const [seekIndex, setSeekIndex] = useState(0);
   const [seeking, setSeeking] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Image upload
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -172,13 +174,16 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
   function applyScrapeResultToPreview(result: NormalizedPerformerScrapeResult) {
     setScrapeResult(result);
+    setSelectedImageIndex(0);
     const fields = new Set<string>();
     for (const [key, value] of Object.entries(result)) {
-      if (value != null && value !== "" && key !== "tagNames") {
+      if (value != null && value !== "" && key !== "tagNames" && key !== "imageUrls") {
         fields.add(key);
       }
     }
     if (result.tagNames?.length) fields.add("tagNames");
+    // Auto-select imageUrl if images are available
+    if (result.imageUrls?.length || result.imageUrl) fields.add("imageUrl");
     setSelectedScrapeFields(fields);
   }
 
@@ -208,7 +213,6 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     setError(null);
     setScrapeResult(null);
 
-    // Start from the current seekIndex, wrap around once
     let tried = 0;
     let idx = seekIndex;
 
@@ -218,17 +222,24 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
       setMessage(`Trying ${scraper.name}...`);
 
       try {
-        const res = await scrapePerformerApi(scraper.id, id);
-        const result = res.result ?? res.results?.[0] ?? null;
-        if (result) {
-          applyScrapeResultToPreview(result);
-          setMessage(`Found result from ${scraper.name}`);
-          setSeekIndex((idx + 1) % scrapers.length);
-          setSeeking(false);
-          return;
+        const res = await Promise.race([
+          scrapePerformerApi(scraper.id, id),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 5000)
+          ),
+        ]);
+        if (res) {
+          const result = res.result ?? res.results?.[0] ?? null;
+          if (result) {
+            applyScrapeResultToPreview(result);
+            setMessage(`Found result from ${scraper.name}`);
+            setSeekIndex((idx + 1) % scrapers.length);
+            setSeeking(false);
+            return;
+          }
         }
       } catch {
-        // Scraper failed — continue to next
+        // Scraper failed or timed out — continue to next
       }
 
       idx = (idx + 1) % scrapers.length;
@@ -246,9 +257,15 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     setSaving(true);
     setError(null);
     try {
+      // Use the selected image from the image picker
+      const fieldsToSend = { ...scrapeResult } as Record<string, unknown>;
+      const images = scrapeResult.imageUrls ?? [];
+      if (images.length > 0 && selectedScrapeFields.has("imageUrl")) {
+        fieldsToSend.imageUrl = images[selectedImageIndex] ?? images[0];
+      }
       await applyPerformerScrape(
         id,
-        scrapeResult as unknown as Record<string, unknown>,
+        fieldsToSend,
         Array.from(selectedScrapeFields)
       );
       // Refresh the performer data
@@ -485,7 +502,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                     "hover:text-text-accent hover:border-border-accent disabled:opacity-50"
                   )}
                 >
-                  {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                  {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <SkipForward className="h-3 w-3" />}
                   {seeking ? "Seeking..." : "Seek"}
                 </button>
               </div>
@@ -524,33 +541,58 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Object.entries(scrapeResult).map(([key, value]) => {
-                  if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
-                  const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
-                  if (key === "imageUrl" && typeof value === "string" && value.startsWith("http")) {
-                    return (
-                      <div key={key} className="col-span-full flex items-start gap-2">
-                        <button
-                          onClick={() => toggleScrapeField(key)}
-                          className={cn(
-                            "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
-                            selectedScrapeFields.has(key)
-                              ? "bg-accent-800 border-border-accent"
-                              : "border-border-subtle"
-                          )}
-                        >
-                          {selectedScrapeFields.has(key) && <Check className="h-3 w-3 text-text-accent mx-auto" />}
-                        </button>
-                        <div className="min-w-0">
-                          <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider">{formatFieldName(key)}</div>
-                          <div className="mt-1 w-20 h-28 rounded overflow-hidden bg-surface-3">
-                            <img src={value} alt="Scraped" className="w-full h-full object-cover" />
-                          </div>
+              {/* Image picker */}
+              {(() => {
+                const images = scrapeResult.imageUrls ?? [];
+                const singleImage = !images.length && scrapeResult.imageUrl ? [scrapeResult.imageUrl] : images;
+                if (singleImage.length > 0) {
+                  return (
+                    <div className="flex items-start gap-2">
+                      <button
+                        onClick={() => toggleScrapeField("imageUrl")}
+                        className={cn(
+                          "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
+                          selectedScrapeFields.has("imageUrl")
+                            ? "bg-accent-800 border-border-accent"
+                            : "border-border-subtle"
+                        )}
+                      >
+                        {selectedScrapeFields.has("imageUrl") && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                      </button>
+                      <div className="min-w-0">
+                        <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider mb-1.5">
+                          Image{singleImage.length > 1 ? ` (${selectedImageIndex + 1} of ${singleImage.length})` : ""}
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hidden pb-1">
+                          {singleImage.map((url, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedImageIndex(i)}
+                              className={cn(
+                                "flex-shrink-0 w-20 h-28 rounded overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
+                                i === selectedImageIndex
+                                  ? "border-border-accent ring-1 ring-accent-500/30"
+                                  : "border-transparent hover:border-border-subtle opacity-60 hover:opacity-100"
+                              )}
+                            >
+                              <img src={url} alt={`Option ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                            </button>
+                          ))}
                         </div>
                       </div>
-                    );
-                  }
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Other fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Object.entries(scrapeResult).map(([key, value]) => {
+                  // Skip image fields (handled above) and imageUrls array
+                  if (key === "imageUrl" || key === "imageUrls") return null;
+                  if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
+                  const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
                   return (
                     <div key={key} className="flex items-start gap-2">
                       <button
@@ -604,7 +646,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
               <FieldInput label="Birthdate" value={birthdate} onChange={setBirthdate} placeholder="YYYY-MM-DD" />
               <FieldInput label="Ethnicity" value={ethnicity} onChange={setEthnicity} />
               <FieldInput label="Height (cm)" value={height} onChange={setHeight} type="number" />
-              <FieldInput label="Weight (lbs)" value={weight} onChange={setWeight} type="number" />
+              <FieldInput label="Weight (kg)" value={weight} onChange={setWeight} type="number" />
               <FieldInput label="Measurements" value={measurements} onChange={setMeasurements} />
               <FieldInput label="Eye Color" value={eyeColor} onChange={setEyeColor} />
               <FieldInput label="Hair Color" value={hairColor} onChange={setHairColor} />

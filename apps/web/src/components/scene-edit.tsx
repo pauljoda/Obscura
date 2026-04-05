@@ -29,6 +29,7 @@ import {
   Droplets,
   CheckCircle2,
   Clapperboard,
+  SkipForward,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -607,13 +608,18 @@ export function SceneEdit({
       setMessage(`Trying ${scraper.name}...`);
 
       try {
-        const res = await scrapeScene(scraper.id, id, "auto", {
-          url: url || undefined,
-        });
+        const res = await Promise.race([
+          scrapeScene(scraper.id, id, "auto", {
+            url: url || undefined,
+          }),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout")), 5000)
+          ),
+        ]);
 
         let result: NormalizedScrapeResult | null = null;
-        if (res.normalized) result = res.normalized;
-        else if (res.results && res.results.length > 0) result = res.results[0];
+        if (res?.normalized) result = res.normalized;
+        else if (res?.results && res.results.length > 0) result = res.results[0];
 
         if (result) {
           // Apply the same logic as handleScrape
@@ -1069,7 +1075,7 @@ export function SceneEdit({
                 {seeking ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Search className="h-3.5 w-3.5" />
+                  <SkipForward className="h-3.5 w-3.5" />
                 )}
                 {seeking ? "Seeking..." : "Seek"}
               </button>
