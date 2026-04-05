@@ -84,6 +84,7 @@ export function BulkScrape() {
   // Shared
   const [running, setRunning] = useState(false);
   const [autoAccept, setAutoAccept] = useState(false);
+  const [selectedScraperId, setSelectedScraperId] = useState<string>(""); // "" = seek all
   const abortRef = useRef(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -153,6 +154,11 @@ export function BulkScrape() {
     setRunning(true);
     abortRef.current = false;
 
+    // Determine scraper list: single selected or seek through all
+    const scraperList = selectedScraperId
+      ? sceneScrapers.filter((s) => s.id === selectedScraperId)
+      : sceneScrapers;
+
     // Reset non-accepted rows
     setSceneRows((prev) =>
       prev.map((r) =>
@@ -160,7 +166,6 @@ export function BulkScrape() {
       )
     );
 
-    const currentRows = sceneRows.filter((r) => r.status !== "accepted");
     for (let i = 0; i < sceneRows.length; i++) {
       if (abortRef.current) break;
       if (sceneRows[i].status === "accepted") continue;
@@ -170,7 +175,7 @@ export function BulkScrape() {
       );
 
       try {
-        const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], sceneScrapers);
+        const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList);
         if (result && normalized) {
           if (autoAccept) {
             try {
@@ -237,6 +242,10 @@ export function BulkScrape() {
     setRunning(true);
     abortRef.current = false;
 
+    const scraperList = selectedScraperId
+      ? perfScrapers.filter((s) => s.id === selectedScraperId)
+      : perfScrapers;
+
     setPerfRows((prev) =>
       prev.map((r) =>
         r.status === "accepted" ? r : { ...r, status: "pending", result: undefined, error: undefined }
@@ -252,7 +261,7 @@ export function BulkScrape() {
       );
 
       try {
-        const { result, matchedScraper } = await seekPerformer(perfRows[i], perfScrapers);
+        const { result, matchedScraper } = await seekPerformer(perfRows[i], scraperList);
         if (result) {
           if (autoAccept) {
             const allFields = Object.entries(result)
@@ -455,59 +464,78 @@ export function BulkScrape() {
       )}
 
       {/* Controls */}
-      <div className="surface-card-sharp no-lift p-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-[0.68rem] text-text-disabled">
-          <SkipForward className="h-3 w-3 text-text-accent" />
-          <span>Seek mode — cycles {scrapersForTab.length} scraper{scrapersForTab.length !== 1 ? "s" : ""} per item (5s timeout each)</span>
+      <div className="surface-card-sharp no-lift p-3 space-y-2.5">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Scraper selector */}
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedScraperId}
+              onChange={(e) => setSelectedScraperId(e.target.value)}
+              className="control-input py-1.5 text-xs min-w-[200px]"
+              disabled={running}
+            >
+              <option value="">Seek all ({scrapersForTab.length} scrapers)</option>
+              {scrapersForTab.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoAccept}
+              onChange={(e) => setAutoAccept(e.target.checked)}
+              className="accent-[#c79b5c]"
+              disabled={running}
+            />
+            Auto-accept
+          </label>
+
+          <div className="flex-1" />
+
+          {!running ? (
+            <div className="flex items-center gap-2">
+              {foundCount > 0 && (
+                <button
+                  onClick={() => void (tab === "scenes" ? acceptAllScenes() : acceptAllPerformers())}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[3px] text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
+                >
+                  <Check className="h-3 w-3" />
+                  Accept All ({foundCount})
+                </button>
+              )}
+              <button
+                onClick={() => void (tab === "scenes" ? runSceneScrape() : runPerformerScrape())}
+                disabled={totalCount === 0 || scrapersForTab.length === 0}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
+                  "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
+                  "text-accent-200 border border-border-accent shadow-[var(--shadow-glow-accent)]",
+                  "hover:shadow-[var(--shadow-glow-accent-strong)] hover:border-border-accent-strong",
+                  "disabled:opacity-40 disabled:cursor-not-allowed"
+                )}
+              >
+                {selectedScraperId ? <Play className="h-3 w-3" /> : <SkipForward className="h-3 w-3" />}
+                {selectedScraperId ? `Scrape All (${totalCount - acceptedCount})` : `Seek All (${totalCount - acceptedCount})`}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { abortRef.current = true; }}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium text-status-error-text border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
+            >
+              <Square className="h-3 w-3" />
+              Stop
+            </button>
+          )}
         </div>
 
-        <div className="flex-1" />
-
-        <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoAccept}
-            onChange={(e) => setAutoAccept(e.target.checked)}
-            className="accent-[#c79b5c]"
-            disabled={running}
-          />
-          Auto-accept
-        </label>
-
-        {!running ? (
-          <div className="flex items-center gap-2">
-            {foundCount > 0 && (
-              <button
-                onClick={() => void (tab === "scenes" ? acceptAllScenes() : acceptAllPerformers())}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[3px] text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
-              >
-                <Check className="h-3 w-3" />
-                Accept All ({foundCount})
-              </button>
-            )}
-            <button
-              onClick={() => void (tab === "scenes" ? runSceneScrape() : runPerformerScrape())}
-              disabled={totalCount === 0 || scrapersForTab.length === 0}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
-                "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
-                "text-accent-200 border border-border-accent shadow-[var(--shadow-glow-accent)]",
-                "hover:shadow-[var(--shadow-glow-accent-strong)] hover:border-border-accent-strong",
-                "disabled:opacity-40 disabled:cursor-not-allowed"
-              )}
-            >
-              <Play className="h-3 w-3" />
-              Seek All ({totalCount - acceptedCount})
-            </button>
+        {!selectedScraperId && (
+          <div className="flex items-center gap-1.5 text-[0.65rem] text-text-disabled">
+            <SkipForward className="h-3 w-3 text-text-accent" />
+            Cycles through all scrapers per item with 5s timeout each — select a specific scraper above to use only one
           </div>
-        ) : (
-          <button
-            onClick={() => { abortRef.current = true; }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium text-status-error-text border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
-          >
-            <Square className="h-3 w-3" />
-            Stop
-          </button>
         )}
       </div>
 
@@ -551,6 +579,8 @@ export function BulkScrape() {
                 <PerformerRowCard
                   key={row.performer.id}
                   row={row}
+                  expanded={expandedId === row.performer.id}
+                  onToggleExpand={() => setExpandedId(expandedId === row.performer.id ? null : row.performer.id)}
                   onAccept={() => void acceptPerformer(idx)}
                   onReject={() => rejectPerformer(idx)}
                 />
@@ -578,10 +608,13 @@ function SceneRowCard({
 }) {
   return (
     <div>
-      <button
+      <div
         onClick={onToggleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
         className={cn(
-          "w-full text-left surface-card-sharp no-lift p-3 flex items-center gap-3 transition-all duration-fast",
+          "w-full text-left surface-card-sharp no-lift p-3 flex items-center gap-3 transition-all duration-fast cursor-pointer",
           expanded && "border-border-accent/40",
           row.status === "accepted" && "opacity-50",
           row.status === "rejected" && "opacity-30"
@@ -619,16 +652,16 @@ function SceneRowCard({
 
         {/* Actions for found */}
         {row.status === "found" && (
-          <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
-              onClick={onAccept}
+              onClick={(e) => { e.stopPropagation(); onAccept(); }}
               className="p-1.5 rounded-[3px] hover:bg-status-success/15 text-status-success-text transition-colors"
               title="Accept"
             >
               <Check className="h-3.5 w-3.5" />
             </button>
             <button
-              onClick={onReject}
+              onClick={(e) => { e.stopPropagation(); onReject(); }}
               className="p-1.5 rounded-[3px] hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
               title="Reject"
             >
@@ -647,12 +680,12 @@ function SceneRowCard({
             expanded && "rotate-180"
           )}
         />
-      </button>
+      </div>
 
       {/* Expanded detail */}
       {expanded && row.normalized && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 space-y-2 border-border-accent/20">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[0.8rem]">
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
             {row.normalized.title && <MetaRow label="Title" value={row.normalized.title} />}
             {row.normalized.date && <MetaRow label="Date" value={row.normalized.date} />}
             {row.normalized.studioName && <MetaRow label="Studio" value={row.normalized.studioName} />}
@@ -680,82 +713,127 @@ function SceneRowCard({
 
 function PerformerRowCard({
   row,
+  expanded,
+  onToggleExpand,
   onAccept,
   onReject,
 }: {
   row: PerformerRow;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onAccept: () => void;
   onReject: () => void;
 }) {
   return (
-    <div
-      className={cn(
-        "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast",
-        row.status === "accepted" && "opacity-50",
-        row.status === "rejected" && "opacity-30"
+    <div>
+      <div
+        onClick={onToggleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
+        className={cn(
+          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          expanded && "border-border-accent/40",
+          row.status === "accepted" && "opacity-50",
+          row.status === "rejected" && "opacity-30"
+        )}
+      >
+        <StatusDot status={row.status} />
+
+        {/* Image */}
+        <div className="flex-shrink-0 h-10 w-8 rounded-[2px] overflow-hidden bg-surface-3">
+          {row.performer.imagePath ? (
+            <img src={toApiUrl(row.performer.imagePath)!} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ImageIcon className="h-3 w-3 text-text-disabled/40" />
+            </div>
+          )}
+        </div>
+
+        {/* Name + scraped summary */}
+        <div className="flex-1 min-w-0">
+          <div className="text-[0.8rem] font-medium text-text-primary truncate">{row.performer.name}</div>
+          {row.result && (row.status === "found" || row.status === "accepted") && (
+            <div className="text-[0.62rem] text-text-muted truncate mt-0.5">
+              {[row.result.gender, row.result.country, row.result.birthdate].filter(Boolean).join(" | ")}
+            </div>
+          )}
+          {row.matchedScraper && row.status !== "pending" && (
+            <span className="text-text-disabled text-[0.58rem] font-mono">via {row.matchedScraper}</span>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {row.status === "scraping" && (
+            <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />
+          )}
+          {row.status === "found" && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors"
+              >
+                <Check className="h-2.5 w-2.5" />
+                Accept
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onReject(); }}
+                className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </>
+          )}
+          {row.status === "no-result" && <span className="text-[0.62rem] text-text-disabled">No result</span>}
+          {row.status === "error" && <span className="text-[0.62rem] text-status-error-text">Error</span>}
+          {row.status === "accepted" && (
+            <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>
+          )}
+          {row.status === "rejected" && <span className="text-[0.62rem] text-text-disabled">Skipped</span>}
+        </div>
+
+        <ChevronDown
+          className={cn(
+            "h-3 w-3 text-text-disabled flex-shrink-0 transition-transform duration-fast",
+            expanded && "rotate-180"
+          )}
+        />
+      </div>
+
+      {/* Expanded performer detail */}
+      {expanded && row.result && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-[0.8rem]">
+            {row.result.name && <MetaRow label="Name" value={row.result.name} />}
+            {row.result.gender && <MetaRow label="Gender" value={row.result.gender} />}
+            {row.result.birthdate && <MetaRow label="Birthdate" value={row.result.birthdate} />}
+            {row.result.country && <MetaRow label="Country" value={row.result.country} />}
+            {row.result.ethnicity && <MetaRow label="Ethnicity" value={row.result.ethnicity} />}
+            {row.result.height && <MetaRow label="Height" value={row.result.height} />}
+            {row.result.weight && <MetaRow label="Weight" value={String(row.result.weight)} />}
+            {row.result.hairColor && <MetaRow label="Hair" value={row.result.hairColor} />}
+            {row.result.eyeColor && <MetaRow label="Eyes" value={row.result.eyeColor} />}
+            {row.result.measurements && <MetaRow label="Measurements" value={row.result.measurements} />}
+            {row.result.aliases && <MetaRow label="Aliases" value={row.result.aliases} />}
+            {row.result.tattoos && <MetaRow label="Tattoos" value={row.result.tattoos} />}
+            {row.result.piercings && <MetaRow label="Piercings" value={row.result.piercings} />}
+            {row.result.tagNames.length > 0 && (
+              <MetaRow label="Tags" value={row.result.tagNames.join(", ")} />
+            )}
+          </div>
+          {row.result.details && (
+            <p className="text-[0.72rem] text-text-muted mt-2 line-clamp-3">{row.result.details}</p>
+          )}
+        </div>
       )}
-    >
-      <StatusDot status={row.status} />
 
-      {/* Image */}
-      <div className="flex-shrink-0 h-10 w-8 rounded-[2px] overflow-hidden bg-surface-3">
-        {row.performer.imagePath ? (
-          <img src={toApiUrl(row.performer.imagePath)!} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="h-3 w-3 text-text-disabled/40" />
-          </div>
-        )}
-      </div>
-
-      {/* Name + scraped summary */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[0.8rem] font-medium text-text-primary truncate">{row.performer.name}</div>
-        {row.result && (row.status === "found" || row.status === "accepted") && (
-          <div className="text-[0.62rem] text-text-muted truncate mt-0.5">
-            {[row.result.gender, row.result.country, row.result.birthdate].filter(Boolean).join(" | ")}
-          </div>
-        )}
-        {row.matchedScraper && row.status !== "pending" && (
-          <span className="text-text-disabled text-[0.58rem] font-mono">via {row.matchedScraper}</span>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {row.status === "pending" && (
-          <span className="led led-idle" />
-        )}
-        {row.status === "scraping" && (
-          <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />
-        )}
-        {row.status === "found" && (
-          <>
-            <button
-              onClick={onAccept}
-              className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors"
-            >
-              <Check className="h-2.5 w-2.5" />
-              Accept
-            </button>
-            <button
-              onClick={onReject}
-              className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </>
-        )}
-        {row.status === "no-result" && <span className="text-[0.62rem] text-text-disabled">No result</span>}
-        {row.status === "error" && <span className="text-[0.62rem] text-status-error-text">Error</span>}
-        {row.status === "accepted" && (
-          <span className="flex items-center gap-1 text-[0.62rem] text-status-success-text">
-            <Check className="h-2.5 w-2.5" />
-            Applied
-          </span>
-        )}
-        {row.status === "rejected" && <span className="text-[0.62rem] text-text-disabled">Skipped</span>}
-      </div>
+      {expanded && row.error && (
+        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+          <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
+        </div>
+      )}
     </div>
   );
 }

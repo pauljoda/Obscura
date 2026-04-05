@@ -77,16 +77,20 @@ export interface ProbeVideoMetadata {
   audio: ProbeAudioMetadata | null;
 }
 
-/** Filename suffixes that mark generated/preview files we should skip during scan. */
-const generatedSuffixes = [".preview", ".thumb", ".sprite"];
+/**
+ * Filename patterns that mark generated/preview files we should skip during scan.
+ * Matches stems ending with separators followed by these words, e.g.:
+ *   scene.preview.mp4, scene-preview.mp4, scene_preview.mp4
+ */
+const generatedSuffixPattern = /[-._](preview|thumb|sprite|sample)$/i;
 
 export function isVideoFile(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
   if (!supportedVideoExtensions.has(ext)) return false;
 
-  // Skip generated preview/thumbnail files (e.g. scene.preview.mp4)
-  const stem = path.basename(filePath, ext).toLowerCase();
-  return !generatedSuffixes.some((suffix) => stem.endsWith(suffix));
+  // Skip generated preview/thumbnail/sample files
+  const stem = path.basename(filePath, ext);
+  return !generatedSuffixPattern.test(stem);
 }
 
 /** Common HTML entities that appear in filenames downloaded from websites. */
