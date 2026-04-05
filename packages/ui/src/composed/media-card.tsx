@@ -218,7 +218,6 @@ export function MediaCard({
           <img
             src={cardThumbnail || thumbnail}
             alt={title}
-            loading="lazy"
             decoding="async"
             className={cn(
               "h-full w-full object-cover transition-transform duration-normal",

@@ -111,7 +111,6 @@ function SceneListItem({
             <img
               src={scene.thumbnailPath?.includes("thumb-custom") ? toApiUrl(scene.thumbnailPath) : (toApiUrl(scene.cardThumbnailPath) || toApiUrl(scene.thumbnailPath))}
               alt={scene.title}
-              loading="lazy"
               decoding="async"
               className="h-full w-full object-cover"
             />
