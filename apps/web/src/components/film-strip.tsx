@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   loadTrickplayFrames,
   findFrameAtTime,
+  timeToTrackPosition,
   type TrickplayFrame,
 } from "@obscura/ui/lib/trickplay";
 
@@ -79,8 +80,7 @@ export function FilmStrip({
 
       const time = video.currentTime;
       const containerWidth = container.clientWidth;
-      const normalizedTime = Math.max(0, Math.min(1, time / duration));
-      const trackPosition = normalizedTime * trackWidth;
+      const trackPosition = timeToTrackPosition(frames, time, frameWidth);
       const tx = containerWidth / 2 - trackPosition;
 
       const transform = `translateX(${tx}px)`;
@@ -91,23 +91,22 @@ export function FilmStrip({
 
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [frames, frameWidth, trackWidth, duration, videoRef]);
+  }, [frames, frameWidth, videoRef]);
 
   // During drag, we drive the position ourselves
   const applyDragTransform = useCallback(
     (time: number) => {
       const container = containerRef.current;
       const track = trackRef.current;
-      if (!container || !track) return;
+      if (!container || !track || !frames) return;
 
       const containerWidth = container.clientWidth;
-      const normalizedTime = Math.max(0, Math.min(1, time / duration));
-      const trackPosition = normalizedTime * trackWidth;
+      const trackPosition = timeToTrackPosition(frames, time, frameWidth);
       const transform = `translateX(${containerWidth / 2 - trackPosition}px)`;
       track.style.transform = transform;
       if (markersRef.current) markersRef.current.style.transform = transform;
     },
-    [trackWidth, duration]
+    [frames, frameWidth]
   );
 
   const handlePointerDown = useCallback(
@@ -225,7 +224,7 @@ export function FilmStrip({
             style={{ width: trackWidth }}
           >
             {markers.map((marker) => {
-              const left = (marker.time / duration) * trackWidth;
+              const left = timeToTrackPosition(frames, marker.time, frameWidth);
               return (
                 <div
                   key={marker.id}

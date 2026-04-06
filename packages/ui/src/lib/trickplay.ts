@@ -85,3 +85,21 @@ export function findFrameAtTime(frames: TrickplayFrame[], time: number): number 
   // Fallback: clamp to last frame
   return Math.max(0, frames.length - 1);
 }
+
+/**
+ * Convert a time value to a pixel position on the film strip track by
+ * finding the matching frame and interpolating within it. This keeps
+ * the playhead locked to the correct frame regardless of any mismatch
+ * between video duration and VTT time ranges.
+ */
+export function timeToTrackPosition(
+  frames: TrickplayFrame[],
+  time: number,
+  frameWidth: number,
+): number {
+  const idx = findFrameAtTime(frames, time);
+  const frame = frames[idx];
+  const span = frame.end - frame.start;
+  const fraction = span > 0 ? Math.max(0, Math.min(1, (time - frame.start) / span)) : 0;
+  return (idx + fraction) * frameWidth;
+}
