@@ -200,6 +200,29 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
   });
 
+  // ─── Diagnostics: force-rebuild previews ──────────────────────
+  app.post("/jobs/rebuild-previews", async (_request, reply) => {
+    // Clear all generated preview asset paths so every scene is re-queued
+    await db
+      .update(scenes)
+      .set({
+        thumbnailPath: null,
+        cardThumbnailPath: null,
+        previewPath: null,
+        spritePath: null,
+        trickplayVttPath: null,
+        updatedAt: new Date(),
+      });
+
+    const jobIds = await enqueueMissingSceneJobs("preview");
+
+    return {
+      ok: true,
+      enqueued: jobIds.length,
+      jobIds,
+    };
+  });
+
   app.post("/jobs/acknowledge-failed", async (request, reply) => {
     const body = (request.body ?? {}) as { queueName?: QueueName };
     const queueName = body.queueName;

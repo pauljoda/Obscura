@@ -24,6 +24,7 @@ import {
   X,
   Check,
   AlertCircle,
+  Wrench,
 } from "lucide-react";
 import {
   browseLibraryPath,
@@ -34,6 +35,7 @@ import {
   fetchInstalledScrapers,
   fetchLibraryConfig,
   fetchStashBoxEndpoints,
+  rebuildPreviews,
   runQueue,
   testStashBoxEndpoint,
   updateLibraryRoot,
@@ -989,7 +991,69 @@ export function SettingsPageClient({
           <StorageStat label="Total" value={formatBytes(totalBytes)} accent />
         </div>
       </section>
+
+      <div className="border-t border-border-subtle" />
+      <DiagnosticsSection />
     </div>
+  );
+}
+
+function DiagnosticsSection() {
+  const [rebuilding, setRebuilding] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const handleRebuildPreviews = async () => {
+    setRebuilding(true);
+    setResult(null);
+    try {
+      const res = await rebuildPreviews();
+      setResult(`Queued ${res.enqueued} scene${res.enqueued === 1 ? "" : "s"} for preview regeneration`);
+    } catch {
+      setResult("Failed to queue rebuild");
+    } finally {
+      setRebuilding(false);
+    }
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2.5 px-1">
+        <Wrench className="h-4 w-4 text-text-accent" />
+        <div>
+          <h2 className="text-[0.9rem] font-heading font-semibold">Diagnostics</h2>
+          <p className="text-[0.68rem] text-text-muted">Maintenance actions for troubleshooting</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="surface-card-sharp rounded-sm p-3 space-y-2">
+          <div>
+            <p className="text-[0.78rem] font-medium">Rebuild all previews</p>
+            <p className="text-[0.68rem] text-text-muted">
+              Regenerate thumbnails, preview clips, and trickplay sprites for every scene.
+              Useful after quality setting changes or to fix corrupt sprites.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleRebuildPreviews}
+              disabled={rebuilding}
+              className="inline-flex items-center gap-1.5 rounded-sm bg-surface-3 px-3 py-1.5 text-[0.72rem] font-medium text-text-primary transition-colors hover:bg-surface-4 disabled:opacity-50"
+            >
+              {rebuilding ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {rebuilding ? "Queuing..." : "Rebuild previews"}
+            </button>
+            {result && (
+              <p className="text-[0.68rem] text-text-muted">{result}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
