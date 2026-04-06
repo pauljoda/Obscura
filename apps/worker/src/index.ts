@@ -725,6 +725,8 @@ async function processPreview(job: Job) {
     "-loglevel",
     "error",
     "-y",
+    "-reinit_filter",
+    "0",
     "-i",
     scene.filePath,
     "-vf",
