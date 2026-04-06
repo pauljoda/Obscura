@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - **Film strip playhead drift** — film strip now uses frame-based positioning (matching VTT time ranges) instead of linear interpolation over video duration, fixing the playhead being ahead of the actual frame in view.
+- **Blank trickplay frames on concatenated videos** — videos with mid-stream colorspace changes (compilations, multi-segment content) caused ffmpeg's tile filter to reset, producing blank sprite frames for the remainder of the video. Added `-reinit_filter 0` to keep the filter graph stable.
 - **Global search ⌘K / Ctrl+K** — shortcut is registered on `window` in capture phase with `stopPropagation`, uses `KeyboardEvent.code` (`KeyK`) so layout/locale does not break matching, and Escape closes the palette without stale state. Video player no longer treats modifier+K as play/pause, so the shortcut works on scene pages.
 - **Gallery card thumbnails** — gallery card images now fit within the frame (`object-contain`) instead of cropping (`object-cover`), matching the fix applied to studio and tag banners.
 - **Studio card thumbnails** — studio list card images now use `object-contain` so logos and icons display fully instead of being cropped.
