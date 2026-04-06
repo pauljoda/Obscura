@@ -223,17 +223,19 @@ export function SceneDetail({
     }
   }
 
-  const [rebuildingPreview, setRebuildingPreview] = useState(false);
+  const [rebuildPreviewState, setRebuildPreviewState] = useState<"idle" | "queued" | "done">("idle");
 
   async function handleRebuildPreview() {
-    setRebuildingPreview(true);
+    if (rebuildPreviewState !== "idle") return;
+    setRebuildPreviewState("queued");
     try {
       await rebuildScenePreview(id);
     } catch {
-      // silent
-    } finally {
-      setRebuildingPreview(false);
+      setRebuildPreviewState("idle");
+      return;
     }
+    setRebuildPreviewState("done");
+    setTimeout(() => setRebuildPreviewState("idle"), 4000);
   }
 
   if (loading) {
@@ -388,11 +390,29 @@ export function SceneDetail({
             <button
               type="button"
               onClick={() => void handleRebuildPreview()}
-              disabled={rebuildingPreview}
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-sm text-text-disabled hover:text-text-muted hover:bg-surface-2 transition-colors duration-fast disabled:opacity-50"
-              title="Rebuild thumbnails and trickplay"
+              disabled={rebuildPreviewState !== "idle"}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-2.5 rounded-sm transition-colors duration-fast",
+                rebuildPreviewState === "done"
+                  ? "text-success-text"
+                  : rebuildPreviewState === "queued"
+                    ? "text-text-accent"
+                    : "text-text-disabled hover:text-text-muted hover:bg-surface-2",
+                rebuildPreviewState !== "idle" && "cursor-default"
+              )}
+              title={
+                rebuildPreviewState === "done"
+                  ? "Rebuild queued"
+                  : rebuildPreviewState === "queued"
+                    ? "Queuing..."
+                    : "Rebuild thumbnails and trickplay"
+              }
             >
-              <RefreshCw className={cn("h-4 w-4", rebuildingPreview && "animate-spin")} />
+              {rebuildPreviewState === "done" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <RefreshCw className={cn("h-4 w-4", rebuildPreviewState === "queued" && "animate-spin")} />
+              )}
             </button>
           </div>
         </div>
