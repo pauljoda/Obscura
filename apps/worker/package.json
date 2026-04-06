@@ -15,7 +15,8 @@
     "bullmq": "^5.73.0",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.10.1",
-    "postgres": "^3.4.8"
+    "postgres": "^3.4.8",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

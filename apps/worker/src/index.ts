@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import sharp from "sharp";
 import { sql } from "drizzle-orm";
 import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
@@ -623,8 +624,6 @@ async function processPreview(job: Job) {
   const thumbnailAt = duration > 0 ? Math.min(duration - 0.5, Math.max(1, duration * 0.18)) : 0;
   const frameInterval = Math.max(3, settings.trickplayIntervalSeconds);
   const frameCount = Math.max(1, Math.ceil((duration || frameInterval) / frameInterval));
-  const columns = Math.min(5, frameCount);
-  const rows = Math.max(1, Math.ceil(frameCount / columns));
   // Resolution scales with the quality slider:
   //   quality 1  → native video resolution (no downscale)
   //   quality 31 → minimum (320px thumb, 160px card, 160px sprite)
@@ -718,41 +717,94 @@ async function processPreview(job: Job) {
   ]);
   await markJobProgress(job, "preview", 65);
 
-  const spriteQuality = String(trickQualityClamped);
+  // Extract individual frames via separate ffmpeg calls (robust against
+  // mid-stream format changes), then stitch into a sprite with sharp.
+  const tmpFrameDir = path.join(tmpdir(), `obscura-sprite-${scene.id}-${Date.now()}`);
+  await mkdir(tmpFrameDir, { recursive: true });
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-reinit_filter",
-    "0",
-    "-i",
-    scene.filePath,
-    "-vf",
-    `fps=1/${frameInterval},scale=${spriteThumbWidth}:${spriteThumbHeight},tile=${columns}x${rows}`,
-    "-frames:v",
-    "1",
-    "-q:v",
-    spriteQuality,
-    spriteFile,
-  ]);
+  try {
+    for (let index = 0; index < frameCount; index += 1) {
+      const seekTime = Math.min(index * frameInterval, duration - 0.5);
+      const frameFile = path.join(tmpFrameDir, `frame-${String(index).padStart(4, "0")}.png`);
+      try {
+        await runProcess("ffmpeg", [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          String(seekTime),
+          "-i",
+          scene.filePath,
+          "-frames:v",
+          "1",
+          "-vf",
+          `scale=${spriteThumbWidth}:${spriteThumbHeight}`,
+          frameFile,
+        ]);
+      } catch {
+        // Create a black placeholder so grid stays aligned
+        await sharp({
+          create: {
+            width: spriteThumbWidth,
+            height: spriteThumbHeight,
+            channels: 3,
+            background: { r: 0, g: 0, b: 0 },
+          },
+        })
+          .toFormat("png")
+          .toFile(frameFile);
+      }
+    }
 
-  const vttLines = ["WEBVTT", ""];
-  for (let index = 0; index < frameCount; index += 1) {
-    const start = index * frameInterval;
-    const end = start + frameInterval;
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    const x = column * spriteThumbWidth;
-    const y = row * spriteThumbHeight;
+    // Read extracted frames in order
+    const frameFiles = (await readdir(tmpFrameDir))
+      .filter((f) => f.startsWith("frame-"))
+      .sort()
+      .map((f) => path.join(tmpFrameDir, f));
 
-    vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-    vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${spriteThumbWidth},${spriteThumbHeight}`);
-    vttLines.push("");
+    const actualFrameCount = frameFiles.length;
+    const gridColumns = Math.min(5, actualFrameCount);
+    const gridRows = Math.max(1, Math.ceil(actualFrameCount / gridColumns));
+
+    // Stitch frames into a single sprite sheet
+    const composites: sharp.OverlayOptions[] = frameFiles.map((file, i) => ({
+      input: file,
+      left: (i % gridColumns) * spriteThumbWidth,
+      top: Math.floor(i / gridColumns) * spriteThumbHeight,
+    }));
+
+    await sharp({
+      create: {
+        width: gridColumns * spriteThumbWidth,
+        height: gridRows * spriteThumbHeight,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0 },
+      },
+    })
+      .composite(composites)
+      .jpeg({ quality: Math.max(10, Math.round(100 - (trickQualityClamped - 1) * (90 / 30))) })
+      .toFile(spriteFile);
+
+    // Generate VTT from actual extracted frames
+    const vttLines = ["WEBVTT", ""];
+    for (let index = 0; index < actualFrameCount; index += 1) {
+      const start = index * frameInterval;
+      const end = start + frameInterval;
+      const column = index % gridColumns;
+      const row = Math.floor(index / gridColumns);
+      const x = column * spriteThumbWidth;
+      const y = row * spriteThumbHeight;
+
+      vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
+      vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${spriteThumbWidth},${spriteThumbHeight}`);
+      vttLines.push("");
+    }
+
+    await writeFile(trickplayFile, vttLines.join("\n"), "utf8");
+  } finally {
+    await rm(tmpFrameDir, { recursive: true, force: true });
   }
-
-  await writeFile(trickplayFile, vttLines.join("\n"), "utf8");
 
   await db
     .update(scenes)
