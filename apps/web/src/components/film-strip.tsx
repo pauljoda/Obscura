@@ -65,36 +65,8 @@ export function FilmStrip({
 
   const trackWidth = frames ? frames.length * frameWidth : 0;
 
-  // rAF loop: read video.currentTime every frame and set transform directly
-  useEffect(() => {
-    if (!frames || frames.length === 0) return;
-
-    const tick = () => {
-      const video = videoRef.current;
-      const container = containerRef.current;
-      const track = trackRef.current;
-      if (!video || !container || !track || draggingRef.current) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      const time = video.currentTime;
-      const containerWidth = container.clientWidth;
-      const trackPosition = timeToTrackPosition(frames, time, frameWidth);
-      const tx = containerWidth / 2 - trackPosition;
-
-      const transform = `translateX(${tx}px)`;
-      track.style.transform = transform;
-      if (markersRef.current) markersRef.current.style.transform = transform;
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [frames, frameWidth, videoRef]);
-
-  // During drag, we drive the position ourselves
-  const applyDragTransform = useCallback(
+  // Apply track position for a given time — playhead stays at viewport center
+  const applyPosition = useCallback(
     (time: number) => {
       const container = containerRef.current;
       const track = trackRef.current;
@@ -102,12 +74,33 @@ export function FilmStrip({
 
       const containerWidth = container.clientWidth;
       const trackPosition = timeToTrackPosition(frames, time, frameWidth);
-      const transform = `translateX(${containerWidth / 2 - trackPosition}px)`;
+      const tx = containerWidth / 2 - trackPosition;
+
+      const transform = `translateX(${tx}px)`;
       track.style.transform = transform;
       if (markersRef.current) markersRef.current.style.transform = transform;
     },
     [frames, frameWidth]
   );
+
+  // rAF loop: read video.currentTime every frame and set transform directly
+  useEffect(() => {
+    if (!frames || frames.length === 0) return;
+
+    const tick = () => {
+      const video = videoRef.current;
+      if (!video || !containerRef.current || !trackRef.current || draggingRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      applyPosition(video.currentTime);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [frames, frameWidth, videoRef, applyPosition]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -130,10 +123,10 @@ export function FilmStrip({
         0,
         Math.min(duration, dragStartTimeRef.current + timeDelta)
       );
-      applyDragTransform(newTime);
+      applyPosition(newTime);
       onSeek(newTime);
     },
-    [frames, trackWidth, duration, onSeek, applyDragTransform]
+    [frames, trackWidth, duration, onSeek, applyPosition]
   );
 
   const handlePointerUp = useCallback(() => {
