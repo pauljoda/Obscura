@@ -4,6 +4,29 @@ import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "
 
 const { scenes, studios, scenePerformers, performers, sceneTags, tags } = schema;
 
+function formatDuration(seconds: number | null): string | null {
+  if (!seconds) return null;
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function resolutionLabel(height: number | null): string | null {
+  if (!height) return null;
+  if (height >= 2160) return "4K";
+  if (height >= 1080) return "1080p";
+  if (height >= 720) return "720p";
+  if (height >= 480) return "480p";
+  return `${height}p`;
+}
+
 export const scenesSearchProvider: SearchProvider = {
   kind: "scene",
   label: "Scenes",
@@ -47,10 +70,17 @@ export const scenesSearchProvider: SearchProvider = {
       db.select({
         id: scenes.id,
         title: scenes.title,
-        thumbnailPath: scenes.cardThumbnailPath,
+        thumbnailPath: scenes.thumbnailPath,
+        cardThumbnailPath: scenes.cardThumbnailPath,
         studioName: studios.name,
         rating: scenes.rating,
         duration: scenes.duration,
+        height: scenes.height,
+        codec: scenes.codec,
+        fileSize: scenes.fileSize,
+        spritePath: scenes.spritePath,
+        trickplayVttPath: scenes.trickplayVttPath,
+        playCount: scenes.playCount,
         score: scoreExpr,
       })
         .from(scenes)
@@ -75,7 +105,23 @@ export const scenesSearchProvider: SearchProvider = {
         href: `/scenes/${r.id}`,
         rating: r.rating,
         score: r.score,
-        meta: { duration: r.duration },
+        meta: {
+          durationSeconds: r.duration,
+          durationFormatted: formatDuration(r.duration),
+          resolution: resolutionLabel(r.height),
+          codec: r.codec,
+          cardThumbnailPath: r.cardThumbnailPath,
+          fileSizeFormatted:
+            r.fileSize && r.fileSize >= 1024 * 1024 * 1024
+              ? `${(r.fileSize / (1024 * 1024 * 1024)).toFixed(1)} GB`
+              : r.fileSize
+                ? `${(r.fileSize / (1024 * 1024)).toFixed(0)} MB`
+                : null,
+          spritePath: r.spritePath,
+          trickplayVttPath: r.trickplayVttPath,
+          studio: r.studioName,
+          views: r.playCount,
+        },
       })),
     };
   },

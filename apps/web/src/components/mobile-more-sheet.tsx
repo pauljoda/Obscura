@@ -13,6 +13,7 @@ import {
   Activity,
   Settings,
   LayoutDashboard,
+  Search,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +25,7 @@ const sections = [
     kicker: "Overview",
     items: [
       { label: "Dashboard", href: "/", Icon: LayoutDashboard },
+      { label: "Search", href: "/search", Icon: Search },
     ],
   },
   {

@@ -277,7 +277,7 @@ export function PerformerPageClient({
       </Link>
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="flex-shrink-0 lg:w-72">
+        <div className="w-full max-w-xs self-center flex-shrink-0 sm:max-w-sm lg:w-72 lg:max-w-none lg:self-auto">
           <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-lg bg-surface-3">
             {imageUrl ? (
               <img

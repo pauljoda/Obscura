@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { fetchPerformers, toApiUrl, type PerformerItem } from "../../lib/api";
+import { fetchPerformers, type PerformerItem } from "../../lib/api";
+import { PerformerEntityCard } from "../performers/performer-entity-card";
+import { performerItemToCardData } from "../performers/performer-card-data";
 
 type SortKey = "name" | "scenes" | "rating" | "recent";
 type SortDir = "asc" | "desc";
@@ -379,7 +381,10 @@ export function PerformersPageClient({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {performers.map((performer) => (
-            <PerformerCard key={performer.id} performer={performer} />
+            <PerformerEntityCard
+              key={performer.id}
+              performer={performerItemToCardData(performer)}
+            />
           ))}
         </div>
       )}
@@ -395,44 +400,5 @@ export function PerformersPageClient({
         </div>
       )}
     </div>
-  );
-}
-
-function PerformerCard({ performer }: { performer: PerformerItem }) {
-  const imageUrl = toApiUrl(performer.imagePath);
-
-  return (
-    <Link href={`/performers/${performer.id}`}>
-      <article className="surface-card group h-full cursor-pointer overflow-hidden">
-        <div className="relative aspect-[3/4] bg-surface-3">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={performer.name}
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-moderate group-hover:scale-[1.02]"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Users className="h-10 w-10 text-text-disabled/50" />
-            </div>
-          )}
-          {performer.favorite ? (
-            <span className="absolute right-2 top-2 rounded-sm bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
-              <Star className="h-3 w-3 fill-current" />
-            </span>
-          ) : null}
-        </div>
-        <div className="space-y-1 px-3 py-2.5">
-          <h3 className="truncate text-sm font-medium transition-colors duration-fast group-hover:text-text-accent">
-            {performer.name}
-          </h3>
-          <p className="text-[0.68rem] text-text-disabled">
-            {performer.sceneCount} scene{performer.sceneCount !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </article>
-    </Link>
   );
 }

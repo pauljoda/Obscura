@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { Images, Film } from "lucide-react";
-import { MediaCard } from "@obscura/ui/composed/media-card";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   toApiUrl,
   type GalleryListItem,
   type SceneListItem,
 } from "../../lib/api";
-import { SCENE_TAG_COLORS } from "../scene-tag-colors";
+import { GalleryEntityCard } from "../galleries/gallery-entity-card";
+import { galleryListItemToCardData } from "../galleries/gallery-card-data";
+import { SceneCard } from "../scenes/scene-card";
+import { sceneListItemToCardData } from "../scenes/scene-card-data";
 import { DASHBOARD_STAT_GRADIENTS, formatIngestStamp } from "./dashboard-utils";
 
 const MERGE_CAP = 11;
@@ -40,37 +42,20 @@ function mergeIngest(
 
 function SceneIngestTile({
   scene,
-  gradientClass,
+  index,
 }: {
   scene: SceneListItem;
-  gradientClass: string;
+  index: number;
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
-      <Link
-        href={`/scenes/${scene.id}`}
-        className="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-accent-strong focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-      >
-        <MediaCard
-          title={scene.title}
-          thumbnail={toApiUrl(scene.thumbnailPath)}
-          cardThumbnail={scene.thumbnailPath?.includes("thumb-custom") ? undefined : toApiUrl(scene.cardThumbnailPath)}
+      <div className="rounded-sm focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
+        <SceneCard
+          scene={sceneListItemToCardData(scene)}
+          index={index}
           imageLoading="lazy"
-          trickplaySprite={toApiUrl(scene.spritePath)}
-          trickplayVtt={toApiUrl(scene.trickplayVttPath)}
-          scrubDurationSeconds={scene.duration ?? undefined}
-          duration={scene.durationFormatted ?? undefined}
-          resolution={scene.resolution ?? undefined}
-          codec={scene.codec ?? undefined}
-          fileSize={scene.fileSizeFormatted ?? undefined}
-          performers={scene.performers.map((p) => ({ name: p.name, imagePath: toApiUrl(p.imagePath) ?? undefined }))}
-          tags={scene.tags.map((t) => t.name)}
-          tagColors={SCENE_TAG_COLORS}
-          rating={scene.rating ?? undefined}
-          views={scene.playCount}
-          gradientClass={gradientClass}
         />
-      </Link>
+      </div>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
         {formatIngestStamp(scene.createdAt)}
       </p>
@@ -80,56 +65,18 @@ function SceneIngestTile({
 
 function GalleryIngestTile({
   gallery,
-  gradientClass,
 }: {
   gallery: GalleryListItem;
-  gradientClass: string;
 }) {
-  const thumb = gallery.coverImagePath ? toApiUrl(gallery.coverImagePath) : null;
-
   return (
-    <Link
-      href="/galleries"
-      className="group snap-start shrink-0 w-[min(52vw,168px)] sm:w-[148px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-accent-strong focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-    >
-      <div
-        className={cn(
-          "relative aspect-[3/4] overflow-hidden rounded-sm border border-border-subtle bg-surface-1 transition-[border-color,box-shadow] duration-normal",
-          "group-hover:border-border-accent group-hover:shadow-[var(--shadow-card-hover)]"
-        )}
-      >
-        <div
-          className={cn(
-            "absolute inset-0 transition-opacity duration-normal",
-            thumb ? "opacity-0 group-hover:opacity-40" : "opacity-100",
-            gradientClass
-          )}
-        />
-        {thumb && (
-          <img
-            src={thumb}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        )}
-        <div className="absolute left-1.5 top-1.5">
-          <span className="media-chip-accent rounded-sm px-1.5 py-0.5 text-[0.55rem] font-mono font-semibold uppercase tracking-[0.14em] text-accent-100">
-            Stills
-          </span>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--color-overlay-glass)_94%,transparent)] px-2 py-1.5">
-          <p className="truncate text-[0.78rem] font-medium leading-tight text-text-primary">
-            {gallery.title}
-          </p>
-          <p className="text-mono-sm text-text-disabled mt-0.5">
-            {gallery.imageCount} file{gallery.imageCount !== 1 ? "s" : ""} ·{" "}
-            {formatIngestStamp(gallery.createdAt)}
-          </p>
-        </div>
+    <div className="snap-start shrink-0 w-[min(52vw,168px)] sm:w-[148px]">
+      <div className="rounded-sm focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
+        <GalleryEntityCard gallery={galleryListItemToCardData(gallery)} />
       </div>
-    </Link>
+      <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
+        {formatIngestStamp(gallery.createdAt)}
+      </p>
+    </div>
   );
 }
 
@@ -221,13 +168,12 @@ export function DashboardRecentAdditions({
         ) : (
           <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-hidden snap-x snap-mandatory">
             {merged.map((row, i) => {
-              const g = DASHBOARD_STAT_GRADIENTS[i % DASHBOARD_STAT_GRADIENTS.length];
               if (row.kind === "scene") {
                 return (
                   <SceneIngestTile
                     key={`s-${row.scene.id}`}
                     scene={row.scene}
-                    gradientClass={g}
+                    index={i}
                   />
                 );
               }
@@ -235,7 +181,6 @@ export function DashboardRecentAdditions({
                 <GalleryIngestTile
                   key={`g-${row.gallery.id}`}
                   gallery={row.gallery}
-                  gradientClass={g}
                 />
               );
             })}

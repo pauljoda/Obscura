@@ -1,35 +1,10 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-} from "react";
-import {
-  Loader2,
-  ImageOff,
-  Film,
-  Star,
-  Calendar,
-  HardDrive,
-} from "lucide-react";
-import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl, updateImage } from "../lib/api";
-import { isVideoImage } from "../lib/image-media";
+import { useEffect, useRef } from "react";
+import { Loader2, ImageOff } from "lucide-react";
 import type { ImageListItemDto } from "@obscura/contracts";
-
-function formatFileSize(bytes: number | null): string {
-  if (!bytes) return "";
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(1)} MB`;
-  const kb = bytes / 1024;
-  return `${kb.toFixed(0)} KB`;
-}
-
-// ---------------------------------------------------------------------------
-// ImageFeed
-// ---------------------------------------------------------------------------
+import { ImageEntityCard } from "./images/image-entity-card";
+import { imageItemToCardData } from "./images/image-card-data";
 
 interface ImageFeedProps {
   images: ImageListItemDto[];
@@ -43,7 +18,6 @@ interface ImageFeedProps {
 export function ImageFeed({
   images,
   onImageClick,
-  onImageUpdate,
   hasMore = false,
   onLoadMore,
   loadingMore = false,
@@ -78,11 +52,11 @@ export function ImageFeed({
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       {images.map((image, index) => (
-        <FeedCard
+        <ImageEntityCard
           key={image.id}
-          image={image}
-          onClick={() => onImageClick?.(index)}
-          onImageUpdate={onImageUpdate}
+          image={imageItemToCardData(image)}
+          variant="feed"
+          onSelect={() => onImageClick?.(index)}
         />
       ))}
 
@@ -95,195 +69,6 @@ export function ImageFeed({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FeedCard
-//
-// All cards are always rendered (no virtualization placeholders). Videos use
-// an IntersectionObserver to switch between poster/thumbnail (off-screen) and
-// full-quality autoplay (on-screen). All visible videos play simultaneously.
-// ---------------------------------------------------------------------------
-
-const ACTIVATE_THRESHOLD = 0.3;
-
-function FeedCard({
-  image,
-  onClick,
-  onImageUpdate,
-}: {
-  image: ImageListItemDto;
-  onClick: () => void;
-  onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const [activated, setActivated] = useState(false);
-  const [error, setError] = useState(false);
-
-  const thumbUrl = toApiUrl(image.thumbnailPath);
-  const previewUrl = toApiUrl(image.previewPath);
-  const fullUrl = toApiUrl(image.fullPath);
-  const isVideo = isVideoImage(image);
-
-  const handleError = useCallback(() => setError(true), []);
-
-  // --- Activation observer: video plays at full quality when visible ---
-  useEffect(() => {
-    if (!isVideo) return;
-    const node = containerRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setActivated(Boolean(entry?.isIntersecting));
-      },
-      { rootMargin: "200px", threshold: ACTIVATE_THRESHOLD },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [isVideo]);
-
-  // --- Play/pause based on activation ---
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid) return;
-
-    if (activated) {
-      vid.play().catch(() => {});
-    } else {
-      vid.pause();
-    }
-  }, [activated]);
-
-  const ratingStars = image.rating ? Math.round(image.rating / 20) : 0;
-  const sizeStr = formatFileSize(image.fileSize);
-
-  const videoSrc = activated ? fullUrl : previewUrl;
-
-  return (
-    <div
-      ref={containerRef}
-      className="surface-card-sharp overflow-hidden"
-      style={{ overflowAnchor: "none" }}
-    >
-      {/* Media area */}
-      <button
-        type="button"
-        onClick={onClick}
-        className="block w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-inset"
-      >
-        <div className="relative bg-surface-2">
-          {error || !thumbUrl ? (
-            <div className="flex items-center justify-center bg-surface-2 aspect-video">
-              <ImageOff className="h-8 w-8 text-text-disabled" />
-            </div>
-          ) : isVideo && videoSrc ? (
-            <video
-              ref={videoRef}
-              key={activated ? "full" : "preview"}
-              src={videoSrc}
-              loop
-              muted
-              playsInline
-              preload={activated ? "auto" : "none"}
-              poster={thumbUrl}
-              onError={() => setError(true)}
-              className="w-full object-contain bg-black"
-              style={{ maxHeight: "70vh" }}
-            />
-          ) : (
-            <img
-              src={fullUrl ?? thumbUrl}
-              alt={image.title}
-              loading="lazy"
-              decoding="async"
-              onError={handleError}
-              className="w-full object-contain bg-black"
-              style={{ maxHeight: "70vh" }}
-            />
-          )}
-
-          {isVideo && (
-            <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1 rounded-sm bg-black/70 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
-              <Film className="h-3.5 w-3.5" />
-            </div>
-          )}
-        </div>
-      </button>
-
-      {/* Metadata area */}
-      <div className="px-4 py-3 space-y-2">
-        <h3 className="text-sm font-medium text-text-primary truncate">
-          {image.title}
-        </h3>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.72rem] text-text-muted">
-          {image.date && (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {image.date}
-            </span>
-          )}
-          {sizeStr && (
-            <span className="flex items-center gap-1">
-              <HardDrive className="h-3 w-3" />
-              {sizeStr}
-            </span>
-          )}
-          {image.width && image.height && (
-            <span className="font-mono text-text-disabled">
-              {image.width}×{image.height}
-            </span>
-          )}
-          {image.format && (
-            <span className="font-mono text-text-disabled uppercase">
-              {image.format}
-            </span>
-          )}
-        </div>
-
-        <div className="flex gap-0.5">
-          {[20, 40, 60, 80, 100].map((v) => (
-            <button
-              key={v}
-              onClick={(e) => {
-                e.stopPropagation();
-                const newRating = image.rating === v ? null : v;
-                void updateImage(image.id, { rating: newRating });
-                onImageUpdate?.(image.id, { rating: newRating });
-              }}
-              className="p-0.5 transition-colors"
-            >
-              <Star
-                className={cn(
-                  "h-3.5 w-3.5",
-                  image.rating != null && image.rating >= v
-                    ? "text-accent-500 fill-accent-500"
-                    : "text-text-disabled hover:text-accent-500/50",
-                )}
-              />
-            </button>
-          ))}
-        </div>
-
-        {image.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 pt-0.5">
-            {image.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="tag-chip tag-chip-default text-[0.6rem]"
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

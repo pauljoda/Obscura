@@ -14,7 +14,7 @@ const primaryTabs = [
   { label: "Jobs", href: "/jobs", icon: Activity },
 ] as const;
 
-const moreRoutes = ["/", "/images", "/studios", "/tags", "/collections", "/identify", "/settings"];
+const moreRoutes = ["/", "/search", "/images", "/studios", "/tags", "/collections", "/identify", "/settings"];
 
 export function MobileNav() {
   const pathname = usePathname();

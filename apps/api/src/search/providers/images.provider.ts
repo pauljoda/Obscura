@@ -1,6 +1,7 @@
 import { db, schema } from "../../db";
 import { ilike, or, sql, and, gte, lte, count, eq, exists } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import { getImagePreviewPath } from "../../lib/image-media";
 
 const { images, galleries, imageTags, tags } = schema;
 
@@ -47,6 +48,7 @@ export const imagesSearchProvider: SearchProvider = {
         rating: images.rating,
         width: images.width,
         height: images.height,
+        format: images.format,
         score: scoreExpr,
       })
         .from(images)
@@ -71,10 +73,17 @@ export const imagesSearchProvider: SearchProvider = {
         title: r.title,
         subtitle: r.galleryTitle ?? null,
         imagePath: r.thumbnailPath ?? null,
-        href: r.galleryId ? `/galleries/${r.galleryId}` : `/images/${r.id}`,
+        href: r.galleryId ? `/galleries/${r.galleryId}?image=${r.id}` : `/images/${r.id}`,
         rating: r.rating,
         score: r.score,
-        meta: { width: r.width, height: r.height, galleryId: r.galleryId },
+        meta: {
+          width: r.width,
+          height: r.height,
+          galleryId: r.galleryId,
+          format: r.format,
+          previewPath: getImagePreviewPath(r.id, r.format),
+          fullPath: `/assets/images/${r.id}/full`,
+        },
       })),
     };
   },

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, Images, LayoutGrid, LayoutList, Newspaper } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
 import { ImageFeed } from "../image-feed";
@@ -27,6 +28,8 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [subGalleryView, setSubGalleryView] = useState<"grid" | "list">("grid");
   const [imageViewMode, setImageViewMode] = useState<"grid" | "feed">("grid");
+  const searchParams = useSearchParams();
+  const handledDeepLinkImageId = useRef<string | null>(null);
 
   const backHref = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
 
@@ -63,6 +66,44 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
       setLightboxOpen(true);
     }
   }, [images.length]);
+
+  const openImageById = useCallback(async (imageId: string) => {
+    let currentImages = images;
+    let imageIndex = currentImages.findIndex((image) => image.id === imageId);
+
+    while (imageIndex === -1 && currentImages.length < imageTotal) {
+      const result = await fetchGalleryImages(gallery.id, {
+        limit: 60,
+        offset: currentImages.length,
+      });
+      const existingIds = new Set(currentImages.map((image) => image.id));
+      const newItems = result.images.filter((image) => !existingIds.has(image.id));
+
+      if (newItems.length === 0) {
+        break;
+      }
+
+      currentImages = [...currentImages, ...newItems];
+      setImages(currentImages);
+      imageIndex = currentImages.findIndex((image) => image.id === imageId);
+    }
+
+    if (imageIndex !== -1) {
+      setLightboxIndex(imageIndex);
+      setLightboxOpen(true);
+    }
+  }, [gallery.id, imageTotal, images]);
+
+  useEffect(() => {
+    const imageId = searchParams.get("image");
+
+    if (!imageId || handledDeepLinkImageId.current === imageId) {
+      return;
+    }
+
+    handledDeepLinkImageId.current = imageId;
+    void openImageById(imageId);
+  }, [openImageById, searchParams]);
 
   // Build child gallery DTOs for card rendering
   const childGalleries: GalleryListItemDto[] = gallery.children.map((child) => ({

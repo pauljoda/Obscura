@@ -1,8 +1,8 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists } from "drizzle-orm";
+import { ilike, or, sql, and, gte, lte, count, eq, exists, inArray, asc } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 
-const { galleries, galleryTags, tags } = schema;
+const { galleries, galleryTags, tags, images } = schema;
 
 export const galleriesSearchProvider: SearchProvider = {
   kind: "gallery",
@@ -55,6 +55,26 @@ export const galleriesSearchProvider: SearchProvider = {
     ]);
 
     const total = countResult[0]?.total ?? 0;
+    const galleryIds = rows.map((row) => row.id);
+    const previewRows = galleryIds.length
+      ? await db
+          .select({
+            galleryId: images.galleryId,
+            imageId: images.id,
+          })
+          .from(images)
+          .where(inArray(images.galleryId, galleryIds))
+          .orderBy(asc(images.sortOrder))
+      : [];
+
+    const previewMap = new Map<string, string[]>();
+    for (const preview of previewRows) {
+      if (!preview.galleryId) continue;
+      const current = previewMap.get(preview.galleryId) ?? [];
+      if (current.length >= 4) continue;
+      current.push(`/assets/images/${preview.imageId}/thumb`);
+      previewMap.set(preview.galleryId, current);
+    }
 
     return {
       total,
@@ -67,7 +87,11 @@ export const galleriesSearchProvider: SearchProvider = {
         href: `/galleries/${r.id}`,
         rating: r.rating,
         score: r.score,
-        meta: { imageCount: r.imageCount, galleryType: r.galleryType },
+        meta: {
+          imageCount: r.imageCount,
+          galleryType: r.galleryType,
+          previewImagePaths: JSON.stringify(previewMap.get(r.id) ?? []),
+        },
       })),
     };
   },

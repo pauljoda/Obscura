@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl, type TagItem } from "../../lib/api";
+import { type TagItem } from "../../lib/api";
+import { TagEntityCard } from "../tags/tag-entity-card";
+import { tagItemToCardData } from "../tags/tag-card-data";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
@@ -240,69 +242,22 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         <div className="surface-panel p-6">
           <div className="flex flex-wrap gap-1.5 justify-center">
             {filtered.map((tag) => {
-              const total = tag.sceneCount + (tag.imageCount ?? 0);
-              const intensity = total / maxCount;
               return (
-                <Link
+                <TagEntityCard
                   key={tag.id}
-                  href={`/tags/${encodeURIComponent(tag.name)}`}
-                  className={cn(
-                    "border px-2.5 py-1 transition-all duration-fast",
-                    "hover:border-border-accent hover:bg-accent-950 hover:text-text-accent hover:shadow-[0_0_12px_rgba(199,155,92,0.15)]",
-                    intensity > 0.6
-                      ? "border-border-accent text-accent-400 text-base font-medium bg-accent-950/30"
-                      : intensity > 0.3
-                        ? "border-border-default text-text-secondary text-sm"
-                        : "border-border-subtle text-text-muted text-xs",
-                  )}
-                >
-                  {tag.name}
-                  <span className="ml-1.5 text-text-disabled text-xs">{total}</span>
-                </Link>
+                  tag={tagItemToCardData(tag)}
+                  variant="cloud"
+                  maxCount={maxCount}
+                />
               );
             })}
           </div>
         </div>
       ) : (
         <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
-          {filtered.map((tag) => {
-            const total = tag.sceneCount + (tag.imageCount ?? 0);
-            const tagImage = tag.imagePath ? toApiUrl(tag.imagePath) : null;
-            return (
-              <Link
-                key={tag.id}
-                href={`/tags/${encodeURIComponent(tag.name)}`}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5",
-                  "border-b border-border-subtle/50",
-                  "hover:bg-surface-2 hover:text-text-accent transition-colors duration-fast",
-                  "break-inside-avoid",
-                )}
-              >
-                {tagImage && (
-                  <div className="flex-shrink-0 w-8 h-5 rounded-[2px] overflow-hidden bg-surface-3">
-                    <img src={tagImage} alt="" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <span className="text-[0.8rem] text-text-primary truncate flex-1">{tag.name}</span>
-                <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
-                  {tag.sceneCount > 0 && (
-                    <span className="flex items-center gap-0.5">
-                      <Film className="h-2.5 w-2.5" />
-                      {tag.sceneCount}
-                    </span>
-                  )}
-                  {(tag.imageCount ?? 0) > 0 && (
-                    <span className="flex items-center gap-0.5">
-                      <Image className="h-2.5 w-2.5" />
-                      {tag.imageCount}
-                    </span>
-                  )}
-                  {total === 0 && <span className="text-text-disabled/50">—</span>}
-                </span>
-              </Link>
-            );
-          })}
+          {filtered.map((tag) => (
+            <TagEntityCard key={tag.id} tag={tagItemToCardData(tag)} />
+          ))}
         </div>
       )}
     </div>

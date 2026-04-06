@@ -21,6 +21,18 @@ import { cn } from "@obscura/ui/lib/utils";
 import type { EntityKind, SearchResultItem, SearchResultGroup } from "@obscura/contracts";
 import { useSearch } from "../../hooks/use-search";
 import { fetchSearch, toApiUrl } from "../../lib/api";
+import { GalleryEntityCard } from "../galleries/gallery-entity-card";
+import { searchGalleryItemToCardData } from "../galleries/gallery-card-data";
+import { ImageEntityCard } from "../images/image-entity-card";
+import { searchImageItemToCardData } from "../images/image-card-data";
+import { PerformerEntityCard } from "../performers/performer-entity-card";
+import { searchPerformerItemToCardData } from "../performers/performer-card-data";
+import { SceneCard } from "../scenes/scene-card";
+import { searchSceneItemToCardData } from "../scenes/scene-card-data";
+import { StudioEntityCard } from "../studios/studio-entity-card";
+import { searchStudioItemToCardData } from "../studios/studio-card-data";
+import { TagEntityCard } from "../tags/tag-entity-card";
+import { searchTagItemToCardData } from "../tags/tag-card-data";
 
 const ALL_KINDS: EntityKind[] = ["scene", "performer", "studio", "tag", "gallery", "image"];
 
@@ -368,8 +380,18 @@ function SearchSection({
       <div
         className={cn(
           "grid gap-2",
-          kind === "tag"
-            ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+          kind === "scene"
+            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            : kind === "gallery"
+            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            : kind === "image"
+            ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
+            : kind === "performer"
+            ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5"
+            : kind === "studio"
+            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            : kind === "tag"
+            ? "columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0 block"
             : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
         )}
       >
@@ -406,22 +428,55 @@ function SearchSection({
 }
 
 function SearchCard({ item }: { item: SearchResultItem }) {
+  if (item.kind === "scene") {
+    const scene = searchSceneItemToCardData(item);
+
+    if (scene) {
+      return <SceneCard scene={scene} />;
+    }
+  }
+
+  if (item.kind === "gallery") {
+    const gallery = searchGalleryItemToCardData(item);
+
+    if (gallery) {
+      return <GalleryEntityCard gallery={gallery} />;
+    }
+  }
+
+  if (item.kind === "image") {
+    const image = searchImageItemToCardData(item);
+
+    if (image) {
+      return <ImageEntityCard image={image} />;
+    }
+  }
+
+  if (item.kind === "performer") {
+    const performer = searchPerformerItemToCardData(item);
+
+    if (performer) {
+      return <PerformerEntityCard performer={performer} />;
+    }
+  }
+
+  if (item.kind === "studio") {
+    const studio = searchStudioItemToCardData(item);
+
+    if (studio) {
+      return <StudioEntityCard studio={studio} />;
+    }
+  }
+
   const Icon = KIND_CONFIG[item.kind].icon;
   const imgSrc = toApiUrl(item.imagePath);
 
   if (item.kind === "tag") {
-    return (
-      <Link
-        href={item.href}
-        className="tag-chip tag-chip-default hover:tag-chip-accent cursor-pointer transition-colors duration-fast flex items-center gap-1.5 justify-center py-2"
-      >
-        <Tag className="h-3 w-3" />
-        <span className="truncate">{item.title}</span>
-        {item.subtitle && (
-          <span className="text-text-disabled text-[0.6rem]">{item.subtitle}</span>
-        )}
-      </Link>
-    );
+    const tag = searchTagItemToCardData(item);
+
+    if (tag) {
+      return <TagEntityCard tag={tag} />;
+    }
   }
 
   return (

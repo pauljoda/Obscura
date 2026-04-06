@@ -46,7 +46,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       if (isModK(e)) {
         e.preventDefault();
         e.stopPropagation();
-        setOpen((prev) => !prev);
+        setOpen(true);
         return;
       }
       if (e.key === "Escape" && openRef.current) {

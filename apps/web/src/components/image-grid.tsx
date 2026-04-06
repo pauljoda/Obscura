@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Loader2, ImageOff, Film } from "lucide-react";
+import { Loader2, ImageOff } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl } from "../lib/api";
-import { useElementInView } from "../hooks/use-element-in-view";
-import { canUseInlineVideoPreview, isVideoImage } from "../lib/image-media";
 import type { ImageListItemDto } from "@obscura/contracts";
+import { ImageEntityCard } from "./images/image-entity-card";
+import { imageItemToCardData } from "./images/image-card-data";
 
 interface ImageGridProps {
   images: ImageListItemDto[];
@@ -39,10 +37,10 @@ export function ImageGrid({
         style={{ contentVisibility: "auto" }}
       >
         {images.map((image, index) => (
-          <ImageCell
+          <ImageEntityCard
             key={image.id}
-            image={image}
-            onClick={() => onImageClick?.(index)}
+            image={imageItemToCardData(image)}
+            onSelect={() => onImageClick?.(index)}
           />
         ))}
       </div>
@@ -62,75 +60,6 @@ export function ImageGrid({
             {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
             {loadingMore ? "Loading..." : "Load more images"}
           </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ImageCell({
-  image,
-  onClick,
-}: {
-  image: ImageListItemDto;
-  onClick: () => void;
-}) {
-  const [error, setError] = useState(false);
-  const [hovering, setHovering] = useState(false);
-  const [previewFailed, setPreviewFailed] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useElementInView(containerRef, { rootMargin: "320px" });
-  const thumbUrl = toApiUrl(image.thumbnailPath);
-  const previewUrl = toApiUrl(image.previewPath);
-  const isVideo = isVideoImage(image);
-
-  const handleError = useCallback(() => setError(true), []);
-  const canPreview = canUseInlineVideoPreview(image) && !previewFailed;
-  const showVideoPreview = canPreview && isInView && hovering;
-
-  return (
-    <div
-      ref={containerRef}
-      className="group relative mb-1 break-inside-avoid"
-      onPointerEnter={() => setHovering(true)}
-      onPointerLeave={() => setHovering(false)}
-    >
-      <button
-        type="button"
-        onClick={onClick}
-        className="block w-full cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-sm overflow-hidden"
-      >
-        {error || !thumbUrl ? (
-          <div className="flex items-center justify-center bg-surface-2 aspect-square">
-            <ImageOff className="h-6 w-6 text-text-disabled" />
-          </div>
-        ) : showVideoPreview && previewUrl ? (
-          <video
-            src={previewUrl}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="none"
-            poster={thumbUrl}
-            onError={() => setPreviewFailed(true)}
-            className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
-          />
-        ) : (
-          <img
-            src={thumbUrl}
-            alt={image.title}
-            loading="lazy"
-            decoding="async"
-            onError={handleError}
-            className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
-          />
-        )}
-      </button>
-
-      {isVideo && (
-        <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
-          <Film className="h-3 w-3" />
         </div>
       )}
     </div>

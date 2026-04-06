@@ -23,6 +23,18 @@ import { useSearchPalette } from "./search-context";
 import { useSearch } from "../../hooks/use-search";
 import { useRecentSearches } from "../../hooks/use-recent-searches";
 import { toApiUrl } from "../../lib/api";
+import { GalleryEntityCard } from "../galleries/gallery-entity-card";
+import { searchGalleryItemToCardData } from "../galleries/gallery-card-data";
+import { ImageEntityCard } from "../images/image-entity-card";
+import { searchImageItemToCardData } from "../images/image-card-data";
+import { PerformerEntityCard } from "../performers/performer-entity-card";
+import { searchPerformerItemToCardData } from "../performers/performer-card-data";
+import { SceneCard } from "../scenes/scene-card";
+import { searchSceneItemToCardData } from "../scenes/scene-card-data";
+import { StudioEntityCard } from "../studios/studio-entity-card";
+import { searchStudioItemToCardData } from "../studios/studio-card-data";
+import { TagEntityCard } from "../tags/tag-entity-card";
+import { searchTagItemToCardData } from "../tags/tag-card-data";
 
 const KIND_ICON: Record<EntityKind, typeof Film> = {
   scene: Film,
@@ -309,6 +321,54 @@ function ResultRow({
   item: SearchResultItem;
   onNavigate: (href: string) => void;
 }) {
+  if (item.kind === "scene") {
+    const scene = searchSceneItemToCardData(item);
+
+    if (scene) {
+      return <SceneCard scene={scene} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
+  if (item.kind === "gallery") {
+    const gallery = searchGalleryItemToCardData(item);
+
+    if (gallery) {
+      return <GalleryEntityCard gallery={gallery} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
+  if (item.kind === "image") {
+    const image = searchImageItemToCardData(item);
+
+    if (image) {
+      return <ImageEntityCard image={image} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
+  if (item.kind === "performer") {
+    const performer = searchPerformerItemToCardData(item);
+
+    if (performer) {
+      return <PerformerEntityCard performer={performer} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
+  if (item.kind === "studio") {
+    const studio = searchStudioItemToCardData(item);
+
+    if (studio) {
+      return <StudioEntityCard studio={studio} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
+  if (item.kind === "tag") {
+    const tag = searchTagItemToCardData(item);
+
+    if (tag) {
+      return <TagEntityCard tag={tag} variant="compact" onSelect={onNavigate} />;
+    }
+  }
+
   const Icon = KIND_ICON[item.kind];
   const imgSrc = toApiUrl(item.imagePath);
 
