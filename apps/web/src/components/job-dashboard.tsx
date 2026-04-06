@@ -19,9 +19,11 @@ import {
   AlertTriangle,
   ListChecks,
   Ban,
+  Square,
 } from "lucide-react";
 import {
   acknowledgeJobFailures,
+  cancelQueue,
   fetchJobsDashboard,
   runQueue,
   type JobRun,
@@ -60,6 +62,7 @@ export function JobDashboard() {
   const [dashboard, setDashboard] = useState<JobsDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [runningQueue, setRunningQueue] = useState<string | null>(null);
+  const [cancellingQueue, setCancellingQueue] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -98,6 +101,21 @@ export function JobDashboard() {
       setError(runError instanceof Error ? runError.message : "Failed to queue jobs");
     } finally {
       setRunningQueue(null);
+    }
+  }
+
+  async function handleCancel(queueName: string) {
+    setCancellingQueue(queueName);
+    setMessage(null);
+
+    try {
+      const response = await cancelQueue(queueName);
+      setMessage(`Cancelled ${queueName} jobs (${response.activeRemoved} active, ${response.waitingRemoved} waiting).`);
+      await loadDashboard();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel jobs");
+    } finally {
+      setCancellingQueue(null);
     }
   }
 
@@ -283,6 +301,18 @@ export function JobDashboard() {
                         title="Remove failed jobs from this queue and mark matching history as acknowledged"
                       >
                         {acknowledging === queue.name ? "…" : "Clear"}
+                      </button>
+                    )}
+                    {(queue.active > 0 || queue.waiting > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleCancel(queue.name)}
+                        disabled={cancellingQueue === queue.name}
+                        className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-status-error-text transition-colors disabled:opacity-40"
+                        title="Cancel all active and waiting jobs in this queue"
+                      >
+                        <Square className="h-3 w-3" />
+                        {cancellingQueue === queue.name ? "…" : "Stop"}
                       </button>
                     )}
                     <button

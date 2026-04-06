@@ -837,6 +837,15 @@ export async function runQueue(queueName: string): Promise<{
   });
 }
 
+export async function cancelQueue(queueName: string): Promise<{
+  ok: boolean;
+  queueName: string;
+  waitingRemoved: number;
+  activeRemoved: number;
+}> {
+  return fetchApi(`/jobs/queues/${queueName}/cancel`, { method: "POST" });
+}
+
 export async function rebuildScenePreview(sceneId: string): Promise<{
   ok: boolean;
   jobId: string;

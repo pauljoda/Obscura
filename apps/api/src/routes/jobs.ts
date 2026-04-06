@@ -200,6 +200,54 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
   });
 
+  // ─── Cancel all jobs in a queue ────────────────────────────────
+  app.post("/jobs/queues/:queueName/cancel", async (request, reply) => {
+    const { queueName } = request.params as { queueName: QueueName };
+
+    if (!queueDefinitions.find((definition) => definition.name === queueName)) {
+      reply.code(404);
+      return { error: "Unknown queue" };
+    }
+
+    const queue = getQueue(queueName);
+
+    // Remove waiting jobs
+    const waitingRemoved = await queue.drain();
+
+    // Remove active jobs
+    const activeJobs = await queue.getActive();
+    let activeRemoved = 0;
+    for (const job of activeJobs) {
+      try {
+        await job.moveToFailed(new Error("Cancelled by user"), "0", true);
+        activeRemoved += 1;
+      } catch {
+        // Job may have already completed
+      }
+    }
+
+    // Mark in-progress job_runs as dismissed
+    await db
+      .update(jobRuns)
+      .set({ status: "dismissed", error: "Cancelled by user", updatedAt: new Date() })
+      .where(
+        and(
+          eq(jobRuns.queueName, queueName),
+          inArray(jobRuns.status, ["queued", "active"])
+        )
+      );
+
+    // Clean up the failed jobs we just created
+    await queue.clean(0, 100_000, "failed");
+
+    return {
+      ok: true,
+      queueName,
+      waitingRemoved: typeof waitingRemoved === "undefined" ? 0 : 1,
+      activeRemoved,
+    };
+  });
+
   // ─── Diagnostics: force-rebuild previews ──────────────────────
   app.post("/jobs/rebuild-preview/:sceneId", async (request, reply) => {
     const { sceneId } = request.params as { sceneId: string };
