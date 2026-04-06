@@ -837,6 +837,13 @@ export async function runQueue(queueName: string): Promise<{
   });
 }
 
+export async function rebuildScenePreview(sceneId: string): Promise<{
+  ok: boolean;
+  jobId: string;
+}> {
+  return fetchApi(`/jobs/rebuild-preview/${sceneId}`, { method: "POST" });
+}
+
 export async function rebuildPreviews(): Promise<{
   ok: boolean;
   enqueued: number;

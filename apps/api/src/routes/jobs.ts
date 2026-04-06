@@ -201,6 +201,49 @@ export async function jobsRoutes(app: FastifyInstance) {
   });
 
   // ─── Diagnostics: force-rebuild previews ──────────────────────
+  app.post("/jobs/rebuild-preview/:sceneId", async (request, reply) => {
+    const { sceneId } = request.params as { sceneId: string };
+    const scene = await db.query.scenes.findFirst({
+      where: eq(scenes.id, sceneId),
+      columns: { id: true, title: true },
+    });
+
+    if (!scene) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    await db
+      .update(scenes)
+      .set({
+        thumbnailPath: null,
+        cardThumbnailPath: null,
+        previewPath: null,
+        spritePath: null,
+        trickplayVttPath: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(scenes.id, sceneId));
+
+    const queue = getQueue("preview");
+    const job = await queue.add(
+      "scene-preview",
+      { sceneId },
+      { jobId: `preview:${sceneId}:${Date.now()}` }
+    );
+
+    await recordQueuedJob({
+      queueName: "preview",
+      bullmqJobId: String(job.id),
+      targetType: "scene",
+      targetId: scene.id,
+      targetLabel: scene.title,
+      payload: { sceneId },
+    });
+
+    return { ok: true, jobId: String(job.id) };
+  });
+
   app.post("/jobs/rebuild-previews", async (_request, reply) => {
     // Clear all generated preview asset paths so every scene is re-queued
     await db

@@ -27,12 +27,14 @@ import {
   Trash2,
   X,
   MapPin,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import {
   fetchSceneDetail,
   fetchTags,
   updateScene,
+  rebuildScenePreview,
   trackPlay,
   trackOrgasm,
   createMarker,
@@ -221,6 +223,19 @@ export function SceneDetail({
     }
   }
 
+  const [rebuildingPreview, setRebuildingPreview] = useState(false);
+
+  async function handleRebuildPreview() {
+    setRebuildingPreview(true);
+    try {
+      await rebuildScenePreview(id);
+    } catch {
+      // silent
+    } finally {
+      setRebuildingPreview(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -367,6 +382,17 @@ export function SceneDetail({
               title={scene.organized ? "Marked as organized" : "Mark as organized"}
             >
               <CheckCircle2 className="h-4 w-4" />
+            </button>
+
+            {/* Rebuild preview */}
+            <button
+              type="button"
+              onClick={() => void handleRebuildPreview()}
+              disabled={rebuildingPreview}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-sm text-text-disabled hover:text-text-muted hover:bg-surface-2 transition-colors duration-fast disabled:opacity-50"
+              title="Rebuild thumbnails and trickplay"
+            >
+              <RefreshCw className={cn("h-4 w-4", rebuildingPreview && "animate-spin")} />
             </button>
           </div>
         </div>
