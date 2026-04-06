@@ -2,7 +2,10 @@ export const appShellSections = [
   {
     id: "overview",
     kicker: "Overview",
-    items: [{ label: "Dashboard", href: "/", icon: "layout-dashboard" }],
+    items: [
+      { label: "Dashboard", href: "/", icon: "layout-dashboard" },
+      { label: "Search", href: "/search", icon: "search" },
+    ],
   },
   {
     id: "browse",
@@ -15,7 +18,6 @@ export const appShellSections = [
       { label: "Studios", href: "/studios", icon: "building" },
       { label: "Tags", href: "/tags", icon: "tags" },
       { label: "Collections", href: "/collections", icon: "folder" },
-      { label: "Search", href: "/search", icon: "search" },
     ],
   },
   {
