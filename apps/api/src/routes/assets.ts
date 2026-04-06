@@ -148,13 +148,10 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     const assetPath = kindToPath[resolvedKind];
 
-    // Thumbnails can change (user re-picks frame), so use no-cache to allow
-    // revalidation.  Sprites, previews, and trickplay maps are immutable once
-    // generated, so they keep aggressive caching.
-    const cacheHeader =
-      resolvedKind === "thumb" || resolvedKind === "card"
-        ? "no-cache"
-        : "public, max-age=86400, immutable";
+    // All generated assets use no-cache so regenerated files are picked up
+    // immediately after a rebuild. The browser will revalidate with the server
+    // but still uses its cached copy when the file hasn't changed.
+    const cacheHeader = "no-cache";
 
     // Try sidecar path first, then fall back to legacy cache dir
     if (existsSync(assetPath)) {

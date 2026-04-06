@@ -1,6 +1,8 @@
+import { existsSync, unlinkSync } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import { and, desc, eq, inArray, isNull, not, like, or } from "drizzle-orm";
 import { queueDefinitions, type QueueName } from "@obscura/contracts";
+import { getSidecarPaths } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
 import { getQueue } from "../lib/queues";
@@ -253,12 +255,24 @@ export async function jobsRoutes(app: FastifyInstance) {
     const { sceneId } = request.params as { sceneId: string };
     const scene = await db.query.scenes.findFirst({
       where: eq(scenes.id, sceneId),
-      columns: { id: true, title: true },
+      columns: { id: true, title: true, filePath: true },
     });
 
     if (!scene) {
       reply.code(404);
       return { error: "Scene not found" };
+    }
+
+    // Delete existing sidecar files so stale assets aren't served
+    if (scene.filePath) {
+      const sidecar = getSidecarPaths(scene.filePath);
+      for (const file of Object.values(sidecar)) {
+        try {
+          if (existsSync(file)) unlinkSync(file);
+        } catch {
+          // ignore — file may already be gone
+        }
+      }
     }
 
     await db
