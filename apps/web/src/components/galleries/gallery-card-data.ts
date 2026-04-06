@@ -41,7 +41,7 @@ export function galleryListItemToCardData(gallery: GalleryListItemDto): GalleryC
     rating: gallery.rating ?? undefined,
     date: gallery.date ?? undefined,
     coverImage: toApiUrl(gallery.coverImagePath),
-    previewImages: gallery.previewImagePaths.map(toApiUrl).filter(Boolean) as string[],
+    previewImages: gallery.previewImagePaths.map((p) => toApiUrl(p)).filter(Boolean) as string[],
     tags: gallery.tags.map((tag) => tag.name),
   };
 }
@@ -61,7 +61,7 @@ export function searchGalleryItemToCardData(item: SearchResultItem): GalleryCard
       const raw = readMetaString(item.meta, "previewImagePaths");
       if (!raw) return [];
       try {
-        return (JSON.parse(raw) as string[]).map(toApiUrl).filter(Boolean) as string[];
+        return (JSON.parse(raw) as string[]).map((p) => toApiUrl(p)).filter(Boolean) as string[];
       } catch {
         return [];
       }

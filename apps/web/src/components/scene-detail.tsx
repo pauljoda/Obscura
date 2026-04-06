@@ -288,8 +288,8 @@ export function SceneDetail({
         duration={scene.duration ?? undefined}
         onPlayStarted={handlePlayStarted}
         onTimeUpdate={handleTimeUpdate}
-        trickplaySprite={toApiUrl(scene.spritePath)}
-        trickplayVtt={toApiUrl(scene.trickplayVttPath)}
+        trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
+        trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
       />
 
       {/* Scene header */}

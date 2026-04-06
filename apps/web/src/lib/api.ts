@@ -1251,14 +1251,15 @@ export async function fetchSearch(params: {
   return fetchApi(`/search?${sp}`, { signal });
 }
 
-export function toApiUrl(assetPath: string | null | undefined) {
+export function toApiUrl(assetPath: string | null | undefined, cacheBust?: string) {
   if (!assetPath) {
     return undefined;
   }
 
   if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
-    return assetPath;
+    return cacheBust ? `${assetPath}?v=${encodeURIComponent(cacheBust)}` : assetPath;
   }
 
-  return `${API_BASE}${assetPath}`;
+  const url = `${API_BASE}${assetPath}`;
+  return cacheBust ? `${url}?v=${encodeURIComponent(cacheBust)}` : url;
 }
