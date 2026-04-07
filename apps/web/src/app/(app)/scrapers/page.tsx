@@ -31,8 +31,8 @@ import {
   type ScraperPackage,
 } from "../../../lib/api";
 
-import { DashboardStatTile } from "../../dashboard/dashboard-stat-tile";
-import { DASHBOARD_STAT_GRADIENTS } from "../../dashboard/dashboard-utils";
+import { DashboardStatTile } from "../../../components/dashboard/dashboard-stat-tile";
+import { DASHBOARD_STAT_GRADIENTS } from "../../../components/dashboard/dashboard-utils";
 
 /** Human-readable capability names and their category */
 const CAPABILITY_META: Record<string, { label: string; category: "scene" | "performer" | "gallery" | "group" }> = {
