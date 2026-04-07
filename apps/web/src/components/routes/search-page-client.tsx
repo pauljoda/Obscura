@@ -1,49 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search,
   X,
-  Film,
-  Users,
-  Building2,
-  Tag,
-  Images,
-  Image,
   ChevronDown,
   Loader2,
   SlidersHorizontal,
   Star,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { EntityKind, SearchResultItem, SearchResultGroup } from "@obscura/contracts";
+import type { EntityKind, SearchResultItem } from "@obscura/contracts";
 import { useSearch } from "../../hooks/use-search";
-import { fetchSearch, toApiUrl } from "../../lib/api";
-import { GalleryEntityCard } from "../galleries/gallery-entity-card";
-import { searchGalleryItemToCardData } from "../galleries/gallery-card-data";
-import { ImageEntityCard } from "../images/image-entity-card";
-import { searchImageItemToCardData } from "../images/image-card-data";
-import { PerformerEntityCard } from "../performers/performer-entity-card";
-import { searchPerformerItemToCardData } from "../performers/performer-card-data";
-import { SceneCard } from "../scenes/scene-card";
-import { searchSceneItemToCardData } from "../scenes/scene-card-data";
-import { StudioEntityCard } from "../studios/studio-entity-card";
-import { searchStudioItemToCardData } from "../studios/studio-card-data";
-import { TagEntityCard } from "../tags/tag-entity-card";
-import { searchTagItemToCardData } from "../tags/tag-card-data";
-
-const ALL_KINDS: EntityKind[] = ["scene", "performer", "studio", "tag", "gallery", "image"];
-
-const KIND_CONFIG: Record<EntityKind, { label: string; icon: typeof Film; href: string }> = {
-  scene: { label: "Scenes", icon: Film, href: "/scenes" },
-  performer: { label: "Performers", icon: Users, href: "/performers" },
-  studio: { label: "Studios", icon: Building2, href: "/studios" },
-  tag: { label: "Tags", icon: Tag, href: "/tags" },
-  gallery: { label: "Galleries", icon: Images, href: "/galleries" },
-  image: { label: "Images", icon: Image, href: "/images" },
-};
+import { fetchSearch } from "../../lib/api";
+import { SEARCH_KIND_CONFIG, ALL_SEARCH_KINDS } from "../search/search-kind-config";
+import { SearchResultCard } from "../search/search-result-card";
 
 const PAGE_SIZE = 20;
 
@@ -54,14 +27,17 @@ interface SearchPageClientProps {
 
 export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClientProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [query, setQuery] = useState(initialQuery);
   const [activeKinds, setActiveKinds] = useState<Set<EntityKind>>(() => {
     if (initialKinds) {
-      return new Set(initialKinds.split(",").filter((k): k is EntityKind => ALL_KINDS.includes(k as EntityKind)));
+      return new Set(
+        initialKinds
+          .split(",")
+          .filter((kind): kind is EntityKind => ALL_SEARCH_KINDS.includes(kind as EntityKind)),
+      );
     }
-    return new Set(ALL_KINDS);
+    return new Set(ALL_SEARCH_KINDS);
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minRating, setMinRating] = useState<number | null>(null);
@@ -81,7 +57,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
 
   const { data, loading } = useSearch(query, {
     debounceMs: 300,
-    kinds: kindsArray.length < ALL_KINDS.length ? kindsArray : undefined,
+    kinds: kindsArray.length < ALL_SEARCH_KINDS.length ? kindsArray : undefined,
     limit: 6,
     rating: minRating ?? undefined,
     dateFrom: dateFrom || undefined,
@@ -93,7 +69,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
     const timer = setTimeout(() => {
       const params = new URLSearchParams();
       if (query.trim()) params.set("q", query.trim());
-      if (activeKinds.size < ALL_KINDS.length) {
+      if (activeKinds.size < ALL_SEARCH_KINDS.length) {
         params.set("kinds", Array.from(activeKinds).join(","));
       }
       const qs = params.toString();
@@ -196,8 +172,8 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
 
         {/* Entity kind toggles + filter button */}
         <div className="flex items-center gap-2 flex-wrap">
-          {ALL_KINDS.map((kind) => {
-            const config = KIND_CONFIG[kind];
+          {ALL_SEARCH_KINDS.map((kind) => {
+            const config = SEARCH_KIND_CONFIG[kind];
             const Icon = config.icon;
             const active = activeKinds.has(kind);
             return (
@@ -356,7 +332,7 @@ function SearchSection({
   loadingMore: boolean;
   onLoadMore: () => void;
 }) {
-  const config = KIND_CONFIG[kind];
+  const config = SEARCH_KIND_CONFIG[kind];
   const Icon = config.icon;
 
   return (
@@ -396,7 +372,7 @@ function SearchSection({
         )}
       >
         {items.map((item) => (
-          <SearchCard key={item.id} item={item} />
+          <SearchResultCard key={item.id} item={item} />
         ))}
       </div>
 
@@ -424,110 +400,5 @@ function SearchSection({
         </div>
       )}
     </div>
-  );
-}
-
-function SearchCard({ item }: { item: SearchResultItem }) {
-  if (item.kind === "scene") {
-    const scene = searchSceneItemToCardData(item);
-
-    if (scene) {
-      return <SceneCard scene={scene} />;
-    }
-  }
-
-  if (item.kind === "gallery") {
-    const gallery = searchGalleryItemToCardData(item);
-
-    if (gallery) {
-      return <GalleryEntityCard gallery={gallery} />;
-    }
-  }
-
-  if (item.kind === "image") {
-    const image = searchImageItemToCardData(item);
-
-    if (image) {
-      return <ImageEntityCard image={image} />;
-    }
-  }
-
-  if (item.kind === "performer") {
-    const performer = searchPerformerItemToCardData(item);
-
-    if (performer) {
-      return <PerformerEntityCard performer={performer} />;
-    }
-  }
-
-  if (item.kind === "studio") {
-    const studio = searchStudioItemToCardData(item);
-
-    if (studio) {
-      return <StudioEntityCard studio={studio} />;
-    }
-  }
-
-  const Icon = KIND_CONFIG[item.kind].icon;
-  const imgSrc = toApiUrl(item.imagePath);
-
-  if (item.kind === "tag") {
-    const tag = searchTagItemToCardData(item);
-
-    if (tag) {
-      return <TagEntityCard tag={tag} />;
-    }
-  }
-
-  return (
-    <Link
-      href={item.href}
-      className="surface-card-sharp group flex items-center gap-3 p-2 transition-colors duration-fast"
-    >
-      {/* Thumbnail */}
-      <div
-        className={cn(
-          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center",
-          item.kind === "performer"
-            ? "h-12 w-12 rounded-full"
-            : "h-12 w-20 rounded-sm"
-        )}
-      >
-        {imgSrc ? (
-          <img src={imgSrc} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <Icon className="h-4 w-4 text-text-disabled" />
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-text-primary group-hover:text-text-accent truncate transition-colors duration-fast">
-          {item.title}
-        </div>
-        {item.subtitle && (
-          <div className="text-[0.68rem] text-text-muted truncate">{item.subtitle}</div>
-        )}
-        {item.rating && (
-          <div className="flex items-center gap-0.5 mt-0.5">
-            {Array.from({ length: 5 }, (_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  "h-2.5 w-2.5",
-                  i < item.rating! ? "text-text-accent" : "text-text-disabled/30"
-                )}
-                fill={i < item.rating! ? "currentColor" : "none"}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Type indicator */}
-      <span className="shrink-0 tag-chip tag-chip-default text-[0.55rem]">
-        {item.kind}
-      </span>
-    </Link>
   );
 }

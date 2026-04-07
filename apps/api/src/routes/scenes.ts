@@ -4,6 +4,7 @@ import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
+import { formatDuration, formatFileSize, getResolutionLabel } from "@obscura/contracts";
 import {
   writeNfo,
   getSidecarPaths,
@@ -14,35 +15,6 @@ import {
 } from "@obscura/media-core";
 
 const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios } = schema;
-
-// Helper: format file size
-function formatFileSize(bytes: number | null): string | null {
-  if (!bytes) return null;
-  const gb = bytes / (1024 * 1024 * 1024);
-  if (gb >= 1) return `${gb.toFixed(1)} GB`;
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(0)} MB`;
-}
-
-// Helper: format duration
-function formatDuration(seconds: number | null): string | null {
-  if (!seconds) return null;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-// Helper: resolution label
-function resolutionLabel(width: number | null, height: number | null): string | null {
-  if (!height) return null;
-  if (height >= 2160) return "4K";
-  if (height >= 1080) return "1080p";
-  if (height >= 720) return "720p";
-  if (height >= 480) return "480p";
-  return `${height}p`;
-}
 
 export async function scenesRoutes(app: FastifyInstance) {
   // ─── GET /scenes ──────────────────────────────────────────────
@@ -223,7 +195,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       organized: scene.organized,
       duration: scene.duration,
       durationFormatted: formatDuration(scene.duration),
-      resolution: resolutionLabel(scene.width, scene.height),
+      resolution: getResolutionLabel(scene.height),
       width: scene.width,
       height: scene.height,
       codec: scene.codec?.toUpperCase() ?? null,
@@ -329,7 +301,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       interactive: scene.interactive,
       duration: scene.duration,
       durationFormatted: formatDuration(scene.duration),
-      resolution: resolutionLabel(scene.width, scene.height),
+      resolution: getResolutionLabel(scene.height),
       width: scene.width,
       height: scene.height,
       frameRate: scene.frameRate,

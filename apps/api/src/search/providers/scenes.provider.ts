@@ -1,31 +1,9 @@
+import { formatDuration, formatFileSize, getResolutionLabel } from "@obscura/contracts";
 import { db, schema } from "../../db";
 import { ilike, or, sql, and, gte, lte, count, eq, exists } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 
 const { scenes, studios, scenePerformers, performers, sceneTags, tags } = schema;
-
-function formatDuration(seconds: number | null): string | null {
-  if (!seconds) return null;
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }
-
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function resolutionLabel(height: number | null): string | null {
-  if (!height) return null;
-  if (height >= 2160) return "4K";
-  if (height >= 1080) return "1080p";
-  if (height >= 720) return "720p";
-  if (height >= 480) return "480p";
-  return `${height}p`;
-}
 
 export const scenesSearchProvider: SearchProvider = {
   kind: "scene",
@@ -108,15 +86,10 @@ export const scenesSearchProvider: SearchProvider = {
         meta: {
           durationSeconds: r.duration,
           durationFormatted: formatDuration(r.duration),
-          resolution: resolutionLabel(r.height),
+          resolution: getResolutionLabel(r.height),
           codec: r.codec,
           cardThumbnailPath: r.cardThumbnailPath,
-          fileSizeFormatted:
-            r.fileSize && r.fileSize >= 1024 * 1024 * 1024
-              ? `${(r.fileSize / (1024 * 1024 * 1024)).toFixed(1)} GB`
-              : r.fileSize
-                ? `${(r.fileSize / (1024 * 1024)).toFixed(0)} MB`
-                : null,
+          fileSizeFormatted: formatFileSize(r.fileSize),
           spritePath: r.spritePath,
           trickplayVttPath: r.trickplayVttPath,
           studio: r.studioName,

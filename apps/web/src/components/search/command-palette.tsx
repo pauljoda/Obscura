@@ -3,56 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Search,
   X,
   Clock,
-  Film,
-  Users,
-  Building2,
-  Tag,
-  Images,
-  Image,
   ArrowRight,
   Trash2,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { EntityKind, SearchResultItem, SearchResultGroup } from "@obscura/contracts";
+import type { SearchResultItem, SearchResultGroup } from "@obscura/contracts";
 import { useSearchPalette } from "./search-context";
 import { useSearch } from "../../hooks/use-search";
 import { useRecentSearches } from "../../hooks/use-recent-searches";
-import { toApiUrl } from "../../lib/api";
-import { GalleryEntityCard } from "../galleries/gallery-entity-card";
-import { searchGalleryItemToCardData } from "../galleries/gallery-card-data";
-import { ImageEntityCard } from "../images/image-entity-card";
-import { searchImageItemToCardData } from "../images/image-card-data";
-import { PerformerEntityCard } from "../performers/performer-entity-card";
-import { searchPerformerItemToCardData } from "../performers/performer-card-data";
-import { SceneCard } from "../scenes/scene-card";
-import { searchSceneItemToCardData } from "../scenes/scene-card-data";
-import { StudioEntityCard } from "../studios/studio-entity-card";
-import { searchStudioItemToCardData } from "../studios/studio-card-data";
-import { TagEntityCard } from "../tags/tag-entity-card";
-import { searchTagItemToCardData } from "../tags/tag-card-data";
-
-const KIND_ICON: Record<EntityKind, typeof Film> = {
-  scene: Film,
-  performer: Users,
-  studio: Building2,
-  tag: Tag,
-  gallery: Images,
-  image: Image,
-};
-
-const KIND_LABEL: Record<EntityKind, string> = {
-  scene: "Scenes",
-  performer: "Performers",
-  studio: "Studios",
-  tag: "Tags",
-  gallery: "Galleries",
-  image: "Images",
-};
+import { SEARCH_KIND_CONFIG } from "./search-kind-config";
+import { SearchResultCard } from "./search-result-card";
 
 export function CommandPalette() {
   const { open, closePalette } = useSearchPalette();
@@ -287,13 +251,13 @@ function ResultGroup({
   onNavigate: (href: string) => void;
   query: string;
 }) {
-  const Icon = KIND_ICON[group.kind];
+  const { icon: Icon, label } = SEARCH_KIND_CONFIG[group.kind];
 
   return (
     <div>
       <div className="flex items-center gap-2 px-4 py-1.5">
         <Icon className="h-3 w-3 text-text-disabled" />
-        <span className="text-kicker">{KIND_LABEL[group.kind]}</span>
+        <span className="text-kicker">{label}</span>
         <span className="text-[0.55rem] font-mono text-text-disabled">{group.total}</span>
       </div>
       {group.items.map((item) => (
@@ -307,7 +271,7 @@ function ResultGroup({
           className="flex items-center gap-1.5 px-4 py-1 text-[0.68rem] text-text-muted hover:text-text-accent transition-colors duration-fast w-full"
         >
           <ArrowRight className="h-2.5 w-2.5" />
-          <span>View all {group.total} {KIND_LABEL[group.kind].toLowerCase()}</span>
+        <span>View all {group.total} {label.toLowerCase()}</span>
         </button>
       )}
     </div>
@@ -321,96 +285,5 @@ function ResultRow({
   item: SearchResultItem;
   onNavigate: (href: string) => void;
 }) {
-  if (item.kind === "scene") {
-    const scene = searchSceneItemToCardData(item);
-
-    if (scene) {
-      return <SceneCard scene={scene} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  if (item.kind === "gallery") {
-    const gallery = searchGalleryItemToCardData(item);
-
-    if (gallery) {
-      return <GalleryEntityCard gallery={gallery} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  if (item.kind === "image") {
-    const image = searchImageItemToCardData(item);
-
-    if (image) {
-      return <ImageEntityCard image={image} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  if (item.kind === "performer") {
-    const performer = searchPerformerItemToCardData(item);
-
-    if (performer) {
-      return <PerformerEntityCard performer={performer} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  if (item.kind === "studio") {
-    const studio = searchStudioItemToCardData(item);
-
-    if (studio) {
-      return <StudioEntityCard studio={studio} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  if (item.kind === "tag") {
-    const tag = searchTagItemToCardData(item);
-
-    if (tag) {
-      return <TagEntityCard tag={tag} variant="compact" onSelect={onNavigate} />;
-    }
-  }
-
-  const Icon = KIND_ICON[item.kind];
-  const imgSrc = toApiUrl(item.imagePath);
-
-  return (
-    <button
-      onClick={() => onNavigate(item.href)}
-      className={cn(
-        "flex items-center gap-3 w-full px-4 py-2",
-        "hover:bg-surface-2 transition-colors duration-fast",
-        "text-left"
-      )}
-    >
-      {/* Thumbnail */}
-      <div
-        className={cn(
-          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center",
-          item.kind === "performer" ? "h-8 w-8 rounded-full" : "h-8 w-12 rounded-sm"
-        )}
-      >
-        {imgSrc ? (
-          <img
-            src={imgSrc}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <Icon className="h-3.5 w-3.5 text-text-disabled" />
-        )}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-text-primary truncate">{item.title}</div>
-        {item.subtitle && (
-          <div className="text-[0.68rem] text-text-muted truncate">{item.subtitle}</div>
-        )}
-      </div>
-
-      {/* Type badge */}
-      <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">
-        {item.kind}
-      </span>
-    </button>
-  );
+  return <SearchResultCard item={item} variant="compact" onSelect={onNavigate} />;
 }

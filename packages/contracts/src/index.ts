@@ -57,6 +57,17 @@ export const API_BASE_URL =
     ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000")
     : (process.env.API_URL ?? "http://localhost:4000");
 
+export {
+  canUseInlineVideoPreview,
+  formatDuration,
+  formatFileSize,
+  getResolutionLabel,
+  isVideoImage,
+  isVideoImageFormat,
+  VIDEO_IMAGE_FORMATS,
+  VIDEO_PREVIEW_MAX_FILE_SIZE_BYTES,
+} from "./media";
+
 export const queueDefinitions = [
   { name: "library-scan", description: "Discovers files in configured media roots" },
   { name: "media-probe", description: "Extracts technical metadata using ffprobe" },

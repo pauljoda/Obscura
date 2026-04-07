@@ -1,6 +1,7 @@
 "use client";
 
 import type { SearchResultItem } from "@obscura/contracts";
+import { formatDuration } from "@obscura/contracts";
 import { toApiUrl, type SceneListItem } from "../../lib/api";
 
 export interface SceneCardPerformer {
@@ -26,20 +27,6 @@ export interface SceneCardData {
   tags?: string[];
   rating?: number;
   views?: number;
-}
-
-function formatDuration(seconds: number | null | undefined): string | undefined {
-  if (!seconds) return undefined;
-
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  }
-
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function readMetaString(meta: SearchResultItem["meta"], key: string): string | undefined {
@@ -102,7 +89,7 @@ export function searchSceneItemToCardData(item: SearchResultItem): SceneCardData
     scrubDurationSeconds: readMetaNumber(item.meta, "durationSeconds"),
     duration:
       readMetaString(item.meta, "durationFormatted") ??
-      formatDuration(readMetaNumber(item.meta, "durationSeconds")),
+      formatDuration(readMetaNumber(item.meta, "durationSeconds")) ?? undefined,
     resolution: readMetaString(item.meta, "resolution"),
     codec: readMetaString(item.meta, "codec"),
     fileSize: readMetaString(item.meta, "fileSizeFormatted"),
