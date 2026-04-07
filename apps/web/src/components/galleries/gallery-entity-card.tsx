@@ -16,12 +16,14 @@ const typeIcons = {
 interface GalleryEntityCardProps {
   gallery: GalleryCardData;
   variant?: "grid" | "list" | "compact";
+  aspectRatio?: "video" | "standard" | "portrait";
   onSelect?: (href: string) => void;
 }
 
 export function GalleryEntityCard({
   gallery,
   variant = "grid",
+  aspectRatio = "standard",
   onSelect,
 }: GalleryEntityCardProps) {
   if (variant === "list") {
@@ -32,10 +34,16 @@ export function GalleryEntityCard({
     return <GalleryCompactCard gallery={gallery} onSelect={onSelect} />;
   }
 
-  return <GalleryGridCard gallery={gallery} />;
+  return <GalleryGridCard gallery={gallery} aspectRatio={aspectRatio} />;
 }
 
-function GalleryGridCard({ gallery }: { gallery: GalleryCardData }) {
+function GalleryGridCard({ 
+  gallery, 
+  aspectRatio = "standard" 
+}: { 
+  gallery: GalleryCardData;
+  aspectRatio?: "video" | "standard" | "portrait";
+}) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -73,15 +81,20 @@ function GalleryGridCard({ gallery }: { gallery: GalleryCardData }) {
   const showVideo =
     hovering && isInView && previewVideoUrl && !videoFailed && previews.length <= 1;
 
+  const aspectClass = 
+    aspectRatio === "video" ? "aspect-video" : 
+    aspectRatio === "portrait" ? "aspect-[3/4]" : 
+    "aspect-[4/3]";
+
   return (
     <Link href={gallery.href}>
       <div
         ref={cardRef}
-        className="surface-card-sharp media-card-shell group relative overflow-hidden"
+        className="surface-card media-card-shell group relative overflow-hidden"
         onPointerEnter={startHover}
         onPointerLeave={stopHover}
       >
-        <div className="relative aspect-[4/3] bg-surface-2 overflow-hidden">
+        <div className={cn("relative bg-surface-2 overflow-hidden", aspectClass)}>
           {showVideo ? (
             <video
               src={previewVideoUrl}

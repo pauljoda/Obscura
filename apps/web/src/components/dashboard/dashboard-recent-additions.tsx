@@ -69,9 +69,12 @@ function GalleryIngestTile({
   gallery: GalleryListItem;
 }) {
   return (
-    <div className="snap-start shrink-0 w-[min(52vw,168px)] sm:w-[148px]">
+    <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
       <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
-        <GalleryEntityCard gallery={galleryListItemToCardData(gallery)} />
+        <GalleryEntityCard 
+          gallery={galleryListItemToCardData(gallery)} 
+          aspectRatio="video" 
+        />
       </div>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
         {formatIngestStamp(gallery.createdAt)}
@@ -83,9 +86,9 @@ function GalleryIngestTile({
 function IngestSkeleton() {
   const slots = [
     { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
-    { w: "w-[min(52vw,168px)] sm:w-[148px]", aspect: "aspect-[3/4]" },
     { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
-    { w: "w-[min(52vw,168px)] sm:w-[148px]", aspect: "aspect-[3/4]" },
+    { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
+    { w: "w-[min(78vw,280px)] sm:w-[240px]", aspect: "aspect-video" },
   ] as const;
 
   return (
