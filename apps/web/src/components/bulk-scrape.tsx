@@ -1008,7 +1008,7 @@ export function BulkScrape() {
       )}
 
       {/* Controls */}
-      <div className="surface-card-sharp no-lift p-3 space-y-2.5">
+      <div className="surface-card no-lift p-3 space-y-2.5">
         <div className="flex flex-wrap items-center gap-3">
           {/* Scraper selector */}
           <div className="flex items-center gap-2">
@@ -1117,7 +1117,7 @@ export function BulkScrape() {
 
       {/* Empty state */}
       {totalProviderCount === 0 && (
-        <div className="surface-card-sharp no-lift p-12 text-center">
+        <div className="surface-card no-lift p-12 text-center">
           <ScanSearch className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">
             No metadata providers configured for {tab}.
@@ -1129,7 +1129,7 @@ export function BulkScrape() {
       )}
 
       {totalCount === 0 && totalProviderCount > 0 && (
-        <div className="surface-card-sharp no-lift p-12 text-center">
+        <div className="surface-card no-lift p-12 text-center">
           <Check className="h-8 w-8 text-status-success-text mx-auto mb-2" />
           <p className="text-text-muted text-sm">
             {tab === "scenes" ? "All scenes are organized!" :
@@ -1237,7 +1237,7 @@ function SceneRowCard({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
         className={cn(
-          "w-full text-left surface-card-sharp no-lift p-3 flex items-center gap-3 transition-all duration-fast cursor-pointer",
+          "w-full text-left surface-card no-lift p-3 flex items-center gap-3 transition-all duration-fast cursor-pointer",
           expanded && "border-border-accent/40",
           row.status === "accepted" && "opacity-50",
           row.status === "rejected" && "opacity-30"
@@ -1307,7 +1307,7 @@ function SceneRowCard({
 
       {/* Expanded detail */}
       {expanded && row.normalized && (
-        <div className="surface-card-sharp no-lift ml-1 mr-1 mb-1 p-4 border-border-accent/20">
+        <div className="surface-card no-lift ml-1 mr-1 mb-1 p-4 border-border-accent/20">
           <div className="flex gap-4">
             {/* Large thumbnail on left */}
             {row.normalized.imageUrl && (
@@ -1445,7 +1445,7 @@ function SceneRowCard({
       )}
 
       {expanded && row.error && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
           <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
         </div>
       )}
@@ -1490,7 +1490,7 @@ function PerformerRowCard({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
         className={cn(
-          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          "surface-card no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
           expanded && "border-border-accent/40",
           row.status === "accepted" && "opacity-50",
           row.status === "rejected" && "opacity-30"
@@ -1562,7 +1562,7 @@ function PerformerRowCard({
 
       {/* Expanded performer detail */}
       {expanded && row.result && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
           <div className="flex gap-4">
             {/* Image selection */}
             {allImages.length > 0 && (
@@ -1630,7 +1630,7 @@ function PerformerRowCard({
       )}
 
       {expanded && row.error && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
           <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
         </div>
       )}
@@ -1663,7 +1663,7 @@ function StudioRowCard({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
         className={cn(
-          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          "surface-card no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
           expanded && "border-border-accent/40",
           row.status === "accepted" && "opacity-50",
           row.status === "rejected" && "opacity-30"
@@ -1704,7 +1704,7 @@ function StudioRowCard({
       </div>
 
       {expanded && row.result && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
           <div className="flex gap-4">
             {/* Image preview */}
             {row.result.imageUrl && (
@@ -1738,7 +1738,7 @@ function StudioRowCard({
       )}
 
       {expanded && row.error && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
           <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
         </div>
       )}
@@ -1771,7 +1771,7 @@ function TagRowCard({
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
         className={cn(
-          "surface-card-sharp no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
+          "surface-card no-lift flex items-center gap-3 px-3 py-2.5 transition-all duration-fast cursor-pointer",
           expanded && "border-border-accent/40",
           row.status === "accepted" && "opacity-50",
           row.status === "rejected" && "opacity-30"
@@ -1812,7 +1812,7 @@ function TagRowCard({
       </div>
 
       {expanded && row.result && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-border-accent/20">
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[0.8rem]">
             {row.result.name && <ToggleableField field="name" label="Name" value={row.result.name} enabled={row.selectedFields.has("name")} onToggle={() => onToggleField("name")} />}
             {row.result.description && <ToggleableField field="description" label="Description" value={row.result.description.slice(0, 200)} enabled={row.selectedFields.has("description")} onToggle={() => onToggleField("description")} />}
@@ -1822,7 +1822,7 @@ function TagRowCard({
       )}
 
       {expanded && row.error && (
-        <div className="surface-card-sharp no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
+        <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">
           <p className="text-[0.7rem] text-status-error-text">{row.error}</p>
         </div>
       )}
