@@ -26,6 +26,9 @@ import { fetchPerformers, type PerformerItem } from "../../lib/api";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { performerItemToCardData } from "../performers/performer-card-data";
 
+import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+
 type SortKey = "name" | "scenes" | "rating" | "recent";
 type SortDir = "asc" | "desc";
 
@@ -179,37 +182,26 @@ export function PerformersPageClient({
       </div>
 
       {!loading && total > 0 ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="surface-stat px-3 py-2.5">
-            <div className="mb-1 flex items-center gap-1.5 text-text-disabled">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>
-                Performers
-              </span>
-            </div>
-            <div className="text-lg font-semibold leading-tight text-text-primary">{total}</div>
-          </div>
-          <div className="surface-stat px-3 py-2.5">
-            <div className="mb-1 flex items-center gap-1.5 text-text-disabled">
-              <Star className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>
-                Favorites
-              </span>
-            </div>
-            <div className="text-lg font-semibold leading-tight text-text-primary">
-              {favoriteCount}
-            </div>
-          </div>
-          <div className="hidden surface-stat px-3 py-2.5 sm:block">
-            <div className="mb-1 flex items-center gap-1.5 text-text-disabled">
-              <Film className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>
-                Showing
-              </span>
-            </div>
-            <div className="text-lg font-semibold leading-tight text-text-primary">
-              {performers.length}
-            </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <DashboardStatTile
+            icon={<Users className="h-4 w-4" />}
+            label="Performers"
+            value={String(total)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <DashboardStatTile
+            icon={<Star className="h-4 w-4" />}
+            label="Favorites"
+            value={String(favoriteCount)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+          <div className="hidden sm:block">
+            <DashboardStatTile
+              icon={<Film className="h-4 w-4" />}
+              label="Showing"
+              value={String(performers.length)}
+              gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+            />
           </div>
         </div>
       ) : null}

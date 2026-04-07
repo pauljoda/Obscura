@@ -7,6 +7,9 @@ import { type StudioItem } from "../../lib/api";
 import { StudioEntityCard } from "../studios/studio-entity-card";
 import { studioItemToCardData } from "../studios/studio-card-data";
 
+import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+
 type SortDir = "asc" | "desc";
 
 interface StudiosPageClientProps {
@@ -47,6 +50,24 @@ export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
           {studios.length} total
         </span>
       </div>
+
+      {/* Inline stats */}
+      {studios.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <DashboardStatTile
+            icon={<Building2 className="h-4 w-4" />}
+            label="Total Studios"
+            value={String(studios.length)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <DashboardStatTile
+            icon={<Search className="h-4 w-4" />}
+            label="Showing"
+            value={String(filtered.length)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="surface-well flex items-center gap-2 p-2">

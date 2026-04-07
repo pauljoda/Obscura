@@ -19,6 +19,9 @@ import { type TagItem } from "../../lib/api";
 import { TagEntityCard } from "../tags/tag-entity-card";
 import { tagItemToCardData } from "../tags/tag-card-data";
 
+import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
 type ViewMode = "list" | "cloud";
@@ -93,10 +96,29 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
 
       {/* Inline stats */}
       {tags.length > 0 && (
-        <div className="flex items-center gap-4 text-[0.72rem] text-text-disabled">
-          <span className="flex items-center gap-1"><Film className="h-3 w-3" />{totalScenes} scenes</span>
-          <span className="flex items-center gap-1"><Image className="h-3 w-3" />{totalImages} images</span>
-          {topTag && <span>Top: <span className="text-text-muted">{topTag.name}</span></span>}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <DashboardStatTile
+            icon={<Film className="h-4 w-4" />}
+            label="Tagged Scenes"
+            value={String(totalScenes)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <DashboardStatTile
+            icon={<Image className="h-4 w-4" />}
+            label="Tagged Images"
+            value={String(totalImages)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+          {topTag && (
+            <div className="hidden sm:block">
+              <DashboardStatTile
+                icon={<Tag className="h-4 w-4" />}
+                label="Top Tag"
+                value={topTag.name}
+                gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+              />
+            </div>
+          )}
         </div>
       )}
 
