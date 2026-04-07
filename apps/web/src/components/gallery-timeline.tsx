@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import { GalleryCard } from "./gallery-card";
 import type { GalleryListItemDto } from "@obscura/contracts";
 
@@ -58,9 +57,7 @@ export function GalleryTimeline({ galleries }: GalleryTimelineProps) {
           {/* Gallery cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {group.galleries.map((gallery) => (
-              <Link key={gallery.id} href={`/galleries/${gallery.id}`}>
-                <GalleryCard gallery={gallery} />
-              </Link>
+              <GalleryCard key={gallery.id} gallery={gallery} />
             ))}
           </div>
         </div>

@@ -185,17 +185,13 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
               {subGalleryView === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                   {childGalleries.map((child) => (
-                    <Link key={child.id} href={`/galleries/${child.id}`}>
-                      <GalleryCard gallery={child} />
-                    </Link>
+                    <GalleryCard key={child.id} gallery={child} />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-1">
                   {childGalleries.map((child) => (
-                    <Link key={child.id} href={`/galleries/${child.id}`}>
-                      <GalleryListItem gallery={child} />
-                    </Link>
+                    <GalleryListItem key={child.id} gallery={child} />
                   ))}
                 </div>
               )}
