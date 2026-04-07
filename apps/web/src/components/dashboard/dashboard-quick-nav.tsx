@@ -64,9 +64,9 @@ export function DashboardQuickNav({ sceneCount }: { sceneCount?: number }) {
   return (
     <section aria-label="Library sections">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Navigation</h2>
+        <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Quick Navigation</h2>
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2.5">
         {NAV_ITEMS.map((tile, i) => (
           <NavTile
             key={tile.href}
