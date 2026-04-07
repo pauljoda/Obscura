@@ -6,6 +6,7 @@ import { Calendar, Film, HardDrive, ImageOff, Loader2, Star } from "lucide-react
 import { cn } from "@obscura/ui/lib/utils";
 import { canUseInlineVideoPreview, isVideoImage } from "../../lib/image-media";
 import type { ImageCardData } from "./image-card-data";
+import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes) return "";
@@ -129,22 +130,24 @@ function ImageGridCard({
     "block w-full cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 overflow-hidden";
 
   return (
-    <div
-      ref={containerRef}
-      className="group relative mb-1 break-inside-avoid"
-      onPointerEnter={() => setHovering(true)}
-      onPointerLeave={() => setHovering(false)}
-    >
-      {onSelect ? (
-        <button type="button" onClick={() => onSelect(image.href)} className={className}>
-          {content}
-        </button>
-      ) : (
-        <Link href={image.href} className={className}>
-          {content}
-        </Link>
-      )}
-    </div>
+    <NsfwBlur isNsfw={image.isNsfw ?? false} className="mb-1 break-inside-avoid">
+      <div
+        ref={containerRef}
+        className="group relative"
+        onPointerEnter={() => setHovering(true)}
+        onPointerLeave={() => setHovering(false)}
+      >
+        {onSelect ? (
+          <button type="button" onClick={() => onSelect(image.href)} className={className}>
+            {content}
+          </button>
+        ) : (
+          <Link href={image.href} className={className}>
+            {content}
+          </Link>
+        )}
+      </div>
+    </NsfwBlur>
   );
 }
 

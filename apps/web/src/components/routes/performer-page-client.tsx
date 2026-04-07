@@ -34,6 +34,7 @@ import {
   type SceneListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
+import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 interface PerformerPageClientProps {
   id: string;
@@ -278,21 +279,23 @@ export function PerformerPageClient({
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="w-full max-w-xs self-center flex-shrink-0 sm:max-w-sm lg:w-72 lg:max-w-none lg:self-auto">
-          <div className="relative mb-4 aspect-[3/4] overflow-hidden bg-surface-3">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={performer.name}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="select-none font-heading text-6xl font-semibold text-text-disabled/40">
-                  {initials}
-                </span>
-              </div>
-            )}
-          </div>
+          <NsfwBlur isNsfw={performer.isNsfw ?? false} className="relative mb-4 aspect-[3/4] overflow-hidden bg-surface-3">
+            <div className="relative aspect-[3/4] overflow-hidden bg-surface-3">
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={performer.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="select-none font-heading text-6xl font-semibold text-text-disabled/40">
+                    {initials}
+                  </span>
+                </div>
+              )}
+            </div>
+          </NsfwBlur>
 
           <div className="space-y-2">
             <button

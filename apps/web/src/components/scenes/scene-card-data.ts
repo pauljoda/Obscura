@@ -27,6 +27,7 @@ export interface SceneCardData {
   tags?: string[];
   rating?: number;
   views?: number;
+  isNsfw?: boolean;
 }
 
 function readMetaString(meta: SearchResultItem["meta"], key: string): string | undefined {
@@ -62,6 +63,7 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
     tags: scene.tags.map((tag) => tag.name),
     rating: scene.rating ?? undefined,
     views: scene.playCount,
+    isNsfw: scene.isNsfw,
   };
 }
 

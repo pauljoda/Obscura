@@ -7,6 +7,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import type { SceneCardData } from "./scene-card-data";
 import { SCENE_CARD_GRADIENTS } from "./scene-card-gradients";
+import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
 
 interface SceneCardProps {
   scene: SceneCardData;
@@ -32,28 +33,30 @@ export function SceneCard({
   }
 
   return (
-    <Link href={scene.href}>
-      <MediaCard
-        title={scene.title}
-        thumbnail={scene.thumbnail}
-        cardThumbnail={scene.cardThumbnail}
-        imageLoading={imageLoading}
-        trickplaySprite={scene.trickplaySprite}
-        trickplayVtt={scene.trickplayVtt}
-        scrubDurationSeconds={scene.scrubDurationSeconds}
-        duration={scene.duration}
-        resolution={scene.resolution}
-        codec={scene.codec}
-        fileSize={scene.fileSize}
-        studio={scene.studio}
-        performers={scene.performers}
-        tags={scene.tags}
-        tagColors={SCENE_TAG_COLORS}
-        rating={scene.rating}
-        views={scene.views}
-        gradientClass={SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length]}
-      />
-    </Link>
+    <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
+      <Link href={scene.href}>
+        <MediaCard
+          title={scene.title}
+          thumbnail={scene.thumbnail}
+          cardThumbnail={scene.cardThumbnail}
+          imageLoading={imageLoading}
+          trickplaySprite={scene.trickplaySprite}
+          trickplayVtt={scene.trickplayVtt}
+          scrubDurationSeconds={scene.scrubDurationSeconds}
+          duration={scene.duration}
+          resolution={scene.resolution}
+          codec={scene.codec}
+          fileSize={scene.fileSize}
+          studio={scene.studio}
+          performers={scene.performers}
+          tags={scene.tags}
+          tagColors={SCENE_TAG_COLORS}
+          rating={scene.rating}
+          views={scene.views}
+          gradientClass={SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length]}
+        />
+      </Link>
+    </NsfwBlur>
   );
 }
 
@@ -67,33 +70,35 @@ function SceneListCard({
   return (
     <Link href={scene.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
-        <div
-          className={cn(
-            "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
-            SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length],
-          )}
-        >
-          {scene.thumbnail && (
-            <img
-              src={scene.cardThumbnail || scene.thumbnail}
-              alt={scene.title}
-              loading={index < 6 ? "eager" : "lazy"}
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
-          )}
-          {scene.duration && (
-            <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 ">
-              {scene.duration}
-            </span>
-          )}
-        </div>
+        <NsfwBlur isNsfw={scene.isNsfw ?? false}>
+          <div
+            className={cn(
+              "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
+              SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length],
+            )}
+          >
+            {scene.thumbnail && (
+              <img
+                src={scene.cardThumbnail || scene.thumbnail}
+                alt={scene.title}
+                loading={index < 6 ? "eager" : "lazy"}
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
+            )}
+            {scene.duration && (
+              <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 ">
+                {scene.duration}
+              </span>
+            )}
+          </div>
+        </NsfwBlur>
 
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2">
-            <h4 className="truncate text-[0.8rem] font-medium text-text-primary">
+            <NsfwText isNsfw={scene.isNsfw ?? false} className="truncate text-[0.8rem] font-medium text-text-primary block">
               {scene.title}
-            </h4>
+            </NsfwText>
             {scene.resolution && (
               <span className="pill-accent px-1 py-0 text-[0.55rem] font-semibold flex-shrink-0">
                 {scene.resolution}

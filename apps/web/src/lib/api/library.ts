@@ -36,6 +36,7 @@ export async function createLibraryRoot(payload: {
   recursive?: boolean;
   scanVideos?: boolean;
   scanImages?: boolean;
+  isNsfw?: boolean;
 }): Promise<LibraryRoot> {
   return fetchApi("/libraries", {
     method: "POST",
@@ -46,7 +47,7 @@ export async function createLibraryRoot(payload: {
 export async function updateLibraryRoot(
   id: string,
   payload: Partial<
-    Pick<LibraryRoot, "path" | "label" | "enabled" | "recursive" | "scanVideos" | "scanImages">
+    Pick<LibraryRoot, "path" | "label" | "enabled" | "recursive" | "scanVideos" | "scanImages" | "isNsfw">
   >,
 ): Promise<LibraryRoot> {
   return fetchApi(`/libraries/${id}`, {

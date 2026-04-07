@@ -162,6 +162,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       date: img.date,
       rating: img.rating,
       organized: img.organized,
+      isNsfw: img.isNsfw,
       width: img.width,
       height: img.height,
       format: img.format,
@@ -215,6 +216,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       date: image.date,
       rating: image.rating,
       organized: image.organized,
+      isNsfw: image.isNsfw,
       width: image.width,
       height: image.height,
       format: image.format,
@@ -254,6 +256,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       date?: string | null;
       rating?: number | null;
       organized?: boolean;
+      isNsfw?: boolean;
       studioName?: string | null;
       performerNames?: string[];
       tagNames?: string[];
@@ -277,6 +280,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       if (body.date !== undefined) update.date = body.date;
       if (body.rating !== undefined) update.rating = body.rating;
       if (body.organized !== undefined) update.organized = body.organized;
+      if (body.isNsfw !== undefined) update.isNsfw = body.isNsfw;
 
       if (body.studioName !== undefined) {
         if (body.studioName === null || body.studioName === "") {
@@ -338,6 +342,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       patch: {
         rating?: number | null;
         organized?: boolean;
+        isNsfw?: boolean;
         tagNames?: string[];
         galleryId?: string | null;
       };
@@ -352,6 +357,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       const update: Record<string, unknown> = { updatedAt: new Date() };
       if (body.patch.rating !== undefined) update.rating = body.patch.rating;
       if (body.patch.organized !== undefined) update.organized = body.patch.organized;
+      if (body.patch.isNsfw !== undefined) update.isNsfw = body.patch.isNsfw;
       if (body.patch.galleryId !== undefined) update.galleryId = body.patch.galleryId;
 
       if (Object.keys(update).length > 1) {

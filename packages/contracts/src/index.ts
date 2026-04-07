@@ -48,6 +48,7 @@ export const apiRoutes = {
   stashBoxIdentifyPerformer: "/stashbox-endpoints/:id/identify-performer",
   stashBoxLookupStudio: "/stashbox-endpoints/:id/lookup/studio",
   stashBoxLookupTag: "/stashbox-endpoints/:id/lookup/tag",
+  clientInfo: "/client-info",
   stashBoxLookupPerformer: "/stashbox-endpoints/:id/lookup/performer",
   // Unified metadata providers
   metadataProviders: "/metadata-providers",
@@ -167,6 +168,7 @@ export interface LibraryRootDto {
   recursive: boolean;
   scanVideos: boolean;
   scanImages: boolean;
+  isNsfw: boolean;
   lastScannedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -195,6 +197,7 @@ export interface LibrarySettingsDto {
   previewClipDurationSeconds: number;
   thumbnailQuality: number;
   trickplayQuality: number;
+  nsfwLanAutoEnable: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -219,6 +222,7 @@ export interface GalleryListItemDto {
   imageCount: number;
   rating: number | null;
   organized: boolean;
+  isNsfw: boolean;
   date: string | null;
   studioId: string | null;
   studioName: string | null;
@@ -236,6 +240,7 @@ export interface GalleryDetailDto {
   date: string | null;
   rating: number | null;
   organized: boolean;
+  isNsfw: boolean;
   photographer: string | null;
   folderPath: string | null;
   zipFilePath: string | null;
@@ -277,6 +282,7 @@ export interface ImageListItemDto {
   date: string | null;
   rating: number | null;
   organized: boolean;
+  isNsfw: boolean;
   width: number | null;
   height: number | null;
   format: string | null;
@@ -315,6 +321,7 @@ export interface ImageUpdateDto {
   date?: string | null;
   rating?: number | null;
   organized?: boolean;
+  isNsfw?: boolean;
   studioName?: string | null;
   performerNames?: string[];
   tagNames?: string[];
@@ -461,6 +468,7 @@ export interface PerformerListItemDto {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
   country: string | null;
   createdAt: string;
@@ -489,6 +497,7 @@ export interface PerformerDetailDto {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
   tags: { id: string; name: string }[];
   createdAt: string;
@@ -516,6 +525,7 @@ export interface PerformerUpdateDto {
   imageUrl?: string | null;
   favorite?: boolean;
   rating?: number | null;
+  isNsfw?: boolean;
   tagNames?: string[];
 }
 

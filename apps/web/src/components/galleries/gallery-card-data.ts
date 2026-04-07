@@ -14,6 +14,7 @@ export interface GalleryCardData {
   coverImage?: string;
   previewImages: string[];
   tags: string[];
+  isNsfw?: boolean;
 }
 
 function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | undefined {
@@ -43,6 +44,7 @@ export function galleryListItemToCardData(gallery: GalleryListItemDto): GalleryC
     coverImage: toApiUrl(gallery.coverImagePath),
     previewImages: gallery.previewImagePaths.map((p) => toApiUrl(p)).filter(Boolean) as string[],
     tags: gallery.tags.map((tag) => tag.name),
+    isNsfw: gallery.isNsfw,
   };
 }
 

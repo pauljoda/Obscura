@@ -166,6 +166,7 @@ export async function scenesRoutes(app: FastifyInstance) {
               performerId: performers.id,
               performerName: performers.name,
               performerImagePath: performers.imagePath,
+              performerIsNsfw: performers.isNsfw,
             })
             .from(scenePerformers)
             .innerJoin(performers, eq(scenePerformers.performerId, performers.id))
@@ -193,6 +194,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       date: scene.date,
       rating: scene.rating,
       organized: scene.organized,
+      isNsfw: scene.isNsfw,
       duration: scene.duration,
       durationFormatted: formatDuration(scene.duration),
       resolution: getResolutionLabel(scene.height),
@@ -215,7 +217,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       studioId: scene.studioId,
       performers: perfJoins
         .filter((p) => p.sceneId === scene.id)
-        .map((p) => ({ id: p.performerId, name: p.performerName, imagePath: p.performerImagePath })),
+        .map((p) => ({ id: p.performerId, name: p.performerName, imagePath: p.performerImagePath, isNsfw: p.performerIsNsfw })),
       tags: tagJoins
         .filter((t) => t.sceneId === scene.id)
         .map((t) => ({ id: t.tagId, name: t.tagName })),
@@ -299,6 +301,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       rating: scene.rating,
       url: scene.url,
       organized: scene.organized,
+      isNsfw: scene.isNsfw,
       interactive: scene.interactive,
       duration: scene.duration,
       durationFormatted: formatDuration(scene.duration),
@@ -335,6 +338,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         imageUrl: sp.performer.imageUrl,
         imagePath: sp.performer.imagePath,
         favorite: sp.performer.favorite,
+        isNsfw: sp.performer.isNsfw,
       })),
       tags: scene.sceneTags.map((st) => ({
         id: st.tag.id,
@@ -364,6 +368,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       rating?: number | null;
       url?: string | null;
       organized?: boolean;
+      isNsfw?: boolean;
       orgasmCount?: number;
       studioName?: string | null;
       performerNames?: string[];
@@ -389,6 +394,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       if (body.rating !== undefined) sceneUpdate.rating = body.rating;
       if (body.url !== undefined) sceneUpdate.url = body.url;
       if (body.organized !== undefined) sceneUpdate.organized = body.organized;
+      if (body.isNsfw !== undefined) sceneUpdate.isNsfw = body.isNsfw;
       if (body.orgasmCount !== undefined) sceneUpdate.orgasmCount = body.orgasmCount;
 
       // Studio: find or create by name
@@ -713,6 +719,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         imagePath: r.imagePath,
         favorite: r.favorite,
         rating: r.rating,
+        isNsfw: r.isNsfw,
         sceneCount: r.sceneCount,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
@@ -750,6 +757,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       imagePath: row.imagePath,
       favorite: row.favorite,
       rating: row.rating,
+      isNsfw: row.isNsfw,
       sceneCount: row.sceneCount,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -768,6 +776,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       parentId?: string | null;
       favorite?: boolean;
       rating?: number | null;
+      isNsfw?: boolean;
     };
 
     const [existing] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
@@ -782,13 +791,14 @@ export async function scenesRoutes(app: FastifyInstance) {
     if (body.parentId !== undefined) updates.parentId = body.parentId || null;
     if (body.favorite !== undefined) updates.favorite = body.favorite;
     if (body.rating !== undefined) updates.rating = body.rating;
+    if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
     await db.update(studios).set(updates).where(eq(studios.id, id));
     const [updated] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
     return {
       id: updated.id, name: updated.name, description: updated.description, aliases: updated.aliases,
       url: updated.url, parentId: updated.parentId, imageUrl: updated.imageUrl, imagePath: updated.imagePath,
-      favorite: updated.favorite, rating: updated.rating, sceneCount: updated.sceneCount,
+      favorite: updated.favorite, rating: updated.rating, isNsfw: updated.isNsfw, sceneCount: updated.sceneCount,
       createdAt: updated.createdAt, updatedAt: updated.updatedAt,
     };
   });
@@ -1002,6 +1012,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         imagePath: tag.imagePath,
         favorite: tag.favorite,
         rating: tag.rating,
+        isNsfw: tag.isNsfw,
         sceneCount: tag.sceneCount,
         imageCount: imageCountMap.get(tag.id) ?? 0,
       })),
@@ -1016,7 +1027,7 @@ export async function scenesRoutes(app: FastifyInstance) {
     return {
       id: row.id, name: row.name, description: row.description, aliases: row.aliases,
       parentId: row.parentId, imageUrl: row.imageUrl, imagePath: row.imagePath,
-      favorite: row.favorite, rating: row.rating, ignoreAutoTag: row.ignoreAutoTag,
+      favorite: row.favorite, rating: row.rating, isNsfw: row.isNsfw, ignoreAutoTag: row.ignoreAutoTag,
       sceneCount: row.sceneCount, createdAt: row.createdAt, updatedAt: row.updatedAt,
     };
   });
@@ -1027,7 +1038,7 @@ export async function scenesRoutes(app: FastifyInstance) {
     const body = request.body as {
       name?: string; description?: string | null; aliases?: string | null;
       imageUrl?: string | null; parentId?: string | null;
-      favorite?: boolean; rating?: number | null; ignoreAutoTag?: boolean;
+      favorite?: boolean; rating?: number | null; ignoreAutoTag?: boolean; isNsfw?: boolean;
     };
     const [existing] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
     if (!existing) { reply.code(404); return { error: "Tag not found" }; }
@@ -1041,13 +1052,14 @@ export async function scenesRoutes(app: FastifyInstance) {
     if (body.favorite !== undefined) updates.favorite = body.favorite;
     if (body.rating !== undefined) updates.rating = body.rating;
     if (body.ignoreAutoTag !== undefined) updates.ignoreAutoTag = body.ignoreAutoTag;
+    if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
     await db.update(tags).set(updates).where(eq(tags.id, id));
     const [updated] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
     return {
       id: updated.id, name: updated.name, description: updated.description, aliases: updated.aliases,
       parentId: updated.parentId, imageUrl: updated.imageUrl, imagePath: updated.imagePath,
-      favorite: updated.favorite, rating: updated.rating, ignoreAutoTag: updated.ignoreAutoTag,
+      favorite: updated.favorite, rating: updated.rating, isNsfw: updated.isNsfw, ignoreAutoTag: updated.ignoreAutoTag,
       sceneCount: updated.sceneCount, createdAt: updated.createdAt, updatedAt: updated.updatedAt,
     };
   });

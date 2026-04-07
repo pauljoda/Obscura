@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Star, Users } from "lucide-react";
 import type { PerformerCardData } from "./performer-card-data";
+import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
 
 interface PerformerEntityCardProps {
   performer: PerformerCardData;
@@ -22,30 +23,32 @@ export function PerformerEntityCard({
   return (
     <Link href={performer.href}>
       <article className="surface-card group h-full cursor-pointer overflow-hidden">
-        <div className="relative aspect-[3/4] bg-surface-3">
-          {performer.imagePath ? (
-            <img
-              src={performer.imagePath}
-              alt={performer.name}
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-moderate group-hover:scale-[1.02]"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Users className="h-10 w-10 text-text-disabled/50" />
-            </div>
-          )}
-          {performer.favorite ? (
-            <span className="absolute right-2 top-2 bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
-              <Star className="h-3 w-3 fill-current" />
-            </span>
-          ) : null}
-        </div>
+        <NsfwBlur isNsfw={performer.isNsfw ?? false} className="relative aspect-[3/4] bg-surface-3">
+          <div className="relative aspect-[3/4] bg-surface-3">
+            {performer.imagePath ? (
+              <img
+                src={performer.imagePath}
+                alt={performer.name}
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-moderate group-hover:scale-[1.02]"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Users className="h-10 w-10 text-text-disabled/50" />
+              </div>
+            )}
+            {performer.favorite ? (
+              <span className="absolute right-2 top-2 bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
+                <Star className="h-3 w-3 fill-current" />
+              </span>
+            ) : null}
+          </div>
+        </NsfwBlur>
         <div className="space-y-1 px-3 py-2.5">
-          <h3 className="truncate text-sm font-medium transition-colors duration-fast group-hover:text-text-accent">
+          <NsfwText isNsfw={performer.isNsfw ?? false} className="truncate text-sm font-medium transition-colors duration-fast group-hover:text-text-accent block">
             {performer.name}
-          </h3>
+          </NsfwText>
           <p className="text-[0.68rem] text-text-disabled">
             {performer.sceneCount} scene{performer.sceneCount !== 1 ? "s" : ""}
             {performer.gender ? ` · ${performer.gender}` : ""}

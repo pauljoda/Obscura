@@ -21,6 +21,7 @@ function toGalleryImageListItem(img: typeof images.$inferSelect) {
     date: img.date,
     rating: img.rating,
     organized: img.organized,
+    isNsfw: img.isNsfw,
     width: img.width,
     height: img.height,
     format: img.format,
@@ -237,6 +238,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
         imageCount: gallery.imageCount,
         rating: gallery.rating,
         organized: gallery.organized,
+        isNsfw: gallery.isNsfw,
         date: gallery.date,
         studioId: gallery.studioId,
         studioName: gallery.studioId ? studioMap.get(gallery.studioId) ?? null : null,
@@ -396,6 +398,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       date: gallery.date,
       rating: gallery.rating,
       organized: gallery.organized,
+      isNsfw: gallery.isNsfw,
       photographer: gallery.photographer,
       folderPath: gallery.folderPath,
       zipFilePath: gallery.zipFilePath,
@@ -472,6 +475,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       date?: string | null;
       rating?: number | null;
       organized?: boolean;
+      isNsfw?: boolean;
       photographer?: string | null;
       studioName?: string | null;
       performerNames?: string[];
@@ -496,6 +500,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       if (body.date !== undefined) update.date = body.date;
       if (body.rating !== undefined) update.rating = body.rating;
       if (body.organized !== undefined) update.organized = body.organized;
+      if (body.isNsfw !== undefined) update.isNsfw = body.isNsfw;
       if (body.photographer !== undefined) update.photographer = body.photographer;
 
       // Studio: find or create by name

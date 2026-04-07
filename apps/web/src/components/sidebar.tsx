@@ -24,6 +24,8 @@ import { cn } from "@obscura/ui/lib/utils";
 import { Logo, LogoMark } from "./logo";
 import { ChangelogDialog } from "./changelog-dialog";
 import { APP_VERSION } from "../lib/version";
+import { useNsfw } from "./nsfw/nsfw-context";
+import { useTerms } from "../lib/terminology";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "layout-dashboard": LayoutDashboard,
@@ -45,9 +47,73 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+// Resolves dynamic label based on NSFW mode (e.g. Scenes→Videos, Performers→Actors)
+function useDynamicLabel(label: string): string {
+  const terms = useTerms();
+  const labelMap: Record<string, string> = {
+    Scenes: terms.scenes,
+    Performers: terms.performers,
+  };
+  return labelMap[label] ?? label;
+}
+
+interface SidebarNavItemProps {
+  href: string;
+  label: string;
+  icon: string;
+  pathname: string;
+  isExpanded: boolean;
+}
+
+function SidebarNavItem({ href, label, icon, pathname, isExpanded }: SidebarNavItemProps) {
+  const Icon = iconMap[icon];
+  const displayLabel = useDynamicLabel(label);
+  const isActive = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+
+  return (
+    <li>
+      <Link
+        href={href}
+        className={cn(
+          "group relative flex items-center px-2.5 py-2 text-sm transition-colors duration-fast whitespace-nowrap",
+          isActive
+            ? "bg-accent-950 text-glow-accent"
+            : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+        )}
+        title={!isExpanded ? displayLabel : undefined}
+      >
+        {isActive && (
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
+        )}
+        <div className="w-5 flex items-center justify-center shrink-0">
+          {Icon && (
+            <Icon
+              className={cn(
+                "h-4 w-4",
+                isActive
+                  ? "text-accent-300 drop-shadow-[0_0_8px_rgba(199,155,92,0.5)]"
+                  : "text-text-muted group-hover:text-text-primary"
+              )}
+            />
+          )}
+        </div>
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-width,opacity] duration-moderate",
+            isExpanded ? "max-w-[160px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
+          )}
+        >
+          {displayLabel}
+        </div>
+      </Link>
+    </li>
+  );
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
+  const { mode } = useNsfw();
 
   const isExpanded = !collapsed || hovered;
 
@@ -118,53 +184,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
             />
             <ul className="space-y-0.5 px-2">
-              {section.items.map((item) => {
-                const Icon = iconMap[item.icon];
-                const href = item.href as string;
-                const isActive =
-                  pathname === href ||
-                  (href !== "/" && pathname.startsWith(href + "/"));
-
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "group relative flex items-center px-2.5 py-2 text-sm transition-colors duration-fast whitespace-nowrap",
-                        isActive
-                          ? "bg-accent-950 text-glow-accent"
-                          : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-                      )}
-                      title={!isExpanded ? item.label : undefined}
-                    >
-                      {/* Active indicator bar */}
-                      {isActive && (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
-                      )}
-                      <div className="w-5 flex items-center justify-center shrink-0">
-                        {Icon && (
-                          <Icon
-                            className={cn(
-                              "h-4 w-4",
-                              isActive
-                                ? "text-accent-300 drop-shadow-[0_0_8px_rgba(199,155,92,0.5)]"
-                                : "text-text-muted group-hover:text-text-primary"
-                            )}
-                          />
-                        )}
-                      </div>
-                      <div
-                        className={cn(
-                          "overflow-hidden transition-[max-width,opacity] duration-moderate",
-                          isExpanded ? "max-w-[160px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
-                        )}
-                      >
-                        {item.label}
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
+              {section.items
+                .filter((item) => {
+                  // Hide Identify in SFW mode
+                  if (item.href === "/identify" && mode === "off") return false;
+                  return true;
+                })
+                .map((item) => (
+                  <SidebarNavItem
+                    key={item.href}
+                    href={item.href as string}
+                    label={item.label}
+                    icon={item.icon}
+                    pathname={pathname}
+                    isExpanded={isExpanded}
+                  />
+                ))}
             </ul>
           </div>
         ))}

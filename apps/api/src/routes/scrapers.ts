@@ -883,6 +883,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
               url: studioUrl,
               imageUrl: studioImage,
               parentId,
+              isNsfw: true,
             })
             .returning({ id: studios.id });
           return created.id;
@@ -891,8 +892,9 @@ export async function scrapersRoutes(app: FastifyInstance) {
         sceneUpdate.studioId = await findOrCreateStudio(studioName, rawStudio);
       }
 
-      // Mark organized
+      // Mark organized and NSFW (identify flow always treats content as NSFW)
       sceneUpdate.organized = true;
+      sceneUpdate.isNsfw = true;
 
       // Update scene
       await tx
@@ -924,7 +926,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const performerId = existing?.id ?? (
             await tx
               .insert(performers)
-              .values({ name })
+              .values({ name, isNsfw: true })
               .returning({ id: performers.id })
           )[0].id;
 
@@ -1016,7 +1018,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const tagId = existing?.id ?? (
             await tx
               .insert(tags)
-              .values({ name })
+              .values({ name, isNsfw: true })
               .returning({ id: tags.id })
           )[0].id;
 

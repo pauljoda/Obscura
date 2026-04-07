@@ -10,6 +10,7 @@ export interface TagCardData {
   sceneCount: number;
   imageCount: number;
   imagePath?: string;
+  isNsfw?: boolean;
 }
 
 function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | undefined {
@@ -25,6 +26,7 @@ export function tagItemToCardData(tag: TagItem): TagCardData {
     sceneCount: tag.sceneCount,
     imageCount: tag.imageCount ?? 0,
     imagePath: toApiUrl(tag.imagePath) ?? undefined,
+    isNsfw: tag.isNsfw,
   };
 }
 

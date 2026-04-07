@@ -45,6 +45,7 @@ import {
   type TagItem,
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
+import { NsfwBlur } from "./nsfw/nsfw-gate";
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -275,22 +276,24 @@ export function SceneDetail({
       </Link>
 
       {/* Video Player */}
-      <VideoPlayer
-        src={toApiUrl(scene.streamUrl)}
-        directSrc={toApiUrl(scene.directStreamUrl)}
-        poster={toApiUrl(scene.thumbnailPath)}
-        markers={scene.markers.map((m) => ({
-          id: m.id,
-          time: m.seconds,
-          title: m.title,
-          tag: m.primaryTag?.name,
-        }))}
-        duration={scene.duration ?? undefined}
-        onPlayStarted={handlePlayStarted}
-        onTimeUpdate={handleTimeUpdate}
-        trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
-        trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
-      />
+      <NsfwBlur isNsfw={scene.isNsfw ?? false}>
+        <VideoPlayer
+          src={toApiUrl(scene.streamUrl)}
+          directSrc={toApiUrl(scene.directStreamUrl)}
+          poster={toApiUrl(scene.thumbnailPath)}
+          markers={scene.markers.map((m) => ({
+            id: m.id,
+            time: m.seconds,
+            title: m.title,
+            tag: m.primaryTag?.name,
+          }))}
+          duration={scene.duration ?? undefined}
+          onPlayStarted={handlePlayStarted}
+          onTimeUpdate={handleTimeUpdate}
+          trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
+          trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
+        />
+      </NsfwBlur>
 
       {/* Scene header */}
       <div className="surface-card-sharp p-4">
@@ -473,15 +476,17 @@ export function SceneDetail({
                         href={`/performers/${p.id}`}
                         className="surface-card-sharp flex items-center gap-3 p-2.5 pr-4 hover:border-border-accent transition-colors"
                       >
-                        <div className="flex-shrink-0 h-12 w-9 rounded overflow-hidden bg-surface-3 border border-border-subtle">
-                          {imgUrl ? (
-                            <img src={imgUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[0.6rem] font-mono font-medium text-text-muted">
-                              {initials}
-                            </div>
-                          )}
-                        </div>
+                        <NsfwBlur isNsfw={p.isNsfw ?? false} className="flex-shrink-0 h-12 w-9 overflow-hidden bg-surface-3 border border-border-subtle">
+                          <div className="h-12 w-9 overflow-hidden bg-surface-3">
+                            {imgUrl ? (
+                              <img src={imgUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[0.6rem] font-mono font-medium text-text-muted">
+                                {initials}
+                              </div>
+                            )}
+                          </div>
+                        </NsfwBlur>
                         <div>
                           <p className="text-sm font-medium text-text-primary">
                             {p.name}

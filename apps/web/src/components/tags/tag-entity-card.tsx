@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Film, Image, Tag } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { TagCardData } from "./tag-card-data";
+import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 interface TagEntityCardProps {
   tag: TagCardData;
@@ -56,9 +57,11 @@ export function TagEntityCard({
       )}
     >
       {tag.imagePath && (
-        <div className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
-          <img src={tag.imagePath} alt="" className="w-full h-full object-cover" />
-        </div>
+        <NsfwBlur isNsfw={tag.isNsfw ?? false} className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
+          <div className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
+            <img src={tag.imagePath} alt="" className="w-full h-full object-cover" />
+          </div>
+        </NsfwBlur>
       )}
       <span className="text-[0.8rem] text-text-primary truncate flex-1">{tag.name}</span>
       <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">

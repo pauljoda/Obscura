@@ -6,6 +6,7 @@ import { Archive, FolderOpen, Images, Sparkles, Star } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { useElementInView } from "../../hooks/use-element-in-view";
 import type { GalleryCardData } from "./gallery-card-data";
+import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 const typeIcons = {
   folder: FolderOpen,
@@ -94,6 +95,7 @@ function GalleryGridCard({
         onPointerEnter={startHover}
         onPointerLeave={stopHover}
       >
+        <NsfwBlur isNsfw={gallery.isNsfw ?? false} className={cn("relative bg-surface-2 overflow-hidden", aspectClass)}>
         <div className={cn("relative bg-surface-2 overflow-hidden", aspectClass)}>
           {showVideo ? (
             <video
@@ -143,6 +145,7 @@ function GalleryGridCard({
             </div>
           )}
         </div>
+        </NsfwBlur>
 
         <div className="px-2.5 py-2">
           <h3 className="text-[0.78rem] font-medium text-text-primary truncate">

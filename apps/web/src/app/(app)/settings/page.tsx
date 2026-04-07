@@ -22,6 +22,7 @@ const defaultSettings: LibrarySettings = {
   previewClipDurationSeconds: 8,
   thumbnailQuality: 2,
   trickplayQuality: 2,
+  nsfwLanAutoEnable: false,
   createdAt: "",
   updatedAt: "",
 };

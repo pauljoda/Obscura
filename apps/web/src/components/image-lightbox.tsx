@@ -17,6 +17,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
 import { isVideoImage } from "../lib/image-media";
+import { NsfwBlur } from "./nsfw/nsfw-gate";
 import { ImageLightboxFilmstrip } from "./image-lightbox-filmstrip";
 import { ImageLightboxInfo } from "./image-lightbox-info";
 import type { ImageListItemDto, GalleryChapterDto } from "@obscura/contracts";
@@ -319,44 +320,46 @@ export function ImageLightbox({
         style={{ touchAction: "none" }}
       >
         {fullUrl && (
-          isVideoImage(currentImage) ? (
-            <video
-              ref={videoRef}
-              key={currentImage.id}
-              src={fullUrl}
-              autoPlay
-              loop
-              playsInline
-              onClick={(e) => {
-                e.stopPropagation();
-                const vid = e.currentTarget;
-                if (vid.paused) {
-                  vid.play();
-                } else {
-                  vid.pause();
-                }
-              }}
-              className="max-h-full max-w-full object-contain cursor-pointer"
-              style={{
-                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-                willChange: "transform",
-                transition: isDragging ? "none" : "transform 0.15s ease-out",
-              }}
-              draggable={false}
-            />
-          ) : (
-            <img
-              src={fullUrl}
-              alt={currentImage.title}
-              className="max-h-full max-w-full object-contain"
-              style={{
-                transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-                willChange: "transform",
-                transition: isDragging ? "none" : "transform 0.15s ease-out",
-              }}
-              draggable={false}
-            />
-          )
+          <NsfwBlur isNsfw={currentImage.isNsfw ?? false} className="flex items-center justify-center max-h-full max-w-full">
+            {isVideoImage(currentImage) ? (
+              <video
+                ref={videoRef}
+                key={currentImage.id}
+                src={fullUrl}
+                autoPlay
+                loop
+                playsInline
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const vid = e.currentTarget;
+                  if (vid.paused) {
+                    vid.play();
+                  } else {
+                    vid.pause();
+                  }
+                }}
+                className="max-h-full max-w-full object-contain cursor-pointer"
+                style={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                  willChange: "transform",
+                  transition: isDragging ? "none" : "transform 0.15s ease-out",
+                }}
+                draggable={false}
+              />
+            ) : (
+              <img
+                src={fullUrl}
+                alt={currentImage.title}
+                className="max-h-full max-w-full object-contain"
+                style={{
+                  transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+                  willChange: "transform",
+                  transition: isDragging ? "none" : "transform 0.15s ease-out",
+                }}
+                draggable={false}
+              />
+            )}
+          </NsfwBlur>
         )}
 
         {/* Nav arrows */}

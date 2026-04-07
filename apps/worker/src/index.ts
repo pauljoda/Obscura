@@ -78,10 +78,70 @@ const {
   galleryTags,
   imagePerformers,
   imageTags,
+  performers,
+  tags,
+  studios,
+  scenePerformers,
+  sceneTags,
 } = schema;
 
 function sceneAssetUrl(sceneId: string, fileName: string) {
   return `/assets/scenes/${sceneId}/${fileName}`;
+}
+
+// ─── NSFW Propagation ────────────────────────────────────────────────
+// Computes whether a scene should be marked NSFW based on its library root
+// flag plus any related entities (tags, performers, studio).
+async function propagateSceneNsfw(sceneId: string, libraryRootIsNsfw: boolean) {
+  if (libraryRootIsNsfw) {
+    await db.update(scenes).set({ isNsfw: true }).where(eq(scenes.id, sceneId));
+    return;
+  }
+
+  // Check related tags
+  const nsfwTag = await db
+    .select({ id: tags.id })
+    .from(sceneTags)
+    .innerJoin(tags, eq(sceneTags.tagId, tags.id))
+    .where(and(eq(sceneTags.sceneId, sceneId), eq(tags.isNsfw, true)))
+    .limit(1);
+
+  if (nsfwTag.length > 0) {
+    await db.update(scenes).set({ isNsfw: true }).where(eq(scenes.id, sceneId));
+    return;
+  }
+
+  // Check related performers
+  const nsfwPerformer = await db
+    .select({ id: performers.id })
+    .from(scenePerformers)
+    .innerJoin(performers, eq(scenePerformers.performerId, performers.id))
+    .where(and(eq(scenePerformers.sceneId, sceneId), eq(performers.isNsfw, true)))
+    .limit(1);
+
+  if (nsfwPerformer.length > 0) {
+    await db.update(scenes).set({ isNsfw: true }).where(eq(scenes.id, sceneId));
+    return;
+  }
+
+  // Check studio
+  const [sceneRow] = await db
+    .select({ studioId: scenes.studioId })
+    .from(scenes)
+    .where(eq(scenes.id, sceneId))
+    .limit(1);
+
+  if (sceneRow?.studioId) {
+    const [studio] = await db
+      .select({ isNsfw: studios.isNsfw })
+      .from(studios)
+      .where(eq(studios.id, sceneRow.studioId))
+      .limit(1);
+
+    if (studio?.isNsfw) {
+      await db.update(scenes).set({ isNsfw: true }).where(eq(scenes.id, sceneId));
+    }
+  }
 }
 
 function getQueueDefinition(queueName: QueueName) {
@@ -660,6 +720,9 @@ async function processLibraryScan(job: Job) {
         }
       }
     }
+
+    // Propagate isNsfw: library root flag takes precedence, then relation-based
+    await propagateSceneNsfw(scene.id, root.isNsfw);
 
     if (
       settings.autoGenerateMetadata &&
@@ -1302,6 +1365,7 @@ async function processGalleryScan(job: Job) {
           folderPath: dirPath,
           parentId,
           imageCount: 0,
+          isNsfw: root.isNsfw,
         })
         .returning({ id: galleries.id });
       galleryId = created.id;
@@ -1350,6 +1414,7 @@ async function processGalleryScan(job: Job) {
             filePath,
             galleryId,
             sortOrder: i,
+            isNsfw: root.isNsfw,
           })
           .returning({ id: images.id });
         imageId = created.id;
@@ -1408,6 +1473,7 @@ async function processGalleryScan(job: Job) {
           galleryType: "zip",
           zipFilePath: zipPath,
           imageCount: 0,
+          isNsfw: root.isNsfw,
         })
         .returning({ id: galleries.id });
       galleryId = created.id;
@@ -1441,6 +1507,7 @@ async function processGalleryScan(job: Job) {
             filePath: fullPath,
             galleryId,
             sortOrder: i,
+            isNsfw: root.isNsfw,
           })
           .returning({ id: images.id });
 

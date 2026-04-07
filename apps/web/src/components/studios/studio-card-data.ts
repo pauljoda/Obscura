@@ -11,6 +11,7 @@ export interface StudioCardData {
   favorite: boolean;
   imagePath?: string;
   rating?: number;
+  isNsfw?: boolean;
 }
 
 function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | undefined {
@@ -27,6 +28,7 @@ export function studioItemToCardData(studio: StudioItem): StudioCardData {
     favorite: studio.favorite,
     imagePath: studio.imagePath ? toApiUrl(studio.imagePath) : studio.imageUrl ?? undefined,
     rating: studio.rating ?? undefined,
+    isNsfw: studio.isNsfw,
   };
 }
 

@@ -49,6 +49,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.previewClipDurationSeconds ?? settings.previewClipDurationSeconds,
         thumbnailQuality: payload.thumbnailQuality ?? settings.thumbnailQuality,
         trickplayQuality: payload.trickplayQuality ?? settings.trickplayQuality,
+        nsfwLanAutoEnable: payload.nsfwLanAutoEnable ?? settings.nsfwLanAutoEnable,
         updatedAt: new Date(),
       })
       .where(eq(librarySettings.id, settings.id))
@@ -115,6 +116,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       recursive?: boolean;
       scanVideos?: boolean;
       scanImages?: boolean;
+      isNsfw?: boolean;
     };
 
     const [existing] = await db.select().from(libraryRoots).where(eq(libraryRoots.id, id));
@@ -138,6 +140,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           recursive: body.recursive ?? existing.recursive,
           scanVideos: body.scanVideos ?? existing.scanVideos,
           scanImages: body.scanImages ?? existing.scanImages,
+          isNsfw: body.isNsfw ?? existing.isNsfw,
           updatedAt: new Date(),
         })
         .where(eq(libraryRoots.id, id))
@@ -161,4 +164,32 @@ export async function settingsRoutes(app: FastifyInstance) {
 
     return { ok: true };
   });
+
+  // ─── GET /client-info ─────────────────────────────────────────
+  // Returns whether the connecting client is on a LAN/private network.
+  app.get("/client-info", async (request) => {
+    const ip = (request.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      ?? request.socket.remoteAddress
+      ?? "";
+    return { isLan: isLanIp(ip) };
+  });
+}
+
+function isLanIp(ip: string): boolean {
+  // IPv4 private ranges + loopback
+  if (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("fd")
+  ) return true;
+  // 172.16.0.0/12
+  const match = ip.match(/^172\.(\d+)\./);
+  if (match) {
+    const octet = parseInt(match[1], 10);
+    if (octet >= 16 && octet <= 31) return true;
+  }
+  return false;
 }

@@ -26,6 +26,7 @@ export const studios = pgTable(
     imagePath: text("image_path"),
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -75,6 +76,7 @@ export const performers = pgTable(
     imagePath: text("image_path"),
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -109,6 +111,7 @@ export const tags = pgTable(
     imageUrl: text("image_url"),
     imagePath: text("image_path"),
     rating: integer("rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -139,6 +142,7 @@ export const libraryRoots = pgTable(
     recursive: boolean("recursive").default(true).notNull(),
     scanVideos: boolean("scan_videos").default(true).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     lastScannedAt: timestamp("last_scanned_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -159,6 +163,7 @@ export const librarySettings = pgTable("library_settings", {
   previewClipDurationSeconds: integer("preview_clip_duration_seconds").default(8).notNull(),
   thumbnailQuality: integer("thumbnail_quality").default(2).notNull(),
   trickplayQuality: integer("trickplay_quality").default(2).notNull(),
+  nsfwLanAutoEnable: boolean("nsfw_lan_auto_enable").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -202,6 +207,7 @@ export const scenes = pgTable(
     date: text("date"),
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     interactive: boolean("interactive").default(false).notNull(),
 
     // File info
@@ -514,6 +520,7 @@ export const galleries = pgTable(
     date: text("date"),
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     photographer: text("photographer"),
 
     // Gallery type discriminator: "folder" | "zip" | "virtual"
@@ -572,6 +579,7 @@ export const images = pgTable(
     date: text("date"),
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
 
     // File info — for zip members: "/path/archive.cbz::member/file.jpg"
     filePath: text("file_path").notNull(),

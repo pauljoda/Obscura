@@ -83,6 +83,7 @@ export async function performersRoutes(app: FastifyInstance) {
           imagePath: performers.imagePath,
           favorite: performers.favorite,
           rating: performers.rating,
+          isNsfw: performers.isNsfw,
           sceneCount: performers.sceneCount,
           country: performers.country,
           createdAt: performers.createdAt,
@@ -149,6 +150,7 @@ export async function performersRoutes(app: FastifyInstance) {
       imagePath: row.imagePath,
       favorite: row.favorite,
       rating: row.rating,
+      isNsfw: row.isNsfw,
       sceneCount: row.sceneCount,
       tags: row.performerTags.map((pt: any) => ({
         id: pt.tag.id,
@@ -266,6 +268,7 @@ export async function performersRoutes(app: FastifyInstance) {
       imageUrl?: string | null;
       favorite?: boolean;
       rating?: number | null;
+      isNsfw?: boolean;
       tagNames?: string[];
     };
 
@@ -286,7 +289,7 @@ export async function performersRoutes(app: FastifyInstance) {
         "name", "disambiguation", "aliases", "gender", "birthdate",
         "country", "ethnicity", "eyeColor", "hairColor", "height",
         "weight", "measurements", "tattoos", "piercings", "careerStart",
-        "careerEnd", "details", "imageUrl", "favorite", "rating",
+        "careerEnd", "details", "imageUrl", "favorite", "rating", "isNsfw",
       ] as const;
 
       for (const field of fields) {

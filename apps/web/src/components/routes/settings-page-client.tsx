@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Database,
+  Eye,
   Film,
   FolderOpen,
   HardDrive,
@@ -26,6 +27,7 @@ import {
   AlertCircle,
   Wrench,
 } from "lucide-react";
+import { useNsfw } from "../nsfw/nsfw-context";
 import {
   browseLibraryPath,
   createLibraryRoot,
@@ -114,6 +116,8 @@ export function SettingsPageClient({
   const [newRootRecursive, setNewRootRecursive] = useState(true);
   const [newRootScanVideos, setNewRootScanVideos] = useState(true);
   const [newRootScanImages, setNewRootScanImages] = useState(true);
+  const [newRootIsNsfw, setNewRootIsNsfw] = useState(false);
+  const { mode: nsfwMode, setMode: setNsfwMode } = useNsfw();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scraperCount, setScraperCount] = useState(initialScraperCount);
@@ -226,11 +230,13 @@ export function SettingsPageClient({
         recursive: newRootRecursive,
         scanVideos: newRootScanVideos,
         scanImages: newRootScanImages,
+        isNsfw: newRootIsNsfw,
       });
 
       setMessage("Library root added.");
       setNewRootPath("");
       setNewRootLabel("");
+      setNewRootIsNsfw(false);
       setBrowserVisible(false);
       await loadConfig();
       await runQueue("library-scan");
@@ -433,6 +439,15 @@ export function SettingsPageClient({
                 />
                 Images
               </label>
+              <label className="cursor-pointer pb-2 text-xs text-text-secondary" title="Mark all content in this library as NSFW">
+                <input
+                  type="checkbox"
+                  className="mr-2 accent-[#c79b5c]"
+                  checked={newRootIsNsfw}
+                  onChange={(event) => setNewRootIsNsfw(event.target.checked)}
+                />
+                NSFW
+              </label>
               <button
                 onClick={() => void handleAddRoot()}
                 disabled={addingRoot || !newRootPath}
@@ -518,6 +533,27 @@ export function SettingsPageClient({
                       >
                         <Image className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Image</span>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const next = !root.isNsfw;
+                          setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: next } : r)));
+                          try {
+                            await updateLibraryRoot(root.id, { isNsfw: next });
+                          } catch {
+                            setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: !next } : r)));
+                          }
+                        }}
+                        title={root.isNsfw ? "NSFW library: on" : "NSFW library: off"}
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
+                          root.isNsfw
+                            ? "text-text-accent bg-accent-950/50"
+                            : "text-text-disabled hover:text-text-muted"
+                        )}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">NSFW</span>
                       </button>
                     </div>
                     <button
@@ -963,6 +999,48 @@ export function SettingsPageClient({
             onChange={(value) =>
               setSettings((current) => ({ ...current, trickplayQuality: value }))
             }
+          />
+        </div>
+      </section>
+
+      <div className="border-t border-border-subtle" />
+
+      {/* ─── Content Visibility ──────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <Eye className="h-4 w-4 text-text-accent" />
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Content Visibility</h2>
+            <p className="text-[0.68rem] text-text-muted">
+              Control how adult content is displayed across the application
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          <div className="surface-card no-lift p-3.5">
+            <label className="control-label mb-1.5">NSFW Content Mode</label>
+            <select
+              className="control-input w-full py-1.5 text-sm"
+              value={nsfwMode}
+              onChange={(e) => setNsfwMode(e.target.value as "off" | "blur" | "show")}
+            >
+              <option value="off">Off — hide adult content (SFW)</option>
+              <option value="blur">Blur — obscure thumbnails until hover</option>
+              <option value="show">Show — display all content normally</option>
+            </select>
+            <p className="mt-1.5 text-[0.65rem] text-text-disabled">
+              Stored per device. Does not affect stored data.
+            </p>
+          </div>
+          <ToggleCard
+            label="Auto-enable on LAN"
+            description="Automatically switch to Show mode when accessing from a local network."
+            checked={settings.nsfwLanAutoEnable}
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, nsfwLanAutoEnable: checked }));
+              void autoSaveSetting({ nsfwLanAutoEnable: checked });
+            }}
           />
         </div>
       </section>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Building2, Film, Heart, Star } from "lucide-react";
 import type { StudioCardData } from "./studio-card-data";
+import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 interface StudioEntityCardProps {
   studio: StudioCardData;
@@ -22,20 +23,22 @@ export function StudioEntityCard({
   return (
     <Link href={studio.href}>
       <article className="surface-card overflow-hidden group cursor-pointer h-full">
-        <div className="relative aspect-[16/7] bg-surface-3 overflow-hidden">
-          {studio.imagePath ? (
-            <img
-              src={studio.imagePath}
-              alt={studio.name}
-              className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-normal"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Building2 className="h-10 w-10 text-text-disabled/20" />
-            </div>
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
+        <NsfwBlur isNsfw={studio.isNsfw ?? false} className="relative aspect-[16/7] bg-surface-3 overflow-hidden">
+          <div className="relative aspect-[16/7] bg-surface-3 overflow-hidden">
+            {studio.imagePath ? (
+              <img
+                src={studio.imagePath}
+                alt={studio.name}
+                className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-normal"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Building2 className="h-10 w-10 text-text-disabled/20" />
+              </div>
+            )}
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
+          </div>
+        </NsfwBlur>
 
         <div className="p-3 space-y-1.5">
           <div className="flex items-center justify-between gap-2">

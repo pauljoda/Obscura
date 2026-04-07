@@ -21,6 +21,7 @@ export interface SceneListItem {
   date: string | null;
   rating: number | null;
   organized: boolean;
+  isNsfw: boolean;
   duration: number | null;
   durationFormatted: string | null;
   resolution: string | null;
@@ -47,6 +48,7 @@ export interface SceneListItem {
     gender?: string | null;
     imagePath?: string | null;
     favorite?: boolean;
+    isNsfw?: boolean;
   }[];
   tags: { id: string; name: string }[];
   createdAt: string;
@@ -93,6 +95,7 @@ export interface StudioItem {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
 }
 
@@ -104,6 +107,7 @@ export interface PerformerItem {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
   country: string | null;
   createdAt: string;
@@ -117,6 +121,7 @@ export interface TagItem {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
 }
 
 export interface PerformerDetail {
@@ -142,6 +147,7 @@ export interface PerformerDetail {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
   tags: { id: string; name: string }[];
   createdAt: string;
@@ -197,6 +203,7 @@ export interface StudioDetail {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   sceneCount: number;
   createdAt: string;
   updatedAt: string;
@@ -220,6 +227,7 @@ export interface TagDetail {
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
+  isNsfw: boolean;
   ignoreAutoTag: boolean;
   sceneCount: number;
   createdAt: string;

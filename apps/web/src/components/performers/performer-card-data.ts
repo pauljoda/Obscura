@@ -12,6 +12,7 @@ export interface PerformerCardData {
   imagePath?: string;
   rating?: number;
   gender?: string;
+  isNsfw?: boolean;
 }
 
 function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | undefined {
@@ -34,6 +35,7 @@ export function performerItemToCardData(performer: PerformerItem): PerformerCard
     imagePath: toApiUrl(performer.imagePath) ?? undefined,
     rating: performer.rating ?? undefined,
     gender: performer.gender ?? undefined,
+    isNsfw: performer.isNsfw,
   };
 }
 
