@@ -17,9 +17,10 @@ interface AppShellProps {
   children: React.ReactNode;
   initialCollapsed?: boolean;
   lanAutoEnable?: boolean;
+  initialNsfwMode?: "off" | "blur" | "show";
 }
 
-export function AppShell({ children, initialCollapsed = false, lanAutoEnable = false }: AppShellProps) {
+export function AppShell({ children, initialCollapsed = false, lanAutoEnable = false, initialNsfwMode = "off" }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   const toggle = () => {
@@ -29,7 +30,7 @@ export function AppShell({ children, initialCollapsed = false, lanAutoEnable = f
   };
 
   return (
-    <NsfwProvider lanAutoEnable={lanAutoEnable}>
+    <NsfwProvider lanAutoEnable={lanAutoEnable} initialMode={initialNsfwMode}>
       <SearchProvider>
         <div className="flex min-h-dvh">
           {/* Desktop sidebar */}

@@ -476,7 +476,7 @@ export function SceneDetail({
                         href={`/performers/${p.id}`}
                         className="surface-card-sharp flex items-center gap-3 p-2.5 pr-4 hover:border-border-accent transition-colors"
                       >
-                        <NsfwBlur isNsfw={p.isNsfw ?? false} className="flex-shrink-0 h-12 w-9 overflow-hidden bg-surface-3 border border-border-subtle">
+                        <NsfwBlur isNsfw={scene.isNsfw || (p.isNsfw ?? false)} className="flex-shrink-0 h-12 w-9 overflow-hidden bg-surface-3 border border-border-subtle">
                           <div className="h-12 w-9 overflow-hidden bg-surface-3">
                             {imgUrl ? (
                               <img src={imgUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />

@@ -7,6 +7,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get("obscura-sidebar");
   const initialCollapsed = sidebarCookie?.value === "collapsed";
+  const nsfwCookie = cookieStore.get("obscura-nsfw-mode")?.value;
+  const initialNsfwMode = (nsfwCookie === "blur" || nsfwCookie === "show" || nsfwCookie === "off")
+    ? nsfwCookie
+    : "off";
 
   let lanAutoEnable = false;
   try {
@@ -17,7 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AppShell initialCollapsed={initialCollapsed} lanAutoEnable={lanAutoEnable}>
+    <AppShell initialCollapsed={initialCollapsed} lanAutoEnable={lanAutoEnable} initialNsfwMode={initialNsfwMode}>
       {children}
     </AppShell>
   );

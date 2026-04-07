@@ -17,14 +17,6 @@ const NsfwContext = createContext<NsfwContextValue>({
 const COOKIE_NAME = "obscura-nsfw-mode";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-function readModeCookie(): NsfwMode | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
-  const value = match ? decodeURIComponent(match[1]) : null;
-  if (value === "blur" || value === "show" || value === "off") return value;
-  return null;
-}
-
 function writeModeCookie(mode: NsfwMode) {
   if (typeof document === "undefined") return;
   document.cookie = `${COOKIE_NAME}=${encodeURIComponent(mode)};path=/;max-age=${COOKIE_MAX_AGE};samesite=lax`;
@@ -32,19 +24,21 @@ function writeModeCookie(mode: NsfwMode) {
 
 interface NsfwProviderProps {
   children: React.ReactNode;
+  /** Server-read cookie value — ensures SSR and client agree on first render */
+  initialMode?: NsfwMode;
   /** Whether LAN auto-enable is active (from library settings) */
   lanAutoEnable?: boolean;
 }
 
-export function NsfwProvider({ children, lanAutoEnable = false }: NsfwProviderProps) {
-  // Read cookie synchronously on first client render to avoid hydration
-  // flash. On the server (SSR) readModeCookie returns null, so the default
-  // is "off" which matches the server render.
-  const [mode, setModeState] = useState<NsfwMode>(() => readModeCookie() ?? "off");
+export function NsfwProvider({ children, initialMode = "off", lanAutoEnable = false }: NsfwProviderProps) {
+  // Use the server-provided initial mode so SSR and client hydration match.
+  // The server layout reads the cookie via next/headers and passes it here.
+  const [mode, setModeState] = useState<NsfwMode>(initialMode);
 
   // Track whether we still need to do the async LAN check.
-  // If a cookie existed, we're already initialized.
-  const [initialized, setInitialized] = useState(() => readModeCookie() !== null || !lanAutoEnable);
+  // If a mode was already set (cookie existed), we're initialized.
+  const hasCookie = initialMode !== "off" || !lanAutoEnable;
+  const [initialized, setInitialized] = useState(hasCookie);
   const hasAutoEnabled = useRef(false);
 
   useEffect(() => {
