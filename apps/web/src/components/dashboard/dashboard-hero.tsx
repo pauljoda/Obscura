@@ -10,12 +10,12 @@ export interface DashboardHeroProps {
 
 export function DashboardHero({ stats }: DashboardHeroProps) {
   return (
-    <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 pt-2 pb-1">
-      <div className="flex justify-center lg:justify-start w-full lg:w-auto">
+    <header className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2 pb-1 items-center">
+      <div className="flex justify-center lg:justify-start lg:col-span-1">
         <Logo size={48} className="gap-4" textClassName="text-2xl tracking-[0.18em]" />
       </div>
       
-      <div className="w-full lg:w-auto">
+      <div className="lg:col-span-2">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}

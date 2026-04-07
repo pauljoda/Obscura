@@ -18,7 +18,7 @@ export function DashboardStatTile({
   return (
     <div
       className={cn(
-        "surface-panel relative overflow-hidden p-3 flex flex-col justify-between min-h-[88px]",
+        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
         accent && "border-border-accent shadow-[var(--shadow-glow-accent)]"
       )}
     >
@@ -29,7 +29,7 @@ export function DashboardStatTile({
         )}
       />
       <div className="flex items-center justify-between ml-1.5">
-        <span className="text-[0.65rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
+        <span className="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
           {label}
         </span>
         <div className={cn("opacity-70", accent ? "text-text-accent" : "text-text-disabled")}>
@@ -38,7 +38,7 @@ export function DashboardStatTile({
       </div>
       <div
         className={cn(
-          "ml-1.5 mt-2 text-xl font-mono tracking-tight",
+          "ml-1.5 mt-1 text-lg font-mono tracking-tight",
           accent ? "text-glow-accent" : "text-text-primary"
         )}
       >
