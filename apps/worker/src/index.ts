@@ -10,6 +10,7 @@ import postgres from "postgres";
 import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import {
+  type JobKind,
   jobRunRetention,
   queueDefinitions,
   queueRedisRetention,
@@ -48,6 +49,7 @@ const queryClient = postgres(databaseUrl);
 const db = drizzle(queryClient, { schema });
 
 type JobPayload = Record<string, unknown> & {
+  jobKind?: JobKind;
   triggeredBy?: JobTriggerKind;
   triggerLabel?: string;
 };
@@ -60,6 +62,7 @@ type QueueTarget = {
 
 type QueueTrigger = {
   by?: JobTriggerKind;
+  kind?: JobKind;
   label?: string | null;
 };
 
@@ -91,9 +94,115 @@ function withTriggerMetadata(
 ): JobPayload {
   return {
     ...payload,
+    ...(trigger.kind ? { jobKind: trigger.kind } : {}),
     ...(trigger.by ? { triggeredBy: trigger.by } : {}),
     ...(trigger.label ? { triggerLabel: trigger.label } : {}),
   };
+}
+
+function getRootScopedPath(filePath: string) {
+  return filePath.includes("::") ? (filePath.split("::")[0] ?? filePath) : filePath;
+}
+
+function isPathWithinRoot(filePath: string, rootPath: string) {
+  const candidate = path.resolve(getRootScopedPath(filePath));
+  const root = path.resolve(rootPath);
+  return candidate === root || candidate.startsWith(`${root}${path.sep}`);
+}
+
+function isPathWithinAnyRoot(filePath: string, rootPaths: string[]) {
+  return rootPaths.some((rootPath) => isPathWithinRoot(filePath, rootPath));
+}
+
+async function removeGeneratedSceneDirs(sceneIds: string[]) {
+  for (const sceneId of sceneIds) {
+    await rm(getGeneratedSceneDir(sceneId), { recursive: true, force: true });
+  }
+}
+
+async function removeGeneratedImageDirs(imageIds: string[]) {
+  for (const imageId of imageIds) {
+    await rm(getGeneratedImageDir(imageId), { recursive: true, force: true });
+  }
+}
+
+async function pruneUntrackedLibraryReferences() {
+  const allRoots = await db
+    .select({ path: libraryRoots.path })
+    .from(libraryRoots)
+    .where(eq(libraryRoots.enabled, true));
+
+  const enabledRootPaths = allRoots.map((root) => root.path);
+
+  const allKnownScenes = await db
+    .select({
+      id: scenes.id,
+      filePath: scenes.filePath,
+    })
+    .from(scenes);
+
+  const missingSceneIds = allKnownScenes
+    .filter((scene) => scene.filePath && !existsSync(scene.filePath))
+    .map((scene) => scene.id);
+
+  if (missingSceneIds.length > 0) {
+    await removeGeneratedSceneDirs(missingSceneIds);
+    await db.delete(scenes).where(inArray(scenes.id, missingSceneIds));
+  }
+
+  const orphanedSceneIds = allKnownScenes
+    .filter((scene) => {
+      if (!scene.filePath) return false;
+      if (missingSceneIds.includes(scene.id)) return false;
+      return !isPathWithinAnyRoot(scene.filePath, enabledRootPaths);
+    })
+    .map((scene) => scene.id);
+
+  if (orphanedSceneIds.length > 0) {
+    await removeGeneratedSceneDirs(orphanedSceneIds);
+    await db.delete(scenes).where(inArray(scenes.id, orphanedSceneIds));
+  }
+
+  const allKnownImages = await db
+    .select({
+      id: images.id,
+      filePath: images.filePath,
+    })
+    .from(images);
+
+  const orphanedImageIds = allKnownImages
+    .filter((image) => !isPathWithinAnyRoot(image.filePath, enabledRootPaths))
+    .map((image) => image.id);
+
+  if (orphanedImageIds.length > 0) {
+    await removeGeneratedImageDirs(orphanedImageIds);
+    await db.delete(images).where(inArray(images.id, orphanedImageIds));
+  }
+
+  const allKnownGalleries = await db
+    .select({
+      id: galleries.id,
+      folderPath: galleries.folderPath,
+      zipFilePath: galleries.zipFilePath,
+    })
+    .from(galleries);
+
+  const orphanedGalleryIds = allKnownGalleries
+    .filter((gallery) => {
+      const backingPath = gallery.folderPath ?? gallery.zipFilePath;
+      if (!backingPath) return false;
+      return !isPathWithinAnyRoot(backingPath, enabledRootPaths);
+    })
+    .map((gallery) => gallery.id);
+
+  if (orphanedGalleryIds.length > 0) {
+    await db
+      .update(galleries)
+      .set({ parentId: null, updatedAt: new Date() })
+      .where(inArray(galleries.parentId, orphanedGalleryIds));
+
+    await db.delete(galleries).where(inArray(galleries.id, orphanedGalleryIds));
+  }
 }
 
 function formatJobError(error: unknown) {
@@ -423,55 +532,14 @@ async function processLibraryScan(job: Job) {
     label: root.label,
   });
 
+  await pruneUntrackedLibraryReferences();
+
   const settings = await ensureLibrarySettingsRow();
 
   // Only scan for videos if this root has video scanning enabled
   const scanVideos = root.scanVideos ?? true;
   const files = scanVideos ? await discoverVideoFiles(root.path, root.recursive) : [];
   const discoveredSet = new Set(files);
-
-  const allKnownScenes = await db
-    .select({
-      id: scenes.id,
-      filePath: scenes.filePath,
-    })
-    .from(scenes);
-
-  const globallyMissingSceneIds = allKnownScenes
-    .filter((scene) => scene.filePath && !existsSync(scene.filePath))
-    .map((scene) => scene.id);
-
-  if (globallyMissingSceneIds.length > 0) {
-    for (const missingSceneId of globallyMissingSceneIds) {
-      await rm(getGeneratedSceneDir(missingSceneId), { recursive: true, force: true });
-    }
-
-    await db.delete(scenes).where(inArray(scenes.id, globallyMissingSceneIds));
-  }
-
-  // Remove scenes whose file path doesn't fall under any enabled library root
-  const allRoots = await db
-    .select({ path: libraryRoots.path })
-    .from(libraryRoots)
-    .where(eq(libraryRoots.enabled, true));
-
-  const enabledRootPaths = allRoots.map((r) => r.path);
-
-  const orphanedSceneIds = allKnownScenes
-    .filter((scene) => {
-      if (!scene.filePath) return false;
-      if (globallyMissingSceneIds.includes(scene.id)) return false;
-      return !enabledRootPaths.some((rootPath) => scene.filePath!.startsWith(rootPath));
-    })
-    .map((scene) => scene.id);
-
-  if (orphanedSceneIds.length > 0) {
-    for (const orphanedId of orphanedSceneIds) {
-      await rm(getGeneratedSceneDir(orphanedId), { recursive: true, force: true });
-    }
-
-    await db.delete(scenes).where(inArray(scenes.id, orphanedSceneIds));
-  }
 
   const knownScenesInRoot = await db
     .select({
@@ -486,10 +554,7 @@ async function processLibraryScan(job: Job) {
     .map((scene) => scene.id);
 
   if (staleSceneIds.length > 0) {
-    for (const staleSceneId of staleSceneIds) {
-      await rm(getGeneratedSceneDir(staleSceneId), { recursive: true, force: true });
-    }
-
+    await removeGeneratedSceneDirs(staleSceneIds);
     await db.delete(scenes).where(inArray(scenes.id, staleSceneIds));
   }
 
@@ -1163,9 +1228,7 @@ async function processGalleryScan(job: Job) {
     .map((img) => img.id);
 
   if (staleImageIds.length > 0) {
-    for (const staleId of staleImageIds) {
-      await rm(getGeneratedImageDir(staleId), { recursive: true, force: true });
-    }
+    await removeGeneratedImageDirs(staleImageIds);
     await db.delete(images).where(inArray(images.id, staleImageIds));
   }
 

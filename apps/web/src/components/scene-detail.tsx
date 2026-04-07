@@ -405,7 +405,7 @@ export function SceneDetail({
                   ? "Rebuild queued"
                   : rebuildPreviewState === "queued"
                     ? "Queuing..."
-                    : "Rebuild thumbnails and trickplay"
+                    : "Force rebuild thumbnails and trickplay"
               }
             >
               {rebuildPreviewState === "done" ? (

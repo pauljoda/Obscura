@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { and, asc, desc, eq, inArray, isNull, like, not, or, sql } from "drizzle-orm";
 import {
   queueDefinitions,
+  type JobKind,
   type JobTriggerKind,
   type QueueName,
 } from "@obscura/contracts";
@@ -14,6 +15,7 @@ import { getQueue } from "../lib/queues";
 const { jobRuns, libraryRoots, scenes } = schema;
 
 type JobPayload = Record<string, unknown> & {
+  jobKind?: JobKind;
   triggeredBy?: JobTriggerKind;
   triggerLabel?: string;
 };
@@ -26,6 +28,7 @@ type QueueTarget = {
 
 type QueueTrigger = {
   by?: JobTriggerKind;
+  kind?: JobKind;
   label?: string | null;
 };
 
@@ -39,6 +42,7 @@ function withTriggerMetadata(
 ): JobPayload {
   return {
     ...payload,
+    ...(trigger.kind ? { jobKind: trigger.kind } : {}),
     ...(trigger.by ? { triggeredBy: trigger.by } : {}),
     ...(trigger.label ? { triggerLabel: trigger.label } : {}),
   };
@@ -51,6 +55,7 @@ function readTriggerMetadata(payload: unknown): QueueTrigger {
 
   const meta = payload as JobPayload;
   return {
+    kind: meta.jobKind ?? undefined,
     by: meta.triggeredBy ?? undefined,
     label: typeof meta.triggerLabel === "string" ? meta.triggerLabel : undefined,
   };
@@ -63,6 +68,7 @@ function toJobRunDto(job: typeof jobRuns.$inferSelect) {
   return {
     ...job,
     queueLabel: queueDefinition.label,
+    jobKind: trigger.kind ?? null,
     triggeredBy: trigger.by ?? null,
     triggerLabel: trigger.label ?? null,
     progress: job.progress ?? 0,
@@ -558,7 +564,8 @@ export async function jobsRoutes(app: FastifyInstance) {
       { sceneId },
       {
         by: "manual",
-        label: "Rebuild preview from Operations",
+        kind: "force-rebuild",
+        label: "Force rebuild preview from Operations",
       }
     );
     const job = await queue.add("scene-preview", payload);
@@ -590,7 +597,8 @@ export async function jobsRoutes(app: FastifyInstance) {
 
     const result = await enqueueMissingSceneJobs("preview", {
       by: "manual",
-      label: "Rebuild previews from Operations",
+      kind: "force-rebuild",
+      label: "Force rebuild previews from Operations",
     });
 
     return {

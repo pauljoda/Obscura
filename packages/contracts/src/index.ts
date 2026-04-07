@@ -155,6 +155,10 @@ export const jobTriggerKinds = [
 
 export type JobTriggerKind = (typeof jobTriggerKinds)[number];
 
+export const jobKinds = ["standard", "force-rebuild"] as const;
+
+export type JobKind = (typeof jobKinds)[number];
+
 export interface LibraryRootDto {
   id: string;
   path: string;
@@ -350,6 +354,7 @@ export interface JobRunDto {
   targetLabel: string | null;
   triggeredBy: JobTriggerKind | null;
   triggerLabel: string | null;
+  jobKind: JobKind | null;
   progress: number;
   attempts: number;
   error: string | null;

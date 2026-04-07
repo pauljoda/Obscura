@@ -1007,7 +1007,9 @@ function DiagnosticsSection() {
     setResult(null);
     try {
       const res = await rebuildPreviews();
-      setResult(`Queued ${res.enqueued} scene${res.enqueued === 1 ? "" : "s"} for preview regeneration`);
+      setResult(
+        `Queued ${res.enqueued} scene${res.enqueued === 1 ? "" : "s"} for forced preview regeneration`
+      );
     } catch {
       setResult("Failed to queue rebuild");
     } finally {
@@ -1027,10 +1029,13 @@ function DiagnosticsSection() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="surface-card-sharp rounded-sm p-3 space-y-2">
           <div>
-            <p className="text-[0.78rem] font-medium">Rebuild all previews</p>
+            <p className="text-[0.78rem] font-medium text-status-error-text">
+              Force rebuild all previews
+            </p>
             <p className="text-[0.68rem] text-text-muted">
-              Regenerate thumbnails, preview clips, and trickplay sprites for every scene.
-              Useful after quality setting changes or to fix corrupt sprites.
+              Clear and regenerate thumbnails, preview clips, and trickplay sprites for every
+              scene. This is a heavy maintenance job and is useful after quality setting changes
+              or to fix corrupt sprites.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -1038,14 +1043,14 @@ function DiagnosticsSection() {
               type="button"
               onClick={handleRebuildPreviews}
               disabled={rebuilding}
-              className="inline-flex items-center gap-1.5 rounded-sm bg-surface-3 px-3 py-1.5 text-[0.72rem] font-medium text-text-primary transition-colors hover:bg-surface-4 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-[0.72rem] font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-50"
             >
               {rebuilding ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
                 <RefreshCw className="h-3 w-3" />
               )}
-              {rebuilding ? "Queuing..." : "Rebuild previews"}
+              {rebuilding ? "Queuing..." : "Force rebuild previews"}
             </button>
             {result && (
               <p className="text-[0.68rem] text-text-muted">{result}</p>

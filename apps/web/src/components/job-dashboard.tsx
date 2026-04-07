@@ -84,9 +84,14 @@ function ledForQueue(status: QueueSummary["status"]): LedStatus {
   return "idle";
 }
 
-function toneForJob(status: JobRun["status"]) {
-  if (status === "failed") return "error";
-  if (status === "waiting" || status === "delayed") return "warning";
+function isForceRebuildJob(job: JobRun) {
+  return job.jobKind === "force-rebuild";
+}
+
+function toneForJob(job: JobRun) {
+  if (job.status === "failed") return "error";
+  if (isForceRebuildJob(job)) return "error";
+  if (job.status === "waiting" || job.status === "delayed") return "warning";
   return "phosphor";
 }
 
@@ -118,6 +123,22 @@ function statusLabel(status: JobRun["status"]) {
 
 function jobHeading(job: JobRun) {
   return job.targetLabel ?? `${job.queueLabel} task`;
+}
+
+function jobBadgeVariant(job: JobRun) {
+  return isForceRebuildJob(job) ? "error" : "accent";
+}
+
+function ForceRebuildBadge({ job }: { job: JobRun }) {
+  if (!isForceRebuildJob(job)) {
+    return null;
+  }
+
+  return (
+    <Badge variant="error" className="text-[0.56rem]">
+      Force rebuild
+    </Badge>
+  );
 }
 
 function describeRunResult(queueName: string, enqueued: number, skipped: number) {
@@ -697,20 +718,29 @@ function ActiveJobCard({
     <div
       className={cn(
         "surface-card-sharp no-lift space-y-3 p-4",
-        isRunning ? "border-border-accent/30" : "border-status-warning/20"
+        isForceRebuildJob(job)
+          ? "border-status-error/30 bg-status-error/[0.04]"
+          : isRunning
+            ? "border-border-accent/30"
+            : "border-status-warning/20"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusLed status={toneForJob(job.status)} pulse={isRunning} />
-            <Badge variant="accent" className="text-[0.56rem]">
+            <StatusLed status={toneForJob(job)} pulse={isRunning} />
+            <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
               {job.queueLabel}
             </Badge>
+            <ForceRebuildBadge job={job} />
             <span
               className={cn(
                 "text-[0.62rem] font-semibold uppercase tracking-[0.12em]",
-                isRunning ? "text-text-accent" : "text-status-warning-text"
+                isForceRebuildJob(job)
+                  ? "text-status-error-text"
+                  : isRunning
+                    ? "text-text-accent"
+                    : "text-status-warning-text"
               )}
             >
               {statusLabel(job.status)}
@@ -736,7 +766,11 @@ function ActiveJobCard({
         </div>
       </div>
 
-      <Meter value={job.progress} showValue variant={isRunning ? "phosphor" : "accent"} />
+      <Meter
+        value={job.progress}
+        showValue
+        variant={isRunning && !isForceRebuildJob(job) ? "phosphor" : "accent"}
+      />
 
       <div className="grid gap-2 text-[0.7rem] text-text-disabled md:grid-cols-3">
         <div>
@@ -761,9 +795,10 @@ function FailedJobCard({ job }: { job: JobRun }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <StatusLed status="error" pulse={false} />
-              <Badge variant="accent" className="text-[0.56rem]">
+              <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
                 {job.queueLabel}
               </Badge>
+              <ForceRebuildBadge job={job} />
               <span className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-status-error-text">
                 failed
               </span>
@@ -812,10 +847,11 @@ function CompletedJobRow({ job }: { job: JobRun }) {
         <p className="truncate text-[0.84rem] font-medium text-text-primary">{jobHeading(job)}</p>
         <p className="mt-1 truncate text-mono-sm text-text-disabled">{describeTrigger(job)}</p>
       </div>
-      <div className="flex items-center">
-        <Badge variant="accent" className="text-[0.56rem]">
+      <div className="flex items-center gap-2">
+        <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
           {job.queueLabel}
         </Badge>
+        <ForceRebuildBadge job={job} />
       </div>
       <div className="text-right text-[0.72rem] text-text-muted">
         <div>{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</div>
