@@ -28,6 +28,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { NsfwGate } from "../nsfw/nsfw-gate";
 import {
   browseLibraryPath,
   createLibraryRoot,
@@ -581,6 +582,7 @@ export function SettingsPageClient({
         )}
       </section>
 
+      <NsfwGate>
       <div className="border-t border-border-subtle" />
 
       {/* ─── Metadata Providers ──────────────────────────────────── */}
@@ -870,6 +872,7 @@ export function SettingsPageClient({
           </div>
         </Link>
       </section>
+      </NsfwGate>
 
       <div className="border-t border-border-subtle" />
       <section className="space-y-3">
