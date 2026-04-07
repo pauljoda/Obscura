@@ -22,7 +22,7 @@ function NavTile({
   return (
     <Link
       href={href}
-      className="surface-card-sharp group relative flex items-center gap-3 overflow-hidden p-3.5"
+      className="surface-card group relative flex items-center gap-3 overflow-hidden p-3.5"
     >
       <div
         className={cn(

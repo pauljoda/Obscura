@@ -126,7 +126,7 @@ export function DashboardRecentAdditions({
   return (
     <section>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold tracking-tight font-heading">New</h2>
+        <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">New Additions</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Link
             href="/scenes"
@@ -149,7 +149,7 @@ export function DashboardRecentAdditions({
         </div>
       </div>
 
-      <div className="surface-card-sharp no-lift p-3 sm:p-4">
+      <div className="surface-card no-lift p-3 sm:p-4">
         {loading ? (
           <IngestSkeleton />
         ) : merged.length === 0 ? (

@@ -34,7 +34,7 @@ function QueueLane({
       : 0;
 
   return (
-    <div className="surface-card-sharp no-lift relative min-w-[140px] flex-1 overflow-hidden p-3">
+    <div className="surface-card no-lift relative overflow-hidden p-3">
       <div
         className={cn(
           "pointer-events-none absolute -right-6 -bottom-10 h-24 w-24 rotate-12 opacity-25 blur-2xl",
@@ -42,15 +42,17 @@ function QueueLane({
         )}
       />
       <div className="relative flex items-center justify-between gap-2 mb-2">
-        <span className={`led led-sm ${ledForQueue(queue.status)}`} />
-        <span className="text-[0.58rem] font-mono uppercase tracking-widest text-text-disabled truncate text-right">
-          {formatQueueName(queue.name)}
-        </span>
-      </div>
-      <div className="relative flex gap-2 text-mono-sm text-text-muted">
-        <span title="Running">{queue.active} run</span>
-        <span className="text-text-disabled">·</span>
-        <span title="Waiting">{queue.waiting} wait</span>
+        <div className="flex items-center gap-2">
+          <span className={`led led-sm ${ledForQueue(queue.status)}`} />
+          <span className="text-[0.65rem] font-mono uppercase tracking-widest text-text-secondary">
+            {formatQueueName(queue.name)}
+          </span>
+        </div>
+        <div className="flex gap-2 text-mono-sm text-text-muted">
+          <span title="Running">{queue.active} run</span>
+          <span className="text-text-disabled">·</span>
+          <span title="Waiting">{queue.waiting} wait</span>
+        </div>
       </div>
       <div className="relative mt-2 space-y-1.5">
         <div className="meter-track h-1 overflow-hidden">
@@ -80,11 +82,11 @@ export function DashboardQueueRack({ queues }: { queues: QueueSummaryDto[] }) {
 
   return (
     <section>
-      <div className="flex items-end justify-between gap-3 mb-3">
-        <h2 className="text-lg font-semibold tracking-tight font-heading">Queues</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Queues</h2>
         <span className="text-mono-sm text-text-disabled">{queues.length}</span>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden md:flex-wrap md:overflow-visible">
+      <div className="flex flex-col gap-2">
         {queues.map((queue, i) => (
           <QueueLane
             key={queue.name}

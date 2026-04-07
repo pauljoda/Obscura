@@ -31,58 +31,63 @@ export function DashboardPageClient({
   const loading = false;
 
   return (
-    <div className="space-y-7">
-      <DashboardHero
-        loading={loading}
-        sceneCount={stats?.totalScenes ?? null}
-        scheduleEnabled={jobs?.schedule.enabled ?? false}
-        intervalMinutes={jobs?.schedule.intervalMinutes ?? 0}
-        queueCount={jobs?.queues.length ?? 0}
-      />
+    <div className="space-y-6">
+      <DashboardHero />
 
-      <section aria-label="Library totals">
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <DashboardStatTile
-            icon={<Film className="h-3.5 w-3.5" />}
-            label="Scenes"
-            value={String(stats?.totalScenes ?? 0)}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Main Content Column */}
+        <div className="xl:col-span-2 space-y-6">
+          <DashboardRecentAdditions
+            loading={loading}
+            scenes={recentScenes}
+            galleries={recentGalleries}
           />
-          <DashboardStatTile
-            icon={<Clock className="h-3.5 w-3.5" />}
-            label="Total duration"
-            value={stats?.totalDurationFormatted ?? "—"}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
-          />
-          <DashboardStatTile
-            icon={<HardDrive className="h-3.5 w-3.5" />}
-            label="Storage"
-            value={stats?.totalSizeFormatted ?? "—"}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
-          />
-          <DashboardStatTile
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
-            label="This week"
-            value={`+${stats?.recentCount ?? 0} new`}
-            accent
-            gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
-          />
+          
+          <DashboardQuickNav sceneCount={stats?.totalScenes} />
         </div>
-      </section>
 
-      <DashboardRecentAdditions
-        loading={loading}
-        scenes={recentScenes}
-        galleries={recentGalleries}
-      />
+        {/* System Status Column */}
+        <div className="space-y-6">
+          <section aria-label="Library totals">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">System Stats</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <DashboardStatTile
+                icon={<Film className="h-4 w-4" />}
+                label="Scenes"
+                value={String(stats?.totalScenes ?? 0)}
+                gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+              />
+              <DashboardStatTile
+                icon={<Clock className="h-4 w-4" />}
+                label="Duration"
+                value={stats?.totalDurationFormatted ?? "—"}
+                gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+              />
+              <DashboardStatTile
+                icon={<HardDrive className="h-4 w-4" />}
+                label="Storage"
+                value={stats?.totalSizeFormatted ?? "—"}
+                gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+              />
+              <DashboardStatTile
+                icon={<TrendingUp className="h-4 w-4" />}
+                label="This Week"
+                value={`+${stats?.recentCount ?? 0}`}
+                accent
+                gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
+              />
+            </div>
+          </section>
 
-      {jobs && jobs.queues.length > 0 ? (
-        <DashboardQueueRack queues={jobs.queues} />
-      ) : null}
+          {jobs && jobs.queues.length > 0 ? (
+            <DashboardQueueRack queues={jobs.queues} />
+          ) : null}
 
-      <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} />
-
-      <DashboardQuickNav sceneCount={stats?.totalScenes} />
+          <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} />
+        </div>
+      </div>
     </div>
   );
 }

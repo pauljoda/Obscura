@@ -64,8 +64,8 @@ export function DashboardRecentActivity({
 
   return (
     <section>
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-lg font-semibold tracking-tight font-heading">Jobs</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Recent Jobs</h2>
         <Link
           href="/jobs"
           className="text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast font-medium"
@@ -75,17 +75,17 @@ export function DashboardRecentActivity({
       </div>
 
       {loading ? (
-        <div className="surface-card-sharp no-lift flex items-center justify-center p-12">
+        <div className="surface-card no-lift flex items-center justify-center p-12">
           <Loader2 className="h-6 w-6 text-text-accent animate-spin" />
         </div>
       ) : list.length > 0 ? (
-        <div className="surface-card-sharp no-lift overflow-hidden divide-y divide-border-subtle">
+        <div className="surface-card no-lift overflow-hidden divide-y divide-border-subtle">
           {list.map((job) => (
             <RecentJobRow key={job.id} job={job} />
           ))}
         </div>
       ) : (
-        <div className="surface-card-sharp no-lift flex flex-col items-center justify-center p-10 text-center">
+        <div className="surface-card no-lift flex flex-col items-center justify-center p-10 text-center">
           <Clock className="h-9 w-9 text-text-disabled mb-2 opacity-80" />
           <p className="text-text-muted text-sm">No jobs yet.</p>
           <Link

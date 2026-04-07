@@ -18,31 +18,27 @@ export function DashboardStatTile({
   return (
     <div
       className={cn(
-        "surface-card-sharp no-lift relative overflow-hidden p-3.5 pt-4",
-        accent &&
-          "border-border-accent border-t-accent-500/20 shadow-[var(--shadow-glow-accent)]"
+        "surface-panel relative overflow-hidden p-3 flex flex-col justify-between min-h-[88px]",
+        accent && "border-border-accent shadow-[var(--shadow-glow-accent)]"
       )}
     >
       <div
         className={cn(
-          "absolute bottom-0 left-0 right-0 h-[3px] opacity-90",
+          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
           gradientClass
         )}
       />
-      <div
-        className={cn(
-          "relative flex items-center gap-1.5 mb-1.5",
-          accent ? "text-text-accent" : "text-text-disabled"
-        )}
-      >
-        {icon}
-        <span className="text-kicker" style={{ color: "inherit" }}>
+      <div className="flex items-center justify-between ml-1.5">
+        <span className="text-[0.65rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
           {label}
         </span>
+        <div className={cn("opacity-70", accent ? "text-text-accent" : "text-text-disabled")}>
+          {icon}
+        </div>
       </div>
       <div
         className={cn(
-          "relative text-lg font-semibold leading-tight tracking-tight",
+          "ml-1.5 mt-2 text-xl font-mono tracking-tight",
           accent ? "text-glow-accent" : "text-text-primary"
         )}
       >
