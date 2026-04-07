@@ -50,6 +50,7 @@ export interface SceneListItem {
   }[];
   tags: { id: string; name: string }[];
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface SceneDetail extends SceneListItem {

@@ -44,12 +44,12 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
     id: scene.id,
     href: `/scenes/${scene.id}`,
     title: scene.title,
-    thumbnail: toApiUrl(scene.thumbnailPath),
+    thumbnail: toApiUrl(scene.thumbnailPath, scene.updatedAt),
     cardThumbnail: scene.thumbnailPath?.includes("thumb-custom")
       ? undefined
-      : toApiUrl(scene.cardThumbnailPath),
-    trickplaySprite: toApiUrl(scene.spritePath),
-    trickplayVtt: toApiUrl(scene.trickplayVttPath),
+      : toApiUrl(scene.cardThumbnailPath, scene.updatedAt),
+    trickplaySprite: toApiUrl(scene.spritePath, scene.updatedAt),
+    trickplayVtt: toApiUrl(scene.trickplayVttPath, scene.updatedAt),
     scrubDurationSeconds: scene.duration ?? undefined,
     duration: scene.durationFormatted ?? undefined,
     resolution: scene.resolution ?? undefined,

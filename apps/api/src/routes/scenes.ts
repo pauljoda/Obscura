@@ -220,6 +220,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         .filter((t) => t.sceneId === scene.id)
         .map((t) => ({ id: t.tagId, name: t.tagName })),
       createdAt: scene.createdAt,
+      updatedAt: scene.updatedAt,
     }));
 
     return {

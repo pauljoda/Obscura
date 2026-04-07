@@ -148,10 +148,9 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     const assetPath = kindToPath[resolvedKind];
 
-    // All generated assets use no-cache so regenerated files are picked up
-    // immediately after a rebuild. The browser will revalidate with the server
-    // but still uses its cached copy when the file hasn't changed.
-    const cacheHeader = "no-cache";
+    // Generated scene assets are versioned on the client with `?v=<updatedAt>`,
+    // so they can be cached aggressively without serving stale rebuilds.
+    const cacheHeader = "public, max-age=31536000, immutable";
 
     // Try sidecar path first, then fall back to legacy cache dir
     if (existsSync(assetPath)) {

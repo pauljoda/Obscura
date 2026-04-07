@@ -728,7 +728,9 @@ function scaleResolution(nativeSize: number, minSize: number, quality: number): 
   return Math.round(nativeSize - t * (nativeSize - minSize));
 }
 
-const MAX_TRICKPLAY_SHEET_PIXELS = 120_000_000;
+const MAX_TRICKPLAY_SHEET_PIXELS = 24_000_000;
+const MAX_TRICKPLAY_FRAME_WIDTH = 320;
+const MAX_TRICKPLAY_FRAME_HEIGHT = 180;
 const MIN_TRICKPLAY_FRAME_WIDTH = 48;
 const MIN_TRICKPLAY_FRAME_HEIGHT = 27;
 
@@ -740,8 +742,14 @@ function planTrickplaySheet(input: {
 }) {
   const effectiveDuration = Math.max(0, input.duration);
   let frameInterval = Math.max(1, input.frameInterval);
-  let frameWidth = Math.max(MIN_TRICKPLAY_FRAME_WIDTH, input.frameWidth);
-  let frameHeight = Math.max(MIN_TRICKPLAY_FRAME_HEIGHT, input.frameHeight);
+  let frameWidth = Math.min(
+    MAX_TRICKPLAY_FRAME_WIDTH,
+    Math.max(MIN_TRICKPLAY_FRAME_WIDTH, input.frameWidth)
+  );
+  let frameHeight = Math.min(
+    MAX_TRICKPLAY_FRAME_HEIGHT,
+    Math.max(MIN_TRICKPLAY_FRAME_HEIGHT, input.frameHeight)
+  );
   let frameCount = Math.max(
     1,
     Math.ceil((effectiveDuration || frameInterval) / frameInterval)
@@ -788,6 +796,12 @@ function toTimestamp(seconds: number) {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(
     secs
   ).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+}
+
+function trickplayJpegQuality(quality: number) {
+  const clamped = Math.max(1, Math.min(31, quality));
+  const t = (clamped - 1) / 30;
+  return Math.round(68 - t * 30);
 }
 
 async function processPreview(job: Job) {
@@ -1002,7 +1016,10 @@ async function processPreview(job: Job) {
       },
     })
       .composite(composites)
-      .jpeg({ quality: Math.max(10, Math.round(100 - (trickQualityClamped - 1) * (90 / 30))) })
+      .jpeg({
+        quality: trickplayJpegQuality(trickQualityClamped),
+        mozjpeg: true,
+      })
       .toFile(spriteFile);
 
     // Generate VTT from actual extracted frames
