@@ -130,7 +130,7 @@ export function GalleryFilterBar({
             <button
               onClick={() => setSortOpen(!sortOpen)}
               className={cn(
-                "flex items-center gap-1.5 rounded-sm px-2 py-1.5",
+                "flex items-center gap-1.5 px-2 py-1.5",
                 "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
                 "transition-colors duration-fast"
               )}
@@ -171,7 +171,7 @@ export function GalleryFilterBar({
             onClick={() => onSortChange(sortBy, sortDir === "asc" ? "desc" : "asc")}
             title={sortDir === "asc" ? "Ascending" : "Descending"}
             className={cn(
-              "flex h-7 w-7 items-center justify-center rounded-sm",
+              "flex h-7 w-7 items-center justify-center ",
               "text-text-muted hover:text-text-primary hover:bg-surface-2",
               "transition-colors duration-fast"
             )}
@@ -183,7 +183,7 @@ export function GalleryFilterBar({
         <div className="flex-1" />
 
         {/* View modes */}
-        <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
+        <div className="flex items-center border border-border-subtle overflow-hidden">
           {viewModes.map(({ mode, Icon, title }) => (
             <button
               key={mode}
@@ -205,7 +205,7 @@ export function GalleryFilterBar({
         <button
           onClick={() => setFilterPanelOpen(!filterPanelOpen)}
           className={cn(
-            "flex items-center gap-1.5 rounded-sm px-2 py-1.5",
+            "flex items-center gap-1.5 px-2 py-1.5",
             "text-[0.72rem] transition-colors duration-fast",
             filterPanelOpen
               ? "text-text-accent bg-accent-950"
@@ -215,7 +215,7 @@ export function GalleryFilterBar({
           <SlidersHorizontal className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Filters</span>
           {activeFilters.length > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-accent-800 text-[0.55rem] font-bold text-accent-200">
+            <span className="flex h-4 w-4 items-center justify-center bg-accent-800 text-[0.55rem] font-bold text-accent-200">
               {activeFilters.length}
             </span>
           )}

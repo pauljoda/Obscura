@@ -49,7 +49,7 @@ function SceneIngestTile({
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
-      <div className="rounded-sm focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
+      <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
         <SceneCard
           scene={sceneListItemToCardData(scene)}
           index={index}
@@ -70,7 +70,7 @@ function GalleryIngestTile({
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(52vw,168px)] sm:w-[148px]">
-      <div className="rounded-sm focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
+      <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
         <GalleryEntityCard gallery={galleryListItemToCardData(gallery)} />
       </div>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
@@ -94,14 +94,14 @@ function IngestSkeleton() {
         <div key={i} className={cn("shrink-0 space-y-2", slot.w)}>
           <div
             className={cn(
-              "w-full rounded-sm border border-border-subtle bg-surface-2/80 animate-pulse",
+              "w-full border border-border-subtle bg-surface-2/80 animate-pulse",
               slot.aspect
             )}
           />
           {slot.aspect === "aspect-video" && (
             <>
-              <div className="h-3 w-3/4 rounded-xs bg-surface-2/80 animate-pulse" />
-              <div className="h-3 w-1/2 rounded-xs bg-surface-2/80 animate-pulse" />
+              <div className="h-3 w-3/4 bg-surface-2/80 animate-pulse" />
+              <div className="h-3 w-1/2 bg-surface-2/80 animate-pulse" />
             </>
           )}
         </div>
@@ -130,7 +130,7 @@ export function DashboardRecentAdditions({
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Link
             href="/scenes"
-            className="glass-chip rounded-sm border border-white/6 px-2.5 py-1 text-[0.7rem] font-medium text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
+            className="glass-chip border border-white/6 px-2.5 py-1 text-[0.7rem] font-medium text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
           >
             <span className="inline-flex items-center gap-1.5">
               <Film className="h-3 w-3 opacity-70" />
@@ -139,7 +139,7 @@ export function DashboardRecentAdditions({
           </Link>
           <Link
             href="/galleries"
-            className="glass-chip rounded-sm border border-white/6 px-2.5 py-1 text-[0.7rem] font-medium text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
+            className="glass-chip border border-white/6 px-2.5 py-1 text-[0.7rem] font-medium text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
           >
             <span className="inline-flex items-center gap-1.5">
               <Images className="h-3 w-3 opacity-70" />
@@ -154,7 +154,7 @@ export function DashboardRecentAdditions({
           <IngestSkeleton />
         ) : merged.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 text-center px-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-sm border border-border-subtle bg-surface-2 mb-3">
+            <div className="flex h-11 w-11 items-center justify-center border border-border-subtle bg-surface-2 mb-3">
               <Film className="h-5 w-5 text-text-disabled" />
             </div>
             <p className="text-sm text-text-muted">No recent items.</p>
@@ -186,7 +186,7 @@ export function DashboardRecentAdditions({
             })}
 
             {showStillsSlot && (
-              <div className="snap-start shrink-0 flex w-[min(48vw,152px)] sm:w-[136px] flex-col justify-between rounded-sm border border-dashed border-border-default bg-surface-1/40 px-2.5 py-3">
+              <div className="snap-start shrink-0 flex w-[min(48vw,152px)] sm:w-[136px] flex-col justify-between border border-dashed border-border-default bg-surface-1/40 px-2.5 py-3">
                 <Images className="h-4 w-4 text-text-disabled mb-2" />
                 <p className="text-[0.68rem] text-text-muted leading-snug">
                   No stills in index yet.

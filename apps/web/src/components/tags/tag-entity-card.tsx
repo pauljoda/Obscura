@@ -56,7 +56,7 @@ export function TagEntityCard({
       )}
     >
       {tag.imagePath && (
-        <div className="flex-shrink-0 w-8 h-5 rounded-[2px] overflow-hidden bg-surface-3">
+        <div className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
           <img src={tag.imagePath} alt="" className="w-full h-full object-cover" />
         </div>
       )}
@@ -90,7 +90,7 @@ function TagCompactCard({
   const total = tag.sceneCount + tag.imageCount;
   const content = (
     <>
-      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-8 rounded-sm">
+      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-8 ">
         {tag.imagePath ? (
           <img src={tag.imagePath} alt="" className="h-full w-full object-cover" />
         ) : (

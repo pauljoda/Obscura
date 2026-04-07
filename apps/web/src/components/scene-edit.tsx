@@ -904,7 +904,7 @@ export function SceneEdit({
                         className="inline-flex items-center gap-1.5 tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                       >
                         {imgUrl ? (
-                          <img src={imgUrl} alt="" className="h-4 w-3 rounded-sm object-cover flex-shrink-0" loading="lazy" />
+                          <img src={imgUrl} alt="" className="h-4 w-3 object-cover flex-shrink-0" loading="lazy" />
                         ) : null}
                         {p.name}
                       </Link>
@@ -956,7 +956,7 @@ export function SceneEdit({
               <ImageIcon className="h-3.5 w-3.5" />
               Thumbnail
             </h4>
-            <div className="relative group aspect-video surface-well overflow-hidden rounded-sm">
+            <div className="relative group aspect-video surface-well overflow-hidden ">
               {scene.thumbnailPath ? (
                 <img
                   src={toApiUrl(scene.thumbnailPath)}
@@ -1227,7 +1227,7 @@ export function SceneEdit({
             <ImageIcon className="h-3.5 w-3.5" />
             Thumbnail
           </h4>
-          <div className="relative group aspect-video surface-well overflow-hidden rounded-sm">
+          <div className="relative group aspect-video surface-well overflow-hidden ">
             {scene.thumbnailPath ? (
               <img
                 src={toApiUrl(scene.thumbnailPath)}

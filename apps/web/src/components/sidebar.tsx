@@ -68,7 +68,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </Link>
         <button
           onClick={onToggle}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
+          className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
@@ -100,7 +100,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors duration-fast",
+                        "group relative flex items-center gap-3 px-2.5 py-2 text-sm transition-colors duration-fast",
                         isActive
                           ? "bg-accent-950 text-glow-accent"
                           : "text-text-muted hover:text-text-primary hover:bg-surface-2"
@@ -109,7 +109,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     >
                       {/* Active indicator bar */}
                       {isActive && (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
                       )}
                       {Icon && (
                         <Icon

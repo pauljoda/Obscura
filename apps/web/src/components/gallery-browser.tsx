@@ -46,7 +46,7 @@ function TreeRow({ node, depth }: { node: GalleryTreeNode; depth: number }) {
         {hasChildren ? (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex h-5 w-5 items-center justify-center rounded-sm text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+            className="flex h-5 w-5 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
           >
             {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
           </button>

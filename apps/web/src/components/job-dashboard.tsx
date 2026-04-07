@@ -359,7 +359,7 @@ export function JobDashboard() {
               type="button"
               onClick={() => void handleAcknowledgeFailures("all")}
               disabled={acknowledging !== null}
-              className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-status-error/10 hover:text-status-error-text disabled:opacity-40"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-status-error/10 hover:text-status-error-text disabled:opacity-40"
             >
               <Ban className="h-3.5 w-3.5" />
               {acknowledging === "all" ? "Clearing..." : "Clear all failures"}
@@ -368,7 +368,7 @@ export function JobDashboard() {
           <button
             type="button"
             onClick={() => void loadDashboard()}
-            className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
@@ -453,7 +453,7 @@ export function JobDashboard() {
               type="button"
               onClick={() => void handleForceRebuildPreviews()}
               disabled={rebuildingPreviews}
-              className="inline-flex items-center gap-1.5 rounded-[3px] border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-xs font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-xs font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-40"
             >
               {rebuildingPreviews ? (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -513,7 +513,7 @@ export function JobDashboard() {
                 type="button"
                 onClick={() => void handleCancelAllJobs()}
                 disabled={cancellingAllJobs}
-                className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
               >
                 <Square className="h-3 w-3" />
                 {cancellingAllJobs ? "Killing..." : "Kill all"}
@@ -557,7 +557,7 @@ export function JobDashboard() {
                 type="button"
                 onClick={() => void handleAcknowledgeFailures("all")}
                 disabled={acknowledging !== null}
-                className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
               >
                 <Ban className="h-3 w-3" />
                 {acknowledging === "all" ? "Clearing..." : "Clear all"}
@@ -705,7 +705,7 @@ function QueueCard({
               type="button"
               onClick={() => void onClearFailures(queue.name)}
               disabled={acknowledging !== null}
-              className="rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+              className="px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
             >
               {acknowledging === queue.name ? "Clearing..." : "Clear failures"}
             </button>
@@ -715,7 +715,7 @@ function QueueCard({
               type="button"
               onClick={() => void onCancel(queue.name)}
               disabled={cancellingQueue === queue.name}
-              className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
             >
               <Square className="h-3 w-3" />
               {cancellingQueue === queue.name ? "Stopping..." : "Stop"}
@@ -725,7 +725,7 @@ function QueueCard({
             type="button"
             onClick={() => void onRun(queue.name)}
             disabled={runningQueue === queue.name}
-            className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-accent disabled:opacity-40"
+            className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-accent disabled:opacity-40"
           >
             <Play className="h-3 w-3" />
             {runningQueue === queue.name ? "Queueing..." : "Run"}
@@ -755,7 +755,7 @@ function QueueMetric({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-[2px] bg-black/15 px-2 py-2 text-center">
+    <div className="bg-black/15 px-2 py-2 text-center">
       <p className="mb-0.5 text-[0.55rem] uppercase tracking-wider text-text-disabled">
         {label}
       </p>
@@ -831,7 +831,7 @@ function ActiveJobCard({
             type="button"
             onClick={() => void onCancelJob(job)}
             disabled={isCancelling}
-            className="mt-2 inline-flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+            className="mt-2 inline-flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
           >
             <Square className="h-3 w-3" />
             {isCancelling ? "Stopping..." : "Kill task"}
@@ -900,7 +900,7 @@ function FailedJobCard({ job }: { job: JobRun }) {
             <span className="text-text-muted">Trigger:</span> {job.triggeredBy ?? "unknown"}
           </div>
         </div>
-        <div className="mt-3 rounded-[3px] border border-status-error/20 bg-status-error/[0.05] p-3">
+        <div className="mt-3 border border-status-error/20 bg-status-error/[0.05] p-3">
           <p className="mb-1 text-[0.68rem] uppercase tracking-[0.12em] text-status-error-text">
             Error output
           </p>

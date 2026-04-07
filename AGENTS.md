@@ -72,12 +72,15 @@ docs/              — Architecture and design language docs
 
 ## Design System Rules
 
-- Follow the `Dark Control Room` visual direction (see `docs/design-language.md`).
-- Five-level surface hierarchy: bg → surface-1 → surface-2 → surface-3 → surface-4.
-- Burnished brass accent (#c79b5c) — rare and meaningful, only on active/selected states.
+- Follow the `Dark Room` visual direction (see `docs/design-language.md`).
+- **Sharp corners everywhere** — `border-radius: 0` on all elements, no exceptions.
+- **Material base + glass overlay** — solid dark surfaces as the ground layer; glass (`backdrop-filter: blur` + semi-transparent fill) for floating and interactive elements.
+- Five-level material surface hierarchy: bg → surface-1 → surface-2 → surface-3 → surface-4. Three glass layers: glass-1 → glass-2 → glass-3.
+- Brass accent (`#c49a5a`) — used only on active/selected states. Always expressed with glow (`box-shadow` blur), never flat. Accent gradients for fills.
+- **Mobile first** — design and build for mobile layout first. Desktop is an expansion, not a fallback.
 - Three font voices: Geist (headings), Inter (body), JetBrains Mono (utility/metadata).
+- Glow and animation express state — selection, focus, and activity use `glow-pulse` or full glow `box-shadow`. No static color-only state changes.
 - Avoid generic SaaS styling and unmodified shadcn defaults.
-- Desktop and mobile are both first-class targets.
 - Core actions must not depend on hover-only affordances.
 
 ## Data & Integration Rules

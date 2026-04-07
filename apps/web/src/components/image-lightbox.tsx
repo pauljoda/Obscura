@@ -206,7 +206,7 @@ export function ImageLightbox({
           <button
             onClick={() => setSlideshowActive((v) => !v)}
             className={cn(
-              "p-2 rounded-sm transition-colors",
+              "p-2 transition-colors",
               slideshowActive ? "text-accent-500" : "text-white/60 hover:text-white"
             )}
             title="Slideshow (Space)"
@@ -219,7 +219,7 @@ export function ImageLightbox({
             <div className="relative">
               <button
                 onClick={() => setShowChapters((v) => !v)}
-                className="p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+                className="p-2 text-white/60 hover:text-white transition-colors"
                 title="Chapters"
               >
                 <Bookmark className="h-4 w-4" />
@@ -227,7 +227,7 @@ export function ImageLightbox({
               {showChapters && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowChapters(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-surface-2 border border-border-subtle rounded-sm py-1 shadow-lg">
+                  <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-surface-2 border border-border-subtle py-1 shadow-lg">
                     {chapters.map((ch) => (
                       <button
                         key={ch.id}
@@ -250,7 +250,7 @@ export function ImageLightbox({
           {/* Zoom controls — hidden on mobile */}
           <button
             onClick={() => setZoom(clampZoom(zoom - 0.5))}
-            className="hidden sm:flex p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+            className="hidden sm:flex p-2 text-white/60 hover:text-white transition-colors"
             title="Zoom out"
           >
             <ZoomOut className="h-4 w-4" />
@@ -260,7 +260,7 @@ export function ImageLightbox({
           </span>
           <button
             onClick={() => setZoom(clampZoom(zoom + 0.5))}
-            className="hidden sm:flex p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+            className="hidden sm:flex p-2 text-white/60 hover:text-white transition-colors"
             title="Zoom in"
           >
             <ZoomIn className="h-4 w-4" />
@@ -270,7 +270,7 @@ export function ImageLightbox({
           <button
             onClick={() => setShowInfo((v) => !v)}
             className={cn(
-              "p-2 rounded-sm transition-colors",
+              "p-2 transition-colors",
               showInfo ? "text-accent-500" : "text-white/60 hover:text-white"
             )}
             title="Info (I)"
@@ -287,7 +287,7 @@ export function ImageLightbox({
                 document.exitFullscreen?.();
               }
             }}
-            className="p-2 rounded-sm text-white/60 hover:text-white transition-colors"
+            className="p-2 text-white/60 hover:text-white transition-colors"
             title="Fullscreen (F)"
           >
             <Maximize className="h-4 w-4" />
@@ -296,7 +296,7 @@ export function ImageLightbox({
           {/* Close — always last, prominent on mobile */}
           <button
             onClick={onClose}
-            className="p-2 rounded-sm text-white/80 hover:text-white bg-white/10 sm:bg-transparent transition-colors"
+            className="p-2 text-white/80 hover:text-white bg-white/10 sm:bg-transparent transition-colors"
             title="Close (Esc)"
           >
             <X className="h-5 w-5 sm:h-4 sm:w-4" />
@@ -366,7 +366,7 @@ export function ImageLightbox({
               e.stopPropagation();
               setCurrentIndex((i) => i - 1);
             }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-colors"
+            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-colors"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -377,7 +377,7 @@ export function ImageLightbox({
               e.stopPropagation();
               setCurrentIndex((i) => i + 1);
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white/70 hover:text-white hover:bg-black/70 transition-colors"
           >
             <ChevronRight className="h-6 w-6" />
           </button>

@@ -69,7 +69,7 @@ function SceneListCard({
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
         <div
           className={cn(
-            "relative w-28 flex-shrink-0 aspect-video rounded-sm overflow-hidden",
+            "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
             SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length],
           )}
         >
@@ -83,7 +83,7 @@ function SceneListCard({
             />
           )}
           {scene.duration && (
-            <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 rounded-sm">
+            <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 ">
               {scene.duration}
             </span>
           )}
@@ -117,7 +117,7 @@ function SceneListCard({
                         alt=""
                         loading="lazy"
                         decoding="async"
-                        className="h-4 w-3 rounded-sm object-cover flex-shrink-0"
+                        className="h-4 w-3 object-cover flex-shrink-0"
                       />
                     )}
                     <span>{performer.name}</span>
@@ -186,7 +186,7 @@ function SceneCompactCard({
     <>
       <div
         className={cn(
-          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 rounded-sm",
+          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ",
           !scene.thumbnail && SCENE_CARD_GRADIENTS[0],
         )}
       >

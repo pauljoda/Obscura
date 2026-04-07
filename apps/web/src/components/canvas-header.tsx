@@ -57,7 +57,7 @@ export function CanvasHeader() {
         <button
           onClick={openPalette}
           className={cn(
-            "flex items-center gap-2 rounded-md px-3 py-1.5",
+            "flex items-center gap-2 px-3 py-1.5",
             "surface-well text-text-muted text-mono-sm",
             "hover:text-text-primary hover:border-border-accent",
             "transition-colors duration-fast cursor-pointer select-none"
@@ -72,7 +72,7 @@ export function CanvasHeader() {
         </button>
         <Link
           href="/settings"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
+          className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
         >
           <Settings className="h-4 w-4" />
         </Link>

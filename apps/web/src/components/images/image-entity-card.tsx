@@ -104,7 +104,7 @@ function ImageGridCard({
           preload="none"
           poster={image.thumbnail}
           onError={() => setPreviewFailed(true)}
-          className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
+          className="w-full object-cover group-hover:brightness-110 transition-all duration-fast"
         />
       ) : (
         <img
@@ -113,12 +113,12 @@ function ImageGridCard({
           loading="lazy"
           decoding="async"
           onError={() => setError(true)}
-          className="w-full object-cover rounded-sm group-hover:brightness-110 transition-all duration-fast"
+          className="w-full object-cover group-hover:brightness-110 transition-all duration-fast"
         />
       )}
 
       {effectiveVideo(image) && (
-        <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
+        <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
           <Film className="h-3 w-3" />
         </div>
       )}
@@ -126,7 +126,7 @@ function ImageGridCard({
   );
 
   const className =
-    "block w-full cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-sm overflow-hidden";
+    "block w-full cursor-pointer group focus:outline-none focus:ring-2 focus:ring-accent-500 overflow-hidden";
 
   return (
     <div
@@ -222,7 +222,7 @@ function ImageFeedCard({
         )}
 
         {effectiveVideo(image) && (
-          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1 rounded-sm bg-black/70 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
+          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1 bg-black/70 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
             <Film className="h-3.5 w-3.5" />
           </div>
         )}
@@ -306,7 +306,7 @@ function ImageCompactCard({
 }) {
   const content = (
     <>
-      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 rounded-sm">
+      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ">
         {image.thumbnail ? (
           <img src={image.thumbnail} alt="" className="h-full w-full object-cover" />
         ) : (

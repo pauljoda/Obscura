@@ -210,7 +210,7 @@ export function ImagesPageClient({
             <div className="relative">
               <button
                 onClick={() => setSortOpen(!sortOpen)}
-                className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
               >
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{currentSort?.label}</span>
@@ -246,7 +246,7 @@ export function ImagesPageClient({
             <button
               onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
               title={sortDir === "asc" ? "Ascending" : "Descending"}
-              className="flex h-7 w-7 items-center justify-center rounded-sm text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
+              className="flex h-7 w-7 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors duration-fast"
             >
               <ChevronDown className={cn("h-3.5 w-3.5", sortDir === "asc" && "rotate-180")} />
             </button>
@@ -255,7 +255,7 @@ export function ImagesPageClient({
           <div className="flex-1" />
 
           {/* View mode toggle */}
-          <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
+          <div className="flex items-center border border-border-subtle overflow-hidden">
             <button
               onClick={() => handleViewModeChange("grid")}
               title="Grid view"
@@ -286,7 +286,7 @@ export function ImagesPageClient({
           <button
             onClick={() => setFilterPanelOpen(!filterPanelOpen)}
             className={cn(
-              "flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
+              "flex items-center gap-1.5 px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
               filterPanelOpen
                 ? "text-text-accent bg-accent-950"
                 : "text-text-muted hover:text-text-primary hover:bg-surface-2"
@@ -295,7 +295,7 @@ export function ImagesPageClient({
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Filters</span>
             {activeFilters.length > 0 && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-accent-800 text-[0.55rem] font-bold text-accent-200">
+              <span className="flex h-4 w-4 items-center justify-center bg-accent-800 text-[0.55rem] font-bold text-accent-200">
                 {activeFilters.length}
               </span>
             )}
@@ -350,7 +350,7 @@ export function ImagesPageClient({
       {loading ? (
         <div className="surface-well flex items-center justify-center py-20">
           <div className="flex items-center gap-2 text-text-muted text-sm">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+            <div className="h-4 w-4 animate-spin border-2 border-accent-500 border-t-transparent" />
             Loading...
           </div>
         </div>

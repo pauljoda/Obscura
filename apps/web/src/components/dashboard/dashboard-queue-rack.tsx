@@ -53,16 +53,16 @@ function QueueLane({
         <span title="Waiting">{queue.waiting} wait</span>
       </div>
       <div className="relative mt-2 space-y-1.5">
-        <div className="meter-track h-1 rounded-xs overflow-hidden">
+        <div className="meter-track h-1 overflow-hidden">
           <div
-            className="meter-fill h-full rounded-xs"
+            className="meter-fill h-full "
             style={{ width: `${Math.min(100, Math.round(waitingShare * 100))}%` }}
           />
         </div>
         {queue.failed > 0 && (
-          <div className="meter-track h-1 rounded-xs overflow-hidden bg-error-muted/30">
+          <div className="meter-track h-1 overflow-hidden bg-error-muted/30">
             <div
-              className="h-full rounded-xs bg-gradient-to-r from-error-muted to-error-text/90"
+              className="h-full bg-gradient-to-r from-error-muted to-error-text/90"
               style={{
                 width: `${Math.min(100, Math.round(failShare * 100))}%`,
                 boxShadow: "0 0 6px rgba(179, 79, 86, 0.35)",

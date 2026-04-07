@@ -132,7 +132,7 @@ function DefaultFallbackResultCard({ item }: { item: SearchResultItem }) {
       <div
         className={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center",
-          item.kind === "performer" ? "h-12 w-12 rounded-full" : "h-12 w-20 rounded-sm",
+          item.kind === "performer" ? "h-12 w-12 " : "h-12 w-20 ",
         )}
       >
         {imgSrc ? (
@@ -186,7 +186,7 @@ function CompactFallbackResultCard({
       <div
         className={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center",
-          item.kind === "performer" ? "h-8 w-8 rounded-full" : "h-8 w-12 rounded-sm",
+          item.kind === "performer" ? "h-8 w-8 " : "h-8 w-12 ",
         )}
       >
         {imgSrc ? (

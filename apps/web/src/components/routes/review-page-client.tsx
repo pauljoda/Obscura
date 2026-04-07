@@ -218,7 +218,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
 function ReviewField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-3 py-2.5">
-      <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-success-muted/30 text-success-text">
+      <span className="flex h-5 w-5 items-center justify-center bg-success-muted/30 text-success-text">
         <Plus className="h-3 w-3" />
       </span>
       <span className="text-label text-text-muted w-24">{label}</span>

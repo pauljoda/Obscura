@@ -92,7 +92,7 @@ export function CommandPalette() {
       <div
         className={cn(
           "relative w-full max-w-2xl mx-4",
-          "surface-elevated rounded-lg shadow-2xl",
+          "surface-elevated shadow-2xl",
           "border border-border-subtle",
           "flex flex-col max-h-[70vh]"
         )}

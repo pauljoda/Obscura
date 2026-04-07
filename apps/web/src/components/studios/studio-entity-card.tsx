@@ -73,7 +73,7 @@ function StudioCompactCard({
 }) {
   const content = (
     <>
-      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 rounded-sm">
+      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ">
         {studio.imagePath ? (
           <img src={studio.imagePath} alt="" className="h-full w-full object-cover" />
         ) : (

@@ -299,7 +299,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
             const displayUrl = tag?.imagePath ? toApiUrl(tag.imagePath) : tag?.imageUrl;
             return (
               <>
-                <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-3">
+                <div className="relative aspect-square overflow-hidden bg-surface-3">
                   {displayUrl ? (
                     <img src={displayUrl} alt={name} className="absolute inset-0 w-full h-full object-contain" />
                   ) : (

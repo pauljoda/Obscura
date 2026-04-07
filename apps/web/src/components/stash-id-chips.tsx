@@ -110,7 +110,7 @@ export function StashIdChips({
         <span
           key={entry.id}
           className={cn(
-            "inline-flex items-center gap-1 rounded-[3px] border transition-colors",
+            "inline-flex items-center gap-1 border transition-colors",
             "border-border-accent/30 bg-accent-950/40 text-[0.62rem]",
             compact ? "px-1.5 py-0.5" : "px-2 py-1",
           )}
@@ -167,7 +167,7 @@ export function StashIdChips({
         <button
           onClick={() => setShowAddForm(true)}
           className={cn(
-            "inline-flex items-center gap-0.5 rounded-[3px] border border-dashed transition-colors",
+            "inline-flex items-center gap-0.5 border border-dashed transition-colors",
             "border-border-subtle text-text-disabled hover:text-text-accent hover:border-border-accent",
             compact ? "px-1.5 py-0.5 text-[0.55rem]" : "px-2 py-1 text-[0.62rem]",
           )}

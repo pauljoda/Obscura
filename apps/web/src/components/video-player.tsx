@@ -636,16 +636,16 @@ export function VideoPlayer({
         showControls ? "opacity-100" : "opacity-0"
       )}>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          <span className="player-chip rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
+          <span className="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
             {usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
           </span>
           {selectedQualityLabel && (
-            <span className="player-chip-accent rounded-sm px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
+            <span className="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
             </span>
           )}
           {playerNotice && (
-            <span className="player-chip rounded-sm border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
+            <span className="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
               {playerNotice}
             </span>
           )}
@@ -701,7 +701,7 @@ export function VideoPlayer({
           >
             {timelineHover && (
               <div
-                className="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 -translate-x-1/2 rounded-sm border border-white/10 bg-black/88 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+                className="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 -translate-x-1/2 border border-white/10 bg-black/88 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
                 style={{ left: `${timelineHover.percent}%` }}
               >
                 <div className="text-mono-tabular text-[0.65rem] text-white/82">
@@ -745,7 +745,7 @@ export function VideoPlayer({
                     seekTo(marker.time);
                     onMarkerClick?.(marker);
                   }}
-                  className="player-chip rounded-sm px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
+                  className="player-chip px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
                 >
                   {marker.title}
                 </button>
@@ -766,7 +766,7 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={togglePlay}
-              className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-sm bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+              className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
             >
               {playing ? (
                 <Pause className="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
@@ -811,13 +811,13 @@ export function VideoPlayer({
                   setQualityMenuOpen((open) => !open);
                   setSpeedMenuOpen(false);
                 }}
-                className="player-chip flex items-center gap-1 sm:gap-1.5 rounded-sm px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {selectedQualityLabel ?? "Quality"}
                 <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               </button>
               {qualityMenuOpen && (
-                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] rounded-sm player-dropdown p-1">
+                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] player-dropdown p-1">
                   {qualityOptions.map((option) => (
                     <button
                       key={String(option.value)}
@@ -827,7 +827,7 @@ export function VideoPlayer({
                         setQualityMenuOpen(false);
                       }}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-sm px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                        "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
                         qualityMode === option.value
                           ? "bg-accent-500/18 text-accent-100"
                           : "text-white/78 hover:bg-white/8 hover:text-white"
@@ -848,20 +848,20 @@ export function VideoPlayer({
                   setSpeedMenuOpen((open) => !open);
                   setQualityMenuOpen(false);
                 }}
-                className="player-chip flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                className="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
                 {playbackRate}x
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {speedMenuOpen && (
-                <div className="absolute bottom-12 right-0 min-w-[112px] rounded-sm player-dropdown p-1">
+                <div className="absolute bottom-12 right-0 min-w-[112px] player-dropdown p-1">
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
                       type="button"
                       onClick={() => applyPlaybackRate(rate)}
                       className={cn(
-                        "block w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
+                        "block w-full px-3 py-2 text-left text-sm transition-colors",
                         playbackRate === rate
                           ? "bg-accent-500/18 text-accent-100"
                           : "text-white/78 hover:bg-white/8 hover:text-white"
@@ -877,7 +877,7 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="player-chip rounded-sm p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+              className="player-chip p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             >
               <Maximize className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
             </button>
@@ -886,7 +886,7 @@ export function VideoPlayer({
       </div>
     </div>
     {hasFilmStrip && (
-      <div className="rounded-sm border border-border-subtle bg-black overflow-hidden">
+      <div className="border border-border-subtle bg-black overflow-hidden">
         <FilmStrip
           spriteUrl={trickplaySprite!}
           vttUrl={trickplayVtt!}
@@ -911,7 +911,7 @@ function MetricChip({
   value: string;
 }) {
   return (
-    <div className="pointer-events-none player-chip rounded-sm px-2 py-1.5">
+    <div className="pointer-events-none player-chip px-2 py-1.5">
       <div className="mb-0.5 flex items-center justify-end gap-1 text-white/50">
         {icon}
         <span className="text-[0.58rem] uppercase tracking-[0.16em]">{label}</span>

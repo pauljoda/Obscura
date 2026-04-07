@@ -107,12 +107,12 @@ function GalleryGridCard({ gallery }: { gallery: GalleryCardData }) {
             </div>
           )}
 
-          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
+          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
             <Images className="h-3 w-3" />
             {gallery.imageCount}
           </div>
 
-          <div className="absolute top-1.5 right-1.5 rounded-sm bg-black/60 p-1 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
+          <div className="absolute top-1.5 right-1.5 bg-black/60 p-1 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
             <TypeIcon className="h-3 w-3 text-white/80" />
           </div>
 
@@ -122,7 +122,7 @@ function GalleryGridCard({ gallery }: { gallery: GalleryCardData }) {
                 <div
                   key={i}
                   className={cn(
-                    "h-0.5 flex-1 rounded-full transition-colors duration-fast",
+                    "h-0.5 flex-1 transition-colors duration-fast",
                     i === currentPreviewIndex ? "bg-accent-500" : "bg-white/30",
                   )}
                 />
@@ -169,7 +169,7 @@ function GalleryListCard({ gallery }: { gallery: GalleryCardData }) {
   return (
     <Link href={gallery.href}>
       <div className="surface-card-sharp flex items-center gap-3 px-3 py-2 group hover:bg-surface-2 transition-colors duration-fast">
-        <div className="w-16 aspect-[4/3] bg-surface-2 rounded-sm overflow-hidden flex-shrink-0">
+        <div className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden flex-shrink-0">
           {gallery.coverImage ? (
             <img
               src={gallery.coverImage}
@@ -221,7 +221,7 @@ function GalleryCompactCard({
 }) {
   const content = (
     <>
-      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 rounded-sm">
+      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ">
         {gallery.coverImage ? (
           <img src={gallery.coverImage} alt="" className="h-full w-full object-cover" />
         ) : (

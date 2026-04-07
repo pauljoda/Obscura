@@ -42,7 +42,7 @@ export function ImageLightboxFilmstrip({
             ref={isActive ? activeRef : undefined}
             onClick={() => onSelect(index)}
             className={cn(
-              "flex-shrink-0 w-14 h-10 rounded-sm overflow-hidden transition-all duration-fast",
+              "flex-shrink-0 w-14 h-10 overflow-hidden transition-all duration-fast",
               isActive
                 ? "ring-2 ring-accent-500 ring-offset-1 ring-offset-black brightness-110"
                 : "opacity-60 hover:opacity-90"

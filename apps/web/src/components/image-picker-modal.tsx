@@ -45,7 +45,7 @@ export function ImagePickerModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 surface-elevated rounded-t-lg">
+        <div className="flex items-center justify-between px-4 py-3 surface-elevated ">
           <span className="text-sm font-medium text-text-primary">
             {title} ({selectedIndex + 1} of {images.length})
           </span>
@@ -63,13 +63,13 @@ export function ImagePickerModal({
             <>
               <button
                 onClick={() => onSelect(selectedIndex > 0 ? selectedIndex - 1 : images.length - 1)}
-                className="absolute left-2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                className="absolute left-2 z-10 p-2 bg-black/50 text-white hover:bg-black/70 transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={() => onSelect(selectedIndex < images.length - 1 ? selectedIndex + 1 : 0)}
-                className="absolute right-2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                className="absolute right-2 z-10 p-2 bg-black/50 text-white hover:bg-black/70 transition-colors"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -83,7 +83,7 @@ export function ImagePickerModal({
         </div>
 
         {/* Thumbnail grid */}
-        <div className="surface-elevated rounded-b-lg p-4">
+        <div className="surface-elevated p-4">
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-48 overflow-y-auto">
             {images.map((url, i) => (
               <button

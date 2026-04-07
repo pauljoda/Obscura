@@ -50,7 +50,7 @@ export function GalleryGrid({
     return (
       <div className="surface-well flex items-center justify-center py-20">
         <div className="flex items-center gap-2 text-text-muted text-sm">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+          <div className="h-4 w-4 animate-spin border-2 border-accent-500 border-t-transparent" />
           Loading...
         </div>
       </div>
@@ -60,7 +60,7 @@ export function GalleryGrid({
   if (galleries.length === 0) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-20 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-surface-3 mb-4">
+        <div className="flex h-16 w-16 items-center justify-center bg-surface-3 mb-4">
           <Images className="h-8 w-8 text-text-disabled" />
         </div>
         <h3 className="text-base font-medium font-heading text-text-secondary mb-1">

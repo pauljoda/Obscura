@@ -964,7 +964,7 @@ export function BulkScrape() {
             key={key}
             onClick={() => { if (!running) setTab(key); }}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-[3px] text-sm font-medium transition-all duration-fast",
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-fast",
               tab === key
                 ? "bg-accent-950 text-text-accent border border-border-accent shadow-[var(--shadow-glow-accent)]"
                 : "text-text-muted border border-transparent hover:text-text-secondary hover:bg-surface-3/40",
@@ -1070,7 +1070,7 @@ export function BulkScrape() {
                     tab === "studios" ? acceptAllStudios() :
                     acceptAllTags()
                   )}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[3px] text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
                 >
                   <Check className="h-3 w-3" />
                   Accept All ({foundCount})
@@ -1085,7 +1085,7 @@ export function BulkScrape() {
                 )}
                 disabled={totalCount === 0 || totalProviderCount === 0}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium transition-all duration-normal",
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-normal",
                   "bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
                   "text-accent-200 border border-border-accent shadow-[var(--shadow-glow-accent)]",
                   "hover:shadow-[var(--shadow-glow-accent-strong)] hover:border-border-accent-strong",
@@ -1099,7 +1099,7 @@ export function BulkScrape() {
           ) : (
             <button
               onClick={() => { abortRef.current = true; }}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-[3px] text-xs font-medium text-status-error-text border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-status-error-text border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
             >
               <Square className="h-3 w-3" />
               Stop
@@ -1250,10 +1250,10 @@ function SceneRowCard({
           <img
             src={toApiUrl(row.scene.thumbnailPath)}
             alt=""
-            className="w-16 h-10 object-cover rounded-[2px] flex-shrink-0"
+            className="w-16 h-10 object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-16 h-10 bg-surface-3 rounded-[2px] flex-shrink-0" />
+          <div className="w-16 h-10 bg-surface-3 flex-shrink-0" />
         )}
 
         {/* Info */}
@@ -1278,14 +1278,14 @@ function SceneRowCard({
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={(e) => { e.stopPropagation(); onAccept(); }}
-              className="p-1.5 rounded-[3px] hover:bg-status-success/15 text-status-success-text transition-colors"
+              className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
               title="Accept"
             >
               <Check className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onReject(); }}
-              className="p-1.5 rounded-[3px] hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+              className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
               title="Reject"
             >
               <X className="h-3.5 w-3.5" />
@@ -1323,7 +1323,7 @@ function SceneRowCard({
                     src={row.normalized.imageUrl}
                     alt=""
                     className={cn(
-                      "w-40 h-24 object-cover rounded-[3px] border transition-all",
+                      "w-40 h-24 object-cover border transition-all",
                       row.selectedFields.has("image")
                         ? "border-border-accent/40"
                         : "border-border-subtle grayscale"
@@ -1499,7 +1499,7 @@ function PerformerRowCard({
         <StatusDot status={row.status} />
 
         {/* Image */}
-        <div className="flex-shrink-0 h-10 w-8 rounded-[2px] overflow-hidden bg-surface-3">
+        <div className="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
           {row.performer.imagePath ? (
             <img src={toApiUrl(row.performer.imagePath)!} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -1531,14 +1531,14 @@ function PerformerRowCard({
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); onAccept(effectiveImageUrl ?? undefined); }}
-                className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors"
               >
                 <Check className="h-2.5 w-2.5" />
                 Accept
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onReject(); }}
-                className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors"
+                className="p-1 text-text-disabled hover:text-status-error-text transition-colors"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -1570,7 +1570,7 @@ function PerformerRowCard({
                 {/* Selected/primary image — click to browse */}
                 <button
                   onClick={(e) => { e.stopPropagation(); if (allImages.length > 1) setImagePickerOpen(true); }}
-                  className="w-24 h-32 rounded-[3px] overflow-hidden bg-surface-3 border border-border-subtle hover:border-border-accent transition-all"
+                  className="w-24 h-32 overflow-hidden bg-surface-3 border border-border-subtle hover:border-border-accent transition-all"
                 >
                   {effectiveImageUrl && (
                     <img src={effectiveImageUrl} alt="" className="w-full h-full object-cover" />
@@ -1687,10 +1687,10 @@ function StudioRowCard({
           {row.status === "scraping" && <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />}
           {row.status === "found" && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
                 <Check className="h-2.5 w-2.5" /> Accept
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 text-text-disabled hover:text-status-error-text transition-colors">
                 <X className="h-3 w-3" />
               </button>
             </>
@@ -1717,7 +1717,7 @@ function StudioRowCard({
                     src={row.result.imageUrl}
                     alt=""
                     className={cn(
-                      "w-32 h-20 object-contain rounded-[3px] border transition-all",
+                      "w-32 h-20 object-contain border transition-all",
                       row.selectedFields.has("imageUrl") ? "border-border-accent/40" : "border-border-subtle grayscale"
                     )}
                   />
@@ -1795,10 +1795,10 @@ function TagRowCard({
           {row.status === "scraping" && <Loader2 className="h-3.5 w-3.5 text-text-accent animate-spin" />}
           {row.status === "found" && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} className="flex items-center gap-1 px-2 py-1 text-[0.62rem] text-status-success-text border border-status-success/25 hover:bg-status-success/10 transition-colors">
                 <Check className="h-2.5 w-2.5" /> Accept
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 rounded-[3px] text-text-disabled hover:text-status-error-text transition-colors">
+              <button onClick={(e) => { e.stopPropagation(); onReject(); }} className="p-1 text-text-disabled hover:text-status-error-text transition-colors">
                 <X className="h-3 w-3" />
               </button>
             </>

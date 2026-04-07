@@ -225,7 +225,7 @@ export function FilmStrip({
                   style={{ left }}
                 >
                   <div className="w-px h-full bg-accent-500/50" />
-                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-px text-[0.5rem] font-medium tracking-wide uppercase leading-tight bg-black/80 text-accent-300 border border-accent-500/30 rounded-sm">
+                  <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-px text-[0.5rem] font-medium tracking-wide uppercase leading-tight bg-black/80 text-accent-300 border border-accent-500/30 ">
                     {marker.title}
                   </div>
                 </div>

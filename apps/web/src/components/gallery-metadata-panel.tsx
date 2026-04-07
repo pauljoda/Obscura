@@ -89,7 +89,7 @@ export function GalleryMetadataPanel({
           <input
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            className="flex-1 bg-surface-2 border border-border-subtle rounded-sm px-2 py-1 text-base font-heading text-text-primary focus:outline-none focus:border-accent-500"
+            className="flex-1 bg-surface-2 border border-border-subtle px-2 py-1 text-base font-heading text-text-primary focus:outline-none focus:border-accent-500"
           />
         ) : (
           <h2 className="text-base font-heading font-medium text-text-primary flex-1">
@@ -98,7 +98,7 @@ export function GalleryMetadataPanel({
         )}
         <button
           onClick={editMode ? handleCancel : () => setEditMode(true)}
-          className="ml-2 p-1.5 rounded-sm text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+          className="ml-2 p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
         >
           {editMode ? <XCircle className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
         </button>
@@ -131,7 +131,7 @@ export function GalleryMetadataPanel({
       <button
         onClick={handleOrganizedToggle}
         className={cn(
-          "flex items-center gap-2 w-full px-2 py-1.5 rounded-sm text-[0.78rem] transition-colors",
+          "flex items-center gap-2 w-full px-2 py-1.5 text-[0.78rem] transition-colors",
           gallery.organized
             ? "bg-accent-950 text-accent-300"
             : "text-text-muted hover:bg-surface-2"
@@ -149,7 +149,7 @@ export function GalleryMetadataPanel({
             value={editDetails}
             onChange={(e) => setEditDetails(e.target.value)}
             rows={3}
-            className="w-full bg-surface-2 border border-border-subtle rounded-sm px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500 resize-none"
+            className="w-full bg-surface-2 border border-border-subtle px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500 resize-none"
           />
         </div>
       ) : gallery.details ? (
@@ -166,7 +166,7 @@ export function GalleryMetadataPanel({
           <input
             value={editPhotographer}
             onChange={(e) => setEditPhotographer(e.target.value)}
-            className="w-full bg-surface-2 border border-border-subtle rounded-sm px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500"
+            className="w-full bg-surface-2 border border-border-subtle px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500"
           />
         </div>
       ) : gallery.photographer ? (
@@ -184,7 +184,7 @@ export function GalleryMetadataPanel({
             type="date"
             value={editDate}
             onChange={(e) => setEditDate(e.target.value)}
-            className="w-full bg-surface-2 border border-border-subtle rounded-sm px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500"
+            className="w-full bg-surface-2 border border-border-subtle px-2 py-1 text-[0.78rem] text-text-primary focus:outline-none focus:border-accent-500"
           />
         </div>
       ) : gallery.date ? (
@@ -200,7 +200,7 @@ export function GalleryMetadataPanel({
           onClick={handleSave}
           disabled={saving}
           className={cn(
-            "flex items-center gap-2 w-full justify-center px-3 py-2 rounded-sm text-[0.78rem]",
+            "flex items-center gap-2 w-full justify-center px-3 py-2 text-[0.78rem]",
             "bg-accent-800 text-accent-100 hover:bg-accent-700 transition-colors",
             saving && "opacity-50 cursor-wait"
           )}
@@ -243,9 +243,9 @@ export function GalleryMetadataPanel({
               <a
                 key={performer.id}
                 href={`/performers/${performer.id}`}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-surface-2 transition-colors"
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-2 transition-colors"
               >
-                <div className="h-6 w-6 rounded-full bg-surface-3 flex-shrink-0" />
+                <div className="h-6 w-6 bg-surface-3 flex-shrink-0" />
                 <span className="text-[0.78rem] text-text-primary">{performer.name}</span>
               </a>
             ))}
@@ -262,7 +262,7 @@ export function GalleryMetadataPanel({
               <button
                 key={chapter.id}
                 onClick={() => onChapterJump?.(chapter.imageIndex)}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-sm text-left text-[0.78rem] text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-left text-[0.78rem] text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
               >
                 <Bookmark className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="flex-1 truncate">{chapter.title}</span>

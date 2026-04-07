@@ -276,7 +276,7 @@ export function PerformersPageClient({
               <button
                 onClick={() => setSortOpen((open) => !open)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-sm px-2 py-1.5",
+                  "flex items-center gap-1.5 px-2 py-1.5",
                   "text-[0.72rem] text-text-muted hover:bg-surface-2 hover:text-text-primary",
                   "transition-colors duration-fast",
                 )}
@@ -325,7 +325,7 @@ export function PerformersPageClient({
           <button
             onClick={() => setFilterOpen((open) => !open)}
             className={cn(
-              "flex items-center gap-1.5 rounded-sm px-2 py-1.5",
+              "flex items-center gap-1.5 px-2 py-1.5",
               "text-[0.72rem] text-text-muted hover:bg-surface-2 hover:text-text-primary",
               "transition-colors duration-fast",
               hasFilters && "bg-accent-950 text-text-accent",
@@ -337,7 +337,7 @@ export function PerformersPageClient({
         </div>
 
         {filterOpen ? (
-          <div className="surface-card-sharp rounded-t-none border-t-0 p-3">
+          <div className="surface-card-sharp border-t-0 p-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-kicker">Gender</label>

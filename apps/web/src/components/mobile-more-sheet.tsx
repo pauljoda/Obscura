@@ -91,11 +91,11 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
       <div
         role="dialog"
         aria-label="Navigation"
-        className="fixed inset-x-0 bottom-14 z-[60] rounded-t-2xl border-t border-border-subtle bg-surface-1"
+        className="fixed inset-x-0 bottom-14 z-[60] border-t border-border-subtle bg-surface-1"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-2 pb-1">
-          <span className="h-1 w-8 rounded-full bg-border-subtle" />
+          <span className="h-1 w-8 bg-border-subtle" />
         </div>
 
         {/* Header */}
@@ -105,7 +105,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
           </span>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+            className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
             aria-label="Close navigation"
           >
             <X className="h-4 w-4" />
@@ -131,14 +131,14 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                         href={item.href}
                         onClick={onClose}
                         className={cn(
-                          "group relative flex items-center gap-3 rounded-md px-2.5 py-2.5 text-sm transition-colors",
+                          "group relative flex items-center gap-3 px-2.5 py-2.5 text-sm transition-colors",
                           isActive
                             ? "bg-accent-950 text-glow-accent"
                             : "text-text-muted active:bg-surface-2",
                         )}
                       >
                         {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
                         )}
                         <item.Icon
                           className={cn(

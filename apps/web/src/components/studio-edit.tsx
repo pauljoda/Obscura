@@ -327,7 +327,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             const displayUrl = studio?.imagePath ? toApiUrl(studio.imagePath) : studio?.imageUrl;
             return (
               <>
-                <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-3">
+                <div className="relative aspect-square overflow-hidden bg-surface-3">
                   {displayUrl ? (
                     <img src={displayUrl} alt={name} className="absolute inset-0 w-full h-full object-contain" />
                   ) : (
@@ -498,7 +498,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
                   )}
                 </div>
                 {parentDropdownOpen && parentSearch.length > 0 && (
-                  <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-surface-2 border border-border-subtle rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-surface-2 border border-border-subtle shadow-lg max-h-48 overflow-y-auto">
                     {allStudios
                       .filter((s) => s.name.toLowerCase().includes(parentSearch.toLowerCase()))
                       .slice(0, 20)

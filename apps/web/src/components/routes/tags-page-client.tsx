@@ -139,7 +139,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
               <button
                 onClick={() => setSortOpen(!sortOpen)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-sm px-2 py-1.5",
+                  "flex items-center gap-1.5 px-2 py-1.5",
                   "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
                   "transition-colors duration-fast",
                 )}
@@ -181,7 +181,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
               onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
               title={sortDir === "asc" ? "Ascending" : "Descending"}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-sm",
+                "flex h-7 w-7 items-center justify-center ",
                 "text-text-muted hover:text-text-primary hover:bg-surface-2",
                 "transition-colors duration-fast",
               )}
@@ -197,7 +197,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
             <button
               onClick={() => setViewMode("list")}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-sm transition-colors duration-fast",
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
                 viewMode === "list"
                   ? "text-text-accent bg-accent-950"
                   : "text-text-muted hover:text-text-primary hover:bg-surface-2",
@@ -209,7 +209,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
             <button
               onClick={() => setViewMode("cloud")}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-sm transition-colors duration-fast",
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
                 viewMode === "cloud"
                   ? "text-text-accent bg-accent-950"
                   : "text-text-muted hover:text-text-primary hover:bg-surface-2",

@@ -295,14 +295,14 @@ export function SettingsPageClient({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => void loadConfig()}
-            className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Reload</span>
           </button>
           <button
             onClick={() => void handleRunScan()}
-            className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
           >
             <ScanSearch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Run Scan</span>
@@ -311,7 +311,7 @@ export function SettingsPageClient({
             onClick={() => void handleSaveSettings()}
             disabled={saving || !isDirty}
             className={cn(
-              "flex items-center gap-1.5 rounded-[3px] px-4 py-1.5 text-xs font-medium transition-all duration-normal",
+              "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-normal",
               isDirty
                 ? "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)] hover:border-border-accent-strong hover:shadow-[var(--shadow-glow-accent-strong)]"
                 : "cursor-not-allowed border border-border-subtle bg-surface-3 text-text-disabled",
@@ -349,7 +349,7 @@ export function SettingsPageClient({
           <button
             onClick={() => void openBrowser(browser?.path)}
             className={cn(
-              "surface-card-sharp no-lift flex items-center gap-1.5 rounded-[3px] px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-fast hover:border-border-accent hover:text-text-accent",
+              "surface-card-sharp no-lift flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-fast hover:border-border-accent hover:text-text-accent",
             )}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -359,7 +359,7 @@ export function SettingsPageClient({
 
         {browserVisible ? (
           <div className="surface-card-sharp no-lift space-y-3 border-border-accent/30 p-4">
-            <div className="rounded-[3px] bg-black/20 p-3">
+            <div className="bg-black/20 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="truncate text-mono-sm text-text-accent">
                   {browser?.path ?? "Loading..."}
@@ -367,7 +367,7 @@ export function SettingsPageClient({
                 <button
                   onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
                   disabled={!browser?.parentPath}
-                  className="flex-shrink-0 rounded-[3px] px-2.5 py-1 text-xs text-text-muted transition-all hover:bg-surface-3/60 hover:text-text-primary disabled:opacity-40"
+                  className="flex-shrink-0 px-2.5 py-1 text-xs text-text-muted transition-all hover:bg-surface-3/60 hover:text-text-primary disabled:opacity-40"
                 >
                   Up One Level
                 </button>
@@ -433,7 +433,7 @@ export function SettingsPageClient({
                 onClick={() => void handleAddRoot()}
                 disabled={addingRoot || !newRootPath}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-[3px] px-4 py-1.5 text-xs font-medium transition-all duration-normal",
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-normal",
                   "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)]",
                   "hover:shadow-[var(--shadow-glow-accent-strong)] disabled:opacity-50",
                 )}
@@ -446,7 +446,7 @@ export function SettingsPageClient({
                   setNewRootPath("");
                   setNewRootLabel("");
                 }}
-                className="rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
+                className="px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
               >
                 Cancel
               </button>
@@ -493,7 +493,7 @@ export function SettingsPageClient({
                         onClick={() => void handleToggleMediaType(root, "scanVideos")}
                         title={root.scanVideos ? "Videos: scanning" : "Videos: skipped"}
                         className={cn(
-                          "flex items-center gap-1 rounded-[3px] px-1.5 py-1 text-[0.65rem] transition-colors",
+                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
                           root.scanVideos
                             ? "text-text-accent bg-accent-950/50"
                             : "text-text-disabled hover:text-text-muted"
@@ -506,7 +506,7 @@ export function SettingsPageClient({
                         onClick={() => void handleToggleMediaType(root, "scanImages")}
                         title={root.scanImages ? "Images: scanning" : "Images: skipped"}
                         className={cn(
-                          "flex items-center gap-1 rounded-[3px] px-1.5 py-1 text-[0.65rem] transition-colors",
+                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
                           root.scanImages
                             ? "text-text-accent bg-accent-950/50"
                             : "text-text-disabled hover:text-text-muted"
@@ -518,7 +518,7 @@ export function SettingsPageClient({
                     </div>
                     <button
                       onClick={() => void handleToggleRoot(root)}
-                      className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary"
                     >
                       {root.enabled ? (
                         <ToggleRight className="h-4 w-4 text-text-accent" />
@@ -529,7 +529,7 @@ export function SettingsPageClient({
                     </button>
                     <button
                       onClick={() => void handleDeleteRoot(root)}
-                      className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1027,7 +1027,7 @@ function DiagnosticsSection() {
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="surface-card-sharp rounded-sm p-3 space-y-2">
+        <div className="surface-card-sharp p-3 space-y-2">
           <div>
             <p className="text-[0.78rem] font-medium text-status-error-text">
               Force rebuild all previews
@@ -1043,7 +1043,7 @@ function DiagnosticsSection() {
               type="button"
               onClick={handleRebuildPreviews}
               disabled={rebuilding}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-[0.72rem] font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-[0.72rem] font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-50"
             >
               {rebuilding ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -1125,7 +1125,7 @@ function QualitySlider({
         step={1}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full h-1.5 appearance-none rounded-full bg-surface-4 accent-accent-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent-500 [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(199,155,92,0.5)]"
+        className="w-full h-1.5 appearance-none bg-surface-4 accent-accent-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:[&::-webkit-slider-thumb]:bg-accent-500 [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(199,155,92,0.5)]"
       />
       <div className="flex justify-between mt-1.5">
         <span className="text-[0.58rem] text-text-disabled">Native (1)</span>
@@ -1163,7 +1163,7 @@ function StorageStat({
         {value}
       </div>
       {!accent ? (
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-4">
+        <div className="mt-2 h-1 overflow-hidden bg-surface-4">
           <div className="h-full bg-accent-500/70" style={{ width: `${Math.max((ratio ?? 0) * 100, 4)}%` }} />
         </div>
       ) : null}

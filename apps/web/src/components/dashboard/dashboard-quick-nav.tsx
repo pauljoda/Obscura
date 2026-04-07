@@ -30,7 +30,7 @@ function NavTile({
           gradientClass
         )}
       />
-      <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-sm glass-chip border border-white/8">
+      <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center glass-chip border border-white/8">
         <Icon className="h-4 w-4 text-text-muted transition-colors duration-fast group-hover:text-text-accent" />
       </div>
       <div className="relative min-w-0 flex-1">

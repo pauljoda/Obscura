@@ -203,7 +203,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
             <SlidersHorizontal className="h-3 w-3" />
             Filters
             {(minRating || dateFrom || dateTo) && (
-              <span className="flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-accent-800 text-[0.5rem] font-bold text-accent-200">
+              <span className="flex h-3.5 w-3.5 items-center justify-center bg-accent-800 text-[0.5rem] font-bold text-accent-200">
                 !
               </span>
             )}
@@ -221,7 +221,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
                     key={n}
                     onClick={() => setMinRating(minRating === n ? null : n)}
                     className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-sm transition-colors duration-fast",
+                      "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
                       minRating && n <= minRating
                         ? "text-text-accent"
                         : "text-text-disabled hover:text-text-muted"
@@ -383,7 +383,7 @@ function SearchSection({
             onClick={onLoadMore}
             disabled={loadingMore}
             className={cn(
-              "flex items-center gap-1.5 px-4 py-1.5 rounded-sm",
+              "flex items-center gap-1.5 px-4 py-1.5 ",
               "text-[0.72rem] text-text-muted",
               "surface-well hover:text-text-primary",
               "transition-colors duration-fast",

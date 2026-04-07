@@ -115,7 +115,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
           {!editing && (
             <button
               onClick={startEdit}
-              className="flex h-6 w-6 items-center justify-center rounded-sm text-text-muted hover:text-text-accent hover:bg-surface-3 transition-colors"
+              className="flex h-6 w-6 items-center justify-center text-text-muted hover:text-text-accent hover:bg-surface-3 transition-colors"
               title="Edit metadata"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -123,7 +123,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
           )}
           <button
             onClick={editing ? cancelEdit : onClose}
-            className="flex h-6 w-6 items-center justify-center rounded-sm text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+            className="flex h-6 w-6 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -165,7 +165,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
           <button
             onClick={() => setEditOrganized(!editOrganized)}
             className={cn(
-              "flex items-center gap-2 w-full px-2 py-1.5 rounded-sm text-[0.78rem] transition-colors",
+              "flex items-center gap-2 w-full px-2 py-1.5 text-[0.78rem] transition-colors",
               editOrganized
                 ? "bg-accent-950 text-accent-300"
                 : "text-text-muted hover:bg-surface-3"
@@ -175,7 +175,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
             {editOrganized ? "Organized" : "Mark as organized"}
           </button>
         ) : image.organized ? (
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-accent-950 text-accent-300 text-[0.78rem]">
+          <div className="flex items-center gap-2 px-2 py-1.5 bg-accent-950 text-accent-300 text-[0.78rem]">
             <CheckCircle2 className="h-4 w-4" />
             Organized
           </div>
@@ -224,11 +224,11 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
                     }
                   }}
                   placeholder="Search or add tag..."
-                  className="w-full bg-surface-1 border border-border-subtle rounded-sm pl-7 pr-2 py-1.5 text-[0.72rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-500"
+                  className="w-full bg-surface-1 border border-border-subtle pl-7 pr-2 py-1.5 text-[0.72rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-500"
                 />
               </div>
               {tagPickerOpen && (filteredAvailableTags.length > 0 || tagSearch.trim()) && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-3 border border-border-subtle rounded-sm shadow-lg max-h-40 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-3 border border-border-subtle shadow-lg max-h-40 overflow-y-auto">
                   {filteredAvailableTags.slice(0, 20).map((tag) => (
                     <button
                       key={tag.id}
@@ -265,7 +265,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
               onClick={handleSave}
               disabled={saving}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-[0.78rem]",
+                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[0.78rem]",
                 "bg-accent-800 text-accent-100 hover:bg-accent-700 transition-colors",
                 saving && "opacity-50 cursor-wait"
               )}
@@ -275,7 +275,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
             </button>
             <button
               onClick={cancelEdit}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-[0.78rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-[0.78rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
             >
               <XCircle className="h-3.5 w-3.5" />
               Cancel

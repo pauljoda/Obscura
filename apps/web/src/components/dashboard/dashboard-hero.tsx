@@ -50,8 +50,8 @@ export function DashboardHero({
     : "—";
 
   return (
-    <section className="relative overflow-hidden rounded-sm border border-border-accent/30 shadow-[var(--shadow-glow-accent)]">
-      <div className="pointer-events-none absolute -right-28 -top-32 h-80 w-80 rounded-sm bg-accent-600/15 blur-[90px]" />
+    <section className="relative overflow-hidden border border-border-accent/30 shadow-[var(--shadow-glow-accent)]">
+      <div className="pointer-events-none absolute -right-28 -top-32 h-80 w-80 bg-accent-600/15 blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 gradient-thumb-5 opacity-45 blur-[70px]" />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent-500/35 to-transparent"
@@ -65,7 +65,7 @@ export function DashboardHero({
             </div>
 
             <div className="flex flex-col items-stretch gap-3 sm:flex-row lg:flex-col lg:items-end">
-              <div className="glass-chip rounded-sm px-4 py-3 text-right min-w-[200px] border border-white/5">
+              <div className="glass-chip px-4 py-3 text-right min-w-[200px] border border-white/5">
                 <p className="text-mono-sm text-text-disabled uppercase tracking-widest">
                   Time
                 </p>
@@ -75,12 +75,12 @@ export function DashboardHero({
                 <p className="text-[0.7rem] text-text-muted mt-0.5">{dateStr}</p>
               </div>
               <div className="flex flex-wrap gap-2 justify-end">
-                <span className="glass-chip rounded-sm px-2.5 py-1 text-[0.65rem] font-medium text-text-muted border border-white/5">
+                <span className="glass-chip px-2.5 py-1 text-[0.65rem] font-medium text-text-muted border border-white/5">
                   {loading ? "…" : `${sceneCount ?? 0} scenes`}
                 </span>
                 <span
                   className={cn(
-                    "rounded-sm px-2.5 py-1 text-[0.65rem] font-medium border",
+                    "px-2.5 py-1 text-[0.65rem] font-medium border",
                     scheduleEnabled
                       ? "glass-chip-accent text-accent-100"
                       : "glass-chip text-text-muted border-white/5"
@@ -88,7 +88,7 @@ export function DashboardHero({
                 >
                   Scan {scheduleEnabled ? `${intervalMinutes}m` : "off"}
                 </span>
-                <span className="glass-chip rounded-sm px-2.5 py-1 text-[0.65rem] font-mono text-text-muted border border-white/5">
+                <span className="glass-chip px-2.5 py-1 text-[0.65rem] font-mono text-text-muted border border-white/5">
                   {queueCount} queue{queueCount !== 1 ? "s" : ""}
                 </span>
               </div>

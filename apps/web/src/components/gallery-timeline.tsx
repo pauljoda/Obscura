@@ -50,7 +50,7 @@ export function GalleryTimeline({ galleries }: GalleryTimelineProps) {
         <div key={group.label} className="mb-8">
           {/* Month header */}
           <div className="sticky top-0 z-10 -ml-6 mb-3 flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-accent-500 shadow-[0_0_6px_rgba(199,155,92,0.4)] flex-shrink-0" />
+            <div className="h-2 w-2 bg-accent-500 shadow-[0_0_6px_rgba(199,155,92,0.4)] flex-shrink-0" />
             <span className="text-kicker bg-bg px-2">{group.label}</span>
           </div>
 

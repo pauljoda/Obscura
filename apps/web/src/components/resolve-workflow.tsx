@@ -269,10 +269,10 @@ export function ResolveWorkflow() {
                     <img
                       src={toApiUrl(scene.thumbnailPath)}
                       alt=""
-                      className="w-16 h-10 object-cover rounded-sm flex-shrink-0"
+                      className="w-16 h-10 object-cover flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-16 h-10 bg-surface-3 rounded-sm flex-shrink-0" />
+                    <div className="w-16 h-10 bg-surface-3 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{scene.title}</p>
@@ -301,10 +301,10 @@ export function ResolveWorkflow() {
                     <img
                       src={toApiUrl(selectedScene.thumbnailPath)}
                       alt=""
-                      className="w-40 h-24 object-cover rounded-sm flex-shrink-0"
+                      className="w-40 h-24 object-cover flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-40 h-24 bg-surface-3 rounded-sm flex-shrink-0" />
+                    <div className="w-40 h-24 bg-surface-3 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold">{selectedScene.title}</h3>
@@ -596,7 +596,7 @@ function DiffField({
       <button
         onClick={onToggle}
         className={cn(
-          "flex h-5 w-5 items-center justify-center rounded-sm transition-colors",
+          "flex h-5 w-5 items-center justify-center transition-colors",
           enabled
             ? isAdd
               ? "bg-success-muted/30 text-success-text"

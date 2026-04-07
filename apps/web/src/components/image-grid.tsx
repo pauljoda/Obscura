@@ -51,7 +51,7 @@ export function ImageGrid({
             onClick={onLoadMore}
             disabled={loadingMore}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md text-sm",
+              "flex items-center gap-2 px-4 py-2 text-sm",
               "bg-surface-2 text-text-muted hover:text-text-primary hover:bg-surface-3",
               "transition-colors duration-fast",
               loadingMore && "opacity-50 cursor-wait"

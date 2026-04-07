@@ -130,7 +130,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
       <div className="flex items-center gap-3">
         <Link
           href={backHref}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+          className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
@@ -156,7 +156,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-kicker">Sub-galleries</h3>
-                <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden">
+                <div className="flex items-center border border-border-subtle overflow-hidden">
                   <button
                     onClick={() => setSubGalleryView("grid")}
                     className={cn(
@@ -205,7 +205,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
                 {gallery.children.length > 0 && (
                   <h3 className="text-kicker">Images</h3>
                 )}
-                <div className="flex items-center rounded-sm border border-border-subtle overflow-hidden ml-auto">
+                <div className="flex items-center border border-border-subtle overflow-hidden ml-auto">
                   <button
                     onClick={() => setImageViewMode("grid")}
                     title="Grid view"

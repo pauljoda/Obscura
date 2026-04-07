@@ -37,7 +37,7 @@ export function PerformerEntityCard({
             </div>
           )}
           {performer.favorite ? (
-            <span className="absolute right-2 top-2 rounded-sm bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
+            <span className="absolute right-2 top-2 bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
               <Star className="h-3 w-3 fill-current" />
             </span>
           ) : null}
@@ -65,7 +65,7 @@ function PerformerCompactCard({
 }) {
   const content = (
     <>
-      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-8 rounded-full">
+      <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-8 ">
         {performer.imagePath ? (
           <img src={performer.imagePath} alt="" className="h-full w-full object-cover" />
         ) : (

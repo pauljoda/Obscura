@@ -505,7 +505,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
         {/* Left column — image */}
         <div className="flex-shrink-0 lg:w-72 space-y-3">
           {/* Portrait image */}
-          <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-surface-3">
+          <div className="relative aspect-[3/4] overflow-hidden bg-surface-3">
             {imageUrl ? (
               <img src={imageUrl} alt={name} className="absolute inset-0 w-full h-full object-cover" />
             ) : (

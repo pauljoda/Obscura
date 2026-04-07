@@ -263,7 +263,7 @@ export function BulkPerformerScrape() {
       {/* Progress bar */}
       {running && (
         <div className="surface-well p-2">
-          <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-surface-3 overflow-hidden">
             <div
               className="h-full bg-accent-500 transition-all duration-300"
               style={{ width: `${progress}%` }}

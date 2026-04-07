@@ -362,7 +362,7 @@ export function SceneDetail({
             <button
               type="button"
               onClick={() => void handleOrgasm()}
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-sm text-text-muted hover:text-accent-400 hover:bg-surface-2 transition-colors duration-fast"
+              className="flex items-center gap-1.5 h-8 px-2.5 text-text-muted hover:text-accent-400 hover:bg-surface-2 transition-colors duration-fast"
               title="Orgasm counter — click to increment"
             >
               <Droplets className="h-4 w-4" />
@@ -376,7 +376,7 @@ export function SceneDetail({
               type="button"
               onClick={() => void handleToggleOrganized()}
               className={cn(
-                "flex items-center gap-1.5 h-8 px-2.5 rounded-sm transition-colors duration-fast",
+                "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
                 scene.organized
                   ? "text-success-text hover:bg-surface-2"
                   : "text-text-disabled hover:text-text-muted hover:bg-surface-2"
@@ -392,7 +392,7 @@ export function SceneDetail({
               onClick={() => void handleRebuildPreview()}
               disabled={rebuildPreviewState !== "idle"}
               className={cn(
-                "flex items-center gap-1.5 h-8 px-2.5 rounded-sm transition-colors duration-fast",
+                "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
                 rebuildPreviewState === "done"
                   ? "text-success-text"
                   : rebuildPreviewState === "queued"
@@ -432,7 +432,7 @@ export function SceneDetail({
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "px-4 py-1.5 text-[0.78rem] font-medium transition-colors duration-fast whitespace-nowrap rounded-sm",
+              "px-4 py-1.5 text-[0.78rem] font-medium transition-colors duration-fast whitespace-nowrap ",
               activeTab === tab
                 ? "text-text-accent bg-accent-950 border border-border-accent"
                 : "text-text-muted hover:text-text-primary hover:bg-surface-2 border border-transparent"
@@ -866,7 +866,7 @@ function MarkerForm({
             <button
               type="button"
               onClick={onSetCurrentTime}
-              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors rounded-sm"
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors "
               title="Set to current playback time"
             >
               <MapPin className="h-3 w-3" />
@@ -890,7 +890,7 @@ function MarkerForm({
             <button
               type="button"
               onClick={onSetCurrentEndTime}
-              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors rounded-sm"
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-text-muted hover:text-text-accent surface-well hover:border-border-accent transition-colors "
               title="Set to current playback time"
             >
               <MapPin className="h-3 w-3" />
@@ -900,7 +900,7 @@ function MarkerForm({
               <button
                 type="button"
                 onClick={() => onEndSecondsChange(null)}
-                className="flex items-center justify-center p-1.5 text-text-muted hover:text-error-text transition-colors rounded-sm"
+                className="flex items-center justify-center p-1.5 text-text-muted hover:text-error-text transition-colors "
                 title="Clear end time"
               >
                 <X className="h-3 w-3" />
