@@ -30,7 +30,7 @@ COPY . .
 
 # Build web with API URL pointing to the nginx /api proxy
 ENV NEXT_PUBLIC_API_URL=/api
-RUN pnpm turbo run build
+RUN pnpm release:check && pnpm turbo run build
 
 # Prepare standalone web in a separate location so it doesn't
 # clobber node_modules when copied into the runner

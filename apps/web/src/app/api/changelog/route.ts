@@ -4,15 +4,16 @@ import { existsSync } from "node:fs";
 import { NextResponse } from "next/server";
 
 function findChangelog(): string {
-  // In standalone Docker builds, CHANGELOG.md is copied next to the app
-  const local = join(process.cwd(), "CHANGELOG.md");
-  if (existsSync(local)) return local;
+  const candidates = [
+    // Standalone Docker runtime starts from /app.
+    join(process.cwd(), "CHANGELOG.md"),
+    // Next standalone server can also carry the traced file inside apps/web.
+    join(process.cwd(), "apps", "web", "CHANGELOG.md"),
+    // Local development runs from apps/web.
+    join(process.cwd(), "..", "..", "CHANGELOG.md"),
+  ];
 
-  // In dev (monorepo), process.cwd() is apps/web — walk up to repo root
-  const repoRoot = join(process.cwd(), "..", "..", "CHANGELOG.md");
-  if (existsSync(repoRoot)) return repoRoot;
-
-  return local;
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
 export async function GET() {
