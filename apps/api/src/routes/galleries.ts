@@ -363,6 +363,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
         id: galleries.id,
         title: galleries.title,
         imageCount: galleries.imageCount,
+        isNsfw: galleries.isNsfw,
       })
       .from(galleries)
       .where(eq(galleries.parentId, id))
@@ -435,6 +436,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
         imageCount: ch.imageCount,
         coverImagePath: `/assets/galleries/${ch.id}/cover`,
         previewImagePaths: childPreviewMap.get(ch.id) ?? [],
+        isNsfw: ch.isNsfw,
       })),
       createdAt: gallery.createdAt,
       updatedAt: gallery.updatedAt,

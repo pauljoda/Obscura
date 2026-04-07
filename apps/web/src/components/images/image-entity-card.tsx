@@ -193,43 +193,45 @@ function ImageFeedCard({
 
   const media = (
     <>
-      <div className="relative bg-surface-2">
-        {error || !image.thumbnail ? (
-          <div className="flex items-center justify-center bg-surface-2 aspect-video">
-            <ImageOff className="h-8 w-8 text-text-disabled" />
-          </div>
-        ) : effectiveVideo(image) && videoSrc ? (
-          <video
-            ref={videoRef}
-            key={activated ? "full" : "preview"}
-            src={videoSrc}
-            loop
-            muted
-            playsInline
-            preload={activated ? "auto" : "none"}
-            poster={image.thumbnail}
-            onError={() => setError(true)}
-            className="w-full object-contain bg-black"
-            style={{ maxHeight: "70vh" }}
-          />
-        ) : (
-          <img
-            src={image.full ?? image.thumbnail}
-            alt={image.title}
-            loading="lazy"
-            decoding="async"
-            onError={() => setError(true)}
-            className="w-full object-contain bg-black"
-            style={{ maxHeight: "70vh" }}
-          />
-        )}
+      <NsfwBlur isNsfw={image.isNsfw ?? false} className="relative bg-surface-2">
+        <div className="relative bg-surface-2">
+          {error || !image.thumbnail ? (
+            <div className="flex items-center justify-center bg-surface-2 aspect-video">
+              <ImageOff className="h-8 w-8 text-text-disabled" />
+            </div>
+          ) : effectiveVideo(image) && videoSrc ? (
+            <video
+              ref={videoRef}
+              key={activated ? "full" : "preview"}
+              src={videoSrc}
+              loop
+              muted
+              playsInline
+              preload={activated ? "auto" : "none"}
+              poster={image.thumbnail}
+              onError={() => setError(true)}
+              className="w-full object-contain bg-black"
+              style={{ maxHeight: "70vh" }}
+            />
+          ) : (
+            <img
+              src={image.full ?? image.thumbnail}
+              alt={image.title}
+              loading="lazy"
+              decoding="async"
+              onError={() => setError(true)}
+              className="w-full object-contain bg-black"
+              style={{ maxHeight: "70vh" }}
+            />
+          )}
 
-        {effectiveVideo(image) && (
-          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1 bg-black/70 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
-            <Film className="h-3.5 w-3.5" />
-          </div>
-        )}
-      </div>
+          {effectiveVideo(image) && (
+            <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1 bg-black/70 px-2 py-1 text-xs text-white/90 backdrop-blur-sm">
+              <Film className="h-3.5 w-3.5" />
+            </div>
+          )}
+        </div>
+      </NsfwBlur>
 
       <div className="px-4 py-3 space-y-2">
         <h3 className="text-sm font-medium text-text-primary truncate">{image.title}</h3>

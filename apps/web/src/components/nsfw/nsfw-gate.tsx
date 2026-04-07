@@ -30,6 +30,9 @@ interface NsfwBlurProps {
  * - isNsfw=false  OR mode="show": render normally
  * - isNsfw=true  AND mode="blur": render with blur overlay (hover reveals)
  * - isNsfw=true  AND mode="off":  render null (hidden)
+ *
+ * Content remains interactive in blur mode — the blur is applied as a CSS
+ * filter on the content layer, with a non-interactive badge overlay on top.
  */
 export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
   const { mode } = useNsfw();
@@ -42,10 +45,10 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
     return null;
   }
 
-  // mode === "blur"
+  // mode === "blur" — apply CSS filter only, keep content interactive
   return (
     <div className={`group relative ${className ?? ""}`}>
-      <div className="blur-sm brightness-50 transition-all duration-300 group-hover:blur-none group-hover:brightness-100 select-none pointer-events-none group-hover:pointer-events-auto">
+      <div className="blur-sm brightness-50 transition-all duration-300 group-hover:blur-none group-hover:brightness-100">
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
@@ -64,8 +67,9 @@ interface NsfwTextProps {
 }
 
 /**
- * Inline text variant of NsfwBlur. Blurs text in blur mode, shows "•••" in
- * off mode (when isNsfw=true), reveals on hover.
+ * Inline text variant of NsfwBlur. In off mode (SFW), renders nothing to
+ * match NsfwBlur's behavior of hiding NSFW content entirely. In blur mode,
+ * blurs text until hover.
  */
 export function NsfwText({ isNsfw, children, className }: NsfwTextProps) {
   const { mode } = useNsfw();
@@ -75,7 +79,7 @@ export function NsfwText({ isNsfw, children, className }: NsfwTextProps) {
   }
 
   if (mode === "off") {
-    return <span className={className}>{"•".repeat(8)}</span>;
+    return null;
   }
 
   // mode === "blur"

@@ -115,7 +115,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
     imageCount: child.imageCount,
     rating: null,
     organized: false,
-    isNsfw: false,
+    isNsfw: child.isNsfw ?? false,
     date: null,
     studioId: null,
     studioName: null,

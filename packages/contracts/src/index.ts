@@ -256,7 +256,7 @@ export interface GalleryDetailDto {
   imageTotal: number;
   imageLimit: number;
   imageOffset: number;
-  children: { id: string; title: string; imageCount: number; coverImagePath: string | null; previewImagePaths: string[] }[];
+  children: { id: string; title: string; imageCount: number; coverImagePath: string | null; previewImagePaths: string[]; isNsfw: boolean }[];
   createdAt: string;
   updatedAt: string;
 }

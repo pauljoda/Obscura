@@ -185,21 +185,23 @@ function GalleryListCard({ gallery }: { gallery: GalleryCardData }) {
   return (
     <Link href={gallery.href}>
       <div className="surface-card-sharp flex items-center gap-3 px-3 py-2 group hover:bg-surface-2 transition-colors duration-fast">
-        <div className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden flex-shrink-0">
-          {gallery.coverImage ? (
-            <img
-              src={gallery.coverImage}
-              alt={gallery.title}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Images className="h-4 w-4 text-text-disabled" />
-            </div>
-          )}
-        </div>
+        <NsfwBlur isNsfw={gallery.isNsfw ?? false} className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden flex-shrink-0">
+          <div className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden">
+            {gallery.coverImage ? (
+              <img
+                src={gallery.coverImage}
+                alt={gallery.title}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Images className="h-4 w-4 text-text-disabled" />
+              </div>
+            )}
+          </div>
+        </NsfwBlur>
 
         <div className="flex-1 min-w-0">
           <h3 className="text-[0.78rem] font-medium text-text-primary truncate">

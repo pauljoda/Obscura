@@ -7,6 +7,7 @@ import { toApiUrl, type SceneListItem } from "../../lib/api";
 export interface SceneCardPerformer {
   name: string;
   imagePath?: string;
+  isNsfw?: boolean;
 }
 
 export interface SceneCardData {
@@ -59,6 +60,7 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
     performers: scene.performers.map((performer) => ({
       name: performer.name,
       imagePath: toApiUrl(performer.imagePath) ?? undefined,
+      isNsfw: performer.isNsfw,
     })),
     tags: scene.tags.map((tag) => tag.name),
     rating: scene.rating ?? undefined,

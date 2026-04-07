@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../lib/api";
+import { NsfwBlur } from "./nsfw/nsfw-gate";
 import type { ImageListItemDto } from "@obscura/contracts";
 
 interface ImageLightboxFilmstripProps {
@@ -48,17 +49,19 @@ export function ImageLightboxFilmstrip({
                 : "opacity-60 hover:opacity-90"
             )}
           >
-            {thumbUrl ? (
-              <img
-                src={thumbUrl}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <div className="h-full w-full bg-surface-3" />
-            )}
+            <NsfwBlur isNsfw={image.isNsfw ?? false} className="h-full w-full">
+              {thumbUrl ? (
+                <img
+                  src={thumbUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <div className="h-full w-full bg-surface-3" />
+              )}
+            </NsfwBlur>
           </button>
         );
       })}

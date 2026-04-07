@@ -117,13 +117,15 @@ function SceneListCard({
                 {scene.performers.slice(0, 3).map((performer) => (
                   <span key={performer.name} className="inline-flex items-center gap-1">
                     {performer.imagePath && (
-                      <img
-                        src={performer.imagePath}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="h-4 w-3 object-cover flex-shrink-0"
-                      />
+                      <NsfwBlur isNsfw={performer.isNsfw ?? false} className="h-4 w-3 flex-shrink-0 overflow-hidden">
+                        <img
+                          src={performer.imagePath}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-4 w-3 object-cover"
+                        />
+                      </NsfwBlur>
                     )}
                     <span>{performer.name}</span>
                   </span>

@@ -140,8 +140,14 @@ async function propagateSceneNsfw(sceneId: string, libraryRootIsNsfw: boolean) {
 
     if (studio?.isNsfw) {
       await db.update(scenes).set({ isNsfw: true }).where(eq(scenes.id, sceneId));
+      return;
     }
   }
+
+  // No NSFW signals found — clear stale flag if it was set by a previous
+  // propagation. This ensures removed NSFW tags/performers/studios are
+  // reflected after a rescan.
+  await db.update(scenes).set({ isNsfw: false }).where(eq(scenes.id, sceneId));
 }
 
 function getQueueDefinition(queueName: QueueName) {

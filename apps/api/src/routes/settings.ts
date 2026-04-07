@@ -167,29 +167,42 @@ export async function settingsRoutes(app: FastifyInstance) {
 
   // ─── GET /client-info ─────────────────────────────────────────
   // Returns whether the connecting client is on a LAN/private network.
+  // Only trusts X-Forwarded-For when the direct socket connection is from
+  // a loopback address (i.e. the Docker nginx reverse proxy).
   app.get("/client-info", async (request) => {
-    const ip = (request.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      ?? request.socket.remoteAddress
-      ?? "";
-    return { isLan: isLanIp(ip) };
+    const socketIp = request.socket.remoteAddress ?? "";
+    const isFromTrustedProxy = isLoopback(socketIp);
+
+    let clientIp = socketIp;
+    if (isFromTrustedProxy) {
+      const forwarded = (request.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim();
+      if (forwarded) clientIp = forwarded;
+    }
+
+    return { isLan: isLanIp(clientIp) };
   });
 }
 
+function isLoopback(ip: string): boolean {
+  return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+}
+
 function isLanIp(ip: string): boolean {
-  // IPv4 private ranges + loopback
-  if (
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    ip === "::ffff:127.0.0.1" ||
-    ip.startsWith("10.") ||
-    ip.startsWith("192.168.") ||
-    ip.startsWith("fd")
-  ) return true;
+  // Loopback
+  if (isLoopback(ip)) return true;
+  // IPv4 private ranges
+  if (ip.startsWith("10.") || ip.startsWith("192.168.")) return true;
+  // IPv6-mapped IPv4 (::ffff:10.x, ::ffff:192.168.x)
+  const mapped = ip.match(/^::ffff:(.+)$/);
+  if (mapped) return isLanIp(mapped[1]);
   // 172.16.0.0/12
-  const match = ip.match(/^172\.(\d+)\./);
-  if (match) {
-    const octet = parseInt(match[1], 10);
+  const match172 = ip.match(/^172\.(\d+)\./);
+  if (match172) {
+    const octet = parseInt(match172[1], 10);
     if (octet >= 16 && octet <= 31) return true;
   }
+  // IPv6 ULA (fc00::/7 covers both fc and fd prefixes)
+  if (ip.startsWith("fd") || ip.startsWith("fc")) return true;
+  // Docker bridge 172.17.x.x is already covered by 172.16-31 range
   return false;
 }
