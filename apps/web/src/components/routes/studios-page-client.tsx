@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Building2, Search, SortAsc, SortDesc } from "lucide-react";
+import { Building2, Search, X, ArrowUpDown, ChevronDown } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { type StudioItem } from "../../lib/api";
 import { StudioEntityCard } from "../studios/studio-entity-card";
@@ -70,24 +70,50 @@ export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
       )}
 
       {/* Toolbar */}
-      <div className="surface-well flex items-center gap-2 p-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search studios…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="control-input w-full pl-8 pr-3 py-1.5 text-sm"
-          />
+      <div className="space-y-0">
+        <div className="surface-well flex items-center gap-2 px-3 py-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-disabled" />
+            <input
+              type="text"
+              placeholder="Search studios…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(
+                "w-full bg-transparent py-1.5 pl-7 pr-3 text-[0.78rem] text-text-primary",
+                "placeholder:text-text-disabled",
+                "focus:outline-none",
+                "transition-colors duration-fast",
+              )}
+            />
+            {search ? (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : null}
+          </div>
+
+          <div className="h-5 w-px bg-border-subtle" />
+
+          <div className="flex items-center">
+            <button
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+              title={sortDir === "asc" ? "Ascending" : "Descending"}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1.5",
+                "text-[0.72rem] text-text-muted hover:bg-surface-2 hover:text-text-primary",
+                "transition-colors duration-fast",
+              )}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Name</span>
+              <ChevronDown className={cn("h-3 w-3 text-text-disabled", sortDir === "asc" && "rotate-180")} />
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs bg-accent-950 text-text-accent border border-border-accent transition-all duration-fast"
-        >
-          {sortDir === "asc" ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
-          Name
-        </button>
       </div>
 
       {/* Content */}
