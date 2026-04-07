@@ -377,12 +377,12 @@ export function JobDashboard() {
       </div>
 
       {error && (
-        <div className="surface-card-sharp no-lift border-l-2 border-status-error px-3 py-2 text-sm text-status-error-text">
+        <div className="surface-card no-lift border-l-2 border-status-error px-3 py-2 text-sm text-status-error-text">
           {error}
         </div>
       )}
       {message && !error && (
-        <div className="surface-card-sharp no-lift border-l-2 border-status-success px-3 py-2 text-sm text-status-success-text">
+        <div className="surface-card no-lift border-l-2 border-status-success px-3 py-2 text-sm text-status-success-text">
           {message}
         </div>
       )}
@@ -427,52 +427,8 @@ export function JobDashboard() {
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
-            <Wrench className="h-4 w-4 text-status-error-text" />
-            <h2 className="text-[0.92rem] font-heading font-semibold">Maintenance</h2>
-          </div>
-          <span className="text-mono-sm text-text-disabled">manual rebuild tools</span>
-        </div>
-        <div className="surface-card-sharp no-lift border-status-error/25 bg-status-error/[0.04] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2">
-                <Badge variant="error" className="text-[0.56rem]">
-                  Force rebuild
-                </Badge>
-                <h3 className="text-[0.92rem] font-heading font-semibold text-status-error-text">
-                  Preview assets
-                </h3>
-              </div>
-              <p className="mt-2 text-[0.74rem] text-text-muted">
-                Clear all generated scene thumbnails, preview clips, and trickplay assets, then
-                queue a full rebuild. Use this after quality changes or when previews are stale or
-                corrupted.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handleForceRebuildPreviews()}
-              disabled={rebuildingPreviews}
-              className="inline-flex items-center gap-1.5 border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-xs font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-40"
-            >
-              {rebuildingPreviews ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Wrench className="h-3.5 w-3.5" />
-              )}
-              {rebuildingPreviews ? "Queueing..." : "Force rebuild previews"}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-t border-border-subtle" />
-
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2.5">
             <Activity className="h-4 w-4 text-text-accent" />
-            <h2 className="text-[0.92rem] font-heading font-semibold">Queues</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Queues</h2>
           </div>
           <span className="text-mono-sm text-text-disabled">
             {sortedQueues.length} configured
@@ -492,7 +448,7 @@ export function JobDashboard() {
             />
           ))}
           {!dashboard && loading && (
-            <div className="surface-card-sharp no-lift col-span-full p-6 text-center text-sm text-text-muted">
+            <div className="surface-card no-lift col-span-full p-6 text-center text-sm text-text-muted">
               Loading queue state...
             </div>
           )}
@@ -505,7 +461,7 @@ export function JobDashboard() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
             <Cpu className="h-4 w-4 text-text-accent" />
-            <h2 className="text-[0.92rem] font-heading font-semibold">Live Work</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Live Work</h2>
           </div>
           <div className="flex items-center gap-2">
             {(dashboard?.activeJobs.length ?? 0) > 0 && (
@@ -549,7 +505,7 @@ export function JobDashboard() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="h-4 w-4 text-status-error-text" />
-            <h2 className="text-[0.92rem] font-heading font-semibold">Failures</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Failures</h2>
           </div>
           <div className="flex items-center gap-2">
             {totalFailed > 0 && (
@@ -586,13 +542,13 @@ export function JobDashboard() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
             <ListChecks className="h-4 w-4 text-text-accent" />
-            <h2 className="text-[0.92rem] font-heading font-semibold">Recently Finished</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Recently Finished</h2>
           </div>
           <span className="text-mono-sm text-text-disabled">
             {retainedCompleted} retained
           </span>
         </div>
-        <div className="surface-card-sharp no-lift overflow-hidden">
+        <div className="surface-card no-lift overflow-hidden">
           <div className="divide-y divide-border-subtle/50">
             {dashboard?.completedJobs.length ? (
               dashboard.completedJobs.map((job) => (
@@ -628,30 +584,42 @@ function OverviewStat({
   return (
     <div
       className={cn(
-        "surface-stat px-3 py-2.5",
-        accent && !danger && "surface-stat-accent",
-        danger && "border-status-error/30"
+        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
+        accent && !danger && "border-border-accent shadow-[var(--shadow-glow-accent)]",
+        danger && "border-status-error/30 shadow-[0_0_12px_rgba(179,79,86,0.15)]"
       )}
     >
-      <div className="mb-1 flex items-center gap-1.5">
-        <Icon className="h-3 w-3" />
-        <span className={cn("text-kicker !text-text-disabled", danger && "!text-status-error-text")}>
-          {label}
-        </span>
-      </div>
       <div
         className={cn(
-          "text-lg font-semibold leading-tight",
-          danger
-            ? "text-status-error-text"
-            : accent
-              ? "text-glow-accent"
-              : "text-text-primary"
+          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
+          danger ? "bg-status-error" : accent ? "bg-accent-500" : "bg-surface-4"
         )}
-      >
-        {value}
+      />
+      <div className="flex items-center justify-between ml-1.5">
+        <span className={cn("text-[0.6rem] font-semibold tracking-[0.15em] uppercase", danger ? "text-status-error-text" : "text-text-muted")}>
+          {label}
+        </span>
+        <div className={cn("opacity-70", danger ? "text-status-error-text" : accent ? "text-text-accent" : "text-text-disabled")}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
       </div>
-      <div className="mt-0.5 text-[0.62rem] text-text-disabled">{detail}</div>
+      <div className="flex items-end justify-between ml-1.5 mt-1">
+        <div
+          className={cn(
+            "text-lg font-mono tracking-tight",
+            danger
+              ? "text-status-error-text"
+              : accent
+                ? "text-glow-accent"
+                : "text-text-primary"
+          )}
+        >
+          {value}
+        </div>
+        <div className="text-[0.6rem] text-text-disabled mb-0.5 truncate max-w-[60%] text-right" title={detail}>
+          {detail}
+        </div>
+      </div>
     </div>
   );
 }
@@ -679,7 +647,7 @@ function QueueCard({
   return (
     <div
       className={cn(
-        "surface-card-sharp no-lift space-y-4 p-4 transition-all duration-normal",
+        "surface-card no-lift space-y-4 p-4 transition-all duration-normal",
         queue.failed > 0
           ? "border-status-error/25"
           : hasPressure
@@ -790,7 +758,7 @@ function ActiveJobCard({
   return (
     <div
       className={cn(
-        "surface-card-sharp no-lift space-y-3 p-4",
+        "surface-card no-lift space-y-3 p-4",
         isForceRebuildJob(job)
           ? "border-status-error/30 bg-status-error/[0.04]"
           : isRunning
@@ -862,7 +830,7 @@ function ActiveJobCard({
 
 function FailedJobCard({ job }: { job: JobRun }) {
   return (
-    <details className="surface-card-sharp no-lift border-status-error/25 p-4" open>
+    <details className="surface-card no-lift border-status-error/25 p-4" open>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -936,7 +904,7 @@ function CompletedJobRow({ job }: { job: JobRun }) {
 
 function EmptyPanel({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="surface-card-sharp no-lift px-4 py-6 text-center">
+    <div className="surface-card no-lift px-4 py-6 text-center">
       <p className="text-sm font-medium text-text-primary">{title}</p>
       <p className="mt-1 text-[0.78rem] text-text-muted">{detail}</p>
     </div>
