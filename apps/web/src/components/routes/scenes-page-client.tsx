@@ -20,6 +20,8 @@ import {
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
+import { cn } from "@obscura/ui/lib/utils";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 
 interface ActiveFilter {
   label: string;
@@ -167,27 +169,31 @@ export function ScenesPageClient({
       </div>
 
       {initialStats ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <StatCard
-            icon={<Film className="h-3.5 w-3.5" />}
+            icon={<Film className="h-4 w-4" />}
             label="Total Scenes"
             value={String(initialStats.totalScenes)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />
           <StatCard
-            icon={<Clock className="h-3.5 w-3.5" />}
+            icon={<Clock className="h-4 w-4" />}
             label="Total Duration"
             value={initialStats.totalDurationFormatted}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
           />
           <StatCard
-            icon={<HardDrive className="h-3.5 w-3.5" />}
+            icon={<HardDrive className="h-4 w-4" />}
             label="Storage"
             value={initialStats.totalSizeFormatted ?? "—"}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
           />
           <StatCard
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
+            icon={<TrendingUp className="h-4 w-4" />}
             label="This Week"
-            value={`+${initialStats.recentCount} new`}
+            value={`+${initialStats.recentCount}`}
             accent
+            gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
           />
         </div>
       ) : null}
@@ -234,28 +240,40 @@ function StatCard({
   icon,
   label,
   value,
+  gradientClass,
 }: {
   accent?: boolean;
   icon: ReactNode;
   label: string;
   value: string;
+  gradientClass: string;
 }) {
   return (
-    <div className={accent ? "surface-stat-accent px-3 py-2.5" : "surface-stat px-3 py-2.5"}>
+    <div
+      className={cn(
+        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
+        accent && "border-border-accent shadow-[var(--shadow-glow-accent)]"
+      )}
+    >
       <div
-        className={`mb-1 flex items-center gap-1.5 ${accent ? "text-text-accent" : "text-text-disabled"}`}
-      >
-        {icon}
-        <span className="text-kicker" style={{ color: "inherit" }}>
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
+          gradientClass
+        )}
+      />
+      <div className="flex items-center justify-between ml-1.5">
+        <span className="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
           {label}
         </span>
+        <div className={cn("opacity-70", accent ? "text-text-accent" : "text-text-disabled")}>
+          {icon}
+        </div>
       </div>
       <div
-        className={
-          accent
-            ? "text-lg font-semibold leading-tight text-text-accent"
-            : "text-lg font-semibold leading-tight text-text-primary"
-        }
+        className={cn(
+          "ml-1.5 mt-1 text-lg font-mono tracking-tight",
+          accent ? "text-glow-accent" : "text-text-primary"
+        )}
       >
         {value}
       </div>
