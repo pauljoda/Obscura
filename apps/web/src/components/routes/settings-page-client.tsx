@@ -976,19 +976,16 @@ export function SettingsPageClient({
           <StorageStat
             label="Thumbnails"
             value={formatBytes(storage?.thumbnailsBytes ?? 0)}
-            ratio={totalBytes > 0 ? (storage?.thumbnailsBytes ?? 0) / totalBytes : 0}
             gradientClass="gradient-thumb-1"
           />
           <StorageStat
             label="Preview clips"
             value={formatBytes(storage?.previewsBytes ?? 0)}
-            ratio={totalBytes > 0 ? (storage?.previewsBytes ?? 0) / totalBytes : 0}
             gradientClass="gradient-thumb-2"
           />
           <StorageStat
             label="Trickplay sprites"
             value={formatBytes(storage?.trickplayBytes ?? 0)}
-            ratio={totalBytes > 0 ? (storage?.trickplayBytes ?? 0) / totalBytes : 0}
             gradientClass="gradient-thumb-3"
           />
           <StorageStat label="Total" value={formatBytes(totalBytes)} accent />
@@ -1141,13 +1138,11 @@ function QualitySlider({
 function StorageStat({
   accent,
   label,
-  ratio,
   value,
   gradientClass,
 }: {
   accent?: boolean;
   label: string;
-  ratio?: number;
   value: string;
   gradientClass?: string;
 }) {
@@ -1177,11 +1172,6 @@ function StorageStat({
       >
         {value}
       </div>
-      {!accent ? (
-        <div className="absolute bottom-0 left-0 right-0 h-1 overflow-hidden bg-surface-4">
-          <div className="h-full bg-accent-500/70" style={{ width: `${Math.max((ratio ?? 0) * 100, 4)}%` }} />
-        </div>
-      ) : null}
     </div>
   );
 }
