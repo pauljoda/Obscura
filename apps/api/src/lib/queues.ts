@@ -1,6 +1,10 @@
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
-import { queueDefinitions, type QueueName } from "@obscura/contracts";
+import {
+  queueDefinitions,
+  queueRedisRetention,
+  type QueueName,
+} from "@obscura/contracts";
 
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 
@@ -15,8 +19,8 @@ export const queueMap = Object.fromEntries(
     new Queue(definition.name, {
       connection,
       defaultJobOptions: {
-        removeOnComplete: 100,
-        removeOnFail: 200,
+        removeOnComplete: queueRedisRetention.completed,
+        removeOnFail: queueRedisRetention.failed,
       },
     }),
   ])

@@ -69,17 +69,67 @@ export {
 } from "./media";
 
 export const queueDefinitions = [
-  { name: "library-scan", description: "Discovers files in configured media roots" },
-  { name: "media-probe", description: "Extracts technical metadata using ffprobe" },
-  { name: "fingerprint", description: "Generates md5, oshash, and perceptual fingerprints" },
-  { name: "preview", description: "Builds thumbnails, previews, and trickplay sprites" },
-  { name: "metadata-import", description: "Coordinates stash bootstrap imports and provider application" },
-  { name: "gallery-scan", description: "Discovers images and galleries in configured media roots" },
-  { name: "image-thumbnail", description: "Generates thumbnails for images" },
-  { name: "image-fingerprint", description: "Computes MD5/oshash for images" },
+  {
+    name: "library-scan",
+    label: "Library Scan",
+    description: "Discovers video scenes in configured media roots",
+    concurrency: 1,
+  },
+  {
+    name: "media-probe",
+    label: "Media Probe",
+    description: "Extracts technical metadata using ffprobe",
+    concurrency: 1,
+  },
+  {
+    name: "fingerprint",
+    label: "Fingerprint",
+    description: "Generates md5 and oshash fingerprints for scenes",
+    concurrency: 1,
+  },
+  {
+    name: "preview",
+    label: "Preview Build",
+    description: "Builds scene thumbnails, preview clips, and trickplay sprites",
+    concurrency: 1,
+  },
+  {
+    name: "metadata-import",
+    label: "Metadata Import",
+    description: "Coordinates provider imports and metadata application",
+    concurrency: 1,
+  },
+  {
+    name: "gallery-scan",
+    label: "Gallery Scan",
+    description: "Discovers image galleries in configured media roots",
+    concurrency: 1,
+  },
+  {
+    name: "image-thumbnail",
+    label: "Image Thumbnail",
+    description: "Generates thumbnails and lightweight previews for images",
+    concurrency: 1,
+  },
+  {
+    name: "image-fingerprint",
+    label: "Image Fingerprint",
+    description: "Computes md5 and oshash fingerprints for images",
+    concurrency: 1,
+  },
 ] as const;
 
 export type QueueName = (typeof queueDefinitions)[number]["name"];
+
+export const queueRedisRetention = {
+  completed: 5,
+  failed: 20,
+} as const;
+
+export const jobRunRetention = {
+  completed: 40,
+  dismissed: 40,
+} as const;
 
 export const jobStatuses = [
   "waiting",
@@ -92,6 +142,16 @@ export const jobStatuses = [
 ] as const;
 
 export type JobStatus = (typeof jobStatuses)[number];
+
+export const jobTriggerKinds = [
+  "manual",
+  "schedule",
+  "library-scan",
+  "gallery-scan",
+  "system",
+] as const;
+
+export type JobTriggerKind = (typeof jobTriggerKinds)[number];
 
 export interface LibraryRootDto {
   id: string;
@@ -266,10 +326,14 @@ export interface ImageBulkUpdateDto {
 
 export interface QueueSummaryDto {
   name: QueueName;
+  label: string;
   description: string;
   status: "idle" | "active" | "warning";
+  concurrency: number;
   active: number;
   waiting: number;
+  delayed: number;
+  backlog: number;
   completed: number;
   failed: number;
 }
@@ -277,10 +341,13 @@ export interface QueueSummaryDto {
 export interface JobRunDto {
   id: string;
   queueName: QueueName;
+  queueLabel: string;
   status: JobStatus;
   targetType: string | null;
   targetId: string | null;
   targetLabel: string | null;
+  triggeredBy: JobTriggerKind | null;
+  triggerLabel: string | null;
   progress: number;
   attempts: number;
   error: string | null;
@@ -501,6 +568,8 @@ export interface SearchResponseDto {
 export interface JobsDashboardDto {
   queues: QueueSummaryDto[];
   activeJobs: JobRunDto[];
+  failedJobs: JobRunDto[];
+  completedJobs: JobRunDto[];
   recentJobs: JobRunDto[];
   lastScanAt: string | null;
   schedule: {

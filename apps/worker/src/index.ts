@@ -9,7 +9,13 @@ import IORedis from "ioredis";
 import postgres from "postgres";
 import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { queueDefinitions, type QueueName } from "@obscura/contracts";
+import {
+  jobRunRetention,
+  queueDefinitions,
+  queueRedisRetention,
+  type JobTriggerKind,
+  type QueueName,
+} from "@obscura/contracts";
 import {
   computeMd5,
   computeOsHash,
@@ -41,6 +47,22 @@ const redis = new IORedis(redisUrl, {
 const queryClient = postgres(databaseUrl);
 const db = drizzle(queryClient, { schema });
 
+type JobPayload = Record<string, unknown> & {
+  triggeredBy?: JobTriggerKind;
+  triggerLabel?: string;
+};
+
+type QueueTarget = {
+  type?: string | null;
+  id?: string | null;
+  label?: string | null;
+};
+
+type QueueTrigger = {
+  by?: JobTriggerKind;
+  label?: string | null;
+};
+
 const {
   scenes,
   libraryRoots,
@@ -59,6 +81,50 @@ function sceneAssetUrl(sceneId: string, fileName: string) {
   return `/assets/scenes/${sceneId}/${fileName}`;
 }
 
+function getQueueDefinition(queueName: QueueName) {
+  return queueDefinitions.find((definition) => definition.name === queueName)!;
+}
+
+function withTriggerMetadata(
+  payload: Record<string, unknown>,
+  trigger: QueueTrigger = {}
+): JobPayload {
+  return {
+    ...payload,
+    ...(trigger.by ? { triggeredBy: trigger.by } : {}),
+    ...(trigger.label ? { triggerLabel: trigger.label } : {}),
+  };
+}
+
+function formatJobError(error: unknown) {
+  if (error instanceof Error) {
+    if (error.stack && error.stack !== error.message) {
+      return `${error.message}\n${error.stack}`.slice(0, 4000);
+    }
+
+    return error.message;
+  }
+
+  return typeof error === "string" ? error : "Unknown error";
+}
+
+const workerQueues = Object.fromEntries(
+  queueDefinitions.map((definition) => [
+    definition.name,
+    new Queue(definition.name, {
+      connection: redis,
+      defaultJobOptions: {
+        removeOnComplete: queueRedisRetention.completed,
+        removeOnFail: queueRedisRetention.failed,
+      },
+    }),
+  ])
+) as Record<QueueName, Queue>;
+
+function getWorkerQueue(queueName: QueueName) {
+  return workerQueues[queueName];
+}
+
 async function ensureLibrarySettingsRow() {
   const [existing] = await db.select().from(librarySettings).limit(1);
   if (existing) {
@@ -74,6 +140,8 @@ async function upsertJobRun(
   queueName: QueueName,
   patch: Partial<typeof jobRuns.$inferInsert>
 ) {
+  const payload = (patch.payload ?? (job.data as JobPayload) ?? {}) as JobPayload;
+
   await db
     .insert(jobRuns)
     .values({
@@ -85,7 +153,7 @@ async function upsertJobRun(
       targetType: patch.targetType ?? null,
       targetId: patch.targetId ?? null,
       targetLabel: patch.targetLabel ?? null,
-      payload: patch.payload ?? job.data ?? {},
+      payload,
       error: patch.error ?? null,
       startedAt: patch.startedAt ?? null,
       finishedAt: patch.finishedAt ?? null,
@@ -100,7 +168,7 @@ async function upsertJobRun(
         targetType: patch.targetType ?? null,
         targetId: patch.targetId ?? null,
         targetLabel: patch.targetLabel ?? null,
-        payload: patch.payload ?? job.data ?? {},
+        payload,
         error: patch.error ?? null,
         startedAt: patch.startedAt ?? undefined,
         finishedAt: patch.finishedAt ?? undefined,
@@ -146,25 +214,72 @@ async function markJobFailed(job: Job, queueName: QueueName, error: unknown) {
   await upsertJobRun(job, queueName, {
     status: "failed",
     attempts: job.attemptsMade,
-    error: error instanceof Error ? error.message : "Unknown error",
+    error: formatJobError(error),
     finishedAt: new Date(),
   });
 }
 
-async function enqueuePendingSceneJob(queueName: QueueName, sceneId: string) {
+async function hasPendingJob(queueName: QueueName, target: QueueTarget) {
+  if (!target.id) {
+    return false;
+  }
+
+  const predicates = [
+    eq(jobRuns.queueName, queueName),
+    eq(jobRuns.targetId, target.id),
+    inArray(jobRuns.status, ["waiting", "active", "delayed"]),
+  ];
+
+  if (target.type) {
+    predicates.push(eq(jobRuns.targetType, target.type));
+  }
+
   const [pending] = await db
     .select({ id: jobRuns.id })
     .from(jobRuns)
-    .where(
-      and(
-        eq(jobRuns.queueName, queueName),
-        eq(jobRuns.targetId, sceneId),
-        inArray(jobRuns.status, ["waiting", "active", "delayed"])
-      )
-    )
+    .where(and(...predicates))
     .limit(1);
 
-  if (pending) {
+  return Boolean(pending);
+}
+
+async function enqueueJobIfNeeded(input: {
+  queueName: QueueName;
+  jobName: string;
+  data: Record<string, unknown>;
+  target: QueueTarget;
+  trigger?: QueueTrigger;
+}) {
+  if (await hasPendingJob(input.queueName, input.target)) {
+    return null;
+  }
+
+  const queue = getWorkerQueue(input.queueName);
+  const payload = withTriggerMetadata(input.data, input.trigger);
+  const job = await queue.add(input.jobName, payload);
+
+  await upsertJobRun(job, input.queueName, {
+    status: "waiting",
+    targetType: input.target.type ?? null,
+    targetId: input.target.id ?? null,
+    targetLabel: input.target.label ?? null,
+    payload,
+  });
+
+  return job;
+}
+
+async function enqueuePendingSceneJob(
+  queueName: QueueName,
+  sceneId: string,
+  trigger: QueueTrigger = {}
+) {
+  if (
+    await hasPendingJob(queueName, {
+      type: "scene",
+      id: sceneId,
+    })
+  ) {
     return;
   }
 
@@ -178,36 +293,32 @@ async function enqueuePendingSceneJob(queueName: QueueName, sceneId: string) {
     return;
   }
 
-  const queue = new Queue(queueName, {
-    connection: redis,
-    defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+  await enqueueJobIfNeeded({
+    queueName,
+    jobName: `scene-${queueName}`,
+    data: { sceneId },
+    target: {
+      type: "scene",
+      id: scene.id,
+      label: scene.title,
+    },
+    trigger,
   });
-
-  const job = await queue.add(`scene-${queueName}`, { sceneId });
-  await upsertJobRun(job, queueName, {
-    status: "waiting",
-    targetType: "scene",
-    targetId: scene.id,
-    targetLabel: scene.title,
-  });
-
-  await queue.close();
 }
 
-async function enqueuePendingImageJob(queueName: QueueName, imageId: string) {
-  const [pending] = await db
-    .select({ id: jobRuns.id })
-    .from(jobRuns)
-    .where(
-      and(
-        eq(jobRuns.queueName, queueName),
-        eq(jobRuns.targetId, imageId),
-        inArray(jobRuns.status, ["waiting", "active", "delayed"])
-      )
-    )
-    .limit(1);
-
-  if (pending) return;
+async function enqueuePendingImageJob(
+  queueName: QueueName,
+  imageId: string,
+  trigger: QueueTrigger = {}
+) {
+  if (
+    await hasPendingJob(queueName, {
+      type: "image",
+      id: imageId,
+    })
+  ) {
+    return;
+  }
 
   const [image] = await db
     .select({ id: images.id, title: images.title })
@@ -217,20 +328,81 @@ async function enqueuePendingImageJob(queueName: QueueName, imageId: string) {
 
   if (!image) return;
 
-  const queue = new Queue(queueName, {
-    connection: redis,
-    defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+  await enqueueJobIfNeeded({
+    queueName,
+    jobName: `image-${queueName}`,
+    data: { imageId },
+    target: {
+      type: "image",
+      id: image.id,
+      label: image.title,
+    },
+    trigger,
   });
+}
 
-  const job = await queue.add(`image-${queueName}`, { imageId });
-  await upsertJobRun(job, queueName, {
-    status: "waiting",
-    targetType: "image",
-    targetId: image.id,
-    targetLabel: image.title,
+async function enqueueLibraryRootJob(
+  root: { id: string; label: string; path: string; recursive: boolean },
+  trigger: QueueTrigger = {}
+) {
+  await enqueueJobIfNeeded({
+    queueName: "library-scan",
+    jobName: "library-root-scan",
+    data: {
+      libraryRootId: root.id,
+      path: root.path,
+      recursive: root.recursive,
+    },
+    target: {
+      type: "library-root",
+      id: root.id,
+      label: root.label,
+    },
+    trigger,
   });
+}
 
-  await queue.close();
+async function enqueueGalleryRootJob(
+  root: { id: string; label: string },
+  trigger: QueueTrigger = {}
+) {
+  await enqueueJobIfNeeded({
+    queueName: "gallery-scan",
+    jobName: "gallery-root-scan",
+    data: {
+      libraryRootId: root.id,
+    },
+    target: {
+      type: "library-root",
+      id: root.id,
+      label: root.label,
+    },
+    trigger,
+  });
+}
+
+async function pruneJobRunHistory() {
+  await db.execute(sql`
+    DELETE FROM job_runs
+    WHERE id IN (
+      SELECT id
+      FROM job_runs
+      WHERE status = 'completed'
+      ORDER BY COALESCE(finished_at, updated_at, created_at) DESC, created_at DESC
+      OFFSET ${jobRunRetention.completed}
+    )
+  `);
+
+  await db.execute(sql`
+    DELETE FROM job_runs
+    WHERE id IN (
+      SELECT id
+      FROM job_runs
+      WHERE status = 'dismissed'
+      ORDER BY COALESCE(updated_at, created_at) DESC, created_at DESC
+      OFFSET ${jobRunRetention.dismissed}
+    )
+  `);
 }
 
 async function processLibraryScan(job: Job) {
@@ -330,20 +502,10 @@ async function processLibraryScan(job: Job) {
     // Still trigger gallery scan even if no video files were found
     const scanImages = root.scanImages ?? true;
     if (scanImages) {
-      const galleryScanQueue = new Queue("gallery-scan", {
-        connection: redis,
-        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+      await enqueueGalleryRootJob(root, {
+        by: "library-scan",
+        label: `Queued during ${root.label} scan`,
       });
-      const galleryScanJob = await galleryScanQueue.add("gallery-root-scan", {
-        libraryRootId: root.id,
-      });
-      await upsertJobRun(galleryScanJob, "gallery-scan", {
-        status: "waiting",
-        targetType: "library-root",
-        targetId: root.id,
-        targetLabel: root.label,
-      });
-      await galleryScanQueue.close();
     }
     return;
   }
@@ -358,6 +520,7 @@ async function processLibraryScan(job: Job) {
         checksumMd5: scenes.checksumMd5,
         oshash: scenes.oshash,
         thumbnailPath: scenes.thumbnailPath,
+        cardThumbnailPath: scenes.cardThumbnailPath,
         previewPath: scenes.previewPath,
         spritePath: scenes.spritePath,
         trickplayVttPath: scenes.trickplayVttPath,
@@ -393,6 +556,7 @@ async function processLibraryScan(job: Job) {
           checksumMd5: scenes.checksumMd5,
           oshash: scenes.oshash,
           thumbnailPath: scenes.thumbnailPath,
+          cardThumbnailPath: scenes.cardThumbnailPath,
           previewPath: scenes.previewPath,
           spritePath: scenes.spritePath,
           trickplayVttPath: scenes.trickplayVttPath,
@@ -431,27 +595,33 @@ async function processLibraryScan(job: Job) {
       settings.autoGenerateMetadata &&
       (!scene.duration || !scene.width || !scene.codec)
     ) {
-      await enqueuePendingSceneJob("media-probe", scene.id);
+      await enqueuePendingSceneJob("media-probe", scene.id, {
+        by: "library-scan",
+        label: `Queued during ${root.label} scan`,
+      });
     }
 
     if (
       settings.autoGenerateFingerprints &&
       (!scene.checksumMd5 || !scene.oshash)
     ) {
-      await enqueuePendingSceneJob("fingerprint", scene.id);
+      await enqueuePendingSceneJob("fingerprint", scene.id, {
+        by: "library-scan",
+        label: `Queued during ${root.label} scan`,
+      });
     }
 
     {
       const hasCustomThumb = scene.thumbnailPath?.includes("thumb-custom") ?? false;
-      const isMissing =
-        !scene.thumbnailPath ||
-        !scene.previewPath ||
-        !scene.spritePath ||
-        !scene.trickplayVttPath;
-      // Always regenerate if the user hasn't set a custom thumbnail so
-      // quality setting changes take effect on the next scan.
-      if (settings.autoGeneratePreview && (isMissing || !hasCustomThumb)) {
-        await enqueuePendingSceneJob("preview", scene.id);
+      const isMissingGeneratedThumbnail =
+        !hasCustomThumb && (!scene.thumbnailPath || !scene.cardThumbnailPath);
+      const isMissingDerivedAssets = !scene.previewPath || !scene.spritePath || !scene.trickplayVttPath;
+
+      if (settings.autoGeneratePreview && (isMissingGeneratedThumbnail || isMissingDerivedAssets)) {
+        await enqueuePendingSceneJob("preview", scene.id, {
+          by: "library-scan",
+          label: `Queued during ${root.label} scan`,
+        });
       }
     }
 
@@ -470,20 +640,10 @@ async function processLibraryScan(job: Job) {
   // Trigger gallery scan if this root has image scanning enabled
   const scanImages = root.scanImages ?? true;
   if (scanImages) {
-    const galleryScanQueue = new Queue("gallery-scan", {
-      connection: redis,
-      defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
+    await enqueueGalleryRootJob(root, {
+      by: "library-scan",
+      label: `Queued during ${root.label} scan`,
     });
-    const galleryScanJob = await galleryScanQueue.add("gallery-root-scan", {
-      libraryRootId: root.id,
-    });
-    await upsertJobRun(galleryScanJob, "gallery-scan", {
-      status: "waiting",
-      targetType: "library-root",
-      targetId: root.id,
-      targetLabel: root.label,
-    });
-    await galleryScanQueue.close();
   }
 }
 
@@ -1051,10 +1211,16 @@ async function processGalleryScan(job: Job) {
       }
 
       if (needsThumbnail) {
-        await enqueuePendingImageJob("image-thumbnail", imageId);
+        await enqueuePendingImageJob("image-thumbnail", imageId, {
+          by: "gallery-scan",
+          label: `Queued during ${root.label} gallery scan`,
+        });
       }
       if (!existingImage && settings.autoGenerateFingerprints) {
-        await enqueuePendingImageJob("image-fingerprint", imageId);
+        await enqueuePendingImageJob("image-fingerprint", imageId, {
+          by: "gallery-scan",
+          label: `Queued during ${root.label} gallery scan`,
+        });
       }
     }
 
@@ -1133,9 +1299,15 @@ async function processGalleryScan(job: Job) {
           .returning({ id: images.id });
 
         needsThumbnail = true;
-        await enqueuePendingImageJob("image-thumbnail", created.id);
+        await enqueuePendingImageJob("image-thumbnail", created.id, {
+          by: "gallery-scan",
+          label: `Queued during ${root.label} gallery scan`,
+        });
         if (settings.autoGenerateFingerprints) {
-          await enqueuePendingImageJob("image-fingerprint", created.id);
+          await enqueuePendingImageJob("image-fingerprint", created.id, {
+            by: "gallery-scan",
+            label: `Queued during ${root.label} gallery scan`,
+          });
         }
       } else {
         await db
@@ -1152,7 +1324,10 @@ async function processGalleryScan(job: Job) {
         const isZipVideoFormat = [".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv"].includes(zipMemberExt);
         if (!imgRow?.thumbnailPath ||
             (isZipVideoFormat && !existsSync(path.join(getGeneratedImageDir(existingImage.id), "preview.mp4")))) {
-          await enqueuePendingImageJob("image-thumbnail", existingImage.id);
+          await enqueuePendingImageJob("image-thumbnail", existingImage.id, {
+            by: "gallery-scan",
+            label: `Queued during ${root.label} gallery scan`,
+          });
         }
       }
     }
@@ -1327,6 +1502,8 @@ async function processImageFingerprint(job: Job) {
 }
 
 function createWorker(queueName: QueueName, processor: (job: Job) => Promise<void>) {
+  const definition = getQueueDefinition(queueName);
+
   return new Worker(
     queueName,
     async (job) => {
@@ -1340,42 +1517,22 @@ function createWorker(queueName: QueueName, processor: (job: Job) => Promise<voi
     },
     {
       connection: redis,
-      concurrency:
-        queueName === "library-scan" || queueName === "gallery-scan"
-          ? 1
-          : queueName === "image-thumbnail"
-            ? 3
-            : 2,
+      concurrency: definition.concurrency,
     }
   );
 }
 
-async function enqueueScheduledLibraryScan(rootId: string, label: string, rootPath: string, recursive: boolean) {
-  const queue = new Queue("library-scan", {
-    connection: redis,
-    defaultJobOptions: { removeOnComplete: 100, removeOnFail: 200 },
-  });
-
-  const job = await queue.add("library-root-scan", {
-    libraryRootId: rootId,
-    path: rootPath,
-    recursive,
-  });
-
-  await upsertJobRun(job, "library-scan", {
-    status: "waiting",
-    targetType: "library-root",
-    targetId: rootId,
-    targetLabel: label,
-  });
-
-  await queue.close();
-}
-
 let scheduling = false;
+const scheduleLockKey = "obscura:worker:schedule-library-scan";
 
 async function scheduleRecurringScans() {
   if (scheduling) {
+    return;
+  }
+
+  const lockToken = `${process.pid}:${Date.now()}`;
+  const lockAcquired = await redis.set(scheduleLockKey, lockToken, "PX", 55_000, "NX");
+  if (!lockAcquired) {
     return;
   }
 
@@ -1410,10 +1567,16 @@ async function scheduleRecurringScans() {
     }
 
     for (const root of enabledRoots) {
-      await enqueueScheduledLibraryScan(root.id, root.label, root.path, root.recursive);
+      await enqueueLibraryRootJob(root, {
+        by: "schedule",
+        label: `Scheduled every ${Math.max(5, settings.scanIntervalMinutes)} minutes`,
+      });
     }
   } finally {
     scheduling = false;
+    if ((await redis.get(scheduleLockKey)) === lockToken) {
+      await redis.del(scheduleLockKey);
+    }
   }
 }
 
@@ -1432,6 +1595,10 @@ await scheduleRecurringScans();
 setInterval(() => {
   void scheduleRecurringScans();
 }, 60_000);
+await pruneJobRunHistory();
+setInterval(() => {
+  void pruneJobRunHistory();
+}, 10 * 60_000);
 
 console.log(
   JSON.stringify(
@@ -1447,6 +1614,7 @@ console.log(
 
 process.on("SIGINT", async () => {
   await Promise.all(workers.map((worker) => worker.close()));
+  await Promise.all(Object.values(workerQueues).map((queue) => queue.close()));
   await redis.quit();
   await queryClient.end();
   process.exit(0);
