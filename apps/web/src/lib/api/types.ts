@@ -229,6 +229,7 @@ export type LibraryRoot = LibraryRootDto;
 export type LibrarySettings = LibrarySettingsDto;
 export type StorageStats = StorageStatsDto;
 export type JobsDashboard = JobsDashboardDto;
+export type QueueSummary = JobsDashboardDto["queues"][number];
 export type JobRun = JobRunDto;
 export type LibraryBrowse = LibraryBrowseDto;
 export type ScraperPackage = ScraperPackageDto;

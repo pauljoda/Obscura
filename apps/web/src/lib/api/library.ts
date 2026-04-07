@@ -69,6 +69,7 @@ export async function runQueue(queueName: string): Promise<{
   ok: boolean;
   queueName: string;
   enqueued: number;
+  skipped: number;
   jobIds: string[];
 }> {
   return fetchApi(`/jobs/queues/${queueName}/run`, {
@@ -95,6 +96,7 @@ export async function rebuildScenePreview(sceneId: string): Promise<{
 export async function rebuildPreviews(): Promise<{
   ok: boolean;
   enqueued: number;
+  skipped: number;
   jobIds: string[];
 }> {
   return fetchApi("/jobs/rebuild-previews", { method: "POST" });

@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { Meter } from "@obscura/ui/composed/meter";
 import { StatusLed, type LedStatus } from "@obscura/ui/composed/status-led";
 import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
 import {
-  FolderSearch,
-  FileSearch,
-  Fingerprint,
-  Image,
-  DatabaseZap,
-  Cpu,
-  Clock,
-  RefreshCw,
-  Play,
   Activity,
   AlertTriangle,
-  ListChecks,
   Ban,
+  Clock,
+  Cpu,
+  DatabaseZap,
+  FileSearch,
+  Fingerprint,
+  FolderSearch,
+  Image,
+  ListChecks,
+  Play,
+  RefreshCw,
   Square,
 } from "lucide-react";
 import {
@@ -28,6 +28,7 @@ import {
   runQueue,
   type JobRun,
   type JobsDashboard,
+  type QueueSummary,
 } from "../lib/api";
 
 const queueIcons: Record<string, typeof FolderSearch> = {
@@ -36,26 +37,97 @@ const queueIcons: Record<string, typeof FolderSearch> = {
   fingerprint: Fingerprint,
   preview: Image,
   "metadata-import": DatabaseZap,
+  "gallery-scan": FolderSearch,
+  "image-thumbnail": Image,
+  "image-fingerprint": Fingerprint,
 };
-
-function formatElapsed(startedAt: string | null) {
-  if (!startedAt) return "Queued";
-  const deltaSeconds = Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000));
-  const minutes = Math.floor(deltaSeconds / 60);
-  const seconds = deltaSeconds % 60;
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
 
 function formatStamp(value: string | null) {
   if (!value) return "Never";
   return new Date(value).toLocaleString();
 }
 
-function ledForStatus(status: string): LedStatus {
+function formatRelativeTime(value: string | null) {
+  if (!value) return "Never";
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000));
+
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
+function formatElapsed(job: JobRun) {
+  const anchor = job.startedAt ?? job.createdAt;
+  const deltaSeconds = Math.max(0, Math.round((Date.now() - new Date(anchor).getTime()) / 1000));
+  const minutes = Math.floor(deltaSeconds / 60);
+  const seconds = deltaSeconds % 60;
+
+  if (job.status === "waiting" || job.status === "delayed") {
+    return `queued ${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  }
+
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function ledForQueue(status: QueueSummary["status"]): LedStatus {
   if (status === "active") return "phosphor";
   if (status === "warning") return "warning";
-  if (status === "failed") return "error";
   return "idle";
+}
+
+function toneForJob(status: JobRun["status"]) {
+  if (status === "failed") return "error";
+  if (status === "waiting" || status === "delayed") return "warning";
+  return "phosphor";
+}
+
+function describeTrigger(job: JobRun) {
+  if (job.triggerLabel) return job.triggerLabel;
+
+  switch (job.triggeredBy) {
+    case "manual":
+      return "Started manually";
+    case "schedule":
+      return "Started by recurring scan schedule";
+    case "library-scan":
+      return "Queued during library scan";
+    case "gallery-scan":
+      return "Queued during gallery scan";
+    case "system":
+      return "Queued by the system";
+    default:
+      return "Trigger not recorded";
+  }
+}
+
+function statusLabel(status: JobRun["status"]) {
+  if (status === "waiting") return "queued";
+  if (status === "delayed") return "delayed";
+  if (status === "dismissed") return "cleared";
+  return status;
+}
+
+function jobHeading(job: JobRun) {
+  return job.targetLabel ?? `${job.queueLabel} task`;
+}
+
+function describeRunResult(queueName: string, enqueued: number, skipped: number) {
+  const parts = [
+    `Queued ${enqueued} ${queueName} job${enqueued === 1 ? "" : "s"}`,
+  ];
+
+  if (skipped > 0) {
+    parts.push(`skipped ${skipped} already pending`);
+  }
+
+  return `${parts.join(", ")}.`;
 }
 
 export function JobDashboard() {
@@ -70,8 +142,10 @@ export function JobDashboard() {
   async function loadDashboard() {
     try {
       const response = await fetchJobsDashboard();
-      setDashboard(response);
-      setError(null);
+      startTransition(() => {
+        setDashboard(response);
+        setError(null);
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load jobs");
     } finally {
@@ -84,6 +158,7 @@ export function JobDashboard() {
     const timer = window.setInterval(() => {
       void loadDashboard();
     }, 5000);
+
     return () => window.clearInterval(timer);
   }, []);
 
@@ -93,9 +168,8 @@ export function JobDashboard() {
 
     try {
       const response = await runQueue(queueName);
-      setMessage(
-        `Queued ${response.enqueued} ${queueName} job${response.enqueued === 1 ? "" : "s"}.`
-      );
+      setMessage(describeRunResult(queueName, response.enqueued, response.skipped));
+      setError(null);
       await loadDashboard();
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Failed to queue jobs");
@@ -110,7 +184,10 @@ export function JobDashboard() {
 
     try {
       const response = await cancelQueue(queueName);
-      setMessage(`Cancelled ${queueName} jobs (${response.activeRemoved} active, ${response.waitingRemoved} waiting).`);
+      setMessage(
+        `Cancelled ${queueName} jobs (${response.activeRemoved} active, ${response.waitingRemoved} waiting).`
+      );
+      setError(null);
       await loadDashboard();
     } catch (cancelError) {
       setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel jobs");
@@ -126,16 +203,23 @@ export function JobDashboard() {
     try {
       const result = await acknowledgeJobFailures(scope === "all" ? undefined : scope);
       const parts: string[] = [];
+
       if (result.redisRemoved > 0) {
-        parts.push(`cleared ${result.redisRemoved} failed job${result.redisRemoved === 1 ? "" : "s"} from queue storage`);
+        parts.push(
+          `cleared ${result.redisRemoved} failed BullMQ job${result.redisRemoved === 1 ? "" : "s"}`
+        );
       }
+
       if (result.runsUpdated > 0) {
-        parts.push(`acknowledged ${result.runsUpdated} run${result.runsUpdated === 1 ? "" : "s"} in history`);
+        parts.push(
+          `acknowledged ${result.runsUpdated} failed run${result.runsUpdated === 1 ? "" : "s"}`
+        );
       }
+
       setMessage(
         parts.length > 0
-          ? parts.join("; ").replace(/^\w/, (c) => c.toUpperCase()) + "."
-          : "Nothing to acknowledge."
+          ? `${parts.join("; ").replace(/^\w/, (char) => char.toUpperCase())}.`
+          : "Nothing to clear."
       );
       setError(null);
       await loadDashboard();
@@ -146,27 +230,37 @@ export function JobDashboard() {
     }
   }
 
-  const failedCount = useMemo(
-    () => dashboard?.recentJobs.filter((job) => job.status === "failed").length ?? 0,
+  const sortedQueues = useMemo(
+    () =>
+      [...(dashboard?.queues ?? [])].sort(
+        (left: QueueSummary, right: QueueSummary) =>
+          right.failed - left.failed ||
+          right.backlog - left.backlog ||
+          right.active - left.active ||
+          left.label.localeCompare(right.label)
+      ),
     [dashboard]
   );
 
-  const totalActive = dashboard?.activeJobs.length ?? 0;
-  const totalCompleted = dashboard?.queues.reduce((sum, q) => sum + q.completed, 0) ?? 0;
-  const redisFailedTotal = dashboard?.queues.reduce((sum, q) => sum + q.failed, 0) ?? 0;
-  const canAcknowledgeFailures = redisFailedTotal > 0 || failedCount > 0;
+  const totalActive = dashboard?.activeJobs.filter((job) => job.status === "active").length ?? 0;
+  const totalQueued =
+    dashboard?.activeJobs.filter((job) => job.status === "waiting" || job.status === "delayed")
+      .length ?? 0;
+  const totalFailed = dashboard?.failedJobs.length ?? 0;
+  const retainedCompleted = dashboard?.completedJobs.length ?? 0;
+  const canAcknowledgeFailures =
+    totalFailed > 0 || sortedQueues.some((queue: QueueSummary) => queue.failed > 0);
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2.5">
             <Activity className="h-5 w-5 text-text-accent" />
-            Operations
+            Job Control
           </h1>
-          <p className="mt-1 text-text-muted text-[0.78rem]">
-            Queue health, active work, and manual generation controls.
+          <p className="mt-1 text-text-muted text-[0.8rem]">
+            Clear queue pressure, inspect live work, and keep only the failures that still need action.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -175,16 +269,16 @@ export function JobDashboard() {
               type="button"
               onClick={() => void handleAcknowledgeFailures("all")}
               disabled={acknowledging !== null}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] text-xs text-text-muted hover:text-status-error-text hover:bg-status-error/10 transition-all duration-fast disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-status-error/10 hover:text-status-error-text disabled:opacity-40"
             >
               <Ban className="h-3.5 w-3.5" />
-              {acknowledging === "all" ? "Clearing…" : "Acknowledge errors"}
+              {acknowledging === "all" ? "Clearing..." : "Clear all failures"}
             </button>
           )}
           <button
             type="button"
             onClick={() => void loadDashboard()}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[3px] text-xs text-text-muted hover:text-text-primary hover:bg-surface-3/60 transition-all duration-fast"
+            className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
@@ -192,7 +286,6 @@ export function JobDashboard() {
         </div>
       </div>
 
-      {/* Messages */}
       {error && (
         <div className="surface-card-sharp no-lift border-l-2 border-status-error px-3 py-2 text-sm text-status-error-text">
           {error}
@@ -204,159 +297,68 @@ export function JobDashboard() {
         </div>
       )}
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div className={cn("surface-stat px-3 py-2.5", totalActive > 0 && "surface-stat-accent")}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Cpu className="h-3 w-3" />
-            <span className={cn("text-kicker", totalActive === 0 && "!text-text-disabled")}>Active</span>
-          </div>
-          <div className={cn(
-            "text-lg font-semibold leading-tight",
-            totalActive > 0 ? "text-glow-accent" : "text-text-primary"
-          )}>
-            {totalActive}
-          </div>
-        </div>
-        <div className="surface-stat px-3 py-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <ListChecks className="h-3 w-3" />
-            <span className="text-kicker !text-text-disabled">Completed</span>
-          </div>
-          <div className="text-lg font-semibold text-text-primary leading-tight">
-            {totalCompleted}
-          </div>
-        </div>
-        <div className={cn("surface-stat px-3 py-2.5", failedCount > 0 && "border-status-error/30")}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="h-3 w-3" />
-            <span className="text-kicker !text-text-disabled">Failed</span>
-          </div>
-          <div className={cn(
-            "text-lg font-semibold leading-tight",
-            failedCount > 0 ? "text-status-error-text" : "text-text-primary"
-          )}>
-            {failedCount}
-          </div>
-        </div>
-        <div className="surface-stat px-3 py-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Clock className="h-3 w-3" />
-            <span className="text-kicker !text-text-disabled">Last Scan</span>
-          </div>
-          <div className="text-[0.8rem] font-medium text-text-secondary leading-tight mt-0.5 font-mono">
-            {dashboard?.lastScanAt
-              ? <span className="text-ephemeral">{new Date(dashboard.lastScanAt).toLocaleTimeString()}</span>
-              : "Never"}
-          </div>
-          <div className="text-[0.62rem] text-text-disabled mt-0.5">
-            Auto scan {dashboard?.schedule.enabled
-              ? `every ${dashboard.schedule.intervalMinutes}m`
-              : "disabled"}
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <OverviewStat
+          icon={Cpu}
+          label="Running"
+          value={totalActive}
+          detail={totalActive > 0 ? "Workers are active now" : "No worker pressure right now"}
+          accent={totalActive > 0}
+        />
+        <OverviewStat
+          icon={Clock}
+          label="Backlog"
+          value={totalQueued}
+          detail={totalQueued > 0 ? "Queued or delayed work" : "No queued backlog"}
+          accent={totalQueued > 0}
+        />
+        <OverviewStat
+          icon={AlertTriangle}
+          label="Failures"
+          value={totalFailed}
+          detail={totalFailed > 0 ? "Needs review or clearing" : "No uncleared failures"}
+          accent={totalFailed > 0}
+          danger={totalFailed > 0}
+        />
+        <OverviewStat
+          icon={ListChecks}
+          label="Retained Done"
+          value={retainedCompleted}
+          detail={
+            dashboard?.schedule.enabled
+              ? `Auto scan every ${dashboard.schedule.intervalMinutes}m`
+              : "Auto scan disabled"
+          }
+        />
       </div>
 
       <div className="border-t border-border-subtle" />
 
-      {/* Queues */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
             <Activity className="h-4 w-4 text-text-accent" />
-            <h2 className="text-[0.9rem] font-heading font-semibold">Queues</h2>
+            <h2 className="text-[0.92rem] font-heading font-semibold">Queues</h2>
           </div>
           <span className="text-mono-sm text-text-disabled">
-            {dashboard?.queues.length ?? 0} configured
+            {sortedQueues.length} configured
           </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
-          {dashboard?.queues.map((queue) => {
-            const Icon = queueIcons[queue.name] ?? Cpu;
-            const hasActivity = queue.active > 0 || queue.waiting > 0;
-            return (
-              <div
-                key={queue.name}
-                className={cn(
-                  "surface-card-sharp no-lift p-3.5 transition-all duration-normal",
-                  hasActivity && "border-border-accent/30"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <StatusLed status={ledForStatus(queue.status)} pulse={queue.active > 0} />
-                    <Icon className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[0.8rem] font-medium truncate">{queue.name}</p>
-                      <p className="text-text-disabled text-[0.62rem] mt-0.5 truncate">{queue.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    {queue.failed > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => void handleAcknowledgeFailures(queue.name)}
-                        disabled={acknowledging !== null}
-                        className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-status-error-text transition-colors disabled:opacity-40"
-                        title="Remove failed jobs from this queue and mark matching history as acknowledged"
-                      >
-                        {acknowledging === queue.name ? "…" : "Clear"}
-                      </button>
-                    )}
-                    {(queue.active > 0 || queue.waiting > 0) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleCancel(queue.name)}
-                        disabled={cancellingQueue === queue.name}
-                        className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-status-error-text transition-colors disabled:opacity-40"
-                        title="Cancel all active and waiting jobs in this queue"
-                      >
-                        <Square className="h-3 w-3" />
-                        {cancellingQueue === queue.name ? "…" : "Stop"}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleRun(queue.name)}
-                      disabled={runningQueue === queue.name}
-                      className="flex items-center gap-1 px-2 py-1 rounded-[3px] text-xs text-text-muted hover:text-text-accent transition-colors disabled:opacity-40"
-                    >
-                      <Play className="h-3 w-3" />
-                      Run
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-1">
-                  {[
-                    { label: "Active", value: queue.active, highlight: queue.active > 0 },
-                    { label: "Wait", value: queue.waiting, highlight: queue.waiting > 0 },
-                    { label: "Done", value: queue.completed, highlight: false },
-                    { label: "Fail", value: queue.failed, highlight: queue.failed > 0 },
-                  ].map((stat) => (
-                    <div key={stat.label} className="text-center rounded-[2px] bg-black/15 py-1.5">
-                      <p className="text-[0.55rem] text-text-disabled uppercase tracking-wider mb-0.5">
-                        {stat.label}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-mono text-[0.8rem] font-semibold",
-                          stat.label === "Fail" && stat.highlight
-                            ? "text-status-error-text"
-                            : stat.highlight
-                              ? "text-text-accent"
-                              : "text-text-muted"
-                        )}
-                      >
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {sortedQueues.map((queue: QueueSummary) => (
+            <QueueCard
+              key={queue.name}
+              queue={queue}
+              runningQueue={runningQueue}
+              cancellingQueue={cancellingQueue}
+              acknowledging={acknowledging}
+              onRun={handleRun}
+              onCancel={handleCancel}
+              onClearFailures={handleAcknowledgeFailures}
+            />
+          ))}
           {!dashboard && loading && (
-            <div className="surface-card-sharp no-lift p-6 text-text-muted text-sm col-span-full text-center">
+            <div className="surface-card-sharp no-lift col-span-full p-6 text-center text-sm text-text-muted">
               Loading queue state...
             </div>
           )}
@@ -365,97 +367,74 @@ export function JobDashboard() {
 
       <div className="border-t border-border-subtle" />
 
-      {/* Active Jobs */}
-      {(totalActive > 0 || loading) && (
-        <>
-          <section className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
-                <Cpu className="h-4 w-4 text-text-accent" />
-                <h2 className="text-[0.9rem] font-heading font-semibold">Active Jobs</h2>
-              </div>
-              <span className="text-mono-sm text-text-disabled">
-                {totalActive} in flight
-              </span>
-            </div>
-            <div className="space-y-2">
-              {dashboard?.activeJobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
-            </div>
-          </section>
-          <div className="border-t border-border-subtle" />
-        </>
-      )}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2.5">
+            <Cpu className="h-4 w-4 text-text-accent" />
+            <h2 className="text-[0.92rem] font-heading font-semibold">Live Work</h2>
+          </div>
+          <span className="text-mono-sm text-text-disabled">
+            {dashboard?.activeJobs.length ?? 0} visible
+          </span>
+        </div>
+        <div className="space-y-2">
+          {dashboard?.activeJobs.length ? (
+            dashboard.activeJobs.map((job) => <ActiveJobCard key={job.id} job={job} />)
+          ) : (
+            <EmptyPanel
+              title="No active or queued jobs"
+              detail="When work is triggered, the active queue and backlog will show up here first."
+            />
+          )}
+        </div>
+      </section>
 
-      {/* Recent Runs */}
+      <div className="border-t border-border-subtle" />
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 text-status-error-text" />
+            <h2 className="text-[0.92rem] font-heading font-semibold">Failures</h2>
+          </div>
+          <span className="text-mono-sm text-text-disabled">
+            {totalFailed} uncleared
+          </span>
+        </div>
+        <div className="space-y-2">
+          {dashboard?.failedJobs.length ? (
+            dashboard.failedJobs.map((job) => <FailedJobCard key={job.id} job={job} />)
+          ) : (
+            <EmptyPanel
+              title="No active failures"
+              detail="Failed jobs stay here until you clear them, so this list should stay short and actionable."
+            />
+          )}
+        </div>
+      </section>
+
+      <div className="border-t border-border-subtle" />
+
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
             <ListChecks className="h-4 w-4 text-text-accent" />
-            <h2 className="text-[0.9rem] font-heading font-semibold">Recent Runs</h2>
+            <h2 className="text-[0.92rem] font-heading font-semibold">Recently Finished</h2>
           </div>
           <span className="text-mono-sm text-text-disabled">
-            {dashboard?.recentJobs.length ?? 0} jobs
+            {retainedCompleted} retained
           </span>
         </div>
         <div className="surface-card-sharp no-lift overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[1.3fr_0.8fr_0.7fr_0.5fr] gap-3 px-4 py-2.5 text-[0.6rem] uppercase tracking-[0.12em] text-text-disabled border-b border-border-subtle bg-black/15">
-            <span>Target</span>
-            <span>Queue</span>
-            <span>Status</span>
-            <span className="text-right">Progress</span>
-          </div>
-          {/* Table body */}
-          <div className="divide-y divide-border-subtle/40 max-h-[440px] overflow-y-auto scrollbar-hidden">
-            {dashboard?.recentJobs.map((job) => (
-              <div
-                key={job.id}
-                className={cn(
-                  "grid grid-cols-[1.3fr_0.8fr_0.7fr_0.5fr] gap-3 px-4 py-2.5 text-[0.8rem] transition-colors",
-                  job.status === "failed" && "bg-status-error/[0.04]",
-                  job.status === "dismissed" && "opacity-75"
-                )}
-              >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{job.targetLabel ?? "Queued work"}</p>
-                  <p className="text-mono-sm text-text-disabled truncate">
-                    {job.finishedAt ? formatStamp(job.finishedAt) : formatStamp(job.createdAt)}
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <Badge variant="accent" className="text-[0.55rem]">{job.queueName}</Badge>
-                </div>
-                <div className="flex items-center">
-                  <span
-                    className={cn(
-                      "text-[0.65rem] font-semibold uppercase tracking-[0.1em]",
-                      job.status === "failed"
-                        ? "text-status-error-text"
-                        : job.status === "completed"
-                          ? "text-status-success-text"
-                          : job.status === "dismissed"
-                            ? "text-text-disabled"
-                            : "text-text-accent"
-                    )}
-                  >
-                    {job.status === "dismissed" ? "acknowledged" : job.status}
-                  </span>
-                </div>
-                <div className="text-mono-sm text-text-muted flex items-center justify-end">
-                  {job.progress}%
-                </div>
-                {job.error && (
-                  <div className="col-span-4 text-[0.68rem] text-status-error-text mt-1 truncate">{job.error}</div>
-                )}
+          <div className="divide-y divide-border-subtle/50">
+            {dashboard?.completedJobs.length ? (
+              dashboard.completedJobs.map((job) => (
+                <CompletedJobRow key={job.id} job={job} />
+              ))
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-text-disabled">
+                No retained completions.
               </div>
-            ))}
-            {!dashboard && loading && (
-              <div className="px-4 py-6 text-text-muted text-sm text-center">Loading recent jobs...</div>
-            )}
-            {dashboard && dashboard.recentJobs.length === 0 && (
-              <div className="px-4 py-6 text-text-disabled text-sm text-center">No recent jobs.</div>
             )}
           </div>
         </div>
@@ -464,28 +443,302 @@ export function JobDashboard() {
   );
 }
 
-function JobCard({ job }: { job: JobRun }) {
-  const isFailed = job.status === "failed";
+function OverviewStat({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  accent = false,
+  danger = false,
+}: {
+  icon: typeof Cpu;
+  label: string;
+  value: number;
+  detail: string;
+  accent?: boolean;
+  danger?: boolean;
+}) {
   return (
-    <div className={cn(
-      "surface-card-sharp no-lift p-3.5 transition-all duration-normal",
-      isFailed ? "border-status-error/30" : "border-phosphor-500/30"
-    )}>
-      <div className="flex items-center justify-between gap-3 mb-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <StatusLed status={isFailed ? "error" : "phosphor"} pulse={!isFailed} />
-          <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">
-            {job.queueName}
-          </Badge>
-          <p className="text-[0.8rem] text-text-secondary truncate">
-            {job.targetLabel ?? "Background work"}
-          </p>
-        </div>
-        <span className="text-ephemeral flex-shrink-0">
-          {formatElapsed(job.startedAt)}
+    <div
+      className={cn(
+        "surface-stat px-3 py-2.5",
+        accent && !danger && "surface-stat-accent",
+        danger && "border-status-error/30"
+      )}
+    >
+      <div className="mb-1 flex items-center gap-1.5">
+        <Icon className="h-3 w-3" />
+        <span className={cn("text-kicker !text-text-disabled", danger && "!text-status-error-text")}>
+          {label}
         </span>
       </div>
-      <Meter value={job.progress} showValue variant={isFailed ? "accent" : "phosphor"} />
+      <div
+        className={cn(
+          "text-lg font-semibold leading-tight",
+          danger
+            ? "text-status-error-text"
+            : accent
+              ? "text-glow-accent"
+              : "text-text-primary"
+        )}
+      >
+        {value}
+      </div>
+      <div className="mt-0.5 text-[0.62rem] text-text-disabled">{detail}</div>
+    </div>
+  );
+}
+
+function QueueCard({
+  queue,
+  runningQueue,
+  cancellingQueue,
+  acknowledging,
+  onRun,
+  onCancel,
+  onClearFailures,
+}: {
+  queue: QueueSummary;
+  runningQueue: string | null;
+  cancellingQueue: string | null;
+  acknowledging: "all" | string | null;
+  onRun: (queueName: string) => Promise<void>;
+  onCancel: (queueName: string) => Promise<void>;
+  onClearFailures: (scope: "all" | string) => Promise<void>;
+}) {
+  const Icon = queueIcons[queue.name] ?? Cpu;
+  const hasPressure = queue.active > 0 || queue.backlog > 0;
+
+  return (
+    <div
+      className={cn(
+        "surface-card-sharp no-lift space-y-4 p-4 transition-all duration-normal",
+        queue.failed > 0
+          ? "border-status-error/25"
+          : hasPressure
+            ? "border-border-accent/30"
+            : ""
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <StatusLed status={ledForQueue(queue.status)} pulse={queue.active > 0} />
+            <Icon className="h-4 w-4 text-text-muted" />
+            <h3 className="truncate text-[0.92rem] font-heading font-semibold">{queue.label}</h3>
+          </div>
+          <p className="mt-1 text-[0.72rem] text-text-muted">{queue.description}</p>
+          <p className="mt-1 text-[0.68rem] text-text-disabled">
+            Throttle: {queue.concurrency} worker{queue.concurrency === 1 ? "" : "s"} at a time
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {queue.failed > 0 && (
+            <button
+              type="button"
+              onClick={() => void onClearFailures(queue.name)}
+              disabled={acknowledging !== null}
+              className="rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+            >
+              {acknowledging === queue.name ? "Clearing..." : "Clear failures"}
+            </button>
+          )}
+          {(queue.active > 0 || queue.backlog > 0) && (
+            <button
+              type="button"
+              onClick={() => void onCancel(queue.name)}
+              disabled={cancellingQueue === queue.name}
+              className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+            >
+              <Square className="h-3 w-3" />
+              {cancellingQueue === queue.name ? "Stopping..." : "Stop"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void onRun(queue.name)}
+            disabled={runningQueue === queue.name}
+            className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-accent disabled:opacity-40"
+          >
+            <Play className="h-3 w-3" />
+            {runningQueue === queue.name ? "Queueing..." : "Run"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        <QueueMetric label="Running" value={queue.active} highlight={queue.active > 0} />
+        <QueueMetric label="Queued" value={queue.waiting} highlight={queue.waiting > 0} />
+        <QueueMetric label="Delayed" value={queue.delayed} highlight={queue.delayed > 0} />
+        <QueueMetric label="Errors" value={queue.failed} highlight={queue.failed > 0} danger />
+      </div>
+    </div>
+  );
+}
+
+function QueueMetric({
+  label,
+  value,
+  highlight,
+  danger = false,
+}: {
+  label: string;
+  value: number;
+  highlight: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <div className="rounded-[2px] bg-black/15 px-2 py-2 text-center">
+      <p className="mb-0.5 text-[0.55rem] uppercase tracking-wider text-text-disabled">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "text-mono text-[0.84rem] font-semibold",
+          danger && highlight
+            ? "text-status-error-text"
+            : highlight
+              ? "text-text-accent"
+              : "text-text-muted"
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ActiveJobCard({ job }: { job: JobRun }) {
+  const isRunning = job.status === "active";
+
+  return (
+    <div
+      className={cn(
+        "surface-card-sharp no-lift space-y-3 p-4",
+        isRunning ? "border-border-accent/30" : "border-status-warning/20"
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusLed status={toneForJob(job.status)} pulse={isRunning} />
+            <Badge variant="accent" className="text-[0.56rem]">
+              {job.queueLabel}
+            </Badge>
+            <span
+              className={cn(
+                "text-[0.62rem] font-semibold uppercase tracking-[0.12em]",
+                isRunning ? "text-text-accent" : "text-status-warning-text"
+              )}
+            >
+              {statusLabel(job.status)}
+            </span>
+          </div>
+          <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{jobHeading(job)}</h3>
+          <p className="mt-1 text-[0.74rem] text-text-muted">{describeTrigger(job)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-ephemeral">{formatElapsed(job)}</p>
+          <p className="mt-1 text-mono-sm text-text-disabled">
+            attempt {Math.max(1, job.attempts + 1)}
+          </p>
+        </div>
+      </div>
+
+      <Meter value={job.progress} showValue variant={isRunning ? "phosphor" : "accent"} />
+
+      <div className="grid gap-2 text-[0.7rem] text-text-disabled md:grid-cols-3">
+        <div>
+          <span className="text-text-muted">Queued:</span> {formatStamp(job.createdAt)}
+        </div>
+        <div>
+          <span className="text-text-muted">Started:</span> {formatStamp(job.startedAt)}
+        </div>
+        <div>
+          <span className="text-text-muted">Trigger:</span> {job.triggeredBy ?? "unknown"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FailedJobCard({ job }: { job: JobRun }) {
+  return (
+    <details className="surface-card-sharp no-lift border-status-error/25 p-4" open>
+      <summary className="cursor-pointer list-none">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusLed status="error" pulse={false} />
+              <Badge variant="accent" className="text-[0.56rem]">
+                {job.queueLabel}
+              </Badge>
+              <span className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-status-error-text">
+                failed
+              </span>
+            </div>
+            <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{jobHeading(job)}</h3>
+            <p className="mt-1 text-[0.74rem] text-text-muted">{describeTrigger(job)}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-ephemeral">{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</p>
+            <p className="mt-1 text-mono-sm text-text-disabled">
+              attempt {Math.max(1, job.attempts + 1)}
+            </p>
+          </div>
+        </div>
+      </summary>
+
+      <div className="mt-4 border-t border-border-subtle pt-4">
+        <div className="grid gap-2 text-[0.7rem] text-text-disabled md:grid-cols-3">
+          <div>
+            <span className="text-text-muted">Queued:</span> {formatStamp(job.createdAt)}
+          </div>
+          <div>
+            <span className="text-text-muted">Finished:</span> {formatStamp(job.finishedAt)}
+          </div>
+          <div>
+            <span className="text-text-muted">Trigger:</span> {job.triggeredBy ?? "unknown"}
+          </div>
+        </div>
+        <div className="mt-3 rounded-[3px] border border-status-error/20 bg-status-error/[0.05] p-3">
+          <p className="mb-1 text-[0.68rem] uppercase tracking-[0.12em] text-status-error-text">
+            Error output
+          </p>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.75rem] leading-5 text-status-error-text">
+            {job.error ?? "No error message recorded."}
+          </pre>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function CompletedJobRow({ job }: { job: JobRun }) {
+  return (
+    <div className="grid gap-3 px-4 py-3 md:grid-cols-[1.1fr_0.8fr_0.8fr]">
+      <div className="min-w-0">
+        <p className="truncate text-[0.84rem] font-medium text-text-primary">{jobHeading(job)}</p>
+        <p className="mt-1 truncate text-mono-sm text-text-disabled">{describeTrigger(job)}</p>
+      </div>
+      <div className="flex items-center">
+        <Badge variant="accent" className="text-[0.56rem]">
+          {job.queueLabel}
+        </Badge>
+      </div>
+      <div className="text-right text-[0.72rem] text-text-muted">
+        <div>{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</div>
+        <div className="mt-1 text-text-disabled">{formatStamp(job.finishedAt)}</div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyPanel({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="surface-card-sharp no-lift px-4 py-6 text-center">
+      <p className="text-sm font-medium text-text-primary">{title}</p>
+      <p className="mt-1 text-[0.78rem] text-text-muted">{detail}</p>
     </div>
   );
 }
