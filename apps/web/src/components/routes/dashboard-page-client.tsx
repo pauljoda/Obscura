@@ -34,16 +34,16 @@ export function DashboardPageClient({
     <div className="space-y-6">
       <DashboardHero />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Column */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <DashboardRecentAdditions
             loading={loading}
             scenes={recentScenes}
             galleries={recentGalleries}
           />
           
-          <DashboardQuickNav sceneCount={stats?.totalScenes} />
+          <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} />
         </div>
 
         {/* System Status Column */}
@@ -85,7 +85,7 @@ export function DashboardPageClient({
             <DashboardQueueRack queues={jobs.queues} />
           ) : null}
 
-          <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} />
+          <DashboardQuickNav sceneCount={stats?.totalScenes} />
         </div>
       </div>
     </div>
