@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
 import { Images, Loader2 } from "lucide-react";
-import { cn } from "@obscura/ui/lib/utils";
+
 import { GalleryCard } from "./gallery-card";
 import { GalleryListItem } from "./gallery-list-item";
 import { GalleryBrowser } from "./gallery-browser";
@@ -112,9 +111,7 @@ export function GalleryGrid({
       <>
         <div className="space-y-1">
           {galleries.map((gallery) => (
-            <Link key={gallery.id} href={`/galleries/${gallery.id}`}>
-              <GalleryListItem gallery={gallery} />
-            </Link>
+            <GalleryListItem key={gallery.id} gallery={gallery} />
           ))}
         </div>
         {loadMoreSentinel}
@@ -127,14 +124,13 @@ export function GalleryGrid({
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
         {galleries.map((gallery, index) => (
-          <Link
+          <div
             key={gallery.id}
-            href={`/galleries/${gallery.id}`}
             style={{ animationDelay: `${Math.min(index, 20) * 20}ms` }}
             className="animate-vault-enter"
           >
             <GalleryCard gallery={gallery} />
-          </Link>
+          </div>
         ))}
       </div>
       {loadMoreSentinel}
