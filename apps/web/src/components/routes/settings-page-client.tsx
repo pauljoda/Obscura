@@ -325,12 +325,12 @@ export function SettingsPageClient({
       </div>
 
       {error ? (
-        <div className="surface-card-sharp no-lift border-l-2 border-status-error px-3 py-2 text-sm text-status-error-text">
+        <div className="surface-card no-lift border-l-2 border-status-error px-3 py-2 text-sm text-status-error-text">
           {error}
         </div>
       ) : null}
       {message && !error ? (
-        <div className="surface-card-sharp no-lift border-l-2 border-status-success px-3 py-2 text-sm text-status-success-text">
+        <div className="surface-card no-lift border-l-2 border-status-success px-3 py-2 text-sm text-status-success-text">
           {message}
         </div>
       ) : null}
@@ -340,7 +340,7 @@ export function SettingsPageClient({
           <div className="flex items-center gap-2.5">
             <FolderOpen className="h-4 w-4 text-text-accent" />
             <div>
-              <h2 className="text-[0.9rem] font-heading font-semibold">Watched Libraries</h2>
+              <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Watched Libraries</h2>
               <p className="text-[0.68rem] text-text-muted">
                 Add mounted folders to scan for media files
               </p>
@@ -349,7 +349,7 @@ export function SettingsPageClient({
           <button
             onClick={() => void openBrowser(browser?.path)}
             className={cn(
-              "surface-card-sharp no-lift flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-fast hover:border-border-accent hover:text-text-accent",
+              "surface-card no-lift flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-fast hover:border-border-accent hover:text-text-accent",
             )}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -358,7 +358,7 @@ export function SettingsPageClient({
         </div>
 
         {browserVisible ? (
-          <div className="surface-card-sharp no-lift space-y-3 border-border-accent/30 p-4">
+          <div className="surface-card no-lift space-y-3 border-border-accent/30 p-4">
             <div className="bg-black/20 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="truncate text-mono-sm text-text-accent">
@@ -377,7 +377,7 @@ export function SettingsPageClient({
                   <button
                     key={directory.path}
                     type="button"
-                    className="surface-card-sharp px-3 py-2 text-left"
+                    className="surface-card px-3 py-2 text-left"
                     onClick={() => void openBrowser(directory.path)}
                   >
                     <p className="truncate text-[0.8rem] font-medium">{directory.name}</p>
@@ -455,11 +455,11 @@ export function SettingsPageClient({
         ) : null}
 
         {loading ? (
-          <div className="surface-card-sharp no-lift flex items-center justify-center p-8">
+          <div className="surface-card no-lift flex items-center justify-center p-8">
             <Loader2 className="h-5 w-5 animate-spin text-text-disabled" />
           </div>
         ) : roots.length === 0 ? (
-          <div className="surface-card-sharp no-lift p-8 text-center">
+          <div className="surface-card no-lift p-8 text-center">
             <FolderOpen className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
             <p className="text-sm text-text-muted">
               No library roots configured. Browse to a mounted folder to begin.
@@ -471,7 +471,7 @@ export function SettingsPageClient({
               <div
                 key={root.id}
                 className={cn(
-                  "surface-card-sharp no-lift p-3.5 transition-opacity duration-fast",
+                  "surface-card no-lift p-3.5 transition-opacity duration-fast",
                   !root.enabled && "opacity-50",
                 )}
               >
@@ -548,7 +548,7 @@ export function SettingsPageClient({
         <div className="flex items-center gap-2.5 px-1">
           <Database className="h-4 w-4 text-text-accent" />
           <div>
-            <h2 className="text-[0.9rem] font-heading font-semibold">Metadata Providers</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Metadata Providers</h2>
             <p className="text-[0.68rem] text-text-muted">
               Stash-Box endpoints and community scrapers for identifying media
             </p>
@@ -576,7 +576,7 @@ export function SettingsPageClient({
           </div>
 
           {stashBoxEndpoints.length === 0 && !showStashBoxForm && (
-            <div className="surface-card-sharp no-lift p-4 text-center">
+            <div className="surface-card no-lift p-4 text-center">
               <p className="text-[0.75rem] text-text-disabled">
                 No Stash-Box endpoints configured. Add one to enable fingerprint-based scene identification.
               </p>
@@ -584,7 +584,7 @@ export function SettingsPageClient({
           )}
 
           {stashBoxEndpoints.map((ep) => (
-            <div key={ep.id} className="surface-card-sharp no-lift p-3.5">
+            <div key={ep.id} className="surface-card no-lift p-3.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -673,7 +673,7 @@ export function SettingsPageClient({
 
           {/* Add/Edit form */}
           {showStashBoxForm && (
-            <div className="surface-card-sharp no-lift p-4 space-y-3">
+            <div className="surface-card no-lift p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-[0.78rem] font-medium">
                   {editingStashBox ? "Edit Endpoint" : "Add Stash-Box Endpoint"}
@@ -806,7 +806,7 @@ export function SettingsPageClient({
         <Link href="/scrapers" className="group block">
           <div
             className={cn(
-              "surface-card-sharp no-lift p-3.5 transition-all duration-normal",
+              "surface-card no-lift p-3.5 transition-all duration-normal",
               "hover:border-border-accent hover:shadow-[var(--shadow-glow-accent)]",
             )}
           >
@@ -836,7 +836,7 @@ export function SettingsPageClient({
         <div className="flex items-center gap-2.5 px-1">
           <ScanSearch className="h-4 w-4 text-text-accent" />
           <div>
-            <h2 className="text-[0.9rem] font-heading font-semibold">Generation Pipeline</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Generation Pipeline</h2>
             <p className="text-[0.68rem] text-text-muted">
               Control automatic scanning and how new files are enriched
             </p>
@@ -853,7 +853,7 @@ export function SettingsPageClient({
               void autoSaveSetting({ autoScanEnabled: checked });
             }}
           />
-          <div className="surface-card-sharp no-lift p-3.5">
+          <div className="surface-card no-lift p-3.5">
             <label className="control-label mb-1.5">Scan Interval (min)</label>
             <input
               className="control-input w-full py-1.5 text-sm"
@@ -911,7 +911,7 @@ export function SettingsPageClient({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card-sharp no-lift p-3.5">
+          <div className="surface-card no-lift p-3.5">
             <label className="control-label mb-1.5">Trickplay Interval (sec)</label>
             <input
               className="control-input w-full py-1.5 text-sm"
@@ -927,7 +927,7 @@ export function SettingsPageClient({
               }
             />
           </div>
-          <div className="surface-card-sharp no-lift p-3.5">
+          <div className="surface-card no-lift p-3.5">
             <label className="control-label mb-1.5">Preview Clip Length (sec)</label>
             <input
               className="control-input w-full py-1.5 text-sm"
@@ -968,7 +968,7 @@ export function SettingsPageClient({
         <div className="flex items-center gap-2.5 px-1">
           <HardDrive className="h-4 w-4 text-text-accent" />
           <div>
-            <h2 className="text-[0.9rem] font-heading font-semibold">Generated Storage</h2>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Generated Storage</h2>
             <p className="text-[0.68rem] text-text-muted">Disk usage for rendered assets</p>
           </div>
         </div>
@@ -977,16 +977,19 @@ export function SettingsPageClient({
             label="Thumbnails"
             value={formatBytes(storage?.thumbnailsBytes ?? 0)}
             ratio={totalBytes > 0 ? (storage?.thumbnailsBytes ?? 0) / totalBytes : 0}
+            gradientClass="gradient-thumb-1"
           />
           <StorageStat
             label="Preview clips"
             value={formatBytes(storage?.previewsBytes ?? 0)}
             ratio={totalBytes > 0 ? (storage?.previewsBytes ?? 0) / totalBytes : 0}
+            gradientClass="gradient-thumb-2"
           />
           <StorageStat
             label="Trickplay sprites"
             value={formatBytes(storage?.trickplayBytes ?? 0)}
             ratio={totalBytes > 0 ? (storage?.trickplayBytes ?? 0) / totalBytes : 0}
+            gradientClass="gradient-thumb-3"
           />
           <StorageStat label="Total" value={formatBytes(totalBytes)} accent />
         </div>
@@ -1022,12 +1025,12 @@ function DiagnosticsSection() {
       <div className="flex items-center gap-2.5 px-1">
         <Wrench className="h-4 w-4 text-text-accent" />
         <div>
-          <h2 className="text-[0.9rem] font-heading font-semibold">Diagnostics</h2>
+          <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Diagnostics</h2>
           <p className="text-[0.68rem] text-text-muted">Maintenance actions for troubleshooting</p>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="surface-card-sharp p-3 space-y-2">
+        <div className="surface-card p-3 space-y-2">
           <div>
             <p className="text-[0.78rem] font-medium text-status-error-text">
               Force rebuild all previews
@@ -1078,7 +1081,7 @@ function ToggleCard({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "surface-card-sharp no-lift p-3.5 text-left transition-all duration-normal",
+        "surface-card no-lift p-3.5 text-left transition-all duration-normal",
         checked && "border-border-accent/30",
       )}
     >
@@ -1113,7 +1116,7 @@ function QualitySlider({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="surface-card-sharp no-lift p-3.5">
+    <div className="surface-card no-lift p-3.5">
       <div className="flex items-center justify-between mb-2">
         <label className="control-label">{label}</label>
         <span className="text-mono-sm text-text-accent">{qualityLabel(value)}</span>
@@ -1140,30 +1143,42 @@ function StorageStat({
   label,
   ratio,
   value,
+  gradientClass,
 }: {
   accent?: boolean;
   label: string;
   ratio?: number;
   value: string;
+  gradientClass?: string;
 }) {
   return (
-    <div className={accent ? "surface-stat-accent px-3 py-2.5" : "surface-stat px-3 py-2.5"}>
-      <div className={`mb-1 ${accent ? "text-text-accent" : "text-text-disabled"}`}>
-        <span className="text-kicker" style={{ color: "inherit" }}>
+    <div
+      className={cn(
+        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
+        accent && "border-border-accent shadow-[var(--shadow-glow-accent)]"
+      )}
+    >
+      <div
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
+          gradientClass || (accent ? "bg-accent-500" : "bg-surface-4")
+        )}
+      />
+      <div className="flex items-center justify-between ml-1.5">
+        <span className="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
           {label}
         </span>
       </div>
       <div
-        className={
-          accent
-            ? "text-lg font-semibold leading-tight text-text-accent"
-            : "text-lg font-semibold leading-tight text-text-primary"
-        }
+        className={cn(
+          "ml-1.5 mt-1 text-lg font-mono tracking-tight",
+          accent ? "text-glow-accent" : "text-text-primary"
+        )}
       >
         {value}
       </div>
       {!accent ? (
-        <div className="mt-2 h-1 overflow-hidden bg-surface-4">
+        <div className="absolute bottom-0 left-0 right-0 h-1 overflow-hidden bg-surface-4">
           <div className="h-full bg-accent-500/70" style={{ width: `${Math.max((ratio ?? 0) * 100, 4)}%` }} />
         </div>
       ) : null}
