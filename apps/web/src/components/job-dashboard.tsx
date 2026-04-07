@@ -20,6 +20,7 @@ import {
   Play,
   RefreshCw,
   Square,
+  Wrench,
 } from "lucide-react";
 import {
   acknowledgeJobFailures,
@@ -27,6 +28,7 @@ import {
   cancelJobRun,
   cancelQueue,
   fetchJobsDashboard,
+  rebuildPreviews,
   runQueue,
   type JobRun,
   type JobsDashboard,
@@ -160,6 +162,7 @@ export function JobDashboard() {
   const [cancellingQueue, setCancellingQueue] = useState<string | null>(null);
   const [cancellingAllJobs, setCancellingAllJobs] = useState(false);
   const [cancellingJobRunId, setCancellingJobRunId] = useState<string | null>(null);
+  const [rebuildingPreviews, setRebuildingPreviews] = useState(false);
   const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -291,6 +294,32 @@ export function JobDashboard() {
     }
   }
 
+  async function handleForceRebuildPreviews() {
+    setRebuildingPreviews(true);
+    setMessage(null);
+
+    try {
+      const response = await rebuildPreviews();
+      const parts = [
+        `Queued forced preview rebuild for ${response.enqueued} scene${response.enqueued === 1 ? "" : "s"}`,
+      ];
+
+      if (response.skipped > 0) {
+        parts.push(`skipped ${response.skipped} already pending`);
+      }
+
+      setMessage(`${parts.join(", ")}.`);
+      setError(null);
+      await loadDashboard();
+    } catch (rebuildError) {
+      setError(
+        rebuildError instanceof Error ? rebuildError.message : "Failed to queue forced preview rebuild"
+      );
+    } finally {
+      setRebuildingPreviews(false);
+    }
+  }
+
   const sortedQueues = useMemo(
     () =>
       [...(dashboard?.queues ?? [])].sort(
@@ -392,6 +421,50 @@ export function JobDashboard() {
           }
         />
       </div>
+
+      <div className="border-t border-border-subtle" />
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2.5">
+            <Wrench className="h-4 w-4 text-status-error-text" />
+            <h2 className="text-[0.92rem] font-heading font-semibold">Maintenance</h2>
+          </div>
+          <span className="text-mono-sm text-text-disabled">manual rebuild tools</span>
+        </div>
+        <div className="surface-card-sharp no-lift border-status-error/25 bg-status-error/[0.04] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2">
+                <Badge variant="error" className="text-[0.56rem]">
+                  Force rebuild
+                </Badge>
+                <h3 className="text-[0.92rem] font-heading font-semibold text-status-error-text">
+                  Preview assets
+                </h3>
+              </div>
+              <p className="mt-2 text-[0.74rem] text-text-muted">
+                Clear all generated scene thumbnails, preview clips, and trickplay assets, then
+                queue a full rebuild. Use this after quality changes or when previews are stale or
+                corrupted.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleForceRebuildPreviews()}
+              disabled={rebuildingPreviews}
+              className="inline-flex items-center gap-1.5 rounded-[3px] border border-status-error/25 bg-status-error/[0.12] px-3 py-1.5 text-xs font-medium text-status-error-text transition-colors hover:bg-status-error/[0.18] disabled:opacity-40"
+            >
+              {rebuildingPreviews ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Wrench className="h-3.5 w-3.5" />
+              )}
+              {rebuildingPreviews ? "Queueing..." : "Force rebuild previews"}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div className="border-t border-border-subtle" />
 
