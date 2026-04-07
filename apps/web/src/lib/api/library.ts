@@ -86,6 +86,15 @@ export async function cancelQueue(queueName: string): Promise<{
   return fetchApi(`/jobs/queues/${queueName}/cancel`, { method: "POST" });
 }
 
+export async function cancelAllJobs(): Promise<{
+  ok: boolean;
+  waitingRemoved: number;
+  activeRemoved: number;
+  byQueue: Record<string, { waitingRemoved: number; activeRemoved: number }>;
+}> {
+  return fetchApi("/jobs/cancel-all", { method: "POST" });
+}
+
 export async function cancelJobRun(jobRunId: string): Promise<{
   ok: boolean;
   jobRunId: string;

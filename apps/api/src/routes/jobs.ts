@@ -283,6 +283,51 @@ async function cancelJobRunById(jobRunId: string, reason = "Cancelled by user") 
   };
 }
 
+async function cancelQueueJobs(queueName: QueueName, reason = "Cancelled by user") {
+  const queue = getQueue(queueName);
+
+  const waitingJobs = await queue.getWaiting();
+  const delayedJobs = await queue.getDelayed();
+  let waitingRemoved = 0;
+  for (const job of [...waitingJobs, ...delayedJobs]) {
+    try {
+      await job.remove();
+      waitingRemoved += 1;
+    } catch {
+      // Job may have moved on before removal.
+    }
+  }
+
+  const activeJobs = await queue.getActive();
+  let activeRemoved = 0;
+  for (const job of activeJobs) {
+    try {
+      await job.moveToFailed(new Error(reason), "0", true);
+      activeRemoved += 1;
+    } catch {
+      // Job may have already completed
+    }
+  }
+
+  await db
+    .update(jobRuns)
+    .set({ status: "dismissed", error: reason, updatedAt: new Date() })
+    .where(
+      and(
+        eq(jobRuns.queueName, queueName),
+        inArray(jobRuns.status, ["waiting", "active", "delayed"])
+      )
+    );
+
+  await queue.clean(0, 100_000, "failed");
+
+  return {
+    queueName,
+    waitingRemoved,
+    activeRemoved,
+  };
+}
+
 export async function jobsRoutes(app: FastifyInstance) {
   app.get("/jobs", async () => {
     const settings = await ensureLibrarySettingsRow();
@@ -429,6 +474,29 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
   });
 
+  app.post("/jobs/cancel-all", async () => {
+    const byQueueEntries = await Promise.all(
+      queueDefinitions.map((definition) => cancelQueueJobs(definition.name))
+    );
+
+    const byQueue = Object.fromEntries(
+      byQueueEntries.map((entry) => [
+        entry.queueName,
+        {
+          waitingRemoved: entry.waitingRemoved,
+          activeRemoved: entry.activeRemoved,
+        },
+      ])
+    );
+
+    return {
+      ok: true,
+      waitingRemoved: byQueueEntries.reduce((sum, entry) => sum + entry.waitingRemoved, 0),
+      activeRemoved: byQueueEntries.reduce((sum, entry) => sum + entry.activeRemoved, 0),
+      byQueue,
+    };
+  });
+
   // ─── Cancel all jobs in a queue ────────────────────────────────
   app.post("/jobs/queues/:queueName/cancel", async (request, reply) => {
     const { queueName } = request.params as { queueName: QueueName };
@@ -438,51 +506,13 @@ export async function jobsRoutes(app: FastifyInstance) {
       return { error: "Unknown queue" };
     }
 
-    const queue = getQueue(queueName);
-
-    const waitingJobs = await queue.getWaiting();
-    const delayedJobs = await queue.getDelayed();
-    let waitingRemoved = 0;
-    for (const job of [...waitingJobs, ...delayedJobs]) {
-      try {
-        await job.remove();
-        waitingRemoved += 1;
-      } catch {
-        // Job may have moved on before removal.
-      }
-    }
-
-    // Remove active jobs
-    const activeJobs = await queue.getActive();
-    let activeRemoved = 0;
-    for (const job of activeJobs) {
-      try {
-        await job.moveToFailed(new Error("Cancelled by user"), "0", true);
-        activeRemoved += 1;
-      } catch {
-        // Job may have already completed
-      }
-    }
-
-    // Mark in-progress job_runs as dismissed
-    await db
-      .update(jobRuns)
-      .set({ status: "dismissed", error: "Cancelled by user", updatedAt: new Date() })
-      .where(
-        and(
-          eq(jobRuns.queueName, queueName),
-          inArray(jobRuns.status, ["waiting", "active", "delayed"])
-        )
-      );
-
-    // Clean up the failed jobs we just created
-    await queue.clean(0, 100_000, "failed");
+    const result = await cancelQueueJobs(queueName);
 
     return {
       ok: true,
       queueName,
-      waitingRemoved,
-      activeRemoved,
+      waitingRemoved: result.waitingRemoved,
+      activeRemoved: result.activeRemoved,
     };
   });
 

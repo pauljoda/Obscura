@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import {
   acknowledgeJobFailures,
+  cancelAllJobs,
   cancelJobRun,
   cancelQueue,
   fetchJobsDashboard,
@@ -136,6 +137,7 @@ export function JobDashboard() {
   const [loading, setLoading] = useState(true);
   const [runningQueue, setRunningQueue] = useState<string | null>(null);
   const [cancellingQueue, setCancellingQueue] = useState<string | null>(null);
+  const [cancellingAllJobs, setCancellingAllJobs] = useState(false);
   const [cancellingJobRunId, setCancellingJobRunId] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +197,24 @@ export function JobDashboard() {
       setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel jobs");
     } finally {
       setCancellingQueue(null);
+    }
+  }
+
+  async function handleCancelAllJobs() {
+    setCancellingAllJobs(true);
+    setMessage(null);
+
+    try {
+      const response = await cancelAllJobs();
+      setMessage(
+        `Killed ${response.activeRemoved} active and ${response.waitingRemoved} queued job${response.activeRemoved + response.waitingRemoved === 1 ? "" : "s"}.`
+      );
+      setError(null);
+      await loadDashboard();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Failed to kill all jobs");
+    } finally {
+      setCancellingAllJobs(false);
     }
   }
 
@@ -393,9 +413,22 @@ export function JobDashboard() {
             <Cpu className="h-4 w-4 text-text-accent" />
             <h2 className="text-[0.92rem] font-heading font-semibold">Live Work</h2>
           </div>
-          <span className="text-mono-sm text-text-disabled">
-            {dashboard?.activeJobs.length ?? 0} visible
-          </span>
+          <div className="flex items-center gap-2">
+            {(dashboard?.activeJobs.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => void handleCancelAllJobs()}
+                disabled={cancellingAllJobs}
+                className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+              >
+                <Square className="h-3 w-3" />
+                {cancellingAllJobs ? "Killing..." : "Kill all"}
+              </button>
+            )}
+            <span className="text-mono-sm text-text-disabled">
+              {dashboard?.activeJobs.length ?? 0} visible
+            </span>
+          </div>
         </div>
         <div className="space-y-2">
           {dashboard?.activeJobs.length ? (
@@ -424,9 +457,22 @@ export function JobDashboard() {
             <AlertTriangle className="h-4 w-4 text-status-error-text" />
             <h2 className="text-[0.92rem] font-heading font-semibold">Failures</h2>
           </div>
-          <span className="text-mono-sm text-text-disabled">
-            {totalFailed} uncleared
-          </span>
+          <div className="flex items-center gap-2">
+            {totalFailed > 0 && (
+              <button
+                type="button"
+                onClick={() => void handleAcknowledgeFailures("all")}
+                disabled={acknowledging !== null}
+                className="flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+              >
+                <Ban className="h-3 w-3" />
+                {acknowledging === "all" ? "Clearing..." : "Clear all"}
+              </button>
+            )}
+            <span className="text-mono-sm text-text-disabled">
+              {totalFailed} uncleared
+            </span>
+          </div>
         </div>
         <div className="space-y-2">
           {dashboard?.failedJobs.length ? (

@@ -2,6 +2,7 @@ export const apiRoutes = {
   health: "/health",
   jobs: "/jobs",
   jobQueueRun: "/jobs/queues/:queueName/run",
+  jobCancelAll: "/jobs/cancel-all",
   jobRunCancel: "/jobs/:jobRunId/cancel",
   jobAcknowledgeFailed: "/jobs/acknowledge-failed",
   sceneAssets: "/assets/scenes/:id/*",
