@@ -728,6 +728,56 @@ function scaleResolution(nativeSize: number, minSize: number, quality: number): 
   return Math.round(nativeSize - t * (nativeSize - minSize));
 }
 
+const MAX_TRICKPLAY_SHEET_PIXELS = 120_000_000;
+const MIN_TRICKPLAY_FRAME_WIDTH = 48;
+const MIN_TRICKPLAY_FRAME_HEIGHT = 27;
+
+function planTrickplaySheet(input: {
+  duration: number;
+  frameInterval: number;
+  frameWidth: number;
+  frameHeight: number;
+}) {
+  const effectiveDuration = Math.max(0, input.duration);
+  let frameInterval = Math.max(1, input.frameInterval);
+  let frameWidth = Math.max(MIN_TRICKPLAY_FRAME_WIDTH, input.frameWidth);
+  let frameHeight = Math.max(MIN_TRICKPLAY_FRAME_HEIGHT, input.frameHeight);
+  let frameCount = Math.max(
+    1,
+    Math.ceil((effectiveDuration || frameInterval) / frameInterval)
+  );
+
+  let projectedPixels = frameCount * frameWidth * frameHeight;
+  if (projectedPixels > MAX_TRICKPLAY_SHEET_PIXELS) {
+    const scale = Math.sqrt(MAX_TRICKPLAY_SHEET_PIXELS / projectedPixels);
+    frameWidth = Math.max(MIN_TRICKPLAY_FRAME_WIDTH, Math.floor(frameWidth * scale));
+    frameHeight = Math.max(MIN_TRICKPLAY_FRAME_HEIGHT, Math.floor(frameHeight * scale));
+    projectedPixels = frameCount * frameWidth * frameHeight;
+  }
+
+  if (projectedPixels > MAX_TRICKPLAY_SHEET_PIXELS) {
+    const maxFrameCount = Math.max(
+      1,
+      Math.floor(MAX_TRICKPLAY_SHEET_PIXELS / (frameWidth * frameHeight))
+    );
+    frameInterval = Math.max(
+      frameInterval,
+      Math.ceil((effectiveDuration || frameInterval) / maxFrameCount)
+    );
+    frameCount = Math.max(
+      1,
+      Math.ceil((effectiveDuration || frameInterval) / frameInterval)
+    );
+  }
+
+  return {
+    frameInterval,
+    frameCount,
+    frameWidth,
+    frameHeight,
+  };
+}
+
 function toTimestamp(seconds: number) {
   const totalMilliseconds = Math.max(0, Math.floor(seconds * 1000));
   const hours = Math.floor(totalMilliseconds / 3_600_000);
@@ -782,8 +832,7 @@ async function processPreview(job: Job) {
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
   const previewStart = duration > previewDuration ? Math.max(0, duration * 0.1) : 0;
   const thumbnailAt = duration > 0 ? Math.min(duration - 0.5, Math.max(1, duration * 0.18)) : 0;
-  const frameInterval = Math.max(3, settings.trickplayIntervalSeconds);
-  const frameCount = Math.max(1, Math.ceil((duration || frameInterval) / frameInterval));
+  const requestedFrameInterval = Math.max(3, settings.trickplayIntervalSeconds);
   // Resolution scales with the quality slider:
   //   quality 1  → native video resolution (no downscale)
   //   quality 31 → minimum (320px thumb, 160px card, 160px sprite)
@@ -811,6 +860,16 @@ async function processPreview(job: Job) {
     Math.round((nativeH / nativeW) * spriteThumbWidth),
     Math.round(scaleResolution(nativeH, 90, trickQualityClamped))
   );
+  const trickplayPlan = planTrickplaySheet({
+    duration,
+    frameInterval: requestedFrameInterval,
+    frameWidth: spriteThumbWidth,
+    frameHeight: spriteThumbHeight,
+  });
+  const frameInterval = trickplayPlan.frameInterval;
+  const frameCount = trickplayPlan.frameCount;
+  const plannedSpriteThumbWidth = trickplayPlan.frameWidth;
+  const plannedSpriteThumbHeight = trickplayPlan.frameHeight;
 
   const thumbQuality = String(thumbQualityClamped);
 
@@ -899,15 +958,15 @@ async function processPreview(job: Job) {
           "-frames:v",
           "1",
           "-vf",
-          `scale=${spriteThumbWidth}:${spriteThumbHeight}`,
+          `scale=${plannedSpriteThumbWidth}:${plannedSpriteThumbHeight}`,
           frameFile,
         ]);
       } catch {
         // Create a black placeholder so grid stays aligned
         await sharp({
           create: {
-            width: spriteThumbWidth,
-            height: spriteThumbHeight,
+            width: plannedSpriteThumbWidth,
+            height: plannedSpriteThumbHeight,
             channels: 3,
             background: { r: 0, g: 0, b: 0 },
           },
@@ -930,14 +989,14 @@ async function processPreview(job: Job) {
     // Stitch frames into a single sprite sheet
     const composites: sharp.OverlayOptions[] = frameFiles.map((file, i) => ({
       input: file,
-      left: (i % gridColumns) * spriteThumbWidth,
-      top: Math.floor(i / gridColumns) * spriteThumbHeight,
+      left: (i % gridColumns) * plannedSpriteThumbWidth,
+      top: Math.floor(i / gridColumns) * plannedSpriteThumbHeight,
     }));
 
     await sharp({
       create: {
-        width: gridColumns * spriteThumbWidth,
-        height: gridRows * spriteThumbHeight,
+        width: gridColumns * plannedSpriteThumbWidth,
+        height: gridRows * plannedSpriteThumbHeight,
         channels: 3,
         background: { r: 0, g: 0, b: 0 },
       },
@@ -953,11 +1012,13 @@ async function processPreview(job: Job) {
       const end = start + frameInterval;
       const column = index % gridColumns;
       const row = Math.floor(index / gridColumns);
-      const x = column * spriteThumbWidth;
-      const y = row * spriteThumbHeight;
+      const x = column * plannedSpriteThumbWidth;
+      const y = row * plannedSpriteThumbHeight;
 
       vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-      vttLines.push(`${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${spriteThumbWidth},${spriteThumbHeight}`);
+      vttLines.push(
+        `${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
+      );
       vttLines.push("");
     }
 

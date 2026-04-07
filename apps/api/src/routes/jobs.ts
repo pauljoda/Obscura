@@ -237,6 +237,52 @@ async function enqueueMissingSceneJobs(queueName: QueueName, trigger: QueueTrigg
   return { jobIds: createdJobIds, skipped };
 }
 
+async function cancelJobRunById(jobRunId: string, reason = "Cancelled by user") {
+  const [run] = await db
+    .select()
+    .from(jobRuns)
+    .where(eq(jobRuns.id, jobRunId))
+    .limit(1);
+
+  if (!run) {
+    return { kind: "missing" as const };
+  }
+
+  if (!["waiting", "active", "delayed"].includes(run.status)) {
+    return { kind: "not-cancellable" as const, run };
+  }
+
+  const queueName = run.queueName as QueueName;
+  const queue = getQueue(queueName);
+  const redisJob = await queue.getJob(run.bullmqJobId);
+  const redisState = redisJob ? await redisJob.getState() : null;
+
+  if (redisJob) {
+    if (redisState === "waiting" || redisState === "delayed") {
+      await redisJob.remove();
+    } else if (redisState === "active") {
+      await redisJob.moveToFailed(new Error(reason), "0", true);
+      await queue.clean(0, 1_000, "failed");
+    }
+  }
+
+  await db
+    .update(jobRuns)
+    .set({
+      status: "dismissed",
+      error: reason,
+      finishedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(jobRuns.id, run.id));
+
+  return {
+    kind: "cancelled" as const,
+    run,
+    redisState,
+  };
+}
+
 export async function jobsRoutes(app: FastifyInstance) {
   app.get("/jobs", async () => {
     const settings = await ensureLibrarySettingsRow();
@@ -356,6 +402,30 @@ export async function jobsRoutes(app: FastifyInstance) {
       enqueued: result.jobIds.length,
       skipped: result.skipped,
       jobIds: result.jobIds,
+    };
+  });
+
+  app.post("/jobs/:jobRunId/cancel", async (request, reply) => {
+    const { jobRunId } = request.params as { jobRunId: string };
+    const result = await cancelJobRunById(jobRunId);
+
+    if (result.kind === "missing") {
+      reply.code(404);
+      return { error: "Job run not found" };
+    }
+
+    if (result.kind === "not-cancellable") {
+      reply.code(409);
+      return {
+        error: `Job is already ${result.run.status}`,
+      };
+    }
+
+    return {
+      ok: true,
+      jobRunId,
+      queueName: result.run.queueName,
+      redisState: result.redisState,
     };
   });
 

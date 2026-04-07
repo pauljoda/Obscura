@@ -86,6 +86,15 @@ export async function cancelQueue(queueName: string): Promise<{
   return fetchApi(`/jobs/queues/${queueName}/cancel`, { method: "POST" });
 }
 
+export async function cancelJobRun(jobRunId: string): Promise<{
+  ok: boolean;
+  jobRunId: string;
+  queueName: string;
+  redisState: string | null;
+}> {
+  return fetchApi(`/jobs/${jobRunId}/cancel`, { method: "POST" });
+}
+
 export async function rebuildScenePreview(sceneId: string): Promise<{
   ok: boolean;
   jobId: string;

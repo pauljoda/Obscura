@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import {
   acknowledgeJobFailures,
+  cancelJobRun,
   cancelQueue,
   fetchJobsDashboard,
   runQueue,
@@ -135,6 +136,7 @@ export function JobDashboard() {
   const [loading, setLoading] = useState(true);
   const [runningQueue, setRunningQueue] = useState<string | null>(null);
   const [cancellingQueue, setCancellingQueue] = useState<string | null>(null);
+  const [cancellingJobRunId, setCancellingJobRunId] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -193,6 +195,24 @@ export function JobDashboard() {
       setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel jobs");
     } finally {
       setCancellingQueue(null);
+    }
+  }
+
+  async function handleCancelJob(job: JobRun) {
+    setCancellingJobRunId(job.id);
+    setMessage(null);
+
+    try {
+      const response = await cancelJobRun(job.id);
+      setMessage(
+        `Cancelled ${jobHeading(job)} from ${response.queueName}${response.redisState ? ` (${response.redisState})` : ""}.`
+      );
+      setError(null);
+      await loadDashboard();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel job");
+    } finally {
+      setCancellingJobRunId(null);
     }
   }
 
@@ -379,7 +399,14 @@ export function JobDashboard() {
         </div>
         <div className="space-y-2">
           {dashboard?.activeJobs.length ? (
-            dashboard.activeJobs.map((job) => <ActiveJobCard key={job.id} job={job} />)
+            dashboard.activeJobs.map((job) => (
+              <ActiveJobCard
+                key={job.id}
+                job={job}
+                cancellingJobRunId={cancellingJobRunId}
+                onCancelJob={handleCancelJob}
+              />
+            ))
           ) : (
             <EmptyPanel
               title="No active or queued jobs"
@@ -608,8 +635,17 @@ function QueueMetric({
   );
 }
 
-function ActiveJobCard({ job }: { job: JobRun }) {
+function ActiveJobCard({
+  job,
+  cancellingJobRunId,
+  onCancelJob,
+}: {
+  job: JobRun;
+  cancellingJobRunId: string | null;
+  onCancelJob: (job: JobRun) => Promise<void>;
+}) {
   const isRunning = job.status === "active";
+  const isCancelling = cancellingJobRunId === job.id;
 
   return (
     <div
@@ -642,6 +678,15 @@ function ActiveJobCard({ job }: { job: JobRun }) {
           <p className="mt-1 text-mono-sm text-text-disabled">
             attempt {Math.max(1, job.attempts + 1)}
           </p>
+          <button
+            type="button"
+            onClick={() => void onCancelJob(job)}
+            disabled={isCancelling}
+            className="mt-2 inline-flex items-center gap-1 rounded-[3px] px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
+          >
+            <Square className="h-3 w-3" />
+            {isCancelling ? "Stopping..." : "Kill task"}
+          </button>
         </div>
       </div>
 
