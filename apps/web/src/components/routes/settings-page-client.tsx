@@ -242,19 +242,23 @@ export function SettingsPageClient({
   }
 
   async function handleToggleRoot(root: LibraryRoot) {
+    const next = !root.enabled;
+    setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, enabled: next } : r)));
     try {
-      await updateLibraryRoot(root.id, { enabled: !root.enabled });
-      await loadConfig();
+      await updateLibraryRoot(root.id, { enabled: next });
     } catch (toggleError) {
+      setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, enabled: !next } : r)));
       setError(toggleError instanceof Error ? toggleError.message : "Failed to update root");
     }
   }
 
   async function handleToggleMediaType(root: LibraryRoot, field: "scanVideos" | "scanImages") {
+    const next = !root[field];
+    setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, [field]: next } : r)));
     try {
-      await updateLibraryRoot(root.id, { [field]: !root[field] });
-      await loadConfig();
+      await updateLibraryRoot(root.id, { [field]: next });
     } catch (toggleError) {
+      setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, [field]: !next } : r)));
       setError(toggleError instanceof Error ? toggleError.message : "Failed to update root");
     }
   }

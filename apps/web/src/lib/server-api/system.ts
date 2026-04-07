@@ -13,7 +13,7 @@ export async function fetchLibraryConfig() {
     settings: LibrarySettingsDto;
     roots: LibraryRootDto[];
     storage: StorageStatsDto;
-  }>("/settings/library", { revalidate: 60, tags: ["settings"] });
+  }>("/settings/library", { revalidate: 0, tags: ["settings"] });
 }
 
 export async function fetchInstalledScrapers() {

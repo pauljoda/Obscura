@@ -128,11 +128,16 @@ async function removeGeneratedImageDirs(imageIds: string[]) {
 
 async function pruneUntrackedLibraryReferences() {
   const allRoots = await db
-    .select({ path: libraryRoots.path })
+    .select({
+      path: libraryRoots.path,
+      scanVideos: libraryRoots.scanVideos,
+      scanImages: libraryRoots.scanImages,
+    })
     .from(libraryRoots)
     .where(eq(libraryRoots.enabled, true));
 
-  const enabledRootPaths = allRoots.map((root) => root.path);
+  const videoRootPaths = allRoots.filter((r) => r.scanVideos).map((r) => r.path);
+  const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
 
   const allKnownScenes = await db
     .select({
@@ -154,7 +159,7 @@ async function pruneUntrackedLibraryReferences() {
     .filter((scene) => {
       if (!scene.filePath) return false;
       if (missingSceneIds.includes(scene.id)) return false;
-      return !isPathWithinAnyRoot(scene.filePath, enabledRootPaths);
+      return !isPathWithinAnyRoot(scene.filePath, videoRootPaths);
     })
     .map((scene) => scene.id);
 
@@ -171,7 +176,7 @@ async function pruneUntrackedLibraryReferences() {
     .from(images);
 
   const orphanedImageIds = allKnownImages
-    .filter((image) => !isPathWithinAnyRoot(image.filePath, enabledRootPaths))
+    .filter((image) => !isPathWithinAnyRoot(image.filePath, imageRootPaths))
     .map((image) => image.id);
 
   if (orphanedImageIds.length > 0) {
@@ -191,7 +196,7 @@ async function pruneUntrackedLibraryReferences() {
     .filter((gallery) => {
       const backingPath = gallery.folderPath ?? gallery.zipFilePath;
       if (!backingPath) return false;
-      return !isPathWithinAnyRoot(backingPath, enabledRootPaths);
+      return !isPathWithinAnyRoot(backingPath, imageRootPaths);
     })
     .map((gallery) => gallery.id);
 
