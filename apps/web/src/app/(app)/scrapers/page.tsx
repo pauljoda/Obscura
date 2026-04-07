@@ -31,6 +31,9 @@ import {
   type ScraperPackage,
 } from "../../../lib/api";
 
+import { DashboardStatTile } from "../../dashboard/dashboard-stat-tile";
+import { DASHBOARD_STAT_GRADIENTS } from "../../dashboard/dashboard-utils";
+
 /** Human-readable capability names and their category */
 const CAPABILITY_META: Record<string, { label: string; category: "scene" | "performer" | "gallery" | "group" }> = {
   sceneByURL: { label: "Scene by URL", category: "scene" },
@@ -267,34 +270,25 @@ export default function ScrapersPage() {
 
       {/* Stats strip */}
       {!loading && installed.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="surface-stat px-3 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1 text-text-disabled">
-              <Package className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Installed</span>
-            </div>
-            <div className="text-lg font-semibold text-text-primary leading-tight">
-              {installed.length}
-            </div>
-          </div>
-          <div className="surface-stat px-3 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1 text-text-disabled">
-              <Film className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Scene Scrapers</span>
-            </div>
-            <div className="text-lg font-semibold text-text-primary leading-tight">
-              {sceneCount}
-            </div>
-          </div>
-          <div className="surface-stat px-3 py-2.5">
-            <div className="flex items-center gap-1.5 mb-1 text-text-disabled">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-kicker" style={{ color: "inherit" }}>Performer Scrapers</span>
-            </div>
-            <div className="text-lg font-semibold text-text-primary leading-tight">
-              {performerCount}
-            </div>
-          </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          <DashboardStatTile
+            icon={<Package className="h-4 w-4" />}
+            label="Installed"
+            value={String(installed.length)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <DashboardStatTile
+            icon={<Film className="h-4 w-4" />}
+            label="Scene Scrapers"
+            value={String(sceneCount)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+          <DashboardStatTile
+            icon={<Users className="h-4 w-4" />}
+            label="Performer Scrapers"
+            value={String(performerCount)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+          />
         </div>
       )}
 
@@ -481,7 +475,7 @@ export default function ScrapersPage() {
               <div
                 key={entry.id}
                 className={cn(
-                  "surface-card-sharp no-lift px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
+                  "surface-card no-lift px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
                   !entry.installed && selected.has(entry.id) && "border-border-accent/40"
                 )}
               >
@@ -572,7 +566,7 @@ function ScraperCard({
 
   return (
     <div className={cn(
-      "surface-card-sharp no-lift p-4 transition-opacity duration-fast",
+      "surface-card no-lift p-4 transition-opacity duration-fast",
       !pkg.enabled && "opacity-60"
     )}>
       <div className="flex flex-wrap items-start justify-between gap-3">
