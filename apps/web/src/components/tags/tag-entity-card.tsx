@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Image, Tag } from "lucide-react";
+import { Check, Film, Image, Tag } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { TagCardData } from "./tag-card-data";
 import { NsfwBlur, NsfwTagLabel } from "../nsfw/nsfw-gate";
@@ -54,45 +54,54 @@ export function TagEntityCard({
     <Link
       href={tag.href}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5",
-        "border-b border-border-subtle/50",
-        "hover:bg-surface-2 hover:text-text-accent transition-colors duration-fast",
-        "break-inside-avoid",
+        "group flex items-center gap-2.5 px-3 py-2",
+        "border border-transparent hover:border-border-accent/30",
+        "bg-surface-1 hover:bg-surface-2 hover:shadow-[inset_0_2px_6px_rgba(0,0,0,0.3)]",
+        "transition-all duration-fast break-inside-avoid mb-1",
+        selected && "border-border-accent bg-accent-950/20 shadow-[inset_0_2px_6px_rgba(0,0,0,0.3)]"
       )}
     >
       {onToggleSelect && (
-        <input
-          type="checkbox"
-          checked={selected ?? false}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => { e.preventDefault(); onToggleSelect(tag.id); }}
-          className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
-        />
+        <div 
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleSelect(tag.id); }}
+          className={cn(
+            "flex items-center justify-center h-4 w-4 border transition-colors duration-fast cursor-pointer shrink-0",
+            selected 
+              ? "border-border-accent bg-accent-500 text-surface-1 shadow-[0_0_6px_rgba(199,155,92,0.4)]" 
+              : "border-border-subtle bg-surface-3 text-transparent group-hover:border-border-default",
+            !selected && "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+          )}
+        >
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </div>
       )}
       {tag.imagePath && (
-        <NsfwBlur isNsfw={tag.isNsfw ?? false} className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
+        <NsfwBlur isNsfw={tag.isNsfw ?? false} className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3 shadow-well">
           <div className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
             <img src={tag.imagePath} alt="" className="w-full h-full object-cover" />
           </div>
         </NsfwBlur>
       )}
-      <span className="text-[0.8rem] text-text-primary truncate flex-1">
+      <span className={cn(
+        "text-[0.8rem] truncate flex-1 transition-colors duration-fast",
+        selected ? "text-text-primary font-medium" : "text-text-secondary group-hover:text-text-primary"
+      )}>
         <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
       </span>
       <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
         {tag.sceneCount > 0 && (
-          <span className="flex items-center gap-0.5">
-            <Film className="h-2.5 w-2.5" />
+          <span className="flex items-center gap-1">
+            <Film className="h-2.5 w-2.5 opacity-70" />
             {tag.sceneCount}
           </span>
         )}
         {tag.imageCount > 0 && (
-          <span className="flex items-center gap-0.5">
-            <Image className="h-2.5 w-2.5" />
+          <span className="flex items-center gap-1">
+            <Image className="h-2.5 w-2.5 opacity-70" />
             {tag.imageCount}
           </span>
         )}
-        {tag.sceneCount + tag.imageCount === 0 && <span className="text-text-disabled/50">—</span>}
+        {tag.sceneCount + tag.imageCount === 0 && <span className="text-text-disabled/40">—</span>}
       </span>
     </Link>
   );
