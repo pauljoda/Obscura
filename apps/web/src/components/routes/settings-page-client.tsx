@@ -1034,7 +1034,10 @@ export function SettingsPageClient({
               <option value="show">Show — display all content normally</option>
             </select>
             <p className="mt-1.5 text-[0.65rem] text-text-disabled">
-              Stored per device. Does not affect stored data.
+              Stored per device. Does not affect stored data. Quick toggle (full SFW ↔ full NSFW, skips blur):{" "}
+              <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">Ctrl+Shift+U</kbd>{" "}
+              or <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">⌘⇧U</kbd> on Mac — also in
+              the header next to Search.
             </p>
           </div>
           <ToggleCard

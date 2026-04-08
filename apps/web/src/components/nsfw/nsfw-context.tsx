@@ -1,17 +1,21 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { isModShiftU } from "../../lib/nsfw-hotkey";
 
 export type NsfwMode = "off" | "blur" | "show";
 
 interface NsfwContextValue {
   mode: NsfwMode;
   setMode: (mode: NsfwMode) => void;
+  /** Toggle only full SFW (`off`) and full NSFW (`show`). Blur becomes show on activate. */
+  toggleShowOffMode: () => void;
 }
 
 const NsfwContext = createContext<NsfwContextValue>({
   mode: "off",
   setMode: () => {},
+  toggleShowOffMode: () => {},
 });
 
 const COOKIE_NAME = "obscura-nsfw-mode";
@@ -63,13 +67,36 @@ export function NsfwProvider({ children, initialMode = "off", lanAutoEnable = fa
     writeModeCookie(next);
   }, []);
 
+  const toggleShowOffMode = useCallback(() => {
+    setModeState((prev) => {
+      const next = prev === "show" ? "off" : "show";
+      writeModeCookie(next);
+      return next;
+    });
+  }, []);
+
+  // Global shortcut: same capture-window pattern as the search palette (Mod+K).
+  useEffect(() => {
+    if (!initialized) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!isModShiftU(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleShowOffMode();
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [initialized, toggleShowOffMode]);
+
   // Only suppress render during the async LAN check (first-ever visit
   // with lanAutoEnable and no cookie). Users with an existing cookie
   // render immediately with no flash.
   if (!initialized) return null;
 
   return (
-    <NsfwContext.Provider value={{ mode, setMode }}>
+    <NsfwContext.Provider value={{ mode, setMode, toggleShowOffMode }}>
       {children}
     </NsfwContext.Provider>
   );
