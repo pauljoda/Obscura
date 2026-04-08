@@ -52,7 +52,7 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
-        <span className="inline-flex items-center px-2 py-0.5 text-mono-xs font-semibold uppercase tracking-widest bg-status-error/20 text-status-error border border-status-error/45 shadow-[0_0_12px_rgba(220,38,38,0.25)]">
+        <span className="inline-flex items-center border-2 border-error bg-error-muted/95 px-2.5 py-1 font-mono text-[0.65rem] font-semibold uppercase tracking-widest text-error-text [text-shadow:0_0_12px_rgba(204,120,128,0.55),0_0_4px_rgba(168,72,80,0.4)] shadow-[0_0_18px_rgba(168,72,80,0.55),0_0_6px_rgba(204,120,128,0.35)]">
           NSFW
         </span>
       </div>
@@ -66,7 +66,7 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
  */
 export function NsfwChip() {
   return (
-    <span className="inline-flex items-center px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider bg-status-error/15 text-status-error border border-status-error/30">
+    <span className="inline-flex items-center border border-error/40 bg-error-muted/50 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-error-text shadow-[0_0_8px_rgba(168,72,80,0.25)]">
       NSFW
     </span>
   );
@@ -91,12 +91,12 @@ export function NsfwEditToggle({
         onClick={() => onChange(!value)}
         className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[0.72rem] font-medium transition-colors duration-fast ${
           value
-            ? "bg-status-error/15 text-status-error border border-status-error/40 hover:bg-status-error/20"
+            ? "border border-error/45 bg-error-muted/40 text-error-text hover:bg-error-muted/55"
             : "bg-surface-2 text-text-muted border border-border-subtle hover:border-border-accent hover:text-text-primary"
         }`}
       >
         <span
-          className={`inline-block h-2 w-2 border ${value ? "bg-status-error border-status-error" : "border-border-subtle"}`}
+          className={`inline-block h-2 w-2 border ${value ? "border-error bg-error" : "border-border-subtle"}`}
         />
         NSFW
       </button>
