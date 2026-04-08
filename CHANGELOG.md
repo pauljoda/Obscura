@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Mobile Safari / PWA shell** — `font-size: max(16px, 1em)` on `input`, `textarea`, and `select` in global base styles to avoid iOS Safari’s focus zoom when controls would compute below 16px. Web app manifest (`/site.webmanifest`), PNG icons rasterized from the logo (**180** apple-touch, **192** / **512** for manifest), `theme-color` / `viewport` (`viewport-fit=cover`), and `appleWebApp` metadata (`standalone`, `black-translucent` status bar) so Add to Home Screen and mobile browser chrome pick up name, colors, and icons.
+
 - **SFW / full NSFW quick toggle (desktop)** — **Ctrl+Shift+Z** (Windows/Linux) or **⌘⇧Z** (Mac) toggles between **Off** (SFW) and **Show** (full NSFW) only; **Blur** is unchanged by the shortcut (first press from blur switches to Show). Uses the same window capture pattern as global search. No header button; Settings → Content Visibility documents the combo as a power-user tip alongside **⌘K** / **Ctrl+K** for search.
 
 - **Mobile NSFW quick toggle** — On the bottom navigation bar, press and hold **More** for five seconds to run the same full SFW ↔ full NSFW toggle (pointer capture, movement past ~14px cancels; synthetic click after a successful hold is suppressed so the more sheet does not open). Optional `navigator.vibrate` when available.
