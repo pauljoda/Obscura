@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
+import { getQueue } from "../lib/queues";
 
 const {
   galleries,
@@ -559,6 +560,15 @@ export async function galleriesRoutes(app: FastifyInstance) {
         }
       }
     });
+
+    if (body.isNsfw !== undefined) {
+      const queue = getQueue("gallery-scan");
+      await queue.add("gallery-nsfw-propagate", {
+        galleryId: id,
+        isNsfw: body.isNsfw,
+        triggeredBy: "manual",
+      });
+    }
 
     return { ok: true, id };
   });

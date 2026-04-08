@@ -1252,6 +1252,63 @@ async function processMetadataImport(job: Job) {
   await markJobProgress(job, "metadata-import", 100);
 }
 
+// ─── Gallery NSFW Propagation ──────────────────────────────────────
+
+async function processGalleryNsfwPropagate(job: Job) {
+  const galleryId = String(job.data.galleryId);
+  const isNsfw = Boolean(job.data.isNsfw);
+
+  const [gallery] = await db
+    .select({ id: schema.galleries.id, title: schema.galleries.title })
+    .from(schema.galleries)
+    .where(eq(schema.galleries.id, galleryId))
+    .limit(1);
+
+  if (!gallery) {
+    throw new Error(`Gallery not found: ${galleryId}`);
+  }
+
+  await markJobActive(job, "gallery-scan", {
+    type: "gallery",
+    id: gallery.id,
+    label: gallery.title ?? gallery.id,
+  });
+
+  await markJobProgress(job, "gallery-scan", 10);
+
+  // Recursively collect all descendant gallery IDs
+  const descendantResult = await db.execute<{ id: string }>(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT id FROM galleries WHERE parent_id = ${galleryId}
+      UNION ALL
+      SELECT g.id FROM galleries g
+      INNER JOIN descendants d ON g.parent_id = d.id
+    )
+    SELECT id FROM descendants
+  `);
+
+  const descendantIds = descendantResult.map((r) => r.id);
+  const allGalleryIds = [galleryId, ...descendantIds];
+
+  await markJobProgress(job, "gallery-scan", 30);
+
+  if (descendantIds.length > 0) {
+    await db
+      .update(schema.galleries)
+      .set({ isNsfw, updatedAt: new Date() })
+      .where(inArray(schema.galleries.id, descendantIds));
+  }
+
+  await markJobProgress(job, "gallery-scan", 60);
+
+  await db
+    .update(schema.images)
+    .set({ isNsfw, updatedAt: new Date() })
+    .where(inArray(schema.images.galleryId, allGalleryIds));
+
+  await markJobCompleted(job, "gallery-scan");
+}
+
 // ─── Gallery Scan ──────────────────────────────────────────────────
 
 async function shouldSkipGalleryDerivedJobs(
@@ -1274,6 +1331,10 @@ async function shouldSkipGalleryDerivedJobs(
 }
 
 async function processGalleryScan(job: Job) {
+  if (job.name === "gallery-nsfw-propagate") {
+    return processGalleryNsfwPropagate(job);
+  }
+
   const sfwOnly = Boolean(job.data.sfwOnly);
   const libraryRootId = String(job.data.libraryRootId);
   const [root] = await db

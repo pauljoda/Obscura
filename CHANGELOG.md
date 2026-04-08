@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Gallery NSFW propagation** — When a gallery's `isNsfw` flag is updated via `PATCH /galleries/:id`, a `gallery-nsfw-propagate` job is automatically enqueued on the `gallery-scan` queue. The worker recursively propagates the NSFW flag to all descendant sub-galleries and every image contained within them.
+
 ### Changed
 
 - **Video player metrics** — The top-right **ABR** (bandwidth) chip is hidden in **Direct** playback mode; it only appears for adaptive HLS. Buffer and drop stats stay visible.
