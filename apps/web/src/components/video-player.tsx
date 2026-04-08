@@ -651,8 +651,15 @@ export function VideoPlayer({
           )}
         </div>
 
-        <div className="hidden sm:grid min-w-[184px] grid-cols-3 gap-2 text-right text-[0.68rem] text-white/70">
-          <MetricChip icon={<Wifi className="h-3.5 w-3.5" />} label="ABR" value={formatBandwidth(bandwidthEstimate)} />
+        <div
+          className={cn(
+            "hidden sm:grid gap-2 text-right text-[0.68rem] text-white/70",
+            streamMode === "direct" ? "min-w-[120px] grid-cols-2" : "min-w-[184px] grid-cols-3",
+          )}
+        >
+          {streamMode !== "direct" && (
+            <MetricChip icon={<Wifi className="h-3.5 w-3.5" />} label="ABR" value={formatBandwidth(bandwidthEstimate)} />
+          )}
           <MetricChip icon={<Gauge className="h-3.5 w-3.5" />} label="Buffer" value={`${bufferAhead.toFixed(1)}s`} />
           <MetricChip icon={<Settings2 className="h-3.5 w-3.5" />} label="Drop" value={droppedFrames == null ? "—" : String(droppedFrames)} />
         </div>
