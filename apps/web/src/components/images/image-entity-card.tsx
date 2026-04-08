@@ -6,7 +6,7 @@ import { Calendar, Film, HardDrive, ImageOff, Loader2, Star } from "lucide-react
 import { cn } from "@obscura/ui/lib/utils";
 import { canUseInlineVideoPreview, isVideoImage } from "../../lib/image-media";
 import type { ImageCardData } from "./image-card-data";
-import { NsfwBlur, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 
 function formatFileSize(bytes: number | null | undefined): string {
@@ -124,6 +124,10 @@ function ImageGridCard({
           <Film className="h-3 w-3" />
         </div>
       )}
+      <NsfwShowModeChip
+        isNsfw={image.isNsfw}
+        className="pointer-events-none absolute right-2 top-2 z-10"
+      />
     </>
   );
 
@@ -233,6 +237,10 @@ function ImageFeedCard({
               <Film className="h-3.5 w-3.5" />
             </div>
           )}
+          <NsfwShowModeChip
+            isNsfw={image.isNsfw}
+            className="pointer-events-none absolute right-3 top-3 z-10"
+          />
         </div>
       </NsfwBlur>
 

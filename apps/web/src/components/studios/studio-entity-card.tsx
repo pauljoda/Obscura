@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Building2, Film, Heart, Star } from "lucide-react";
 import type { StudioCardData } from "./studio-card-data";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { formatVideoCount } from "../../lib/terminology";
 
 interface StudioEntityCardProps {
@@ -44,6 +44,10 @@ export function StudioEntityCard({
                 <Building2 className="h-10 w-10 text-text-disabled/20" />
               </div>
             )}
+            <NsfwShowModeChip
+              isNsfw={studio.isNsfw}
+              className="absolute left-2 top-2 z-10 pointer-events-none"
+            />
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
         </NsfwBlur>
@@ -109,9 +113,12 @@ function StudioListCard({
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <span className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
-            {studio.name}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="min-w-0 truncate text-[0.8rem] font-medium text-text-primary block group-hover:text-text-accent transition-colors duration-fast">
+              {studio.name}
+            </span>
+            <NsfwShowModeChip isNsfw={studio.isNsfw} className="flex-shrink-0" />
+          </div>
           <p className="text-[0.68rem] text-text-disabled">
             {formatVideoCount(studio.sceneCount)}
           </p>

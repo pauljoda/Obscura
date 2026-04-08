@@ -6,7 +6,7 @@ import { Archive, FolderOpen, Images, Sparkles, Star } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { useElementInView } from "../../hooks/use-element-in-view";
 import type { GalleryCardData } from "./gallery-card-data";
-import { NsfwBlur, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 
 const typeIcons = {
@@ -125,6 +125,11 @@ function GalleryGridCard({
             </div>
           )}
 
+          <NsfwShowModeChip
+            isNsfw={gallery.isNsfw}
+            className="absolute left-2 top-2 z-10 pointer-events-none"
+          />
+
           <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
             <Images className="h-3 w-3" />
             {gallery.imageCount}
@@ -207,9 +212,12 @@ function GalleryListCard({ gallery }: { gallery: GalleryCardData }) {
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-[0.78rem] font-medium text-text-primary truncate">
-            {gallery.title}
-          </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="min-w-0 flex-1 truncate text-[0.78rem] font-medium text-text-primary">
+              {gallery.title}
+            </h3>
+            <NsfwShowModeChip isNsfw={gallery.isNsfw} className="flex-shrink-0" />
+          </div>
           <div className="flex items-center gap-3 mt-0.5 text-[0.65rem] text-text-muted">
             <span className="flex items-center gap-1">
               <Images className="h-3 w-3" />

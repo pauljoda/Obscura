@@ -74,6 +74,38 @@ export function NsfwChip() {
 }
 
 /**
+ * Compact flame badge for grid/list cards when content is fully visible (Show mode).
+ * In Blur mode the existing overlay already signals NSFW; hidden in SFW (off).
+ */
+export function NsfwShowModeChip({
+  isNsfw,
+  className,
+  compact,
+}: {
+  isNsfw?: boolean;
+  className?: string;
+  /** Smaller badge for dense rows (e.g. tag cloud). */
+  compact?: boolean;
+}) {
+  const { mode } = useNsfw();
+  if (isNsfw !== true || mode !== "show") return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center border border-error/50 bg-error-muted/40 leading-none text-error-text shadow-[0_0_10px_rgba(168,72,80,0.35)]",
+        compact ? "h-4 w-4 text-[0.55rem]" : "size-5 text-[0.7rem]",
+        className,
+      )}
+      title="Marked NSFW"
+      aria-label="NSFW"
+      role="img"
+    >
+      🔥
+    </span>
+  );
+}
+
+/**
  * Toggle button for marking an entity as NSFW in edit forms.
  * Wraps in NsfwGate so it is hidden in SFW mode (marking content NSFW in SFW
  * mode would immediately make it disappear, confusing the user).

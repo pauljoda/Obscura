@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **NSFW flame badge in Show mode** — New `NsfwShowModeChip` renders a compact 🔥 badge with red/error styling on library cards when an entity is marked NSFW and global content mode is **Show** (full visibility). Hidden in **Blur** (existing blur/overlay already signals NSFW) and **Off** (SFW). Used on scene grid/list, performer grid/list, studio grid/list, tag list/cloud, gallery grid/list, and image grid/feed cards.
+
 ### Changed
 
 - **Tag Entity Card Checkbox** — Replaced the native checkbox on the Tags page with a custom styled component that matches the "Dark Room" aesthetic. The checkbox is now hidden by default and only appears on hover or when selected, keeping the list clean.

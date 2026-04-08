@@ -7,7 +7,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import type { SceneCardData } from "./scene-card-data";
 import { SCENE_CARD_GRADIENTS } from "./scene-card-gradients";
-import { NsfwBlur, NsfwTagLabel, NsfwText, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, NsfwText, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 
 interface SceneCardProps {
@@ -58,7 +58,12 @@ function SceneGridCard({
 
   return (
     <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
-      <Link href={scene.href}>
+      <div className="relative h-full">
+        <NsfwShowModeChip
+          isNsfw={scene.isNsfw}
+          className="absolute left-2 top-2 z-20 pointer-events-none"
+        />
+        <Link href={scene.href} className="block h-full">
         <MediaCard
           title={scene.title}
           thumbnail={scene.thumbnail}
@@ -97,7 +102,8 @@ function SceneGridCard({
           views={scene.views}
           gradientClass={SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length]}
         />
-      </Link>
+        </Link>
+      </div>
     </NsfwBlur>
   );
 }
@@ -154,10 +160,11 @@ function SceneListCard({
         </NsfwBlur>
 
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <NsfwText isNsfw={scene.isNsfw ?? false} className="truncate text-[0.8rem] font-medium text-text-primary block">
               {scene.title}
             </NsfwText>
+            <NsfwShowModeChip isNsfw={scene.isNsfw} className="flex-shrink-0" />
             {scene.resolution && (
               <span className="pill-accent px-1 py-0 text-[0.55rem] font-semibold flex-shrink-0">
                 {scene.resolution}

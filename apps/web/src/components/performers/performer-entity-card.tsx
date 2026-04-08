@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Star, Users } from "lucide-react";
 import type { PerformerCardData } from "./performer-card-data";
-import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip, NsfwText } from "../nsfw/nsfw-gate";
 import { entityTerms, formatVideoCount } from "../../lib/terminology";
 
 interface PerformerEntityCardProps {
@@ -46,6 +46,10 @@ export function PerformerEntityCard({
                 <Users className="h-10 w-10 text-text-disabled/50" />
               </div>
             )}
+            <NsfwShowModeChip
+              isNsfw={performer.isNsfw}
+              className="absolute left-2 top-2 z-10 pointer-events-none"
+            />
             {performer.favorite ? (
               <span className="absolute right-2 top-2 bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
                 <Star className="h-3 w-3 fill-current" />
@@ -101,9 +105,12 @@ function PerformerListCard({
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <NsfwText isNsfw={performer.isNsfw ?? false} className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
-            {performer.name}
-          </NsfwText>
+          <div className="flex items-center gap-2 min-w-0">
+            <NsfwText isNsfw={performer.isNsfw ?? false} className="min-w-0 truncate text-[0.8rem] font-medium text-text-primary block group-hover:text-text-accent transition-colors duration-fast">
+              {performer.name}
+            </NsfwText>
+            <NsfwShowModeChip isNsfw={performer.isNsfw} className="flex-shrink-0" />
+          </div>
           <p className="text-[0.68rem] text-text-disabled truncate">
             {formatVideoCount(performer.sceneCount)}
             {performer.gender ? ` · ${performer.gender}` : ""}
