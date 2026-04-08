@@ -53,7 +53,7 @@ import {
   type PerformerItem,
   type StudioItem,
 } from "../lib/api";
-import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -935,7 +935,7 @@ export function SceneEdit({
                       href={`/tags/${tag.id}`}
                       className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                     >
-                      {tag.name}
+                      <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                     </Link>
                   ))}
                 </div>

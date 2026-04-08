@@ -186,6 +186,7 @@ export async function scenesRoutes(app: FastifyInstance) {
               sceneId: sceneTags.sceneId,
               tagId: tags.id,
               tagName: tags.name,
+              tagIsNsfw: tags.isNsfw,
             })
             .from(sceneTags)
             .innerJoin(tags, eq(sceneTags.tagId, tags.id))
@@ -226,7 +227,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         .map((p) => ({ id: p.performerId, name: p.performerName, imagePath: p.performerImagePath, isNsfw: p.performerIsNsfw })),
       tags: tagJoins
         .filter((t) => t.sceneId === scene.id)
-        .map((t) => ({ id: t.tagId, name: t.tagName })),
+        .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
       createdAt: scene.createdAt,
       updatedAt: scene.updatedAt,
     }));
@@ -357,6 +358,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       tags: scene.sceneTags.map((st) => ({
         id: st.tag.id,
         name: st.tag.name,
+        isNsfw: st.tag.isNsfw,
       })),
       markers: scene.markers.map((m) => ({
         id: m.id,
@@ -364,7 +366,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         seconds: m.seconds,
         endSeconds: m.endSeconds,
         primaryTag: m.primaryTag
-          ? { id: m.primaryTag.id, name: m.primaryTag.name }
+          ? { id: m.primaryTag.id, name: m.primaryTag.name, isNsfw: m.primaryTag.isNsfw }
           : null,
       })),
       createdAt: scene.createdAt,

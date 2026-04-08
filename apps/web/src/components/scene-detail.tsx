@@ -46,7 +46,7 @@ import {
   type TagItem,
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
-import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip, NsfwTagLabel } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -541,7 +541,7 @@ export function SceneDetail({
                       href={`/tags/${tag.id}`}
                       className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                     >
-                      {tag.name}
+                      <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                     </Link>
                   ))}
                 </div>
@@ -700,7 +700,9 @@ export function SceneDetail({
                 </div>
                 {marker.primaryTag && (
                   <span className="tag-chip tag-chip-accent flex-shrink-0">
-                    {marker.primaryTag.name}
+                    <NsfwTagLabel isNsfw={marker.primaryTag.isNsfw}>
+                      {marker.primaryTag.name}
+                    </NsfwTagLabel>
                   </span>
                 )}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -953,7 +955,7 @@ function MarkerForm({
                       setTagFocused(false);
                     }}
                   >
-                    {t.name}
+                    <NsfwTagLabel isNsfw={t.isNsfw}>{t.name}</NsfwTagLabel>
                     <span className="autocomplete-item-count">{t.sceneCount}</span>
                   </div>
                 ))}

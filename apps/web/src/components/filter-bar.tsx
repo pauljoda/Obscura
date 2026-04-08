@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
+import { NsfwTagLabel } from "./nsfw/nsfw-gate";
 
 export type ViewMode = "grid" | "list";
 export type SortOption = "recent" | "title" | "duration" | "size" | "rating" | "date" | "plays";
@@ -442,7 +443,7 @@ function TagChipButton({
           : "tag-chip-default hover:tag-chip-info"
       )}
     >
-      {tag.name}
+      <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
       <span className="text-text-disabled ml-1">{tag.sceneCount}</span>
     </button>
   );

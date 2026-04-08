@@ -25,7 +25,7 @@ export interface SceneCardData {
   fileSize?: string;
   studio?: string;
   performers?: SceneCardPerformer[];
-  tags?: string[];
+  tags?: { name: string; isNsfw: boolean }[];
   rating?: number;
   views?: number;
   isNsfw?: boolean;
@@ -62,7 +62,7 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
       imagePath: toApiUrl(performer.imagePath) ?? undefined,
       isNsfw: performer.isNsfw,
     })),
-    tags: scene.tags.map((tag) => tag.name),
+    tags: scene.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
     rating: scene.rating ?? undefined,
     views: scene.playCount,
     isNsfw: scene.isNsfw,

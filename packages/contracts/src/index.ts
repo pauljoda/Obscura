@@ -209,6 +209,13 @@ export interface StorageStatsDto {
   totalBytes: number;
 }
 
+/** Tag embedded on scenes, images, galleries, and performers in list/detail payloads. */
+export interface TagEmbedDto {
+  id: string;
+  name: string;
+  isNsfw: boolean;
+}
+
 // ─── Gallery DTOs ────────────────────────────────────────────────
 
 export type GalleryType = "folder" | "zip" | "virtual";
@@ -227,7 +234,7 @@ export interface GalleryListItemDto {
   studioId: string | null;
   studioName: string | null;
   performers: { id: string; name: string }[];
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   parentId: string | null;
   createdAt: string;
 }
@@ -250,7 +257,7 @@ export interface GalleryDetailDto {
   imageCount: number;
   studio: { id: string; name: string; url: string | null } | null;
   performers: { id: string; name: string; gender: string | null; imagePath: string | null }[];
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   chapters: GalleryChapterDto[];
   images: ImageListItemDto[];
   imageTotal: number;
@@ -295,7 +302,7 @@ export interface ImageListItemDto {
   sortOrder: number;
   studioId: string | null;
   performers: { id: string; name: string }[];
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   createdAt: string;
 }
 
@@ -499,7 +506,7 @@ export interface PerformerDetailDto {
   rating: number | null;
   isNsfw: boolean;
   sceneCount: number;
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
 }

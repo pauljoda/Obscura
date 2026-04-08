@@ -13,7 +13,7 @@ export interface GalleryCardData {
   date?: string;
   coverImage?: string;
   previewImages: string[];
-  tags: string[];
+  tags: { name: string; isNsfw: boolean }[];
   isNsfw?: boolean;
 }
 
@@ -43,7 +43,7 @@ export function galleryListItemToCardData(gallery: GalleryListItemDto): GalleryC
     date: gallery.date ?? undefined,
     coverImage: toApiUrl(gallery.coverImagePath),
     previewImages: gallery.previewImagePaths.map((p) => toApiUrl(p)).filter(Boolean) as string[],
-    tags: gallery.tags.map((tag) => tag.name),
+    tags: gallery.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
     isNsfw: gallery.isNsfw,
   };
 }

@@ -192,6 +192,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
               galleryId: galleryTags.galleryId,
               tagId: tags.id,
               tagName: tags.name,
+              tagIsNsfw: tags.isNsfw,
             })
             .from(galleryTags)
             .innerJoin(tags, eq(galleryTags.tagId, tags.id))
@@ -247,7 +248,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
           .map((p) => ({ id: p.performerId, name: p.performerName })),
         tags: tagJoins
           .filter((t) => t.galleryId === gallery.id)
-          .map((t) => ({ id: t.tagId, name: t.tagName })),
+          .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
         parentId: gallery.parentId,
         createdAt: gallery.createdAt,
       };
@@ -419,6 +420,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       tags: gallery.galleryTags.map((gt) => ({
         id: gt.tag.id,
         name: gt.tag.name,
+        isNsfw: gt.tag.isNsfw,
       })),
       chapters: gallery.chapters.map((ch) => ({
         id: ch.id,

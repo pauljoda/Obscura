@@ -15,7 +15,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { updateGallery } from "../lib/api";
 import { revalidateGalleryCache } from "../app/actions/revalidate-gallery";
 import type { GalleryDetailDto, GalleryChapterDto } from "@obscura/contracts";
-import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
 
 interface GalleryMetadataPanelProps {
   gallery: GalleryDetailDto;
@@ -247,7 +247,7 @@ export function GalleryMetadataPanel({
           <div className="flex flex-wrap gap-1">
             {gallery.tags.map((tag) => (
               <span key={tag.id} className="tag-chip tag-chip-default">
-                {tag.name}
+                <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
               </span>
             ))}
           </div>

@@ -152,9 +152,10 @@ export async function performersRoutes(app: FastifyInstance) {
       rating: row.rating,
       isNsfw: row.isNsfw,
       sceneCount: row.sceneCount,
-      tags: row.performerTags.map((pt: any) => ({
+      tags: row.performerTags.map((pt) => ({
         id: pt.tag.id,
         name: pt.tag.name,
+        isNsfw: pt.tag.isNsfw,
       })),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

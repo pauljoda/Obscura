@@ -26,6 +26,7 @@ import { ImageFeed } from "../image-feed";
 import { ImageLightbox } from "../image-lightbox";
 import { fetchImages, type TagItem } from "../../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
+import { NsfwTagLabel } from "../nsfw/nsfw-gate";
 
 export type ImageViewMode = "grid" | "feed";
 
@@ -318,7 +319,7 @@ export function ImagesPageClient({
                       : "tag-chip-default hover:tag-chip-info"
                   )}
                 >
-                  {tag.name}
+                  <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </button>
               ))}
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@obscura/ui/lib/utils";
 import { useNsfw } from "./nsfw-context";
 
 interface NsfwGateProps {
@@ -133,6 +134,55 @@ export function NsfwText({ isNsfw, children, className }: NsfwTextProps) {
       title="NSFW — hover to reveal"
     >
       {children}
+    </span>
+  );
+}
+
+const TAG_GARBLE_CHARS = ["▒", "░", "█"] as const;
+
+function garbleTagLabelText(text: string): string {
+  return [...text]
+    .map((ch, i) => (/\s/.test(ch) ? ch : TAG_GARBLE_CHARS[i % TAG_GARBLE_CHARS.length]!))
+    .join("");
+}
+
+/**
+ * NSFW tag names in global "blur" mode: garbled block glyphs plus a light blur;
+ * hover shows the real text. Matches NsfwBlur/NsfwText off/show behavior.
+ */
+export function NsfwTagLabel({
+  isNsfw,
+  children,
+  className,
+}: {
+  isNsfw: boolean;
+  children: string;
+  className?: string;
+}) {
+  const { mode } = useNsfw();
+
+  if (!isNsfw || mode === "show") {
+    return <span className={className}>{children}</span>;
+  }
+
+  if (mode === "off") {
+    return null;
+  }
+
+  const garbled = garbleTagLabelText(children);
+
+  return (
+    <span
+      className={cn("group/nsfw-tag inline max-w-full align-baseline", className)}
+      title="NSFW — hover to reveal"
+    >
+      <span
+        aria-hidden
+        className="inline blur-[2.5px] contrast-[0.85] transition-[filter] duration-200 group-hover/nsfw-tag:hidden"
+      >
+        {garbled}
+      </span>
+      <span className="hidden group-hover/nsfw-tag:inline">{children}</span>
     </span>
   );
 }

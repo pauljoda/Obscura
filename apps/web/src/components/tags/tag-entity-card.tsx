@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Film, Image, Tag } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { TagCardData } from "./tag-card-data";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel } from "../nsfw/nsfw-gate";
 
 interface TagEntityCardProps {
   tag: TagCardData;
@@ -40,7 +40,7 @@ export function TagEntityCard({
               : "border-border-subtle text-text-muted text-xs",
         )}
       >
-        {tag.name}
+        <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
         <span className="ml-1.5 text-text-disabled text-xs">{total}</span>
       </Link>
     );
@@ -76,7 +76,9 @@ export function TagEntityCard({
           </div>
         </NsfwBlur>
       )}
-      <span className="text-[0.8rem] text-text-primary truncate flex-1">{tag.name}</span>
+      <span className="text-[0.8rem] text-text-primary truncate flex-1">
+        <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
+      </span>
       <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
         {tag.sceneCount > 0 && (
           <span className="flex items-center gap-0.5">
@@ -114,7 +116,9 @@ function TagCompactCard({
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-text-primary truncate">{tag.name}</div>
+        <div className="text-sm text-text-primary truncate">
+          <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
+        </div>
         <div className="text-[0.68rem] text-text-muted truncate">
           {total} item{total !== 1 ? "s" : ""}
         </div>

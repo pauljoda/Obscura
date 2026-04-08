@@ -6,7 +6,7 @@ import { Archive, FolderOpen, Images, Sparkles, Star } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { useElementInView } from "../../hooks/use-element-in-view";
 import type { GalleryCardData } from "./gallery-card-data";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel } from "../nsfw/nsfw-gate";
 
 const typeIcons = {
   folder: FolderOpen,
@@ -164,8 +164,8 @@ function GalleryGridCard({
           {gallery.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {gallery.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="tag-chip tag-chip-default text-[0.55rem]">
-                  {tag}
+                <span key={tag.name} className="tag-chip tag-chip-default text-[0.55rem]">
+                  <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </span>
               ))}
               {gallery.tags.length > 3 && (

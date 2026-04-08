@@ -35,7 +35,7 @@ import {
   type SceneListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
-import { NsfwBlur, NsfwChip } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip, NsfwTagLabel } from "../nsfw/nsfw-gate";
 
 interface PerformerPageClientProps {
   id: string;
@@ -382,7 +382,7 @@ export function PerformerPageClient({
               {performer.tags.map((tag) => (
                 <span key={tag.id} className="tag-chip tag-chip-default">
                   <TagIcon className="mr-1 h-2.5 w-2.5" />
-                  {tag.name}
+                  <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </span>
               ))}
             </div>

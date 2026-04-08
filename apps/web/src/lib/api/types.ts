@@ -12,6 +12,7 @@ import type {
   ScrapeResultDto,
   ScraperPackageDto,
   StorageStatsDto,
+  TagEmbedDto,
 } from "@obscura/contracts";
 
 export interface SceneListItem {
@@ -50,7 +51,7 @@ export interface SceneListItem {
     favorite?: boolean;
     isNsfw?: boolean;
   }[];
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
 }
@@ -70,7 +71,7 @@ export interface SceneDetail extends SceneListItem {
     title: string;
     seconds: number;
     endSeconds: number | null;
-    primaryTag: { id: string; name: string } | null;
+    primaryTag: TagEmbedDto | null;
   }[];
   updatedAt: string;
 }
@@ -149,7 +150,7 @@ export interface PerformerDetail {
   rating: number | null;
   isNsfw: boolean;
   sceneCount: number;
-  tags: { id: string; name: string }[];
+  tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
 }
@@ -214,7 +215,7 @@ export interface MarkerDto {
   title: string;
   seconds: number;
   endSeconds: number | null;
-  primaryTag: { id: string; name: string } | null;
+  primaryTag: TagEmbedDto | null;
 }
 
 export interface TagDetail {

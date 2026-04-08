@@ -22,7 +22,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SceneGrid } from "../../../../components/scene-grid";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
-import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
+import { NsfwChip, NsfwTagLabel } from "../../../../components/nsfw/nsfw-gate";
 import {
   fetchScenes,
   fetchTags,
@@ -183,7 +183,11 @@ export default function TagPage({ params }: TagPageProps) {
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="flex items-center gap-2.5">
           <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
-          {tagName}
+          {tagDetail ? (
+            <NsfwTagLabel isNsfw={tagDetail.isNsfw}>{tagDetail.name}</NsfwTagLabel>
+          ) : (
+            tagName
+          )}
         </h1>
         {tagDetail?.isNsfw && <NsfwChip />}
         {tagDetail && (

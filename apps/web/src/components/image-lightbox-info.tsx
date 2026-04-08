@@ -5,7 +5,7 @@ import { X, Star, Pencil, Save, XCircle, CheckCircle2, Search } from "lucide-rea
 import { cn } from "@obscura/ui/lib/utils";
 import { updateImage, type TagItem } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
-import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
 
 interface ImageLightboxInfoProps {
   image: ImageListItemDto;
@@ -61,13 +61,22 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
         rating: editRating,
         organized: editOrganized,
         isNsfw: editIsNsfw,
-        tags: editTags.map((name, i) => ({ id: `temp-${i}`, name })),
+        tags: editTags.map((name, i) => {
+          const known = availableTags.find(
+            (t) => t.name.toLowerCase() === name.toLowerCase(),
+          );
+          return {
+            id: known?.id ?? `temp-${i}`,
+            name,
+            isNsfw: known?.isNsfw ?? false,
+          };
+        }),
       });
       setEditing(false);
     } finally {
       setSaving(false);
     }
-  }, [image.id, editRating, editOrganized, editIsNsfw, editTags, onImageUpdate]);
+  }, [image.id, editRating, editOrganized, editIsNsfw, editTags, availableTags, onImageUpdate]);
 
   const handleRatingClick = useCallback((value: number) => {
     if (editing) {
@@ -101,7 +110,6 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
   }, [availableTags, editTags, tagSearch]);
 
   const displayRating = editing ? editRating : image.rating;
-  const displayTags = editing ? editTags.map((name, i) => ({ id: `edit-${i}`, name })) : image.tags;
 
   return (
     <div
@@ -199,20 +207,31 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
         <div>
           <div className="text-kicker mb-1">Tags</div>
           <div className="flex flex-wrap gap-1">
-            {displayTags.map((tag, i) => (
-              <span key={tag.id} className="tag-chip tag-chip-default text-[0.6rem] inline-flex items-center gap-1">
-                {tag.name}
-                {editing && (
-                  <button
-                    onClick={() => removeTag(i)}
-                    className="text-text-disabled hover:text-status-error transition-colors"
+            {editing
+              ? editTags.map((name, i) => (
+                  <span
+                    key={`edit-${i}`}
+                    className="tag-chip tag-chip-default text-[0.6rem] inline-flex items-center gap-1"
                   >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                )}
-              </span>
-            ))}
-            {!editing && displayTags.length === 0 && (
+                    {name}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(i)}
+                      className="text-text-disabled hover:text-error-text transition-colors"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))
+              : image.tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="tag-chip tag-chip-default text-[0.6rem] inline-flex items-center gap-1"
+                  >
+                    <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
+                  </span>
+                ))}
+            {!editing && image.tags.length === 0 && (
               <span className="text-[0.68rem] text-text-disabled">No tags</span>
             )}
           </div>
@@ -249,7 +268,9 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
                       onClick={() => addTag(tag.name)}
                       className="flex items-center justify-between w-full px-2.5 py-1.5 text-[0.72rem] text-left text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
                     >
-                      <span>{tag.name}</span>
+                      <span>
+                        <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
+                      </span>
                       <span className="text-text-disabled text-[0.6rem]">
                         {tag.sceneCount + (tag.imageCount ?? 0)}
                       </span>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
+import { NsfwTagLabel } from "./nsfw/nsfw-gate";
 
 export type GalleryViewMode = "grid" | "list" | "browser" | "timeline";
 export type GallerySortOption = "recent" | "title" | "date" | "rating" | "imageCount" | "created";
@@ -267,7 +268,7 @@ export function GalleryFilterBar({
                           : "tag-chip-default hover:tag-chip-info"
                       )}
                     >
-                      {tag.name}
+                      <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                     </button>
                   ))}
                 </div>

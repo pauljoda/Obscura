@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
 import { Film, Clock, HardDrive, Eye, Star } from "lucide-react";
@@ -34,6 +34,8 @@ export interface MediaCardProps {
   studio?: string;
   performers?: (string | { name: string; imagePath?: string | null })[];
   tags?: string[];
+  /** When set, replaces the default tag chip row (e.g. NSFW-aware labels from the app). */
+  tagsSlot?: ReactNode;
   tagColors?: Record<string, string>;
   rating?: number;
   views?: number;
@@ -57,6 +59,7 @@ export function MediaCard({
   studio,
   performers,
   tags,
+  tagsSlot,
   tagColors,
   rating,
   views,
@@ -349,24 +352,25 @@ export function MediaCard({
           </div>
         )}
 
-        {tags && tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {tags.slice(0, 3).map((tag) => {
-              const colorClass =
-                tagColors?.[tag] || "tag-chip-default";
-              return (
-                <span key={tag} className={cn("tag-chip", colorClass)}>
-                  {tag}
+        {tagsSlot ??
+          (tags && tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {tags.slice(0, 3).map((tag) => {
+                const colorClass =
+                  tagColors?.[tag] || "tag-chip-default";
+                return (
+                  <span key={tag} className={cn("tag-chip", colorClass)}>
+                    {tag}
+                  </span>
+                );
+              })}
+              {tags.length > 3 && (
+                <span className="tag-chip tag-chip-default text-text-disabled">
+                  +{tags.length - 3}
                 </span>
-              );
-            })}
-            {tags.length > 3 && (
-              <span className="tag-chip tag-chip-default text-text-disabled">
-                +{tags.length - 3}
-              </span>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          ))}
 
         {(fileSize || views !== undefined || (rating != null && rating > 0)) && (
           <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">

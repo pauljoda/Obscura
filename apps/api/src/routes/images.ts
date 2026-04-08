@@ -150,6 +150,7 @@ export async function imagesRoutes(app: FastifyInstance) {
               imageId: imageTags.imageId,
               tagId: tags.id,
               tagName: tags.name,
+              tagIsNsfw: tags.isNsfw,
             })
             .from(imageTags)
             .innerJoin(tags, eq(imageTags.tagId, tags.id))
@@ -179,7 +180,7 @@ export async function imagesRoutes(app: FastifyInstance) {
         .map((p) => ({ id: p.performerId, name: p.performerName })),
       tags: tagJoins
         .filter((t) => t.imageId === img.id)
-        .map((t) => ({ id: t.tagId, name: t.tagName })),
+        .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
       createdAt: img.createdAt,
     }));
 
@@ -241,6 +242,7 @@ export async function imagesRoutes(app: FastifyInstance) {
       tags: image.imageTags.map((it) => ({
         id: it.tag.id,
         name: it.tag.name,
+        isNsfw: it.tag.isNsfw,
       })),
       createdAt: image.createdAt,
       updatedAt: image.updatedAt,

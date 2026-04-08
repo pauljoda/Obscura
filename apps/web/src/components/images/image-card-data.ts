@@ -18,7 +18,7 @@ export interface ImageCardData {
   preview?: string;
   full?: string;
   galleryTitle?: string;
-  tags: string[];
+  tags: { name: string; isNsfw: boolean }[];
   isNsfw?: boolean;
 }
 
@@ -42,7 +42,7 @@ export function imageItemToCardData(image: ImageListItemDto): ImageCardData {
     thumbnail: toApiUrl(image.thumbnailPath),
     preview: toApiUrl(image.previewPath),
     full: toApiUrl(image.fullPath),
-    tags: image.tags.map((tag) => tag.name),
+    tags: image.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
     isNsfw: image.isNsfw,
   };
 }

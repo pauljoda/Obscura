@@ -38,7 +38,7 @@ import {
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
-import { NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
 import { useTerms } from "../lib/terminology";
 
 interface PerformerEditProps {
@@ -854,7 +854,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                         onClick={() => addTag(tag.name)}
                         className="w-full px-3 py-1.5 text-xs text-left text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
                       >
-                        {tag.name}
+                        <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                         <span className="ml-2 text-text-disabled">{tag.sceneCount}</span>
                       </button>
                     ))}

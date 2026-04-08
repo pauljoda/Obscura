@@ -7,7 +7,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import type { SceneCardData } from "./scene-card-data";
 import { SCENE_CARD_GRADIENTS } from "./scene-card-gradients";
-import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel, NsfwText } from "../nsfw/nsfw-gate";
 
 interface SceneCardProps {
   scene: SceneCardData;
@@ -53,7 +53,25 @@ export function SceneCard({
           fileSize={scene.fileSize}
           studio={scene.studio}
           performers={scene.performers}
-          tags={scene.tags}
+          tagsSlot={
+            scene.tags && scene.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {scene.tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag.name}
+                    className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}
+                  >
+                    <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
+                  </span>
+                ))}
+                {scene.tags.length > 3 && (
+                  <span className="tag-chip tag-chip-default text-text-disabled">
+                    +{scene.tags.length - 3}
+                  </span>
+                )}
+              </div>
+            ) : null
+          }
           tagColors={SCENE_TAG_COLORS}
           rating={scene.rating}
           views={scene.views}
@@ -158,10 +176,10 @@ function SceneListCard({
             <div className="hidden sm:flex flex-wrap gap-1">
               {scene.tags.slice(0, 4).map((tag) => (
                 <span
-                  key={tag}
-                  className={cn("tag-chip", SCENE_TAG_COLORS[tag] || "tag-chip-default")}
+                  key={tag.name}
+                  className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}
                 >
-                  {tag}
+                  <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </span>
               ))}
             </div>
