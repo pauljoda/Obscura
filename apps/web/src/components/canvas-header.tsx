@@ -78,17 +78,20 @@ export function CanvasHeader() {
           type="button"
           onClick={openPalette}
           className={cn(
-            "flex items-center gap-2 px-3 py-1.5",
-            "surface-well text-mono-sm",
-            "text-text-muted hover:text-text-primary hover:border-border-accent",
-            "transition-colors duration-fast cursor-pointer select-none",
+            "group flex items-center justify-center sm:justify-between w-8 sm:w-64 px-0 sm:px-3 py-1.5",
+            "bg-transparent sm:bg-surface-1 border border-transparent sm:border-border-default sm:border-t-[rgba(0,0,0,0.6)]",
+            "sm:shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]",
+            "text-text-muted hover:text-text-primary sm:hover:border-border-accent focus-visible:border-border-accent-strong focus-visible:shadow-focus-accent",
+            "transition-all duration-fast cursor-text select-none outline-none",
           )}
           aria-label="Open search"
           title={`Search (${searchShortcutKbd})`}
         >
-          <Search className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline text-text-disabled">Search</span>
-          <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border-subtle px-1.5 text-[0.6rem] text-text-disabled">
+          <div className="flex items-center gap-2.5">
+            <Search className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-text-muted sm:text-text-disabled group-hover:text-text-primary sm:group-hover:text-text-muted transition-colors duration-fast" />
+            <span className="hidden sm:inline text-[0.8rem]">Search...</span>
+          </div>
+          <kbd className="hidden sm:inline-flex h-5 items-center border border-border-subtle px-1.5 text-[0.65rem] font-mono text-text-disabled bg-surface-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_2px_rgba(0,0,0,0.2)]">
             {searchShortcutKbd}
           </kbd>
         </button>
