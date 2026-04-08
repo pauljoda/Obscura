@@ -27,6 +27,7 @@ import {
   Building2,
   FileText,
   Droplets,
+  Heart,
   CheckCircle2,
   Clapperboard,
   SkipForward,
@@ -53,6 +54,7 @@ import {
   type StudioItem,
 } from "../lib/api";
 import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
 interface SceneEditProps {
@@ -359,6 +361,8 @@ export function SceneEdit({
   currentPlaybackTime,
 }: SceneEditProps) {
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
+  const explicitCounterLabels = nsfwMode === "show";
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -938,7 +942,10 @@ export function SceneEdit({
               )}
             </MetadataRow>
 
-            <MetadataRow label="Orgasms" icon={Droplets}>
+            <MetadataRow
+              label={explicitCounterLabels ? "Orgasms" : "Likes"}
+              icon={explicitCounterLabels ? Droplets : Heart}
+            >
               <span className="text-mono-sm">
                 {scene.orgasmCount || 0}
               </span>
@@ -1165,7 +1172,7 @@ export function SceneEdit({
                 />
               </FormField>
 
-              <FormField label="Orgasm Count">
+              <FormField label={explicitCounterLabels ? "Orgasm Count" : "Like Count"}>
                 <input
                   className="control-input w-full"
                   type="number"

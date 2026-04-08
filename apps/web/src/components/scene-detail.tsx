@@ -21,6 +21,7 @@ import {
   Tag as TagIcon,
   Loader2,
   Droplets,
+  Heart,
   CheckCircle2,
   Plus,
   Pencil,
@@ -96,6 +97,8 @@ export function SceneDetail({
   const [markerTagName, setMarkerTagName] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
   const { mode: nsfwMode } = useNsfw();
+  /** Full adult terminology only when NSFW content mode is "show". */
+  const explicitCounterLabels = nsfwMode === "show";
   const terms = useTerms();
 
   const refreshScene = useCallback(() => {
@@ -366,14 +369,22 @@ export function SceneDetail({
               })}
             </div>
 
-            {/* Orgasm counter */}
+            {/* Orgasm / like counter (same field; labels depend on NSFW content mode) */}
             <button
               type="button"
               onClick={() => void handleOrgasm()}
               className="flex items-center gap-1.5 h-8 px-2.5 text-text-muted hover:text-accent-400 hover:bg-surface-2 transition-colors duration-fast"
-              title="Orgasm counter — click to increment"
+              title={
+                explicitCounterLabels
+                  ? "Orgasm counter — click to increment"
+                  : "Like counter — click to increment"
+              }
             >
-              <Droplets className="h-4 w-4" />
+              {explicitCounterLabels ? (
+                <Droplets className="h-4 w-4" />
+              ) : (
+                <Heart className="h-4 w-4" />
+              )}
               {scene.orgasmCount > 0 && (
                 <span className="text-mono-sm">{scene.orgasmCount}</span>
               )}
