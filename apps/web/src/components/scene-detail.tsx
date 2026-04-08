@@ -46,6 +46,7 @@ import {
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
 import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -93,6 +94,7 @@ export function SceneDetail({
   const [markerEndSeconds, setMarkerEndSeconds] = useState<number | null>(null);
   const [markerTagName, setMarkerTagName] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
+  const { mode: nsfwMode } = useNsfw();
 
   const refreshScene = useCallback(() => {
     fetchSceneDetail(id)
@@ -230,7 +232,7 @@ export function SceneDetail({
     if (rebuildPreviewState !== "idle") return;
     setRebuildPreviewState("queued");
     try {
-      await rebuildScenePreview(id);
+      await rebuildScenePreview(id, nsfwMode);
     } catch {
       setRebuildPreviewState("idle");
       return;

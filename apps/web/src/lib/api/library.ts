@@ -66,7 +66,10 @@ export async function fetchJobsDashboard(): Promise<JobsDashboard> {
   return fetchApi("/jobs");
 }
 
-export async function runQueue(queueName: string): Promise<{
+export async function runQueue(
+  queueName: string,
+  nsfwMode: string,
+): Promise<{
   ok: boolean;
   queueName: string;
   enqueued: number;
@@ -75,6 +78,7 @@ export async function runQueue(queueName: string): Promise<{
 }> {
   return fetchApi(`/jobs/queues/${queueName}/run`, {
     method: "POST",
+    body: JSON.stringify({ nsfw: nsfwMode }),
   });
 }
 
@@ -105,20 +109,26 @@ export async function cancelJobRun(jobRunId: string): Promise<{
   return fetchApi(`/jobs/${jobRunId}/cancel`, { method: "POST" });
 }
 
-export async function rebuildScenePreview(sceneId: string): Promise<{
+export async function rebuildScenePreview(sceneId: string, nsfwMode: string): Promise<{
   ok: boolean;
   jobId: string;
 }> {
-  return fetchApi(`/jobs/rebuild-preview/${sceneId}`, { method: "POST" });
+  return fetchApi(`/jobs/rebuild-preview/${sceneId}`, {
+    method: "POST",
+    body: JSON.stringify({ nsfw: nsfwMode }),
+  });
 }
 
-export async function rebuildPreviews(): Promise<{
+export async function rebuildPreviews(nsfwMode: string): Promise<{
   ok: boolean;
   enqueued: number;
   skipped: number;
   jobIds: string[];
 }> {
-  return fetchApi("/jobs/rebuild-previews", { method: "POST" });
+  return fetchApi("/jobs/rebuild-previews", {
+    method: "POST",
+    body: JSON.stringify({ nsfw: nsfwMode }),
+  });
 }
 
 export async function acknowledgeJobFailures(queueName?: string): Promise<{

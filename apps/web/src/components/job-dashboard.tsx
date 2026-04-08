@@ -34,6 +34,7 @@ import {
   type JobsDashboard,
   type QueueSummary,
 } from "../lib/api";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 const queueIcons: Record<string, typeof FolderSearch> = {
   "library-scan": FolderSearch,
@@ -166,6 +167,7 @@ export function JobDashboard() {
   const [acknowledging, setAcknowledging] = useState<"all" | string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const { mode: nsfwMode } = useNsfw();
 
   async function loadDashboard() {
     try {
@@ -195,7 +197,7 @@ export function JobDashboard() {
     setMessage(null);
 
     try {
-      const response = await runQueue(queueName);
+      const response = await runQueue(queueName, nsfwMode);
       setMessage(describeRunResult(queueName, response.enqueued, response.skipped));
       setError(null);
       await loadDashboard();
@@ -299,7 +301,7 @@ export function JobDashboard() {
     setMessage(null);
 
     try {
-      const response = await rebuildPreviews();
+      const response = await rebuildPreviews(nsfwMode);
       const parts = [
         `Queued forced preview rebuild for ${response.enqueued} scene${response.enqueued === 1 ? "" : "s"}`,
       ];

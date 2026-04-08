@@ -3,11 +3,10 @@ import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { sql } from "drizzle-orm";
 import { Queue, Worker, type Job } from "bullmq";
 import IORedis from "ioredis";
 import postgres from "postgres";
-import { and, desc, eq, inArray, like } from "drizzle-orm";
+import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import {
   type JobKind,
@@ -544,13 +543,15 @@ async function enqueueLibraryRootJob(
 
 async function enqueueGalleryRootJob(
   root: { id: string; label: string },
-  trigger: QueueTrigger = {}
+  trigger: QueueTrigger = {},
+  opts?: { sfwOnly?: boolean }
 ) {
   await enqueueJobIfNeeded({
     queueName: "gallery-scan",
     jobName: "gallery-root-scan",
     data: {
       libraryRootId: root.id,
+      ...(opts?.sfwOnly ? { sfwOnly: true } : {}),
     },
     target: {
       type: "library-root",
@@ -629,6 +630,8 @@ async function processLibraryScan(job: Job) {
     await db.delete(scenes).where(inArray(scenes.id, staleSceneIds));
   }
 
+  const gallerySfwOpts = Boolean(job.data.sfwOnly) ? { sfwOnly: true as const } : undefined;
+
   if (files.length === 0) {
     await db
       .update(libraryRoots)
@@ -638,10 +641,14 @@ async function processLibraryScan(job: Job) {
     // Still trigger gallery scan even if no video files were found
     const scanImages = root.scanImages ?? true;
     if (scanImages) {
-      await enqueueGalleryRootJob(root, {
-        by: "library-scan",
-        label: `Queued during ${root.label} scan`,
-      });
+      await enqueueGalleryRootJob(
+        root,
+        {
+          by: "library-scan",
+          label: `Queued during ${root.label} scan`,
+        },
+        gallerySfwOpts
+      );
     }
     return;
   }
@@ -730,7 +737,16 @@ async function processLibraryScan(job: Job) {
     // Propagate isNsfw: library root flag takes precedence, then relation-based
     await propagateSceneNsfw(scene.id, root.isNsfw);
 
+    const sfwOnly = Boolean(job.data.sfwOnly);
+    const [nsfwRow] = await db
+      .select({ isNsfw: scenes.isNsfw })
+      .from(scenes)
+      .where(eq(scenes.id, scene.id))
+      .limit(1);
+    const skipHeavySceneJobs = sfwOnly && Boolean(nsfwRow?.isNsfw);
+
     if (
+      !skipHeavySceneJobs &&
       settings.autoGenerateMetadata &&
       (!scene.duration || !scene.width || !scene.codec)
     ) {
@@ -741,6 +757,7 @@ async function processLibraryScan(job: Job) {
     }
 
     if (
+      !skipHeavySceneJobs &&
       settings.autoGenerateFingerprints &&
       (!scene.checksumMd5 || !scene.oshash)
     ) {
@@ -756,7 +773,11 @@ async function processLibraryScan(job: Job) {
         !hasCustomThumb && (!scene.thumbnailPath || !scene.cardThumbnailPath);
       const isMissingDerivedAssets = !scene.previewPath || !scene.spritePath || !scene.trickplayVttPath;
 
-      if (settings.autoGeneratePreview && (isMissingGeneratedThumbnail || isMissingDerivedAssets)) {
+      if (
+        !skipHeavySceneJobs &&
+        settings.autoGeneratePreview &&
+        (isMissingGeneratedThumbnail || isMissingDerivedAssets)
+      ) {
         await enqueuePendingSceneJob("preview", scene.id, {
           by: "library-scan",
           label: `Queued during ${root.label} scan`,
@@ -779,10 +800,14 @@ async function processLibraryScan(job: Job) {
   // Trigger gallery scan if this root has image scanning enabled
   const scanImages = root.scanImages ?? true;
   if (scanImages) {
-    await enqueueGalleryRootJob(root, {
-      by: "library-scan",
-      label: `Queued during ${root.label} scan`,
-    });
+    await enqueueGalleryRootJob(
+      root,
+      {
+        by: "library-scan",
+        label: `Queued during ${root.label} scan`,
+      },
+      gallerySfwOpts
+    );
   }
 }
 
@@ -1217,7 +1242,27 @@ async function processMetadataImport(job: Job) {
 
 // ─── Gallery Scan ──────────────────────────────────────────────────
 
+async function shouldSkipGalleryDerivedJobs(
+  sfwOnly: boolean,
+  galleryId: string,
+  imageId: string
+): Promise<boolean> {
+  if (!sfwOnly) return false;
+  const [g] = await db
+    .select({ isNsfw: galleries.isNsfw })
+    .from(galleries)
+    .where(eq(galleries.id, galleryId))
+    .limit(1);
+  const [img] = await db
+    .select({ isNsfw: images.isNsfw })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+  return Boolean(g?.isNsfw || img?.isNsfw);
+}
+
 async function processGalleryScan(job: Job) {
+  const sfwOnly = Boolean(job.data.sfwOnly);
   const libraryRootId = String(job.data.libraryRootId);
   const [root] = await db
     .select()
@@ -1428,16 +1473,20 @@ async function processGalleryScan(job: Job) {
       }
 
       if (needsThumbnail) {
-        await enqueuePendingImageJob("image-thumbnail", imageId, {
-          by: "gallery-scan",
-          label: `Queued during ${root.label} gallery scan`,
-        });
+        if (!(await shouldSkipGalleryDerivedJobs(sfwOnly, galleryId, imageId))) {
+          await enqueuePendingImageJob("image-thumbnail", imageId, {
+            by: "gallery-scan",
+            label: `Queued during ${root.label} gallery scan`,
+          });
+        }
       }
       if (!existingImage && settings.autoGenerateFingerprints) {
-        await enqueuePendingImageJob("image-fingerprint", imageId, {
-          by: "gallery-scan",
-          label: `Queued during ${root.label} gallery scan`,
-        });
+        if (!(await shouldSkipGalleryDerivedJobs(sfwOnly, galleryId, imageId))) {
+          await enqueuePendingImageJob("image-fingerprint", imageId, {
+            by: "gallery-scan",
+            label: `Queued during ${root.label} gallery scan`,
+          });
+        }
       }
     }
 
@@ -1518,11 +1567,16 @@ async function processGalleryScan(job: Job) {
           .returning({ id: images.id });
 
         needsThumbnail = true;
-        await enqueuePendingImageJob("image-thumbnail", created.id, {
-          by: "gallery-scan",
-          label: `Queued during ${root.label} gallery scan`,
-        });
-        if (settings.autoGenerateFingerprints) {
+        if (!(await shouldSkipGalleryDerivedJobs(sfwOnly, galleryId, created.id))) {
+          await enqueuePendingImageJob("image-thumbnail", created.id, {
+            by: "gallery-scan",
+            label: `Queued during ${root.label} gallery scan`,
+          });
+        }
+        if (
+          settings.autoGenerateFingerprints &&
+          !(await shouldSkipGalleryDerivedJobs(sfwOnly, galleryId, created.id))
+        ) {
           await enqueuePendingImageJob("image-fingerprint", created.id, {
             by: "gallery-scan",
             label: `Queued during ${root.label} gallery scan`,
@@ -1543,10 +1597,12 @@ async function processGalleryScan(job: Job) {
         const isZipVideoFormat = [".mp4", ".m4v", ".mkv", ".mov", ".webm", ".avi", ".wmv", ".flv"].includes(zipMemberExt);
         if (!imgRow?.thumbnailPath ||
             (isZipVideoFormat && !existsSync(path.join(getGeneratedImageDir(existingImage.id), "preview.mp4")))) {
-          await enqueuePendingImageJob("image-thumbnail", existingImage.id, {
-            by: "gallery-scan",
-            label: `Queued during ${root.label} gallery scan`,
-          });
+          if (!(await shouldSkipGalleryDerivedJobs(sfwOnly, galleryId, existingImage.id))) {
+            await enqueuePendingImageJob("image-thumbnail", existingImage.id, {
+              by: "gallery-scan",
+              label: `Queued during ${root.label} gallery scan`,
+            });
+          }
         }
       }
     }

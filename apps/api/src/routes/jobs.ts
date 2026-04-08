@@ -1,6 +1,6 @@
 import { existsSync, unlinkSync } from "node:fs";
-import type { FastifyInstance } from "fastify";
-import { and, asc, desc, eq, inArray, isNull, like, not, or, sql } from "drizzle-orm";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { and, asc, desc, eq, inArray, isNull, like, ne, not, or, sql, type SQL } from "drizzle-orm";
 import {
   queueDefinitions,
   type JobKind,
@@ -31,6 +31,26 @@ type QueueTrigger = {
   kind?: JobKind;
   label?: string | null;
 };
+
+/** SFW-only job runs: skip NSFW-marked entities (matches web NSFW mode `off`). */
+function readSfwOnly(request: FastifyRequest): boolean {
+  const body = request.body as { nsfw?: string } | undefined;
+  if (body && typeof body === "object" && body.nsfw === "off") {
+    return true;
+  }
+  const raw = request.headers["x-obscura-nsfw-mode"];
+  const headerVal = Array.isArray(raw) ? raw[0] : raw;
+  return headerVal === "off";
+}
+
+function scenesSfwFilter(sfwOnly: boolean): SQL | undefined {
+  return sfwOnly ? ne(scenes.isNsfw, true) : undefined;
+}
+
+function andSceneSfw(base: SQL, sfwOnly: boolean): SQL {
+  const sfw = scenesSfwFilter(sfwOnly);
+  return sfw ? and(base, sfw)! : base;
+}
 
 function getQueueDefinition(queueName: QueueName) {
   return queueDefinitions.find((definition) => definition.name === queueName)!;
@@ -145,7 +165,7 @@ async function enqueueQueueJob(input: {
   return job;
 }
 
-async function enqueueLibraryScans(trigger: QueueTrigger = {}) {
+async function enqueueLibraryScans(trigger: QueueTrigger = {}, sfwOnly = false) {
   const roots = await db
     .select()
     .from(libraryRoots)
@@ -163,6 +183,7 @@ async function enqueueLibraryScans(trigger: QueueTrigger = {}) {
         libraryRootId: root.id,
         path: root.path,
         recursive: root.recursive,
+        ...(sfwOnly ? { sfwOnly: true } : {}),
       },
       target: {
         type: "library-root",
@@ -182,39 +203,52 @@ async function enqueueLibraryScans(trigger: QueueTrigger = {}) {
   return { jobIds: createdJobIds, skipped };
 }
 
-async function enqueueMissingSceneJobs(queueName: QueueName, trigger: QueueTrigger = {}) {
+async function enqueueMissingSceneJobs(
+  queueName: QueueName,
+  trigger: QueueTrigger = {},
+  sfwOnly = false
+) {
   let sceneRows: Array<{ id: string; title: string }> = [];
 
   if (queueName === "media-probe") {
     sceneRows = await db
       .select({ id: scenes.id, title: scenes.title })
       .from(scenes)
-      .where(or(isNull(scenes.duration), isNull(scenes.width), isNull(scenes.codec))!);
+      .where(
+        andSceneSfw(or(isNull(scenes.duration), isNull(scenes.width), isNull(scenes.codec))!, sfwOnly)
+      );
   } else if (queueName === "fingerprint") {
     sceneRows = await db
       .select({ id: scenes.id, title: scenes.title })
       .from(scenes)
-      .where(or(isNull(scenes.checksumMd5), isNull(scenes.oshash))!);
+      .where(andSceneSfw(or(isNull(scenes.checksumMd5), isNull(scenes.oshash))!, sfwOnly));
   } else if (queueName === "preview") {
     sceneRows = await db
       .select({ id: scenes.id, title: scenes.title })
       .from(scenes)
       .where(
-        or(
-          isNull(scenes.previewPath),
-          isNull(scenes.spritePath),
-          isNull(scenes.trickplayVttPath),
-          and(
-            or(isNull(scenes.thumbnailPath), not(like(scenes.thumbnailPath, "%thumb-custom%"))),
-            or(isNull(scenes.thumbnailPath), isNull(scenes.cardThumbnailPath))
-          )
-        )!
+        andSceneSfw(
+          or(
+            isNull(scenes.previewPath),
+            isNull(scenes.spritePath),
+            isNull(scenes.trickplayVttPath),
+            and(
+              or(isNull(scenes.thumbnailPath), not(like(scenes.thumbnailPath, "%thumb-custom%"))),
+              or(isNull(scenes.thumbnailPath), isNull(scenes.cardThumbnailPath))
+            )
+          )!,
+          sfwOnly
+        )
       );
   } else if (queueName === "metadata-import") {
-    sceneRows = await db
-      .select({ id: scenes.id, title: scenes.title })
-      .from(scenes)
-      .limit(25);
+    const sfw = scenesSfwFilter(sfwOnly);
+    sceneRows = sfw
+      ? await db
+          .select({ id: scenes.id, title: scenes.title })
+          .from(scenes)
+          .where(sfw)
+          .limit(25)
+      : await db.select({ id: scenes.id, title: scenes.title }).from(scenes).limit(25);
   }
 
   const createdJobIds: string[] = [];
@@ -436,16 +470,25 @@ export async function jobsRoutes(app: FastifyInstance) {
       return { error: "Unknown queue" };
     }
 
+    const sfwOnly = readSfwOnly(request);
+
     const result =
       queueName === "library-scan"
-        ? await enqueueLibraryScans({
-            by: "manual",
-            label: "Started from Operations",
-          })
-        : await enqueueMissingSceneJobs(queueName, {
-            by: "manual",
-            label: "Started from Operations",
-          });
+        ? await enqueueLibraryScans(
+            {
+              by: "manual",
+              label: "Started from Operations",
+            },
+            sfwOnly
+          )
+        : await enqueueMissingSceneJobs(
+            queueName,
+            {
+              by: "manual",
+              label: "Started from Operations",
+            },
+            sfwOnly
+          );
 
     return {
       ok: true,
@@ -525,14 +568,20 @@ export async function jobsRoutes(app: FastifyInstance) {
   // ─── Diagnostics: force-rebuild previews ──────────────────────
   app.post("/jobs/rebuild-preview/:sceneId", async (request, reply) => {
     const { sceneId } = request.params as { sceneId: string };
+    const sfwOnly = readSfwOnly(request);
     const scene = await db.query.scenes.findFirst({
       where: eq(scenes.id, sceneId),
-      columns: { id: true, title: true, filePath: true },
+      columns: { id: true, title: true, filePath: true, isNsfw: true },
     });
 
     if (!scene) {
       reply.code(404);
       return { error: "Scene not found" };
+    }
+
+    if (sfwOnly && scene.isNsfw) {
+      reply.code(409);
+      return { error: "Preview rebuild is not available for NSFW content in SFW mode" };
     }
 
     // Delete existing sidecar files so stale assets aren't served
@@ -582,24 +631,32 @@ export async function jobsRoutes(app: FastifyInstance) {
     return { ok: true, jobId: String(job.id) };
   });
 
-  app.post("/jobs/rebuild-previews", async (_request, reply) => {
-    // Clear all generated preview asset paths so every scene is re-queued
-    await db
-      .update(scenes)
-      .set({
-        thumbnailPath: null,
-        cardThumbnailPath: null,
-        previewPath: null,
-        spritePath: null,
-        trickplayVttPath: null,
-        updatedAt: new Date(),
-      });
+  app.post("/jobs/rebuild-previews", async (request) => {
+    const sfwOnly = readSfwOnly(request);
+    const clearSet = {
+      thumbnailPath: null as null,
+      cardThumbnailPath: null as null,
+      previewPath: null as null,
+      spritePath: null as null,
+      trickplayVttPath: null as null,
+      updatedAt: new Date(),
+    };
 
-    const result = await enqueueMissingSceneJobs("preview", {
-      by: "manual",
-      kind: "force-rebuild",
-      label: "Force rebuild previews from Operations",
-    });
+    if (sfwOnly) {
+      await db.update(scenes).set(clearSet).where(ne(scenes.isNsfw, true));
+    } else {
+      await db.update(scenes).set(clearSet);
+    }
+
+    const result = await enqueueMissingSceneJobs(
+      "preview",
+      {
+        by: "manual",
+        kind: "force-rebuild",
+        label: "Force rebuild previews from Operations",
+      },
+      sfwOnly
+    );
 
     return {
       ok: true,

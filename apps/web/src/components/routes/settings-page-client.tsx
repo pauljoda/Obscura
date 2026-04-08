@@ -240,7 +240,7 @@ export function SettingsPageClient({
       setNewRootIsNsfw(false);
       setBrowserVisible(false);
       await loadConfig();
-      await runQueue("library-scan");
+      await runQueue("library-scan", nsfwMode);
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : "Failed to add library root");
     } finally {
@@ -282,7 +282,7 @@ export function SettingsPageClient({
 
   async function handleRunScan() {
     try {
-      const response = await runQueue("library-scan");
+      const response = await runQueue("library-scan", nsfwMode);
       setMessage(`Queued ${response.enqueued} library scan job${response.enqueued === 1 ? "" : "s"}.`);
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Failed to queue scan");
@@ -1086,12 +1086,13 @@ export function SettingsPageClient({
 function DiagnosticsSection() {
   const [rebuilding, setRebuilding] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const { mode: nsfwMode } = useNsfw();
 
   const handleRebuildPreviews = async () => {
     setRebuilding(true);
     setResult(null);
     try {
-      const res = await rebuildPreviews();
+      const res = await rebuildPreviews(nsfwMode);
       setResult(
         `Queued ${res.enqueued} scene${res.enqueued === 1 ? "" : "s"} for forced preview regeneration`
       );
