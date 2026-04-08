@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **SFW / full NSFW quick toggle** — **Ctrl+Shift+U** (Windows/Linux) or **⌘⇧U** (Mac) toggles between **Off** (SFW) and **Show** (full NSFW) only; **Blur** is unchanged by the shortcut (first press from blur switches to Show). Same window capture pattern as global search (**⌘⇧Z** / **Ctrl+Shift+Z**). Header control shows state (SFW / Blur / NSFW) and the shortcut hint; Settings → Content Visibility documents both combos.
+- **SFW / full NSFW quick toggle (keyboard-only)** — **Ctrl+Shift+Z** (Windows/Linux) or **⌘⇧Z** (Mac) toggles between **Off** (SFW) and **Show** (full NSFW) only; **Blur** is unchanged by the shortcut (first press from blur switches to Show). Uses the same window capture pattern as global search. No header button; Settings → Content Visibility documents the combo as a power-user tip alongside **⌘K** / **Ctrl+K** for search.
 
 - **NSFW tag labels in blur mode** — New `NsfwTagLabel` shows garbled block glyphs plus a light blur for tags marked `isNsfw` when global mode is **Blur**; hover reveals the real name (same **Show** / **Off** rules as `NsfwBlur`). Embedded tags on scenes, images, galleries, and performer detail now include `isNsfw` via `TagEmbedDto` in `@obscura/contracts` and API list/detail payloads. `MediaCard` accepts an optional `tagsSlot` so scene grid cards can render obscured tags. Helper `tagsVisibleInNsfwMode` omits NSFW tags from chip rows, filters, and tag browse in **SFW (off)** so safe tags show real names without empty pills; **Show** lists everything with plain text for non-NSFW tags; only `isNsfw === true` is treated as NSFW. Tag detail uses a non-leaking title when the tag is hidden in SFW mode.
 
@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- **Global search palette** — Removed the header Search button; the palette is opened only via **⌘⇧Z** (Mac) or **Ctrl+Shift+Z** (Windows/Linux), documented as a power-user tip under Settings → Content Visibility. Shortcut still uses capture phase on `window` with `KeyZ` matching. NSFW mode is still passed through to search when the palette opens.
+- **Global search palette** — Header Search control and **⌘K** / **Ctrl+K** shortcut restored (capture phase on `window`, `KeyK` matching). NSFW mode is still passed through to search when the palette opens.
 
 - **NSFW blur overlay** — The centered badge uses theme `error` / `error-text` / `error-muted` tokens (the previous `status-error` utilities are not defined in `@theme`, so the label did not pick up red). `NsfwChip` and `NsfwEditToggle` use the same tokens for consistency.
 
@@ -42,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Job Control: Backlog stat now sums per-queue Redis counts instead of capping at 24 (the `activeJobs` list limit)
 - **SFW-aware job queueing** — When NSFW mode is Off, manual job triggers from the UI send `nsfw: "off"` so the API and worker skip work for content already marked `isNsfw`: library scans still upsert DB rows but omit probe/fingerprint/preview jobs for NSFW scenes and omit image thumbnail/fingerprint jobs for NSFW galleries/images; “Run queue” for media-probe, fingerprint, preview, and metadata-import only enqueues SFW scenes; bulk preview rebuild clears and re-queues previews only for SFW scenes; per-scene preview rebuild returns 409 for NSFW scenes in SFW mode. Scheduled/auto scans are unchanged and still process the full library.
 - **SFW library stats** — With NSFW mode Off, dashboard and scenes info cards (totals, duration, storage, this week) and the scenes list count now match visible SFW-only content: `GET /scenes` and `GET /scenes/stats` accept `nsfw=off` to exclude `isNsfw` scenes from aggregates (same contract as search). SSR reads the mode cookie; the dashboard and scenes pages refetch stats when the mode changes.
-- **Command palette search** — The quick-search palette (⌘⇧Z / Ctrl+Shift+Z) passes the current NSFW mode to the search API, matching the full search page (SFW mode excludes NSFW entities from preview results).
+- **Command palette search** — The quick-search palette (⌘K / Ctrl+K) passes the current NSFW mode to the search API, matching the full search page (SFW mode excludes NSFW entities from preview results).
 
 ### Added
 

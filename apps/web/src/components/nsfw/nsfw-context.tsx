@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { isModShiftU } from "../../lib/nsfw-hotkey";
+import { isModShiftZ } from "../../lib/nsfw-hotkey";
 
 export type NsfwMode = "off" | "blur" | "show";
 
@@ -75,12 +75,12 @@ export function NsfwProvider({ children, initialMode = "off", lanAutoEnable = fa
     });
   }, []);
 
-  // Global shortcut: same capture-window pattern as the search palette (⌘⇧Z / Ctrl+Shift+Z).
+  // Global shortcut: capture on window (⌘⇧Z / Ctrl+Shift+Z), same pattern as search (⌘K).
   useEffect(() => {
     if (!initialized) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (!isModShiftU(e)) return;
+      if (!isModShiftZ(e)) return;
       e.preventDefault();
       e.stopPropagation();
       toggleShowOffMode();

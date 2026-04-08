@@ -1,7 +1,6 @@
-/** True when Cmd/Ctrl + Shift + U (physical KeyU), for SFW ↔ NSFW quick toggle. */
-export function isModShiftU(e: KeyboardEvent): boolean {
+/** True when Cmd/Ctrl + Shift + Z (physical KeyZ), for SFW ↔ full NSFW quick toggle. */
+export function isModShiftZ(e: KeyboardEvent): boolean {
   if (!e.metaKey && !e.ctrlKey) return false;
-  if (!e.shiftKey) return false;
-  if (e.altKey) return false;
-  return e.code === "KeyU" || e.key?.toLowerCase() === "u";
+  if (!e.shiftKey || e.altKey) return false;
+  return e.code === "KeyZ" || e.key?.toLowerCase() === "z";
 }

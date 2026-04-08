@@ -1034,10 +1034,7 @@ export function SettingsPageClient({
               <option value="show">Show — display all content normally</option>
             </select>
             <p className="mt-1.5 text-[0.65rem] text-text-disabled">
-              Stored per device. Does not affect stored data. Quick toggle (full SFW ↔ full NSFW, skips blur):{" "}
-              <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">Ctrl+Shift+U</kbd>{" "}
-              or <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">⌘⇧U</kbd> on Mac — shown in
-              the header.
+              Stored per device. Does not affect stored data.
             </p>
           </div>
           <ToggleCard
@@ -1051,14 +1048,19 @@ export function SettingsPageClient({
           />
         </div>
         <p className="surface-well px-3 py-2.5 text-[0.65rem] text-text-muted leading-relaxed">
-          <span className="text-text-disabled">Power-user tip:</span> the global search palette is not on the toolbar.
-          Open it with{" "}
+          <span className="text-text-disabled">Power-user tip:</span> quick toggle between full SFW and full NSFW (skips
+          blur; first press from blur goes to Show) with no toolbar button:{" "}
           <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">⌘⇧Z</kbd> on
           Mac or{" "}
           <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
             Ctrl+Shift+Z
           </kbd>{" "}
-          elsewhere (one-hand friendly on Mac).
+          elsewhere. Global search stays on the header and also opens with{" "}
+          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">⌘K</kbd> /{" "}
+          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
+            Ctrl+K
+          </kbd>
+          .
         </p>
       </section>
 

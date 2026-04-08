@@ -1,11 +1,11 @@
 "use client";
 
-import { Eye, EyeOff, Settings } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { useNsfw } from "./nsfw/nsfw-context";
+import { useSearchPalette } from "./search/search-context";
 import { entityTerms } from "../lib/terminology";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,14 +38,12 @@ function getBreadcrumbs(pathname: string) {
 export function CanvasHeader() {
   const pathname = usePathname();
   const crumbs = getBreadcrumbs(pathname);
-  const { mode: nsfwMode, toggleShowOffMode } = useNsfw();
+  const { openPalette } = useSearchPalette();
   const [appleMod, setAppleMod] = useState(false);
   useEffect(() => {
     setAppleMod(typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent));
   }, []);
-  const nsfwShortcutKbd = appleMod ? "⌘⇧U" : "Ctrl+Shift+U";
-  const nsfwFullOn = nsfwMode === "show";
-  const nsfwHeaderLabel = nsfwMode === "show" ? "NSFW" : nsfwMode === "off" ? "SFW" : "Blur";
+  const searchShortcutKbd = appleMod ? "⌘K" : "Ctrl+K";
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border-subtle px-5">
@@ -78,34 +76,20 @@ export function CanvasHeader() {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={toggleShowOffMode}
+          onClick={openPalette}
           className={cn(
             "flex items-center gap-2 px-3 py-1.5",
             "surface-well text-mono-sm",
-            "hover:text-text-primary hover:border-border-accent",
+            "text-text-muted hover:text-text-primary hover:border-border-accent",
             "transition-colors duration-fast cursor-pointer select-none",
-            nsfwFullOn
-              ? "text-text-primary border-border-accent"
-              : nsfwMode === "blur"
-                ? "text-text-muted border-border-subtle"
-                : "text-text-muted",
           )}
-          aria-label={
-            nsfwMode === "show"
-              ? "Switch to SFW mode (hide adult content)"
-              : "Switch to full NSFW mode (show all content)"
-          }
-          aria-pressed={nsfwFullOn}
-          title={`Toggle SFW and full NSFW (${nsfwShortcutKbd}). Skips blur; set blur only in Settings.`}
+          aria-label="Open search"
+          title={`Search (${searchShortcutKbd})`}
         >
-          {nsfwMode === "off" ? (
-            <EyeOff className="h-3.5 w-3.5" />
-          ) : (
-            <Eye className="h-3.5 w-3.5" />
-          )}
-          <span className="hidden sm:inline text-text-disabled">{nsfwHeaderLabel}</span>
+          <Search className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline text-text-disabled">Search</span>
           <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border-subtle px-1.5 text-[0.6rem] text-text-disabled">
-            {nsfwShortcutKbd}
+            {searchShortcutKbd}
           </kbd>
         </button>
         <Link
