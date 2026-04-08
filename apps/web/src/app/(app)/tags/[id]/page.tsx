@@ -65,8 +65,8 @@ export default function TagPage({ params }: TagPageProps) {
     setLoading(true);
     try {
       const [scenesRes, tagsRes] = await Promise.all([
-        fetchScenes({ tag: [tagName], limit: 100 }),
-        fetchTags(),
+        fetchScenes({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
+        fetchTags({ nsfw: nsfwMode }),
       ]);
       setScenes(scenesRes.scenes);
       setTotal(scenesRes.total);
@@ -74,15 +74,17 @@ export default function TagPage({ params }: TagPageProps) {
       // Resolve tag name to UUID, then fetch full detail
       const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
       if (match) {
-        const detail = await fetchTagDetail(match.id);
+        const detail = await fetchTagDetail(match.id, { nsfw: nsfwMode });
         setTagDetail(detail);
+      } else {
+        setTagDetail(null);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [tagName]);
+  }, [tagName, nsfwMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -118,7 +120,7 @@ export default function TagPage({ params }: TagPageProps) {
     setUploadingImage(true);
     try {
       await uploadTagImage(tagDetail.id, file);
-      const updated = await fetchTagDetail(tagDetail.id);
+      const updated = await fetchTagDetail(tagDetail.id, { nsfw: nsfwMode });
       setTagDetail(updated);
     } catch { /* ignore */ }
     finally { setUploadingImage(false); }
@@ -129,7 +131,7 @@ export default function TagPage({ params }: TagPageProps) {
     setUploadingImage(true);
     try {
       await deleteTagImage(tagDetail.id);
-      const updated = await fetchTagDetail(tagDetail.id);
+      const updated = await fetchTagDetail(tagDetail.id, { nsfw: nsfwMode });
       setTagDetail(updated);
     } catch { /* ignore */ }
     finally { setUploadingImage(false); }

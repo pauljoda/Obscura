@@ -409,9 +409,9 @@ export function SceneEdit({
     Promise.all([
       fetchSceneDetail(id),
       fetchInstalledScrapers(),
-      fetchTags(),
-      fetchPerformers(),
-      fetchStudios(),
+      fetchTags({ nsfw: nsfwMode }),
+      fetchPerformers({ nsfw: nsfwMode, limit: 100 }),
+      fetchStudios({ nsfw: nsfwMode }),
     ])
       .then(([sceneData, scrapersData, tagsData, performersData, studiosData]) => {
         setScene(sceneData);
@@ -427,7 +427,7 @@ export function SceneEdit({
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, nsfwMode]);
 
   function populateForm(data: SceneDetail) {
     setTitle(data.title);
@@ -485,9 +485,9 @@ export function SceneEdit({
 
       // Refresh autocomplete data
       const [tagsData, performersData, studiosData] = await Promise.all([
-        fetchTags(),
-        fetchPerformers(),
-        fetchStudios(),
+        fetchTags({ nsfw: nsfwMode }),
+        fetchPerformers({ nsfw: nsfwMode, limit: 100 }),
+        fetchStudios({ nsfw: nsfwMode }),
       ]);
       setAllTags(tagsData.tags);
       setAllPerformers(performersData.performers);
@@ -803,7 +803,9 @@ export function SceneEdit({
   }
 
   // Studio autocomplete
-  const studioSuggestions = allStudios.map((s) => ({ name: s.name }));
+  const studioSuggestions = tagsVisibleInNsfwMode(allStudios, nsfwMode).map((s) => ({
+    name: s.name,
+  }));
   const filteredStudios = studioFocused
     ? (studioName.trim()
         ? studioSuggestions.filter(
@@ -1221,7 +1223,7 @@ export function SceneEdit({
               <ChipInput
                 values={performerNames}
                 onChange={setPerformerNames}
-                suggestions={allPerformers.map((p) => ({
+                suggestions={tagsVisibleInNsfwMode(allPerformers, nsfwMode).map((p) => ({
                   name: p.name,
                   count: p.sceneCount,
                 }))}
@@ -1234,7 +1236,7 @@ export function SceneEdit({
               <ChipInput
                 values={tagNames}
                 onChange={setTagNames}
-                suggestions={allTags.map((t) => ({
+                suggestions={tagsVisibleInNsfwMode(allTags, nsfwMode).map((t) => ({
                   name: t.name,
                   count: t.sceneCount,
                 }))}

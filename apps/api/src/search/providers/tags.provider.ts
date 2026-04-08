@@ -1,5 +1,5 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, count } from "drizzle-orm";
+import { ilike, or, sql, and, gte, count, ne } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 
 const { tags } = schema;
@@ -20,6 +20,7 @@ export const tagsSearchProvider: SearchProvider = {
 
     const conditions = [matchCondition];
     if (filters.rating) conditions.push(gte(tags.rating, filters.rating));
+    if (filters.nsfw === "off") conditions.push(ne(tags.isNsfw, true));
 
     const where = and(...conditions);
 

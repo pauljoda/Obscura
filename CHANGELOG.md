@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **SFW mode for actors, studios, tags, and search** — With `nsfw=off`, `GET /performers`, `/studios`, and `/tags` omit NSFW entities and return scene/image counts that only include viewable (non-NSFW) media; performer list sorting by video count uses those counts. Tag and studio search providers apply the same filter. Scene grid/list cards drop NSFW actor thumbnails and names in SFW mode; video edit relation autocompletes and scene detail marker tag data use SFW-filtered fetches. Direct API access to an NSFW performer or studio in SFW mode returns 404. Clients refetch lists when the global NSFW mode changes.
+
 - **Image lightbox fit** — Full-size images and videos in the lightbox again scale with `object-contain` inside the viewport. The media area uses `min-h-0`/`min-w-0` in the column flex layout, and the `NsfwBlur` stack fills that area so `max-h-full`/`max-w-full` resolve against a definite box instead of collapsing to intrinsic media size.
 
 - **Video player quality switching locked to Direct** — Switching to Auto or a specific resolution was silently reverted immediately. The source `useEffect` reset `qualityMode`/`streamMode` on every run, including when `streamMode` changed as a result of the user's selection, creating a feedback loop. Fix: quality state is now only reset when the video source (`src`/`directSrc`) changes; mode switches by the user are preserved and HLS initialises correctly.

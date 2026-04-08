@@ -1,12 +1,21 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, and } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, and, ne } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
 import { getGeneratedPerformerDir } from "@obscura/media-core";
 
-const { performers, performerTags, scenePerformers, tags } = schema;
+const { performers, performerTags, scenePerformers, tags, scenes } = schema;
+
+/** Count of scenes viewable in SFW mode (non-NSFW scenes) for this performer row. */
+const sfwPerformerSceneCountExpr = sql<number>`(
+  SELECT COUNT(*)::int
+  FROM scene_performers sp
+  INNER JOIN scenes s ON s.id = sp.scene_id
+  WHERE sp.performer_id = ${performers.id}
+    AND (s.is_nsfw IS NOT TRUE)
+)`;
 
 export async function performersRoutes(app: FastifyInstance) {
   // ─── GET /performers ────────────────────────────────────────────
@@ -20,13 +29,20 @@ export async function performersRoutes(app: FastifyInstance) {
       country?: string;
       limit?: string;
       offset?: string;
+      /** When `off`, omit NSFW actors and use SFW-only scene counts. */
+      nsfw?: string;
     };
 
     const limit = Math.min(Number(query.limit) || 50, 100);
     const offset = Number(query.offset) || 0;
+    const sfwOnly = query.nsfw === "off";
 
     // Build WHERE conditions
     const conditions = [];
+
+    if (sfwOnly) {
+      conditions.push(ne(performers.isNsfw, true));
+    }
 
     if (query.search) {
       const term = `%${query.search}%`;
@@ -53,6 +69,8 @@ export async function performersRoutes(app: FastifyInstance) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const sceneCountSelect = sfwOnly ? sfwPerformerSceneCountExpr : performers.sceneCount;
+
     // Sorting
     const sortDir = query.order === "asc" ? asc : desc;
     const sortAsc = query.order === "asc" ? asc : null;
@@ -62,7 +80,11 @@ export async function performersRoutes(app: FastifyInstance) {
         orderBy = (sortAsc ?? asc)(performers.name);
         break;
       case "scenes":
-        orderBy = sortDir(performers.sceneCount);
+        orderBy = sfwOnly
+          ? query.order === "asc"
+            ? asc(sfwPerformerSceneCountExpr)
+            : desc(sfwPerformerSceneCountExpr)
+          : sortDir(performers.sceneCount);
         break;
       case "rating":
         orderBy = sortDir(performers.rating);
@@ -84,7 +106,7 @@ export async function performersRoutes(app: FastifyInstance) {
           favorite: performers.favorite,
           rating: performers.rating,
           isNsfw: performers.isNsfw,
-          sceneCount: performers.sceneCount,
+          sceneCount: sceneCountSelect,
           country: performers.country,
           createdAt: performers.createdAt,
         })
@@ -113,6 +135,9 @@ export async function performersRoutes(app: FastifyInstance) {
   // ─── GET /performers/:id ────────────────────────────────────────
   app.get("/performers/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
+    const q = request.query as { nsfw?: string };
+    const sfwOnly = q.nsfw === "off";
+
     const row = await db.query.performers.findFirst({
       where: eq(performers.id, id),
       with: {
@@ -125,6 +150,21 @@ export async function performersRoutes(app: FastifyInstance) {
     if (!row) {
       reply.code(404);
       return { error: "Actor not found" };
+    }
+
+    if (sfwOnly && row.isNsfw) {
+      reply.code(404);
+      return { error: "Actor not found" };
+    }
+
+    let sceneCount = row.sceneCount;
+    if (sfwOnly) {
+      const [cnt] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(scenePerformers)
+        .innerJoin(scenes, eq(scenes.id, scenePerformers.sceneId))
+        .where(and(eq(scenePerformers.performerId, id), ne(scenes.isNsfw, true)));
+      sceneCount = Number(cnt?.n ?? 0);
     }
 
     return {
@@ -151,7 +191,7 @@ export async function performersRoutes(app: FastifyInstance) {
       favorite: row.favorite,
       rating: row.rating,
       isNsfw: row.isNsfw,
-      sceneCount: row.sceneCount,
+      sceneCount,
       tags: row.performerTags.map((pt) => ({
         id: pt.tag.id,
         name: pt.tag.name,

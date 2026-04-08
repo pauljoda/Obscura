@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, inArray, and, ne } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, inArray, and, ne, isNotNull } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
@@ -14,7 +14,8 @@ import {
   runProcess,
 } from "@obscura/media-core";
 
-const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios } = schema;
+const { scenes, scenePerformers, sceneTags, sceneMarkers, performers, tags, studios, images, imageTags } =
+  schema;
 
 export async function scenesRoutes(app: FastifyInstance) {
   // ─── GET /scenes ──────────────────────────────────────────────
@@ -757,11 +758,31 @@ export async function scenesRoutes(app: FastifyInstance) {
   });
 
   // ─── GET /studios ────────────────────────────────────────────
-  app.get("/studios", async () => {
+  app.get("/studios", async (request) => {
+    const q = request.query as { nsfw?: string };
+    const sfwOnly = q.nsfw === "off";
+
     const rows = await db
       .select()
       .from(studios)
+      .where(sfwOnly ? ne(studios.isNsfw, true) : undefined)
       .orderBy(asc(studios.name));
+
+    let sfwSceneByStudio = new Map<string, number>();
+    if (sfwOnly) {
+      const agg = await db
+        .select({
+          studioId: scenes.studioId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(scenes)
+        .where(and(isNotNull(scenes.studioId), ne(scenes.isNsfw, true)))
+        .groupBy(scenes.studioId);
+      sfwSceneByStudio = new Map(
+        agg.filter((r) => r.studioId != null).map((r) => [r.studioId!, Number(r.cnt)]),
+      );
+    }
+
     return {
       studios: rows.map((r) => ({
         id: r.id,
@@ -775,7 +796,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         favorite: r.favorite,
         rating: r.rating,
         isNsfw: r.isNsfw,
-        sceneCount: r.sceneCount,
+        sceneCount: sfwOnly ? (sfwSceneByStudio.get(r.id) ?? 0) : r.sceneCount,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       })),
@@ -785,12 +806,15 @@ export async function scenesRoutes(app: FastifyInstance) {
   // ─── GET /studios/:id ─────────────────────────────────────────
   app.get("/studios/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
+    const q = request.query as { nsfw?: string };
+    const sfwOnly = q.nsfw === "off";
+
     const row = await db.query.studios.findFirst({
       where: eq(studios.id, id),
       with: {
         parent: { columns: { id: true, name: true, imagePath: true, imageUrl: true } },
         children: {
-          columns: { id: true, name: true, imagePath: true, imageUrl: true, sceneCount: true },
+          columns: { id: true, name: true, imagePath: true, imageUrl: true, sceneCount: true, isNsfw: true },
           orderBy: asc(studios.name),
         },
       },
@@ -799,6 +823,36 @@ export async function scenesRoutes(app: FastifyInstance) {
       reply.code(404);
       return { error: "Studio not found" };
     }
+
+    if (sfwOnly && row.isNsfw) {
+      reply.code(404);
+      return { error: "Studio not found" };
+    }
+
+    const studioIdsForCounts = [row.id, ...row.children.map((c) => c.id)];
+    let sfwSceneByStudio = new Map<string, number>();
+    if (sfwOnly) {
+      const agg = await db
+        .select({
+          studioId: scenes.studioId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(scenes)
+        .where(
+          and(
+            inArray(scenes.studioId, studioIdsForCounts),
+            isNotNull(scenes.studioId),
+            ne(scenes.isNsfw, true),
+          ),
+        )
+        .groupBy(scenes.studioId);
+      sfwSceneByStudio = new Map(
+        agg.filter((r) => r.studioId != null).map((r) => [r.studioId!, Number(r.cnt)]),
+      );
+    }
+
+    const sceneCount = sfwOnly ? (sfwSceneByStudio.get(row.id) ?? 0) : row.sceneCount;
+
     return {
       id: row.id,
       name: row.name,
@@ -807,13 +861,21 @@ export async function scenesRoutes(app: FastifyInstance) {
       url: row.url,
       parentId: row.parentId,
       parent: row.parent ? { id: row.parent.id, name: row.parent.name, imagePath: row.parent.imagePath, imageUrl: row.parent.imageUrl } : null,
-      childStudios: row.children.map((c) => ({ id: c.id, name: c.name, imagePath: c.imagePath, imageUrl: c.imageUrl, sceneCount: c.sceneCount })),
+      childStudios: row.children
+        .filter((c) => !sfwOnly || !c.isNsfw)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          imagePath: c.imagePath,
+          imageUrl: c.imageUrl,
+          sceneCount: sfwOnly ? (sfwSceneByStudio.get(c.id) ?? 0) : c.sceneCount,
+        })),
       imageUrl: row.imageUrl,
       imagePath: row.imagePath,
       favorite: row.favorite,
       rating: row.rating,
       isNsfw: row.isNsfw,
-      sceneCount: row.sceneCount,
+      sceneCount,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -1045,45 +1107,119 @@ export async function scenesRoutes(app: FastifyInstance) {
   });
 
   // ─── GET /tags ───────────────────────────────────────────────
-  app.get("/tags", async () => {
-    const rows = await db.select().from(tags).orderBy(desc(tags.sceneCount));
+  app.get("/tags", async (request) => {
+    const q = request.query as { nsfw?: string };
+    const sfwOnly = q.nsfw === "off";
 
-    // Count images per tag
-    const imageTagCounts = await db
-      .select({
-        tagId: schema.imageTags.tagId,
-        count: sql<number>`count(*)`,
-      })
-      .from(schema.imageTags)
-      .groupBy(schema.imageTags.tagId);
-    const imageCountMap = new Map(imageTagCounts.map((r) => [r.tagId, Number(r.count)]));
+    if (!sfwOnly) {
+      const rows = await db.select().from(tags).orderBy(desc(tags.sceneCount));
 
-    return {
-      tags: rows.map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        description: tag.description,
-        aliases: tag.aliases,
-        imagePath: tag.imagePath,
-        favorite: tag.favorite,
-        rating: tag.rating,
-        isNsfw: tag.isNsfw,
-        sceneCount: tag.sceneCount,
-        imageCount: imageCountMap.get(tag.id) ?? 0,
-      })),
-    };
+      const imageTagCounts = await db
+        .select({
+          tagId: imageTags.tagId,
+          count: sql<number>`count(*)`,
+        })
+        .from(imageTags)
+        .groupBy(imageTags.tagId);
+      const imageCountMap = new Map(imageTagCounts.map((r) => [r.tagId, Number(r.count)]));
+
+      return {
+        tags: rows.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          description: tag.description,
+          aliases: tag.aliases,
+          imagePath: tag.imagePath,
+          favorite: tag.favorite,
+          rating: tag.rating,
+          isNsfw: tag.isNsfw,
+          sceneCount: tag.sceneCount,
+          imageCount: imageCountMap.get(tag.id) ?? 0,
+        })),
+      };
+    }
+
+    const [sceneAgg, imageAgg] = await Promise.all([
+      db
+        .select({
+          tagId: sceneTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(sceneTags)
+        .innerJoin(scenes, eq(scenes.id, sceneTags.sceneId))
+        .where(ne(scenes.isNsfw, true))
+        .groupBy(sceneTags.tagId),
+      db
+        .select({
+          tagId: imageTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(imageTags)
+        .innerJoin(images, eq(images.id, imageTags.imageId))
+        .where(ne(images.isNsfw, true))
+        .groupBy(imageTags.tagId),
+    ]);
+
+    const sceneMap = new Map(sceneAgg.map((r) => [r.tagId, Number(r.cnt)]));
+    const imageMap = new Map(imageAgg.map((r) => [r.tagId, Number(r.cnt)]));
+
+    const rows = await db.select().from(tags).where(ne(tags.isNsfw, true));
+
+    const mapped = rows.map((tag) => ({
+      id: tag.id,
+      name: tag.name,
+      description: tag.description,
+      aliases: tag.aliases,
+      imagePath: tag.imagePath,
+      favorite: tag.favorite,
+      rating: tag.rating,
+      isNsfw: tag.isNsfw,
+      sceneCount: sceneMap.get(tag.id) ?? 0,
+      imageCount: imageMap.get(tag.id) ?? 0,
+    }));
+
+    mapped.sort((a, b) => b.sceneCount - a.sceneCount);
+
+    return { tags: mapped };
   });
 
   // ─── GET /tags/:id ───────────────────────────────────────────
   app.get("/tags/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
+    const q = request.query as { nsfw?: string };
+    const sfwOnly = q.nsfw === "off";
+
     const row = await db.query.tags.findFirst({ where: eq(tags.id, id) });
-    if (!row) { reply.code(404); return { error: "Tag not found" }; }
+    if (!row) {
+      reply.code(404);
+      return { error: "Tag not found" };
+    }
+
+    let sceneCount = row.sceneCount;
+    if (sfwOnly) {
+      const [cnt] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(sceneTags)
+        .innerJoin(scenes, eq(scenes.id, sceneTags.sceneId))
+        .where(and(eq(sceneTags.tagId, id), ne(scenes.isNsfw, true)));
+      sceneCount = Number(cnt?.n ?? 0);
+    }
+
     return {
-      id: row.id, name: row.name, description: row.description, aliases: row.aliases,
-      parentId: row.parentId, imageUrl: row.imageUrl, imagePath: row.imagePath,
-      favorite: row.favorite, rating: row.rating, isNsfw: row.isNsfw, ignoreAutoTag: row.ignoreAutoTag,
-      sceneCount: row.sceneCount, createdAt: row.createdAt, updatedAt: row.updatedAt,
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      aliases: row.aliases,
+      parentId: row.parentId,
+      imageUrl: row.imageUrl,
+      imagePath: row.imagePath,
+      favorite: row.favorite,
+      rating: row.rating,
+      isNsfw: row.isNsfw,
+      ignoreAutoTag: row.ignoreAutoTag,
+      sceneCount,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   });
 

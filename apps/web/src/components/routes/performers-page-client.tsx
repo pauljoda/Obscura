@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import { fetchPerformers, updatePerformer, deletePerformer, type PerformerItem } from "../../lib/api";
+import { useNsfw } from "../nsfw/nsfw-context";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { performerItemToCardData } from "../performers/performer-card-data";
 
@@ -74,6 +75,7 @@ export function PerformersPageClient({
   initialTotal,
 }: PerformersPageClientProps) {
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
   type ViewMode = "grid" | "list";
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [performers, setPerformers] = useState(initialPerformers);
@@ -111,6 +113,7 @@ export function PerformersPageClient({
         favorite: favoriteOnly ? "true" : undefined,
         limit: PAGE_SIZE,
         offset: 0,
+        nsfw: nsfwMode,
       });
 
       setPerformers(result.performers);
@@ -120,7 +123,7 @@ export function PerformersPageClient({
     } finally {
       setLoading(false);
     }
-  }, [deferredSearch, favoriteOnly, gender, sortDir, sortKey]);
+  }, [deferredSearch, favoriteOnly, gender, nsfwMode, sortDir, sortKey]);
 
   // Load more (append) for infinite scroll
   const loadMore = useCallback(async () => {
@@ -136,6 +139,7 @@ export function PerformersPageClient({
         favorite: favoriteOnly ? "true" : undefined,
         limit: PAGE_SIZE,
         offset: performers.length,
+        nsfw: nsfwMode,
       });
 
       setPerformers((prev) => [...prev, ...result.performers]);
@@ -145,7 +149,17 @@ export function PerformersPageClient({
     } finally {
       setLoadingMore(false);
     }
-  }, [deferredSearch, favoriteOnly, gender, loading, loadingMore, performers.length, sortDir, sortKey]);
+  }, [
+    deferredSearch,
+    favoriteOnly,
+    gender,
+    loading,
+    loadingMore,
+    nsfwMode,
+    performers.length,
+    sortDir,
+    sortKey,
+  ]);
 
   useEffect(() => {
     if (!hydratedRef.current) {

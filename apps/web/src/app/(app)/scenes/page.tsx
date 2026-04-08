@@ -17,8 +17,8 @@ export default async function ScenesPage() {
   const [scenesResponse, stats, studiosResponse, tagsResponse] = await Promise.all([
     fetchScenes({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }),
     fetchSceneStats(nsfwMode).catch(() => null),
-    fetchStudios().catch(() => ({ studios: [] })),
-    fetchTags().catch(() => ({ tags: [] })),
+    fetchStudios({ nsfw: nsfwMode }).catch(() => ({ studios: [] })),
+    fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] })),
   ]);
 
   return (

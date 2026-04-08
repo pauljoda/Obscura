@@ -114,14 +114,14 @@ export function SceneDetail({
     }
 
     setLoading(true);
-    Promise.all([fetchSceneDetail(id), fetchTags()])
+    Promise.all([fetchSceneDetail(id), fetchTags({ nsfw: nsfwMode })])
       .then(([sceneData, tagsData]) => {
         setScene(sceneData);
         setAllTags(tagsData.tags);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id, initialScene]);
+  }, [id, initialScene, nsfwMode]);
 
   const handlePlayStarted = useCallback(() => {
     trackPlay(id).catch(() => {});

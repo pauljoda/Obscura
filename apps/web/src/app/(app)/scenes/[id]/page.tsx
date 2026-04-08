@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { cookies } from "next/headers";
 import { SceneDetail } from "../../../../components/scene-detail";
 import {
   fetchSceneDetail,
@@ -7,6 +8,7 @@ import {
   type SceneDetail as SceneDetailType,
   type TagItem,
 } from "../../../../lib/server-api";
+import { parseNsfwModeCookie } from "../../../../lib/nsfw-cookie";
 
 interface ScenePageProps {
   params: Promise<{ id: string }>;
@@ -14,10 +16,12 @@ interface ScenePageProps {
 
 export default async function ScenePage({ params }: ScenePageProps) {
   const { id } = await params;
+  const cookieStore = await cookies();
+  const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
 
   const [scene, tagsResponse] = await Promise.all([
     fetchSceneDetail(id).catch(() => null as SceneDetailType | null),
-    fetchTags().catch(() => ({ tags: [] as TagItem[] })),
+    fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] as TagItem[] })),
   ]);
 
   return <SceneDetail id={id} initialScene={scene} initialTags={tagsResponse.tags} />;

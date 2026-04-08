@@ -16,6 +16,8 @@ import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
   fetchSceneStats,
+  fetchStudios,
+  fetchTags,
   updateScene,
   deleteScene,
   type SceneListItem,
@@ -67,6 +69,20 @@ export function ScenesPageClient({
       .catch(() => {});
   }, [nsfwMode]);
 
+  const skipFirstFilterRefetch = useRef(true);
+  useEffect(() => {
+    if (skipFirstFilterRefetch.current) {
+      skipFirstFilterRefetch.current = false;
+      return;
+    }
+    void Promise.all([fetchStudios({ nsfw: nsfwMode }), fetchTags({ nsfw: nsfwMode })])
+      .then(([s, t]) => {
+        setFilterStudios(s.studios);
+        setFilterTags(t.tags);
+      })
+      .catch(() => {});
+  }, [nsfwMode]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -74,6 +90,8 @@ export function ScenesPageClient({
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [scenes, setScenes] = useState(initialScenes);
   const [total, setTotal] = useState(initialTotal);
+  const [filterStudios, setFilterStudios] = useState(initialStudios);
+  const [filterTags, setFilterTags] = useState(initialTags);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -276,8 +294,8 @@ export function ScenesPageClient({
         onRemoveFilter={removeFilter}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        availableStudios={initialStudios}
-        availableTags={initialTags}
+        availableStudios={filterStudios}
+        availableTags={filterTags}
         onAddFilter={addFilter}
       />
 

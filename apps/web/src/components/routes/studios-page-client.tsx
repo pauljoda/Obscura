@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Building2, Search, X, ArrowUpDown, ChevronDown, LayoutGrid, LayoutList } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { type StudioItem, updateStudio, deleteStudio } from "../../lib/api";
+import { fetchStudios, type StudioItem, updateStudio, deleteStudio } from "../../lib/api";
+import { useNsfw } from "../nsfw/nsfw-context";
 import { StudioEntityCard } from "../studios/studio-entity-card";
 import { studioItemToCardData } from "../studios/studio-card-data";
 
@@ -23,7 +24,19 @@ interface StudiosPageClientProps {
 type ViewMode = "grid" | "list";
 
 export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
+  const { mode: nsfwMode } = useNsfw();
   const [studios, setStudios] = useState(initialStudios);
+  const skipFirstStudioRefetch = useRef(true);
+
+  useEffect(() => {
+    if (skipFirstStudioRefetch.current) {
+      skipFirstStudioRefetch.current = false;
+      return;
+    }
+    void fetchStudios({ nsfw: nsfwMode })
+      .then((r) => setStudios(r.studios))
+      .catch(() => {});
+  }, [nsfwMode]);
   const [search, setSearch] = useState("");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");

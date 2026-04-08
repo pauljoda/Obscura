@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users,
   Star,
@@ -67,12 +67,13 @@ export function PerformerPageClient({
     setLoading(true);
 
     try {
-      const performerResponse = await fetchPerformerDetail(id);
+      const performerResponse = await fetchPerformerDetail(id, { nsfw: nsfwMode });
       setPerformer(performerResponse);
 
       const scenesResponse = await fetchScenes({
         performer: [performerResponse.name],
         limit: 100,
+        nsfw: nsfwMode,
       });
 
       setScenes(scenesResponse.scenes);
@@ -84,7 +85,21 @@ export function PerformerPageClient({
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, nsfwMode]);
+
+  const prevNsfwForRefetch = useRef(nsfwMode);
+  useEffect(() => {
+    setPerformer(initialPerformer);
+    setScenes(initialScenes);
+    setTotalScenes(initialTotalScenes);
+    setNotFound(initialPerformer == null);
+  }, [id, initialPerformer, initialScenes, initialTotalScenes]);
+
+  useEffect(() => {
+    if (prevNsfwForRefetch.current === nsfwMode) return;
+    prevNsfwForRefetch.current = nsfwMode;
+    void loadPerformer();
+  }, [nsfwMode, loadPerformer]);
 
   async function handleToggleFavorite() {
     if (!performer) {

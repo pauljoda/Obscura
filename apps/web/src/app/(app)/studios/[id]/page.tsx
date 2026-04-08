@@ -22,6 +22,7 @@ import { SceneGrid } from "../../../../components/scene-grid";
 import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
+import { useNsfw } from "../../../../components/nsfw/nsfw-context";
 import {
   fetchScenes,
   fetchStudioDetail,
@@ -44,6 +45,7 @@ interface StudioPageProps {
 
 export default function StudioPage({ params }: StudioPageProps) {
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
   const { id } = use(params);
   const router = useRouter();
 
@@ -60,9 +62,9 @@ export default function StudioPage({ params }: StudioPageProps) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchStudioDetail(id);
+      const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
-      const scenesData = await fetchScenes({ studio: id, limit: 100 });
+      const scenesData = await fetchScenes({ studio: id, limit: 100, nsfw: nsfwMode });
       setScenes(scenesData.scenes);
       setTotal(scenesData.total);
       setNotFound(false);
@@ -71,7 +73,7 @@ export default function StudioPage({ params }: StudioPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, nsfwMode]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -105,7 +107,7 @@ export default function StudioPage({ params }: StudioPageProps) {
     setUploadingImage(true);
     try {
       await uploadStudioImage(id, file);
-      const updated = await fetchStudioDetail(id);
+      const updated = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(updated);
     } catch { /* ignore */ }
     finally { setUploadingImage(false); }
@@ -115,7 +117,7 @@ export default function StudioPage({ params }: StudioPageProps) {
     setUploadingImage(true);
     try {
       await deleteStudioImage(id);
-      const updated = await fetchStudioDetail(id);
+      const updated = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(updated);
     } catch { /* ignore */ }
     finally { setUploadingImage(false); }

@@ -51,6 +51,10 @@ function SceneGridCard({
 }) {
   const { mode } = useNsfw();
   const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
+  const performersRow = tagsVisibleInNsfwMode(scene.performers ?? [], mode).map((p) => ({
+    name: p.name,
+    imagePath: p.imagePath,
+  }));
 
   return (
     <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
@@ -68,7 +72,7 @@ function SceneGridCard({
           codec={scene.codec}
           fileSize={scene.fileSize}
           studio={scene.studio}
-          performers={scene.performers}
+          performers={performersRow}
           tagsSlot={
             tagRow.length > 0 ? (
               <div className="flex flex-wrap gap-1">
@@ -111,6 +115,7 @@ function SceneListCard({
 }) {
   const { mode } = useNsfw();
   const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
+  const performersRow = tagsVisibleInNsfwMode(scene.performers ?? [], mode);
 
   return (
     <Link href={scene.href}>
@@ -165,13 +170,13 @@ function SceneListCard({
             )}
           </div>
 
-          {!!scene.performers?.length && (
+          {performersRow.length > 0 && (
             <div className="flex items-center gap-2 text-[0.7rem] text-text-muted">
               <span className="inline-flex items-center gap-1.5 truncate">
-                {scene.performers.slice(0, 3).map((performer) => (
+                {performersRow.slice(0, 3).map((performer) => (
                   <span key={performer.name} className="inline-flex items-center gap-1">
                     {performer.imagePath && (
-                      <NsfwBlur isNsfw={performer.isNsfw ?? false} className="h-4 w-3 flex-shrink-0 overflow-hidden">
+                      <span className="h-4 w-3 flex-shrink-0 overflow-hidden">
                         <img
                           src={performer.imagePath}
                           alt=""
@@ -179,13 +184,13 @@ function SceneListCard({
                           decoding="async"
                           className="h-4 w-3 object-cover"
                         />
-                      </NsfwBlur>
+                      </span>
                     )}
                     <span>{performer.name}</span>
                   </span>
                 ))}
-                {scene.performers.length > 3 && (
-                  <span className="text-text-disabled">+{scene.performers.length - 3}</span>
+                {performersRow.length > 3 && (
+                  <span className="text-text-disabled">+{performersRow.length - 3}</span>
                 )}
               </span>
             </div>

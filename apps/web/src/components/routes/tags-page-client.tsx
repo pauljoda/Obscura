@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Tag,
   Search,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { type TagItem, updateTag, deleteTag } from "../../lib/api";
+import { fetchTags, type TagItem, updateTag, deleteTag } from "../../lib/api";
 import { TagEntityCard } from "../tags/tag-entity-card";
 import { tagItemToCardData } from "../tags/tag-card-data";
 
@@ -61,6 +61,17 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
   const selection = useSelection();
   const [bulkLoading, setBulkLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const skipFirstTagRefetch = useRef(true);
+
+  useEffect(() => {
+    if (skipFirstTagRefetch.current) {
+      skipFirstTagRefetch.current = false;
+      return;
+    }
+    void fetchTags({ nsfw: nsfwMode })
+      .then((r) => setTags(r.tags))
+      .catch(() => {});
+  }, [nsfwMode]);
 
   const sorted = useMemo(() => {
     const copy = [...tags];

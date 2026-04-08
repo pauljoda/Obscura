@@ -9,8 +9,9 @@ import type {
   TagItem,
 } from "./types";
 
-export async function fetchStudios(): Promise<{ studios: StudioItem[] }> {
-  return fetchApi("/studios");
+export async function fetchStudios(params?: { nsfw?: string }): Promise<{ studios: StudioItem[] }> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/studios${qs}`);
 }
 
 export async function findOrCreateStudio(data: {
@@ -36,6 +37,7 @@ export async function fetchPerformers(params?: {
   country?: string;
   limit?: number;
   offset?: number;
+  nsfw?: string;
 }): Promise<{ performers: PerformerItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     search: params?.search,
@@ -46,17 +48,20 @@ export async function fetchPerformers(params?: {
     country: params?.country,
     limit: params?.limit,
     offset: params?.offset,
+    nsfw: params?.nsfw,
   });
 
   return fetchApi(`/performers${qs}`);
 }
 
-export async function fetchTags(): Promise<{ tags: TagItem[] }> {
-  return fetchApi("/tags");
+export async function fetchTags(params?: { nsfw?: string }): Promise<{ tags: TagItem[] }> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/tags${qs}`);
 }
 
-export async function fetchPerformerDetail(id: string): Promise<PerformerDetail> {
-  return fetchApi(`/performers/${id}`);
+export async function fetchPerformerDetail(id: string, params?: { nsfw?: string }): Promise<PerformerDetail> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/performers/${id}${qs}`);
 }
 
 export async function createPerformer(
@@ -156,8 +161,9 @@ export async function applyPerformerScrape(
   });
 }
 
-export async function fetchStudioDetail(id: string): Promise<StudioDetail> {
-  return fetchApi(`/studios/${id}`);
+export async function fetchStudioDetail(id: string, params?: { nsfw?: string }): Promise<StudioDetail> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/studios/${id}${qs}`);
 }
 
 export async function updateStudio(
@@ -225,8 +231,9 @@ export async function deleteStudioImage(id: string): Promise<{ ok: true }> {
   return fetchApi(`/studios/${id}/image`, { method: "DELETE" });
 }
 
-export async function fetchTagDetail(id: string): Promise<TagDetail> {
-  return fetchApi(`/tags/${id}`);
+export async function fetchTagDetail(id: string, params?: { nsfw?: string }): Promise<TagDetail> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/tags/${id}${qs}`);
 }
 
 export async function updateTag(
