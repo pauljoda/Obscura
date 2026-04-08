@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { Film, Users, Building2, Tag } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "./dashboard-utils";
+import { useTerms } from "../../lib/terminology";
 
 function NavTile({
   href,
@@ -48,29 +49,26 @@ function NavTile({
   );
 }
 
-const NAV_ITEMS: {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  countKey?: "scenes";
-}[] = [
-  { href: "/scenes", label: "Scenes", icon: Film, countKey: "scenes" },
-  { href: "/performers", label: "Performers", icon: Users },
-  { href: "/studios", label: "Studios", icon: Building2 },
-  { href: "/tags", label: "Tags", icon: Tag },
-];
-
 export function DashboardQuickNav({ sceneCount }: { sceneCount?: number }) {
+  const terms = useTerms();
+
+  const navItems = [
+    { href: "/scenes", label: terms.scenes, icon: Film, count: sceneCount },
+    { href: "/performers", label: terms.performers, icon: Users },
+    { href: "/studios", label: terms.studios, icon: Building2 },
+    { href: "/tags", label: terms.tags, icon: Tag },
+  ] satisfies { href: string; label: string; icon: LucideIcon; count?: number }[];
+
   return (
     <section aria-label="Library sections">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {NAV_ITEMS.map((tile, i) => (
+        {navItems.map((tile, i) => (
           <NavTile
             key={tile.href}
             href={tile.href}
             icon={tile.icon}
             label={tile.label}
-            count={tile.countKey === "scenes" ? sceneCount : undefined}
+            count={tile.count}
             gradientClass={DASHBOARD_STAT_GRADIENTS[i % DASHBOARD_STAT_GRADIENTS.length]}
           />
         ))}

@@ -11,12 +11,13 @@ interface SearchParams {
   dateFrom?: string;
   dateTo?: string;
   tags?: string[];
+  nsfw?: string;
 }
 
 export async function executeSearch(params: SearchParams): Promise<SearchResponseDto> {
   const start = Date.now();
-  const { q, kinds, limit, offset = 0, kind, rating, dateFrom, dateTo, tags } = params;
-  const filters = { rating, dateFrom, dateTo, tags };
+  const { q, kinds, limit, offset = 0, kind, rating, dateFrom, dateTo, tags, nsfw } = params;
+  const filters = { rating, dateFrom, dateTo, tags, nsfw };
 
   // Single-kind mode: full pagination for /search page "show more"
   if (kind) {

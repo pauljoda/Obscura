@@ -17,6 +17,8 @@ import { useSearch } from "../../hooks/use-search";
 import { fetchSearch } from "../../lib/api";
 import { SEARCH_KIND_CONFIG, ALL_SEARCH_KINDS } from "../search/search-kind-config";
 import { SearchResultCard } from "../search/search-result-card";
+import { useNsfw } from "../nsfw/nsfw-context";
+import { useTerms } from "../../lib/terminology";
 
 const PAGE_SIZE = 20;
 
@@ -27,6 +29,8 @@ interface SearchPageClientProps {
 
 export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClientProps) {
   const router = useRouter();
+  const { mode: nsfwMode } = useNsfw();
+  const terms = useTerms();
 
   const [query, setQuery] = useState(initialQuery);
   const [activeKinds, setActiveKinds] = useState<Set<EntityKind>>(() => {
@@ -62,6 +66,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
     rating: minRating ?? undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
+    nsfw: nsfwMode,
   });
 
   // Sync query to URL
@@ -82,6 +87,12 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
   useEffect(() => {
     setExpandedData({});
   }, [query, minRating, dateFrom, dateTo]);
+
+  const kindLabel = (kind: string, baseLabel: string) => {
+    if (kind === "scene") return terms.scenes;
+    if (kind === "performer") return terms.performers;
+    return baseLabel;
+  };
 
   const toggleKind = useCallback((kind: EntityKind) => {
     setActiveKinds((prev) => {
@@ -112,6 +123,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
           rating: minRating ?? undefined,
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
+          nsfw: nsfwMode,
         });
 
         const group = result.groups[0];
@@ -132,7 +144,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
         }));
       }
     },
-    [query, minRating, dateFrom, dateTo]
+    [query, minRating, dateFrom, dateTo, nsfwMode]
   );
 
   const hasQuery = query.trim().length >= 2;
@@ -186,7 +198,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
                 )}
               >
                 <Icon className="h-3 w-3" />
-                {config.label}
+                {kindLabel(kind, config.label)}
               </button>
             );
           })}
@@ -300,6 +312,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
                 <SearchSection
                   key={group.kind}
                   kind={group.kind}
+                  label={kindLabel(group.kind, SEARCH_KIND_CONFIG[group.kind].label)}
                   items={items}
                   total={total}
                   hasMore={hasMore}
@@ -319,6 +332,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
 
 function SearchSection({
   kind,
+  label,
   items,
   total,
   hasMore,
@@ -326,6 +340,7 @@ function SearchSection({
   onLoadMore,
 }: {
   kind: EntityKind;
+  label: string;
   items: SearchResultItem[];
   total: number;
   hasMore: boolean;
@@ -341,7 +356,7 @@ function SearchSection({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-text-muted" />
-          <span className="text-sm font-medium text-text-primary">{config.label}</span>
+          <span className="text-sm font-medium text-text-primary">{label}</span>
           <span className="text-[0.65rem] font-mono text-text-disabled">{total}</span>
         </div>
         <Link

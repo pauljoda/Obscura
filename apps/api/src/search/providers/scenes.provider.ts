@@ -1,6 +1,6 @@
 import { formatDuration, formatFileSize, getResolutionLabel } from "@obscura/contracts";
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists } from "drizzle-orm";
+import { ilike, or, sql, and, gte, lte, count, eq, exists, ne } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 
 const { scenes, studios, scenePerformers, performers, sceneTags, tags } = schema;
@@ -33,6 +33,7 @@ export const scenesSearchProvider: SearchProvider = {
     if (filters.rating) conditions.push(gte(scenes.rating, filters.rating));
     if (filters.dateFrom) conditions.push(gte(scenes.date, filters.dateFrom));
     if (filters.dateTo) conditions.push(lte(scenes.date, filters.dateTo));
+    if (filters.nsfw === "off") conditions.push(ne(scenes.isNsfw, true));
 
     const where = and(...conditions);
 

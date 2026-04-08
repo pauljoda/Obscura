@@ -1,5 +1,5 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists } from "drizzle-orm";
+import { ilike, or, sql, and, gte, lte, count, eq, exists, ne } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 import { getImagePreviewPath } from "../../lib/image-media";
 
@@ -28,6 +28,7 @@ export const imagesSearchProvider: SearchProvider = {
     if (filters.rating) conditions.push(gte(images.rating, filters.rating));
     if (filters.dateFrom) conditions.push(gte(images.date, filters.dateFrom));
     if (filters.dateTo) conditions.push(lte(images.date, filters.dateTo));
+    if (filters.nsfw === "off") conditions.push(ne(images.isNsfw, true));
 
     const where = and(...conditions);
 

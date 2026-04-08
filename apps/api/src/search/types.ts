@@ -9,6 +9,8 @@ export interface SearchProviderQuery {
     dateFrom?: string;
     dateTo?: string;
     tags?: string[];
+    /** "off" = exclude NSFW content, "blur"/"show" = include all */
+    nsfw?: string;
   };
 }
 

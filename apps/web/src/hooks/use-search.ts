@@ -13,6 +13,7 @@ interface UseSearchOptions {
   dateFrom?: string;
   dateTo?: string;
   tags?: string[];
+  nsfw?: string;
   debounceMs?: number;
   enabled?: boolean;
 }

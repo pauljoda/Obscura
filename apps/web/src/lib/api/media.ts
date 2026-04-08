@@ -255,6 +255,7 @@ export async function fetchSearch(
     dateFrom?: string;
     dateTo?: string;
     tags?: string[];
+    nsfw?: string;
   },
   signal?: AbortSignal,
 ): Promise<SearchResponseDto> {
@@ -269,6 +270,7 @@ export async function fetchSearch(
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
       tags: params.tags?.length ? params.tags.join(",") : undefined,
+      nsfw: params.nsfw,
     },
   );
 

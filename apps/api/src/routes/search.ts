@@ -21,6 +21,7 @@ export async function searchRoutes(app: FastifyInstance) {
       dateFrom: q.dateFrom,
       dateTo: q.dateTo,
       tags: q.tags ? q.tags.split(",") : undefined,
+      nsfw: q.nsfw,
     });
   });
 }

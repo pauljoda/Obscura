@@ -1,5 +1,5 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists, inArray, asc } from "drizzle-orm";
+import { ilike, or, sql, and, gte, lte, count, eq, exists, inArray, asc, ne } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
 
 const { galleries, galleryTags, tags, images } = schema;
@@ -26,6 +26,7 @@ export const galleriesSearchProvider: SearchProvider = {
     if (filters.rating) conditions.push(gte(galleries.rating, filters.rating));
     if (filters.dateFrom) conditions.push(gte(galleries.date, filters.dateFrom));
     if (filters.dateTo) conditions.push(lte(galleries.date, filters.dateTo));
+    if (filters.nsfw === "off") conditions.push(ne(galleries.isNsfw, true));
 
     const where = and(...conditions);
 

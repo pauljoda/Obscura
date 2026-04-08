@@ -13,6 +13,8 @@ import { galleryListItemToCardData } from "../galleries/gallery-card-data";
 import { SceneCard } from "../scenes/scene-card";
 import { sceneListItemToCardData } from "../scenes/scene-card-data";
 import { DASHBOARD_STAT_GRADIENTS, formatIngestStamp } from "./dashboard-utils";
+import { useNsfw } from "../nsfw/nsfw-context";
+import { useTerms } from "../../lib/terminology";
 
 const MERGE_CAP = 11;
 
@@ -122,7 +124,15 @@ export function DashboardRecentAdditions({
   scenes: SceneListItem[];
   galleries: GalleryListItem[];
 }) {
-  const merged = mergeIngest(scenes, galleries);
+  const { mode } = useNsfw();
+  const terms = useTerms();
+
+  const allMerged = mergeIngest(scenes, galleries);
+  // In SFW mode, filter out NSFW items entirely so they leave no blank space
+  const merged = mode === "off"
+    ? allMerged.filter((r) => r.kind === "scene" ? !r.scene.isNsfw : !r.gallery.isNsfw)
+    : allMerged;
+
   const showStillsSlot =
     !loading && galleries.length === 0 && merged.some((r) => r.kind === "scene");
 
@@ -137,7 +147,7 @@ export function DashboardRecentAdditions({
           >
             <span className="inline-flex items-center gap-1.5">
               <Film className="h-3 w-3 opacity-70" />
-              Scenes
+              {terms.scenes}
             </span>
           </Link>
           <Link
