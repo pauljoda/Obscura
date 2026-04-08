@@ -1036,8 +1036,8 @@ export function SettingsPageClient({
             <p className="mt-1.5 text-[0.65rem] text-text-disabled">
               Stored per device. Does not affect stored data. Quick toggle (full SFW ↔ full NSFW, skips blur):{" "}
               <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">Ctrl+Shift+U</kbd>{" "}
-              or <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">⌘⇧U</kbd> on Mac — also in
-              the header next to Search.
+              or <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem]">⌘⇧U</kbd> on Mac — shown in
+              the header.
             </p>
           </div>
           <ToggleCard
@@ -1050,6 +1050,16 @@ export function SettingsPageClient({
             }}
           />
         </div>
+        <p className="surface-well px-3 py-2.5 text-[0.65rem] text-text-muted leading-relaxed">
+          <span className="text-text-disabled">Power-user tip:</span> the global search palette is not on the toolbar.
+          Open it with{" "}
+          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">⌘⇧Z</kbd> on
+          Mac or{" "}
+          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
+            Ctrl+Shift+Z
+          </kbd>{" "}
+          elsewhere (one-hand friendly on Mac).
+        </p>
       </section>
 
       <div className="border-t border-border-subtle" />

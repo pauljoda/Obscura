@@ -75,7 +75,7 @@ export function NsfwProvider({ children, initialMode = "off", lanAutoEnable = fa
     });
   }, []);
 
-  // Global shortcut: same capture-window pattern as the search palette (Mod+K).
+  // Global shortcut: same capture-window pattern as the search palette (⌘⇧Z / Ctrl+Shift+Z).
   useEffect(() => {
     if (!initialized) return;
 

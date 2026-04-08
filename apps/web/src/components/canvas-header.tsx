@@ -1,11 +1,10 @@
 "use client";
 
-import { Eye, EyeOff, Search, Settings } from "lucide-react";
+import { Eye, EyeOff, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { useSearchPalette } from "./search/search-context";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { entityTerms } from "../lib/terminology";
 
@@ -39,7 +38,6 @@ function getBreadcrumbs(pathname: string) {
 export function CanvasHeader() {
   const pathname = usePathname();
   const crumbs = getBreadcrumbs(pathname);
-  const { openPalette } = useSearchPalette();
   const { mode: nsfwMode, toggleShowOffMode } = useNsfw();
   const [appleMod, setAppleMod] = useState(false);
   useEffect(() => {
@@ -108,23 +106,6 @@ export function CanvasHeader() {
           <span className="hidden sm:inline text-text-disabled">{nsfwHeaderLabel}</span>
           <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border-subtle px-1.5 text-[0.6rem] text-text-disabled">
             {nsfwShortcutKbd}
-          </kbd>
-        </button>
-        <button
-          type="button"
-          onClick={openPalette}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5",
-            "surface-well text-text-muted text-mono-sm",
-            "hover:text-text-primary hover:border-border-accent",
-            "transition-colors duration-fast cursor-pointer select-none"
-          )}
-          aria-label="Open global search"
-        >
-          <Search className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline text-text-disabled">Search...</span>
-          <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border-subtle px-1.5 text-[0.6rem] text-text-disabled">
-            ⌘K
           </kbd>
         </button>
         <Link

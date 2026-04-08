@@ -10,10 +10,11 @@ import {
   type ReactNode,
 } from "react";
 
-function isModK(e: KeyboardEvent): boolean {
+/** Mac: ⌘⇧Z — one-hand friendly; Windows/Linux: Ctrl+Shift+Z. Uses `code` so layout/locale stays reliable. */
+function isModShiftZ(e: KeyboardEvent): boolean {
+  if (!e.shiftKey || e.altKey) return false;
   if (!e.metaKey && !e.ctrlKey) return false;
-  if (e.altKey) return false;
-  return e.code === "KeyK" || e.key?.toLowerCase() === "k";
+  return e.code === "KeyZ" || e.key?.toLowerCase() === "z";
 }
 
 interface SearchContextValue {
@@ -43,7 +44,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   // Capture phase on window so we run before other handlers (e.g. video hotkeys) and can stop propagation.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (isModK(e)) {
+      if (isModShiftZ(e)) {
         e.preventDefault();
         e.stopPropagation();
         setOpen(true);
