@@ -48,7 +48,7 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
   // mode === "blur" — apply CSS filter only, keep content interactive
   return (
     <div className={`group relative ${className ?? ""}`}>
-      <div className="blur-sm brightness-50 transition-all duration-300 group-hover:blur-none group-hover:brightness-100">
+      <div className="min-h-0 min-w-0 h-full w-full blur-sm brightness-50 transition-all duration-300 group-hover:blur-none group-hover:brightness-100">
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
