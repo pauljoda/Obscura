@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { and, asc, desc, eq, inArray, isNull, like, ne, not, or, sql, type SQL } from "drizzle-orm";
 import {
   queueDefinitions,
+  resolveQueueWorkerConcurrency,
   type JobKind,
   type JobTriggerKind,
   type QueueName,
@@ -402,7 +403,10 @@ export async function jobsRoutes(app: FastifyInstance) {
           label: definition.label,
           description: definition.description,
           status,
-          concurrency: definition.concurrency,
+          concurrency: resolveQueueWorkerConcurrency(
+            definition.concurrency,
+            settings.backgroundWorkerConcurrency
+          ),
           active,
           waiting,
           delayed,

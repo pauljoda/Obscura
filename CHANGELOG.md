@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Background worker concurrency setting** — Library settings include `backgroundWorkerConcurrency` (default 1, range 1–32). The BullMQ worker applies it per queue (parallel jobs per queue), re-reads the value about every 15 seconds so changes take effect without restarting the worker, and the jobs dashboard shows the effective throttle. Schema: `library_settings.background_worker_concurrency`.
+
 - **Film strip wheel scrub (desktop only)** — The trickplay film strip scrubs the video when using the mouse wheel or trackpad scroll over the strip. The `wheel` listener is registered only when `(pointer: fine) and (hover: hover)` matches so phones and other touch-primary layouts stay unchanged. Scroll direction matches natural timeline expectation (wheel down / typical horizontal scroll moves playback forward).
 - **Film strip hides player chrome while scrubbing** — Pointer drag on the strip (including touch) and desktop wheel scrub report interaction to the video player so the control overlay fades out like during playback; releasing the pointer or ~320ms after the last wheel event restores controls (`surfaceControls` / auto-hide when playing).
 

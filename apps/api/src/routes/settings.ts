@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { normalizeBackgroundWorkerConcurrency } from "@obscura/contracts";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "../db";
 import {
@@ -49,6 +50,9 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.previewClipDurationSeconds ?? settings.previewClipDurationSeconds,
         thumbnailQuality: payload.thumbnailQuality ?? settings.thumbnailQuality,
         trickplayQuality: payload.trickplayQuality ?? settings.trickplayQuality,
+        backgroundWorkerConcurrency: normalizeBackgroundWorkerConcurrency(
+          payload.backgroundWorkerConcurrency ?? settings.backgroundWorkerConcurrency
+        ),
         nsfwLanAutoEnable: payload.nsfwLanAutoEnable ?? settings.nsfwLanAutoEnable,
         updatedAt: new Date(),
       })

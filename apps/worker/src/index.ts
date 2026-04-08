@@ -13,6 +13,7 @@ import {
   jobRunRetention,
   queueDefinitions,
   queueRedisRetention,
+  resolveQueueWorkerConcurrency,
   type JobTriggerKind,
   type QueueName,
 } from "@obscura/contracts";
@@ -147,10 +148,6 @@ async function propagateSceneNsfw(sceneId: string, libraryRootIsNsfw: boolean) {
   // propagation. This ensures removed NSFW tags/performers/studios are
   // reflected after a rescan.
   await db.update(scenes).set({ isNsfw: false }).where(eq(scenes.id, sceneId));
-}
-
-function getQueueDefinition(queueName: QueueName) {
-  return queueDefinitions.find((definition) => definition.name === queueName)!;
 }
 
 function withTriggerMetadata(
@@ -1788,9 +1785,11 @@ async function processImageFingerprint(job: Job) {
   }
 }
 
-function createWorker(queueName: QueueName, processor: (job: Job) => Promise<void>) {
-  const definition = getQueueDefinition(queueName);
-
+function createWorker(
+  queueName: QueueName,
+  processor: (job: Job) => Promise<void>,
+  concurrency: number
+) {
   return new Worker(
     queueName,
     async (job) => {
@@ -1804,7 +1803,7 @@ function createWorker(queueName: QueueName, processor: (job: Job) => Promise<voi
     },
     {
       connection: redis,
-      concurrency: definition.concurrency,
+      concurrency,
     }
   );
 }
@@ -1867,16 +1866,39 @@ async function scheduleRecurringScans() {
   }
 }
 
-const workers = [
-  createWorker("library-scan", processLibraryScan),
-  createWorker("media-probe", processMediaProbe),
-  createWorker("fingerprint", processFingerprint),
-  createWorker("preview", processPreview),
-  createWorker("metadata-import", processMetadataImport),
-  createWorker("gallery-scan", processGalleryScan),
-  createWorker("image-thumbnail", processImageThumbnail),
-  createWorker("image-fingerprint", processImageFingerprint),
-];
+const processorByQueue: Record<QueueName, (job: Job) => Promise<void>> = {
+  "library-scan": processLibraryScan,
+  "media-probe": processMediaProbe,
+  fingerprint: processFingerprint,
+  preview: processPreview,
+  "metadata-import": processMetadataImport,
+  "gallery-scan": processGalleryScan,
+  "image-thumbnail": processImageThumbnail,
+  "image-fingerprint": processImageFingerprint,
+};
+
+const libraryRowForWorkers = await ensureLibrarySettingsRow();
+const workers = queueDefinitions.map((definition) =>
+  createWorker(
+    definition.name,
+    processorByQueue[definition.name],
+    resolveQueueWorkerConcurrency(definition.concurrency, libraryRowForWorkers.backgroundWorkerConcurrency)
+  )
+);
+
+async function syncWorkerConcurrencyFromSettings() {
+  const row = await ensureLibrarySettingsRow();
+  queueDefinitions.forEach((definition, i) => {
+    workers[i].concurrency = resolveQueueWorkerConcurrency(
+      definition.concurrency,
+      row.backgroundWorkerConcurrency
+    );
+  });
+}
+
+setInterval(() => {
+  void syncWorkerConcurrencyFromSettings();
+}, 15_000);
 
 await scheduleRecurringScans();
 setInterval(() => {
@@ -1893,6 +1915,10 @@ console.log(
       service: "worker",
       queues: queueDefinitions.map((definition) => definition.name),
       redisUrl,
+      backgroundWorkerConcurrency: resolveQueueWorkerConcurrency(
+        1,
+        libraryRowForWorkers.backgroundWorkerConcurrency
+      ),
     },
     null,
     2

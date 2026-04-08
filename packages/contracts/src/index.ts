@@ -122,6 +122,32 @@ export const queueDefinitions = [
   },
 ] as const;
 
+/** BullMQ jobs per queue; default 1. Higher values increase CPU, disk, and memory use. */
+export const BACKGROUND_WORKER_CONCURRENCY_MIN = 1;
+export const BACKGROUND_WORKER_CONCURRENCY_MAX = 32;
+
+export function normalizeBackgroundWorkerConcurrency(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) {
+    return BACKGROUND_WORKER_CONCURRENCY_MIN;
+  }
+  const floor = Math.floor(n);
+  return Math.min(
+    BACKGROUND_WORKER_CONCURRENCY_MAX,
+    Math.max(BACKGROUND_WORKER_CONCURRENCY_MIN, floor)
+  );
+}
+
+/** Effective BullMQ concurrency for a queue: definition base × normalized user setting. */
+export function resolveQueueWorkerConcurrency(
+  definitionConcurrency: number,
+  backgroundWorkerConcurrency: unknown
+): number {
+  const base = Math.max(1, Math.floor(definitionConcurrency));
+  const k = normalizeBackgroundWorkerConcurrency(backgroundWorkerConcurrency);
+  return base * k;
+}
+
 export type QueueName = (typeof queueDefinitions)[number]["name"];
 
 export const queueRedisRetention = {
@@ -197,6 +223,8 @@ export interface LibrarySettingsDto {
   previewClipDurationSeconds: number;
   thumbnailQuality: number;
   trickplayQuality: number;
+  /** Parallel jobs per queue in the worker process (1–32). */
+  backgroundWorkerConcurrency: number;
   nsfwLanAutoEnable: boolean;
   createdAt: string;
   updatedAt: string;

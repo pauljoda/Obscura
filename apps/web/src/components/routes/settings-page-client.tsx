@@ -32,6 +32,10 @@ import {
   Droplet,
   Flame,
 } from "lucide-react";
+import {
+  BACKGROUND_WORKER_CONCURRENCY_MAX,
+  BACKGROUND_WORKER_CONCURRENCY_MIN,
+} from "@obscura/contracts";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { entityTerms } from "../../lib/terminology";
 import { NsfwGate } from "../nsfw/nsfw-gate";
@@ -85,6 +89,7 @@ const settingsKeys = [
   "previewClipDurationSeconds",
   "thumbnailQuality",
   "trickplayQuality",
+  "backgroundWorkerConcurrency",
 ] as const;
 
 function normalizeSettings(s: LibrarySettings): LibrarySettings {
@@ -92,6 +97,7 @@ function normalizeSettings(s: LibrarySettings): LibrarySettings {
     ...s,
     thumbnailQuality: s.thumbnailQuality ?? 2,
     trickplayQuality: s.trickplayQuality ?? 2,
+    backgroundWorkerConcurrency: s.backgroundWorkerConcurrency ?? 1,
   };
 }
 
@@ -207,6 +213,7 @@ export function SettingsPageClient({
         previewClipDurationSeconds: settings.previewClipDurationSeconds,
         thumbnailQuality: settings.thumbnailQuality,
         trickplayQuality: settings.trickplayQuality,
+        backgroundWorkerConcurrency: settings.backgroundWorkerConcurrency,
       });
 
       const normalized = normalizeSettings(updated);
@@ -953,6 +960,19 @@ export function SettingsPageClient({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <NumberStepper
+              label="Background job concurrency"
+              description="Parallel jobs per queue in the worker. Higher uses more CPU, disk I/O, and RAM. Applies within about 15 seconds after save."
+              value={settings.backgroundWorkerConcurrency}
+              min={BACKGROUND_WORKER_CONCURRENCY_MIN}
+              max={BACKGROUND_WORKER_CONCURRENCY_MAX}
+              step={1}
+              onChange={(val) =>
+                setSettings((current) => ({ ...current, backgroundWorkerConcurrency: val }))
+              }
+            />
+          </div>
           <NumberStepper
             label="Trickplay Interval"
             description="Seconds between sprite sheet frames."
