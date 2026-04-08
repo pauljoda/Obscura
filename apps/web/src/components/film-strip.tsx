@@ -121,7 +121,7 @@ export function FilmStrip({
       e.preventDefault();
       e.stopPropagation();
       const pixelsPerSecond = trackWidth / duration;
-      const timeDelta = -raw / pixelsPerSecond;
+      const timeDelta = raw / pixelsPerSecond;
       const video = videoRef.current;
       const current = video?.currentTime ?? 0;
       const newTime = Math.max(0, Math.min(duration, current + timeDelta));
