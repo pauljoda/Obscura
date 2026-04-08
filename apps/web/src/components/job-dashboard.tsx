@@ -334,8 +334,7 @@ export function JobDashboard() {
 
   const totalActive = dashboard?.activeJobs.filter((job) => job.status === "active").length ?? 0;
   const totalQueued =
-    dashboard?.activeJobs.filter((job) => job.status === "waiting" || job.status === "delayed")
-      .length ?? 0;
+    dashboard?.queues.reduce((sum, queue) => sum + queue.backlog, 0) ?? 0;
   const totalFailed = dashboard?.failedJobs.length ?? 0;
   const retainedCompleted = dashboard?.completedJobs.length ?? 0;
   const canAcknowledgeFailures =
