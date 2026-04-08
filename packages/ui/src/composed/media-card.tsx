@@ -41,6 +41,8 @@ export interface MediaCardProps {
   views?: number;
   href?: string;
   className?: string;
+  /** Rendered inside the thumbnail, bottom-right (e.g. NSFW badge in Show mode). */
+  thumbnailOverlay?: ReactNode;
 }
 
 export function MediaCard({
@@ -64,6 +66,7 @@ export function MediaCard({
   rating,
   views,
   className,
+  thumbnailOverlay,
 }: MediaCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -310,6 +313,17 @@ export function MediaCard({
             </div>
           </div>
         )}
+
+        {thumbnailOverlay ? (
+          <div
+            className={cn(
+              "pointer-events-none absolute right-2 z-[25]",
+              hasScrubPreview ? "bottom-10" : "bottom-2",
+            )}
+          >
+            {thumbnailOverlay}
+          </div>
+        ) : null}
       </div>
 
       <div className="p-2.5 space-y-1.5">

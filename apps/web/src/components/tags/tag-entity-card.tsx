@@ -31,7 +31,7 @@ export function TagEntityCard({
       <Link
         href={tag.href}
         className={cn(
-          "border px-2.5 py-1 transition-all duration-fast",
+          "inline-flex max-w-full min-w-0 items-center gap-1.5 border px-2.5 py-1 transition-all duration-fast",
           "hover:border-border-accent hover:bg-accent-950 hover:text-text-accent hover:shadow-[0_0_12px_rgba(199,155,92,0.15)]",
           intensity > 0.6
             ? "border-border-accent text-accent-400 text-base font-medium bg-accent-950/30"
@@ -40,11 +40,11 @@ export function TagEntityCard({
               : "border-border-subtle text-text-muted text-xs",
         )}
       >
-        <span className="inline-flex items-center gap-1">
+        <span className="min-w-0 truncate">
           <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
-          <NsfwShowModeChip isNsfw={tag.isNsfw} compact />
         </span>
-        <span className="ml-1.5 text-text-disabled text-xs">{total}</span>
+        <NsfwShowModeChip isNsfw={tag.isNsfw} compact className="shrink-0" />
+        <span className="shrink-0 text-text-disabled text-xs tabular-nums">{total}</span>
       </Link>
     );
   }
@@ -57,7 +57,7 @@ export function TagEntityCard({
     <Link
       href={tag.href}
       className={cn(
-        "group flex items-center gap-2.5 px-3 py-2",
+        "group flex w-full min-w-0 items-center gap-2.5 px-3 py-2",
         "border border-transparent hover:border-border-accent/30",
         "bg-surface-1 hover:bg-surface-2 hover:shadow-[inset_0_2px_6px_rgba(0,0,0,0.3)]",
         "transition-all duration-fast break-inside-avoid mb-1",
@@ -86,15 +86,14 @@ export function TagEntityCard({
         </NsfwBlur>
       )}
       <span className={cn(
-        "flex min-w-0 flex-1 items-center gap-1.5 text-[0.8rem] transition-colors duration-fast",
+        "min-w-0 flex-1 truncate text-[0.8rem] transition-colors duration-fast",
         selected ? "text-text-primary font-medium" : "text-text-secondary group-hover:text-text-primary"
       )}>
-        <span className="min-w-0 truncate">
-          <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
-        </span>
-        <NsfwShowModeChip isNsfw={tag.isNsfw} compact className="flex-shrink-0" />
+        <NsfwTagLabel isNsfw={tag.isNsfw ?? false}>{tag.name}</NsfwTagLabel>
       </span>
-      <span className="flex items-center gap-2 shrink-0 text-[0.65rem] font-mono text-text-disabled">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <NsfwShowModeChip isNsfw={tag.isNsfw} compact />
+        <span className="flex items-center gap-2 text-[0.65rem] font-mono text-text-disabled">
         {tag.sceneCount > 0 && (
           <span className="flex items-center gap-1">
             <Film className="h-2.5 w-2.5 opacity-70" />
@@ -108,7 +107,8 @@ export function TagEntityCard({
           </span>
         )}
         {tag.sceneCount + tag.imageCount === 0 && <span className="text-text-disabled/40">—</span>}
-      </span>
+        </span>
+      </div>
     </Link>
   );
 }

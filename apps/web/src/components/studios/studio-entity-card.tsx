@@ -46,7 +46,7 @@ export function StudioEntityCard({
             )}
             <NsfwShowModeChip
               isNsfw={studio.isNsfw}
-              className="absolute left-2 top-2 z-10 pointer-events-none"
+              className="absolute bottom-2 right-2 z-10 pointer-events-none"
             />
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
@@ -101,7 +101,7 @@ function StudioListCard({
           />
         )}
         <NsfwBlur isNsfw={studio.isNsfw ?? false} className="flex-shrink-0 w-12 h-7 overflow-hidden bg-surface-3">
-          <div className="w-12 h-7 overflow-hidden bg-surface-3">
+          <div className="relative h-full w-full overflow-hidden bg-surface-3">
             {studio.imagePath ? (
               <img src={studio.imagePath} alt={studio.name} loading="lazy" decoding="async" className="h-full w-full object-contain" />
             ) : (
@@ -109,16 +109,18 @@ function StudioListCard({
                 <Building2 className="h-3.5 w-3.5 text-text-disabled" />
               </div>
             )}
+            <NsfwShowModeChip
+              isNsfw={studio.isNsfw}
+              compact
+              className="pointer-events-none absolute bottom-0.5 right-0.5 z-10"
+            />
           </div>
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="min-w-0 truncate text-[0.8rem] font-medium text-text-primary block group-hover:text-text-accent transition-colors duration-fast">
-              {studio.name}
-            </span>
-            <NsfwShowModeChip isNsfw={studio.isNsfw} className="flex-shrink-0" />
-          </div>
+          <span className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
+            {studio.name}
+          </span>
           <p className="text-[0.68rem] text-text-disabled">
             {formatVideoCount(studio.sceneCount)}
           </p>

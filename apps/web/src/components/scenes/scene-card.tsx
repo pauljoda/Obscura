@@ -58,12 +58,7 @@ function SceneGridCard({
 
   return (
     <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
-      <div className="relative h-full">
-        <NsfwShowModeChip
-          isNsfw={scene.isNsfw}
-          className="absolute left-2 top-2 z-20 pointer-events-none"
-        />
-        <Link href={scene.href} className="block h-full">
+      <Link href={scene.href} className="block h-full">
         <MediaCard
           title={scene.title}
           thumbnail={scene.thumbnail}
@@ -78,6 +73,7 @@ function SceneGridCard({
           fileSize={scene.fileSize}
           studio={scene.studio}
           performers={performersRow}
+          thumbnailOverlay={<NsfwShowModeChip isNsfw={scene.isNsfw} />}
           tagsSlot={
             tagRow.length > 0 ? (
               <div className="flex flex-wrap gap-1">
@@ -102,8 +98,7 @@ function SceneGridCard({
           views={scene.views}
           gradientClass={SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length]}
         />
-        </Link>
-      </div>
+      </Link>
     </NsfwBlur>
   );
 }
@@ -151,11 +146,14 @@ function SceneListCard({
                 className="h-full w-full object-cover"
               />
             )}
-            {scene.duration && (
-              <span className="absolute bottom-0.5 right-0.5 text-[0.55rem] font-mono bg-black/70 text-white/80 px-1 ">
-                {scene.duration}
-              </span>
-            )}
+            <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+              <NsfwShowModeChip isNsfw={scene.isNsfw} />
+              {scene.duration ? (
+                <span className="text-[0.55rem] font-mono bg-black/70 text-white/80 px-1">
+                  {scene.duration}
+                </span>
+              ) : null}
+            </div>
           </div>
         </NsfwBlur>
 
@@ -164,7 +162,6 @@ function SceneListCard({
             <NsfwText isNsfw={scene.isNsfw ?? false} className="truncate text-[0.8rem] font-medium text-text-primary block">
               {scene.title}
             </NsfwText>
-            <NsfwShowModeChip isNsfw={scene.isNsfw} className="flex-shrink-0" />
             {scene.resolution && (
               <span className="pill-accent px-1 py-0 text-[0.55rem] font-semibold flex-shrink-0">
                 {scene.resolution}

@@ -127,7 +127,7 @@ function GalleryGridCard({
 
           <NsfwShowModeChip
             isNsfw={gallery.isNsfw}
-            className="absolute left-2 top-2 z-10 pointer-events-none"
+            className="absolute bottom-2 right-2 z-10 pointer-events-none"
           />
 
           <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
@@ -194,7 +194,7 @@ function GalleryListCard({ gallery }: { gallery: GalleryCardData }) {
     <Link href={gallery.href}>
       <div className="surface-card-sharp flex items-center gap-3 px-3 py-2 group hover:bg-surface-2 transition-colors duration-fast">
         <NsfwBlur isNsfw={gallery.isNsfw ?? false} className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden flex-shrink-0">
-          <div className="w-16 aspect-[4/3] bg-surface-2 overflow-hidden">
+          <div className="relative h-full w-full overflow-hidden bg-surface-2">
             {gallery.coverImage ? (
               <img
                 src={gallery.coverImage}
@@ -208,16 +208,18 @@ function GalleryListCard({ gallery }: { gallery: GalleryCardData }) {
                 <Images className="h-4 w-4 text-text-disabled" />
               </div>
             )}
+            <NsfwShowModeChip
+              isNsfw={gallery.isNsfw}
+              compact
+              className="pointer-events-none absolute bottom-0.5 right-0.5 z-10"
+            />
           </div>
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <h3 className="min-w-0 flex-1 truncate text-[0.78rem] font-medium text-text-primary">
-              {gallery.title}
-            </h3>
-            <NsfwShowModeChip isNsfw={gallery.isNsfw} className="flex-shrink-0" />
-          </div>
+          <h3 className="text-[0.78rem] font-medium text-text-primary truncate">
+            {gallery.title}
+          </h3>
           <div className="flex items-center gap-3 mt-0.5 text-[0.65rem] text-text-muted">
             <span className="flex items-center gap-1">
               <Images className="h-3 w-3" />

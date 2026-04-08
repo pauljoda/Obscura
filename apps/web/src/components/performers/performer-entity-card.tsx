@@ -48,7 +48,7 @@ export function PerformerEntityCard({
             )}
             <NsfwShowModeChip
               isNsfw={performer.isNsfw}
-              className="absolute left-2 top-2 z-10 pointer-events-none"
+              className="absolute bottom-2 right-2 z-10 pointer-events-none"
             />
             {performer.favorite ? (
               <span className="absolute right-2 top-2 bg-black/60 px-1.5 py-1 text-text-accent backdrop-blur-sm">
@@ -93,7 +93,7 @@ function PerformerListCard({
           />
         )}
         <NsfwBlur isNsfw={performer.isNsfw ?? false} className="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
-          <div className="h-10 w-8 overflow-hidden bg-surface-3">
+          <div className="relative h-10 w-8 overflow-hidden bg-surface-3">
             {performer.imagePath ? (
               <img src={performer.imagePath} alt={performer.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             ) : (
@@ -101,16 +101,18 @@ function PerformerListCard({
                 <Users className="h-3.5 w-3.5 text-text-disabled" />
               </div>
             )}
+            <NsfwShowModeChip
+              isNsfw={performer.isNsfw}
+              compact
+              className="pointer-events-none absolute bottom-0.5 right-0.5 z-10"
+            />
           </div>
         </NsfwBlur>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <NsfwText isNsfw={performer.isNsfw ?? false} className="min-w-0 truncate text-[0.8rem] font-medium text-text-primary block group-hover:text-text-accent transition-colors duration-fast">
-              {performer.name}
-            </NsfwText>
-            <NsfwShowModeChip isNsfw={performer.isNsfw} className="flex-shrink-0" />
-          </div>
+          <NsfwText isNsfw={performer.isNsfw ?? false} className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
+            {performer.name}
+          </NsfwText>
           <p className="text-[0.68rem] text-text-disabled truncate">
             {formatVideoCount(performer.sceneCount)}
             {performer.gender ? ` · ${performer.gender}` : ""}

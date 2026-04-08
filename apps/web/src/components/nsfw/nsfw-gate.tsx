@@ -1,5 +1,6 @@
 "use client";
 
+import { Flame } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { useNsfw, type NsfwMode } from "./nsfw-context";
 
@@ -74,7 +75,7 @@ export function NsfwChip() {
 }
 
 /**
- * Compact flame badge for grid/list cards when content is fully visible (Show mode).
+ * Compact flame icon badge for grid/list cards when content is fully visible (Show mode).
  * In Blur mode the existing overlay already signals NSFW; hidden in SFW (off).
  */
 export function NsfwShowModeChip({
@@ -92,15 +93,18 @@ export function NsfwShowModeChip({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center border border-error/50 bg-error-muted/40 leading-none text-error-text shadow-[0_0_10px_rgba(168,72,80,0.35)]",
-        compact ? "h-4 w-4 text-[0.55rem]" : "size-5 text-[0.7rem]",
+        "inline-flex shrink-0 items-center justify-center border border-error/50 bg-error-muted/40 text-error-text shadow-[0_0_10px_rgba(168,72,80,0.35)]",
+        compact ? "h-4 w-4" : "size-5",
         className,
       )}
       title="Marked NSFW"
       aria-label="NSFW"
-      role="img"
     >
-      🔥
+      <Flame
+        className={compact ? "h-2.5 w-2.5" : "h-3 w-3"}
+        strokeWidth={2.25}
+        aria-hidden
+      />
     </span>
   );
 }
