@@ -160,13 +160,23 @@ export function NsfwTagLabel({
   className?: string;
 }) {
   const { mode } = useNsfw();
+  /** Only explicit true is treated as NSFW (avoids truthy strings / odd JSON). */
+  const tagIsNsfw = isNsfw === true;
 
-  if (!isNsfw || mode === "show") {
+  if (!tagIsNsfw || mode === "show") {
     return <span className={className}>{children}</span>;
   }
 
+  // SFW (off) mode: hide the real name but keep chips readable (no empty pills).
   if (mode === "off") {
-    return null;
+    return (
+      <span
+        className={cn("inline font-mono text-[0.85em] text-text-disabled tracking-[0.2em]", className)}
+        aria-label="Tag hidden in SFW mode"
+      >
+        ···
+      </span>
+    );
   }
 
   const garbled = garbleTagLabelText(children);
