@@ -7,15 +7,22 @@ import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
 
 interface PerformerEntityCardProps {
   performer: PerformerCardData;
-  variant?: "portrait" | "compact";
+  variant?: "portrait" | "list" | "compact";
   onSelect?: (href: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function PerformerEntityCard({
   performer,
   variant = "portrait",
   onSelect,
+  selected,
+  onToggleSelect,
 }: PerformerEntityCardProps) {
+  if (variant === "list") {
+    return <PerformerListCard performer={performer} selected={selected} onToggleSelect={onToggleSelect} />;
+  }
   if (variant === "compact") {
     return <PerformerCompactCard performer={performer} onSelect={onSelect} />;
   }
@@ -55,6 +62,65 @@ export function PerformerEntityCard({
           </p>
         </div>
       </article>
+    </Link>
+  );
+}
+
+function PerformerListCard({
+  performer,
+  selected,
+  onToggleSelect,
+}: {
+  performer: PerformerCardData;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+}) {
+  return (
+    <Link href={performer.href}>
+      <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => { e.preventDefault(); onToggleSelect(performer.id); }}
+            className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+          />
+        )}
+        <NsfwBlur isNsfw={performer.isNsfw ?? false} className="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
+          <div className="h-10 w-8 overflow-hidden bg-surface-3">
+            {performer.imagePath ? (
+              <img src={performer.imagePath} alt={performer.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <Users className="h-3.5 w-3.5 text-text-disabled" />
+              </div>
+            )}
+          </div>
+        </NsfwBlur>
+
+        <div className="flex-1 min-w-0">
+          <NsfwText isNsfw={performer.isNsfw ?? false} className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
+            {performer.name}
+          </NsfwText>
+          <p className="text-[0.68rem] text-text-disabled truncate">
+            {performer.sceneCount} scene{performer.sceneCount !== 1 ? "s" : ""}
+            {performer.gender ? ` · ${performer.gender}` : ""}
+          </p>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+          {performer.favorite && (
+            <Star className="h-3 w-3 text-accent-500 fill-accent-500" />
+          )}
+          {performer.rating != null && performer.rating > 0 && (
+            <span className="flex items-center gap-0.5 text-[0.65rem] text-text-disabled">
+              <Star className="h-3 w-3 text-accent-500 fill-accent-500" />
+              {Math.round(performer.rating / 20)}
+            </span>
+          )}
+        </div>
+      </div>
     </Link>
   );
 }

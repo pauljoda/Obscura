@@ -19,15 +19,21 @@ import {
   SlidersHorizontal,
   Film,
   Loader2,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { fetchPerformers, type PerformerItem } from "../../lib/api";
+import { fetchPerformers, updatePerformer, deletePerformer, type PerformerItem } from "../../lib/api";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { performerItemToCardData } from "../performers/performer-card-data";
 
 import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+import { useSelection } from "../../hooks/use-selection";
+import { SelectAllHeader } from "../select-all-header";
+import { BulkActionToolbar } from "../bulk-action-toolbar";
+import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 
 type SortKey = "name" | "scenes" | "rating" | "recent";
 type SortDir = "asc" | "desc";
@@ -66,6 +72,8 @@ export function PerformersPageClient({
   initialPerformers,
   initialTotal,
 }: PerformersPageClientProps) {
+  type ViewMode = "grid" | "list";
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [performers, setPerformers] = useState(initialPerformers);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
@@ -77,6 +85,10 @@ export function PerformersPageClient({
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  const selection = useSelection();
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search);
   const hydratedRef = useRef(false);
@@ -163,6 +175,34 @@ export function PerformersPageClient({
   const currentSort = sortOptions.find((option) => option.value === sortKey);
   const hasFilters = gender !== "" || favoriteOnly;
   const favoriteCount = performers.filter((performer) => performer.favorite).length;
+  const visibleIds = performers.map((p) => p.id);
+
+  async function handleBulkNsfw(isNsfw: boolean) {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => updatePerformer(id, { isNsfw })),
+      );
+      selection.deselectAll();
+      await loadPerformers();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => deletePerformer(id)),
+      );
+      selection.deselectAll();
+      setDeleteDialogOpen(false);
+      await loadPerformers();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -326,6 +366,31 @@ export function PerformersPageClient({
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Filters</span>
           </button>
+
+          <div className="h-5 w-px bg-border-subtle" />
+
+          <div className="flex items-center">
+            <button
+              onClick={() => { setViewMode("grid"); selection.deselectAll(); }}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+                viewMode === "grid" ? "text-text-accent bg-accent-950" : "text-text-muted hover:text-text-primary hover:bg-surface-2",
+              )}
+              title="Grid view"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+                viewMode === "list" ? "text-text-accent bg-accent-950" : "text-text-muted hover:text-text-primary hover:bg-surface-2",
+              )}
+              title="List view"
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         {filterOpen ? (
@@ -370,6 +435,30 @@ export function PerformersPageClient({
               : "No performers in the library yet."}
           </p>
         </div>
+      ) : viewMode === "list" ? (
+        <>
+          <SelectAllHeader
+            allSelected={selection.isAllSelected(visibleIds)}
+            onToggle={() =>
+              selection.isAllSelected(visibleIds)
+                ? selection.deselectAll()
+                : selection.selectAll(visibleIds)
+            }
+            selectedCount={selection.count}
+            totalVisible={performers.length}
+          />
+          <div className="space-y-1">
+            {performers.map((performer) => (
+              <PerformerEntityCard
+                key={performer.id}
+                performer={performerItemToCardData(performer)}
+                variant="list"
+                selected={selection.isSelected(performer.id)}
+                onToggleSelect={selection.toggle}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           {performers.map((performer) => (
@@ -391,6 +480,24 @@ export function PerformersPageClient({
           </div>
         </div>
       )}
+
+      <BulkActionToolbar
+        selectedCount={selection.count}
+        onDeselectAll={selection.deselectAll}
+        onMarkNsfw={() => void handleBulkNsfw(true)}
+        onUnmarkNsfw={() => void handleBulkNsfw(false)}
+        onDelete={() => setDeleteDialogOpen(true)}
+        loading={bulkLoading}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="performer"
+        count={selection.count}
+        onDeleteFromLibrary={() => void handleBulkDelete()}
+        loading={bulkLoading}
+      />
     </div>
   );
 }

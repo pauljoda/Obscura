@@ -15,6 +15,8 @@ interface SceneCardProps {
   index?: number;
   imageLoading?: "eager" | "lazy";
   onSelect?: (href: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function SceneCard({
@@ -23,9 +25,11 @@ export function SceneCard({
   index = 0,
   imageLoading = "lazy",
   onSelect,
+  selected,
+  onToggleSelect,
 }: SceneCardProps) {
   if (variant === "list") {
-    return <SceneListCard scene={scene} index={index} />;
+    return <SceneListCard scene={scene} index={index} selected={selected} onToggleSelect={onToggleSelect} />;
   }
 
   if (variant === "compact") {
@@ -63,13 +67,26 @@ export function SceneCard({
 function SceneListCard({
   scene,
   index,
+  selected,
+  onToggleSelect,
 }: {
   scene: SceneCardData;
   index: number;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   return (
     <Link href={scene.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => { e.preventDefault(); onToggleSelect(scene.id); }}
+            className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+          />
+        )}
         <NsfwBlur isNsfw={scene.isNsfw ?? false}>
           <div
             className={cn(

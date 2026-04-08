@@ -11,6 +11,8 @@ interface TagEntityCardProps {
   variant?: "list" | "cloud" | "compact";
   maxCount?: number;
   onSelect?: (href: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function TagEntityCard({
@@ -18,6 +20,8 @@ export function TagEntityCard({
   variant = "list",
   maxCount = 1,
   onSelect,
+  selected,
+  onToggleSelect,
 }: TagEntityCardProps) {
   if (variant === "cloud") {
     const total = tag.sceneCount + tag.imageCount;
@@ -56,6 +60,15 @@ export function TagEntityCard({
         "break-inside-avoid",
       )}
     >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={selected ?? false}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => { e.preventDefault(); onToggleSelect(tag.id); }}
+          className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+        />
+      )}
       {tag.imagePath && (
         <NsfwBlur isNsfw={tag.isNsfw ?? false} className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">
           <div className="flex-shrink-0 w-8 h-5 overflow-hidden bg-surface-3">

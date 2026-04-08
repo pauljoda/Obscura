@@ -523,6 +523,45 @@ export async function scenesRoutes(app: FastifyInstance) {
     return { ok: true, id };
   });
 
+  // ─── DELETE /scenes/:id ───────────────────────────────────────
+  app.delete("/scenes/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as { deleteFile?: string };
+    const deleteFile = query.deleteFile === "true";
+
+    const existing = await db.query.scenes.findFirst({
+      where: eq(scenes.id, id),
+      columns: { id: true, filePath: true },
+    });
+
+    if (!existing) {
+      reply.code(404);
+      return { error: "Scene not found" };
+    }
+
+    // Delete scene record (cascades handle scenePerformers, sceneTags, sceneMarkers)
+    await db.delete(scenes).where(eq(scenes.id, id));
+
+    // Clean up generated files (thumbnails, sprites, HLS cache, etc.)
+    const genDir = getGeneratedSceneDir(id);
+    try {
+      if (existsSync(genDir)) await rm(genDir, { recursive: true });
+    } catch {
+      // non-fatal
+    }
+
+    // Optionally delete the source video file from disk
+    if (deleteFile && existing.filePath) {
+      try {
+        if (existsSync(existing.filePath)) await unlink(existing.filePath);
+      } catch {
+        // non-fatal
+      }
+    }
+
+    return { ok: true };
+  });
+
   // ─── POST /scenes/:id/markers ──────────────────────────────────
   app.post("/scenes/:id/markers", async (request, reply) => {
     const { id } = request.params as { id: string };

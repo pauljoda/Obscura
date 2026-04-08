@@ -7,15 +7,22 @@ import { NsfwBlur } from "../nsfw/nsfw-gate";
 
 interface StudioEntityCardProps {
   studio: StudioCardData;
-  variant?: "banner" | "compact";
+  variant?: "banner" | "list" | "compact";
   onSelect?: (href: string) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function StudioEntityCard({
   studio,
   variant = "banner",
   onSelect,
+  selected,
+  onToggleSelect,
 }: StudioEntityCardProps) {
+  if (variant === "list") {
+    return <StudioListCard studio={studio} selected={selected} onToggleSelect={onToggleSelect} />;
+  }
   if (variant === "compact") {
     return <StudioCompactCard studio={studio} onSelect={onSelect} />;
   }
@@ -63,6 +70,64 @@ export function StudioEntityCard({
           </div>
         </div>
       </article>
+    </Link>
+  );
+}
+
+function StudioListCard({
+  studio,
+  selected,
+  onToggleSelect,
+}: {
+  studio: StudioCardData;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+}) {
+  return (
+    <Link href={studio.href}>
+      <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected ?? false}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => { e.preventDefault(); onToggleSelect(studio.id); }}
+            className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+          />
+        )}
+        <NsfwBlur isNsfw={studio.isNsfw ?? false} className="flex-shrink-0 w-12 h-7 overflow-hidden bg-surface-3">
+          <div className="w-12 h-7 overflow-hidden bg-surface-3">
+            {studio.imagePath ? (
+              <img src={studio.imagePath} alt={studio.name} loading="lazy" decoding="async" className="h-full w-full object-contain" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <Building2 className="h-3.5 w-3.5 text-text-disabled" />
+              </div>
+            )}
+          </div>
+        </NsfwBlur>
+
+        <div className="flex-1 min-w-0">
+          <span className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
+            {studio.name}
+          </span>
+          <p className="text-[0.68rem] text-text-disabled">
+            {studio.sceneCount} scene{studio.sceneCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+          {studio.favorite && (
+            <Heart className="h-3 w-3 text-red-400 fill-red-400" />
+          )}
+          {studio.rating != null && studio.rating > 0 && (
+            <span className="flex items-center gap-0.5 text-[0.65rem] text-text-disabled">
+              <Star className="h-3 w-3 text-accent-500 fill-accent-500" />
+              {Math.round(studio.rating / 20)}
+            </span>
+          )}
+        </div>
+      </div>
     </Link>
   );
 }

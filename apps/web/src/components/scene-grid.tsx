@@ -14,9 +14,11 @@ interface SceneGridProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore }: SceneGridProps) {
+export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect }: SceneGridProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,6 +82,8 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
               scene={sceneListItemToCardData(scene)}
               variant="list"
               index={i}
+              selected={selectedIds?.has(scene.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>

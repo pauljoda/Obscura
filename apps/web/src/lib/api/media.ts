@@ -67,6 +67,14 @@ export async function updateScene(
   });
 }
 
+export async function deleteScene(
+  id: string,
+  deleteFile?: boolean,
+): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/scenes/${id}${qs}`, { method: "DELETE" });
+}
+
 export async function createMarker(
   sceneId: string,
   data: { title: string; seconds: number; endSeconds?: number | null; primaryTagName?: string | null },

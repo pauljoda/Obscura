@@ -15,6 +15,8 @@ import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
+  updateScene,
+  deleteScene,
   type SceneListItem,
   type SceneStats,
   type StudioItem,
@@ -22,6 +24,10 @@ import {
 } from "../../lib/api";
 import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+import { useSelection } from "../../hooks/use-selection";
+import { SelectAllHeader } from "../select-all-header";
+import { BulkActionToolbar } from "../bulk-action-toolbar";
+import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 
 interface ActiveFilter {
   label: string;
@@ -53,6 +59,10 @@ export function ScenesPageClient({
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  const selection = useSelection();
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
@@ -151,6 +161,35 @@ export function ScenesPageClient({
     });
   }
 
+  async function handleBulkNsfw(isNsfw: boolean) {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => updateScene(id, { isNsfw })),
+      );
+      selection.deselectAll();
+      await loadScenes();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleBulkDelete(deleteFile?: boolean) {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => deleteScene(id, deleteFile)),
+      );
+      selection.deselectAll();
+      setDeleteDialogOpen(false);
+      await loadScenes();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  const visibleIds = scenes.map((s) => s.id);
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -223,6 +262,19 @@ export function ScenesPageClient({
         onAddFilter={addFilter}
       />
 
+      {viewMode === "list" && !loading && scenes.length > 0 && (
+        <SelectAllHeader
+          allSelected={selection.isAllSelected(visibleIds)}
+          onToggle={() =>
+            selection.isAllSelected(visibleIds)
+              ? selection.deselectAll()
+              : selection.selectAll(visibleIds)
+          }
+          selectedCount={selection.count}
+          totalVisible={scenes.length}
+        />
+      )}
+
       <SceneGrid
         scenes={scenes}
         viewMode={viewMode}
@@ -230,6 +282,27 @@ export function ScenesPageClient({
         hasMore={scenes.length < total}
         loadingMore={loadingMore}
         onLoadMore={loadMore}
+        selectedIds={viewMode === "list" ? selection.selectedIds : undefined}
+        onToggleSelect={viewMode === "list" ? selection.toggle : undefined}
+      />
+
+      <BulkActionToolbar
+        selectedCount={selection.count}
+        onDeselectAll={selection.deselectAll}
+        onMarkNsfw={() => void handleBulkNsfw(true)}
+        onUnmarkNsfw={() => void handleBulkNsfw(false)}
+        onDelete={() => setDeleteDialogOpen(true)}
+        loading={bulkLoading}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="scene"
+        count={selection.count}
+        onDeleteFromLibrary={() => void handleBulkDelete(false)}
+        onDeleteFromDisk={() => void handleBulkDelete(true)}
+        loading={bulkLoading}
       />
     </div>
   );

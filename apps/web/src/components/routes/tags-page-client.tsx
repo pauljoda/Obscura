@@ -15,12 +15,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { type TagItem } from "../../lib/api";
+import { type TagItem, updateTag, deleteTag } from "../../lib/api";
 import { TagEntityCard } from "../tags/tag-entity-card";
 import { tagItemToCardData } from "../tags/tag-card-data";
 
 import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
+import { useSelection } from "../../hooks/use-selection";
+import { SelectAllHeader } from "../select-all-header";
+import { BulkActionToolbar } from "../bulk-action-toolbar";
+import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
@@ -42,12 +46,16 @@ interface TagsPageClientProps {
 }
 
 export function TagsPageClient({ initialTags }: TagsPageClientProps) {
-  const [tags] = useState(initialTags);
+  const [tags, setTags] = useState(initialTags);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scenes");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortOpen, setSortOpen] = useState(false);
+
+  const selection = useSelection();
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const sorted = useMemo(() => {
     const copy = [...tags];
@@ -75,6 +83,38 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
   const topTag = tags.length > 0 ? [...tags].sort((a, b) => totalCount(b) - totalCount(a))[0] : null;
 
   const currentSort = sortOptions.find((s) => s.value === sortKey);
+  const visibleIds = filtered.map((t) => t.id);
+
+  async function handleBulkNsfw(isNsfw: boolean) {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => updateTag(id, { isNsfw })),
+      );
+      setTags((prev) =>
+        prev.map((t) =>
+          selection.selectedIds.has(t.id) ? { ...t, isNsfw } : t,
+        ),
+      );
+      selection.deselectAll();
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selection.selectedIds).map((id) => deleteTag(id)),
+      );
+      setTags((prev) => prev.filter((t) => !selection.selectedIds.has(t.id)));
+      selection.deselectAll();
+      setDeleteDialogOpen(false);
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -260,6 +300,31 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
             </button>
           )}
         </div>
+      ) : viewMode === "list" ? (
+        <>
+          {filtered.length > 0 && (
+            <SelectAllHeader
+              allSelected={selection.isAllSelected(visibleIds)}
+              onToggle={() =>
+                selection.isAllSelected(visibleIds)
+                  ? selection.deselectAll()
+                  : selection.selectAll(visibleIds)
+              }
+              selectedCount={selection.count}
+              totalVisible={filtered.length}
+            />
+          )}
+          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
+            {filtered.map((tag) => (
+              <TagEntityCard
+                key={tag.id}
+                tag={tagItemToCardData(tag)}
+                selected={selection.isSelected(tag.id)}
+                onToggleSelect={selection.toggle}
+              />
+            ))}
+          </div>
+        </>
       ) : viewMode === "cloud" ? (
         <div className="surface-panel p-6">
           <div className="flex flex-wrap gap-1.5 justify-center">
@@ -275,13 +340,25 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
             })}
           </div>
         </div>
-      ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
-          {filtered.map((tag) => (
-            <TagEntityCard key={tag.id} tag={tagItemToCardData(tag)} />
-          ))}
-        </div>
-      )}
+      ) : null}
+
+      <BulkActionToolbar
+        selectedCount={selection.count}
+        onDeselectAll={selection.deselectAll}
+        onMarkNsfw={() => void handleBulkNsfw(true)}
+        onUnmarkNsfw={() => void handleBulkNsfw(false)}
+        onDelete={() => setDeleteDialogOpen(true)}
+        loading={bulkLoading}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        entityType="tag"
+        count={selection.count}
+        onDeleteFromLibrary={() => void handleBulkDelete()}
+        loading={bulkLoading}
+      />
     </div>
   );
 }
