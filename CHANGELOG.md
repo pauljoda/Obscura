@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **NSFW Content Mode Switcher** — Replaced the generic `<select>` dropdown in Settings with a modern, icon-based segmented control. Provides clearer visual feedback and descriptions for each mode (Off, Blur, Show) using `Shield`, `Droplet`, and `Flame` icons, adapting to the "Dark Room" industrial visual language with inset shadows and accent glows.
 - **Canvas header search bar** — Replaced the generic button with a sleek, inset search input style. Removed rounded corners to adhere to the sharp corners rule. Added appropriate hover and focus states with accent borders and shadows. Enhanced responsive design (icon-only on mobile, full input on larger screens).
 
 ### Added

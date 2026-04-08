@@ -6,6 +6,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import {
   Database,
   Eye,
+  EyeOff,
   Film,
   FolderOpen,
   HardDrive,
@@ -26,6 +27,9 @@ import {
   Check,
   AlertCircle,
   Wrench,
+  Shield,
+  Droplet,
+  Flame,
 } from "lucide-react";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { entityTerms } from "../../lib/terminology";
@@ -1022,20 +1026,61 @@ export function SettingsPageClient({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card no-lift p-3.5">
-            <label className="control-label mb-1.5">NSFW Content Mode</label>
-            <select
-              className="control-input w-full py-1.5 text-sm"
-              value={nsfwMode}
-              onChange={(e) => setNsfwMode(e.target.value as "off" | "blur" | "show")}
-            >
-              <option value="off">Off — hide adult content (SFW)</option>
-              <option value="blur">Blur — obscure thumbnails until hover</option>
-              <option value="show">Show — display all content normally</option>
-            </select>
-            <p className="mt-1.5 text-[0.65rem] text-text-disabled">
-              Stored per device. Does not affect stored data.
-            </p>
+          <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
+            <div>
+              <label className="control-label">NSFW Content Mode</label>
+              <p className="text-[0.68rem] text-text-muted">
+                Stored per device. Does not affect stored data.
+              </p>
+            </div>
+            
+            <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
+              <button
+                type="button"
+                onClick={() => setNsfwMode("off")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "off" 
+                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary" 
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Shield className={cn("h-4 w-4", nsfwMode === "off" && "text-info-text")} />
+                <span className="text-[0.75rem] font-medium">Off (SFW)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNsfwMode("blur")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "blur" 
+                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary" 
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Droplet className={cn("h-4 w-4", nsfwMode === "blur" && "text-warning-text")} />
+                <span className="text-[0.75rem] font-medium">Blur</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNsfwMode("show")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "show" 
+                    ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400" 
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Flame className={cn("h-4 w-4", nsfwMode === "show" && "text-accent-500")} />
+                <span className="text-[0.75rem] font-medium">Show</span>
+              </button>
+            </div>
+            
+            <div className="text-[0.7rem] text-text-muted bg-surface-2/50 p-2.5 border border-border-subtle">
+              {nsfwMode === "off" && "Adult content is completely hidden from the interface."}
+              {nsfwMode === "blur" && "Adult content is shown but thumbnails and text are obscured until hovered."}
+              {nsfwMode === "show" && "All content is displayed normally without any obscuring."}
+            </div>
           </div>
           <ToggleCard
             label="Auto-enable on LAN"
