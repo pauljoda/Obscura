@@ -45,7 +45,7 @@ import {
   type TagItem,
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
-import { NsfwBlur } from "./nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -328,6 +328,7 @@ export function SceneDetail({
                   {scene.resolution}
                 </span>
               )}
+              {scene.isNsfw && <NsfwChip />}
             </div>
           </div>
 

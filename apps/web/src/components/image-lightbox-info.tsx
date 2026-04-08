@@ -5,6 +5,7 @@ import { X, Star, Pencil, Save, XCircle, CheckCircle2, Search } from "lucide-rea
 import { cn } from "@obscura/ui/lib/utils";
 import { updateImage, type TagItem } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
+import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface ImageLightboxInfoProps {
   image: ImageListItemDto;
@@ -26,6 +27,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
   const [editing, setEditing] = useState(false);
   const [editRating, setEditRating] = useState<number | null>(image.rating);
   const [editOrganized, setEditOrganized] = useState(image.organized);
+  const [editIsNsfw, setEditIsNsfw] = useState(image.isNsfw ?? false);
   const [editTags, setEditTags] = useState(image.tags.map((t) => t.name));
   const [tagSearch, setTagSearch] = useState("");
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
@@ -35,6 +37,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
   const startEdit = useCallback(() => {
     setEditRating(image.rating);
     setEditOrganized(image.organized);
+    setEditIsNsfw(image.isNsfw ?? false);
     setEditTags(image.tags.map((t) => t.name));
     setTagSearch("");
     setTagPickerOpen(false);
@@ -51,18 +54,20 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
       await updateImage(image.id, {
         rating: editRating,
         organized: editOrganized,
+        isNsfw: editIsNsfw,
         tagNames: editTags,
       });
       onImageUpdate?.(image.id, {
         rating: editRating,
         organized: editOrganized,
+        isNsfw: editIsNsfw,
         tags: editTags.map((name, i) => ({ id: `temp-${i}`, name })),
       });
       setEditing(false);
     } finally {
       setSaving(false);
     }
-  }, [image.id, editRating, editOrganized, editTags, onImageUpdate]);
+  }, [image.id, editRating, editOrganized, editIsNsfw, editTags, onImageUpdate]);
 
   const handleRatingClick = useCallback((value: number) => {
     if (editing) {
@@ -179,6 +184,15 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
             <CheckCircle2 className="h-4 w-4" />
             Organized
           </div>
+        ) : null}
+
+        {/* NSFW */}
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
+          </div>
+        ) : image.isNsfw ? (
+          <NsfwChip />
         ) : null}
 
         {/* Tags */}

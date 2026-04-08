@@ -14,6 +14,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import { updateGallery } from "../lib/api";
 import type { GalleryDetailDto, GalleryChapterDto } from "@obscura/contracts";
+import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface GalleryMetadataPanelProps {
   gallery: GalleryDetailDto;
@@ -31,6 +32,7 @@ export function GalleryMetadataPanel({
   const [editDetails, setEditDetails] = useState(gallery.details ?? "");
   const [editPhotographer, setEditPhotographer] = useState(gallery.photographer ?? "");
   const [editDate, setEditDate] = useState(gallery.date ?? "");
+  const [editIsNsfw, setEditIsNsfw] = useState(gallery.isNsfw ?? false);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -41,12 +43,14 @@ export function GalleryMetadataPanel({
         details: editDetails || null,
         photographer: editPhotographer || null,
         date: editDate || null,
+        isNsfw: editIsNsfw,
       });
       onGalleryUpdate?.({
         title: editTitle,
         details: editDetails || null,
         photographer: editPhotographer || null,
         date: editDate || null,
+        isNsfw: editIsNsfw,
       });
       setEditMode(false);
     } finally {
@@ -59,6 +63,7 @@ export function GalleryMetadataPanel({
     setEditDetails(gallery.details ?? "");
     setEditPhotographer(gallery.photographer ?? "");
     setEditDate(gallery.date ?? "");
+    setEditIsNsfw(gallery.isNsfw ?? false);
     setEditMode(false);
   };
 
@@ -92,9 +97,12 @@ export function GalleryMetadataPanel({
             className="flex-1 bg-surface-2 border border-border-subtle px-2 py-1 text-base font-heading text-text-primary focus:outline-none focus:border-accent-500"
           />
         ) : (
-          <h2 className="text-base font-heading font-medium text-text-primary flex-1">
-            {gallery.title}
-          </h2>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-heading font-medium text-text-primary">
+              {gallery.title}
+            </h2>
+            {gallery.isNsfw && <div className="mt-1"><NsfwChip /></div>}
+          </div>
         )}
         <button
           onClick={editMode ? handleCancel : () => setEditMode(true)}
@@ -193,6 +201,14 @@ export function GalleryMetadataPanel({
           {gallery.date}
         </div>
       ) : null}
+
+      {/* NSFW toggle (edit mode) */}
+      {editMode && (
+        <div className="flex items-center gap-3">
+          <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
+          {editIsNsfw && <span className="text-[0.68rem] text-text-muted">Hidden in SFW mode</span>}
+        </div>
+      )}
 
       {/* Save button */}
       {editMode && (

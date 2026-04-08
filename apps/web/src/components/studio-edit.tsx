@@ -33,6 +33,7 @@ import {
   type StashBoxStudioResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
+import { NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface StudioEditProps {
   id: string;
@@ -52,6 +53,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
   const [description, setDescription] = useState("");
   const [aliases, setAliases] = useState("");
   const [url, setUrl] = useState("");
+  const [isNsfw, setIsNsfw] = useState(false);
   const [parentId, setParentId] = useState<string | null>(null);
   const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
   const [parentSearch, setParentSearch] = useState("");
@@ -83,6 +85,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       setDescription(s.description ?? "");
       setAliases(s.aliases ?? "");
       setUrl(s.url ?? "");
+      setIsNsfw(s.isNsfw ?? false);
       setParentId(s.parentId);
       setParentSearch(s.parent?.name ?? "");
 
@@ -253,6 +256,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
         aliases: aliases.trim() || null,
         url: url.trim() || null,
         parentId: parentId,
+        isNsfw,
       });
       setMessage("Changes saved");
       onSaved?.();
@@ -533,6 +537,10 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
               <div className="col-span-full">
                 <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Description</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="control-input w-full py-2 text-sm resize-y" placeholder="Studio description..." />
+              </div>
+              <div className="col-span-full flex items-center gap-3">
+                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
+                {isNsfw && <span className="text-[0.68rem] text-text-muted">This studio will be hidden in SFW mode</span>}
               </div>
             </div>
           </div>

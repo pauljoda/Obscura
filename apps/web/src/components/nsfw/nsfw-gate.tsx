@@ -60,6 +60,50 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
   );
 }
 
+/**
+ * Red "NSFW" chip for display in metadata sections.
+ * Shown only when isNsfw is true — no mode gating, it's informational metadata.
+ */
+export function NsfwChip() {
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider bg-status-error/15 text-status-error border border-status-error/30">
+      NSFW
+    </span>
+  );
+}
+
+/**
+ * Toggle button for marking an entity as NSFW in edit forms.
+ * Wraps in NsfwGate so it is hidden in SFW mode (marking content NSFW in SFW
+ * mode would immediately make it disappear, confusing the user).
+ */
+export function NsfwEditToggle({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <NsfwGate>
+      <button
+        type="button"
+        onClick={() => onChange(!value)}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[0.72rem] font-medium transition-colors duration-fast ${
+          value
+            ? "bg-status-error/15 text-status-error border border-status-error/40 hover:bg-status-error/20"
+            : "bg-surface-2 text-text-muted border border-border-subtle hover:border-border-accent hover:text-text-primary"
+        }`}
+      >
+        <span
+          className={`inline-block h-2 w-2 border ${value ? "bg-status-error border-status-error" : "border-border-subtle"}`}
+        />
+        NSFW
+      </button>
+    </NsfwGate>
+  );
+}
+
 interface NsfwTextProps {
   isNsfw: boolean;
   children: React.ReactNode;

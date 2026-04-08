@@ -52,6 +52,7 @@ import {
   type PerformerItem,
   type StudioItem,
 } from "../lib/api";
+import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface SceneEditProps {
   id: string;
@@ -369,6 +370,7 @@ export function SceneEdit({
   const [date, setDate] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [url, setUrl] = useState("");
+  const [isNsfw, setIsNsfw] = useState(false);
   const [studioName, setStudioName] = useState("");
   const [performerNames, setPerformerNames] = useState<string[]>([]);
   const [tagNames, setTagNames] = useState<string[]>([]);
@@ -427,6 +429,7 @@ export function SceneEdit({
     setDate(data.date ?? "");
     setRating(data.rating);
     setUrl(data.url ?? "");
+    setIsNsfw(data.isNsfw ?? false);
     setStudioName(data.studio?.name ?? "");
     setPerformerNames(data.performers.map((p) => p.name));
     setTagNames(data.tags.map((t) => t.name));
@@ -462,6 +465,7 @@ export function SceneEdit({
         rating: rating,
         url: url.trim() || null,
         orgasmCount: orgasmCount,
+        isNsfw: isNsfw,
         studioName: studioName.trim() || null,
         performerNames: performerNames,
         tagNames: tagNames,
@@ -1186,6 +1190,11 @@ export function SceneEdit({
                   rows={3}
                 />
               </FormField>
+
+              <div className="md:col-span-2 flex items-center gap-3">
+                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
+                {isNsfw && <span className="text-[0.68rem] text-text-muted">This scene will be hidden in SFW mode</span>}
+              </div>
             </div>
           </section>
 

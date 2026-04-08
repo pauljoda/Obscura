@@ -21,6 +21,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SceneGrid } from "../../../../components/scene-grid";
 import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
+import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
 import {
   fetchScenes,
   fetchStudioDetail,
@@ -198,6 +199,7 @@ export default function StudioPage({ params }: StudioPageProps) {
           <Building2 className="h-5 w-5 text-text-accent" />
           {studio.name}
         </h1>
+        {studio.isNsfw && <NsfwChip />}
         <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", studio.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
           <Heart className={cn("h-4 w-4", studio.favorite && "fill-current")} />
         </button>

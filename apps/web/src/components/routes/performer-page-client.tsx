@@ -34,7 +34,7 @@ import {
   type SceneListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip } from "../nsfw/nsfw-gate";
 
 interface PerformerPageClientProps {
   id: string;
@@ -373,6 +373,7 @@ export function PerformerPageClient({
                   {totalScenes} scene{totalScenes !== 1 ? "s" : ""}
                 </span>
               </div>
+              {performer.isNsfw && <NsfwChip />}
             </div>
           </div>
 

@@ -27,6 +27,7 @@ import {
   type NormalizedTagScrapeResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
+import { NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface TagEditProps {
   id: string;
@@ -45,6 +46,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [aliases, setAliases] = useState("");
+  const [isNsfw, setIsNsfw] = useState(false);
 
   // Image
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +71,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
       setName(t.name);
       setDescription(t.description ?? "");
       setAliases(t.aliases ?? "");
+      setIsNsfw(t.isNsfw ?? false);
 
       const enabled = epRes.endpoints.filter((e) => e.enabled);
       setEndpoints(enabled);
@@ -224,6 +227,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
         name: name.trim(),
         description: description.trim() || null,
         aliases: aliases.trim() || null,
+        isNsfw,
       });
       setMessage("Changes saved");
       onSaved?.();
@@ -448,6 +452,10 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
                   className="control-input w-full py-2 text-sm resize-y"
                   placeholder="Tag description..."
                 />
+              </div>
+              <div className="flex items-center gap-3">
+                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
+                {isNsfw && <span className="text-[0.68rem] text-text-muted">This tag will be hidden in SFW mode</span>}
               </div>
             </div>
           </div>

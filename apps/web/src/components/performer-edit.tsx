@@ -38,6 +38,7 @@ import {
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
+import { NsfwEditToggle } from "./nsfw/nsfw-gate";
 
 interface PerformerEditProps {
   id: string;
@@ -81,6 +82,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const [careerEnd, setCareerEnd] = useState("");
   const [details, setDetails] = useState("");
   const [tagNames, setTagNames] = useState<string[]>([]);
+  const [isNsfw, setIsNsfw] = useState(false);
 
   // Scraper state
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
@@ -132,6 +134,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
       setCareerEnd(p.careerEnd != null ? String(p.careerEnd) : "");
       setDetails(p.details ?? "");
       setTagNames(p.tags?.map((t) => t.name) ?? []);
+      setIsNsfw(p.isNsfw ?? false);
 
       // Filter scrapers with performer capabilities
       const perfScrapers = s.packages.filter((pkg) => {
@@ -181,6 +184,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
         careerStart: careerStart ? parseInt(careerStart, 10) || null : null,
         careerEnd: careerEnd ? parseInt(careerEnd, 10) || null : null,
         details: details.trim() || null,
+        isNsfw,
         tagNames,
       });
       setMessage("Changes saved");
@@ -778,6 +782,10 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                 </select>
               </div>
               <FieldInput label="Country" value={country} onChange={setCountry} />
+              <div className="col-span-full flex items-center gap-3">
+                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
+                {isNsfw && <span className="text-[0.68rem] text-text-muted">This performer will be hidden in SFW mode</span>}
+              </div>
             </div>
           </div>
 

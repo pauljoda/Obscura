@@ -22,6 +22,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SceneGrid } from "../../../../components/scene-grid";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
+import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
 import {
   fetchScenes,
   fetchTags,
@@ -182,6 +183,7 @@ export default function TagPage({ params }: TagPageProps) {
           <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
           {tagName}
         </h1>
+        {tagDetail?.isNsfw && <NsfwChip />}
         {tagDetail && (
           <button onClick={handleToggleFavorite} className={cn("p-1.5 rounded transition-colors", tagDetail.favorite ? "text-red-400 hover:text-red-300" : "text-text-disabled hover:text-red-400")}>
             <Heart className={cn("h-4 w-4", tagDetail.favorite && "fill-current")} />

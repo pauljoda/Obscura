@@ -55,6 +55,7 @@ export async function updateScene(
     url?: string | null;
     organized?: boolean;
     orgasmCount?: number;
+    isNsfw?: boolean;
     studioName?: string | null;
     performerNames?: string[];
     tagNames?: string[];
@@ -164,6 +165,7 @@ export async function updateGallery(
     date?: string | null;
     rating?: number | null;
     organized?: boolean;
+    isNsfw?: boolean;
     photographer?: string | null;
     studioName?: string | null;
     performerNames?: string[];
@@ -233,6 +235,7 @@ export async function updateImage(
     date?: string | null;
     rating?: number | null;
     organized?: boolean;
+    isNsfw?: boolean;
     studioName?: string | null;
     performerNames?: string[];
     tagNames?: string[];
