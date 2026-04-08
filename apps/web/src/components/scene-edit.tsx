@@ -53,7 +53,7 @@ import {
   type PerformerItem,
   type StudioItem,
 } from "../lib/api";
-import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -814,6 +814,8 @@ export function SceneEdit({
         : studioSuggestions)
     : [];
 
+  const sceneTagsVisibleInViewMode = tagsVisibleInNsfwMode(scene.tags, nsfwMode);
+
   // ─── VIEW MODE ─────────────────────────────────────────────────
 
   if (!editing) {
@@ -925,11 +927,11 @@ export function SceneEdit({
             </MetadataRow>
 
             <MetadataRow label="Tags" icon={TagIcon}>
-              {scene.tags.length === 0 ? (
+              {sceneTagsVisibleInViewMode.length === 0 ? (
                 <span className="text-sm text-text-disabled">--</span>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {scene.tags.map((tag) => (
+                  {sceneTagsVisibleInViewMode.map((tag) => (
                     <Link
                       key={tag.id}
                       href={`/tags/${tag.id}`}

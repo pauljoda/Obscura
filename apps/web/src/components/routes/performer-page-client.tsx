@@ -35,7 +35,8 @@ import {
   type SceneListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
-import { NsfwBlur, NsfwChip, NsfwTagLabel } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 interface PerformerPageClientProps {
   id: string;
@@ -52,6 +53,7 @@ export function PerformerPageClient({
 }: PerformerPageClientProps) {
   const router = useRouter();
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
 
   const [performer, setPerformer] = useState(initialPerformer);
   const [scenes, setScenes] = useState(initialScenes);
@@ -172,6 +174,7 @@ export function PerformerPageClient({
   }
 
   const imageUrl = toApiUrl(performer.imagePath);
+  const performerTagsVisible = tagsVisibleInNsfwMode(performer.tags, nsfwMode);
   const initials = performer.name
     .split(" ")
     .map((part) => part[0])
@@ -377,9 +380,9 @@ export function PerformerPageClient({
             </div>
           </div>
 
-          {performer.tags && performer.tags.length > 0 ? (
+          {performerTagsVisible.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
-              {performer.tags.map((tag) => (
+              {performerTagsVisible.map((tag) => (
                 <span key={tag.id} className="tag-chip tag-chip-default">
                   <TagIcon className="mr-1 h-2.5 w-2.5" />
                   <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>

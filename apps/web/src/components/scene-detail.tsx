@@ -46,7 +46,7 @@ import {
   type TagItem,
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
-import { NsfwBlur, NsfwChip, NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -97,6 +97,7 @@ export function SceneDetail({
   const [markerTagName, setMarkerTagName] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
   const { mode: nsfwMode } = useNsfw();
+  const sceneTagsVisible = tagsVisibleInNsfwMode(scene?.tags, nsfwMode);
   /** Full adult terminology only when NSFW content mode is "show". */
   const explicitCounterLabels = nsfwMode === "show";
   const terms = useTerms();
@@ -531,11 +532,11 @@ export function SceneDetail({
                 <TagIcon className="h-3.5 w-3.5" />
                 Tags
               </h4>
-              {scene.tags.length === 0 ? (
+              {sceneTagsVisible.length === 0 ? (
                 <p className="text-text-disabled text-sm">No tags</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {scene.tags.map((tag) => (
+                  {sceneTagsVisible.map((tag) => (
                     <Link
                       key={tag.id}
                       href={`/tags/${tag.id}`}
@@ -698,7 +699,8 @@ export function SceneDetail({
                     {marker.title}
                   </p>
                 </div>
-                {marker.primaryTag && (
+                {marker.primaryTag &&
+                  (nsfwMode !== "off" || marker.primaryTag.isNsfw !== true) && (
                   <span className="tag-chip tag-chip-accent flex-shrink-0">
                     <NsfwTagLabel isNsfw={marker.primaryTag.isNsfw}>
                       {marker.primaryTag.name}
@@ -853,6 +855,7 @@ function MarkerForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const { mode: markerNsfwMode } = useNsfw();
   const [tagFocused, setTagFocused] = useState(false);
   const filteredTags = tagFocused
     ? (tagName.trim()
@@ -862,6 +865,7 @@ function MarkerForm({
         : allTags
       ).slice(0, 10)
     : [];
+  const suggestionTags = tagsVisibleInNsfwMode(filteredTags, markerNsfwMode);
 
   return (
     <div className="surface-card-sharp p-4 space-y-3">
@@ -943,9 +947,9 @@ function MarkerForm({
               onBlur={() => setTimeout(() => setTagFocused(false), 150)}
               placeholder="Tag name"
             />
-            {filteredTags.length > 0 && (
+            {suggestionTags.length > 0 && (
               <div className="autocomplete-dropdown">
-                {filteredTags.map((t) => (
+                {suggestionTags.map((t) => (
                   <div
                     key={t.id}
                     className="autocomplete-item"

@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
-import { NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 export type ViewMode = "grid" | "list";
 export type SortOption = "recent" | "title" | "duration" | "size" | "rating" | "date" | "plays";
@@ -312,14 +313,16 @@ function TagFilterSection({
   activeFilters: { label: string; value: string }[];
   onAddFilter?: (type: string, label: string, value: string) => void;
 }) {
+  const { mode: nsfwMode } = useNsfw();
   const [tagSearch, setTagSearch] = useState("");
 
   const filteredTags = useMemo(() => {
-    const withScenes = tags.filter((t) => t.sceneCount > 0);
+    const visible = tagsVisibleInNsfwMode(tags, nsfwMode);
+    const withScenes = visible.filter((t) => t.sceneCount > 0);
     if (!tagSearch.trim()) return withScenes;
     const q = tagSearch.toLowerCase();
     return withScenes.filter((t) => t.name.toLowerCase().includes(q));
-  }, [tags, tagSearch]);
+  }, [tags, tagSearch, nsfwMode]);
 
   // Group alphabetically when we have many tags
   const grouped = useMemo(() => {
@@ -332,7 +335,9 @@ function TagFilterSection({
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredTags]);
 
-  const totalWithScenes = tags.filter((t) => t.sceneCount > 0).length;
+  const totalWithScenes = tagsVisibleInNsfwMode(tags, nsfwMode).filter(
+    (t) => t.sceneCount > 0,
+  ).length;
   const showSearch = totalWithScenes > 12;
 
   return (

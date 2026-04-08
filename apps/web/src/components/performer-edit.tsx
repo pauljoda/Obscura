@@ -38,7 +38,8 @@ import {
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
-import { NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
 interface PerformerEditProps {
@@ -59,6 +60,7 @@ const genderOptions = [
 
 export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const terms = useTerms();
+  const { mode: performerTagPickerNsfwMode } = useNsfw();
   const [performer, setPerformer] = useState<PerformerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -448,6 +450,10 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const filteredTags = tagInput.trim()
     ? availableTags.filter((t) => t.name.toLowerCase().includes(tagInput.toLowerCase()))
     : availableTags;
+  const tagPickerSuggestions = tagsVisibleInNsfwMode(
+    filteredTags,
+    performerTagPickerNsfwMode,
+  );
 
   if (loading) {
     return (
@@ -844,11 +850,11 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                 placeholder="Add tag..."
                 className="control-input w-full py-1.5 text-sm"
               />
-              {showTagDropdown && filteredTags.length > 0 && (
+              {showTagDropdown && tagPickerSuggestions.length > 0 && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowTagDropdown(false)} />
                   <div className="absolute left-0 right-0 top-full mt-1 z-50 surface-elevated max-h-40 overflow-y-auto py-1">
-                    {filteredTags.slice(0, 20).map((tag) => (
+                    {tagPickerSuggestions.slice(0, 20).map((tag) => (
                       <button
                         key={tag.id}
                         onClick={() => addTag(tag.name)}

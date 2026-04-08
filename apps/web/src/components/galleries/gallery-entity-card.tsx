@@ -6,7 +6,8 @@ import { Archive, FolderOpen, Images, Sparkles, Star } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { useElementInView } from "../../hooks/use-element-in-view";
 import type { GalleryCardData } from "./gallery-card-data";
-import { NsfwBlur, NsfwTagLabel } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 const typeIcons = {
   folder: FolderOpen,
@@ -45,6 +46,8 @@ function GalleryGridCard({
   gallery: GalleryCardData;
   aspectRatio?: "video" | "standard" | "portrait";
 }) {
+  const { mode: nsfwMode } = useNsfw();
+  const visibleGalleryTags = tagsVisibleInNsfwMode(gallery.tags, nsfwMode);
   const cardRef = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -161,16 +164,16 @@ function GalleryGridCard({
               </span>
             )}
           </div>
-          {gallery.tags.length > 0 && (
+          {visibleGalleryTags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {gallery.tags.slice(0, 3).map((tag) => (
+              {visibleGalleryTags.slice(0, 3).map((tag) => (
                 <span key={tag.name} className="tag-chip tag-chip-default text-[0.55rem]">
                   <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </span>
               ))}
-              {gallery.tags.length > 3 && (
+              {visibleGalleryTags.length > 3 && (
                 <span className="text-[0.55rem] text-text-disabled">
-                  +{gallery.tags.length - 3}
+                  +{visibleGalleryTags.length - 3}
                 </span>
               )}
             </div>

@@ -23,6 +23,7 @@ import { SceneGrid } from "../../../../components/scene-grid";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip, NsfwTagLabel } from "../../../../components/nsfw/nsfw-gate";
+import { useNsfw } from "../../../../components/nsfw/nsfw-context";
 import {
   fetchScenes,
   fetchTags,
@@ -46,6 +47,7 @@ interface TagPageProps {
 
 export default function TagPage({ params }: TagPageProps) {
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
   const { id } = use(params);
   const tagName = decodeURIComponent(id);
   const router = useRouter();
@@ -184,7 +186,13 @@ export default function TagPage({ params }: TagPageProps) {
         <h1 className="flex items-center gap-2.5">
           <Tag className="h-5 w-5 text-text-accent flex-shrink-0" />
           {tagDetail ? (
-            <NsfwTagLabel isNsfw={tagDetail.isNsfw}>{tagDetail.name}</NsfwTagLabel>
+            tagDetail.isNsfw === true && nsfwMode === "off" ? (
+              <span className="text-text-secondary text-lg font-medium">
+                Hidden in SFW mode
+              </span>
+            ) : (
+              <NsfwTagLabel isNsfw={tagDetail.isNsfw}>{tagDetail.name}</NsfwTagLabel>
+            )
           ) : (
             tagName
           )}

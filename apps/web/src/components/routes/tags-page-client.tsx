@@ -26,6 +26,8 @@ import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 import { useTerms } from "../../lib/terminology";
+import { tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
@@ -48,6 +50,7 @@ interface TagsPageClientProps {
 
 export function TagsPageClient({ initialTags }: TagsPageClientProps) {
   const terms = useTerms();
+  const { mode: nsfwMode } = useNsfw();
   const [tags, setTags] = useState(initialTags);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scenes");
@@ -78,14 +81,26 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
     return sorted.filter((t) => t.name.toLowerCase().includes(term));
   }, [sorted, search]);
 
+  const displayedTags = useMemo(
+    () => tagsVisibleInNsfwMode(filtered, nsfwMode),
+    [filtered, nsfwMode],
+  );
+
   const totalCount = (t: TagItem) => t.sceneCount + (t.imageCount ?? 0);
-  const maxCount = tags.length > 0 ? Math.max(...tags.map(totalCount)) : 1;
+  const maxCount =
+    displayedTags.length > 0
+      ? Math.max(...displayedTags.map(totalCount))
+      : 1;
   const totalScenes = tags.reduce((sum, t) => sum + t.sceneCount, 0);
   const totalImages = tags.reduce((sum, t) => sum + (t.imageCount ?? 0), 0);
-  const topTag = tags.length > 0 ? [...tags].sort((a, b) => totalCount(b) - totalCount(a))[0] : null;
+  const tagsSafeForTopTile = tagsVisibleInNsfwMode(tags, nsfwMode);
+  const topTag =
+    tagsSafeForTopTile.length > 0
+      ? [...tagsSafeForTopTile].sort((a, b) => totalCount(b) - totalCount(a))[0]
+      : null;
 
   const currentSort = sortOptions.find((s) => s.value === sortKey);
-  const visibleIds = filtered.map((t) => t.id);
+  const visibleIds = displayedTags.map((t) => t.id);
 
   async function handleBulkNsfw(isNsfw: boolean) {
     setBulkLoading(true);
@@ -191,7 +206,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
 
           {search && (
             <span className="text-mono-sm text-text-disabled whitespace-nowrap">
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              {displayedTags.length} result{displayedTags.length !== 1 ? "s" : ""}
             </span>
           )}
 
@@ -302,9 +317,16 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
             </button>
           )}
         </div>
+      ) : displayedTags.length === 0 ? (
+        <div className="surface-well p-12 text-center">
+          <Tag className="h-10 w-10 text-text-disabled mx-auto mb-3" />
+          <p className="text-text-muted text-sm">
+            No tags are visible with the current NSFW setting.
+          </p>
+        </div>
       ) : viewMode === "list" ? (
         <>
-          {filtered.length > 0 && (
+          {displayedTags.length > 0 && (
             <SelectAllHeader
               allSelected={selection.isAllSelected(visibleIds)}
               onToggle={() =>
@@ -313,11 +335,11 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
                   : selection.selectAll(visibleIds)
               }
               selectedCount={selection.count}
-              totalVisible={filtered.length}
+              totalVisible={displayedTags.length}
             />
           )}
           <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-0">
-            {filtered.map((tag) => (
+            {displayedTags.map((tag) => (
               <TagEntityCard
                 key={tag.id}
                 tag={tagItemToCardData(tag)}
@@ -330,7 +352,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
       ) : viewMode === "cloud" ? (
         <div className="surface-panel p-6">
           <div className="flex flex-wrap gap-1.5 justify-center">
-            {filtered.map((tag) => {
+            {displayedTags.map((tag) => {
               return (
                 <TagEntityCard
                   key={tag.id}

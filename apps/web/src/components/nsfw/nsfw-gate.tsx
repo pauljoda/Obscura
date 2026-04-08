@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@obscura/ui/lib/utils";
-import { useNsfw } from "./nsfw-context";
+import { useNsfw, type NsfwMode } from "./nsfw-context";
 
 interface NsfwGateProps {
   children: React.ReactNode;
@@ -140,6 +140,20 @@ export function NsfwText({ isNsfw, children, className }: NsfwTextProps) {
 
 const TAG_GARBLE_CHARS = ["▒", "░", "█"] as const;
 
+/**
+ * In SFW (off) mode, NSFW-tagged rows are omitted from chip rows so only safe
+ * tags show real names. Blur/show modes keep the full list (NsfwTagLabel
+ * obscures per mode).
+ */
+export function tagsVisibleInNsfwMode<T extends { isNsfw?: boolean }>(
+  tags: T[] | undefined,
+  mode: NsfwMode
+): T[] {
+  if (!tags?.length) return [];
+  if (mode !== "off") return tags;
+  return tags.filter((t) => t.isNsfw !== true);
+}
+
 function garbleTagLabelText(text: string): string {
   return [...text]
     .map((ch, i) => (/\s/.test(ch) ? ch : TAG_GARBLE_CHARS[i % TAG_GARBLE_CHARS.length]!))
@@ -147,8 +161,11 @@ function garbleTagLabelText(text: string): string {
 }
 
 /**
- * NSFW tag names in global "blur" mode: garbled block glyphs plus a light blur;
- * hover shows the real text. Matches NsfwBlur/NsfwText off/show behavior.
+ * Tag name display by global NSFW mode and the tag's own `isNsfw` flag:
+ * - **Show** or non-NSFW tag: always the real text.
+ * - **SFW (off)** + NSFW tag: return null (parent should omit the chip via
+ *   `tagsVisibleInNsfwMode`).
+ * - **Blur** + NSFW tag: garbled glyphs + light blur; hover reveals the name.
  */
 export function NsfwTagLabel({
   isNsfw,
@@ -167,16 +184,8 @@ export function NsfwTagLabel({
     return <span className={className}>{children}</span>;
   }
 
-  // SFW (off) mode: hide the real name but keep chips readable (no empty pills).
   if (mode === "off") {
-    return (
-      <span
-        className={cn("inline font-mono text-[0.85em] text-text-disabled tracking-[0.2em]", className)}
-        aria-label="Tag hidden in SFW mode"
-      >
-        ···
-      </span>
-    );
+    return null;
   }
 
   const garbled = garbleTagLabelText(children);

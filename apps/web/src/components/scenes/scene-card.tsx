@@ -7,7 +7,8 @@ import { cn } from "@obscura/ui/lib/utils";
 import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import type { SceneCardData } from "./scene-card-data";
 import { SCENE_CARD_GRADIENTS } from "./scene-card-gradients";
-import { NsfwBlur, NsfwTagLabel, NsfwText } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel, NsfwText, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 interface SceneCardProps {
   scene: SceneCardData;
@@ -36,6 +37,21 @@ export function SceneCard({
     return <SceneCompactCard scene={scene} onSelect={onSelect} />;
   }
 
+  return <SceneGridCard scene={scene} imageLoading={imageLoading} index={index} />;
+}
+
+function SceneGridCard({
+  scene,
+  imageLoading,
+  index,
+}: {
+  scene: SceneCardData;
+  imageLoading: "eager" | "lazy";
+  index: number;
+}) {
+  const { mode } = useNsfw();
+  const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
+
   return (
     <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
       <Link href={scene.href}>
@@ -54,9 +70,9 @@ export function SceneCard({
           studio={scene.studio}
           performers={scene.performers}
           tagsSlot={
-            scene.tags && scene.tags.length > 0 ? (
+            tagRow.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {scene.tags.slice(0, 3).map((tag) => (
+                {tagRow.slice(0, 3).map((tag) => (
                   <span
                     key={tag.name}
                     className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}
@@ -64,9 +80,9 @@ export function SceneCard({
                     <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                   </span>
                 ))}
-                {scene.tags.length > 3 && (
+                {tagRow.length > 3 && (
                   <span className="tag-chip tag-chip-default text-text-disabled">
-                    +{scene.tags.length - 3}
+                    +{tagRow.length - 3}
                   </span>
                 )}
               </div>
@@ -93,6 +109,9 @@ function SceneListCard({
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
+  const { mode } = useNsfw();
+  const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
+
   return (
     <Link href={scene.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
@@ -172,9 +191,9 @@ function SceneListCard({
             </div>
           )}
 
-          {!!scene.tags?.length && (
+          {tagRow.length > 0 && (
             <div className="hidden sm:flex flex-wrap gap-1">
-              {scene.tags.slice(0, 4).map((tag) => (
+              {tagRow.slice(0, 4).map((tag) => (
                 <span
                   key={tag.name}
                   className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}

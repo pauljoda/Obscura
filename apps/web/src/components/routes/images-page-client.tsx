@@ -5,6 +5,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -26,7 +27,8 @@ import { ImageFeed } from "../image-feed";
 import { ImageLightbox } from "../image-lightbox";
 import { fetchImages, type TagItem } from "../../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
-import { NsfwTagLabel } from "../nsfw/nsfw-gate";
+import { NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 export type ImageViewMode = "grid" | "feed";
 
@@ -64,6 +66,11 @@ export function ImagesPageClient({
   initialTags,
   initialTotal,
 }: ImagesPageClientProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const imagePageTagsForFilters = useMemo(
+    () => tagsVisibleInNsfwMode(initialTags, nsfwMode),
+    [initialTags, nsfwMode],
+  );
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialView = (searchParams.get("view") === "feed" ? "feed" : "grid") as ImageViewMode;
@@ -304,11 +311,11 @@ export function ImagesPageClient({
         </div>
 
         {/* Filter panel */}
-        {filterPanelOpen && initialTags.length > 0 && (
+        {filterPanelOpen && imagePageTagsForFilters.length > 0 && (
           <div className="surface-well mt-px p-3">
             <div className="text-kicker mb-2">Tags</div>
             <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto">
-              {initialTags.map((tag) => (
+              {imagePageTagsForFilters.map((tag) => (
                 <button
                   key={tag.id}
                   onClick={() => handleAddFilter("tag", "Tag", tag.name)}

@@ -5,7 +5,8 @@ import { X, Star, Pencil, Save, XCircle, CheckCircle2, Search } from "lucide-rea
 import { cn } from "@obscura/ui/lib/utils";
 import { updateImage, type TagItem } from "../lib/api";
 import type { ImageListItemDto } from "@obscura/contracts";
-import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface ImageLightboxInfoProps {
   image: ImageListItemDto;
@@ -24,6 +25,8 @@ function formatFileSize(bytes: number | null): string {
 }
 
 export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availableTags = [] }: ImageLightboxInfoProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const imageTagsVisible = tagsVisibleInNsfwMode(image.tags, nsfwMode);
   const [editing, setEditing] = useState(false);
   const [editRating, setEditRating] = useState<number | null>(image.rating);
   const [editOrganized, setEditOrganized] = useState(image.organized);
@@ -223,7 +226,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
                     </button>
                   </span>
                 ))
-              : image.tags.map((tag) => (
+              : imageTagsVisible.map((tag) => (
                   <span
                     key={tag.id}
                     className="tag-chip tag-chip-default text-[0.6rem] inline-flex items-center gap-1"
@@ -231,7 +234,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
                     <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                   </span>
                 ))}
-            {!editing && image.tags.length === 0 && (
+            {!editing && imageTagsVisible.length === 0 && (
               <span className="text-[0.68rem] text-text-disabled">No tags</span>
             )}
           </div>

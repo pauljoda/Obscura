@@ -6,7 +6,8 @@ import { Calendar, Film, HardDrive, ImageOff, Loader2, Star } from "lucide-react
 import { cn } from "@obscura/ui/lib/utils";
 import { canUseInlineVideoPreview, isVideoImage } from "../../lib/image-media";
 import type { ImageCardData } from "./image-card-data";
-import { NsfwBlur, NsfwTagLabel } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 function formatFileSize(bytes: number | null | undefined): string {
   if (!bytes) return "";
@@ -158,6 +159,8 @@ function ImageFeedCard({
   image: ImageCardData;
   onSelect?: (href: string) => void;
 }) {
+  const { mode: nsfwMode } = useNsfw();
+  const feedTagsVisible = tagsVisibleInNsfwMode(image.tags, nsfwMode);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activated, setActivated] = useState(false);
@@ -267,9 +270,9 @@ function ImageFeedCard({
           </div>
         )}
 
-        {image.tags.length > 0 && (
+        {feedTagsVisible.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {image.tags.map((tag) => (
+            {feedTagsVisible.map((tag) => (
               <span key={tag.name} className="tag-chip tag-chip-default text-[0.6rem]">
                 <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
               </span>

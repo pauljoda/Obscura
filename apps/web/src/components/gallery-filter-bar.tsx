@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
-import { NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 export type GalleryViewMode = "grid" | "list" | "browser" | "timeline";
 export type GallerySortOption = "recent" | "title" | "date" | "rating" | "imageCount" | "created";
@@ -76,6 +77,8 @@ export function GalleryFilterBar({
   availableTags = [],
   onAddFilter,
 }: GalleryFilterBarProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const galleryFilterTagsVisible = tagsVisibleInNsfwMode(availableTags, nsfwMode);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
@@ -253,11 +256,11 @@ export function GalleryFilterBar({
             </div>
 
             {/* Tags */}
-            {availableTags.length > 0 && (
+            {galleryFilterTagsVisible.length > 0 && (
               <div>
                 <div className="text-kicker mb-2">Tags</div>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
-                  {availableTags.map((tag) => (
+                  {galleryFilterTagsVisible.map((tag) => (
                     <button
                       key={tag.id}
                       onClick={() => onAddFilter?.("tag", "Tag", tag.name)}

@@ -15,7 +15,8 @@ import { cn } from "@obscura/ui/lib/utils";
 import { updateGallery } from "../lib/api";
 import { revalidateGalleryCache } from "../app/actions/revalidate-gallery";
 import type { GalleryDetailDto, GalleryChapterDto } from "@obscura/contracts";
-import { NsfwChip, NsfwEditToggle, NsfwTagLabel } from "./nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface GalleryMetadataPanelProps {
   gallery: GalleryDetailDto;
@@ -28,6 +29,8 @@ export function GalleryMetadataPanel({
   onGalleryUpdate,
   onChapterJump,
 }: GalleryMetadataPanelProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const galleryTagsVisible = tagsVisibleInNsfwMode(gallery.tags, nsfwMode);
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState(gallery.title);
   const [editDetails, setEditDetails] = useState(gallery.details ?? "");
@@ -241,11 +244,11 @@ export function GalleryMetadataPanel({
       )}
 
       {/* Tags */}
-      {gallery.tags.length > 0 && (
+      {galleryTagsVisible.length > 0 && (
         <div>
           <div className="text-kicker mb-1.5">Tags</div>
           <div className="flex flex-wrap gap-1">
-            {gallery.tags.map((tag) => (
+            {galleryTagsVisible.map((tag) => (
               <span key={tag.id} className="tag-chip tag-chip-default">
                 <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
               </span>
