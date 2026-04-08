@@ -728,9 +728,11 @@ export function VideoPlayer({
         showControls ? "opacity-100" : "opacity-0"
       )}>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          <span className="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
-            {hlsInitializing ? "Loading…" : usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
-          </span>
+          {(hlsInitializing || usingAdaptiveStream || qualityMode !== "direct") && (
+            <span className="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
+              {hlsInitializing ? "Loading…" : usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
+            </span>
+          )}
           {selectedQualityLabel && (
             <span className="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
