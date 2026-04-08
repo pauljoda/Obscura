@@ -1095,7 +1095,7 @@ function DiagnosticsSection() {
     try {
       const res = await rebuildPreviews(nsfwMode);
       setResult(
-        `Queued ${res.enqueued} ${res.enqueued === 1 ? "video" : "videos"} for forced preview regeneration`
+        `Queued ${res.enqueued} ${res.enqueued === 1 ? "video" : "videos"} for forced preview regeneration (metadata re-probed from disk)`
       );
     } catch {
       setResult("Failed to queue rebuild");
@@ -1120,9 +1120,9 @@ function DiagnosticsSection() {
               Force rebuild all previews
             </p>
             <p className="text-[0.68rem] text-text-muted">
-              Clear and regenerate thumbnails, preview clips, and trickplay sprites for every{" "}
-              {entityTerms.scene.toLowerCase()}. This is a heavy maintenance job and is useful after quality setting changes
-              or to fix corrupt sprites.
+              Re-probe each file on disk (resolution, duration, codecs, size), then clear and regenerate thumbnails, preview
+              clips, and trickplay sprites for every {entityTerms.scene.toLowerCase()}. Use this after replacing a source file
+              with a different resolution, after quality setting changes, or to fix corrupt sprites. Heavy maintenance job.
             </p>
           </div>
           <div className="flex items-center gap-3">

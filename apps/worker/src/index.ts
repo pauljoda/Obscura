@@ -811,6 +811,26 @@ async function processLibraryScan(job: Job) {
   }
 }
 
+/** Probe the file on disk and persist format/dimensions/duration into `scenes`. */
+async function applyVideoProbeToScene(sceneId: string, filePath: string) {
+  const metadata = await probeVideoFile(filePath);
+  await db
+    .update(scenes)
+    .set({
+      fileSize: metadata.fileSize,
+      duration: metadata.duration,
+      width: metadata.width,
+      height: metadata.height,
+      frameRate: metadata.frameRate,
+      bitRate: metadata.bitRate,
+      codec: metadata.codec,
+      container: metadata.container,
+      updatedAt: new Date(),
+    })
+    .where(eq(scenes.id, sceneId));
+  return metadata;
+}
+
 async function processMediaProbe(job: Job) {
   const sceneId = String(job.data.sceneId);
   const [scene] = await db
@@ -829,23 +849,8 @@ async function processMediaProbe(job: Job) {
     label: scene.title,
   });
 
-  const metadata = await probeVideoFile(scene.filePath);
+  await applyVideoProbeToScene(scene.id, scene.filePath);
   await markJobProgress(job, "media-probe", 70);
-
-  await db
-    .update(scenes)
-    .set({
-      fileSize: metadata.fileSize,
-      duration: metadata.duration,
-      width: metadata.width,
-      height: metadata.height,
-      frameRate: metadata.frameRate,
-      bitRate: metadata.bitRate,
-      codec: metadata.codec,
-      container: metadata.container,
-      updatedAt: new Date(),
-    })
-    .where(eq(scenes.id, scene.id));
 }
 
 async function processFingerprint(job: Job) {
@@ -993,11 +998,18 @@ async function processPreview(job: Job) {
     label: scene.title,
   });
 
+  const payload = job.data as JobPayload;
   const settings = await ensureLibrarySettingsRow();
   const metadata =
-    scene.duration && scene.width && scene.height
-      ? scene
-      : await probeVideoFile(scene.filePath);
+    payload.jobKind === "force-rebuild"
+      ? await applyVideoProbeToScene(scene.id, scene.filePath)
+      : scene.duration && scene.width && scene.height
+        ? scene
+        : await probeVideoFile(scene.filePath);
+
+  if (payload.jobKind === "force-rebuild") {
+    await markJobProgress(job, "preview", 12);
+  }
 
   const sidecar = getSidecarPaths(scene.filePath);
 

@@ -303,7 +303,7 @@ export function JobDashboard() {
     try {
       const response = await rebuildPreviews(nsfwMode);
       const parts = [
-        `Queued forced preview rebuild for ${response.enqueued} ${response.enqueued === 1 ? "video" : "videos"}`,
+        `Queued forced preview rebuild (metadata re-probed) for ${response.enqueued} ${response.enqueued === 1 ? "video" : "videos"}`,
       ];
 
       if (response.skipped > 0) {
