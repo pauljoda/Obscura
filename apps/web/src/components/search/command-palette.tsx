@@ -17,14 +17,16 @@ import { useSearch } from "../../hooks/use-search";
 import { useRecentSearches } from "../../hooks/use-recent-searches";
 import { SEARCH_KIND_CONFIG } from "./search-kind-config";
 import { SearchResultCard } from "./search-result-card";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 export function CommandPalette() {
   const { open, closePalette } = useSearchPalette();
+  const { mode: nsfwMode } = useNsfw();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const recentSearches = useRecentSearches();
-  const { data, loading } = useSearch(query, { debounceMs: 250 });
+  const { data, loading } = useSearch(query, { debounceMs: 250, nsfw: nsfwMode });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
