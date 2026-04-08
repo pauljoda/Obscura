@@ -27,6 +27,9 @@ interface FilmStripProps {
 
 const STRIP_HEIGHT = 52;
 
+/** Wheel scrub only on desktop — touch-primary devices keep native scroll/gestures. */
+const DESKTOP_WHEEL_SCRUB_MQ = "(pointer: fine) and (hover: hover)";
+
 export function FilmStrip({
   spriteUrl,
   vttUrl,
@@ -101,6 +104,45 @@ export function FilmStrip({
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
   }, [frames, frameWidth, videoRef, applyPosition]);
+
+  // Desktop only: map wheel / trackpad scroll to scrub (passive: false). Skipped on touch-primary UIs.
+  useEffect(() => {
+    if (!frames || frames.length === 0 || duration <= 0 || trackWidth <= 0) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const mq = window.matchMedia(DESKTOP_WHEEL_SCRUB_MQ);
+
+    const onWheel = (e: WheelEvent) => {
+      if (!mq.matches) return;
+      const raw =
+        Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (raw === 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pixelsPerSecond = trackWidth / duration;
+      const timeDelta = -raw / pixelsPerSecond;
+      const video = videoRef.current;
+      const current = video?.currentTime ?? 0;
+      const newTime = Math.max(0, Math.min(duration, current + timeDelta));
+      applyPosition(newTime);
+      onSeek(newTime);
+    };
+
+    const syncListener = () => {
+      el.removeEventListener("wheel", onWheel);
+      if (mq.matches) {
+        el.addEventListener("wheel", onWheel, { passive: false });
+      }
+    };
+
+    syncListener();
+    mq.addEventListener("change", syncListener);
+    return () => {
+      mq.removeEventListener("change", syncListener);
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, [frames, duration, trackWidth, videoRef, applyPosition, onSeek]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
