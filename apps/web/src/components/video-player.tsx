@@ -104,6 +104,9 @@ export function VideoPlayer({
   const controlsTimeoutRef = useRef<number | null>(null);
   const playTrackedRef = useRef(false);
   const isDraggingRef = useRef(false);
+  // Track last-seen src/directSrc to distinguish "new video loaded" from
+  // "user changed quality mode" when the source effect re-runs.
+  const prevSrcKeyRef = useRef<string>("");
 
   const [playing, setPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -172,23 +175,32 @@ export function VideoPlayer({
 
     let cancelled = false;
 
-    setDuration(propDuration ?? 0);
-    setCurrentTime(0);
-    setBufferedProgress(0);
-    setBufferAhead(0);
-    setBandwidthEstimate(null);
-    setDroppedFrames(null);
-    const initialMode = directSrc ? "direct" : "auto";
-    setQualityMode(initialMode);
-    setStreamMode(initialMode === "direct" ? "direct" : "hls");
-    setQualityOptions(
-      directSrc
-        ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
-        : [{ value: "auto" as const, label: "Auto" }],
-    );
-    setActiveQualityLabel(null);
-    setPlayerNotice(null);
-    setUsingAdaptiveStream(false);
+    // Only reset quality/mode state when the video source itself changes.
+    // When streamMode changes (user switched quality), we skip the reset so
+    // the user's chosen mode is not immediately overwritten.
+    const srcKey = `${src ?? ""}|${directSrc ?? ""}`;
+    const isNewSource = srcKey !== prevSrcKeyRef.current;
+    prevSrcKeyRef.current = srcKey;
+
+    if (isNewSource) {
+      setDuration(propDuration ?? 0);
+      setCurrentTime(0);
+      setBufferedProgress(0);
+      setBufferAhead(0);
+      setBandwidthEstimate(null);
+      setDroppedFrames(null);
+      const initialMode = directSrc ? "direct" : "auto";
+      setQualityMode(initialMode);
+      setStreamMode(initialMode === "direct" ? "direct" : "hls");
+      setQualityOptions(
+        directSrc
+          ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
+          : [{ value: "auto" as const, label: "Auto" }],
+      );
+      setActiveQualityLabel(null);
+      setPlayerNotice(null);
+      setUsingAdaptiveStream(false);
+    }
 
     const destroyHls = () => {
       hlsRef.current?.destroy();
