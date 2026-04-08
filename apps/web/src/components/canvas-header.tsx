@@ -5,8 +5,22 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import { useSearchPalette } from "./search/search-context";
+import { entityTerms } from "../lib/terminology";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Map route segments to user-facing labels (paths stay /scenes, /performers). */
+const SEGMENT_LABELS: Record<string, string> = {
+  scenes: entityTerms.scenes,
+  performers: entityTerms.performers,
+};
+
+function segmentLabel(seg: string): string {
+  const decoded = decodeURIComponent(seg);
+  const mapped = SEGMENT_LABELS[decoded.toLowerCase()];
+  if (mapped) return mapped;
+  return decoded.charAt(0).toUpperCase() + decoded.slice(1);
+}
 
 function getBreadcrumbs(pathname: string) {
   const segments = pathname.split("/").filter(Boolean);
@@ -14,7 +28,7 @@ function getBreadcrumbs(pathname: string) {
   return segments
     .filter((seg) => !UUID_RE.test(seg))
     .map((seg, i, arr) => ({
-      label: decodeURIComponent(seg).charAt(0).toUpperCase() + decodeURIComponent(seg).slice(1),
+      label: segmentLabel(seg),
       href: "/" + segments.slice(0, segments.indexOf(seg) + 1).join("/"),
       isLast: i === arr.length - 1,
     }));
