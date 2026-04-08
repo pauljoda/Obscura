@@ -5,6 +5,7 @@ import type Hls from "hls.js";
 import {
   ChevronDown,
   Gauge,
+  Loader2,
   Maximize,
   Pause,
   Play,
@@ -107,6 +108,10 @@ export function VideoPlayer({
   // Track last-seen src/directSrc to distinguish "new video loaded" from
   // "user changed quality mode" when the source effect re-runs.
   const prevSrcKeyRef = useRef<string>("");
+  // Capture playback state before a quality-mode teardown so we can restore
+  // position and resume playing once the new mode is initialised.
+  const pendingAutoPlayRef = useRef(false);
+  const pendingSeekTimeRef = useRef<number | null>(null);
 
   const [playing, setPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -135,6 +140,7 @@ export function VideoPlayer({
   } | null>(null);
   const [usingAdaptiveStream, setUsingAdaptiveStream] = useState(false);
   const [playerNotice, setPlayerNotice] = useState<string | null>(null);
+  const [hlsInitializing, setHlsInitializing] = useState(false);
 
   function clearControlsTimer() {
     if (controlsTimeoutRef.current) {
@@ -175,12 +181,16 @@ export function VideoPlayer({
 
     let cancelled = false;
 
-    // Only reset quality/mode state when the video source itself changes.
-    // When streamMode changes (user switched quality), we skip the reset so
-    // the user's chosen mode is not immediately overwritten.
     const srcKey = `${src ?? ""}|${directSrc ?? ""}`;
     const isNewSource = srcKey !== prevSrcKeyRef.current;
     prevSrcKeyRef.current = srcKey;
+
+    // For a brand-new video always start in the default mode (direct when
+    // a directSrc is available) regardless of where the previous video left off.
+    // For a quality switch keep the mode the user selected.
+    const effectiveMode: "direct" | "hls" = isNewSource
+      ? (directSrc ? "direct" : "hls")
+      : streamMode;
 
     if (isNewSource) {
       setDuration(propDuration ?? 0);
@@ -189,9 +199,8 @@ export function VideoPlayer({
       setBufferAhead(0);
       setBandwidthEstimate(null);
       setDroppedFrames(null);
-      const initialMode = directSrc ? "direct" : "auto";
-      setQualityMode(initialMode);
-      setStreamMode(initialMode === "direct" ? "direct" : "hls");
+      setQualityMode(effectiveMode === "direct" ? "direct" : "auto");
+      setStreamMode(effectiveMode);
       setQualityOptions(
         directSrc
           ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
@@ -200,6 +209,14 @@ export function VideoPlayer({
       setActiveQualityLabel(null);
       setPlayerNotice(null);
       setUsingAdaptiveStream(false);
+      setHlsInitializing(false);
+      pendingAutoPlayRef.current = false;
+      pendingSeekTimeRef.current = null;
+    } else {
+      // Quality switch — capture position and play state so we can restore
+      // them seamlessly once the new mode has initialised.
+      pendingSeekTimeRef.current = video.currentTime > 0.5 ? video.currentTime : null;
+      pendingAutoPlayRef.current = !video.paused;
     }
 
     const destroyHls = () => {
@@ -214,21 +231,39 @@ export function VideoPlayer({
     video.load();
 
     if (!src && !directSrc) {
+      setHlsInitializing(false);
       return;
     }
 
-    // Direct mode: use the raw source URL, skip HLS entirely
-    if (streamMode === "direct") {
+    // ─── Direct mode ──────────────────────────────────────────────────────
+    if (effectiveMode === "direct") {
+      setHlsInitializing(false);
+      setUsingAdaptiveStream(false);
       const directSource = directSrc ?? src;
       if (directSource) {
         video.src = directSource;
         video.load();
+
+        const seekTime = pendingSeekTimeRef.current;
+        const shouldPlay = pendingAutoPlayRef.current;
+        if (seekTime !== null || shouldPlay) {
+          pendingSeekTimeRef.current = null;
+          pendingAutoPlayRef.current = false;
+          // Wait for metadata before seeking; then resume playing if needed.
+          const onReady = () => {
+            if (seekTime !== null) video.currentTime = seekTime;
+            if (shouldPlay) void video.play();
+          };
+          video.addEventListener("loadedmetadata", onReady, { once: true });
+        }
       }
       return;
     }
 
-    // HLS / adaptive mode
+    // ─── HLS / adaptive mode ──────────────────────────────────────────────
     if (src?.endsWith(".m3u8")) {
+      setHlsInitializing(true);
+
       void (async () => {
         const { default: Hls } = await import("hls.js");
         if (cancelled) {
@@ -252,6 +287,8 @@ export function VideoPlayer({
           });
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setHlsInitializing(false);
+
             const hlsLevels = hls.levels
               .map((level, index) => ({
                 value: index,
@@ -273,6 +310,18 @@ export function VideoPlayer({
             setBandwidthEstimate(
               Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null,
             );
+
+            // Restore playback state captured before teardown.
+            const seekTime = pendingSeekTimeRef.current;
+            const shouldPlay = pendingAutoPlayRef.current;
+            pendingSeekTimeRef.current = null;
+            pendingAutoPlayRef.current = false;
+            if (seekTime !== null) {
+              video.currentTime = seekTime;
+            }
+            if (shouldPlay) {
+              void video.play();
+            }
           });
 
           hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
@@ -297,6 +346,9 @@ export function VideoPlayer({
             hls.destroy();
             hlsRef.current = null;
             setUsingAdaptiveStream(false);
+            setHlsInitializing(false);
+            pendingAutoPlayRef.current = false;
+            pendingSeekTimeRef.current = null;
 
             if (directSrc) {
               setQualityMode("direct");
@@ -312,13 +364,29 @@ export function VideoPlayer({
           return;
         }
 
+        // Native HLS (Safari)
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          setHlsInitializing(false);
           setUsingAdaptiveStream(true);
           video.src = src;
           video.load();
+
+          const seekTime = pendingSeekTimeRef.current;
+          const shouldPlay = pendingAutoPlayRef.current;
+          if (seekTime !== null || shouldPlay) {
+            pendingSeekTimeRef.current = null;
+            pendingAutoPlayRef.current = false;
+            const onReady = () => {
+              if (seekTime !== null) video.currentTime = seekTime;
+              if (shouldPlay) void video.play();
+            };
+            video.addEventListener("loadedmetadata", onReady, { once: true });
+          }
           return;
         }
 
+        // Browser can't play HLS at all — fall back to direct
+        setHlsInitializing(false);
         const fallbackSource = directSrc ?? src;
         if (fallbackSource) {
           video.src = fallbackSource;
@@ -333,6 +401,7 @@ export function VideoPlayer({
     }
 
     // Non-HLS fallback in adaptive mode
+    setHlsInitializing(false);
     const fallbackSource = directSrc ?? src;
     if (fallbackSource) {
       video.src = fallbackSource;
@@ -649,7 +718,7 @@ export function VideoPlayer({
       )}>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
           <span className="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
-            {usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
+            {hlsInitializing ? "Loading…" : usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
           </span>
           {selectedQualityLabel && (
             <span className="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
@@ -784,10 +853,13 @@ export function VideoPlayer({
             </button>
             <button
               type="button"
-              onClick={togglePlay}
-              className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+              onClick={hlsInitializing ? undefined : togglePlay}
+              disabled={hlsInitializing}
+              className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)] disabled:opacity-70 disabled:cursor-wait"
             >
-              {playing ? (
+              {hlsInitializing ? (
+                <Loader2 className="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin" />
+              ) : playing ? (
                 <Pause className="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
               ) : (
                 <Play className="ml-0.5 h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
