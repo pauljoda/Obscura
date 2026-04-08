@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - **NSFW flame badge in Show mode** — New `NsfwShowModeChip` renders a compact Lucide `Flame` icon with red/error styling on library cards when an entity is marked NSFW and global content mode is **Show** (full visibility). Hidden in **Blur** (existing blur/overlay already signals NSFW) and **Off** (SFW). Placed at the bottom-right of media/thumbnail areas (or right-aligned with counts on tag rows). Scene grid uses `MediaCard` `thumbnailOverlay`. Used on scene grid/list, performer grid/list, studio grid/list, tag list/cloud, gallery grid/list, and image grid/feed cards.
+- **MediaCard scrub bar** — Removed the static "SCRUB" text chip from the bottom-right of the thumbnail to prevent it from overlapping the duration. The scrub progress bar is now a full-width line anchored to the very bottom edge (`bottom-0`), allowing the NSFW flame badge to sit flush in the bottom-right corner.
 
 ### Changed
 

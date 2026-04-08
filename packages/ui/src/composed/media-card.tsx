@@ -296,7 +296,7 @@ export function MediaCard({
 
 
         {hasScrubPreview && (
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-2">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center">
             <div className="h-1 flex-1 overflow-hidden bg-black/55">
               <div
                 className="h-full bg-gradient-to-r from-accent-700 via-accent-500 to-accent-300 shadow-[0_0_6px_rgba(199,155,92,0.3)] transition-[width] duration-75"
@@ -308,19 +308,11 @@ export function MediaCard({
                 }}
               />
             </div>
-            <div className="media-chip px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-white/65">
-              Scrub
-            </div>
           </div>
         )}
 
         {thumbnailOverlay ? (
-          <div
-            className={cn(
-              "pointer-events-none absolute right-2 z-[25]",
-              hasScrubPreview ? "bottom-10" : "bottom-2",
-            )}
-          >
+          <div className="pointer-events-none absolute right-2 bottom-2 z-[25]">
             {thumbnailOverlay}
           </div>
         ) : null}
