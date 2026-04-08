@@ -26,6 +26,8 @@ export async function fetchScenes(params: {
   resolution?: string;
   limit?: number;
   offset?: number;
+  /** Pass current mode; API excludes NSFW when `off`. */
+  nsfw?: string;
 }) {
   const qs = buildQueryString(
     {
@@ -36,6 +38,7 @@ export async function fetchScenes(params: {
       studio: params.studio,
       limit: params.limit,
       offset: params.offset,
+      nsfw: params.nsfw,
     },
     {
       tag: params.tag,
@@ -56,8 +59,9 @@ export async function fetchSceneDetail(id: string) {
   });
 }
 
-export async function fetchSceneStats() {
-  return serverFetch<SceneStats>("/scenes/stats", {
+export async function fetchSceneStats(nsfw?: string) {
+  const qs = buildQueryString({ nsfw });
+  return serverFetch<SceneStats>(`/scenes/stats${qs}`, {
     tags: ["scenes"],
   });
 }

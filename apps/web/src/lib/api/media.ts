@@ -21,6 +21,7 @@ export async function fetchScenes(params: {
   resolution?: string;
   limit?: number;
   offset?: number;
+  nsfw?: string;
 }): Promise<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
@@ -31,6 +32,7 @@ export async function fetchScenes(params: {
       studio: params.studio,
       limit: params.limit,
       offset: params.offset,
+      nsfw: params.nsfw,
     },
     {
       tag: params.tag,
@@ -107,8 +109,9 @@ export async function trackOrgasm(sceneId: string): Promise<{ ok: true; orgasmCo
   return fetchApi(`/scenes/${sceneId}/orgasm`, { method: "POST" });
 }
 
-export async function fetchSceneStats(): Promise<SceneStats> {
-  return fetchApi("/scenes/stats");
+export async function fetchSceneStats(nsfw?: string): Promise<SceneStats> {
+  const qs = buildQueryString({ nsfw });
+  return fetchApi(`/scenes/stats${qs}`);
 }
 
 export async function fetchGalleries(params?: {

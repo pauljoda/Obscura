@@ -15,6 +15,7 @@ import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
+  fetchSceneStats,
   updateScene,
   deleteScene,
   type SceneListItem,
@@ -22,6 +23,7 @@ import {
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
+import { useNsfw } from "../nsfw/nsfw-context";
 import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import { useSelection } from "../../hooks/use-selection";
@@ -50,6 +52,19 @@ export function ScenesPageClient({
   initialTags,
   initialTotal,
 }: ScenesPageClientProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const [stats, setStats] = useState(initialStats);
+
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
+
+  useEffect(() => {
+    void fetchSceneStats(nsfwMode)
+      .then(setStats)
+      .catch(() => {});
+  }, [nsfwMode]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -85,8 +100,9 @@ export function ScenesPageClient({
       performer: performerFilters.length > 0 ? performerFilters : undefined,
       resolution: resolutionFilter?.value,
       studio: studioFilter?.value,
+      nsfw: nsfwMode,
     };
-  }, [activeFilters, deferredSearchQuery, sortBy, sortDir]);
+  }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode]);
 
   const loadScenes = useCallback(async () => {
     setLoading(true);
@@ -207,30 +223,30 @@ export function ScenesPageClient({
         </span>
       </div>
 
-      {initialStats ? (
+      {stats ? (
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <StatCard
             icon={<Film className="h-4 w-4" />}
             label="Total Scenes"
-            value={String(initialStats.totalScenes)}
+            value={String(stats.totalScenes)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />
           <StatCard
             icon={<Clock className="h-4 w-4" />}
             label="Total Duration"
-            value={initialStats.totalDurationFormatted}
+            value={stats.totalDurationFormatted}
             gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
           />
           <StatCard
             icon={<HardDrive className="h-4 w-4" />}
             label="Storage"
-            value={initialStats.totalSizeFormatted ?? "—"}
+            value={stats.totalSizeFormatted ?? "—"}
             gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
           />
           <StatCard
             icon={<TrendingUp className="h-4 w-4" />}
             label="This Week"
-            value={`+${initialStats.recentCount}`}
+            value={`+${stats.recentCount}`}
             accent
             gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
           />

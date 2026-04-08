@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, inArray, and, ne } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
@@ -29,6 +29,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       resolution?: string;
       limit?: string;
       offset?: string;
+      /** When `off`, exclude NSFW scenes (same contract as search). */
+      nsfw?: string;
     };
 
     const limit = Math.min(Number(query.limit) || 50, 100);
@@ -36,6 +38,10 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     // Build WHERE conditions
     const conditions = [];
+
+    if (query.nsfw === "off") {
+      conditions.push(ne(scenes.isNsfw, true));
+    }
 
     if (query.search) {
       const term = `%${query.search}%`;
@@ -234,7 +240,10 @@ export async function scenesRoutes(app: FastifyInstance) {
   });
 
   // ─── GET /scenes/stats ────────────────────────────────────────
-  app.get("/scenes/stats", async () => {
+  app.get("/scenes/stats", async (request) => {
+    const query = request.query as { nsfw?: string };
+    const sfwOnly = query.nsfw === "off" ? ne(scenes.isNsfw, true) : undefined;
+
     const [stats] = await db
       .select({
         totalScenes: sql<number>`count(*)`,
@@ -242,7 +251,12 @@ export async function scenesRoutes(app: FastifyInstance) {
         totalSize: sql<number>`coalesce(sum(${scenes.fileSize}), 0)`,
         totalPlays: sql<number>`coalesce(sum(${scenes.playCount}), 0)`,
       })
-      .from(scenes);
+      .from(scenes)
+      .where(sfwOnly);
+
+    const recentWhere = sfwOnly
+      ? and(sfwOnly, sql`${scenes.createdAt} > now() - interval '7 days'`)
+      : sql`${scenes.createdAt} > now() - interval '7 days'`;
 
     // Scenes added in last 7 days
     const [recentStats] = await db
@@ -250,7 +264,7 @@ export async function scenesRoutes(app: FastifyInstance) {
         recentCount: sql<number>`count(*)`,
       })
       .from(scenes)
-      .where(sql`${scenes.createdAt} > now() - interval '7 days'`);
+      .where(recentWhere);
 
     const durationSec = Number(stats.totalDuration);
     const hours = Math.floor(durationSec / 3600);

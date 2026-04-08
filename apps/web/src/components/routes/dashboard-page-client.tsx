@@ -1,18 +1,18 @@
 "use client";
 
-import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import { DashboardHero } from "../dashboard/dashboard-hero";
-import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DashboardQueueRack } from "../dashboard/dashboard-queue-rack";
 import { DashboardRecentAdditions } from "../dashboard/dashboard-recent-additions";
 import { DashboardRecentActivity } from "../dashboard/dashboard-recent-activity";
 import { DashboardQuickNav } from "../dashboard/dashboard-quick-nav";
-import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
-import type {
-  GalleryListItem,
-  JobsDashboard,
-  SceneListItem,
-  SceneStats,
+import { useNsfw } from "../nsfw/nsfw-context";
+import {
+  fetchSceneStats,
+  type GalleryListItem,
+  type JobsDashboard,
+  type SceneListItem,
+  type SceneStats,
 } from "../../lib/api";
 
 interface DashboardPageClientProps {
@@ -26,8 +26,22 @@ export function DashboardPageClient({
   jobs,
   recentGalleries,
   recentScenes,
-  stats,
+  stats: initialStats,
 }: DashboardPageClientProps) {
+  const { mode } = useNsfw();
+  const [stats, setStats] = useState(initialStats);
+
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
+
+  // Refetch when NSFW mode changes (including LAN auto-enable vs SSR cookie default).
+  useEffect(() => {
+    void fetchSceneStats(mode)
+      .then(setStats)
+      .catch(() => {});
+  }, [mode]);
+
   const loading = false;
 
   return (
