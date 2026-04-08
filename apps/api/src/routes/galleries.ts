@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
 import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
-import { getQueue } from "../lib/queues";
 
 const {
   galleries,
@@ -495,6 +494,17 @@ export async function galleriesRoutes(app: FastifyInstance) {
       return { error: "Gallery not found" };
     }
 
+    let affectedGalleryIds: string[] | undefined;
+    let shouldPropagateNsfw = false;
+    if (body.isNsfw !== undefined) {
+      const [current] = await db
+        .select({ isNsfw: galleries.isNsfw })
+        .from(galleries)
+        .where(eq(galleries.id, id))
+        .limit(1);
+      shouldPropagateNsfw = current?.isNsfw !== body.isNsfw;
+    }
+
     await db.transaction(async (tx) => {
       const update: Record<string, unknown> = { updatedAt: new Date() };
 
@@ -523,6 +533,30 @@ export async function galleriesRoutes(app: FastifyInstance) {
       }
 
       await tx.update(galleries).set(update).where(eq(galleries.id, id));
+
+      if (shouldPropagateNsfw && body.isNsfw !== undefined) {
+        const descendantRows = await tx.execute<{ id: string }>(sql`
+          WITH RECURSIVE descendants AS (
+            SELECT id FROM galleries WHERE parent_id = ${id}
+            UNION ALL
+            SELECT g.id FROM galleries g
+            INNER JOIN descendants d ON g.parent_id = d.id
+          )
+          SELECT id FROM descendants
+        `);
+        const descendantIds = descendantRows.map((r) => r.id);
+        affectedGalleryIds = [id, ...descendantIds];
+        if (descendantIds.length > 0) {
+          await tx
+            .update(galleries)
+            .set({ isNsfw: body.isNsfw, updatedAt: new Date() })
+            .where(inArray(galleries.id, descendantIds));
+        }
+        await tx
+          .update(images)
+          .set({ isNsfw: body.isNsfw, updatedAt: new Date() })
+          .where(inArray(images.galleryId, affectedGalleryIds));
+      }
 
       // Performers: replace all
       if (body.performerNames !== undefined) {
@@ -561,16 +595,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       }
     });
 
-    if (body.isNsfw !== undefined) {
-      const queue = getQueue("gallery-scan");
-      await queue.add("gallery-nsfw-propagate", {
-        galleryId: id,
-        isNsfw: body.isNsfw,
-        triggeredBy: "manual",
-      });
-    }
-
-    return { ok: true, id };
+    return { ok: true, id, ...(affectedGalleryIds ? { affectedGalleryIds } : {}) };
   });
 
   // ─── DELETE /galleries/:id ───────────────────────────────────────

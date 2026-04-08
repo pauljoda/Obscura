@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { updateGallery } from "../lib/api";
+import { revalidateGalleryCache } from "../app/actions/revalidate-gallery";
 import type { GalleryDetailDto, GalleryChapterDto } from "@obscura/contracts";
 import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
 
@@ -38,7 +39,7 @@ export function GalleryMetadataPanel({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateGallery(gallery.id, {
+      const result = await updateGallery(gallery.id, {
         title: editTitle,
         details: editDetails || null,
         photographer: editPhotographer || null,
@@ -52,6 +53,9 @@ export function GalleryMetadataPanel({
         date: editDate || null,
         isNsfw: editIsNsfw,
       });
+      if (result.affectedGalleryIds?.length) {
+        await revalidateGalleryCache(result.affectedGalleryIds);
+      }
       setEditMode(false);
     } finally {
       setSaving(false);

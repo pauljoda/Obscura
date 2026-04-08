@@ -52,7 +52,7 @@ export function NsfwBlur({ isNsfw, children, className }: NsfwBlurProps) {
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300 pointer-events-none">
-        <span className="bg-surface-2/90 border border-border-subtle px-2 py-0.5 text-mono-xs text-text-muted uppercase tracking-widest">
+        <span className="inline-flex items-center px-2 py-0.5 text-mono-xs font-semibold uppercase tracking-widest bg-status-error/20 text-status-error border border-status-error/45 shadow-[0_0_12px_rgba(220,38,38,0.25)]">
           NSFW
         </span>
       </div>

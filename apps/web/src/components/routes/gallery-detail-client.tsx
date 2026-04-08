@@ -31,10 +31,26 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
   const searchParams = useSearchParams();
   const handledDeepLinkImageId = useRef<string | null>(null);
 
+  useEffect(() => {
+    setGallery(initialGallery);
+    setImages(initialGallery.images);
+  }, [initialGallery]);
+
   const backHref = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
 
   const handleGalleryUpdate = useCallback((patch: Partial<GalleryDetailDto>) => {
-    setGallery((prev) => ({ ...prev, ...patch }));
+    setGallery((prev) => {
+      const next = { ...prev, ...patch };
+      if (patch.isNsfw !== undefined) {
+        const nsfw = patch.isNsfw;
+        next.children = prev.children.map((c) => ({ ...c, isNsfw: nsfw }));
+      }
+      return next;
+    });
+    if (patch.isNsfw !== undefined) {
+      const nsfw = patch.isNsfw;
+      setImages((prev) => prev.map((img) => ({ ...img, isNsfw: nsfw })));
+    }
   }, []);
 
   const handleImageClick = useCallback((index: number) => {

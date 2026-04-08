@@ -105,7 +105,7 @@ export async function fetchGalleries(params?: {
 
 export async function fetchGalleryDetail(id: string) {
   return serverFetch<GalleryDetailDto>(`/galleries/${id}`, {
-    revalidate: 15,
+    revalidate: 0,
     tags: ["galleries", `gallery-${id}`],
   });
 }

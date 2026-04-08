@@ -8,9 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Gallery NSFW propagation** — When a gallery's `isNsfw` flag is updated via `PATCH /galleries/:id`, a `gallery-nsfw-propagate` job is automatically enqueued on the `gallery-scan` queue. The worker recursively propagates the NSFW flag to all descendant sub-galleries and every image contained within them.
+- **Gallery NSFW propagation (API)** — `PATCH /galleries/:id` applies `isNsfw` to all descendant sub-galleries and images in the same transaction (recursive CTE). The JSON body may include `affectedGalleryIds` so clients can invalidate caches. Propagation runs only when the flag value changes.
 
 ### Changed
+
+- **NSFW blur overlay** — The centered badge on blurred thumbnails uses red status styling (aligned with `NsfwChip`) instead of neutral surface/muted text.
+
+- **Gallery detail freshness** — Server-side gallery detail fetch uses `revalidate: 0` so a full page reload reflects edits immediately. After saving gallery metadata, the web app revalidates `galleries` and per-gallery cache tags and syncs NSFW state into sub-gallery and image list client state.
 
 - **Video player metrics** — The top-right **ABR** (bandwidth) chip is hidden in **Direct** playback mode; it only appears for adaptive HLS. Buffer and drop stats stay visible.
 

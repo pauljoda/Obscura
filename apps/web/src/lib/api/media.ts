@@ -182,7 +182,7 @@ export async function updateGallery(
     performerNames?: string[];
     tagNames?: string[];
   },
-): Promise<{ ok: true; id: string }> {
+): Promise<{ ok: true; id: string; affectedGalleryIds?: string[] }> {
   return fetchApi(`/galleries/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
