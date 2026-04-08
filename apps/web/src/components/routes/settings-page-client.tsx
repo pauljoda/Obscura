@@ -15,6 +15,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Minus,
   RefreshCw,
   Save,
   ScanSearch,
@@ -901,22 +902,15 @@ export function SettingsPageClient({
               void autoSaveSetting({ autoScanEnabled: checked });
             }}
           />
-          <div className="surface-card no-lift p-3.5">
-            <label className="control-label mb-1.5">Scan Interval (min)</label>
-            <input
-              className="control-input w-full py-1.5 text-sm"
-              type="number"
-              min={5}
-              step={5}
-              value={settings.scanIntervalMinutes}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  scanIntervalMinutes: Number(event.target.value) || 5,
-                }))
-              }
-            />
-          </div>
+          <NumberStepper
+            label="Scan Interval"
+            description="Minutes between automatic scans."
+            value={settings.scanIntervalMinutes}
+            min={5}
+            max={1440}
+            step={5}
+            onChange={(val) => setSettings((current) => ({ ...current, scanIntervalMinutes: val }))}
+          />
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -959,38 +953,24 @@ export function SettingsPageClient({
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card no-lift p-3.5">
-            <label className="control-label mb-1.5">Trickplay Interval (sec)</label>
-            <input
-              className="control-input w-full py-1.5 text-sm"
-              type="number"
-              min={3}
-              step={1}
-              value={settings.trickplayIntervalSeconds}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  trickplayIntervalSeconds: Number(event.target.value) || 3,
-                }))
-              }
-            />
-          </div>
-          <div className="surface-card no-lift p-3.5">
-            <label className="control-label mb-1.5">Preview Clip Length (sec)</label>
-            <input
-              className="control-input w-full py-1.5 text-sm"
-              type="number"
-              min={4}
-              step={1}
-              value={settings.previewClipDurationSeconds}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  previewClipDurationSeconds: Number(event.target.value) || 4,
-                }))
-              }
-            />
-          </div>
+          <NumberStepper
+            label="Trickplay Interval"
+            description="Seconds between sprite sheet frames."
+            value={settings.trickplayIntervalSeconds}
+            min={1}
+            max={60}
+            step={1}
+            onChange={(val) => setSettings((current) => ({ ...current, trickplayIntervalSeconds: val }))}
+          />
+          <NumberStepper
+            label="Preview Clip Length"
+            description="Duration of the generated preview video."
+            value={settings.previewClipDurationSeconds}
+            min={2}
+            max={60}
+            step={1}
+            onChange={(val) => setSettings((current) => ({ ...current, previewClipDurationSeconds: val }))}
+          />
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -1092,22 +1072,18 @@ export function SettingsPageClient({
             }}
           />
         </div>
-        <p className="surface-well px-3 py-2.5 text-[0.65rem] text-text-muted leading-relaxed">
-          <span className="text-text-disabled">Power-user tip:</span> quick toggle between full SFW and full NSFW (skips
-          blur; first press from blur goes to Show) with no toolbar button:{" "}
-          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">⌘⇧Z</kbd> on
-          Mac or{" "}
-          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
-            Ctrl+Shift+Z
-          </kbd>{" "}
-          elsewhere. Global search stays on the header and also opens with{" "}
-          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">⌘K</kbd> /{" "}
-          <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
-            Ctrl+K
-          </kbd>
-          . On mobile, press and hold the bottom bar <strong className="text-text-secondary">More</strong> button for
-          five seconds for the same SFW ↔ full NSFW toggle (a short vibration confirms when it fires).
-        </p>
+        <div className="surface-card no-lift p-3.5 bg-surface-1/50 border-l-2 border-l-border-accent">
+          <p className="text-[0.65rem] text-text-muted leading-relaxed">
+            <strong className="text-text-accent font-mono uppercase tracking-wider mr-2">Power-user tip:</strong>
+            Quick toggle between full SFW and full NSFW (skips blur) with no toolbar button:{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘⇧Z</kbd> on Mac or{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+Shift+Z</kbd>{" "}
+            elsewhere. Global search also opens with{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘K</kbd> /{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+K</kbd>. 
+            On mobile, press and hold the bottom bar <strong className="text-text-primary">More</strong> button for five seconds for the same SFW ↔ full NSFW toggle.
+          </p>
+        </div>
       </section>
 
       <div className="border-t border-border-subtle" />
@@ -1226,17 +1202,19 @@ function ToggleCard({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "surface-card no-lift p-3.5 text-left transition-all duration-normal",
-        checked && "border-border-accent/30",
+        "surface-card no-lift p-3.5 text-left transition-all duration-normal group flex flex-col justify-between min-h-[100px]",
+        checked ? "border-border-accent/40 bg-surface-2/30" : "opacity-85 hover:opacity-100",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-text-primary">{label}</p>
-          <p className="mt-1 text-[0.72rem] text-text-muted">{description}</p>
+      <div className="flex items-start justify-between gap-3 mb-2 w-full">
+        <p className={cn("text-sm font-medium transition-colors", checked ? "text-text-primary" : "text-text-secondary")}>{label}</p>
+        <div className={cn("relative w-9 h-5 border transition-colors duration-fast shrink-0", checked ? "border-border-accent bg-accent-950/30" : "border-border-default bg-surface-1 shadow-well")}>
+          <div className={cn("absolute top-0.5 bottom-0.5 w-3.5 bg-surface-3 border border-border-subtle transition-all duration-fast flex items-center justify-center shadow-sm", checked ? "left-[1.1rem] border-border-accent" : "left-0.5")}>
+            <div className={cn("led led-sm", checked ? "led-active" : "led-idle")} />
+          </div>
         </div>
-        <div className={cn("led", checked ? "led-active" : "led-idle")} />
       </div>
+      <p className="text-[0.72rem] text-text-muted leading-relaxed">{description}</p>
     </button>
   );
 }
@@ -1261,23 +1239,74 @@ function QualitySlider({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="surface-card no-lift p-3.5">
-      <div className="flex items-center justify-between mb-2">
-        <label className="control-label">{label}</label>
-        <span className="text-mono-sm text-text-accent">{qualityLabel(value)}</span>
+    <div className="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <label className="control-label">{label}</label>
+          <p className="text-[0.65rem] text-text-muted mt-1">1 is native, 31 is smallest</p>
+        </div>
+        <span className="text-mono-sm px-2 py-0.5 bg-surface-1 border border-border-subtle text-text-accent shadow-well">
+          {qualityLabel(value)} ({value})
+        </span>
       </div>
-      <input
-        type="range"
-        min={1}
-        max={31}
-        step={1}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full h-1.5 appearance-none bg-surface-4 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:bg-accent-500 [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(199,155,92,0.5)]"
-      />
-      <div className="flex justify-between mt-1.5">
-        <span className="text-[0.58rem] text-text-disabled">Native (1)</span>
-        <span className="text-[0.58rem] text-text-disabled">Smallest (31)</span>
+      <div className="relative pt-2 pb-1">
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 bg-surface-4 border border-border-subtle shadow-well" />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-accent-700 to-accent-500 shadow-[0_0_8px_rgba(199,155,92,0.3)]" style={{ width: `${((value - 1) / 30) * 100}%` }} />
+        <input
+          type="range"
+          min={1}
+          max={31}
+          step={1}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="relative w-full h-1.5 appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:bg-surface-2 [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(0,0,0,0.8)] z-10"
+        />
+      </div>
+    </div>
+  );
+}
+
+function NumberStepper({
+  label,
+  description,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
+      <div className="mb-3">
+        <label className="control-label mb-1">{label}</label>
+        <p className="text-[0.68rem] text-text-muted">{description}</p>
+      </div>
+      <div className="flex items-center bg-surface-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - step))}
+          className="px-3 py-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors border-r border-border-subtle"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <div className="flex-1 text-center font-mono text-[0.85rem] text-text-primary py-1.5">
+          {value}
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + step))}
+          className="px-3 py-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors border-l border-border-subtle"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
