@@ -1060,7 +1060,8 @@ export function SettingsPageClient({
           <kbd className="border border-border-subtle px-1 py-0.5 font-mono text-[0.6rem] text-text-secondary">
             Ctrl+K
           </kbd>
-          .
+          . On mobile, press and hold the bottom bar <strong className="text-text-secondary">More</strong> button for
+          five seconds for the same SFW ↔ full NSFW toggle (a short vibration confirms when it fires).
         </p>
       </section>
 

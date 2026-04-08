@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Film, Images, Users, Activity, MoreHorizontal } from "lucide-react";
+import { Film, Images, Users, Activity } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { MobileMoreSheet } from "./mobile-more-sheet";
+import { MobileMoreNavButton } from "./mobile-more-nav-button";
 
 const primaryTabs = [
   { label: "Videos", href: "/scenes", icon: Film },
@@ -55,21 +56,11 @@ export function MobileNav() {
           );
         })}
 
-        <button
-          type="button"
-          onClick={() => setSheetOpen((prev) => !prev)}
-          className={cn(
-            "flex flex-col items-center gap-0.5 px-3 py-1.5 text-[0.65rem] transition-colors duration-fast",
-            isMoreActive
-              ? "text-text-accent"
-              : "text-text-disabled hover:text-text-muted",
-          )}
-          aria-label="More navigation"
-          aria-expanded={sheetOpen}
-        >
-          <MoreHorizontal className="h-5 w-5" />
-          <span>More</span>
-        </button>
+        <MobileMoreNavButton
+          isMoreActive={isMoreActive}
+          sheetOpen={sheetOpen}
+          onToggleSheet={() => setSheetOpen((prev) => !prev)}
+        />
       </nav>
 
       <MobileMoreSheet open={sheetOpen} onClose={closeSheet} />
