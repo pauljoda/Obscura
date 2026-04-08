@@ -685,6 +685,17 @@ export function VideoPlayer({
 
   const hasFilmStrip = Boolean(trickplaySprite && trickplayVtt && duration > 0);
 
+  function handleFilmStripInteraction(active: boolean) {
+    if (active) {
+      clearControlsTimer();
+      setShowControls(false);
+      setQualityMenuOpen(false);
+      setSpeedMenuOpen(false);
+    } else {
+      surfaceControls();
+    }
+  }
+
   return (
     <div className="space-y-1">
     <div
@@ -985,6 +996,7 @@ export function VideoPlayer({
           duration={duration}
           onSeek={seekTo}
           markers={markers}
+          onStripInteractionChange={handleFilmStripInteraction}
         />
       </div>
     )}

@@ -23,6 +23,8 @@ interface FilmStripProps {
   duration: number;
   onSeek: (time: number) => void;
   markers?: FilmStripMarker[];
+  /** True while user scrubs via pointer (any device) or wheel (desktop); parent may hide player chrome. */
+  onStripInteractionChange?: (active: boolean) => void;
 }
 
 const STRIP_HEIGHT = 52;
@@ -37,6 +39,7 @@ export function FilmStrip({
   duration,
   onSeek,
   markers = [],
+  onStripInteractionChange,
 }: FilmStripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -47,6 +50,27 @@ export function FilmStrip({
   const dragStartXRef = useRef(0);
   const dragStartTimeRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const interactionCbRef = useRef(onStripInteractionChange);
+  interactionCbRef.current = onStripInteractionChange;
+  const wheelIdleTimerRef = useRef<number | null>(null);
+
+  const clearWheelIdleTimer = useCallback(() => {
+    if (wheelIdleTimerRef.current != null) {
+      window.clearTimeout(wheelIdleTimerRef.current);
+      wheelIdleTimerRef.current = null;
+    }
+  }, []);
+
+  const notifyWheelScrubActivity = useCallback(() => {
+    const cb = interactionCbRef.current;
+    if (!cb) return;
+    cb(true);
+    clearWheelIdleTimer();
+    wheelIdleTimerRef.current = window.setTimeout(() => {
+      wheelIdleTimerRef.current = null;
+      interactionCbRef.current?.(false);
+    }, 320);
+  }, [clearWheelIdleTimer]);
 
   useEffect(() => {
     loadTrickplayFrames(vttUrl)
@@ -127,6 +151,7 @@ export function FilmStrip({
       const newTime = Math.max(0, Math.min(duration, current + timeDelta));
       applyPosition(newTime);
       onSeek(newTime);
+      notifyWheelScrubActivity();
     };
 
     const syncListener = () => {
@@ -142,17 +167,26 @@ export function FilmStrip({
       mq.removeEventListener("change", syncListener);
       el.removeEventListener("wheel", onWheel);
     };
-  }, [frames, duration, trackWidth, videoRef, applyPosition, onSeek]);
+  }, [frames, duration, trackWidth, videoRef, applyPosition, onSeek, notifyWheelScrubActivity]);
+
+  useEffect(() => {
+    return () => {
+      clearWheelIdleTimer();
+      interactionCbRef.current?.(false);
+    };
+  }, [clearWheelIdleTimer]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!frames) return;
+      clearWheelIdleTimer();
+      interactionCbRef.current?.(true);
       draggingRef.current = true;
       dragStartXRef.current = e.clientX;
       dragStartTimeRef.current = videoRef.current?.currentTime ?? 0;
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [frames, videoRef]
+    [frames, videoRef, clearWheelIdleTimer]
   );
 
   const handlePointerMove = useCallback(
@@ -171,9 +205,11 @@ export function FilmStrip({
     [frames, trackWidth, duration, onSeek, applyPosition]
   );
 
-  const handlePointerUp = useCallback(() => {
+  const endStripPointerInteraction = useCallback(() => {
     draggingRef.current = false;
-  }, []);
+    clearWheelIdleTimer();
+    interactionCbRef.current?.(false);
+  }, [clearWheelIdleTimer]);
 
   const jumpFrame = useCallback(
     (direction: -1 | 1) => {
@@ -209,7 +245,8 @@ export function FilmStrip({
         style={{ height: STRIP_HEIGHT }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onPointerUp={endStripPointerInteraction}
+        onPointerCancel={endStripPointerInteraction}
       >
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-black/60 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-black/60 to-transparent" />
