@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Star, Users } from "lucide-react";
 import type { PerformerCardData } from "./performer-card-data";
 import { NsfwBlur, NsfwText } from "../nsfw/nsfw-gate";
+import { entityTerms, formatVideoCount } from "../../lib/terminology";
 
 interface PerformerEntityCardProps {
   performer: PerformerCardData;
@@ -57,7 +58,7 @@ export function PerformerEntityCard({
             {performer.name}
           </NsfwText>
           <p className="text-[0.68rem] text-text-disabled">
-            {performer.sceneCount} scene{performer.sceneCount !== 1 ? "s" : ""}
+            {formatVideoCount(performer.sceneCount)}
             {performer.gender ? ` · ${performer.gender}` : ""}
           </p>
         </div>
@@ -104,7 +105,7 @@ function PerformerListCard({
             {performer.name}
           </NsfwText>
           <p className="text-[0.68rem] text-text-disabled truncate">
-            {performer.sceneCount} scene{performer.sceneCount !== 1 ? "s" : ""}
+            {formatVideoCount(performer.sceneCount)}
             {performer.gender ? ` · ${performer.gender}` : ""}
           </p>
         </div>
@@ -144,10 +145,12 @@ function PerformerCompactCard({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{performer.name}</div>
         <div className="text-[0.68rem] text-text-muted truncate">
-          {[performer.gender, `${performer.sceneCount} scenes`].filter(Boolean).join(" · ")}
+          {[performer.gender, formatVideoCount(performer.sceneCount)].filter(Boolean).join(" · ")}
         </div>
       </div>
-      <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">performer</span>
+      <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">
+        {entityTerms.performer.toLowerCase()}
+      </span>
     </>
   );
 

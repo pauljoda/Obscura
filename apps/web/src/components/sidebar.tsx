@@ -25,7 +25,6 @@ import { Logo, LogoMark } from "./logo";
 import { ChangelogDialog } from "./changelog-dialog";
 import { APP_VERSION } from "../lib/version";
 import { useNsfw } from "./nsfw/nsfw-context";
-import { useTerms } from "../lib/terminology";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "layout-dashboard": LayoutDashboard,
@@ -47,16 +46,6 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-// Resolves dynamic label based on NSFW mode (e.g. Scenes→Videos, Performers→Actors)
-function useDynamicLabel(label: string): string {
-  const terms = useTerms();
-  const labelMap: Record<string, string> = {
-    Scenes: terms.scenes,
-    Performers: terms.performers,
-  };
-  return labelMap[label] ?? label;
-}
-
 interface SidebarNavItemProps {
   href: string;
   label: string;
@@ -67,7 +56,7 @@ interface SidebarNavItemProps {
 
 function SidebarNavItem({ href, label, icon, pathname, isExpanded }: SidebarNavItemProps) {
   const Icon = iconMap[icon];
-  const displayLabel = useDynamicLabel(label);
+  const displayLabel = label;
   const isActive = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
 
   return (

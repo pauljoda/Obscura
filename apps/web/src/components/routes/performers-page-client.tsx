@@ -34,6 +34,7 @@ import { useSelection } from "../../hooks/use-selection";
 import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
+import { useTerms } from "../../lib/terminology";
 
 type SortKey = "name" | "scenes" | "rating" | "recent";
 type SortDir = "asc" | "desc";
@@ -47,7 +48,7 @@ const defaultSortDir: Record<SortKey, SortDir> = {
 
 const sortOptions: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A-Z" },
-  { value: "scenes", label: "Scene Count" },
+  { value: "scenes", label: "Video count" },
   { value: "rating", label: "Rating" },
   { value: "recent", label: "Recently Added" },
 ];
@@ -72,6 +73,7 @@ export function PerformersPageClient({
   initialPerformers,
   initialTotal,
 }: PerformersPageClientProps) {
+  const terms = useTerms();
   type ViewMode = "grid" | "list";
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [performers, setPerformers] = useState(initialPerformers);
@@ -210,10 +212,10 @@ export function PerformersPageClient({
         <div>
           <h1 className="flex items-center gap-2.5">
             <Users className="h-5 w-5 text-text-accent" />
-            Performers
+            {terms.performers}
           </h1>
           <p className="mt-1 text-[0.78rem] text-text-muted">
-            Browse performers in your library
+            Browse {terms.performers.toLowerCase()} in your library
           </p>
         </div>
         <span className="mt-1 text-mono-sm text-text-disabled">
@@ -225,7 +227,7 @@ export function PerformersPageClient({
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           <DashboardStatTile
             icon={<Users className="h-4 w-4" />}
-            label="Performers"
+            label={terms.performers}
             value={String(total)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />
@@ -252,7 +254,7 @@ export function PerformersPageClient({
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-disabled" />
             <input
               type="text"
-              placeholder="Search performers..."
+              placeholder={`Search ${terms.performers.toLowerCase()}...`}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className={cn(
@@ -425,14 +427,14 @@ export function PerformersPageClient({
       </div>
 
       {loading ? (
-        <div className="surface-well p-12 text-center text-sm text-text-muted">Loading performers…</div>
+        <div className="surface-well p-12 text-center text-sm text-text-muted">Loading {terms.performers.toLowerCase()}…</div>
       ) : performers.length === 0 ? (
         <div className="surface-well p-12 text-center">
           <Users className="mx-auto mb-3 h-10 w-10 text-text-disabled" />
           <p className="text-sm text-text-muted">
             {search || hasFilters
-              ? "No performers match the current filters."
-              : "No performers in the library yet."}
+              ? `No ${terms.performers.toLowerCase()} match the current filters.`
+              : `No ${terms.performers.toLowerCase()} in the library yet.`}
           </p>
         </div>
       ) : viewMode === "list" ? (

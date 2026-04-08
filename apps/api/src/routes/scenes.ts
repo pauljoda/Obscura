@@ -304,7 +304,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!scene) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     return {
@@ -396,7 +396,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     await db.transaction(async (tx) => {
@@ -550,7 +550,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     // Delete scene record (cascades handle scenePerformers, sceneTags, sceneMarkers)
@@ -597,7 +597,7 @@ export async function scenesRoutes(app: FastifyInstance) {
     });
     if (!existing) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     let primaryTagId: string | null = null;
@@ -715,7 +715,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     await db
@@ -740,7 +740,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     const [updated] = await db
@@ -1235,7 +1235,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!scene) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     const file = await request.file();
@@ -1279,7 +1279,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!scene) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     try {
@@ -1327,7 +1327,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!scene || !scene.filePath || !existsSync(scene.filePath)) {
       reply.code(404);
-      return { error: "Scene video file not found" };
+      return { error: "Video file not found" };
     }
 
     const maxSeconds =
@@ -1382,7 +1382,7 @@ export async function scenesRoutes(app: FastifyInstance) {
 
     if (!scene) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     // Delete custom thumbnail file if it exists

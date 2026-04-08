@@ -6,7 +6,7 @@ const { performers } = schema;
 
 export const performersSearchProvider: SearchProvider = {
   kind: "performer",
-  label: "Performers",
+  label: "Actors",
   defaultPreviewLimit: 3,
 
   async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {

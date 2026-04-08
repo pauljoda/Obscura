@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
+import { useTerms, formatVideoCount } from "../../lib/terminology";
 import { SceneGrid } from "../scene-grid";
 import { PerformerEdit } from "../performer-edit";
 import {
@@ -50,6 +51,7 @@ export function PerformerPageClient({
   initialTotalScenes,
 }: PerformerPageClientProps) {
   const router = useRouter();
+  const terms = useTerms();
 
   const [performer, setPerformer] = useState(initialPerformer);
   const [scenes, setScenes] = useState(initialScenes);
@@ -115,7 +117,7 @@ export function PerformerPageClient({
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this performer? This cannot be undone.")) {
+    if (!confirm(`Delete this ${terms.performer.toLowerCase()}? This cannot be undone.`)) {
       return;
     }
 
@@ -146,11 +148,11 @@ export function PerformerPageClient({
           className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted transition-colors duration-fast hover:text-text-accent"
         >
           <ArrowLeft className="h-3 w-3" />
-          Performers
+          {terms.performers}
         </Link>
         <div className="surface-well p-12 text-center">
           <Users className="mx-auto mb-3 h-10 w-10 text-text-disabled" />
-          <p className="text-sm text-text-muted">Performer not found.</p>
+          <p className="text-sm text-text-muted">{terms.performer} not found.</p>
         </div>
       </div>
     );
@@ -274,7 +276,7 @@ export function PerformerPageClient({
         className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted transition-colors duration-fast hover:text-text-accent"
       >
         <ArrowLeft className="h-3 w-3" />
-        Performers
+        {terms.performers}
       </Link>
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -369,9 +371,7 @@ export function PerformerPageClient({
             <div className="mt-3 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5 text-sm text-text-muted">
                 <Film className="h-4 w-4" />
-                <span className="text-mono-sm">
-                  {totalScenes} scene{totalScenes !== 1 ? "s" : ""}
-                </span>
+                <span className="text-mono-sm">{formatVideoCount(totalScenes)}</span>
               </div>
               {performer.isNsfw && <NsfwChip />}
             </div>
@@ -422,13 +422,15 @@ export function PerformerPageClient({
           <div className="separator" />
 
           <section>
-            <h4 className="mb-3 text-kicker">Filmography</h4>
+            <h4 className="mb-3 text-kicker">{terms.scenes}</h4>
             {totalScenes > 0 ? (
               <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
-                <p className="text-sm text-text-muted">No scenes with this performer.</p>
+                <p className="text-sm text-text-muted">
+                  No {terms.scenes.toLowerCase()} with this {terms.performer.toLowerCase()}.
+                </p>
               </div>
             )}
           </section>

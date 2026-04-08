@@ -3,6 +3,7 @@ import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
 import { DashboardStatTile } from "./dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "./dashboard-utils";
 import type { SceneStats } from "../../lib/api";
+import { entityTerms } from "../../lib/terminology";
 
 export interface DashboardHeroProps {
   stats: SceneStats | null;
@@ -19,7 +20,7 @@ export function DashboardHero({ stats }: DashboardHeroProps) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
-            label="Scenes"
+            label={entityTerms.scenes}
             value={String(stats?.totalScenes ?? 0)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />

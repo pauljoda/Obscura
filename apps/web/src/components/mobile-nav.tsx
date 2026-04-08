@@ -8,9 +8,9 @@ import { cn } from "@obscura/ui/lib/utils";
 import { MobileMoreSheet } from "./mobile-more-sheet";
 
 const primaryTabs = [
-  { label: "Scenes", href: "/scenes", icon: Film },
+  { label: "Videos", href: "/scenes", icon: Film },
   { label: "Galleries", href: "/galleries", icon: Images },
-  { label: "Performers", href: "/performers", icon: Users },
+  { label: "Actors", href: "/performers", icon: Users },
   { label: "Jobs", href: "/jobs", icon: Activity },
 ] as const;
 

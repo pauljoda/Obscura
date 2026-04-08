@@ -30,6 +30,7 @@ import {
   type ScrapeResult,
   type NormalizedScrapeResult,
 } from "../lib/api";
+import { entityTerms } from "../lib/terminology";
 
 interface ScrapeState {
   scraping: boolean;
@@ -129,7 +130,7 @@ export function ResolveWorkflow() {
         setScrapeState({
           ...defaultScrapeState,
           triedActions: res.triedActions,
-          error: res.message || "No results found for this scene.",
+          error: res.message || `No results found for this ${entityTerms.scene.toLowerCase()}.`,
         });
       }
     } catch (err) {
@@ -202,7 +203,7 @@ export function ResolveWorkflow() {
         <div>
           <h1>Resolve</h1>
           <p className="mt-1 text-text-muted text-sm">
-            Scrape and apply metadata to your scenes
+            Scrape and apply metadata to your {entityTerms.scenes.toLowerCase()}
           </p>
         </div>
         <div className="surface-well flex flex-col items-center justify-center py-16">
@@ -226,7 +227,7 @@ export function ResolveWorkflow() {
         <div>
           <h1>Resolve</h1>
           <p className="mt-1 text-text-muted text-sm">
-            Scrape and apply metadata to your scenes
+            Scrape and apply metadata to your {entityTerms.scenes.toLowerCase()}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -248,7 +249,7 @@ export function ResolveWorkflow() {
             {unmatchedScenes.length === 0 ? (
               <div className="surface-well p-6 text-center">
                 <Check className="h-8 w-8 text-success-text mx-auto mb-2" />
-                <p className="text-text-muted text-sm">All scenes matched!</p>
+                <p className="text-text-muted text-sm">All {entityTerms.scenes.toLowerCase()} matched!</p>
               </div>
             ) : (
               unmatchedScenes.map((scene) => (
@@ -344,7 +345,7 @@ export function ResolveWorkflow() {
                     </select>
                   </div>
                   <div>
-                    <label className="control-label">Scene URL (optional)</label>
+                    <label className="control-label">{entityTerms.scene} URL (optional)</label>
                     <input
                       className="control-input"
                       placeholder="https://example.com/scene/12345"
@@ -472,7 +473,7 @@ export function ResolveWorkflow() {
                     />
                     <div className="separator" />
                     <DiffField
-                      field="Performers"
+                      field={entityTerms.performers}
                       current={
                         selectedScene.performers.length > 0
                           ? selectedScene.performers.map((p) => p.name).join(", ")

@@ -196,7 +196,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
     const body = request.body as { sceneId: string };
 
     if (!body.sceneId) {
-      return reply.code(400).send({ error: "sceneId is required" });
+      return reply.code(400).send({ error: "Video id is required" });
     }
 
     const [ep] = await db
@@ -227,7 +227,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .limit(1);
 
     if (!scene) {
-      return reply.code(404).send({ error: "Scene not found" });
+      return reply.code(404).send({ error: "Video not found" });
     }
 
     const client = buildClient(ep);
@@ -340,7 +340,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
     const body = request.body as { performerId: string };
 
     if (!body.performerId) {
-      return reply.code(400).send({ error: "performerId is required" });
+      return reply.code(400).send({ error: "Actor id is required" });
     }
 
     const [ep] = await db
@@ -362,7 +362,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .limit(1);
 
     if (!performer) {
-      return reply.code(404).send({ error: "Performer not found" });
+      return reply.code(404).send({ error: "Actor not found" });
     }
 
     const client = buildClient(ep);

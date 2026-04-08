@@ -28,6 +28,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { entityTerms } from "../../lib/terminology";
 import { NsfwGate } from "../nsfw/nsfw-gate";
 import {
   browseLibraryPath,
@@ -410,7 +411,7 @@ export function SettingsPageClient({
                   className="control-input w-full py-1.5 text-sm"
                   value={newRootLabel}
                   onChange={(event) => setNewRootLabel(event.target.value)}
-                  placeholder="Primary scenes"
+                  placeholder={`Primary ${entityTerms.scenes.toLowerCase()}`}
                 />
               </div>
               <label className="cursor-pointer pb-2 text-xs text-text-secondary">
@@ -620,7 +621,7 @@ export function SettingsPageClient({
           {stashBoxEndpoints.length === 0 && !showStashBoxForm && (
             <div className="surface-card no-lift p-4 text-center">
               <p className="text-[0.75rem] text-text-disabled">
-                No Stash-Box endpoints configured. Add one to enable fingerprint-based scene identification.
+                No Stash-Box endpoints configured. Add one to enable fingerprint-based video identification.
               </p>
             </div>
           )}
@@ -1094,7 +1095,7 @@ function DiagnosticsSection() {
     try {
       const res = await rebuildPreviews(nsfwMode);
       setResult(
-        `Queued ${res.enqueued} scene${res.enqueued === 1 ? "" : "s"} for forced preview regeneration`
+        `Queued ${res.enqueued} ${res.enqueued === 1 ? "video" : "videos"} for forced preview regeneration`
       );
     } catch {
       setResult("Failed to queue rebuild");
@@ -1119,8 +1120,8 @@ function DiagnosticsSection() {
               Force rebuild all previews
             </p>
             <p className="text-[0.68rem] text-text-muted">
-              Clear and regenerate thumbnails, preview clips, and trickplay sprites for every
-              scene. This is a heavy maintenance job and is useful after quality setting changes
+              Clear and regenerate thumbnails, preview clips, and trickplay sprites for every{" "}
+              {entityTerms.scene.toLowerCase()}. This is a heavy maintenance job and is useful after quality setting changes
               or to fix corrupt sprites.
             </p>
           </div>

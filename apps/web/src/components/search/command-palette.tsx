@@ -108,7 +108,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search scenes, performers, studios, tags..."
+            placeholder="Search videos, actors, studios, tags..."
             className={cn(
               "flex-1 bg-transparent text-sm text-text-primary",
               "placeholder:text-text-disabled",

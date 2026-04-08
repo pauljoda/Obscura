@@ -54,6 +54,7 @@ import {
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
 import { autoSaveStashId } from "./stash-id-chips";
+import { entityTerms } from "../lib/terminology";
 
 /** Unified provider that can be either a community scraper or StashBox endpoint */
 interface Provider {
@@ -121,6 +122,13 @@ function perfFieldsFromResult(result: NormalizedPerformerScrapeResult): Set<stri
       .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
       .map(([k]) => k)
   );
+}
+
+function tabEntityLabel(t: Tab): string {
+  if (t === "scenes") return entityTerms.scenes.toLowerCase();
+  if (t === "performers") return entityTerms.performers.toLowerCase();
+  if (t === "studios") return "studios";
+  return "tags";
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -947,7 +955,7 @@ export function BulkScrape() {
             Identify
           </h1>
           <p className="mt-1 text-text-muted text-[0.78rem]">
-            Match scenes and performers against metadata providers
+            Match {entityTerms.scenes.toLowerCase()} and {entityTerms.performers.toLowerCase()} against metadata providers
           </p>
         </div>
       </div>
@@ -955,8 +963,8 @@ export function BulkScrape() {
       {/* Tabs */}
       <div className="flex items-center gap-1 flex-wrap">
         {([
-          { key: "scenes" as Tab, label: "Scenes", icon: Film, count: sceneRows.length },
-          { key: "performers" as Tab, label: "Performers", icon: Users, count: perfRows.length },
+          { key: "scenes" as Tab, label: entityTerms.scenes, icon: Film, count: sceneRows.length },
+          { key: "performers" as Tab, label: entityTerms.performers, icon: Users, count: perfRows.length },
           { key: "studios" as Tab, label: "Studios", icon: Building2, count: studioRows.length },
           { key: "tags" as Tab, label: "Tags", icon: Tag, count: tagRows.length },
         ]).map(({ key, label, icon: Icon, count }) => (
@@ -1120,7 +1128,7 @@ export function BulkScrape() {
         <div className="surface-card no-lift p-12 text-center">
           <ScanSearch className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">
-            No metadata providers configured for {tab}.
+            No metadata providers configured for {tabEntityLabel(tab)}.
           </p>
           <p className="text-text-disabled text-xs mt-1">
             Add a Stash-Box endpoint or install scrapers in Settings.
@@ -1132,8 +1140,8 @@ export function BulkScrape() {
         <div className="surface-card no-lift p-12 text-center">
           <Check className="h-8 w-8 text-status-success-text mx-auto mb-2" />
           <p className="text-text-muted text-sm">
-            {tab === "scenes" ? "All scenes are organized!" :
-             tab === "performers" ? "All performers have complete metadata." :
+            {tab === "scenes" ? `All ${entityTerms.scenes.toLowerCase()} are organized!` :
+             tab === "performers" ? `All ${entityTerms.performers.toLowerCase()} have complete metadata.` :
              tab === "studios" ? "All studios have complete metadata." :
              "All tags loaded."}
           </p>
@@ -1371,7 +1379,7 @@ function SceneRowCard({
                       className="accent-[#c79b5c]"
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <span className="text-kicker">Performers</span>
+                    <span className="text-kicker">{entityTerms.performers}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {row.normalized.performerNames.map((name) => {
@@ -1590,7 +1598,7 @@ function PerformerRowCard({
                     selectedIndex={selectedImageIndex}
                     onSelect={setSelectedImageIndex}
                     onClose={() => setImagePickerOpen(false)}
-                    title="Select Performer Image"
+                    title={`Select ${entityTerms.performer} image`}
                   />
                 )}
               </div>

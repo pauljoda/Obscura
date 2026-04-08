@@ -53,6 +53,7 @@ import {
   type StudioItem,
 } from "../lib/api";
 import { NsfwChip, NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { useTerms } from "../lib/terminology";
 
 interface SceneEditProps {
   id: string;
@@ -357,6 +358,7 @@ export function SceneEdit({
   onSaved,
   currentPlaybackTime,
 }: SceneEditProps) {
+  const terms = useTerms();
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -791,7 +793,7 @@ export function SceneEdit({
   if (!scene) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
-        <p className="text-text-muted text-sm">{error ?? "Scene not found"}</p>
+        <p className="text-text-muted text-sm">{error ?? `${terms.scene} not found`}</p>
       </div>
     );
   }
@@ -819,7 +821,7 @@ export function SceneEdit({
             className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Scene
+            Back to {terms.scene}
           </Link>
         )}
 
@@ -834,7 +836,7 @@ export function SceneEdit({
         <div className="flex items-center justify-between">
           <h3 className="text-kicker flex items-center gap-2">
             <FileText className="h-3.5 w-3.5" />
-            Scene Metadata
+            {terms.scene} Metadata
           </h3>
           <Button variant="secondary" size="sm" onClick={enterEditMode}>
             <Pencil className="h-3.5 w-3.5" />
@@ -894,7 +896,7 @@ export function SceneEdit({
               )}
             </MetadataRow>
 
-            <MetadataRow label="Performers" icon={User}>
+            <MetadataRow label={terms.performers} icon={User}>
               {scene.performers.length === 0 ? (
                 <span className="text-sm text-text-disabled">--</span>
               ) : (
@@ -1000,7 +1002,7 @@ export function SceneEdit({
           className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Scene
+          Back to {terms.scene}
         </Link>
       )}
 
@@ -1193,7 +1195,11 @@ export function SceneEdit({
 
               <div className="md:col-span-2 flex items-center gap-3">
                 <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
-                {isNsfw && <span className="text-[0.68rem] text-text-muted">This scene will be hidden in SFW mode</span>}
+                {isNsfw && (
+                  <span className="text-[0.68rem] text-text-muted">
+                    This {terms.scene.toLowerCase()} will be hidden in SFW mode
+                  </span>
+                )}
               </div>
             </div>
           </section>
@@ -1202,7 +1208,7 @@ export function SceneEdit({
           <section className="surface-card-sharp no-lift p-4 space-y-4">
             <h4 className="text-kicker">Relations</h4>
 
-            <FormField label="Performers">
+            <FormField label={terms.performers}>
               <ChipInput
                 values={performerNames}
                 onChange={setPerformerNames}
@@ -1210,7 +1216,7 @@ export function SceneEdit({
                   name: p.name,
                   count: p.sceneCount,
                 }))}
-                placeholder="Type to add performers..."
+                placeholder={`Type to add ${terms.performers.toLowerCase()}...`}
                 newItems={newFromScrape.performers}
               />
             </FormField>

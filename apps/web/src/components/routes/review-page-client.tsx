@@ -17,6 +17,7 @@ import {
   rejectScrapeResult,
   type ScrapeResult,
 } from "../../lib/api";
+import { entityTerms } from "../../lib/terminology";
 
 interface ReviewPageClientProps {
   initialResults: ScrapeResult[];
@@ -131,7 +132,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
           <GitCompareArrows className="h-12 w-12 text-text-disabled mb-3" />
           <p className="text-text-muted text-sm">No pending results to review.</p>
           <p className="text-text-disabled text-xs mt-1">
-            Scrape scenes from the{" "}
+            Scrape {entityTerms.scenes.toLowerCase()} from the{" "}
             <a href="/resolve" className="text-text-accent hover:underline">
               Resolve queue
             </a>{" "}
@@ -145,7 +146,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-text-disabled">
-                    Scene {result.sceneId.slice(0, 8)}... · {result.action}
+                    {entityTerms.scene} {result.sceneId.slice(0, 8)}... · {result.action}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -191,7 +192,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
                 {result.proposedPerformerNames && result.proposedPerformerNames.length > 0 && (
                   <>
                     <div className="separator" />
-                    <ReviewField label="Performers" value={result.proposedPerformerNames.join(", ")} />
+                    <ReviewField label={entityTerms.performers} value={result.proposedPerformerNames.join(", ")} />
                   </>
                 )}
                 {result.proposedTagNames && result.proposedTagNames.length > 0 && (

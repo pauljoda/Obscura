@@ -33,16 +33,17 @@ import {
 
 import { DashboardStatTile } from "../../../components/dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../../../components/dashboard/dashboard-utils";
+import { entityTerms } from "../../../lib/terminology";
 
 /** Human-readable capability names and their category */
 const CAPABILITY_META: Record<string, { label: string; category: "scene" | "performer" | "gallery" | "group" }> = {
-  sceneByURL: { label: "Scene by URL", category: "scene" },
-  sceneByFragment: { label: "Scene by Fragment", category: "scene" },
-  sceneByName: { label: "Scene by Name", category: "scene" },
-  sceneByQueryFragment: { label: "Scene by Query", category: "scene" },
-  performerByURL: { label: "Performer by URL", category: "performer" },
-  performerByName: { label: "Performer by Name", category: "performer" },
-  performerByFragment: { label: "Performer by Fragment", category: "performer" },
+  sceneByURL: { label: "Video by URL", category: "scene" },
+  sceneByFragment: { label: "Video by fragment", category: "scene" },
+  sceneByName: { label: "Video by name", category: "scene" },
+  sceneByQueryFragment: { label: "Video by query", category: "scene" },
+  performerByURL: { label: "Actor by URL", category: "performer" },
+  performerByName: { label: "Actor by name", category: "performer" },
+  performerByFragment: { label: "Actor by fragment", category: "performer" },
   galleryByURL: { label: "Gallery by URL", category: "gallery" },
   galleryByFragment: { label: "Gallery by Fragment", category: "gallery" },
   groupByURL: { label: "Group by URL", category: "group" },
@@ -279,13 +280,13 @@ export default function ScrapersPage() {
           />
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
-            label="Scene Scrapers"
+            label={`${entityTerms.scene} scrapers`}
             value={String(sceneCount)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
           />
           <DashboardStatTile
             icon={<Users className="h-4 w-4" />}
-            label="Performer Scrapers"
+            label={`${entityTerms.performer} scrapers`}
             value={String(performerCount)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
           />
@@ -353,7 +354,7 @@ export default function ScrapersPage() {
                     {filter === "all" && <Package className="h-3 w-3" />}
                     {filter === "scene" && <Film className="h-3 w-3" />}
                     {filter === "performer" && <Users className="h-3 w-3" />}
-                    {filter === "all" ? "All" : filter === "scene" ? "Scenes" : "Performers"}
+                    {filter === "all" ? "All" : filter === "scene" ? entityTerms.scenes : entityTerms.performers}
                   </button>
                 ))}
               </>

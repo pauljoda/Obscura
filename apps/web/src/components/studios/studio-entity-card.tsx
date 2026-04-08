@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Building2, Film, Heart, Star } from "lucide-react";
 import type { StudioCardData } from "./studio-card-data";
 import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { formatVideoCount } from "../../lib/terminology";
 
 interface StudioEntityCardProps {
   studio: StudioCardData;
@@ -59,7 +60,7 @@ export function StudioEntityCard({
           <div className="flex items-center gap-3 text-[0.65rem] text-text-disabled">
             <span className="flex items-center gap-1">
               <Film className="h-2.5 w-2.5" />
-              {studio.sceneCount}
+              {formatVideoCount(studio.sceneCount)}
             </span>
             {studio.rating != null && studio.rating > 0 && (
               <span className="flex items-center gap-0.5">
@@ -112,7 +113,7 @@ function StudioListCard({
             {studio.name}
           </span>
           <p className="text-[0.68rem] text-text-disabled">
-            {studio.sceneCount} scene{studio.sceneCount !== 1 ? "s" : ""}
+            {formatVideoCount(studio.sceneCount)}
           </p>
         </div>
 
@@ -151,7 +152,7 @@ function StudioCompactCard({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{studio.name}</div>
         <div className="text-[0.68rem] text-text-muted truncate">
-          {studio.sceneCount} scenes
+          {formatVideoCount(studio.sceneCount)}
         </div>
       </div>
       <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">studio</span>

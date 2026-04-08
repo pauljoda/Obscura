@@ -39,6 +39,7 @@ import {
 import { ImagePickerModal } from "./image-picker-modal";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
 import { NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { useTerms } from "../lib/terminology";
 
 interface PerformerEditProps {
   id: string;
@@ -57,6 +58,7 @@ const genderOptions = [
 ];
 
 export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
+  const terms = useTerms();
   const [performer, setPerformer] = useState<PerformerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -469,7 +471,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
             <ArrowLeft className="h-3 w-3" />
             Back
           </button>
-          <h1 className="text-lg font-heading font-semibold">Edit Performer</h1>
+          <h1 className="text-lg font-heading font-semibold">Edit {terms.performer}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -726,7 +728,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                     selectedIndex={selectedImageIndex}
                     onSelect={setSelectedImageIndex}
                     onClose={() => setImagePickerOpen(false)}
-                    title="Select Performer Image"
+                    title={`Select ${terms.performer} image`}
                   />
                 );
               })()}
@@ -869,7 +871,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
               onChange={(e) => setDetails(e.target.value)}
               rows={4}
               className="control-input w-full py-2 text-sm resize-y"
-              placeholder="Performer biography..."
+              placeholder={`${terms.performer} biography...`}
             />
           </div>
         </div>

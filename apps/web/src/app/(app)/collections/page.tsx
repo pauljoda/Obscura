@@ -11,7 +11,7 @@ export default function CollectionsPage() {
           Collections
         </h1>
         <p className="text-text-muted text-[0.78rem] mt-1">
-          Organize scenes and galleries into curated collections
+          Organize videos and galleries into curated collections
         </p>
       </div>
 
@@ -24,13 +24,13 @@ export default function CollectionsPage() {
           No collections yet
         </h3>
         <p className="text-text-muted text-sm max-w-xs">
-          Collections let you group scenes and galleries into curated playlists or sets. This feature is coming soon.
+          Collections let you group videos and galleries into curated playlists or sets. This feature is coming soon.
         </p>
         <div className="separator w-32 my-5" />
         <div className="flex items-center gap-4 text-text-disabled text-xs">
           <Link href="/scenes" className="inline-flex items-center gap-1.5 hover:text-text-muted transition-colors duration-fast">
             <Film className="h-3.5 w-3.5" />
-            Browse scenes
+            Browse videos
           </Link>
           <Link href="/galleries" className="inline-flex items-center gap-1.5 hover:text-text-muted transition-colors duration-fast">
             <Images className="h-3.5 w-3.5" />

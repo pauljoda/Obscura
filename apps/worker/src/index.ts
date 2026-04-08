@@ -820,7 +820,7 @@ async function processMediaProbe(job: Job) {
     .limit(1);
 
   if (!scene?.filePath) {
-    throw new Error("Scene file not found");
+    throw new Error("Video file not found");
   }
 
   await markJobActive(job, "media-probe", {
@@ -857,7 +857,7 @@ async function processFingerprint(job: Job) {
     .limit(1);
 
   if (!scene?.filePath) {
-    throw new Error("Scene file not found");
+    throw new Error("Video file not found");
   }
 
   await markJobActive(job, "fingerprint", {
@@ -984,7 +984,7 @@ async function processPreview(job: Job) {
     .limit(1);
 
   if (!scene?.filePath) {
-    throw new Error("Scene file not found");
+    throw new Error("Video file not found");
   }
 
   await markJobActive(job, "preview", {

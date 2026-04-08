@@ -38,12 +38,14 @@ import {
   type TagDetail,
 } from "../../../../lib/api";
 import { use } from "react";
+import { useTerms, formatVideoCount } from "../../../../lib/terminology";
 
 interface TagPageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function TagPage({ params }: TagPageProps) {
+  const terms = useTerms();
   const { id } = use(params);
   const tagName = decodeURIComponent(id);
   const router = useRouter();
@@ -207,7 +209,7 @@ export default function TagPage({ params }: TagPageProps) {
 
         {!loading && (
           <>
-            <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {total} scene{total !== 1 ? "s" : ""}</span>
+            <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {formatVideoCount(total)}</span>
             {totalDuration > 0 && (
               <>
                 <div className="h-4 w-px bg-border-subtle" />
@@ -245,7 +247,7 @@ export default function TagPage({ params }: TagPageProps) {
 
       {/* Scene grid */}
       <section>
-        <h4 className="text-kicker mb-3">Tagged Scenes</h4>
+        <h4 className="text-kicker mb-3">Tagged {terms.scenes}</h4>
         {loading ? (
           <div className="surface-well p-12 flex items-center justify-center">
             <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
@@ -253,7 +255,7 @@ export default function TagPage({ params }: TagPageProps) {
         ) : total === 0 ? (
           <div className="surface-well p-12 text-center">
             <Film className="h-10 w-10 text-text-disabled mx-auto mb-3" />
-            <p className="text-text-muted text-sm">No scenes with this tag.</p>
+            <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} with this tag.</p>
           </div>
         ) : (
           <SceneGrid scenes={scenes} viewMode="grid" loading={false} />

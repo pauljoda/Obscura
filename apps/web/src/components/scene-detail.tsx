@@ -47,6 +47,7 @@ import {
 import { StashIdChips } from "./stash-id-chips";
 import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
+import { useTerms } from "../lib/terminology";
 
 const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -95,6 +96,7 @@ export function SceneDetail({
   const [markerTagName, setMarkerTagName] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
   const { mode: nsfwMode } = useNsfw();
+  const terms = useTerms();
 
   const refreshScene = useCallback(() => {
     fetchSceneDetail(id)
@@ -252,12 +254,12 @@ export function SceneDetail({
   if (error || !scene) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
-        <p className="text-text-muted text-sm">{error ?? "Scene not found"}</p>
+        <p className="text-text-muted text-sm">{error ?? `${terms.scene} not found`}</p>
         <Link
           href="/scenes"
           className="text-text-accent text-sm mt-2 hover:text-text-accent-bright"
         >
-          Back to Scenes
+          Back to {terms.scenes}
         </Link>
       </div>
     );
@@ -274,7 +276,7 @@ export function SceneDetail({
         className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1.5 text-text-muted text-[0.72rem] font-medium hover:text-text-accent hover:border-border-accent transition-colors duration-fast w-fit"
       >
         <ArrowLeft className="h-3 w-3" />
-        Scenes
+        {terms.scenes}
       </Link>
 
       {/* Video Player */}
@@ -462,11 +464,11 @@ export function SceneDetail({
             <section>
               <h4 className="text-kicker mb-3 flex items-center gap-2">
                 <User className="h-3.5 w-3.5" />
-                Performers
+                {terms.performers}
               </h4>
               {scene.performers.length === 0 ? (
                 <p className="text-text-disabled text-sm">
-                  No performers tagged
+                  No {terms.performers.toLowerCase()} tagged
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">

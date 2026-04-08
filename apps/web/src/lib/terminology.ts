@@ -1,25 +1,30 @@
-"use client";
-
-import { useNsfw } from "../components/nsfw/nsfw-context";
-
 /**
- * Returns localized entity terms based on the current NSFW mode.
- * In SFW mode (off): adult-oriented terms are replaced with neutral equivalents.
- * In NSFW mode (blur/show): original terms are used.
+ * User-facing names for library entities. URLs and API types still use
+ * scene/performer; this module is the single source for UI copy.
  */
-export function useTerms() {
-  const { mode } = useNsfw();
-  const sfw = mode === "off";
+export const entityTerms = {
+  scenes: "Videos",
+  scene: "Video",
+  performers: "Actors",
+  performer: "Actor",
+  studios: "Studios",
+  studio: "Studio",
+  tags: "Tags",
+  tag: "Tag",
+} as const;
 
-  return {
-    scenes: sfw ? "Videos" : "Scenes",
-    scene: sfw ? "Video" : "Scene",
-    performers: sfw ? "Actors" : "Performers",
-    performer: sfw ? "Actor" : "Performer",
-    // Studios and Tags keep their names in both modes
-    studios: "Studios",
-    studio: "Studio",
-    tags: "Tags",
-    tag: "Tag",
-  };
+export type EntityTerms = typeof entityTerms;
+
+/** e.g. "1 video" / "3 videos" for cards and stats. */
+export function formatVideoCount(count: number): string {
+  const w =
+    count === 1
+      ? entityTerms.scene.toLowerCase()
+      : entityTerms.scenes.toLowerCase();
+  return `${count} ${w}`;
+}
+
+/** Stable hook for client components; values are constant. */
+export function useTerms(): EntityTerms {
+  return entityTerms;
 }

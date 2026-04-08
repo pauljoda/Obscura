@@ -124,7 +124,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!row) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     return {
@@ -279,7 +279,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     await db.transaction(async (tx) => {
@@ -338,7 +338,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     // Delete performer (cascades handle join tables)
@@ -370,7 +370,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     await db
@@ -393,7 +393,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     await db
@@ -415,7 +415,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     const file = await request.file();
@@ -456,7 +456,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     try {
@@ -508,7 +508,7 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (!existing) {
       reply.code(404);
-      return { error: "Performer not found" };
+      return { error: "Actor not found" };
     }
 
     const imageDiskPath = path.join(getGeneratedPerformerDir(id), "image.jpg");

@@ -25,6 +25,7 @@ import { useSelection } from "../../hooks/use-selection";
 import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
+import { useTerms } from "../../lib/terminology";
 
 type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
@@ -46,6 +47,7 @@ interface TagsPageClientProps {
 }
 
 export function TagsPageClient({ initialTags }: TagsPageClientProps) {
+  const terms = useTerms();
   const [tags, setTags] = useState(initialTags);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("scenes");
@@ -139,7 +141,7 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
-            label="Tagged Scenes"
+            label={`Tagged ${terms.scenes}`}
             value={String(totalScenes)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />

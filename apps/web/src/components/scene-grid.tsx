@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Film, Loader2 } from "lucide-react";
 import type { ViewMode } from "./filter-bar";
 import type { SceneListItem } from "../lib/api";
+import { useTerms } from "../lib/terminology";
 import { SceneCard } from "./scenes/scene-card";
 import { sceneListItemToCardData } from "./scenes/scene-card-data";
 
@@ -19,6 +20,7 @@ interface SceneGridProps {
 }
 
 export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect }: SceneGridProps) {
+  const terms = useTerms();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
         <div className="flex justify-center py-6">
           <div className="flex items-center gap-2 text-text-muted text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading more scenes...
+            Loading more {terms.scenes.toLowerCase()}...
           </div>
         </div>
       )}
@@ -55,7 +57,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <Loader2 className="h-8 w-8 text-text-accent animate-spin mb-3" />
-        <p className="text-text-muted text-sm">Loading scenes...</p>
+        <p className="text-text-muted text-sm">Loading {terms.scenes.toLowerCase()}...</p>
       </div>
     );
   }
@@ -64,7 +66,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <Film className="h-12 w-12 text-text-disabled mb-3" />
-        <p className="text-text-muted text-sm">No scenes found.</p>
+        <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} found.</p>
         <p className="text-text-disabled text-xs mt-1">
           Try adjusting your search or filters.
         </p>

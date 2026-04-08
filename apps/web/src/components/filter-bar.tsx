@@ -46,7 +46,7 @@ interface FilterBarProps {
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "recent", label: "Recently Added" },
-  { value: "date", label: "Scene Date" },
+  { value: "date", label: "Video date" },
   { value: "title", label: "Title A-Z" },
   { value: "duration", label: "Duration" },
   { value: "size", label: "File Size" },

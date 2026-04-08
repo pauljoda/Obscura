@@ -134,7 +134,7 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     if (!scene?.filePath) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     const sidecar = getSidecarPaths(scene.filePath);
@@ -184,7 +184,7 @@ export async function assetsRoutes(app: FastifyInstance) {
   app.get("/assets/performers/:id/:kind", async (request, reply) => {
     const { id, kind } = request.params as { id: string; kind: string };
     if (kind !== "image") { reply.code(404); return { error: "Unknown asset kind" }; }
-    return serveEntityImage(getGeneratedPerformerDir(id), "Performer", reply);
+    return serveEntityImage(getGeneratedPerformerDir(id), "Actor", reply);
   });
 
   // ─── Studio assets: /assets/studios/:id/:kind ───────────────────

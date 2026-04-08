@@ -576,7 +576,7 @@ export async function jobsRoutes(app: FastifyInstance) {
 
     if (!scene) {
       reply.code(404);
-      return { error: "Scene not found" };
+      return { error: "Video not found" };
     }
 
     if (sfwOnly && scene.isNsfw) {

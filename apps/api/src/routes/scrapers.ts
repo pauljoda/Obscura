@@ -319,7 +319,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
     };
 
     if (!body.sceneId) {
-      return reply.code(400).send({ error: "sceneId is required" });
+      return reply.code(400).send({ error: "Video id is required" });
     }
 
     const [pkg] = await db
@@ -355,7 +355,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
       .limit(1);
 
     if (!scene) {
-      return reply.code(404).send({ error: "Scene not found" });
+      return reply.code(404).send({ error: "Video not found" });
     }
 
     // Find the YAML definition
@@ -517,7 +517,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
     };
 
     if (!body.performerId) {
-      return reply.code(400).send({ error: "performerId is required" });
+      return reply.code(400).send({ error: "Actor id is required" });
     }
 
     const [pkg] = await db
@@ -544,7 +544,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
       .limit(1);
 
     if (!performer) {
-      return reply.code(404).send({ error: "Performer not found" });
+      return reply.code(404).send({ error: "Actor not found" });
     }
 
     // Find the YAML definition
@@ -671,7 +671,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
     });
 
     if (!existing) {
-      return reply.code(404).send({ error: "Performer not found" });
+      return reply.code(404).send({ error: "Actor not found" });
     }
 
     const selected = new Set(body.selectedFields);

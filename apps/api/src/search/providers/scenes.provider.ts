@@ -7,7 +7,7 @@ const { scenes, studios, scenePerformers, performers, sceneTags, tags } = schema
 
 export const scenesSearchProvider: SearchProvider = {
   kind: "scene",
-  label: "Scenes",
+  label: "Videos",
   defaultPreviewLimit: 3,
 
   async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {

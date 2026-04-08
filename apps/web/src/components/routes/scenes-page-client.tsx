@@ -24,6 +24,7 @@ import {
   type TagItem,
 } from "../../lib/api";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { useTerms } from "../../lib/terminology";
 import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import { useSelection } from "../../hooks/use-selection";
@@ -53,6 +54,7 @@ export function ScenesPageClient({
   initialTotal,
 }: ScenesPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const terms = useTerms();
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
@@ -212,14 +214,15 @@ export function ScenesPageClient({
         <div>
           <h1 className="flex items-center gap-2.5">
             <Film className="h-5 w-5 text-text-accent" />
-            Scenes
+            {terms.scenes}
           </h1>
           <p className="mt-1 text-[0.78rem] text-text-muted">
             Browse and manage your media library
           </p>
         </div>
         <span className="mt-1 text-mono-sm text-text-disabled">
-          {total} scene{total !== 1 ? "s" : ""}
+          {total}{" "}
+          {total === 1 ? terms.scene.toLowerCase() : terms.scenes.toLowerCase()}
         </span>
       </div>
 
@@ -227,7 +230,7 @@ export function ScenesPageClient({
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <StatCard
             icon={<Film className="h-4 w-4" />}
-            label="Total Scenes"
+            label={`Total ${terms.scenes}`}
             value={String(stats.totalScenes)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />

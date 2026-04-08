@@ -22,6 +22,7 @@ import {
   type ScraperPackage,
   type NormalizedPerformerScrapeResult,
 } from "../lib/api";
+import { entityTerms } from "../lib/terminology";
 
 interface PerformerRow {
   performer: PerformerItem;
@@ -191,7 +192,7 @@ export function BulkPerformerScrape() {
         <div>
           <h2 className="flex items-center gap-2 text-lg font-heading font-semibold">
             <ScanSearch className="h-5 w-5 text-text-accent" />
-            Bulk Performer Scrape
+            Bulk {entityTerms.performer} scrape
           </h2>
           <p className="text-text-muted text-[0.78rem] mt-1">
             Scrape metadata for performers missing images or gender info

@@ -15,8 +15,8 @@ interface ConfirmDeleteDialogProps {
 }
 
 const entityLabels: Record<string, { singular: string; plural: string }> = {
-  scene: { singular: "scene", plural: "scenes" },
-  performer: { singular: "performer", plural: "performers" },
+  scene: { singular: "video", plural: "videos" },
+  performer: { singular: "actor", plural: "actors" },
   studio: { singular: "studio", plural: "studios" },
   tag: { singular: "tag", plural: "tags" },
 };
@@ -69,7 +69,7 @@ export function ConfirmDeleteDialog({
             </h3>
             <p className="mt-1.5 text-[0.78rem] text-text-muted leading-relaxed">
               {isScene
-                ? "This will permanently remove the selected scenes from the library. Generated files (thumbnails, sprites, preview clips) will be deleted."
+                ? "This will permanently remove the selected videos from the library. Generated files (thumbnails, sprites, preview clips) will be deleted."
                 : `This will permanently delete the selected ${noun}. All associations and generated files will be removed.`}
             </p>
             <p className="mt-1 text-[0.72rem] text-status-error font-medium">

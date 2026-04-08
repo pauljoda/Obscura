@@ -250,10 +250,10 @@ export function GalleryMetadataPanel({
         </div>
       )}
 
-      {/* Performers */}
+      {/* Actors */}
       {gallery.performers.length > 0 && (
         <div>
-          <div className="text-kicker mb-1.5">Performers</div>
+          <div className="text-kicker mb-1.5">Actors</div>
           <div className="space-y-1">
             {gallery.performers.map((performer) => (
               <a

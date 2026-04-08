@@ -228,7 +228,7 @@ function SceneCompactCard({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{scene.title}</div>
         <div className="text-[0.68rem] text-text-muted truncate">
-          {[scene.studio, scene.duration].filter(Boolean).join(" · ") || "Scene"}
+          {[scene.studio, scene.duration].filter(Boolean).join(" · ") || "Video"}
         </div>
       </div>
 

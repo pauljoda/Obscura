@@ -36,12 +36,14 @@ import {
   type StudioChildRef,
 } from "../../../../lib/api";
 import { use, useEffect } from "react";
+import { useTerms, formatVideoCount } from "../../../../lib/terminology";
 
 interface StudioPageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function StudioPage({ params }: StudioPageProps) {
+  const terms = useTerms();
   const { id } = use(params);
   const router = useRouter();
 
@@ -218,7 +220,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
         <div className="h-4 w-px bg-border-subtle" />
 
-        <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {total} scene{total !== 1 ? "s" : ""}</span>
+        <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {formatVideoCount(total)}</span>
 
         {studio.url && (
           <>
@@ -273,7 +275,7 @@ export default function StudioPage({ params }: StudioPageProps) {
                     </div>
                     <div className="p-2">
                       <p className="text-[0.78rem] font-medium truncate group-hover:text-text-accent transition-colors">{child.name}</p>
-                      <p className="text-[0.65rem] text-text-disabled">{child.sceneCount} scene{child.sceneCount !== 1 ? "s" : ""}</p>
+                      <p className="text-[0.65rem] text-text-disabled">{formatVideoCount(child.sceneCount)}</p>
                     </div>
                   </Link>
                 );
@@ -286,7 +288,7 @@ export default function StudioPage({ params }: StudioPageProps) {
       <div className="separator" />
 
       <section>
-        <h4 className="text-kicker mb-3">Scenes</h4>
+        <h4 className="text-kicker mb-3">{terms.scenes}</h4>
         <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
       </section>
     </div>
