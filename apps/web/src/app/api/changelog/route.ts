@@ -5,13 +5,15 @@ import { NextResponse } from "next/server";
 
 function findChangelog(): string {
   const candidates = [
+    // Docker: explicit path set via CHANGELOG_PATH env var in unified.Dockerfile.
+    process.env.CHANGELOG_PATH,
     // Standalone Docker runtime starts from /app.
     join(process.cwd(), "CHANGELOG.md"),
     // Next standalone server can also carry the traced file inside apps/web.
     join(process.cwd(), "apps", "web", "CHANGELOG.md"),
     // Local development runs from apps/web.
     join(process.cwd(), "..", "..", "CHANGELOG.md"),
-  ];
+  ].filter(Boolean) as string[];
 
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }

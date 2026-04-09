@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-09
+
 ### Changed
 
 - **Bulk scrape component decomposition** -- Split the 1884-line `bulk-scrape.tsx` into a `scrape/` directory with focused files: `types.ts` (shared types, constants, utilities), `shared-components.tsx` (StatusDot, ToggleableField), `scrape-scenes-tab.tsx`, `scrape-performers-tab.tsx`, `scrape-studios-tab.tsx`, `scrape-tags-tab.tsx` (per-tab seek logic, row rendering, accept/reject), and a slim orchestrator `bulk-scrape.tsx` (~300 lines) that owns shared state, tab switching, controls, and stats. Pure refactor with no visual or behavioral changes.

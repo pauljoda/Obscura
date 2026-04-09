@@ -5,7 +5,9 @@
 - **You MUST ALWAYS commit after every set of changes.** Do not wait for the user to ask — commit immediately when a logical unit of work is complete.
 - Every meaningful implementation iteration must end in a git commit.
 - Use small, reviewable commits with intentional scopes.
-- Update `CHANGELOG.md` after each commit — add entries under `## [Unreleased]`.
+- **With every commit you MUST also:**
+  1. Add changelog entries under `## [Unreleased]` in `CHANGELOG.md`.
+  2. Bump the version in the **root `package.json`** (patch for fixes/docs, minor for features, major for breaking changes). All workspace packages are kept in sync — bump them all.
 - Follow [Keep a Changelog](https://keepachangelog.com/) and [Semantic Versioning](https://semver.org/).
 - Suggested commit style:
   - `chore: bootstrap workspace`
@@ -17,9 +19,10 @@
 
 ### Versioning
 
-- The root `package.json` version is the single source of truth.
+- The root `package.json` version is the single source of truth. All workspace package.json files must match it exactly.
+- **Bump the version on every commit** — do not leave it stale across multiple commits.
 - Git release tags must be `vX.Y.Z`.
-- Run `pnpm release:check` before tagging — it validates semver format and changelog headings.
+- Before building a Docker image, the Dockerfile runs `pnpm release:check --release`, which enforces that a versioned CHANGELOG heading matches `package.json`. The build will fail if they are out of sync.
 - Do not create release tags when version and changelog are out of sync.
 - **MAJOR**: Breaking API changes, DB schema changes requiring manual migration, config format changes.
 - **MINOR**: New features, new API endpoints, new UI views.

@@ -30,7 +30,7 @@ COPY . .
 
 # Build web with API URL pointing to the nginx /api proxy
 ENV NEXT_PUBLIC_API_URL=/api
-RUN pnpm release:check && pnpm turbo run build
+RUN pnpm release:check --release && pnpm turbo run build
 
 # Prepare standalone web in a separate location so it doesn't
 # clobber node_modules when copied into the runner
@@ -59,6 +59,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV INTERNAL_API_URL=http://localhost:4000
+# Explicit path so the changelog API route never has to guess
+ENV CHANGELOG_PATH=/app/CHANGELOG.md
 
 # Copy the ENTIRE built workspace — pnpm virtual store and symlinks intact
 COPY --from=builder /app ./
