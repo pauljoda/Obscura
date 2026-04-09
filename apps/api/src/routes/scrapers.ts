@@ -675,7 +675,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     const selected = new Set(body.selectedFields);
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
 
     const fieldMap: Record<string, string> = {
       name: "name",
@@ -934,7 +934,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const rawPerf = rawByName.get(name.toLowerCase());
           if (rawPerf && (isNew || !existing?.gender)) {
             const normalized = normalizePerformerResult(rawPerf);
-            const perfUpdates: Record<string, any> = { updatedAt: new Date() };
+            const perfUpdates: Record<string, unknown> = { updatedAt: new Date() };
             if (normalized.gender) perfUpdates.gender = normalized.gender;
             if (normalized.birthdate) perfUpdates.birthdate = normalized.birthdate;
             if (normalized.country) perfUpdates.country = normalized.country;
