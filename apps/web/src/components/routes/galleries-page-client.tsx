@@ -18,6 +18,13 @@ import {
   type TagItem,
 } from "../../lib/api";
 import type { GalleryListItemDto } from "@obscura/contracts";
+import type { GalleriesListPrefs } from "../../lib/galleries-list-prefs";
+import {
+  defaultGalleriesListPrefs,
+  isDefaultGalleriesListPrefs,
+  writeGalleriesListPrefsCookie,
+  clearGalleriesListPrefsCookie,
+} from "../../lib/galleries-list-prefs";
 
 const PAGE_SIZE = 60;
 
@@ -32,6 +39,7 @@ interface GalleriesPageClientProps {
   initialStudios: StudioItem[];
   initialTags: TagItem[];
   initialTotal: number;
+  initialListPrefs: GalleriesListPrefs;
 }
 
 export function GalleriesPageClient({
@@ -39,12 +47,13 @@ export function GalleriesPageClient({
   initialStudios,
   initialTags,
   initialTotal,
+  initialListPrefs,
 }: GalleriesPageClientProps) {
-  const [viewMode, setViewMode] = useState<GalleryViewMode>("grid");
-  const [sortBy, setSortBy] = useState<GallerySortOption>("recent");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [viewMode, setViewMode] = useState<GalleryViewMode>(initialListPrefs.viewMode);
+  const [sortBy, setSortBy] = useState<GallerySortOption>(initialListPrefs.sortBy);
+  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  const [searchQuery, setSearchQuery] = useState(initialListPrefs.search);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(initialListPrefs.activeFilters);
   const [galleries, setGalleries] = useState(initialGalleries);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
@@ -52,6 +61,30 @@ export function GalleriesPageClient({
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    const prefs: GalleriesListPrefs = {
+      viewMode,
+      sortBy,
+      sortDir,
+      search: searchQuery,
+      activeFilters,
+    };
+    if (isDefaultGalleriesListPrefs(prefs)) {
+      clearGalleriesListPrefsCookie();
+    } else {
+      writeGalleriesListPrefsCookie(prefs);
+    }
+  }, [viewMode, sortBy, sortDir, searchQuery, activeFilters]);
+
+  const handleClearFiltersAndSort = useCallback(() => {
+    const d = defaultGalleriesListPrefs();
+    setViewMode(d.viewMode);
+    setSortBy(d.sortBy);
+    setSortDir(d.sortDir);
+    setSearchQuery(d.search);
+    setActiveFilters(d.activeFilters);
+  }, []);
 
   const buildParams = useCallback(() => {
     const tagFilters = activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
@@ -162,6 +195,16 @@ export function GalleriesPageClient({
         onSearchChange={setSearchQuery}
         availableTags={initialTags}
         onAddFilter={handleAddFilter}
+        onClearFiltersAndSort={handleClearFiltersAndSort}
+        canClearFiltersAndSort={
+          !isDefaultGalleriesListPrefs({
+            viewMode,
+            sortBy,
+            sortDir,
+            search: searchQuery,
+            activeFilters,
+          })
+        }
       />
 
       <GalleryGrid

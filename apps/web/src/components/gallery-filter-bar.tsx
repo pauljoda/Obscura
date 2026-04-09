@@ -12,15 +12,15 @@ import {
   Search,
   ChevronDown,
   Check,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
 import { NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
+import type { GallerySortOption, GalleryViewMode, SortDir } from "../lib/gallery-browse-types";
 
-export type GalleryViewMode = "grid" | "list" | "browser" | "timeline";
-export type GallerySortOption = "recent" | "title" | "date" | "rating" | "imageCount" | "created";
-export type SortDir = "asc" | "desc";
+export type { GallerySortOption, GalleryViewMode, SortDir } from "../lib/gallery-browse-types";
 
 const defaultSortDir: Record<GallerySortOption, SortDir> = {
   recent: "desc",
@@ -53,6 +53,9 @@ interface GalleryFilterBarProps {
   availableStudios?: StudioItem[];
   availableTags?: TagItem[];
   onAddFilter?: (type: string, label: string, value: string) => void;
+  /** Reset sort, search, tag/type filters, and view mode; clears saved cookie on parent. */
+  onClearFiltersAndSort?: () => void;
+  canClearFiltersAndSort?: boolean;
 }
 
 const viewModes: { mode: GalleryViewMode; Icon: typeof LayoutGrid; title: string }[] = [
@@ -76,6 +79,8 @@ export function GalleryFilterBar({
   availableStudios = [],
   availableTags = [],
   onAddFilter,
+  onClearFiltersAndSort,
+  canClearFiltersAndSort = false,
 }: GalleryFilterBarProps) {
   const { mode: nsfwMode } = useNsfw();
   const galleryFilterTagsVisible = tagsVisibleInNsfwMode(availableTags, nsfwMode);
@@ -224,6 +229,22 @@ export function GalleryFilterBar({
             </span>
           )}
         </button>
+
+        {canClearFiltersAndSort && onClearFiltersAndSort && (
+          <button
+            type="button"
+            onClick={onClearFiltersAndSort}
+            title="Clear filters, sort, search, and saved preferences"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1.5",
+              "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
+              "transition-colors duration-fast"
+            )}
+          >
+            <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+        )}
       </div>
 
       {/* Filter panel */}
