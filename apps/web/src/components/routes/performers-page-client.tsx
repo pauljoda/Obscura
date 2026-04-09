@@ -21,6 +21,7 @@ import {
   Loader2,
   LayoutGrid,
   LayoutList,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
@@ -36,18 +37,24 @@ import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 import { useTerms } from "../../lib/terminology";
+import type { PerformersListPrefs, PerformersSortKey, PerformersViewMode } from "../../lib/performers-list-prefs";
+import {
+  defaultPerformersListPrefs,
+  isDefaultPerformersListPrefs,
+  writePerformersListPrefsCookie,
+  clearPerformersListPrefsCookie,
+} from "../../lib/performers-list-prefs";
 
-type SortKey = "name" | "scenes" | "rating" | "recent";
 type SortDir = "asc" | "desc";
 
-const defaultSortDir: Record<SortKey, SortDir> = {
+const defaultSortDir: Record<PerformersSortKey, SortDir> = {
   name: "asc",
   scenes: "desc",
   rating: "desc",
   recent: "desc",
 };
 
-const sortOptions: { value: SortKey; label: string }[] = [
+const sortOptions: { value: PerformersSortKey; label: string }[] = [
   { value: "name", label: "Name A-Z" },
   { value: "scenes", label: "Video count" },
   { value: "rating", label: "Rating" },
@@ -68,25 +75,26 @@ const PAGE_SIZE = 50;
 interface PerformersPageClientProps {
   initialPerformers: PerformerItem[];
   initialTotal: number;
+  initialListPrefs: PerformersListPrefs;
 }
 
 export function PerformersPageClient({
   initialPerformers,
   initialTotal,
+  initialListPrefs,
 }: PerformersPageClientProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
-  type ViewMode = "grid" | "list";
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<PerformersViewMode>(initialListPrefs.viewMode);
   const [performers, setPerformers] = useState(initialPerformers);
   const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("scenes");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [gender, setGender] = useState("");
-  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [search, setSearch] = useState(initialListPrefs.search);
+  const [sortKey, setSortKey] = useState<PerformersSortKey>(initialListPrefs.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  const [gender, setGender] = useState(initialListPrefs.gender);
+  const [favoriteOnly, setFavoriteOnly] = useState(initialListPrefs.favoriteOnly);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -170,6 +178,33 @@ export function PerformersPageClient({
     const timer = window.setTimeout(loadPerformers, deferredSearch ? 300 : 0);
     return () => window.clearTimeout(timer);
   }, [deferredSearch, loadPerformers]);
+
+  useEffect(() => {
+    const prefs: PerformersListPrefs = {
+      viewMode,
+      search,
+      sortKey,
+      sortDir,
+      gender,
+      favoriteOnly,
+    };
+    if (isDefaultPerformersListPrefs(prefs)) {
+      clearPerformersListPrefsCookie();
+    } else {
+      writePerformersListPrefsCookie(prefs);
+    }
+  }, [viewMode, search, sortKey, sortDir, gender, favoriteOnly]);
+
+  const handleClearFiltersAndSort = useCallback(() => {
+    const d = defaultPerformersListPrefs();
+    setViewMode(d.viewMode);
+    setSearch(d.search);
+    setSortKey(d.sortKey);
+    setSortDir(d.sortDir);
+    setGender(d.gender);
+    setFavoriteOnly(d.favoriteOnly);
+    setFilterOpen(false);
+  }, []);
 
   // Infinite scroll sentinel
   useEffect(() => {
@@ -407,6 +442,29 @@ export function PerformersPageClient({
               <LayoutList className="h-3.5 w-3.5" />
             </button>
           </div>
+
+          {!isDefaultPerformersListPrefs({
+            viewMode,
+            search,
+            sortKey,
+            sortDir,
+            gender,
+            favoriteOnly,
+          }) && (
+            <button
+              type="button"
+              onClick={handleClearFiltersAndSort}
+              title="Clear filters, sort, search, view, and saved preferences"
+              className={cn(
+                "flex items-center gap-1 px-2 py-1.5",
+                "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
+                "transition-colors duration-fast",
+              )}
+            >
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          )}
         </div>
 
         {filterOpen ? (

@@ -9,13 +9,22 @@ import {
   fetchTags,
 } from "../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../lib/nsfw-cookie";
+import {
+  defaultScenesListPrefs,
+  scenesListPrefsToFetchParams,
+  SCENES_LIST_PREFS_COOKIE,
+  parseScenesListPrefs,
+} from "../../../lib/scenes-list-prefs";
 
 export default async function ScenesPage() {
   const cookieStore = await cookies();
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
+  const listPrefs =
+    parseScenesListPrefs(cookieStore.get(SCENES_LIST_PREFS_COOKIE)?.value) ?? defaultScenesListPrefs();
+  const sceneFetchParams = scenesListPrefsToFetchParams(listPrefs, nsfwMode);
 
   const [scenesResponse, stats, studiosResponse, tagsResponse] = await Promise.all([
-    fetchScenes({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }),
+    fetchScenes(sceneFetchParams),
     fetchSceneStats(nsfwMode).catch(() => null),
     fetchStudios({ nsfw: nsfwMode }).catch(() => ({ studios: [] })),
     fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] })),
@@ -28,6 +37,7 @@ export default async function ScenesPage() {
       initialStudios={studiosResponse.studios}
       initialTags={tagsResponse.tags}
       initialTotal={scenesResponse.total}
+      initialListPrefs={listPrefs}
     />
   );
 }

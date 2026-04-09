@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   Tag,
   Search,
@@ -12,6 +12,7 @@ import {
   X,
   List,
   Cloud,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
@@ -28,34 +29,39 @@ import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 import { useTerms } from "../../lib/terminology";
 import { tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
+import type { TagsListPrefs, TagsSortKey, TagsViewMode } from "../../lib/tags-list-prefs";
+import {
+  defaultTagsListPrefs,
+  isDefaultTagsListPrefs,
+  writeTagsListPrefsCookie,
+  clearTagsListPrefsCookie,
+} from "../../lib/tags-list-prefs";
 
-type SortKey = "scenes" | "name" | "recent";
 type SortDir = "asc" | "desc";
-type ViewMode = "list" | "cloud";
 
-const defaultSortDir: Record<SortKey, SortDir> = {
+const defaultSortDir: Record<TagsSortKey, SortDir> = {
   scenes: "desc",
   name: "asc",
-  recent: "desc",
 };
 
-const sortOptions: { value: SortKey; label: string }[] = [
+const sortOptions: { value: TagsSortKey; label: string }[] = [
   { value: "scenes", label: "Usage Count" },
   { value: "name", label: "Name A-Z" },
 ];
 
 interface TagsPageClientProps {
   initialTags: TagItem[];
+  initialListPrefs: TagsListPrefs;
 }
 
-export function TagsPageClient({ initialTags }: TagsPageClientProps) {
+export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClientProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const [tags, setTags] = useState(initialTags);
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("scenes");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [search, setSearch] = useState(initialListPrefs.search);
+  const [sortKey, setSortKey] = useState<TagsSortKey>(initialListPrefs.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  const [viewMode, setViewMode] = useState<TagsViewMode>(initialListPrefs.viewMode);
   const [sortOpen, setSortOpen] = useState(false);
 
   const selection = useSelection();
@@ -72,6 +78,24 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
       .then((r) => setTags(r.tags))
       .catch(() => {});
   }, [nsfwMode]);
+
+  useEffect(() => {
+    const prefs: TagsListPrefs = { search, sortKey, sortDir, viewMode };
+    if (isDefaultTagsListPrefs(prefs)) {
+      clearTagsListPrefsCookie();
+    } else {
+      writeTagsListPrefsCookie(prefs);
+    }
+  }, [search, sortKey, sortDir, viewMode]);
+
+  const handleClearFiltersAndSort = useCallback(() => {
+    const d = defaultTagsListPrefs();
+    setSearch(d.search);
+    setSortKey(d.sortKey);
+    setSortDir(d.sortDir);
+    setViewMode(d.viewMode);
+    selection.deselectAll();
+  }, [selection]);
 
   const sorted = useMemo(() => {
     const copy = [...tags];
@@ -309,6 +333,22 @@ export function TagsPageClient({ initialTags }: TagsPageClientProps) {
               <Cloud className="h-3.5 w-3.5" />
             </button>
           </div>
+
+          {!isDefaultTagsListPrefs({ search, sortKey, sortDir, viewMode }) && (
+            <button
+              type="button"
+              onClick={handleClearFiltersAndSort}
+              title="Clear search, sort, view, and saved preferences"
+              className={cn(
+                "flex items-center gap-1 px-2 py-1.5",
+                "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
+                "transition-colors duration-fast",
+              )}
+            >
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          )}
         </div>
       )}
 

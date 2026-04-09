@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Film, Loader2 } from "lucide-react";
-import type { ViewMode } from "./filter-bar";
+import type { ViewMode } from "../lib/scene-browse-types";
 import type { SceneListItem } from "../lib/api";
 import { useTerms } from "../lib/terminology";
 import { SceneCard } from "./scenes/scene-card";

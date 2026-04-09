@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Building2, Search, X, ArrowUpDown, ChevronDown, LayoutGrid, LayoutList } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { Building2, Search, X, ArrowUpDown, ChevronDown, LayoutGrid, LayoutList, RotateCcw } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { fetchStudios, type StudioItem, updateStudio, deleteStudio } from "../../lib/api";
 import { useNsfw } from "../nsfw/nsfw-context";
@@ -14,16 +14,22 @@ import { useSelection } from "../../hooks/use-selection";
 import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
+import type { StudiosListPrefs, StudiosViewMode } from "../../lib/studios-list-prefs";
+import {
+  defaultStudiosListPrefs,
+  isDefaultStudiosListPrefs,
+  writeStudiosListPrefsCookie,
+  clearStudiosListPrefsCookie,
+} from "../../lib/studios-list-prefs";
 
 type SortDir = "asc" | "desc";
 
 interface StudiosPageClientProps {
   initialStudios: StudioItem[];
+  initialListPrefs: StudiosListPrefs;
 }
 
-type ViewMode = "grid" | "list";
-
-export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
+export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const [studios, setStudios] = useState(initialStudios);
   const skipFirstStudioRefetch = useRef(true);
@@ -37,11 +43,29 @@ export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
       .then((r) => setStudios(r.studios))
       .catch(() => {});
   }, [nsfwMode]);
-  const [search, setSearch] = useState("");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [search, setSearch] = useState(initialListPrefs.search);
+  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  const [viewMode, setViewMode] = useState<StudiosViewMode>(initialListPrefs.viewMode);
+
+  useEffect(() => {
+    const prefs: StudiosListPrefs = { search, sortDir, viewMode };
+    if (isDefaultStudiosListPrefs(prefs)) {
+      clearStudiosListPrefsCookie();
+    } else {
+      writeStudiosListPrefsCookie(prefs);
+    }
+  }, [search, sortDir, viewMode]);
 
   const selection = useSelection();
+
+  const handleClearFiltersAndSort = useCallback(() => {
+    const d = defaultStudiosListPrefs();
+    setSearch(d.search);
+    setSortDir(d.sortDir);
+    setViewMode(d.viewMode);
+    selection.deselectAll();
+  }, [selection]);
+
   const [bulkLoading, setBulkLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -195,6 +219,22 @@ export function StudiosPageClient({ initialStudios }: StudiosPageClientProps) {
               <LayoutList className="h-3.5 w-3.5" />
             </button>
           </div>
+
+          {!isDefaultStudiosListPrefs({ search, sortDir, viewMode }) && (
+            <button
+              type="button"
+              onClick={handleClearFiltersAndSort}
+              title="Clear search, sort, view, and saved preferences"
+              className={cn(
+                "flex items-center gap-1 px-2 py-1.5",
+                "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
+                "transition-colors duration-fast",
+              )}
+            >
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          )}
         </div>
       </div>
 

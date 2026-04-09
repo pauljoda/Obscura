@@ -33,12 +33,13 @@ import { useSelection } from "../../hooks/use-selection";
 import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
-
-interface ActiveFilter {
-  label: string;
-  type: string;
-  value: string;
-}
+import type { ScenesListPrefs, ScenesListPrefsActiveFilter } from "../../lib/scenes-list-prefs";
+import {
+  defaultScenesListPrefs,
+  isDefaultScenesListPrefs,
+  writeScenesListPrefsCookie,
+  clearScenesListPrefsCookie,
+} from "../../lib/scenes-list-prefs";
 
 interface ScenesPageClientProps {
   initialScenes: SceneListItem[];
@@ -46,6 +47,7 @@ interface ScenesPageClientProps {
   initialStudios: StudioItem[];
   initialTags: TagItem[];
   initialTotal: number;
+  initialListPrefs: ScenesListPrefs;
 }
 
 export function ScenesPageClient({
@@ -54,6 +56,7 @@ export function ScenesPageClient({
   initialStudios,
   initialTags,
   initialTotal,
+  initialListPrefs,
 }: ScenesPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
@@ -83,11 +86,13 @@ export function ScenesPageClient({
       .catch(() => {});
   }, [nsfwMode]);
 
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [sortBy, setSortBy] = useState<SortOption>("recent");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialListPrefs.viewMode);
+  const [sortBy, setSortBy] = useState<SortOption>(initialListPrefs.sortBy);
+  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  const [searchQuery, setSearchQuery] = useState(initialListPrefs.search);
+  const [activeFilters, setActiveFilters] = useState<ScenesListPrefsActiveFilter[]>(
+    initialListPrefs.activeFilters,
+  );
   const [scenes, setScenes] = useState(initialScenes);
   const [total, setTotal] = useState(initialTotal);
   const [filterStudios, setFilterStudios] = useState(initialStudios);
@@ -101,6 +106,30 @@ export function ScenesPageClient({
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    const prefs: ScenesListPrefs = {
+      viewMode,
+      sortBy,
+      sortDir,
+      search: searchQuery,
+      activeFilters,
+    };
+    if (isDefaultScenesListPrefs(prefs)) {
+      clearScenesListPrefsCookie();
+    } else {
+      writeScenesListPrefsCookie(prefs);
+    }
+  }, [viewMode, sortBy, sortDir, searchQuery, activeFilters]);
+
+  const handleClearFiltersAndSort = useCallback(() => {
+    const d = defaultScenesListPrefs();
+    setViewMode(d.viewMode);
+    setSortBy(d.sortBy);
+    setSortDir(d.sortDir);
+    setSearchQuery(d.search);
+    setActiveFilters(d.activeFilters);
+  }, []);
 
   const buildParams = useCallback(() => {
     const tagFilters = activeFilters
@@ -297,6 +326,16 @@ export function ScenesPageClient({
         availableStudios={filterStudios}
         availableTags={filterTags}
         onAddFilter={addFilter}
+        onClearFiltersAndSort={handleClearFiltersAndSort}
+        canClearFiltersAndSort={
+          !isDefaultScenesListPrefs({
+            viewMode,
+            sortBy,
+            sortDir,
+            search: searchQuery,
+            activeFilters,
+          })
+        }
       />
 
       {viewMode === "list" && !loading && scenes.length > 0 && (

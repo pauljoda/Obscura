@@ -11,15 +11,15 @@ import {
   ChevronDown,
   Check,
   Tag,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type { StudioItem, TagItem } from "../lib/api";
 import { NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
+import type { SortDir, SortOption, ViewMode } from "../lib/scene-browse-types";
 
-export type ViewMode = "grid" | "list";
-export type SortOption = "recent" | "title" | "duration" | "size" | "rating" | "date" | "plays";
-export type SortDir = "asc" | "desc";
+export type { SortDir, SortOption, ViewMode } from "../lib/scene-browse-types";
 
 const defaultSortDir: Record<SortOption, SortDir> = {
   recent: "desc",
@@ -44,6 +44,8 @@ interface FilterBarProps {
   availableStudios?: StudioItem[];
   availableTags?: TagItem[];
   onAddFilter?: (type: string, label: string, value: string) => void;
+  onClearFiltersAndSort?: () => void;
+  canClearFiltersAndSort?: boolean;
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -69,6 +71,8 @@ export function FilterBar({
   availableStudios = [],
   availableTags = [],
   onAddFilter,
+  onClearFiltersAndSort,
+  canClearFiltersAndSort = false,
 }: FilterBarProps) {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -227,6 +231,22 @@ export function FilterBar({
             </span>
           )}
         </button>
+
+        {canClearFiltersAndSort && onClearFiltersAndSort && (
+          <button
+            type="button"
+            onClick={onClearFiltersAndSort}
+            title="Clear filters, sort, search, and saved preferences"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1.5",
+              "text-text-muted text-[0.72rem] hover:text-text-primary hover:bg-surface-2",
+              "transition-colors duration-fast"
+            )}
+          >
+            <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+        )}
       </div>
 
       {/* Expandable filter panel */}
