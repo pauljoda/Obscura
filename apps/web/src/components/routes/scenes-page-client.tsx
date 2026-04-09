@@ -44,6 +44,11 @@ import {
   writeScenesListPrefsCookie,
   clearScenesListPrefsCookie,
 } from "../../lib/scenes-list-prefs";
+import {
+  type FilterPreset,
+  loadPresets,
+  savePresets,
+} from "../../lib/filter-presets";
 
 interface ScenesPageClientProps {
   initialScenes: SceneListItem[];
@@ -117,6 +122,15 @@ export function ScenesPageClient({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [activePresetId, setActivePresetId] = useState<string | null>(
+    initialListPrefs.activePresetId ?? null,
+  );
+
+  useEffect(() => {
+    setPresets(loadPresets());
+  }, []);
+
   const selection = useSelection();
   const [bulkLoading, setBulkLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -131,13 +145,14 @@ export function ScenesPageClient({
       sortDir,
       search: searchQuery,
       activeFilters,
+      activePresetId: activePresetId ?? undefined,
     };
     if (isDefaultScenesListPrefs(prefs)) {
       clearScenesListPrefsCookie();
     } else {
       writeScenesListPrefsCookie(prefs);
     }
-  }, [viewMode, sortBy, sortDir, searchQuery, activeFilters]);
+  }, [viewMode, sortBy, sortDir, searchQuery, activeFilters, activePresetId]);
 
   const handleClearFiltersAndSort = useCallback(() => {
     const d = defaultScenesListPrefs();
@@ -254,14 +269,13 @@ export function ScenesPageClient({
 
   function removeFilter(index: number) {
     startTransition(() => {
+      setActivePresetId(null);
       setActiveFilters((previous) => previous.filter((_, currentIndex) => currentIndex !== index));
     });
   }
 
   function addFilter(type: string, label: string, value: string) {
     const exclusiveOnePerType = new Set([
-      "resolution",
-      "studio",
       "ratingMin",
       "ratingMax",
       "dateFrom",
@@ -271,10 +285,10 @@ export function ScenesPageClient({
       "interactive",
       "hasFile",
       "played",
-      "codec",
     ]);
 
     startTransition(() => {
+      setActivePresetId(null);
       setActiveFilters((previous) => {
         if (exclusiveOnePerType.has(type)) {
           if (previous.some((filter) => filter.type === type && filter.value === value)) {
@@ -283,13 +297,52 @@ export function ScenesPageClient({
           return [...previous.filter((filter) => filter.type !== type), { type, label, value }];
         }
 
+        // Multi-select types: toggle on/off
         if (previous.some((filter) => filter.type === type && filter.value === value)) {
-          return previous;
+          return previous.filter((filter) => !(filter.type === type && filter.value === value));
         }
 
         return [...previous, { type, label, value }];
       });
     });
+  }
+
+  function handleApplyPreset(preset: FilterPreset) {
+    startTransition(() => {
+      setActiveFilters(preset.filters);
+      setSortBy(preset.sortBy);
+      setSortDir(preset.sortDir);
+      setActivePresetId(preset.id);
+    });
+  }
+
+  function handleSavePreset(name: string) {
+    const newPreset: FilterPreset = {
+      id: crypto.randomUUID(),
+      name,
+      filters: activeFilters,
+      sortBy,
+      sortDir,
+    };
+    const updated = [...presets, newPreset];
+    setPresets(updated);
+    savePresets(updated);
+    setActivePresetId(newPreset.id);
+  }
+
+  function handleOverwritePreset(id: string) {
+    const updated = presets.map((p) =>
+      p.id === id ? { ...p, filters: activeFilters, sortBy, sortDir } : p,
+    );
+    setPresets(updated);
+    savePresets(updated);
+  }
+
+  function handleDeletePreset(id: string) {
+    const updated = presets.filter((p) => p.id !== id);
+    setPresets(updated);
+    savePresets(updated);
+    if (activePresetId === id) setActivePresetId(null);
   }
 
   async function handleBulkNsfw(isNsfw: boolean) {
@@ -400,6 +453,12 @@ export function ScenesPageClient({
             activeFilters,
           })
         }
+        presets={presets}
+        activePresetId={activePresetId}
+        onApplyPreset={handleApplyPreset}
+        onSavePreset={handleSavePreset}
+        onOverwritePreset={handleOverwritePreset}
+        onDeletePreset={handleDeletePreset}
       />
 
       {viewMode === "list" && !loading && scenes.length > 0 && (

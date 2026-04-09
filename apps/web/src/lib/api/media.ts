@@ -17,8 +17,8 @@ export async function fetchScenes(params: {
   order?: "asc" | "desc";
   tag?: string[];
   performer?: string[];
-  studio?: string;
-  resolution?: string;
+  studio?: string[];
+  resolution?: string[];
   ratingMin?: number;
   ratingMax?: number;
   dateFrom?: string;
@@ -29,7 +29,7 @@ export async function fetchScenes(params: {
   interactive?: string;
   hasFile?: string;
   played?: string;
-  codec?: string;
+  codec?: string[];
   limit?: number;
   offset?: number;
   nsfw?: string;
@@ -39,8 +39,6 @@ export async function fetchScenes(params: {
       search: params.search,
       sort: params.sort,
       order: params.order,
-      resolution: params.resolution,
-      studio: params.studio,
       ratingMin: params.ratingMin,
       ratingMax: params.ratingMax,
       dateFrom: params.dateFrom,
@@ -51,7 +49,6 @@ export async function fetchScenes(params: {
       interactive: params.interactive,
       hasFile: params.hasFile,
       played: params.played,
-      codec: params.codec,
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
@@ -59,6 +56,9 @@ export async function fetchScenes(params: {
     {
       tag: params.tag,
       performer: params.performer,
+      resolution: params.resolution,
+      studio: params.studio,
+      codec: params.codec,
     },
   );
 

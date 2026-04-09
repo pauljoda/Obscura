@@ -64,7 +64,7 @@ export default function StudioPage({ params }: StudioPageProps) {
     try {
       const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
-      const scenesData = await fetchScenes({ studio: id, limit: 100, nsfw: nsfwMode });
+      const scenesData = await fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode });
       setScenes(scenesData.scenes);
       setTotal(scenesData.total);
       setNotFound(false);

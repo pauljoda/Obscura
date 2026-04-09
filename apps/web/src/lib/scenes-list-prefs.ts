@@ -17,6 +17,7 @@ export interface ScenesListPrefs {
   sortDir: SortDir;
   search: string;
   activeFilters: ScenesListPrefsActiveFilter[];
+  activePresetId?: string;
 }
 
 const SORT_OPTIONS: readonly SortOption[] = [
@@ -99,12 +100,15 @@ export function parseScenesListPrefs(raw: string | undefined): ScenesListPrefs |
   if (typeof search !== "string" || search.length > 500) return null;
   if (activeFilters === null) return null;
 
+  const activePresetId = typeof parsed.activePresetId === "string" ? parsed.activePresetId : undefined;
+
   return {
     viewMode,
     sortBy: sortBy as SortOption,
     sortDir,
     search,
     activeFilters,
+    activePresetId,
   };
 }
 
@@ -116,6 +120,7 @@ export function serializeScenesListPrefs(p: ScenesListPrefs): string {
       sortDir: p.sortDir,
       search: p.search,
       activeFilters: p.activeFilters,
+      ...(p.activePresetId ? { activePresetId: p.activePresetId } : {}),
     }),
   );
 }
@@ -136,8 +141,8 @@ export function scenesListPrefsToFetchParams(
   order: "asc" | "desc";
   tag?: string[];
   performer?: string[];
-  resolution?: string;
-  studio?: string;
+  resolution?: string[];
+  studio?: string[];
   ratingMin?: number;
   ratingMax?: number;
   dateFrom?: string;
@@ -148,14 +153,15 @@ export function scenesListPrefsToFetchParams(
   interactive?: string;
   hasFile?: string;
   played?: string;
-  codec?: string;
+  codec?: string[];
   limit: number;
   nsfw: string;
 } {
   const tagFilters = p.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
   const performerFilters = p.activeFilters.filter((f) => f.type === "performer").map((f) => f.value);
-  const resolutionFilter = p.activeFilters.find((f) => f.type === "resolution");
-  const studioFilter = p.activeFilters.find((f) => f.type === "studio");
+  const resolutionFilters = p.activeFilters.filter((f) => f.type === "resolution").map((f) => f.value);
+  const studioFilters = p.activeFilters.filter((f) => f.type === "studio").map((f) => f.value);
+  const codecFilters = p.activeFilters.filter((f) => f.type === "codec").map((f) => f.value.toLowerCase());
   const ratingMin = p.activeFilters.find((f) => f.type === "ratingMin")?.value;
   const ratingMax = p.activeFilters.find((f) => f.type === "ratingMax")?.value;
   const dateFrom = p.activeFilters.find((f) => f.type === "dateFrom")?.value;
@@ -165,7 +171,7 @@ export function scenesListPrefsToFetchParams(
   const interactive = p.activeFilters.find((f) => f.type === "interactive")?.value;
   const hasFile = p.activeFilters.find((f) => f.type === "hasFile")?.value;
   const played = p.activeFilters.find((f) => f.type === "played")?.value;
-  const codec = p.activeFilters.find((f) => f.type === "codec")?.value;
+  // codec is now extracted above as codecFilters
 
   const dur =
     durationPreset && DURATION_PRESET_TO_API[durationPreset] ? DURATION_PRESET_TO_API[durationPreset] : {};
@@ -179,8 +185,8 @@ export function scenesListPrefsToFetchParams(
     order: p.sortDir,
     tag: tagFilters.length > 0 ? tagFilters : undefined,
     performer: performerFilters.length > 0 ? performerFilters : undefined,
-    resolution: resolutionFilter?.value,
-    studio: studioFilter?.value,
+    resolution: resolutionFilters.length > 0 ? resolutionFilters : undefined,
+    studio: studioFilters.length > 0 ? studioFilters : undefined,
     ratingMin: Number.isInteger(rm) && rm >= 1 && rm <= 5 ? rm : undefined,
     ratingMax: Number.isInteger(rmax) && rmax >= 1 && rmax <= 5 ? rmax : undefined,
     dateFrom: dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom) ? dateFrom : undefined,
@@ -191,7 +197,7 @@ export function scenesListPrefsToFetchParams(
     interactive: interactive === "true" || interactive === "false" ? interactive : undefined,
     hasFile: hasFile === "true" || hasFile === "false" ? hasFile : undefined,
     played: played === "true" || played === "false" ? played : undefined,
-    codec: codec && /^[a-z0-9]{2,16}$/i.test(codec) ? codec.toLowerCase() : undefined,
+    codec: codecFilters.length > 0 ? codecFilters : undefined,
     limit: PAGE_SIZE,
     nsfw,
   };

@@ -42,8 +42,8 @@ export async function scenesRoutes(app: FastifyInstance) {
       order?: string;
       tag?: string | string[];
       performer?: string | string[];
-      studio?: string;
-      resolution?: string;
+      studio?: string | string[];
+      resolution?: string | string[];
       limit?: string;
       offset?: string;
       /** When `off`, exclude NSFW scenes (same contract as search). */
@@ -58,7 +58,7 @@ export async function scenesRoutes(app: FastifyInstance) {
       interactive?: string;
       hasFile?: string;
       played?: string;
-      codec?: string;
+      codec?: string | string[];
     };
 
     const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -85,26 +85,33 @@ export async function scenesRoutes(app: FastifyInstance) {
       );
     }
 
-    if (query.resolution) {
+    const resValues = Array.isArray(query.resolution) ? query.resolution : query.resolution ? [query.resolution] : [];
+    if (resValues.length > 0) {
       const resMap: Record<string, [number, number]> = {
         "4K": [2160, 99999],
         "1080p": [1080, 2159],
         "720p": [720, 1079],
         "480p": [0, 719],
       };
-      const range = resMap[query.resolution];
-      if (range) {
-        conditions.push(
-          and(
-            sql`${scenes.height} >= ${range[0]}`,
-            sql`${scenes.height} <= ${range[1]}`
-          )!
-        );
+      const resConditions = resValues
+        .map((r) => resMap[r])
+        .filter(Boolean)
+        .map((range) => and(
+          sql`${scenes.height} >= ${range[0]}`,
+          sql`${scenes.height} <= ${range[1]}`,
+        )!);
+      if (resConditions.length === 1) {
+        conditions.push(resConditions[0]);
+      } else if (resConditions.length > 1) {
+        conditions.push(or(...resConditions)!);
       }
     }
 
-    if (query.studio) {
-      conditions.push(eq(scenes.studioId, query.studio));
+    const studioIds = Array.isArray(query.studio) ? query.studio : query.studio ? [query.studio] : [];
+    if (studioIds.length === 1) {
+      conditions.push(eq(scenes.studioId, studioIds[0]));
+    } else if (studioIds.length > 1) {
+      conditions.push(inArray(scenes.studioId, studioIds));
     }
 
     // Tag filter: find scenes that have ALL specified tags
@@ -201,9 +208,13 @@ export async function scenesRoutes(app: FastifyInstance) {
       conditions.push(and(eq(scenes.playCount, 0), isNull(scenes.lastPlayedAt))!);
     }
 
-    const codecKey = query.codec?.toLowerCase().trim() ?? "";
-    if (codecKey && allowedCodecs.has(codecKey)) {
-      conditions.push(ilike(scenes.codec, `%${codecKey}%`));
+    const codecValues = (Array.isArray(query.codec) ? query.codec : query.codec ? [query.codec] : [])
+      .map((c) => c.toLowerCase().trim())
+      .filter((c) => allowedCodecs.has(c));
+    if (codecValues.length === 1) {
+      conditions.push(ilike(scenes.codec, `%${codecValues[0]}%`));
+    } else if (codecValues.length > 1) {
+      conditions.push(or(...codecValues.map((c) => ilike(scenes.codec, `%${c}%`)))!);
     }
 
     // Sort
