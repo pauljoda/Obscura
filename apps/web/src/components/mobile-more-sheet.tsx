@@ -1,54 +1,13 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import {
-  Film,
-  Image,
-  Images,
-  Users,
-  Building2,
-  Tags,
-  FolderOpen,
-  ScanSearch,
-  Activity,
-  Settings,
-  LayoutDashboard,
-  Search,
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
 import { cn } from "@obscura/ui/lib/utils";
-
-const sections = [
-  {
-    kicker: "Overview",
-    items: [
-      { label: "Dashboard", href: "/", Icon: LayoutDashboard },
-      { label: "Search", href: "/search", Icon: Search },
-    ],
-  },
-  {
-    kicker: "Browse",
-    items: [
-      { label: "Videos", href: "/scenes", Icon: Film },
-      { label: "Galleries", href: "/galleries", Icon: Images },
-      { label: "Images", href: "/images", Icon: Image },
-      { label: "Actors", href: "/performers", Icon: Users },
-      { label: "Studios", href: "/studios", Icon: Building2 },
-      { label: "Tags", href: "/tags", Icon: Tags },
-      { label: "Collections", href: "/collections", Icon: FolderOpen },
-    ],
-  },
-  {
-    kicker: "Operate",
-    items: [
-      { label: "Scrape", href: "/scrape", Icon: ScanSearch },
-      { label: "Jobs", href: "/jobs", Icon: Activity },
-      { label: "Settings", href: "/settings", Icon: Settings },
-    ],
-  },
-];
+import { useNsfw } from "./nsfw/nsfw-context";
+import { appShellNavIconMap } from "./app-shell-nav-icon-map";
 
 interface MobileMoreSheetProps {
   open: boolean;
@@ -57,6 +16,7 @@ interface MobileMoreSheetProps {
 
 export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
   const pathname = usePathname();
+  const { mode } = useNsfw();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -114,45 +74,54 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
 
         {/* Navigation sections */}
         <nav className="max-h-[60dvh] overflow-y-auto p-3">
-          {sections.map((section) => (
-            <div key={section.kicker} className="mb-4 last:mb-0">
+          {appShellSections.map((section) => (
+            <div key={section.id} className="mb-4 last:mb-0">
               <div className="px-2 pb-1.5 text-[0.65rem] font-semibold uppercase tracking-widest text-text-accent">
                 {section.kicker}
               </div>
               <ul className="space-y-0.5">
-                {section.items.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== "/" && pathname.startsWith(item.href + "/"));
+                {section.items
+                  .filter((item) => {
+                    if (item.href === "/identify" && mode === "off") return false;
+                    return true;
+                  })
+                  .map((item) => {
+                    const href = item.href as string;
+                    const Icon = appShellNavIconMap[item.icon];
+                    const isActive =
+                      pathname === href ||
+                      (href !== "/" && pathname.startsWith(href + "/"));
 
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={onClose}
-                        className={cn(
-                          "group relative flex items-center gap-3 px-2.5 py-2.5 text-sm transition-colors",
-                          isActive
-                            ? "bg-accent-950 text-glow-accent"
-                            : "text-text-muted active:bg-surface-2",
-                        )}
-                      >
-                        {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
-                        )}
-                        <item.Icon
+                    return (
+                      <li key={href}>
+                        <Link
+                          href={href}
+                          onClick={onClose}
                           className={cn(
-                            "h-4 w-4 flex-shrink-0",
+                            "group relative flex items-center gap-3 px-2.5 py-2.5 text-sm transition-colors",
                             isActive
-                              ? "text-accent-300 drop-shadow-[0_0_8px_rgba(199,155,92,0.5)]"
-                              : "text-text-muted group-hover:text-text-primary",
+                              ? "bg-accent-950 text-glow-accent"
+                              : "text-text-muted active:bg-surface-2",
                           )}
-                        />
-                        <span>{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                        >
+                          {isActive && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent-500 shadow-[var(--shadow-glow-accent)]" />
+                          )}
+                          {Icon && (
+                            <Icon
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0",
+                                isActive
+                                  ? "text-accent-300 drop-shadow-[0_0_8px_rgba(199,155,92,0.5)]"
+                                  : "text-text-muted group-hover:text-text-primary",
+                              )}
+                            />
+                          )}
+                          <span>{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
               </ul>
             </div>
           ))}

@@ -1,22 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Film,
-  Image,
-  Images,
-  Users,
-  Building2,
-  Tags,
-  FolderOpen,
-  ScanSearch,
-  Activity,
-  Settings,
-  PanelLeftClose,
-  PanelLeftOpen,
-  LayoutDashboard,
-  Search,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
@@ -25,21 +10,7 @@ import { Logo, LogoMark } from "./logo";
 import { ChangelogDialog } from "./changelog-dialog";
 import { APP_VERSION } from "../lib/version";
 import { useNsfw } from "./nsfw/nsfw-context";
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  "layout-dashboard": LayoutDashboard,
-  film: Film,
-  images: Images,
-  image: Image,
-  users: Users,
-  building: Building2,
-  tags: Tags,
-  folder: FolderOpen,
-  "scan-search": ScanSearch,
-  activity: Activity,
-  settings: Settings,
-  search: Search,
-};
+import { appShellNavIconMap } from "./app-shell-nav-icon-map";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -55,7 +26,7 @@ interface SidebarNavItemProps {
 }
 
 function SidebarNavItem({ href, label, icon, pathname, isExpanded }: SidebarNavItemProps) {
-  const Icon = iconMap[icon];
+  const Icon = appShellNavIconMap[icon];
   const displayLabel = label;
   const isActive = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
 

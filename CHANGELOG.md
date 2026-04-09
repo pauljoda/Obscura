@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mobile More menu and SFW** — The bottom-bar **More** sheet now uses the same nav sections as the desktop sidebar and omits **Identify** when NSFW content mode is **Off** (SFW). It previously listed **Scrape** (`/scrape`), which showed the same bulk UI without the SFW redirect used by `/identify`.
+
 ### Added
 
 - **Background worker concurrency setting** — Library settings include `backgroundWorkerConcurrency` (default 1, range 1–32). The BullMQ worker applies it per queue (parallel jobs per queue), re-reads the value about every 15 seconds so changes take effect without restarting the worker, and the jobs dashboard shows the effective throttle. Schema: `library_settings.background_worker_concurrency`.
