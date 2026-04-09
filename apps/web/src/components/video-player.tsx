@@ -10,8 +10,8 @@ import {
   Pause,
   Play,
   Settings2,
-  SkipBack,
-  SkipForward,
+  RotateCcw,
+  RotateCw,
   Volume2,
   VolumeX,
   Wifi,
@@ -860,9 +860,11 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={() => seek(-10)}
-              className="text-white/70 transition-colors hover:text-white"
+              className="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+              title="Skip back 10s"
             >
-              <SkipBack className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+              <RotateCcw className="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
+              <span className="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
             </button>
             <button
               type="button"
@@ -881,9 +883,11 @@ export function VideoPlayer({
             <button
               type="button"
               onClick={() => seek(10)}
-              className="text-white/70 transition-colors hover:text-white"
+              className="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+              title="Skip forward 10s"
             >
-              <SkipForward className="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+              <RotateCw className="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
+              <span className="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
             </button>
 
             <div className="hidden sm:flex items-center gap-2 text-white/80">
