@@ -1,5 +1,7 @@
 import "server-only";
 
+export { buildQueryString } from "../query-string";
+
 const API_BASE = process.env.INTERNAL_API_URL ?? "http://localhost:4000";
 
 export async function serverFetch<T>(
@@ -19,26 +21,4 @@ export async function serverFetch<T>(
   }
 
   return res.json();
-}
-
-export function buildQueryString(
-  params: Record<string, string | number | null | undefined>,
-  listParams?: Record<string, string[] | undefined>,
-) {
-  const sp = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== "") {
-      sp.set(key, String(value));
-    }
-  }
-
-  if (listParams) {
-    for (const [key, values] of Object.entries(listParams)) {
-      values?.forEach((value) => sp.append(key, value));
-    }
-  }
-
-  const qs = sp.toString();
-  return qs ? `?${qs}` : "";
 }

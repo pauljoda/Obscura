@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Deduplicate web utility code** — Extracted shared `buildQueryString` into `apps/web/src/lib/query-string.ts` (was duplicated in `api/core.ts` and `server-api/core.ts`). Created a generic `createListPrefs` factory in `apps/web/src/lib/list-prefs.ts` that encapsulates the repeated cookie read/write/clear, JSON parse/serialize, and default-comparison boilerplate. Refactored all 6 entity list-prefs files (scenes, galleries, performers, images, studios, tags) to use the factory. No behavioral changes; all existing export names preserved.
+
 - **Worker modularization** — Decomposed the monolithic 1934-line `apps/worker/src/index.ts` into focused modules: 8 processor files under `processors/` (one per job type), 6 shared utility files under `lib/` (db, queues, job-tracking, nsfw, enqueue, scheduler/helpers), and a slim ~100-line orchestration `index.ts`. Pure refactor with no logic changes.
 
 - **Job control: queue layout** — Queue cards use a fixed order grouped by role: library and gallery scans first, then scene media pipeline (probe, fingerprint, preview), metadata import, and gallery image pipeline. Cards no longer reorder by backlog or failures.

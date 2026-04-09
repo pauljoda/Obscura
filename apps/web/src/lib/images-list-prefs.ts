@@ -1,3 +1,5 @@
+import { createListPrefs, isRecord } from "./list-prefs";
+
 export const IMAGES_LIST_PREFS_COOKIE = "obscura-images-list";
 export const IMAGES_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -20,10 +22,6 @@ export interface ImagesListPrefs {
 
 const SORT_KEYS: readonly ImageListSortKey[] = ["recent", "title", "date", "rating"];
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
 function parseActiveFilters(raw: unknown): ImagesListPrefsActiveFilter[] | null {
   if (!Array.isArray(raw)) return null;
   const out: ImagesListPrefsActiveFilter[] = [];
@@ -38,68 +36,40 @@ function parseActiveFilters(raw: unknown): ImagesListPrefsActiveFilter[] | null 
   return out;
 }
 
-export function defaultImagesListPrefs(): ImagesListPrefs {
-  return {
+const imagesPrefs = createListPrefs<ImagesListPrefs>({
+  cookieName: IMAGES_LIST_PREFS_COOKIE,
+  maxAge: IMAGES_LIST_PREFS_MAX_AGE,
+  defaults: () => ({
     sortBy: "recent",
     sortDir: "desc",
     search: "",
     activeFilters: [],
-  };
-}
+  }),
+  validate: (parsed) => {
+    const sortBy = parsed.sortBy;
+    const sortDir = parsed.sortDir;
+    const search = parsed.search;
+    const activeFilters = parseActiveFilters(parsed.activeFilters);
+    if (typeof sortBy !== "string" || !SORT_KEYS.includes(sortBy as ImageListSortKey)) return null;
+    if (sortDir !== "asc" && sortDir !== "desc") return null;
+    if (typeof search !== "string" || search.length > 500) return null;
+    if (activeFilters === null) return null;
+    return {
+      sortBy: sortBy as ImageListSortKey,
+      sortDir,
+      search,
+      activeFilters,
+    };
+  },
+});
 
-export function isDefaultImagesListPrefs(p: ImagesListPrefs): boolean {
-  const d = defaultImagesListPrefs();
-  if (p.sortBy !== d.sortBy || p.sortDir !== d.sortDir || p.search !== d.search) return false;
-  if (p.activeFilters.length !== d.activeFilters.length) return false;
-  return p.activeFilters.every(
-    (f, i) =>
-      f.label === d.activeFilters[i]?.label &&
-      f.type === d.activeFilters[i]?.type &&
-      f.value === d.activeFilters[i]?.value,
-  );
-}
-
-export function parseImagesListPrefs(raw: string | undefined): ImagesListPrefs | null {
-  if (raw === undefined || raw === "") return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoded) as unknown;
-  } catch {
-    return null;
-  }
-  if (!isRecord(parsed)) return null;
-  const sortBy = parsed.sortBy;
-  const sortDir = parsed.sortDir;
-  const search = parsed.search;
-  const activeFilters = parseActiveFilters(parsed.activeFilters);
-  if (typeof sortBy !== "string" || !SORT_KEYS.includes(sortBy as ImageListSortKey)) return null;
-  if (sortDir !== "asc" && sortDir !== "desc") return null;
-  if (typeof search !== "string" || search.length > 500) return null;
-  if (activeFilters === null) return null;
-  return {
-    sortBy: sortBy as ImageListSortKey,
-    sortDir,
-    search,
-    activeFilters,
-  };
-}
-
-export function serializeImagesListPrefs(p: ImagesListPrefs): string {
-  return encodeURIComponent(
-    JSON.stringify({
-      sortBy: p.sortBy,
-      sortDir: p.sortDir,
-      search: p.search,
-      activeFilters: p.activeFilters,
-    }),
-  );
-}
+// Re-export under original names for backward compatibility
+export const defaultImagesListPrefs = imagesPrefs.defaults;
+export const isDefaultImagesListPrefs = imagesPrefs.isDefault;
+export const parseImagesListPrefs = imagesPrefs.parse;
+export const serializeImagesListPrefs = imagesPrefs.serialize;
+export const writeImagesListPrefsCookie = imagesPrefs.writeCookie;
+export const clearImagesListPrefsCookie = imagesPrefs.clearCookie;
 
 export function imagesListPrefsToFetchParams(
   p: ImagesListPrefs,
@@ -149,14 +119,4 @@ export function imagesListPrefsToFetchParams(
     organized: organized === "true" || organized === "false" ? organized : undefined,
     limit: PAGE_SIZE,
   };
-}
-
-export function writeImagesListPrefsCookie(p: ImagesListPrefs): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${IMAGES_LIST_PREFS_COOKIE}=${serializeImagesListPrefs(p)};path=/;max-age=${IMAGES_LIST_PREFS_MAX_AGE};samesite=lax`;
-}
-
-export function clearImagesListPrefsCookie(): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${IMAGES_LIST_PREFS_COOKIE}=;path=/;max-age=0;samesite=lax`;
 }

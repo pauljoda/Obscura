@@ -1,3 +1,5 @@
+import { createListPrefs } from "./list-prefs";
+
 export const STUDIOS_LIST_PREFS_COOKIE = "obscura-studios-list";
 export const STUDIOS_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -12,88 +14,53 @@ export interface StudiosListPrefs {
   favoritesOnly: boolean;
 }
 
-export function defaultStudiosListPrefs(): StudiosListPrefs {
-  return {
+const studiosPrefs = createListPrefs<StudiosListPrefs>({
+  cookieName: STUDIOS_LIST_PREFS_COOKIE,
+  maxAge: STUDIOS_LIST_PREFS_MAX_AGE,
+  defaults: () => ({
     search: "",
     sortDir: "asc",
     viewMode: "grid",
     minSceneCount: 0,
     minRatingStars: null,
     favoritesOnly: false,
-  };
-}
+  }),
+  validate: (parsed) => {
+    const search = parsed.search;
+    const sortDir = parsed.sortDir;
+    const viewMode = parsed.viewMode;
+    if (typeof search !== "string" || search.length > 500) return null;
+    if (sortDir !== "asc" && sortDir !== "desc") return null;
+    if (viewMode !== "grid" && viewMode !== "list") return null;
 
-export function isDefaultStudiosListPrefs(p: StudiosListPrefs): boolean {
-  const d = defaultStudiosListPrefs();
-  return (
-    p.search === d.search &&
-    p.sortDir === d.sortDir &&
-    p.viewMode === d.viewMode &&
-    p.minSceneCount === d.minSceneCount &&
-    p.minRatingStars === d.minRatingStars &&
-    p.favoritesOnly === d.favoritesOnly
-  );
-}
+    let minSceneCount = 0;
+    if (parsed.minSceneCount !== undefined) {
+      if (typeof parsed.minSceneCount !== "number" || !Number.isInteger(parsed.minSceneCount)) return null;
+      if (parsed.minSceneCount < 0 || parsed.minSceneCount > 1_000_000) return null;
+      minSceneCount = parsed.minSceneCount;
+    }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
+    let minRatingStars: number | null = null;
+    if (parsed.minRatingStars !== undefined && parsed.minRatingStars !== null) {
+      if (typeof parsed.minRatingStars !== "number" || !Number.isInteger(parsed.minRatingStars)) return null;
+      if (parsed.minRatingStars < 1 || parsed.minRatingStars > 5) return null;
+      minRatingStars = parsed.minRatingStars;
+    }
 
-export function parseStudiosListPrefs(raw: string | undefined): StudiosListPrefs | null {
-  if (raw === undefined || raw === "") return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoded) as unknown;
-  } catch {
-    return null;
-  }
-  if (!isRecord(parsed)) return null;
-  const search = parsed.search;
-  const sortDir = parsed.sortDir;
-  const viewMode = parsed.viewMode;
-  if (typeof search !== "string" || search.length > 500) return null;
-  if (sortDir !== "asc" && sortDir !== "desc") return null;
-  if (viewMode !== "grid" && viewMode !== "list") return null;
+    let favoritesOnly = false;
+    if (parsed.favoritesOnly !== undefined) {
+      if (typeof parsed.favoritesOnly !== "boolean") return null;
+      favoritesOnly = parsed.favoritesOnly;
+    }
 
-  let minSceneCount = 0;
-  if (parsed.minSceneCount !== undefined) {
-    if (typeof parsed.minSceneCount !== "number" || !Number.isInteger(parsed.minSceneCount)) return null;
-    if (parsed.minSceneCount < 0 || parsed.minSceneCount > 1_000_000) return null;
-    minSceneCount = parsed.minSceneCount;
-  }
+    return { search, sortDir, viewMode, minSceneCount, minRatingStars, favoritesOnly };
+  },
+});
 
-  let minRatingStars: number | null = null;
-  if (parsed.minRatingStars !== undefined && parsed.minRatingStars !== null) {
-    if (typeof parsed.minRatingStars !== "number" || !Number.isInteger(parsed.minRatingStars)) return null;
-    if (parsed.minRatingStars < 1 || parsed.minRatingStars > 5) return null;
-    minRatingStars = parsed.minRatingStars;
-  }
-
-  let favoritesOnly = false;
-  if (parsed.favoritesOnly !== undefined) {
-    if (typeof parsed.favoritesOnly !== "boolean") return null;
-    favoritesOnly = parsed.favoritesOnly;
-  }
-
-  return { search, sortDir, viewMode, minSceneCount, minRatingStars, favoritesOnly };
-}
-
-export function serializeStudiosListPrefs(p: StudiosListPrefs): string {
-  return encodeURIComponent(JSON.stringify(p));
-}
-
-export function writeStudiosListPrefsCookie(p: StudiosListPrefs): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${STUDIOS_LIST_PREFS_COOKIE}=${serializeStudiosListPrefs(p)};path=/;max-age=${STUDIOS_LIST_PREFS_MAX_AGE};samesite=lax`;
-}
-
-export function clearStudiosListPrefsCookie(): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${STUDIOS_LIST_PREFS_COOKIE}=;path=/;max-age=0;samesite=lax`;
-}
+// Re-export under original names for backward compatibility
+export const defaultStudiosListPrefs = studiosPrefs.defaults;
+export const isDefaultStudiosListPrefs = studiosPrefs.isDefault;
+export const parseStudiosListPrefs = studiosPrefs.parse;
+export const serializeStudiosListPrefs = studiosPrefs.serialize;
+export const writeStudiosListPrefsCookie = studiosPrefs.writeCookie;
+export const clearStudiosListPrefsCookie = studiosPrefs.clearCookie;

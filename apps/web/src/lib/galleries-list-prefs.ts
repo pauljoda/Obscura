@@ -1,3 +1,4 @@
+import { createListPrefs, isRecord } from "./list-prefs";
 import type { GallerySortOption, GalleryViewMode, SortDir } from "./gallery-browse-types";
 
 export const GALLERIES_LIST_PREFS_COOKIE = "obscura-galleries-list";
@@ -31,34 +32,6 @@ const SORT_OPTIONS: readonly GallerySortOption[] = [
 
 const VIEW_MODES: readonly GalleryViewMode[] = ["grid", "list", "browser", "timeline"];
 
-export function defaultGalleriesListPrefs(): GalleriesListPrefs {
-  return {
-    viewMode: "grid",
-    sortBy: "recent",
-    sortDir: "desc",
-    search: "",
-    activeFilters: [],
-  };
-}
-
-export function isDefaultGalleriesListPrefs(p: GalleriesListPrefs): boolean {
-  const d = defaultGalleriesListPrefs();
-  if (p.viewMode !== d.viewMode || p.sortBy !== d.sortBy || p.sortDir !== d.sortDir || p.search !== d.search) {
-    return false;
-  }
-  if (p.activeFilters.length !== d.activeFilters.length) return false;
-  return p.activeFilters.every(
-    (f, i) =>
-      f.label === d.activeFilters[i]?.label &&
-      f.type === d.activeFilters[i]?.type &&
-      f.value === d.activeFilters[i]?.value,
-  );
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
 function parseActiveFilters(raw: unknown): GalleryListPrefsActiveFilter[] | null {
   if (!Array.isArray(raw)) return null;
   const out: GalleryListPrefsActiveFilter[] = [];
@@ -73,55 +46,46 @@ function parseActiveFilters(raw: unknown): GalleryListPrefsActiveFilter[] | null
   return out;
 }
 
-/** Parse cookie payload; returns `null` if missing or invalid. */
-export function parseGalleriesListPrefs(raw: string | undefined): GalleriesListPrefs | null {
-  if (raw === undefined || raw === "") return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoded) as unknown;
-  } catch {
-    return null;
-  }
-  if (!isRecord(parsed)) return null;
+const galleriesPrefs = createListPrefs<GalleriesListPrefs>({
+  cookieName: GALLERIES_LIST_PREFS_COOKIE,
+  maxAge: GALLERIES_LIST_PREFS_MAX_AGE,
+  defaults: () => ({
+    viewMode: "grid",
+    sortBy: "recent",
+    sortDir: "desc",
+    search: "",
+    activeFilters: [],
+  }),
+  validate: (parsed) => {
+    const viewMode = parsed.viewMode;
+    const sortBy = parsed.sortBy;
+    const sortDir = parsed.sortDir;
+    const search = parsed.search;
+    const activeFilters = parseActiveFilters(parsed.activeFilters);
 
-  const viewMode = parsed.viewMode;
-  const sortBy = parsed.sortBy;
-  const sortDir = parsed.sortDir;
-  const search = parsed.search;
-  const activeFilters = parseActiveFilters(parsed.activeFilters);
+    if (typeof viewMode !== "string" || !VIEW_MODES.includes(viewMode as GalleryViewMode)) return null;
+    if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as GallerySortOption)) return null;
+    if (sortDir !== "asc" && sortDir !== "desc") return null;
+    if (typeof search !== "string" || search.length > 500) return null;
+    if (activeFilters === null) return null;
 
-  if (typeof viewMode !== "string" || !VIEW_MODES.includes(viewMode as GalleryViewMode)) return null;
-  if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as GallerySortOption)) return null;
-  if (sortDir !== "asc" && sortDir !== "desc") return null;
-  if (typeof search !== "string" || search.length > 500) return null;
-  if (activeFilters === null) return null;
+    return {
+      viewMode: viewMode as GalleryViewMode,
+      sortBy: sortBy as GallerySortOption,
+      sortDir,
+      search,
+      activeFilters,
+    };
+  },
+});
 
-  return {
-    viewMode: viewMode as GalleryViewMode,
-    sortBy: sortBy as GallerySortOption,
-    sortDir,
-    search,
-    activeFilters,
-  };
-}
-
-export function serializeGalleriesListPrefs(p: GalleriesListPrefs): string {
-  return encodeURIComponent(
-    JSON.stringify({
-      viewMode: p.viewMode,
-      sortBy: p.sortBy,
-      sortDir: p.sortDir,
-      search: p.search,
-      activeFilters: p.activeFilters,
-    }),
-  );
-}
+// Re-export under original names for backward compatibility
+export const defaultGalleriesListPrefs = galleriesPrefs.defaults;
+export const isDefaultGalleriesListPrefs = galleriesPrefs.isDefault;
+export const parseGalleriesListPrefs = galleriesPrefs.parse;
+export const serializeGalleriesListPrefs = galleriesPrefs.serialize;
+export const writeGalleriesListPrefsCookie = galleriesPrefs.writeCookie;
+export const clearGalleriesListPrefsCookie = galleriesPrefs.clearCookie;
 
 /** Params for `fetchGalleries` (server or client) matching list prefs. */
 export function galleriesListPrefsToFetchParams(p: GalleriesListPrefs): {
@@ -170,14 +134,4 @@ export function galleriesListPrefsToFetchParams(p: GalleriesListPrefs): {
     organized: organized === "true" || organized === "false" ? organized : undefined,
     limit: p.viewMode === "browser" ? BROWSER_LIMIT : PAGE_SIZE,
   };
-}
-
-export function writeGalleriesListPrefsCookie(p: GalleriesListPrefs): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${GALLERIES_LIST_PREFS_COOKIE}=${serializeGalleriesListPrefs(p)};path=/;max-age=${GALLERIES_LIST_PREFS_MAX_AGE};samesite=lax`;
-}
-
-export function clearGalleriesListPrefsCookie(): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${GALLERIES_LIST_PREFS_COOKIE}=;path=/;max-age=0;samesite=lax`;
 }
