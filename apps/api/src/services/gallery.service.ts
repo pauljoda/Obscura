@@ -695,3 +695,100 @@ export async function deleteChapter(chapterId: string) {
   await db.delete(galleryChapters).where(eq(galleryChapters.id, chapterId));
   return { ok: true };
 }
+
+// ─── createGallery ────────────────────────────────────────────
+
+export async function createGallery(body: {
+  title: string;
+  details?: string | null;
+  date?: string | null;
+}) {
+  const [created] = await db
+    .insert(galleries)
+    .values({
+      title: body.title.trim(),
+      details: body.details ?? null,
+      date: body.date ?? null,
+      galleryType: "virtual",
+      imageCount: 0,
+    })
+    .returning({ id: galleries.id });
+
+  return { ok: true, id: created.id };
+}
+
+// ─── deleteGallery ────────────────────────────────────────────
+
+export async function deleteGallery(id: string) {
+  const existing = await db.query.galleries.findFirst({
+    where: eq(galleries.id, id),
+    columns: { id: true },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Gallery not found");
+  }
+
+  await db.delete(galleries).where(eq(galleries.id, id));
+  return { ok: true };
+}
+
+// ─── deleteCoverImage ─────────────────────────────────────────
+
+export async function deleteCoverImage(galleryId: string) {
+  const existing = await db.query.galleries.findFirst({
+    where: eq(galleries.id, galleryId),
+    columns: { id: true },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Gallery not found");
+  }
+
+  await db
+    .update(galleries)
+    .set({ coverImageId: null, updatedAt: new Date() })
+    .where(eq(galleries.id, galleryId));
+
+  return { ok: true };
+}
+
+// ─── getGalleryImages ─────────────────────────────────────────
+
+export async function getGalleryImages(
+  galleryId: string,
+  limitStr?: string,
+  offsetStr?: string,
+) {
+  const limit = Math.min(Number(limitStr) || 60, 200);
+  const offset = Number(offsetStr) || 0;
+
+  const gallery = await db.query.galleries.findFirst({
+    where: eq(galleries.id, galleryId),
+    columns: { id: true },
+  });
+
+  if (!gallery) {
+    throw new AppError(404, "Gallery not found");
+  }
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(images)
+    .where(eq(images.galleryId, galleryId));
+
+  const imageRows = await db
+    .select()
+    .from(images)
+    .where(eq(images.galleryId, galleryId))
+    .orderBy(asc(images.sortOrder))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    images: imageRows.map(toGalleryImageListItem),
+    total: Number(countResult.count),
+    limit,
+    offset,
+  };
+}

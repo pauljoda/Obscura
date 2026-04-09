@@ -2,7 +2,10 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { apiRoutes } from "@obscura/contracts";
+import errorHandler from "./plugins/error-handler";
 import { scenesRoutes } from "./routes/scenes";
+import { studiosRoutes } from "./routes/studios";
+import { tagsRoutes } from "./routes/tags";
 import { performersRoutes } from "./routes/performers";
 import { streamRoutes } from "./routes/stream";
 import { settingsRoutes } from "./routes/settings";
@@ -30,6 +33,9 @@ await app.register(multipart, {
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
+// ─── Error handler ────────────────────────────────────────────────
+await app.register(errorHandler);
+
 // ─── Core routes ──────────────────────────────────────────────────
 app.get(apiRoutes.health, async () => ({
   status: "ok",
@@ -42,6 +48,8 @@ await app.register(settingsRoutes);
 await app.register(jobsRoutes);
 await app.register(assetsRoutes);
 await app.register(scenesRoutes);
+await app.register(studiosRoutes);
+await app.register(tagsRoutes);
 await app.register(performersRoutes);
 await app.register(galleriesRoutes);
 await app.register(imagesRoutes);

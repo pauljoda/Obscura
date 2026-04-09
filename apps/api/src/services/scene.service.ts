@@ -35,6 +35,7 @@ import {
   runProcess,
 } from "@obscura/media-core";
 import { db, schema } from "../db";
+import { AppError } from "../plugins/error-handler";
 import type { SortConfig } from "../lib/query-helpers";
 
 const {
@@ -46,19 +47,6 @@ const {
   tags,
   studios,
 } = schema;
-
-// ─── Error Type ────────────────────────────────────────────────
-
-export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code?: string,
-  ) {
-    super(message);
-    this.name = "AppError";
-  }
-}
 
 // ─── Query Types ───────────────────────────────────────────────
 

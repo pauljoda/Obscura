@@ -1,598 +1,82 @@
 import type { FastifyInstance } from "fastify";
-import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, and, ne, isNotNull, isNull, gte, lte } from "drizzle-orm";
-import { existsSync } from "node:fs";
-import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
-import path from "node:path";
-import { getGeneratedPerformerDir } from "@obscura/media-core";
-
-const { performers, performerTags, scenePerformers, tags, scenes } = schema;
-
-/** Count of scenes viewable in SFW mode (non-NSFW scenes) for this performer row. */
-const sfwPerformerSceneCountExpr = sql<number>`(
-  SELECT COUNT(*)::int
-  FROM scene_performers sp
-  INNER JOIN scenes s ON s.id = sp.scene_id
-  WHERE sp.performer_id = ${performers.id}
-    AND (s.is_nsfw IS NOT TRUE)
-)`;
+import * as performerService from "../services/performer.service";
+import type {
+  CreatePerformerBody,
+  UpdatePerformerBody,
+  ListPerformersQuery,
+} from "../services/performer.service";
 
 export async function performersRoutes(app: FastifyInstance) {
   // ─── GET /performers ────────────────────────────────────────────
   app.get("/performers", async (request) => {
-    const query = request.query as {
-      search?: string;
-      sort?: string;
-      order?: string;
-      gender?: string;
-      favorite?: string;
-      country?: string;
-      limit?: string;
-      offset?: string;
-      /** When `off`, omit NSFW actors and use SFW-only scene counts. */
-      nsfw?: string;
-      ratingMin?: string;
-      ratingMax?: string;
-      hasImage?: string;
-      sceneCountMin?: string;
-    };
-
-    const limit = Math.min(Number(query.limit) || 50, 100);
-    const offset = Number(query.offset) || 0;
-    const sfwOnly = query.nsfw === "off";
-
-    // Build WHERE conditions
-    const conditions = [];
-
-    if (sfwOnly) {
-      conditions.push(ne(performers.isNsfw, true));
-    }
-
-    if (query.search) {
-      const term = `%${query.search}%`;
-      conditions.push(
-        or(
-          ilike(performers.name, term),
-          ilike(performers.aliases, term),
-          ilike(performers.disambiguation, term)
-        )!
-      );
-    }
-
-    if (query.gender) {
-      conditions.push(ilike(performers.gender, query.gender));
-    }
-
-    if (query.favorite === "true") {
-      conditions.push(eq(performers.favorite, true));
-    }
-
-    if (query.country) {
-      conditions.push(ilike(performers.country, query.country));
-    }
-
-    const pRatingMin = query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
-    if (Number.isInteger(pRatingMin) && pRatingMin >= 1 && pRatingMin <= 5) {
-      conditions.push(and(isNotNull(performers.rating), gte(performers.rating, pRatingMin))!);
-    }
-    const pRatingMax = query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
-    if (Number.isInteger(pRatingMax) && pRatingMax >= 1 && pRatingMax <= 5) {
-      conditions.push(and(isNotNull(performers.rating), lte(performers.rating, pRatingMax))!);
-    }
-
-    if (query.hasImage === "true") {
-      conditions.push(isNotNull(performers.imagePath));
-    }
-    if (query.hasImage === "false") {
-      conditions.push(isNull(performers.imagePath));
-    }
-
-    const scm = query.sceneCountMin !== undefined ? Number(query.sceneCountMin) : NaN;
-    if (Number.isInteger(scm) && scm >= 1) {
-      if (sfwOnly) {
-        conditions.push(gte(sfwPerformerSceneCountExpr, scm));
-      } else {
-        conditions.push(gte(performers.sceneCount, scm));
-      }
-    }
-
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    const sceneCountSelect = sfwOnly ? sfwPerformerSceneCountExpr : performers.sceneCount;
-
-    // Sorting
-    const sortDir = query.order === "asc" ? asc : desc;
-    const sortAsc = query.order === "asc" ? asc : null;
-    let orderBy;
-    switch (query.sort) {
-      case "name":
-        orderBy = (sortAsc ?? asc)(performers.name);
-        break;
-      case "scenes":
-        orderBy = sfwOnly
-          ? query.order === "asc"
-            ? asc(sfwPerformerSceneCountExpr)
-            : desc(sfwPerformerSceneCountExpr)
-          : sortDir(performers.sceneCount);
-        break;
-      case "rating":
-        orderBy = sortDir(performers.rating);
-        break;
-      case "recent":
-      default:
-        orderBy = sortDir(performers.createdAt);
-        break;
-    }
-
-    const [rows, countResult] = await Promise.all([
-      db
-        .select({
-          id: performers.id,
-          name: performers.name,
-          disambiguation: performers.disambiguation,
-          gender: performers.gender,
-          imagePath: performers.imagePath,
-          favorite: performers.favorite,
-          rating: performers.rating,
-          isNsfw: performers.isNsfw,
-          sceneCount: sceneCountSelect,
-          country: performers.country,
-          createdAt: performers.createdAt,
-        })
-        .from(performers)
-        .where(where)
-        .orderBy(orderBy)
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(performers)
-        .where(where),
-    ]);
-
-    return {
-      performers: rows.map((r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-      })),
-      total: countResult[0]?.count ?? 0,
-      limit,
-      offset,
-    };
+    const query = request.query as ListPerformersQuery;
+    return performerService.listPerformers(query);
   });
 
   // ─── GET /performers/:id ────────────────────────────────────────
-  app.get("/performers/:id", async (request, reply) => {
+  app.get("/performers/:id", async (request) => {
     const { id } = request.params as { id: string };
     const q = request.query as { nsfw?: string };
-    const sfwOnly = q.nsfw === "off";
-
-    const row = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      with: {
-        performerTags: {
-          with: { tag: true },
-        },
-      },
-    });
-
-    if (!row) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    if (sfwOnly && row.isNsfw) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    let sceneCount = row.sceneCount;
-    if (sfwOnly) {
-      const [cnt] = await db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(scenePerformers)
-        .innerJoin(scenes, eq(scenes.id, scenePerformers.sceneId))
-        .where(and(eq(scenePerformers.performerId, id), ne(scenes.isNsfw, true)));
-      sceneCount = Number(cnt?.n ?? 0);
-    }
-
-    return {
-      id: row.id,
-      name: row.name,
-      disambiguation: row.disambiguation,
-      aliases: row.aliases,
-      gender: row.gender,
-      birthdate: row.birthdate,
-      country: row.country,
-      ethnicity: row.ethnicity,
-      eyeColor: row.eyeColor,
-      hairColor: row.hairColor,
-      height: row.height,
-      weight: row.weight,
-      measurements: row.measurements,
-      tattoos: row.tattoos,
-      piercings: row.piercings,
-      careerStart: row.careerStart,
-      careerEnd: row.careerEnd,
-      details: row.details,
-      imageUrl: row.imageUrl,
-      imagePath: row.imagePath,
-      favorite: row.favorite,
-      rating: row.rating,
-      isNsfw: row.isNsfw,
-      sceneCount,
-      tags: row.performerTags.map((pt) => ({
-        id: pt.tag.id,
-        name: pt.tag.name,
-        isNsfw: pt.tag.isNsfw,
-      })),
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    };
+    return performerService.getPerformerById(id, q.nsfw === "off");
   });
 
   // ─── POST /performers ──────────────────────────────────────────
   app.post("/performers", async (request, reply) => {
-    const body = request.body as {
-      name: string;
-      disambiguation?: string | null;
-      aliases?: string | null;
-      gender?: string | null;
-      birthdate?: string | null;
-      country?: string | null;
-      ethnicity?: string | null;
-      eyeColor?: string | null;
-      hairColor?: string | null;
-      height?: number | null;
-      weight?: number | null;
-      measurements?: string | null;
-      tattoos?: string | null;
-      piercings?: string | null;
-      careerStart?: number | null;
-      careerEnd?: number | null;
-      details?: string | null;
-      imageUrl?: string | null;
-      favorite?: boolean;
-      rating?: number | null;
-      tagNames?: string[];
-    };
-
-    if (!body.name?.trim()) {
-      reply.code(400);
-      return { error: "Name is required" };
-    }
-
-    const result = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(performers)
-        .values({
-          name: body.name.trim(),
-          disambiguation: body.disambiguation ?? null,
-          aliases: body.aliases ?? null,
-          gender: body.gender ?? null,
-          birthdate: body.birthdate ?? null,
-          country: body.country ?? null,
-          ethnicity: body.ethnicity ?? null,
-          eyeColor: body.eyeColor ?? null,
-          hairColor: body.hairColor ?? null,
-          height: body.height ?? null,
-          weight: body.weight ?? null,
-          measurements: body.measurements ?? null,
-          tattoos: body.tattoos ?? null,
-          piercings: body.piercings ?? null,
-          careerStart: body.careerStart ?? null,
-          careerEnd: body.careerEnd ?? null,
-          details: body.details ?? null,
-          imageUrl: body.imageUrl ?? null,
-          favorite: body.favorite ?? false,
-          rating: body.rating ?? null,
-        })
-        .returning();
-
-      // Handle tags
-      if (body.tagNames?.length) {
-        for (const tagName of body.tagNames) {
-          const trimmed = tagName.trim();
-          if (!trimmed) continue;
-          let tag = await tx.query.tags.findFirst({
-            where: ilike(tags.name, trimmed),
-          });
-          if (!tag) {
-            [tag] = await tx.insert(tags).values({ name: trimmed }).returning();
-          }
-          await tx.insert(performerTags).values({
-            performerId: created.id,
-            tagId: tag.id,
-          });
-        }
-      }
-
-      return created;
-    });
-
+    const body = request.body as CreatePerformerBody;
+    const result = await performerService.createPerformer(body);
     reply.code(201);
-    return { ok: true, id: result.id };
+    return result;
   });
 
   // ─── PATCH /performers/:id ─────────────────────────────────────
-  app.patch("/performers/:id", async (request, reply) => {
+  app.patch("/performers/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const body = request.body as {
-      name?: string;
-      disambiguation?: string | null;
-      aliases?: string | null;
-      gender?: string | null;
-      birthdate?: string | null;
-      country?: string | null;
-      ethnicity?: string | null;
-      eyeColor?: string | null;
-      hairColor?: string | null;
-      height?: number | null;
-      weight?: number | null;
-      measurements?: string | null;
-      tattoos?: string | null;
-      piercings?: string | null;
-      careerStart?: number | null;
-      careerEnd?: number | null;
-      details?: string | null;
-      imageUrl?: string | null;
-      favorite?: boolean;
-      rating?: number | null;
-      isNsfw?: boolean;
-      tagNames?: string[];
-    };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    await db.transaction(async (tx) => {
-      // Build update set from provided fields
-      const updates: Record<string, any> = { updatedAt: new Date() };
-      const fields = [
-        "name", "disambiguation", "aliases", "gender", "birthdate",
-        "country", "ethnicity", "eyeColor", "hairColor", "height",
-        "weight", "measurements", "tattoos", "piercings", "careerStart",
-        "careerEnd", "details", "imageUrl", "favorite", "rating", "isNsfw",
-      ] as const;
-
-      for (const field of fields) {
-        if (field in body) {
-          updates[field] = (body as any)[field];
-        }
-      }
-
-      await tx.update(performers).set(updates).where(eq(performers.id, id));
-
-      // Handle tags if provided
-      if (body.tagNames !== undefined) {
-        // Clear existing tags
-        await tx.delete(performerTags).where(eq(performerTags.performerId, id));
-
-        if (body.tagNames.length > 0) {
-          for (const tagName of body.tagNames) {
-            const trimmed = tagName.trim();
-            if (!trimmed) continue;
-            let tag = await tx.query.tags.findFirst({
-              where: ilike(tags.name, trimmed),
-            });
-            if (!tag) {
-              [tag] = await tx.insert(tags).values({ name: trimmed }).returning();
-            }
-            await tx.insert(performerTags).values({
-              performerId: id,
-              tagId: tag.id,
-            });
-          }
-        }
-      }
-    });
-
-    return { ok: true, id };
+    const body = request.body as UpdatePerformerBody;
+    return performerService.updatePerformer(id, body);
   });
 
   // ─── DELETE /performers/:id ────────────────────────────────────
-  app.delete("/performers/:id", async (request, reply) => {
+  app.delete("/performers/:id", async (request) => {
     const { id } = request.params as { id: string };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    // Delete performer (cascades handle join tables)
-    await db.delete(performers).where(eq(performers.id, id));
-
-    // Clean up image files
-    const genDir = getGeneratedPerformerDir(id);
-    try {
-      if (existsSync(genDir)) await rm(genDir, { recursive: true });
-    } catch {
-      // non-fatal
-    }
-
-    // Update scene counts for scenes that had this performer
-    // (cascade already deleted scenePerformers rows, but counts are denormalized)
-
-    return { ok: true };
+    return performerService.deletePerformer(id);
   });
 
   // ─── PATCH /performers/:id/favorite ────────────────────────────
-  app.patch("/performers/:id/favorite", async (request, reply) => {
+  app.patch("/performers/:id/favorite", async (request) => {
     const { id } = request.params as { id: string };
     const { favorite } = request.body as { favorite: boolean };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    await db
-      .update(performers)
-      .set({ favorite, updatedAt: new Date() })
-      .where(eq(performers.id, id));
-
-    return { ok: true, favorite };
+    return performerService.setPerformerFavorite(id, favorite);
   });
 
   // ─── PATCH /performers/:id/rating ──────────────────────────────
-  app.patch("/performers/:id/rating", async (request, reply) => {
+  app.patch("/performers/:id/rating", async (request) => {
     const { id } = request.params as { id: string };
     const { rating } = request.body as { rating: number | null };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    await db
-      .update(performers)
-      .set({ rating, updatedAt: new Date() })
-      .where(eq(performers.id, id));
-
-    return { ok: true, rating };
+    return performerService.setPerformerRating(id, rating);
   });
 
   // ─── POST /performers/:id/image (multipart upload) ─────────────
   app.post("/performers/:id/image", async (request, reply) => {
     const { id } = request.params as { id: string };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
     const file = await request.file();
     if (!file) {
       reply.code(400);
       return { error: "No file uploaded" };
     }
-
     const buffer = await file.toBuffer();
-    const genDir = getGeneratedPerformerDir(id);
-    await mkdir(genDir, { recursive: true });
-    const imageDiskPath = path.join(genDir, "image.jpg");
-    await writeFile(imageDiskPath, buffer);
-
-    const assetUrl = `/assets/performers/${id}/image`;
-    await db
-      .update(performers)
-      .set({ imagePath: assetUrl, updatedAt: new Date() })
-      .where(eq(performers.id, id));
-
-    return { ok: true, imagePath: assetUrl };
+    return performerService.uploadPerformerImage(id, buffer);
   });
 
   // ─── POST /performers/:id/image/from-url ───────────────────────
-  app.post("/performers/:id/image/from-url", async (request, reply) => {
+  app.post("/performers/:id/image/from-url", async (request) => {
     const { id } = request.params as { id: string };
     const { imageUrl } = request.body as { imageUrl: string };
-
-    if (!imageUrl || (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:image/"))) {
-      reply.code(400);
-      return { error: "Invalid image URL" };
-    }
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    try {
-      let buffer: Buffer;
-
-      if (imageUrl.startsWith("data:image/")) {
-        // Handle base64 data URL
-        const base64Data = imageUrl.split(",")[1];
-        if (!base64Data) {
-          reply.code(400);
-          return { error: "Invalid data URL" };
-        }
-        buffer = Buffer.from(base64Data, "base64");
-      } else {
-        const res = await fetch(imageUrl);
-        if (!res.ok) {
-          reply.code(502);
-          return { error: `Failed to fetch image: ${res.status}` };
-        }
-        buffer = Buffer.from(await res.arrayBuffer());
-      }
-
-      const genDir = getGeneratedPerformerDir(id);
-      await mkdir(genDir, { recursive: true });
-      const imageDiskPath = path.join(genDir, "image.jpg");
-      await writeFile(imageDiskPath, buffer);
-
-      const assetUrl = `/assets/performers/${id}/image`;
-      await db
-        .update(performers)
-        .set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() })
-        .where(eq(performers.id, id));
-
-      return { ok: true, imagePath: assetUrl };
-    } catch (err) {
-      reply.code(502);
-      return { error: "Failed to download image" };
-    }
+    return performerService.setPerformerImageFromUrl(id, imageUrl);
   });
 
   // ─── DELETE /performers/:id/image ──────────────────────────────
-  app.delete("/performers/:id/image", async (request, reply) => {
+  app.delete("/performers/:id/image", async (request) => {
     const { id } = request.params as { id: string };
-
-    const existing = await db.query.performers.findFirst({
-      where: eq(performers.id, id),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      reply.code(404);
-      return { error: "Actor not found" };
-    }
-
-    const imageDiskPath = path.join(getGeneratedPerformerDir(id), "image.jpg");
-    try {
-      if (existsSync(imageDiskPath)) await unlink(imageDiskPath);
-    } catch {
-      // non-fatal
-    }
-
-    await db
-      .update(performers)
-      .set({ imagePath: null, updatedAt: new Date() })
-      .where(eq(performers.id, id));
-
-    return { ok: true };
+    return performerService.deletePerformerImage(id);
   });
 }
