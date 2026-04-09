@@ -93,16 +93,17 @@ export function GalleryGrid({
     </>
   );
 
-  const sfwHidesAllGalleriesMessage = (
+  /** SFW mode may hide items; empty copy stays neutral (no implication that hidden content exists). */
+  const emptyGalleriesInViewMessage = (
     <div className="surface-well flex flex-col items-center justify-center py-20 text-center">
       <div className="flex h-16 w-16 items-center justify-center bg-surface-3 mb-4">
         <Images className="h-8 w-8 text-text-disabled" />
       </div>
       <h3 className="text-base font-medium font-heading text-text-secondary mb-1">
-        No galleries in this view
+        No galleries found
       </h3>
       <p className="text-text-muted text-sm max-w-xs">
-        NSFW galleries are hidden while content mode is Off (SFW). Change content visibility in Settings to see them.
+        Try adjusting your filters or run a library scan to discover galleries.
       </p>
     </div>
   );
@@ -130,7 +131,7 @@ export function GalleryGrid({
     if (listGalleries.length === 0) {
       return (
         <>
-          {sfwHidesAllGalleriesMessage}
+          {emptyGalleriesInViewMessage}
           {loadMoreSentinel}
         </>
       );
@@ -152,7 +153,7 @@ export function GalleryGrid({
   if (gridGalleries.length === 0) {
     return (
       <>
-        {sfwHidesAllGalleriesMessage}
+        {emptyGalleriesInViewMessage}
         {loadMoreSentinel}
       </>
     );

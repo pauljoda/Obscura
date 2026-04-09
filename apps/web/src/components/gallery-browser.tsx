@@ -13,13 +13,22 @@ interface GalleryBrowserProps {
 }
 
 export function GalleryBrowser({ galleries }: GalleryBrowserProps) {
+  const { mode: nsfwMode } = useNsfw();
   const tree = useMemo(() => buildGalleryTree(galleries), [galleries]);
 
-  if (tree.length === 0) {
+  const noVisibleRootRows =
+    nsfwMode === "off" &&
+    tree.length > 0 &&
+    tree.every((node) => node.gallery.isNsfw === true);
+
+  if (tree.length === 0 || noVisibleRootRows) {
     return (
-      <div className="surface-well flex flex-col items-center justify-center py-16 text-center">
+      <div className="surface-well flex flex-col items-center justify-center py-16 text-center px-4">
         <FolderOpen className="h-8 w-8 text-text-disabled mb-2" />
-        <p className="text-text-muted text-sm">No galleries found</p>
+        <h3 className="text-base font-medium font-heading text-text-secondary mb-1">No galleries found</h3>
+        <p className="text-text-muted text-sm max-w-xs">
+          Try adjusting your filters or run a library scan to discover galleries.
+        </p>
       </div>
     );
   }

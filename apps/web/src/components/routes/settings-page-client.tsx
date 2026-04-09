@@ -499,10 +499,7 @@ export function SettingsPageClient({
         ) : rootsVisibleInSettings.length === 0 ? (
           <div className="surface-card no-lift p-8 text-center">
             <FolderOpen className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
-            <p className="text-sm text-text-muted">
-              NSFW libraries are hidden while content visibility is Off (SFW). Switch to Blur or Show in Content
-              Visibility below to view and edit them.
-            </p>
+            <p className="text-sm text-text-muted">No library roots to display.</p>
           </div>
         ) : (
           <div className="space-y-1.5">
