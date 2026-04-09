@@ -71,6 +71,19 @@ export {
   VIDEO_PREVIEW_MAX_FILE_SIZE_BYTES,
 } from "./media";
 
+export type {
+  PaginatedResponse,
+  ErrorResponse,
+  ListQuery,
+  SceneListQuery,
+  GalleryListQuery,
+  PerformerListQuery,
+  ImageListQuery,
+  StudioListQuery,
+  TagListQuery,
+  BulkUpdateResult,
+} from "./queries";
+
 export const queueDefinitions = [
   {
     name: "library-scan",
