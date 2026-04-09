@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Loader2, ImageOff } from "lucide-react";
-import { cn } from "@obscura/ui/lib/utils";
 import type { ImageListItemDto } from "@obscura/contracts";
 import { ImageEntityCard } from "./images/image-entity-card";
 import { imageItemToCardData } from "./images/image-card-data";
@@ -21,6 +21,24 @@ export function ImageGrid({
   onLoadMore,
   loadingMore = false,
 }: ImageGridProps) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!hasMore || loadingMore || !onLoadMore || !sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: "600px" },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, onLoadMore]);
+
   if (images.length === 0) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16 text-center">
@@ -45,21 +63,13 @@ export function ImageGrid({
         ))}
       </div>
 
-      {hasMore && (
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm",
-              "bg-surface-2 text-text-muted hover:text-text-primary hover:bg-surface-3",
-              "transition-colors duration-fast",
-              loadingMore && "opacity-50 cursor-wait"
-            )}
-          >
-            {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loadingMore ? "Loading..." : "Load more images"}
-          </button>
+      {hasMore && <div ref={sentinelRef} className="h-1 w-full" aria-hidden />}
+      {loadingMore && (
+        <div className="flex justify-center py-6">
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading more...
+          </div>
         </div>
       )}
     </div>
