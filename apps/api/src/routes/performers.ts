@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, and, ne } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, and, ne, isNotNull, isNull, gte, lte } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
@@ -31,6 +31,10 @@ export async function performersRoutes(app: FastifyInstance) {
       offset?: string;
       /** When `off`, omit NSFW actors and use SFW-only scene counts. */
       nsfw?: string;
+      ratingMin?: string;
+      ratingMax?: string;
+      hasImage?: string;
+      sceneCountMin?: string;
     };
 
     const limit = Math.min(Number(query.limit) || 50, 100);
@@ -65,6 +69,31 @@ export async function performersRoutes(app: FastifyInstance) {
 
     if (query.country) {
       conditions.push(ilike(performers.country, query.country));
+    }
+
+    const pRatingMin = query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
+    if (Number.isInteger(pRatingMin) && pRatingMin >= 1 && pRatingMin <= 5) {
+      conditions.push(and(isNotNull(performers.rating), gte(performers.rating, pRatingMin))!);
+    }
+    const pRatingMax = query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
+    if (Number.isInteger(pRatingMax) && pRatingMax >= 1 && pRatingMax <= 5) {
+      conditions.push(and(isNotNull(performers.rating), lte(performers.rating, pRatingMax))!);
+    }
+
+    if (query.hasImage === "true") {
+      conditions.push(isNotNull(performers.imagePath));
+    }
+    if (query.hasImage === "false") {
+      conditions.push(isNull(performers.imagePath));
+    }
+
+    const scm = query.sceneCountMin !== undefined ? Number(query.sceneCountMin) : NaN;
+    if (Number.isInteger(scm) && scm >= 1) {
+      if (sfwOnly) {
+        conditions.push(gte(sfwPerformerSceneCountExpr, scm));
+      } else {
+        conditions.push(gte(performers.sceneCount, scm));
+      }
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;

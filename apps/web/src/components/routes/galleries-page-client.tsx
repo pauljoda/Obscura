@@ -5,6 +5,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -21,6 +22,7 @@ import type { GalleryListItemDto } from "@obscura/contracts";
 import type { GalleriesListPrefs } from "../../lib/galleries-list-prefs";
 import {
   defaultGalleriesListPrefs,
+  galleriesListPrefsToFetchParams,
   isDefaultGalleriesListPrefs,
   writeGalleriesListPrefsCookie,
   clearGalleriesListPrefsCookie,
@@ -87,26 +89,40 @@ export function GalleriesPageClient({
   }, []);
 
   const buildParams = useCallback(() => {
-    const tagFilters = activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
-    const studioFilter = activeFilters.find((f) => f.type === "studio")?.value;
-    const typeFilter = activeFilters.find((f) => f.type === "type")?.value;
+    const base = galleriesListPrefsToFetchParams({
+      viewMode,
+      sortBy,
+      sortDir,
+      search: deferredSearchQuery,
+      activeFilters,
+    });
+    const { limit: _lim, ...rest } = base;
+    return { ...rest, search: deferredSearchQuery || undefined };
+  }, [deferredSearchQuery, sortBy, sortDir, activeFilters, viewMode]);
 
-    return {
-      search: deferredSearchQuery || undefined,
-      sort: sortBy,
-      order: sortDir as "asc" | "desc",
-      tag: tagFilters.length > 0 ? tagFilters : undefined,
-      studio: studioFilter,
-      type: typeFilter,
-    };
-  }, [deferredSearchQuery, sortBy, sortDir, activeFilters]);
+  const galleryFilterBarFilters = useMemo(() => {
+    return activeFilters.map((f) => {
+      let v = f.value;
+      if (f.type === "studio") {
+        v = initialStudios.find((s) => s.id === f.value)?.name ?? f.value;
+      } else if (f.type === "ratingMin") {
+        v = `${f.value}★+`;
+      } else if (f.type === "ratingMax") {
+        v = `≤${f.value}★`;
+      } else if (f.type === "organized") {
+        v = f.value === "true" ? "Yes" : "No";
+      } else if (f.type === "imageCountMin") {
+        v = `${f.value}+ images`;
+      }
+      return { type: f.type, label: f.label, value: v };
+    });
+  }, [activeFilters, initialStudios]);
 
   const loadGalleries = useCallback(async () => {
     setLoading(true);
     try {
       const result = await fetchGalleries({
         ...buildParams(),
-        root: viewMode === "browser" ? "all" : undefined,
         limit: viewMode === "browser" ? 2000 : PAGE_SIZE,
       });
       startTransition(() => {
@@ -157,12 +173,22 @@ export function GalleriesPageClient({
   };
 
   const handleAddFilter = (type: string, label: string, value: string) => {
+    const exclusive = new Set([
+      "studio",
+      "type",
+      "ratingMin",
+      "ratingMax",
+      "dateFrom",
+      "dateTo",
+      "imageCountMin",
+      "organized",
+    ]);
     setActiveFilters((prev) => {
       const existing = prev.findIndex((f) => f.type === type && f.value === value);
       if (existing >= 0) {
         return prev.filter((_, i) => i !== existing);
       }
-      if (type === "studio" || type === "type") {
+      if (exclusive.has(type)) {
         return [...prev.filter((f) => f.type !== type), { label, type, value }];
       }
       return [...prev, { label, type, value }];
@@ -189,10 +215,11 @@ export function GalleriesPageClient({
         sortBy={sortBy}
         sortDir={sortDir}
         onSortChange={handleSortChange}
-        activeFilters={activeFilters}
+        activeFilters={galleryFilterBarFilters}
         onRemoveFilter={(i) => setActiveFilters((prev) => prev.filter((_, idx) => idx !== i))}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        availableStudios={initialStudios}
         availableTags={initialTags}
         onAddFilter={handleAddFilter}
         onClearFiltersAndSort={handleClearFiltersAndSort}

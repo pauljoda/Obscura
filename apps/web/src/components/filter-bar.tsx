@@ -12,9 +12,11 @@ import {
   Check,
   Tag,
   RotateCcw,
+  Users,
+  CalendarRange,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { StudioItem, TagItem } from "../lib/api";
+import type { PerformerItem, StudioItem, TagItem } from "../lib/api";
 import { NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import type { SortDir, SortOption, ViewMode } from "../lib/scene-browse-types";
@@ -37,12 +39,14 @@ interface FilterBarProps {
   sortBy: SortOption;
   sortDir: SortDir;
   onSortChange: (sort: SortOption, dir?: SortDir) => void;
-  activeFilters: { label: string; value: string }[];
+  activeFilters: { label: string; value: string; type?: string }[];
   onRemoveFilter: (index: number) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   availableStudios?: StudioItem[];
   availableTags?: TagItem[];
+  /** Performers with at least one scene (for NSFW-aware filtering). */
+  availablePerformers?: PerformerItem[];
   onAddFilter?: (type: string, label: string, value: string) => void;
   onClearFiltersAndSort?: () => void;
   canClearFiltersAndSort?: boolean;
@@ -70,6 +74,7 @@ export function FilterBar({
   onSearchChange,
   availableStudios = [],
   availableTags = [],
+  availablePerformers = [],
   onAddFilter,
   onClearFiltersAndSort,
   canClearFiltersAndSort = false,
@@ -252,22 +257,19 @@ export function FilterBar({
       {/* Expandable filter panel */}
       {filterPanelOpen && (
         <div className="surface-well mt-px p-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <FilterSection title="Resolution">
               <div className="flex flex-wrap gap-1">
                 {["4K", "1080p", "720p", "480p"].map((res) => (
                   <button
                     key={res}
-                    onClick={() =>
-                      onAddFilter?.("resolution", "Resolution", res)
-                    }
+                    type="button"
+                    onClick={() => onAddFilter?.("resolution", "Resolution", res)}
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some(
-                        (f) => f.label === "Resolution" && f.value === res
-                      )
+                      activeFilters.some((f) => f.type === "resolution" && f.value === res)
                         ? "tag-chip-accent"
-                        : "tag-chip-default hover:tag-chip-accent"
+                        : "tag-chip-default hover:tag-chip-accent",
                     )}
                   >
                     {res}
@@ -275,34 +277,288 @@ export function FilterBar({
                 ))}
               </div>
             </FilterSection>
-            <TagFilterSection
-              tags={availableTags}
-              activeFilters={activeFilters}
-              onAddFilter={onAddFilter}
-            />
-            <FilterSection title="Studio">
+
+            <FilterSection title="Rating">
+              <div className="space-y-2">
+                <div className="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
+                  At least
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={`min-${n}`}
+                      type="button"
+                      onClick={() =>
+                        onAddFilter?.("ratingMin", "Min rating", String(n))
+                      }
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        activeFilters.some((f) => f.type === "ratingMin" && f.value === String(n))
+                          ? "tag-chip-accent"
+                          : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      {n}★+
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
+                  At most
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={`max-${n}`}
+                      type="button"
+                      onClick={() =>
+                        onAddFilter?.("ratingMax", "Max rating", String(n))
+                      }
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        activeFilters.some((f) => f.type === "ratingMax" && f.value === String(n))
+                          ? "tag-chip-accent"
+                          : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      ≤{n}★
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Video date">
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[0.7rem] text-text-muted">
+                  <CalendarRange className="h-3 w-3 shrink-0 text-text-disabled" />
+                  <span className="font-mono text-[0.6rem] uppercase tracking-wider">From</span>
+                  <input
+                    type="date"
+                    className="flex-1 min-w-0 bg-surface-1 border border-border-subtle px-2 py-1 text-[0.72rem] text-text-primary focus:outline-none focus:border-border-accent"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) onAddFilter?.("dateFrom", "Date from", v);
+                    }}
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-[0.7rem] text-text-muted">
+                  <CalendarRange className="h-3 w-3 shrink-0 text-text-disabled" />
+                  <span className="font-mono text-[0.6rem] uppercase tracking-wider">To</span>
+                  <input
+                    type="date"
+                    className="flex-1 min-w-0 bg-surface-1 border border-border-subtle px-2 py-1 text-[0.72rem] text-text-primary focus:outline-none focus:border-border-accent"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) onAddFilter?.("dateTo", "Date to", v);
+                    }}
+                  />
+                </label>
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Duration">
               <div className="flex flex-wrap gap-1">
-                {availableStudios.map((studio) => (
+                {(
+                  [
+                    { id: "lt300", label: "< 5 min" },
+                    { id: "300-900", label: "5–15 min" },
+                    { id: "900-1800", label: "15–30 min" },
+                    { id: "gte1800", label: "30+ min" },
+                  ] as const
+                ).map((d) => (
                   <button
-                    key={studio.id}
-                    onClick={() =>
-                      onAddFilter?.("studio", "Studio", studio.id)
-                    }
+                    key={d.id}
+                    type="button"
+                    onClick={() => onAddFilter?.("duration", "Duration", d.id)}
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some(
-                        (f) =>
-                          f.label === "Studio" && f.value === studio.id
-                      )
+                      activeFilters.some((f) => f.type === "duration" && f.value === d.id)
                         ? "tag-chip-accent"
-                        : "tag-chip-default hover:tag-chip-accent"
+                        : "tag-chip-default hover:tag-chip-accent",
                     )}
                   >
-                    {studio.name}
+                    {d.label}
                   </button>
                 ))}
               </div>
             </FilterSection>
+
+            <FilterSection title="Playback & file">
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("played", "Playback", "true")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "played" && f.value === "true")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Played
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("played", "Playback", "false")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "played" && f.value === "false")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Unplayed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("hasFile", "File", "true")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "hasFile" && f.value === "true")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Has file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("hasFile", "File", "false")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "hasFile" && f.value === "false")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  No file
+                </button>
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Library flags">
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("organized", "Organized", "true")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "organized" && f.value === "true")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Organized
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("organized", "Organized", "false")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "organized" && f.value === "false")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Not organized
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("interactive", "Interactive", "true")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "interactive" && f.value === "true")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Interactive
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddFilter?.("interactive", "Interactive", "false")}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    activeFilters.some((f) => f.type === "interactive" && f.value === "false")
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Not interactive
+                </button>
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Codec">
+              <div className="flex flex-wrap gap-1">
+                {(
+                  [
+                    { id: "h264", label: "H.264" },
+                    { id: "hevc", label: "HEVC" },
+                    { id: "av1", label: "AV1" },
+                    { id: "vp9", label: "VP9" },
+                    { id: "vp8", label: "VP8" },
+                    { id: "mpeg4", label: "MPEG-4" },
+                    { id: "prores", label: "ProRes" },
+                    { id: "wmv", label: "WMV" },
+                  ] as const
+                ).map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onAddFilter?.("codec", "Codec", c.id)}
+                    className={cn(
+                      "tag-chip cursor-pointer transition-colors duration-fast",
+                      activeFilters.some((f) => f.type === "codec" && f.value === c.id)
+                        ? "tag-chip-accent"
+                        : "tag-chip-default hover:tag-chip-accent",
+                    )}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </FilterSection>
+
+            <div className="md:col-span-2 xl:col-span-3">
+              <TagFilterSection
+                tags={availableTags}
+                activeFilters={activeFilters}
+                onAddFilter={onAddFilter}
+              />
+            </div>
+
+            {availablePerformers.length > 0 && (
+              <div className="md:col-span-2 xl:col-span-3">
+                <PerformerFilterSection
+                  performers={availablePerformers}
+                  activeFilters={activeFilters}
+                  onAddFilter={onAddFilter}
+                />
+              </div>
+            )}
+
+            <div className="md:col-span-2 xl:col-span-1">
+              <FilterSection title="Studio">
+                <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto tag-scroll-area">
+                  {availableStudios.map((studio) => (
+                    <button
+                      key={studio.id}
+                      type="button"
+                      onClick={() => onAddFilter?.("studio", "Studio", studio.id)}
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        activeFilters.some((f) => f.type === "studio" && f.value === studio.id)
+                          ? "tag-chip-accent"
+                          : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      {studio.name}
+                    </button>
+                  ))}
+                </div>
+              </FilterSection>
+            </div>
           </div>
         </div>
       )}
@@ -330,7 +586,7 @@ function TagFilterSection({
   onAddFilter,
 }: {
   tags: TagItem[];
-  activeFilters: { label: string; value: string }[];
+  activeFilters: { label: string; value: string; type?: string }[];
   onAddFilter?: (type: string, label: string, value: string) => void;
 }) {
   const { mode: nsfwMode } = useNsfw();
@@ -420,7 +676,7 @@ function TagFilterSection({
                       key={tag.id}
                       tag={tag}
                       active={activeFilters.some(
-                        (f) => f.label === "Tag" && f.value === tag.name
+                        (f) => (f.type === "tag" || f.label === "Tag") && f.value === tag.name,
                       )}
                       onClick={() => onAddFilter?.("tag", "Tag", tag.name)}
                     />
@@ -437,12 +693,96 @@ function TagFilterSection({
                 key={tag.id}
                 tag={tag}
                 active={activeFilters.some(
-                  (f) => f.label === "Tag" && f.value === tag.name
+                  (f) => (f.type === "tag" || f.label === "Tag") && f.value === tag.name,
                 )}
                 onClick={() => onAddFilter?.("tag", "Tag", tag.name)}
               />
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PerformerFilterSection({
+  performers,
+  activeFilters,
+  onAddFilter,
+}: {
+  performers: PerformerItem[];
+  activeFilters: { label: string; value: string; type?: string }[];
+  onAddFilter?: (type: string, label: string, value: string) => void;
+}) {
+  const { mode: nsfwMode } = useNsfw();
+  const [perfSearch, setPerfSearch] = useState("");
+
+  const filteredPerformers = useMemo(() => {
+    const visible = tagsVisibleInNsfwMode(performers, nsfwMode).filter((p) => p.sceneCount > 0);
+    if (!perfSearch.trim()) return visible;
+    const q = perfSearch.toLowerCase();
+    return visible.filter((p) => p.name.toLowerCase().includes(q));
+  }, [performers, nsfwMode, perfSearch]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 text-kicker">
+          <Users className="h-3 w-3 text-text-disabled" />
+          Performers
+        </div>
+        <span className="text-[0.6rem] font-mono text-text-disabled tabular-nums">
+          {filteredPerformers.length}
+        </span>
+      </div>
+      <div className="relative mb-2">
+        <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-text-disabled pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Filter performers..."
+          value={perfSearch}
+          onChange={(e) => setPerfSearch(e.target.value)}
+          className={cn(
+            "w-full bg-surface-1 border border-border-subtle ",
+            "pl-6 pr-2 py-1 text-[0.7rem] text-text-primary",
+            "placeholder:text-text-disabled",
+            "focus:outline-none focus:border-border-accent",
+            "transition-colors duration-fast",
+          )}
+        />
+        {perfSearch ? (
+          <button
+            type="button"
+            onClick={() => setPerfSearch("")}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        ) : null}
+      </div>
+      <div className="max-h-40 overflow-y-auto tag-scroll-area flex flex-wrap gap-1">
+        {filteredPerformers.length === 0 ? (
+          <div className="flex items-center py-3 text-[0.68rem] text-text-disabled w-full justify-center">
+            <Users className="h-3 w-3 mr-1.5 opacity-50" />
+            {perfSearch ? "No matching performers" : "No performers"}
+          </div>
+        ) : (
+          filteredPerformers.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onAddFilter?.("performer", "Performer", p.name)}
+              className={cn(
+                "tag-chip cursor-pointer transition-colors duration-fast",
+                activeFilters.some((f) => f.type === "performer" && f.value === p.name)
+                  ? "tag-chip-info"
+                  : "tag-chip-default hover:tag-chip-info",
+              )}
+            >
+              <NsfwTagLabel isNsfw={p.isNsfw}>{p.name}</NsfwTagLabel>
+              <span className="text-text-disabled ml-1">{p.sceneCount}</span>
+            </button>
+          ))
         )}
       </div>
     </div>

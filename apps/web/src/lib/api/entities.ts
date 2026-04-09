@@ -35,6 +35,10 @@ export async function fetchPerformers(params?: {
   gender?: string;
   favorite?: string;
   country?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  hasImage?: string;
+  sceneCountMin?: number;
   limit?: number;
   offset?: number;
   nsfw?: string;
@@ -46,6 +50,10 @@ export async function fetchPerformers(params?: {
     gender: params?.gender,
     favorite: params?.favorite,
     country: params?.country,
+    ratingMin: params?.ratingMin,
+    ratingMax: params?.ratingMax,
+    hasImage: params?.hasImage,
+    sceneCountMin: params?.sceneCountMin,
     limit: params?.limit,
     offset: params?.offset,
     nsfw: params?.nsfw,

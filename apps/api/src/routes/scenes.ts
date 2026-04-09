@@ -1,6 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, inArray, and, ne, isNotNull } from "drizzle-orm";
+import {
+  eq,
+  ilike,
+  or,
+  desc,
+  asc,
+  sql,
+  inArray,
+  and,
+  ne,
+  isNotNull,
+  isNull,
+  gte,
+  lte,
+  lt,
+  gt,
+} from "drizzle-orm";
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
@@ -32,7 +48,21 @@ export async function scenesRoutes(app: FastifyInstance) {
       offset?: string;
       /** When `off`, exclude NSFW scenes (same contract as search). */
       nsfw?: string;
+      ratingMin?: string;
+      ratingMax?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      durationMin?: string;
+      durationMax?: string;
+      organized?: string;
+      interactive?: string;
+      hasFile?: string;
+      played?: string;
+      codec?: string;
     };
+
+    const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const allowedCodecs = new Set(["h264", "hevc", "av1", "vp9", "mpeg4", "prores", "wmv", "vp8"]);
 
     const limit = Math.min(Number(query.limit) || 50, 100);
     const offset = Number(query.offset) || 0;
@@ -119,6 +149,61 @@ export async function scenesRoutes(app: FastifyInstance) {
           return { scenes: [], total: 0, limit, offset };
         }
       }
+    }
+
+    const ratingMin = query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
+    if (Number.isInteger(ratingMin) && ratingMin >= 1 && ratingMin <= 5) {
+      conditions.push(and(isNotNull(scenes.rating), gte(scenes.rating, ratingMin))!);
+    }
+    const ratingMax = query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
+    if (Number.isInteger(ratingMax) && ratingMax >= 1 && ratingMax <= 5) {
+      conditions.push(and(isNotNull(scenes.rating), lte(scenes.rating, ratingMax))!);
+    }
+
+    if (query.dateFrom && isoDateRe.test(query.dateFrom)) {
+      conditions.push(and(isNotNull(scenes.date), gte(scenes.date, query.dateFrom))!);
+    }
+    if (query.dateTo && isoDateRe.test(query.dateTo)) {
+      conditions.push(and(isNotNull(scenes.date), lte(scenes.date, query.dateTo))!);
+    }
+
+    const durationMin = query.durationMin !== undefined ? Number(query.durationMin) : NaN;
+    if (Number.isFinite(durationMin) && durationMin >= 0) {
+      conditions.push(and(isNotNull(scenes.duration), gte(scenes.duration, durationMin))!);
+    }
+    const durationMax = query.durationMax !== undefined ? Number(query.durationMax) : NaN;
+    if (Number.isFinite(durationMax) && durationMax > 0) {
+      conditions.push(and(isNotNull(scenes.duration), lt(scenes.duration, durationMax))!);
+    }
+
+    if (query.organized === "true") {
+      conditions.push(eq(scenes.organized, true));
+    }
+    if (query.organized === "false") {
+      conditions.push(eq(scenes.organized, false));
+    }
+    if (query.interactive === "true") {
+      conditions.push(eq(scenes.interactive, true));
+    }
+    if (query.interactive === "false") {
+      conditions.push(eq(scenes.interactive, false));
+    }
+    if (query.hasFile === "true") {
+      conditions.push(isNotNull(scenes.filePath));
+    }
+    if (query.hasFile === "false") {
+      conditions.push(isNull(scenes.filePath));
+    }
+    if (query.played === "true") {
+      conditions.push(or(gt(scenes.playCount, 0), isNotNull(scenes.lastPlayedAt))!);
+    }
+    if (query.played === "false") {
+      conditions.push(and(eq(scenes.playCount, 0), isNull(scenes.lastPlayedAt))!);
+    }
+
+    const codecKey = query.codec?.toLowerCase().trim() ?? "";
+    if (codecKey && allowedCodecs.has(codecKey)) {
+      conditions.push(ilike(scenes.codec, `%${codecKey}%`));
     }
 
     // Sort

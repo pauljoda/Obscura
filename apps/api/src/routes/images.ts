@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, inArray, and, ne, isNotNull, gte, lte } from "drizzle-orm";
 import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
 
 const {
@@ -25,12 +25,25 @@ export async function imagesRoutes(app: FastifyInstance) {
       studio?: string;
       limit?: string;
       offset?: string;
+      nsfw?: string;
+      ratingMin?: string;
+      ratingMax?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      resolution?: string;
+      organized?: string;
     };
+
+    const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
 
     const limit = Math.min(Number(query.limit) || 80, 200);
     const offset = Number(query.offset) || 0;
 
     const conditions = [];
+
+    if (query.nsfw === "off") {
+      conditions.push(ne(images.isNsfw, true));
+    }
 
     if (query.search) {
       const term = `%${query.search}%`;
@@ -93,6 +106,46 @@ export async function imagesRoutes(app: FastifyInstance) {
           return { images: [], total: 0, limit, offset };
         }
       }
+    }
+
+    const iRatingMin = query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
+    if (Number.isInteger(iRatingMin) && iRatingMin >= 1 && iRatingMin <= 5) {
+      conditions.push(and(isNotNull(images.rating), gte(images.rating, iRatingMin))!);
+    }
+    const iRatingMax = query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
+    if (Number.isInteger(iRatingMax) && iRatingMax >= 1 && iRatingMax <= 5) {
+      conditions.push(and(isNotNull(images.rating), lte(images.rating, iRatingMax))!);
+    }
+    if (query.dateFrom && isoDateRe.test(query.dateFrom)) {
+      conditions.push(and(isNotNull(images.date), gte(images.date, query.dateFrom))!);
+    }
+    if (query.dateTo && isoDateRe.test(query.dateTo)) {
+      conditions.push(and(isNotNull(images.date), lte(images.date, query.dateTo))!);
+    }
+
+    if (query.resolution) {
+      const resMap: Record<string, [number, number]> = {
+        "4K": [2160, 99999],
+        "1080p": [1080, 2159],
+        "720p": [720, 1079],
+        "480p": [0, 719],
+      };
+      const range = resMap[query.resolution];
+      if (range) {
+        conditions.push(
+          and(
+            sql`${images.height} >= ${range[0]}`,
+            sql`${images.height} <= ${range[1]}`,
+          )!,
+        );
+      }
+    }
+
+    if (query.organized === "true") {
+      conditions.push(eq(images.organized, true));
+    }
+    if (query.organized === "false") {
+      conditions.push(eq(images.organized, false));
     }
 
     // Sort

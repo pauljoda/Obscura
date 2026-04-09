@@ -14,8 +14,10 @@ import {
   Cloud,
   RotateCcw,
   Plus,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import { fetchTags, type TagItem, updateTag, deleteTag } from "../../lib/api";
 import { TagEntityCard } from "../tags/tag-entity-card";
@@ -63,6 +65,10 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
   const [sortKey, setSortKey] = useState<TagsSortKey>(initialListPrefs.sortKey);
   const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
   const [viewMode, setViewMode] = useState<TagsViewMode>(initialListPrefs.viewMode);
+  const [minTotalUsage, setMinTotalUsage] = useState(initialListPrefs.minTotalUsage);
+  const [minRatingStars, setMinRatingStars] = useState<number | null>(initialListPrefs.minRatingStars);
+  const [favoritesOnly, setFavoritesOnly] = useState(initialListPrefs.favoritesOnly);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
 
   const selection = useSelection();
@@ -81,13 +87,21 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
   }, [nsfwMode]);
 
   useEffect(() => {
-    const prefs: TagsListPrefs = { search, sortKey, sortDir, viewMode };
+    const prefs: TagsListPrefs = {
+      search,
+      sortKey,
+      sortDir,
+      viewMode,
+      minTotalUsage,
+      minRatingStars,
+      favoritesOnly,
+    };
     if (isDefaultTagsListPrefs(prefs)) {
       clearTagsListPrefsCookie();
     } else {
       writeTagsListPrefsCookie(prefs);
     }
-  }, [search, sortKey, sortDir, viewMode]);
+  }, [search, sortKey, sortDir, viewMode, minTotalUsage, minRatingStars, favoritesOnly]);
 
   const handleClearFiltersAndSort = useCallback(() => {
     const d = defaultTagsListPrefs();
@@ -95,6 +109,10 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
     setSortKey(d.sortKey);
     setSortDir(d.sortDir);
     setViewMode(d.viewMode);
+    setMinTotalUsage(d.minTotalUsage);
+    setMinRatingStars(d.minRatingStars);
+    setFavoritesOnly(d.favoritesOnly);
+    setFilterOpen(false);
     selection.deselectAll();
   }, [selection]);
 
@@ -112,10 +130,22 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
   }, [tags, sortKey, sortDir]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return sorted;
-    const term = search.toLowerCase();
-    return sorted.filter((t) => t.name.toLowerCase().includes(term));
-  }, [sorted, search]);
+    let list = sorted;
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      list = list.filter((t) => t.name.toLowerCase().includes(term));
+    }
+    if (minTotalUsage > 0) {
+      list = list.filter((t) => t.sceneCount + (t.imageCount ?? 0) >= minTotalUsage);
+    }
+    if (minRatingStars != null) {
+      list = list.filter((t) => t.rating != null && t.rating >= minRatingStars);
+    }
+    if (favoritesOnly) {
+      list = list.filter((t) => t.favorite);
+    }
+    return list;
+  }, [sorted, search, minTotalUsage, minRatingStars, favoritesOnly]);
 
   const displayedTags = useMemo(
     () => tagsVisibleInNsfwMode(filtered, nsfwMode),
@@ -335,7 +365,29 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
             </button>
           </div>
 
-          {!isDefaultTagsListPrefs({ search, sortKey, sortDir, viewMode }) && (
+          <button
+            type="button"
+            onClick={() => setFilterOpen((o) => !o)}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1.5 text-[0.72rem] transition-colors duration-fast",
+              filterOpen || minTotalUsage > 0 || minRatingStars != null || favoritesOnly
+                ? "text-text-accent bg-accent-950"
+                : "text-text-muted hover:text-text-primary hover:bg-surface-2",
+            )}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Filters</span>
+          </button>
+
+          {!isDefaultTagsListPrefs({
+            search,
+            sortKey,
+            sortDir,
+            viewMode,
+            minTotalUsage,
+            minRatingStars,
+            favoritesOnly,
+          }) && (
             <button
               type="button"
               onClick={handleClearFiltersAndSort}
@@ -367,12 +419,83 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
         </div>
       )}
 
+      {tags.length > 0 && filterOpen ? (
+        <div className="surface-well mt-px p-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <div className="text-kicker mb-2">Min usage (scenes + images)</div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { n: 0, label: "Any" },
+                  { n: 1, label: "1+" },
+                  { n: 5, label: "5+" },
+                  { n: 10, label: "10+" },
+                  { n: 25, label: "25+" },
+                  { n: 50, label: "50+" },
+                ].map(({ n, label }) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setMinTotalUsage(n)}
+                    className={cn(
+                      "tag-chip cursor-pointer transition-colors duration-fast",
+                      minTotalUsage === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-kicker mb-2">Min star rating</div>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMinRatingStars(null)}
+                  className={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    minRatingStars === null ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  Any
+                </button>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setMinRatingStars(minRatingStars === n ? null : n)}
+                    className={cn(
+                      "tag-chip cursor-pointer transition-colors duration-fast",
+                      minRatingStars === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                    )}
+                  >
+                    {n}★+
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-text-secondary pt-1">
+              <Checkbox
+                checked={favoritesOnly}
+                onChange={(e) => setFavoritesOnly(e.target.checked)}
+              />
+              Favorites only
+            </label>
+          </div>
+        </div>
+      ) : null}
+
       {/* Content */}
       {filtered.length === 0 ? (
         <div className="surface-well p-12 text-center">
           <Tag className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">
-            {search ? "No tags match your search." : "No tags in the library yet."}
+            {tags.length === 0
+              ? "No tags in the library yet."
+              : search || minTotalUsage > 0 || minRatingStars != null || favoritesOnly
+                ? "No tags match the current filters."
+                : "No tags in the library yet."}
           </p>
           {search && (
             <button

@@ -39,12 +39,18 @@ import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 import { useTerms } from "../../lib/terminology";
-import type { PerformersListPrefs, PerformersSortKey, PerformersViewMode } from "../../lib/performers-list-prefs";
+import type {
+  PerformersListPrefs,
+  PerformersPhotoFilter,
+  PerformersSortKey,
+  PerformersViewMode,
+} from "../../lib/performers-list-prefs";
 import {
+  clearPerformersListPrefsCookie,
   defaultPerformersListPrefs,
   isDefaultPerformersListPrefs,
+  performersListPrefsToFetchParams,
   writePerformersListPrefsCookie,
-  clearPerformersListPrefsCookie,
 } from "../../lib/performers-list-prefs";
 
 type SortDir = "asc" | "desc";
@@ -97,6 +103,10 @@ export function PerformersPageClient({
   const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
   const [gender, setGender] = useState(initialListPrefs.gender);
   const [favoriteOnly, setFavoriteOnly] = useState(initialListPrefs.favoriteOnly);
+  const [minRating, setMinRating] = useState<number | null>(initialListPrefs.minRating);
+  const [maxRating, setMaxRating] = useState<number | null>(initialListPrefs.maxRating);
+  const [photoFilter, setPhotoFilter] = useState<PerformersPhotoFilter>(initialListPrefs.photoFilter);
+  const [minSceneCount, setMinSceneCount] = useState<number | null>(initialListPrefs.minSceneCount);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -111,20 +121,42 @@ export function PerformersPageClient({
   const hasMore = performers.length < total;
 
   // Full reload when filters/sort change
+  const listPrefsSnapshot = useCallback(
+    (): PerformersListPrefs => ({
+      viewMode,
+      search,
+      sortKey,
+      sortDir,
+      gender,
+      favoriteOnly,
+      minRating,
+      maxRating,
+      photoFilter,
+      minSceneCount,
+    }),
+    [
+      viewMode,
+      search,
+      sortKey,
+      sortDir,
+      gender,
+      favoriteOnly,
+      minRating,
+      maxRating,
+      photoFilter,
+      minSceneCount,
+    ],
+  );
+
   const loadPerformers = useCallback(async () => {
     setLoading(true);
 
     try {
-      const result = await fetchPerformers({
-        search: deferredSearch || undefined,
-        sort: sortKey,
-        order: sortDir,
-        gender: gender || undefined,
-        favorite: favoriteOnly ? "true" : undefined,
-        limit: PAGE_SIZE,
-        offset: 0,
-        nsfw: nsfwMode,
-      });
+      const base = performersListPrefsToFetchParams(
+        { ...listPrefsSnapshot(), search: deferredSearch },
+        nsfwMode,
+      );
+      const result = await fetchPerformers({ ...base, offset: 0 });
 
       setPerformers(result.performers);
       setTotal(result.total);
@@ -133,7 +165,7 @@ export function PerformersPageClient({
     } finally {
       setLoading(false);
     }
-  }, [deferredSearch, favoriteOnly, gender, nsfwMode, sortDir, sortKey]);
+  }, [deferredSearch, listPrefsSnapshot, nsfwMode]);
 
   // Load more (append) for infinite scroll
   const loadMore = useCallback(async () => {
@@ -141,16 +173,11 @@ export function PerformersPageClient({
     setLoadingMore(true);
 
     try {
-      const result = await fetchPerformers({
-        search: deferredSearch || undefined,
-        sort: sortKey,
-        order: sortDir,
-        gender: gender || undefined,
-        favorite: favoriteOnly ? "true" : undefined,
-        limit: PAGE_SIZE,
-        offset: performers.length,
-        nsfw: nsfwMode,
-      });
+      const base = performersListPrefsToFetchParams(
+        { ...listPrefsSnapshot(), search: deferredSearch },
+        nsfwMode,
+      );
+      const result = await fetchPerformers({ ...base, offset: performers.length });
 
       setPerformers((prev) => [...prev, ...result.performers]);
       setTotal(result.total);
@@ -159,17 +186,7 @@ export function PerformersPageClient({
     } finally {
       setLoadingMore(false);
     }
-  }, [
-    deferredSearch,
-    favoriteOnly,
-    gender,
-    loading,
-    loadingMore,
-    nsfwMode,
-    performers.length,
-    sortDir,
-    sortKey,
-  ]);
+  }, [deferredSearch, listPrefsSnapshot, loading, loadingMore, nsfwMode, performers.length]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -182,20 +199,13 @@ export function PerformersPageClient({
   }, [deferredSearch, loadPerformers]);
 
   useEffect(() => {
-    const prefs: PerformersListPrefs = {
-      viewMode,
-      search,
-      sortKey,
-      sortDir,
-      gender,
-      favoriteOnly,
-    };
+    const prefs = listPrefsSnapshot();
     if (isDefaultPerformersListPrefs(prefs)) {
       clearPerformersListPrefsCookie();
     } else {
       writePerformersListPrefsCookie(prefs);
     }
-  }, [viewMode, search, sortKey, sortDir, gender, favoriteOnly]);
+  }, [listPrefsSnapshot]);
 
   const handleClearFiltersAndSort = useCallback(() => {
     const d = defaultPerformersListPrefs();
@@ -205,6 +215,10 @@ export function PerformersPageClient({
     setSortDir(d.sortDir);
     setGender(d.gender);
     setFavoriteOnly(d.favoriteOnly);
+    setMinRating(d.minRating);
+    setMaxRating(d.maxRating);
+    setPhotoFilter(d.photoFilter);
+    setMinSceneCount(d.minSceneCount);
     setFilterOpen(false);
   }, []);
 
@@ -226,7 +240,13 @@ export function PerformersPageClient({
   }, [hasMore, loadingMore, loading, loadMore]);
 
   const currentSort = sortOptions.find((option) => option.value === sortKey);
-  const hasFilters = gender !== "" || favoriteOnly;
+  const hasFilters =
+    gender !== "" ||
+    favoriteOnly ||
+    minRating != null ||
+    maxRating != null ||
+    photoFilter !== "all" ||
+    minSceneCount != null;
   const favoriteCount = performers.filter((performer) => performer.favorite).length;
   const visibleIds = performers.map((p) => p.id);
 
@@ -344,7 +364,62 @@ export function PerformersPageClient({
                   <Star className="h-2.5 w-2.5 fill-current text-accent-400" />
                   <span className="text-accent-200">Favorites</span>
                   <button
+                    type="button"
                     onClick={() => setFavoriteOnly(false)}
+                    className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {minRating != null ? (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
+                  <span className="text-accent-400/70">Min ★:</span>
+                  <span className="text-accent-200">{minRating}+</span>
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(null)}
+                    className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {maxRating != null ? (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
+                  <span className="text-accent-400/70">Max ★:</span>
+                  <span className="text-accent-200">≤{maxRating}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMaxRating(null)}
+                    className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {photoFilter !== "all" ? (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
+                  <span className="text-accent-400/70">Photo:</span>
+                  <span className="text-accent-200">
+                    {photoFilter === "with" ? "Has image" : "No image"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoFilter("all")}
+                    className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ) : null}
+              {minSceneCount != null ? (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
+                  <span className="text-accent-400/70">Scenes:</span>
+                  <span className="text-accent-200">{minSceneCount}+</span>
+                  <button
+                    type="button"
+                    onClick={() => setMinSceneCount(null)}
                     className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -445,14 +520,7 @@ export function PerformersPageClient({
             </button>
           </div>
 
-          {!isDefaultPerformersListPrefs({
-            viewMode,
-            search,
-            sortKey,
-            sortDir,
-            gender,
-            favoriteOnly,
-          }) && (
+          {!isDefaultPerformersListPrefs(listPrefsSnapshot()) && (
             <button
               type="button"
               onClick={handleClearFiltersAndSort}
@@ -485,7 +553,7 @@ export function PerformersPageClient({
 
         {filterOpen ? (
           <div className="surface-card-sharp border-t-0 p-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="mb-1 block text-kicker">Gender</label>
                 <select
@@ -507,6 +575,74 @@ export function PerformersPageClient({
                 />
                 Favorites only
               </label>
+              <div>
+                <div className="mb-1 text-kicker">Min rating</div>
+                <div className="flex flex-wrap gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={`pmin-${n}`}
+                      type="button"
+                      onClick={() => setMinRating(minRating === n ? null : n)}
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        minRating === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      {n}★+
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 text-kicker">Max rating</div>
+                <div className="flex flex-wrap gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={`pmax-${n}`}
+                      type="button"
+                      onClick={() => setMaxRating(maxRating === n ? null : n)}
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        maxRating === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      ≤{n}★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-kicker">Profile image</label>
+                <select
+                  value={photoFilter}
+                  onChange={(event) =>
+                    setPhotoFilter(event.target.value as PerformersPhotoFilter)
+                  }
+                  className="control-input w-full py-1.5 text-sm"
+                >
+                  <option value="all">Any</option>
+                  <option value="with">Has image</option>
+                  <option value="without">No image</option>
+                </select>
+              </div>
+              <div>
+                <div className="mb-1 text-kicker">Min scene count</div>
+                <div className="flex flex-wrap gap-1">
+                  {[1, 3, 5, 10, 25].map((n) => (
+                    <button
+                      key={`psc-${n}`}
+                      type="button"
+                      onClick={() => setMinSceneCount(minSceneCount === n ? null : n)}
+                      className={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        minSceneCount === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ) : null}

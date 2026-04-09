@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, ilike, or, desc, asc, sql, inArray, and } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, sql, inArray, and, isNotNull, gte, lte } from "drizzle-orm";
 import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
 
 const {
@@ -54,7 +54,15 @@ export async function galleriesRoutes(app: FastifyInstance) {
       root?: string;
       limit?: string;
       offset?: string;
+      ratingMin?: string;
+      ratingMax?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      imageCountMin?: string;
+      organized?: string;
     };
+
+    const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
 
     const limit = Math.min(Number(query.limit) || 50, 200);
     const offset = Number(query.offset) || 0;
@@ -132,6 +140,31 @@ export async function galleriesRoutes(app: FastifyInstance) {
           return { galleries: [], total: 0, limit, offset };
         }
       }
+    }
+
+    const gRatingMin = query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
+    if (Number.isInteger(gRatingMin) && gRatingMin >= 1 && gRatingMin <= 5) {
+      conditions.push(and(isNotNull(galleries.rating), gte(galleries.rating, gRatingMin))!);
+    }
+    const gRatingMax = query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
+    if (Number.isInteger(gRatingMax) && gRatingMax >= 1 && gRatingMax <= 5) {
+      conditions.push(and(isNotNull(galleries.rating), lte(galleries.rating, gRatingMax))!);
+    }
+    if (query.dateFrom && isoDateRe.test(query.dateFrom)) {
+      conditions.push(and(isNotNull(galleries.date), gte(galleries.date, query.dateFrom))!);
+    }
+    if (query.dateTo && isoDateRe.test(query.dateTo)) {
+      conditions.push(and(isNotNull(galleries.date), lte(galleries.date, query.dateTo))!);
+    }
+    const imgCountMin = query.imageCountMin !== undefined ? Number(query.imageCountMin) : NaN;
+    if (Number.isInteger(imgCountMin) && imgCountMin >= 1) {
+      conditions.push(gte(galleries.imageCount, imgCountMin));
+    }
+    if (query.organized === "true") {
+      conditions.push(eq(galleries.organized, true));
+    }
+    if (query.organized === "false") {
+      conditions.push(eq(galleries.organized, false));
     }
 
     // Sort

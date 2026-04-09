@@ -9,6 +9,11 @@ export interface TagsListPrefs {
   sortKey: TagsSortKey;
   sortDir: "asc" | "desc";
   viewMode: TagsViewMode;
+  /** Minimum combined scene + image usage; 0 disables. */
+  minTotalUsage: number;
+  /** Minimum star rating when set (1–5). */
+  minRatingStars: number | null;
+  favoritesOnly: boolean;
 }
 
 const SORT_KEYS: readonly TagsSortKey[] = ["scenes", "name"];
@@ -19,6 +24,9 @@ export function defaultTagsListPrefs(): TagsListPrefs {
     sortKey: "scenes",
     sortDir: "desc",
     viewMode: "list",
+    minTotalUsage: 0,
+    minRatingStars: null,
+    favoritesOnly: false,
   };
 }
 
@@ -28,7 +36,10 @@ export function isDefaultTagsListPrefs(p: TagsListPrefs): boolean {
     p.search === d.search &&
     p.sortKey === d.sortKey &&
     p.sortDir === d.sortDir &&
-    p.viewMode === d.viewMode
+    p.viewMode === d.viewMode &&
+    p.minTotalUsage === d.minTotalUsage &&
+    p.minRatingStars === d.minRatingStars &&
+    p.favoritesOnly === d.favoritesOnly
   );
 }
 
@@ -62,11 +73,34 @@ export function parseTagsListPrefs(raw: string | undefined): TagsListPrefs | nul
   if (sortDir !== "asc" && sortDir !== "desc") return null;
   if (viewMode !== "list" && viewMode !== "cloud") return null;
 
+  let minTotalUsage = 0;
+  if (parsed.minTotalUsage !== undefined) {
+    if (typeof parsed.minTotalUsage !== "number" || !Number.isInteger(parsed.minTotalUsage)) return null;
+    if (parsed.minTotalUsage < 0 || parsed.minTotalUsage > 1_000_000) return null;
+    minTotalUsage = parsed.minTotalUsage;
+  }
+
+  let minRatingStars: number | null = null;
+  if (parsed.minRatingStars !== undefined && parsed.minRatingStars !== null) {
+    if (typeof parsed.minRatingStars !== "number" || !Number.isInteger(parsed.minRatingStars)) return null;
+    if (parsed.minRatingStars < 1 || parsed.minRatingStars > 5) return null;
+    minRatingStars = parsed.minRatingStars;
+  }
+
+  let favoritesOnly = false;
+  if (parsed.favoritesOnly !== undefined) {
+    if (typeof parsed.favoritesOnly !== "boolean") return null;
+    favoritesOnly = parsed.favoritesOnly;
+  }
+
   return {
     search,
     sortKey: sortKey as TagsSortKey,
     sortDir,
     viewMode,
+    minTotalUsage,
+    minRatingStars,
+    favoritesOnly,
   };
 }
 

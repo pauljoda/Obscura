@@ -132,11 +132,27 @@ export function galleriesListPrefsToFetchParams(p: GalleriesListPrefs): {
   studio?: string;
   type?: string;
   root?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  imageCountMin?: number;
+  organized?: string;
   limit: number;
 } {
   const tagFilters = p.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
   const studioFilter = p.activeFilters.find((f) => f.type === "studio")?.value;
   const typeFilter = p.activeFilters.find((f) => f.type === "type")?.value;
+  const ratingMin = p.activeFilters.find((f) => f.type === "ratingMin")?.value;
+  const ratingMax = p.activeFilters.find((f) => f.type === "ratingMax")?.value;
+  const dateFrom = p.activeFilters.find((f) => f.type === "dateFrom")?.value;
+  const dateTo = p.activeFilters.find((f) => f.type === "dateTo")?.value;
+  const imageCountMin = p.activeFilters.find((f) => f.type === "imageCountMin")?.value;
+  const organized = p.activeFilters.find((f) => f.type === "organized")?.value;
+
+  const rm = ratingMin !== undefined ? Number(ratingMin) : NaN;
+  const rmax = ratingMax !== undefined ? Number(ratingMax) : NaN;
+  const icm = imageCountMin !== undefined ? Number(imageCountMin) : NaN;
 
   return {
     search: p.search.trim() || undefined,
@@ -146,6 +162,12 @@ export function galleriesListPrefsToFetchParams(p: GalleriesListPrefs): {
     studio: studioFilter,
     type: typeFilter,
     root: p.viewMode === "browser" ? "all" : undefined,
+    ratingMin: Number.isInteger(rm) && rm >= 1 && rm <= 5 ? rm : undefined,
+    ratingMax: Number.isInteger(rmax) && rmax >= 1 && rmax <= 5 ? rmax : undefined,
+    dateFrom: dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom) ? dateFrom : undefined,
+    dateTo: dateTo && /^\d{4}-\d{2}-\d{2}$/.test(dateTo) ? dateTo : undefined,
+    imageCountMin: Number.isInteger(icm) && icm >= 1 ? icm : undefined,
+    organized: organized === "true" || organized === "false" ? organized : undefined,
     limit: p.viewMode === "browser" ? BROWSER_LIMIT : PAGE_SIZE,
   };
 }

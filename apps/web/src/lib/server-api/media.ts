@@ -24,6 +24,17 @@ export async function fetchScenes(params: {
   performer?: string[];
   studio?: string;
   resolution?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  durationMin?: number;
+  durationMax?: number;
+  organized?: string;
+  interactive?: string;
+  hasFile?: string;
+  played?: string;
+  codec?: string;
   limit?: number;
   offset?: number;
   /** Pass current mode; API excludes NSFW when `off`. */
@@ -36,6 +47,17 @@ export async function fetchScenes(params: {
       order: params.order,
       resolution: params.resolution,
       studio: params.studio,
+      ratingMin: params.ratingMin,
+      ratingMax: params.ratingMax,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      durationMin: params.durationMin,
+      durationMax: params.durationMax,
+      organized: params.organized,
+      interactive: params.interactive,
+      hasFile: params.hasFile,
+      played: params.played,
+      codec: params.codec,
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
@@ -76,6 +98,12 @@ export async function fetchGalleries(params?: {
   type?: string;
   parent?: string;
   root?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  imageCountMin?: number;
+  organized?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -88,6 +116,12 @@ export async function fetchGalleries(params?: {
       type: params?.type,
       parent: params?.parent,
       root: params?.root,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      imageCountMin: params?.imageCountMin,
+      organized: params?.organized,
       limit: params?.limit,
       offset: params?.offset,
     },
@@ -124,6 +158,13 @@ export async function fetchImages(params?: {
   tag?: string[];
   performer?: string[];
   studio?: string;
+  nsfw?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  resolution?: string;
+  organized?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -134,6 +175,13 @@ export async function fetchImages(params?: {
       order: params?.order,
       gallery: params?.gallery,
       studio: params?.studio,
+      nsfw: params?.nsfw,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      resolution: params?.resolution,
+      organized: params?.organized,
       limit: params?.limit,
       offset: params?.offset,
     },
@@ -170,6 +218,10 @@ export async function fetchPerformers(params?: {
   gender?: string;
   favorite?: string;
   country?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  hasImage?: string;
+  sceneCountMin?: number;
   limit?: number;
   offset?: number;
   nsfw?: string;
@@ -181,6 +233,10 @@ export async function fetchPerformers(params?: {
     gender: params?.gender,
     favorite: params?.favorite,
     country: params?.country,
+    ratingMin: params?.ratingMin,
+    ratingMax: params?.ratingMax,
+    hasImage: params?.hasImage,
+    sceneCountMin: params?.sceneCountMin,
     limit: params?.limit,
     offset: params?.offset,
     nsfw: params?.nsfw,

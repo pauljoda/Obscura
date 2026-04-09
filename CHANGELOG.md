@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Rich list filters (API + web)** — Scene list queries support rating range, video date range, duration buckets, organized/interactive flags, file on disk, played vs unplayed, and codec. Gallery and image list endpoints support rating, date range, organized, and minimum image count (galleries); images also support resolution height bands and respect NSFW mode like scenes. Performer list API supports rating range, has/no profile image, and minimum scene count (SFW-aware for scene totals). The scenes filter bar adds these controls plus a searchable performer picker (saved in the existing scenes list cookie). Galleries gain rating, date, image-count, organized, and studio filters in the panel. Images gain a dedicated `obscura-images-list` cookie for sort, search, and filters (tags, performers, studio, rating, date, resolution, organized). Performers, tags, and studios list pages add metadata filters (rating, usage/scene thresholds, favorites, photo presence) persisted in their existing cookies.
+
 - **Create pages for studios, performers, and tags** — New `/studios/new`, `/performers/new`, and `/tags/new` routes with full form UI for manually creating entities. Form fields are extracted into shared components (`StudioForm`, `PerformerForm`, `TagForm`) used by both the create and edit views, reducing duplication. Each list page toolbar includes a **+ New** button linking to the create page.
 
 ### Fixed

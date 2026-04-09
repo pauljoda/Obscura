@@ -7,6 +7,9 @@ export interface StudiosListPrefs {
   search: string;
   sortDir: "asc" | "desc";
   viewMode: StudiosViewMode;
+  minSceneCount: number;
+  minRatingStars: number | null;
+  favoritesOnly: boolean;
 }
 
 export function defaultStudiosListPrefs(): StudiosListPrefs {
@@ -14,12 +17,22 @@ export function defaultStudiosListPrefs(): StudiosListPrefs {
     search: "",
     sortDir: "asc",
     viewMode: "grid",
+    minSceneCount: 0,
+    minRatingStars: null,
+    favoritesOnly: false,
   };
 }
 
 export function isDefaultStudiosListPrefs(p: StudiosListPrefs): boolean {
   const d = defaultStudiosListPrefs();
-  return p.search === d.search && p.sortDir === d.sortDir && p.viewMode === d.viewMode;
+  return (
+    p.search === d.search &&
+    p.sortDir === d.sortDir &&
+    p.viewMode === d.viewMode &&
+    p.minSceneCount === d.minSceneCount &&
+    p.minRatingStars === d.minRatingStars &&
+    p.favoritesOnly === d.favoritesOnly
+  );
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -47,7 +60,28 @@ export function parseStudiosListPrefs(raw: string | undefined): StudiosListPrefs
   if (typeof search !== "string" || search.length > 500) return null;
   if (sortDir !== "asc" && sortDir !== "desc") return null;
   if (viewMode !== "grid" && viewMode !== "list") return null;
-  return { search, sortDir, viewMode };
+
+  let minSceneCount = 0;
+  if (parsed.minSceneCount !== undefined) {
+    if (typeof parsed.minSceneCount !== "number" || !Number.isInteger(parsed.minSceneCount)) return null;
+    if (parsed.minSceneCount < 0 || parsed.minSceneCount > 1_000_000) return null;
+    minSceneCount = parsed.minSceneCount;
+  }
+
+  let minRatingStars: number | null = null;
+  if (parsed.minRatingStars !== undefined && parsed.minRatingStars !== null) {
+    if (typeof parsed.minRatingStars !== "number" || !Number.isInteger(parsed.minRatingStars)) return null;
+    if (parsed.minRatingStars < 1 || parsed.minRatingStars > 5) return null;
+    minRatingStars = parsed.minRatingStars;
+  }
+
+  let favoritesOnly = false;
+  if (parsed.favoritesOnly !== undefined) {
+    if (typeof parsed.favoritesOnly !== "boolean") return null;
+    favoritesOnly = parsed.favoritesOnly;
+  }
+
+  return { search, sortDir, viewMode, minSceneCount, minRatingStars, favoritesOnly };
 }
 
 export function serializeStudiosListPrefs(p: StudiosListPrefs): string {

@@ -5,6 +5,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -16,10 +17,12 @@ import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
   fetchSceneStats,
+  fetchPerformers,
   fetchStudios,
   fetchTags,
   updateScene,
   deleteScene,
+  type PerformerItem,
   type SceneListItem,
   type SceneStats,
   type StudioItem,
@@ -37,6 +40,7 @@ import type { ScenesListPrefs, ScenesListPrefsActiveFilter } from "../../lib/sce
 import {
   defaultScenesListPrefs,
   isDefaultScenesListPrefs,
+  scenesListPrefsToFetchParams,
   writeScenesListPrefsCookie,
   clearScenesListPrefsCookie,
 } from "../../lib/scenes-list-prefs";
@@ -46,6 +50,7 @@ interface ScenesPageClientProps {
   initialStats: SceneStats | null;
   initialStudios: StudioItem[];
   initialTags: TagItem[];
+  initialPerformers: PerformerItem[];
   initialTotal: number;
   initialListPrefs: ScenesListPrefs;
 }
@@ -55,6 +60,7 @@ export function ScenesPageClient({
   initialStats,
   initialStudios,
   initialTags,
+  initialPerformers,
   initialTotal,
   initialListPrefs,
 }: ScenesPageClientProps) {
@@ -78,10 +84,20 @@ export function ScenesPageClient({
       skipFirstFilterRefetch.current = false;
       return;
     }
-    void Promise.all([fetchStudios({ nsfw: nsfwMode }), fetchTags({ nsfw: nsfwMode })])
-      .then(([s, t]) => {
+    void Promise.all([
+      fetchStudios({ nsfw: nsfwMode }),
+      fetchTags({ nsfw: nsfwMode }),
+      fetchPerformers({
+        nsfw: nsfwMode,
+        sort: "scenes",
+        order: "desc",
+        limit: 400,
+      }),
+    ])
+      .then(([s, t, perf]) => {
         setFilterStudios(s.studios);
         setFilterTags(t.tags);
+        setFilterPerformers(perf.performers);
       })
       .catch(() => {});
   }, [nsfwMode]);
@@ -97,6 +113,7 @@ export function ScenesPageClient({
   const [total, setTotal] = useState(initialTotal);
   const [filterStudios, setFilterStudios] = useState(initialStudios);
   const [filterTags, setFilterTags] = useState(initialTags);
+  const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -132,26 +149,57 @@ export function ScenesPageClient({
   }, []);
 
   const buildParams = useCallback(() => {
-    const tagFilters = activeFilters
-      .filter((filter) => filter.type === "tag")
-      .map((filter) => filter.value);
-    const performerFilters = activeFilters
-      .filter((filter) => filter.type === "performer")
-      .map((filter) => filter.value);
-    const resolutionFilter = activeFilters.find((filter) => filter.type === "resolution");
-    const studioFilter = activeFilters.find((filter) => filter.type === "studio");
+    return scenesListPrefsToFetchParams(
+      {
+        viewMode,
+        sortBy,
+        sortDir,
+        search: deferredSearchQuery,
+        activeFilters,
+      },
+      nsfwMode,
+    );
+  }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode, viewMode]);
 
-    return {
-      search: deferredSearchQuery || undefined,
-      sort: sortBy,
-      order: sortDir,
-      tag: tagFilters.length > 0 ? tagFilters : undefined,
-      performer: performerFilters.length > 0 ? performerFilters : undefined,
-      resolution: resolutionFilter?.value,
-      studio: studioFilter?.value,
-      nsfw: nsfwMode,
+  const filterBarDisplayFilters = useMemo(() => {
+    const durationLabels: Record<string, string> = {
+      lt300: "< 5 min",
+      "300-900": "5–15 min",
+      "900-1800": "15–30 min",
+      gte1800: "30+ min",
     };
-  }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode]);
+    const codecLabels: Record<string, string> = {
+      h264: "H.264",
+      hevc: "HEVC",
+      av1: "AV1",
+      vp9: "VP9",
+      vp8: "VP8",
+      mpeg4: "MPEG-4",
+      prores: "ProRes",
+      wmv: "WMV",
+    };
+    return activeFilters.map((f) => {
+      let v = f.value;
+      if (f.type === "studio") {
+        v = filterStudios.find((s) => s.id === f.value)?.name ?? f.value;
+      } else if (f.type === "played") {
+        v = f.value === "true" ? "Played" : "Unplayed";
+      } else if (f.type === "hasFile") {
+        v = f.value === "true" ? "Has file" : "No file";
+      } else if (f.type === "organized" || f.type === "interactive") {
+        v = f.value === "true" ? "Yes" : "No";
+      } else if (f.type === "duration") {
+        v = durationLabels[f.value] ?? f.value;
+      } else if (f.type === "codec") {
+        v = codecLabels[f.value] ?? f.value;
+      } else if (f.type === "ratingMin") {
+        v = `${f.value}★+`;
+      } else if (f.type === "ratingMax") {
+        v = `≤${f.value}★`;
+      }
+      return { type: f.type, label: f.label, value: v };
+    });
+  }, [activeFilters, filterStudios]);
 
   const loadScenes = useCallback(async () => {
     setLoading(true);
@@ -211,14 +259,32 @@ export function ScenesPageClient({
   }
 
   function addFilter(type: string, label: string, value: string) {
+    const exclusiveOnePerType = new Set([
+      "resolution",
+      "studio",
+      "ratingMin",
+      "ratingMax",
+      "dateFrom",
+      "dateTo",
+      "duration",
+      "organized",
+      "interactive",
+      "hasFile",
+      "played",
+      "codec",
+    ]);
+
     startTransition(() => {
       setActiveFilters((previous) => {
-        if (previous.some((filter) => filter.type === type && filter.value === value)) {
-          return previous;
+        if (exclusiveOnePerType.has(type)) {
+          if (previous.some((filter) => filter.type === type && filter.value === value)) {
+            return previous.filter((filter) => !(filter.type === type && filter.value === value));
+          }
+          return [...previous.filter((filter) => filter.type !== type), { type, label, value }];
         }
 
-        if (type === "resolution" || type === "studio") {
-          return [...previous.filter((filter) => filter.type !== type), { type, label, value }];
+        if (previous.some((filter) => filter.type === type && filter.value === value)) {
+          return previous;
         }
 
         return [...previous, { type, label, value }];
@@ -316,15 +382,13 @@ export function ScenesPageClient({
             }
           });
         }}
-        activeFilters={activeFilters.map((filter) => ({
-          label: filter.label,
-          value: filter.value,
-        }))}
+        activeFilters={filterBarDisplayFilters}
         onRemoveFilter={removeFilter}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         availableStudios={filterStudios}
         availableTags={filterTags}
+        availablePerformers={filterPerformers}
         onAddFilter={addFilter}
         onClearFiltersAndSort={handleClearFiltersAndSort}
         canClearFiltersAndSort={

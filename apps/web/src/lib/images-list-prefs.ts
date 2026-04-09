@@ -1,41 +1,32 @@
-import type { SortDir, SortOption, ViewMode } from "./scene-browse-types";
+export const IMAGES_LIST_PREFS_COOKIE = "obscura-images-list";
+export const IMAGES_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
-export const SCENES_LIST_PREFS_COOKIE = "obscura-scenes-list";
-export const SCENES_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
+const PAGE_SIZE = 80;
 
-const PAGE_SIZE = 50;
+export type ImageListSortKey = "recent" | "title" | "date" | "rating";
 
-export interface ScenesListPrefsActiveFilter {
+export interface ImagesListPrefsActiveFilter {
   label: string;
   type: string;
   value: string;
 }
 
-export interface ScenesListPrefs {
-  viewMode: ViewMode;
-  sortBy: SortOption;
-  sortDir: SortDir;
+export interface ImagesListPrefs {
+  sortBy: ImageListSortKey;
+  sortDir: "asc" | "desc";
   search: string;
-  activeFilters: ScenesListPrefsActiveFilter[];
+  activeFilters: ImagesListPrefsActiveFilter[];
 }
 
-const SORT_OPTIONS: readonly SortOption[] = [
-  "recent",
-  "title",
-  "duration",
-  "size",
-  "rating",
-  "date",
-  "plays",
-];
+const SORT_KEYS: readonly ImageListSortKey[] = ["recent", "title", "date", "rating"];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function parseActiveFilters(raw: unknown): ScenesListPrefsActiveFilter[] | null {
+function parseActiveFilters(raw: unknown): ImagesListPrefsActiveFilter[] | null {
   if (!Array.isArray(raw)) return null;
-  const out: ScenesListPrefsActiveFilter[] = [];
+  const out: ImagesListPrefsActiveFilter[] = [];
   for (const item of raw) {
     if (!isRecord(item)) return null;
     const { label, type, value } = item;
@@ -47,9 +38,8 @@ function parseActiveFilters(raw: unknown): ScenesListPrefsActiveFilter[] | null 
   return out;
 }
 
-export function defaultScenesListPrefs(): ScenesListPrefs {
+export function defaultImagesListPrefs(): ImagesListPrefs {
   return {
-    viewMode: "grid",
     sortBy: "recent",
     sortDir: "desc",
     search: "",
@@ -57,11 +47,9 @@ export function defaultScenesListPrefs(): ScenesListPrefs {
   };
 }
 
-export function isDefaultScenesListPrefs(p: ScenesListPrefs): boolean {
-  const d = defaultScenesListPrefs();
-  if (p.viewMode !== d.viewMode || p.sortBy !== d.sortBy || p.sortDir !== d.sortDir || p.search !== d.search) {
-    return false;
-  }
+export function isDefaultImagesListPrefs(p: ImagesListPrefs): boolean {
+  const d = defaultImagesListPrefs();
+  if (p.sortBy !== d.sortBy || p.sortDir !== d.sortDir || p.search !== d.search) return false;
   if (p.activeFilters.length !== d.activeFilters.length) return false;
   return p.activeFilters.every(
     (f, i) =>
@@ -71,7 +59,7 @@ export function isDefaultScenesListPrefs(p: ScenesListPrefs): boolean {
   );
 }
 
-export function parseScenesListPrefs(raw: string | undefined): ScenesListPrefs | null {
+export function parseImagesListPrefs(raw: string | undefined): ImagesListPrefs | null {
   if (raw === undefined || raw === "") return null;
   let decoded: string;
   try {
@@ -86,32 +74,25 @@ export function parseScenesListPrefs(raw: string | undefined): ScenesListPrefs |
     return null;
   }
   if (!isRecord(parsed)) return null;
-
-  const viewMode = parsed.viewMode;
   const sortBy = parsed.sortBy;
   const sortDir = parsed.sortDir;
   const search = parsed.search;
   const activeFilters = parseActiveFilters(parsed.activeFilters);
-
-  if (viewMode !== "grid" && viewMode !== "list") return null;
-  if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SortOption)) return null;
+  if (typeof sortBy !== "string" || !SORT_KEYS.includes(sortBy as ImageListSortKey)) return null;
   if (sortDir !== "asc" && sortDir !== "desc") return null;
   if (typeof search !== "string" || search.length > 500) return null;
   if (activeFilters === null) return null;
-
   return {
-    viewMode,
-    sortBy: sortBy as SortOption,
+    sortBy: sortBy as ImageListSortKey,
     sortDir,
     search,
     activeFilters,
   };
 }
 
-export function serializeScenesListPrefs(p: ScenesListPrefs): string {
+export function serializeImagesListPrefs(p: ImagesListPrefs): string {
   return encodeURIComponent(
     JSON.stringify({
-      viewMode: p.viewMode,
       sortBy: p.sortBy,
       sortDir: p.sortDir,
       search: p.search,
@@ -120,15 +101,8 @@ export function serializeScenesListPrefs(p: ScenesListPrefs): string {
   );
 }
 
-const DURATION_PRESET_TO_API: Record<string, { durationMin?: number; durationMax?: number }> = {
-  lt300: { durationMax: 300 },
-  "300-900": { durationMin: 300, durationMax: 900 },
-  "900-1800": { durationMin: 900, durationMax: 1800 },
-  gte1800: { durationMin: 1800 },
-};
-
-export function scenesListPrefsToFetchParams(
-  p: ScenesListPrefs,
+export function imagesListPrefsToFetchParams(
+  p: ImagesListPrefs,
   nsfw: string,
 ): {
   search?: string;
@@ -136,39 +110,25 @@ export function scenesListPrefsToFetchParams(
   order: "asc" | "desc";
   tag?: string[];
   performer?: string[];
-  resolution?: string;
   studio?: string;
+  nsfw: string;
   ratingMin?: number;
   ratingMax?: number;
   dateFrom?: string;
   dateTo?: string;
-  durationMin?: number;
-  durationMax?: number;
+  resolution?: string;
   organized?: string;
-  interactive?: string;
-  hasFile?: string;
-  played?: string;
-  codec?: string;
   limit: number;
-  nsfw: string;
 } {
   const tagFilters = p.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
   const performerFilters = p.activeFilters.filter((f) => f.type === "performer").map((f) => f.value);
-  const resolutionFilter = p.activeFilters.find((f) => f.type === "resolution");
-  const studioFilter = p.activeFilters.find((f) => f.type === "studio");
+  const studioFilter = p.activeFilters.find((f) => f.type === "studio")?.value;
   const ratingMin = p.activeFilters.find((f) => f.type === "ratingMin")?.value;
   const ratingMax = p.activeFilters.find((f) => f.type === "ratingMax")?.value;
   const dateFrom = p.activeFilters.find((f) => f.type === "dateFrom")?.value;
   const dateTo = p.activeFilters.find((f) => f.type === "dateTo")?.value;
-  const durationPreset = p.activeFilters.find((f) => f.type === "duration")?.value;
+  const resolution = p.activeFilters.find((f) => f.type === "resolution")?.value;
   const organized = p.activeFilters.find((f) => f.type === "organized")?.value;
-  const interactive = p.activeFilters.find((f) => f.type === "interactive")?.value;
-  const hasFile = p.activeFilters.find((f) => f.type === "hasFile")?.value;
-  const played = p.activeFilters.find((f) => f.type === "played")?.value;
-  const codec = p.activeFilters.find((f) => f.type === "codec")?.value;
-
-  const dur =
-    durationPreset && DURATION_PRESET_TO_API[durationPreset] ? DURATION_PRESET_TO_API[durationPreset] : {};
 
   const rm = ratingMin !== undefined ? Number(ratingMin) : NaN;
   const rmax = ratingMax !== undefined ? Number(ratingMax) : NaN;
@@ -179,30 +139,24 @@ export function scenesListPrefsToFetchParams(
     order: p.sortDir,
     tag: tagFilters.length > 0 ? tagFilters : undefined,
     performer: performerFilters.length > 0 ? performerFilters : undefined,
-    resolution: resolutionFilter?.value,
-    studio: studioFilter?.value,
+    studio: studioFilter,
+    nsfw,
     ratingMin: Number.isInteger(rm) && rm >= 1 && rm <= 5 ? rm : undefined,
     ratingMax: Number.isInteger(rmax) && rmax >= 1 && rmax <= 5 ? rmax : undefined,
     dateFrom: dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom) ? dateFrom : undefined,
     dateTo: dateTo && /^\d{4}-\d{2}-\d{2}$/.test(dateTo) ? dateTo : undefined,
-    durationMin: dur.durationMin,
-    durationMax: dur.durationMax,
+    resolution: resolution && ["4K", "1080p", "720p", "480p"].includes(resolution) ? resolution : undefined,
     organized: organized === "true" || organized === "false" ? organized : undefined,
-    interactive: interactive === "true" || interactive === "false" ? interactive : undefined,
-    hasFile: hasFile === "true" || hasFile === "false" ? hasFile : undefined,
-    played: played === "true" || played === "false" ? played : undefined,
-    codec: codec && /^[a-z0-9]{2,16}$/i.test(codec) ? codec.toLowerCase() : undefined,
     limit: PAGE_SIZE,
-    nsfw,
   };
 }
 
-export function writeScenesListPrefsCookie(p: ScenesListPrefs): void {
+export function writeImagesListPrefsCookie(p: ImagesListPrefs): void {
   if (typeof document === "undefined") return;
-  document.cookie = `${SCENES_LIST_PREFS_COOKIE}=${serializeScenesListPrefs(p)};path=/;max-age=${SCENES_LIST_PREFS_MAX_AGE};samesite=lax`;
+  document.cookie = `${IMAGES_LIST_PREFS_COOKIE}=${serializeImagesListPrefs(p)};path=/;max-age=${IMAGES_LIST_PREFS_MAX_AGE};samesite=lax`;
 }
 
-export function clearScenesListPrefsCookie(): void {
+export function clearImagesListPrefsCookie(): void {
   if (typeof document === "undefined") return;
-  document.cookie = `${SCENES_LIST_PREFS_COOKIE}=;path=/;max-age=0;samesite=lax`;
+  document.cookie = `${IMAGES_LIST_PREFS_COOKIE}=;path=/;max-age=0;samesite=lax`;
 }
