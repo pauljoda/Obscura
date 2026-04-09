@@ -436,6 +436,7 @@ export function ScenesPageClient({
           });
         }}
         activeFilters={filterBarDisplayFilters}
+        rawActiveFilters={activeFilters}
         onRemoveFilter={removeFilter}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

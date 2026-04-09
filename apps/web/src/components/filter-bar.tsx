@@ -47,7 +47,10 @@ interface FilterBarProps {
   sortBy: SortOption;
   sortDir: SortDir;
   onSortChange: (sort: SortOption, dir?: SortDir) => void;
+  /** Display-friendly filters shown as chips in the toolbar. */
   activeFilters: { label: string; value: string; type?: string }[];
+  /** Raw filters used for panel highlight checks (raw IDs/values). */
+  rawActiveFilters?: { label: string; value: string; type: string }[];
   onRemoveFilter: (index: number) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -82,6 +85,7 @@ export function FilterBar({
   sortDir,
   onSortChange,
   activeFilters,
+  rawActiveFilters,
   onRemoveFilter,
   searchQuery,
   onSearchChange,
@@ -103,6 +107,9 @@ export function FilterBar({
   const { mode: nsfwMode } = useNsfw();
 
   const currentSort = sortOptions.find((s) => s.value === sortBy);
+
+  // Use raw filters for panel highlight checks (raw IDs), display filters for toolbar chips
+  const panelFilters = rawActiveFilters ?? activeFilters;
 
   const tagItems: AlphabeticalFilterSectionItem[] = useMemo(() => {
     const visible = tagsVisibleInNsfwMode(availableTags, nsfwMode);
@@ -320,7 +327,7 @@ export function FilterBar({
                     onClick={() => onAddFilter?.("resolution", "Resolution", res)}
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.type === "resolution" && f.value === res)
+                      panelFilters.some((f) => f.type === "resolution" && f.value === res)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
@@ -344,7 +351,7 @@ export function FilterBar({
                       onClick={() => onAddFilter?.("ratingMin", "Min rating", String(n))}
                       className={cn(
                         "tag-chip cursor-pointer transition-colors duration-fast",
-                        activeFilters.some((f) => f.type === "ratingMin" && f.value === String(n))
+                        panelFilters.some((f) => f.type === "ratingMin" && f.value === String(n))
                           ? "tag-chip-accent"
                           : "tag-chip-default hover:tag-chip-accent",
                       )}
@@ -364,7 +371,7 @@ export function FilterBar({
                       onClick={() => onAddFilter?.("ratingMax", "Max rating", String(n))}
                       className={cn(
                         "tag-chip cursor-pointer transition-colors duration-fast",
-                        activeFilters.some((f) => f.type === "ratingMax" && f.value === String(n))
+                        panelFilters.some((f) => f.type === "ratingMax" && f.value === String(n))
                           ? "tag-chip-accent"
                           : "tag-chip-default hover:tag-chip-accent",
                       )}
@@ -421,7 +428,7 @@ export function FilterBar({
                     onClick={() => onAddFilter?.("duration", "Duration", d.id)}
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.type === "duration" && f.value === d.id)
+                      panelFilters.some((f) => f.type === "duration" && f.value === d.id)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
@@ -454,7 +461,7 @@ export function FilterBar({
                     }
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.type === item.type && f.value === item.value)
+                      panelFilters.some((f) => f.type === item.type && f.value === item.value)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
@@ -487,7 +494,7 @@ export function FilterBar({
                     }
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.type === item.type && f.value === item.value)
+                      panelFilters.some((f) => f.type === item.type && f.value === item.value)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
@@ -518,7 +525,7 @@ export function FilterBar({
                     onClick={() => onAddFilter?.("codec", "Codec", c.id)}
                     className={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      activeFilters.some((f) => f.type === "codec" && f.value === c.id)
+                      panelFilters.some((f) => f.type === "codec" && f.value === c.id)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
@@ -540,7 +547,7 @@ export function FilterBar({
                   emptyLabel="tags"
                   chipVariant="info"
                   isActive={(item) =>
-                    activeFilters.some(
+                    panelFilters.some(
                       (f) => (f.type === "tag" || f.label === "Tag") && f.value === item.name,
                     )
                   }
@@ -560,7 +567,7 @@ export function FilterBar({
                   emptyLabel="performers"
                   chipVariant="info"
                   isActive={(item) =>
-                    activeFilters.some((f) => f.type === "performer" && f.value === item.name)
+                    panelFilters.some((f) => f.type === "performer" && f.value === item.name)
                   }
                   onToggle={(item) => onAddFilter?.("performer", "Performer", item.name)}
                 />
@@ -578,7 +585,7 @@ export function FilterBar({
                   emptyLabel="studios"
                   chipVariant="accent"
                   isActive={(item) =>
-                    activeFilters.some((f) => f.type === "studio" && f.value === item.id)
+                    panelFilters.some((f) => f.type === "studio" && f.value === item.id)
                   }
                   onToggle={(item) => onAddFilter?.("studio", "Studio", item.id)}
                 />
