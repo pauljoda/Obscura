@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Worker modularization** — Decomposed the monolithic 1934-line `apps/worker/src/index.ts` into focused modules: 8 processor files under `processors/` (one per job type), 6 shared utility files under `lib/` (db, queues, job-tracking, nsfw, enqueue, scheduler/helpers), and a slim ~100-line orchestration `index.ts`. Pure refactor with no logic changes.
+
 - **Job control: queue layout** — Queue cards use a fixed order grouped by role: library and gallery scans first, then scene media pipeline (probe, fingerprint, preview), metadata import, and gallery image pipeline. Cards no longer reorder by backlog or failures.
 
 - **Route refactor: thin route wrappers** — Rewrote all API route files (`scenes`, `galleries`, `images`, `performers`) to be thin wrappers that parse request params and delegate to the service layer. Extracted studio routes into `routes/studios.ts` and tag routes into `routes/tags.ts` (previously embedded in the 1641-line `scenes.ts`). Registered the global error handler plugin so `AppError` exceptions propagate automatically. Scene routes dropped from ~1641 lines to ~100 lines.
