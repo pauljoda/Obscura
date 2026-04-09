@@ -25,6 +25,7 @@ const { tags, performers } = schema;
 // ─── Sorting ────────────────────────────────────────────────────
 
 export interface SortConfig {
+  /** Map of sort keys to Drizzle columns. Use `as SortConfig["columns"]` on the literal to avoid narrow PgColumn inference. */
   columns: Record<string, Column>;
   defaultDirs: Record<string, "asc" | "desc">;
   fallbackColumn: Column;

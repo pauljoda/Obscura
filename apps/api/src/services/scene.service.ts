@@ -35,6 +35,7 @@ import {
   runProcess,
 } from "@obscura/media-core";
 import { db, schema } from "../db";
+import type { SortConfig } from "../lib/query-helpers";
 
 const {
   scenes,
@@ -352,7 +353,7 @@ export async function listScenes(query: ListScenesQuery) {
   }
 
   // Sort
-  const sortColumnMap: Record<string, typeof scenes.createdAt> = {
+  const sortColumnMap = {
     recent: scenes.createdAt,
     title: scenes.title,
     duration: scenes.duration,
@@ -360,7 +361,7 @@ export async function listScenes(query: ListScenesQuery) {
     rating: scenes.rating,
     date: scenes.date,
     plays: scenes.playCount,
-  };
+  } as SortConfig["columns"];
   const defaultDir: Record<string, "asc" | "desc"> = {
     recent: "desc",
     title: "asc",
