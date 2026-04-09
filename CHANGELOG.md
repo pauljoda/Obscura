@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- **Job control: queue layout** — Queue cards use a fixed order grouped by role: library and gallery scans first, then scene media pipeline (probe, fingerprint, preview), metadata import, and gallery image pipeline. Cards no longer reorder by backlog or failures.
+
 ### Added
 
 - **Create pages for studios, performers, and tags** — New `/studios/new`, `/performers/new`, and `/tags/new` routes with full form UI for manually creating entities. Form fields are extracted into shared components (`StudioForm`, `PerformerForm`, `TagForm`) used by both the create and edit views, reducing duplication. Each list page toolbar includes a **+ New** button linking to the create page.

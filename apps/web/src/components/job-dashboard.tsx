@@ -35,6 +35,7 @@ import {
   type QueueSummary,
 } from "../lib/api";
 import { useNsfw } from "./nsfw/nsfw-context";
+import { groupQueuesForJobDashboard } from "./job-dashboard-queue-sections";
 
 const queueIcons: Record<string, typeof FolderSearch> = {
   "library-scan": FolderSearch,
@@ -322,16 +323,9 @@ export function JobDashboard() {
     }
   }
 
-  const sortedQueues = useMemo(
-    () =>
-      [...(dashboard?.queues ?? [])].sort(
-        (left: QueueSummary, right: QueueSummary) =>
-          right.failed - left.failed ||
-          right.backlog - left.backlog ||
-          right.active - left.active ||
-          left.label.localeCompare(right.label)
-      ),
-    [dashboard]
+  const queueSections = useMemo(
+    () => groupQueuesForJobDashboard(dashboard?.queues ?? []),
+    [dashboard?.queues]
   );
 
   const totalActive = dashboard?.activeJobs.filter((job) => job.status === "active").length ?? 0;
@@ -340,7 +334,8 @@ export function JobDashboard() {
   const totalFailed = dashboard?.failedJobs.length ?? 0;
   const retainedCompleted = dashboard?.completedJobs.length ?? 0;
   const canAcknowledgeFailures =
-    totalFailed > 0 || sortedQueues.some((queue: QueueSummary) => queue.failed > 0);
+    totalFailed > 0 ||
+    (dashboard?.queues ?? []).some((queue: QueueSummary) => queue.failed > 0);
 
   return (
     <div className="space-y-6">
@@ -432,24 +427,39 @@ export function JobDashboard() {
             <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Queues</h2>
           </div>
           <span className="text-mono-sm text-text-disabled">
-            {sortedQueues.length} configured
+            {dashboard?.queues.length ?? 0} configured
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-          {sortedQueues.map((queue: QueueSummary) => (
-            <QueueCard
-              key={queue.name}
-              queue={queue}
-              runningQueue={runningQueue}
-              cancellingQueue={cancellingQueue}
-              acknowledging={acknowledging}
-              onRun={handleRun}
-              onCancel={handleCancel}
-              onClearFailures={handleAcknowledgeFailures}
-            />
+        <div className="space-y-8">
+          {queueSections.map(({ section, queues: sectionQueues }) => (
+            <div key={section?.id ?? "additional"} className="space-y-3">
+              <div className="border-b border-border-subtle/80 px-1 pb-2">
+                <h3 className="text-[0.72rem] font-semibold tracking-[0.14em] font-heading text-text-primary uppercase">
+                  {section?.title ?? "Additional queues"}
+                </h3>
+                <p className="mt-1 text-[0.68rem] text-text-muted">
+                  {section?.description ??
+                    "Queues not yet assigned to a section; layout may need an update."}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                {sectionQueues.map((queue: QueueSummary) => (
+                  <QueueCard
+                    key={queue.name}
+                    queue={queue}
+                    runningQueue={runningQueue}
+                    cancellingQueue={cancellingQueue}
+                    acknowledging={acknowledging}
+                    onRun={handleRun}
+                    onCancel={handleCancel}
+                    onClearFailures={handleAcknowledgeFailures}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
           {!dashboard && loading && (
-            <div className="surface-card no-lift col-span-full p-6 text-center text-sm text-text-muted">
+            <div className="surface-card no-lift p-6 text-center text-sm text-text-muted">
               Loading queue state...
             </div>
           )}
