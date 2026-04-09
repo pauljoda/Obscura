@@ -374,45 +374,46 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             );
           })()}
 
-          {/* Scraper panel */}
-          {endpoints.length > 0 && (
-            <div className="surface-well p-3 space-y-2">
-              <div className="text-kicker">Identify via StashBox</div>
-              <select
-                value={selectedEndpoint}
-                onChange={(e) => setSelectedEndpoint(e.target.value)}
-                className="control-input w-full py-1.5 text-xs"
-              >
-                {endpoints.map((ep) => (
-                  <option key={ep.id} value={ep.id}>{ep.name}</option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleScrape}
-                  disabled={scraping || seeking}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
-                    "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900 disabled:opacity-50"
-                  )}
+          <NsfwGate>
+            {endpoints.length > 0 && (
+              <div className="surface-well p-3 space-y-2">
+                <div className="text-kicker">Identify via StashBox</div>
+                <select
+                  value={selectedEndpoint}
+                  onChange={(e) => setSelectedEndpoint(e.target.value)}
+                  className="control-input w-full py-1.5 text-xs"
                 >
-                  {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-                  Identify
-                </button>
-                <button
-                  onClick={handleSeek}
-                  disabled={scraping || seeking}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
-                    "text-text-muted border border-border-subtle hover:text-text-accent hover:border-border-accent disabled:opacity-50"
-                  )}
-                >
-                  {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <SkipForward className="h-3 w-3" />}
-                  {seeking ? "Seeking..." : "Seek"}
-                </button>
+                  {endpoints.map((ep) => (
+                    <option key={ep.id} value={ep.id}>{ep.name}</option>
+                  ))}
+                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleScrape}
+                    disabled={scraping || seeking}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                      "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900 disabled:opacity-50"
+                    )}
+                  >
+                    {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                    Identify
+                  </button>
+                  <button
+                    onClick={handleSeek}
+                    disabled={scraping || seeking}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                      "text-text-muted border border-border-subtle hover:text-text-accent hover:border-border-accent disabled:opacity-50"
+                    )}
+                  >
+                    {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <SkipForward className="h-3 w-3" />}
+                    {seeking ? "Seeking..." : "Seek"}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </NsfwGate>
 
           <NsfwGate>
             <div className="surface-well p-3 space-y-2">
@@ -424,49 +425,50 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
         {/* Right column — form */}
         <div className="flex-1 min-w-0 space-y-4">
-          {/* Scrape result preview */}
-          {scrapeResult && (
-            <div className="surface-well p-4 border-l-2 border-border-accent space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-kicker text-text-accent">Identify Result</div>
-                <div className="flex gap-2">
-                  <button onClick={() => setScrapeResult(null)} className="text-xs text-text-muted hover:text-text-primary transition-colors">
-                    Dismiss
-                  </button>
-                  <button
-                    onClick={handleApplyScrape}
-                    disabled={saving || selectedFields.size === 0}
-                    className={cn(
-                      "flex items-center gap-1 px-3 py-1 rounded text-xs transition-all duration-fast",
-                      "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900 disabled:opacity-50"
-                    )}
-                  >
-                    <Check className="h-3 w-3" />
-                    Apply Selected
-                  </button>
+          <NsfwGate>
+            {scrapeResult && (
+              <div className="surface-well p-4 border-l-2 border-border-accent space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-kicker text-text-accent">Identify Result</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setScrapeResult(null)} className="text-xs text-text-muted hover:text-text-primary transition-colors">
+                      Dismiss
+                    </button>
+                    <button
+                      onClick={handleApplyScrape}
+                      disabled={saving || selectedFields.size === 0}
+                      className={cn(
+                        "flex items-center gap-1 px-3 py-1 rounded text-xs transition-all duration-fast",
+                        "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900 disabled:opacity-50"
+                      )}
+                    >
+                      <Check className="h-3 w-3" />
+                      Apply Selected
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {scrapeResult.name && (
+                    <ScrapeField field="name" label="Name" value={scrapeResult.name} enabled={selectedFields.has("name")} onToggle={() => toggleField("name")} />
+                  )}
+                  {scrapeResult.url && (
+                    <ScrapeField field="url" label="URL" value={scrapeResult.url} enabled={selectedFields.has("url")} onToggle={() => toggleField("url")} />
+                  )}
+                  {scrapeResult.imageUrl && (
+                    <div className="col-span-full">
+                      <ScrapeField field="imageUrl" label="Image" value="Available" enabled={selectedFields.has("imageUrl")} onToggle={() => toggleField("imageUrl")} />
+                      {selectedFields.has("imageUrl") && (
+                        <img src={scrapeResult.imageUrl} alt="" className="mt-1.5 h-16 rounded object-contain" />
+                      )}
+                    </div>
+                  )}
+                  {scrapeResult.parentName && (
+                    <ScrapeField field="parentName" label="Parent Studio" value={scrapeResult.parentName} enabled={selectedFields.has("parentName")} onToggle={() => toggleField("parentName")} />
+                  )}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {scrapeResult.name && (
-                  <ScrapeField field="name" label="Name" value={scrapeResult.name} enabled={selectedFields.has("name")} onToggle={() => toggleField("name")} />
-                )}
-                {scrapeResult.url && (
-                  <ScrapeField field="url" label="URL" value={scrapeResult.url} enabled={selectedFields.has("url")} onToggle={() => toggleField("url")} />
-                )}
-                {scrapeResult.imageUrl && (
-                  <div className="col-span-full">
-                    <ScrapeField field="imageUrl" label="Image" value="Available" enabled={selectedFields.has("imageUrl")} onToggle={() => toggleField("imageUrl")} />
-                    {selectedFields.has("imageUrl") && (
-                      <img src={scrapeResult.imageUrl} alt="" className="mt-1.5 h-16 rounded object-contain" />
-                    )}
-                  </div>
-                )}
-                {scrapeResult.parentName && (
-                  <ScrapeField field="parentName" label="Parent Studio" value={scrapeResult.parentName} enabled={selectedFields.has("parentName")} onToggle={() => toggleField("parentName")} />
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </NsfwGate>
 
           <StudioForm
             values={{ name, url, description, aliases, isNsfw, parentId }}

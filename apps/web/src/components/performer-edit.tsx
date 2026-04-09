@@ -519,67 +519,68 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
             }}
           />
 
-          {/* Scraper panel */}
-          {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
-            <div className="surface-well p-3 space-y-2">
-              <div className="text-kicker">Scrape Metadata</div>
-              <select
-                value={selectedProvider}
-                onChange={(e) => {
-                  setSelectedProvider(e.target.value);
-                  if (e.target.value.startsWith("scraper:")) {
-                    const scraperId = e.target.value.replace("scraper:", "");
-                    setSeekIndex(scrapers.findIndex((s) => s.id === scraperId));
-                  }
-                }}
-                className="control-input w-full py-1.5 text-xs"
-              >
-                {stashBoxEndpoints.length > 0 && (
-                  <optgroup label="Stash-Box">
-                    {stashBoxEndpoints.map((ep) => (
-                      <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {scrapers.length > 0 && (
-                  <optgroup label="Community Scrapers">
-                    {scrapers.map((s) => (
-                      <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleScrape}
-                  disabled={scraping || seeking || !selectedProvider}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
-                    "bg-accent-950 text-text-accent border border-border-accent",
-                    "hover:bg-accent-900 disabled:opacity-50"
-                  )}
+          <NsfwGate>
+            {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
+              <div className="surface-well p-3 space-y-2">
+                <div className="text-kicker">Scrape Metadata</div>
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => {
+                    setSelectedProvider(e.target.value);
+                    if (e.target.value.startsWith("scraper:")) {
+                      const scraperId = e.target.value.replace("scraper:", "");
+                      setSeekIndex(scrapers.findIndex((s) => s.id === scraperId));
+                    }
+                  }}
+                  className="control-input w-full py-1.5 text-xs"
                 >
-                  {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-                  Scrape
-                </button>
-                <button
-                  onClick={handleSeek}
-                  disabled={scraping || seeking}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
-                    "text-text-muted border border-border-subtle",
-                    "hover:text-text-accent hover:border-border-accent disabled:opacity-50"
+                  {stashBoxEndpoints.length > 0 && (
+                    <optgroup label="Stash-Box">
+                      {stashBoxEndpoints.map((ep) => (
+                        <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
+                      ))}
+                    </optgroup>
                   )}
-                >
-                  {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <SkipForward className="h-3 w-3" />}
-                  {seeking ? "Seeking..." : "Seek"}
-                </button>
+                  {scrapers.length > 0 && (
+                    <optgroup label="Community Scrapers">
+                      {scrapers.map((s) => (
+                        <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleScrape}
+                    disabled={scraping || seeking || !selectedProvider}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                      "bg-accent-950 text-text-accent border border-border-accent",
+                      "hover:bg-accent-900 disabled:opacity-50"
+                    )}
+                  >
+                    {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                    Scrape
+                  </button>
+                  <button
+                    onClick={handleSeek}
+                    disabled={scraping || seeking}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs transition-all duration-fast",
+                      "text-text-muted border border-border-subtle",
+                      "hover:text-text-accent hover:border-border-accent disabled:opacity-50"
+                    )}
+                  >
+                    {seeking ? <Loader2 className="h-3 w-3 animate-spin" /> : <SkipForward className="h-3 w-3" />}
+                    {seeking ? "Seeking..." : "Seek"}
+                  </button>
+                </div>
+                <p className="text-[0.6rem] text-text-disabled leading-snug">
+                  Seek tries each provider until one returns results
+                </p>
               </div>
-              <p className="text-[0.6rem] text-text-disabled leading-snug">
-                Seek tries each provider until one returns results
-              </p>
-            </div>
-          )}
+            )}
+          </NsfwGate>
 
           <NsfwGate>
             <div className="surface-well p-3 space-y-2">
@@ -591,145 +592,146 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
         {/* Right column — form fields */}
         <div className="flex-1 min-w-0 space-y-4">
-          {/* Scrape result preview */}
-          {scrapeResult && (
-            <div className="surface-well p-4 border-l-2 border-border-accent space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-kicker text-text-accent">Scrape Result</div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setScrapeResult(null)}
-                    className="text-xs text-text-muted hover:text-text-primary transition-colors"
-                  >
-                    Dismiss
-                  </button>
-                  <button
-                    onClick={handleApplyScrape}
-                    disabled={saving || selectedScrapeFields.size === 0}
-                    className={cn(
-                      "flex items-center gap-1 px-3 py-1 rounded text-xs transition-all duration-fast",
-                      "bg-accent-950 text-text-accent border border-border-accent",
-                      "hover:bg-accent-900 disabled:opacity-50"
-                    )}
-                  >
-                    <Check className="h-3 w-3" />
-                    Apply Selected
-                  </button>
-                </div>
-              </div>
-              {/* Image picker */}
-              {(() => {
-                const images = scrapeResult.imageUrls ?? [];
-                const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
-                if (allImages.length === 0) return null;
-
-                const currentImage = allImages[selectedImageIndex] ?? allImages[0];
-
-                return (
-                  <div className="flex items-start gap-2">
+          <NsfwGate>
+            {scrapeResult && (
+              <div className="surface-well p-4 border-l-2 border-border-accent space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-kicker text-text-accent">Scrape Result</div>
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => toggleScrapeField("imageUrl")}
+                      onClick={() => setScrapeResult(null)}
+                      className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      onClick={handleApplyScrape}
+                      disabled={saving || selectedScrapeFields.size === 0}
                       className={cn(
-                        "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
-                        selectedScrapeFields.has("imageUrl")
-                          ? "bg-accent-800 border-border-accent"
-                          : "border-border-subtle"
+                        "flex items-center gap-1 px-3 py-1 rounded text-xs transition-all duration-fast",
+                        "bg-accent-950 text-text-accent border border-border-accent",
+                        "hover:bg-accent-900 disabled:opacity-50"
                       )}
                     >
-                      {selectedScrapeFields.has("imageUrl") && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                      <Check className="h-3 w-3" />
+                      Apply Selected
                     </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[0.65rem] text-text-disabled uppercase tracking-wider">
-                          Image{allImages.length > 1 ? ` (${selectedImageIndex + 1} of ${allImages.length})` : ""}
-                        </span>
-                        {allImages.length > 1 && (
-                          <button
-                            onClick={() => setImagePickerOpen(true)}
-                            className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors"
-                          >
-                            Browse all
-                          </button>
-                        )}
-                      </div>
-                      {/* Selected image preview — click to open large view */}
-                      <button
-                        onClick={() => setImagePickerOpen(true)}
-                        className="w-24 h-32 rounded overflow-hidden bg-surface-3 border-2 border-border-accent/40 hover:border-border-accent transition-all duration-fast"
-                      >
-                        <img src={currentImage} alt="Selected" className="w-full h-full object-cover" loading="lazy" />
-                      </button>
-                      {/* Thumbnail strip for quick selection */}
-                      {allImages.length > 1 && (
-                        <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hidden pb-1">
-                          {allImages.map((url, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setSelectedImageIndex(i)}
-                              className={cn(
-                                "flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-surface-3 border transition-all duration-fast",
-                                i === selectedImageIndex
-                                  ? "border-border-accent"
-                                  : "border-transparent opacity-50 hover:opacity-80"
-                              )}
-                            >
-                              <img src={url} alt={`${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                   </div>
-                );
-              })()}
+                </div>
+                {/* Image picker */}
+                {(() => {
+                  const images = scrapeResult.imageUrls ?? [];
+                  const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
+                  if (allImages.length === 0) return null;
 
-              {/* Image picker modal */}
-              {imagePickerOpen && scrapeResult && (() => {
-                const images = scrapeResult.imageUrls ?? [];
-                const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
-                if (allImages.length === 0) return null;
+                  const currentImage = allImages[selectedImageIndex] ?? allImages[0];
 
-                return (
-                  <ImagePickerModal
-                    images={allImages}
-                    selectedIndex={selectedImageIndex}
-                    onSelect={setSelectedImageIndex}
-                    onClose={() => setImagePickerOpen(false)}
-                    title={`Select ${terms.performer} image`}
-                  />
-                );
-              })()}
-
-              {/* Other fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Object.entries(scrapeResult).map(([key, value]) => {
-                  // Skip image fields (handled above) and imageUrls array
-                  if (key === "imageUrl" || key === "imageUrls") return null;
-                  if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
-                  const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
                   return (
-                    <div key={key} className="flex items-start gap-2">
+                    <div className="flex items-start gap-2">
                       <button
-                        onClick={() => toggleScrapeField(key)}
+                        onClick={() => toggleScrapeField("imageUrl")}
                         className={cn(
                           "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
-                          selectedScrapeFields.has(key)
+                          selectedScrapeFields.has("imageUrl")
                             ? "bg-accent-800 border-border-accent"
                             : "border-border-subtle"
                         )}
                       >
-                        {selectedScrapeFields.has(key) && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                        {selectedScrapeFields.has("imageUrl") && <Check className="h-3 w-3 text-text-accent mx-auto" />}
                       </button>
-                      <div className="min-w-0">
-                        <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider">{formatFieldName(key)}</div>
-                        <div className="text-xs text-text-secondary truncate">{displayValue}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[0.65rem] text-text-disabled uppercase tracking-wider">
+                            Image{allImages.length > 1 ? ` (${selectedImageIndex + 1} of ${allImages.length})` : ""}
+                          </span>
+                          {allImages.length > 1 && (
+                            <button
+                              onClick={() => setImagePickerOpen(true)}
+                              className="text-[0.6rem] text-text-accent hover:text-text-accent-bright transition-colors"
+                            >
+                              Browse all
+                            </button>
+                          )}
+                        </div>
+                        {/* Selected image preview — click to open large view */}
+                        <button
+                          onClick={() => setImagePickerOpen(true)}
+                          className="w-24 h-32 rounded overflow-hidden bg-surface-3 border-2 border-border-accent/40 hover:border-border-accent transition-all duration-fast"
+                        >
+                          <img src={currentImage} alt="Selected" className="w-full h-full object-cover" loading="lazy" />
+                        </button>
+                        {/* Thumbnail strip for quick selection */}
+                        {allImages.length > 1 && (
+                          <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-hidden pb-1">
+                            {allImages.map((url, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedImageIndex(i)}
+                                className={cn(
+                                  "flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-surface-3 border transition-all duration-fast",
+                                  i === selectedImageIndex
+                                    ? "border-border-accent"
+                                    : "border-transparent opacity-50 hover:opacity-80"
+                                )}
+                              >
+                                <img src={url} alt={`${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
-                })}
+                })()}
+
+                {/* Image picker modal */}
+                {imagePickerOpen && scrapeResult && (() => {
+                  const images = scrapeResult.imageUrls ?? [];
+                  const allImages = images.length > 0 ? images : scrapeResult.imageUrl ? [scrapeResult.imageUrl] : [];
+                  if (allImages.length === 0) return null;
+
+                  return (
+                    <ImagePickerModal
+                      images={allImages}
+                      selectedIndex={selectedImageIndex}
+                      onSelect={setSelectedImageIndex}
+                      onClose={() => setImagePickerOpen(false)}
+                      title={`Select ${terms.performer} image`}
+                    />
+                  );
+                })()}
+
+                {/* Other fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Object.entries(scrapeResult).map(([key, value]) => {
+                    // Skip image fields (handled above) and imageUrls array
+                    if (key === "imageUrl" || key === "imageUrls") return null;
+                    if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) return null;
+                    const displayValue = Array.isArray(value) ? value.join(", ") : String(value);
+                    return (
+                      <div key={key} className="flex items-start gap-2">
+                        <button
+                          onClick={() => toggleScrapeField(key)}
+                          className={cn(
+                            "flex-shrink-0 mt-1 h-4 w-4 rounded border transition-colors",
+                            selectedScrapeFields.has(key)
+                              ? "bg-accent-800 border-border-accent"
+                              : "border-border-subtle"
+                          )}
+                        >
+                          {selectedScrapeFields.has(key) && <Check className="h-3 w-3 text-text-accent mx-auto" />}
+                        </button>
+                        <div className="min-w-0">
+                          <div className="text-[0.65rem] text-text-disabled uppercase tracking-wider">{formatFieldName(key)}</div>
+                          <div className="text-xs text-text-secondary truncate">{displayValue}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </NsfwGate>
 
           {/* Form fields */}
           <PerformerForm

@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **StashBox IDs in SFW mode** — StashBox ID chips and their section headings are hidden when NSFW content mode is **Off** (SFW) on performer, scene (video), studio, and tag detail and edit views. `StashIdChips` skips stash-ID and endpoint fetches in that mode.
 
+- **Identify / scrape UI in SFW edit mode** — Studio, tag, and performer edit views hide “Identify via StashBox” / “Scrape Metadata” panels and identify/scrape result previews under SFW. Scene metadata edit hides the scraper bar (Scrape / Seek) and does not highlight relation chips as “new from scrape” while mode is Off.
+
 - **Images grid infinite scroll** — Grid view on `/images` used a manual “Load more” button while feed view auto-loaded with an intersection sentinel. Grid now uses the same observer-based loading as the feed (and other library grids).
 
 - **Gallery cards in SFW mode** — `NsfwBlur` only wrapped the thumbnail, so titles, counts, and empty image stubs still appeared for NSFW-marked galleries. Grid, list, and compact gallery cards now wrap the full card (same pattern as scene grid cards). Grid and list index views omit NSFW rows while content mode is Off so animation wrappers do not leave blank cells; timeline groups and sub-gallery sections use the same visibility rules; browser tree rows for NSFW galleries are omitted in SFW.

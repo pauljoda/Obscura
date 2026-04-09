@@ -53,7 +53,13 @@ import {
   type PerformerItem,
   type StudioItem,
 } from "../lib/api";
-import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import {
+  NsfwChip,
+  NsfwEditToggle,
+  NsfwGate,
+  NsfwTagLabel,
+  tagsVisibleInNsfwMode,
+} from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -1059,54 +1065,55 @@ export function SceneEdit({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
-          {/* Scraper panel — compact inline bar */}
-          {scrapers.length > 0 && (
-            <section className="surface-well px-4 py-3 flex flex-wrap items-center gap-3">
-              <Wand2 className="h-4 w-4 text-text-accent flex-shrink-0" />
-              <select
-                className="control-input text-sm py-1.5 w-auto min-w-[140px]"
-                value={selectedScraper}
-                onChange={(e) => {
-                  setSelectedScraper(e.target.value);
-                  setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
-                }}
-              >
-                {scrapers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => void handleScrape()}
-                disabled={scraping || seeking}
-              >
-                {scraping ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Search className="h-3.5 w-3.5" />
-                )}
-                {scraping ? "Scraping..." : "Scrape"}
-              </Button>
-              <button
-                onClick={() => void handleSeek()}
-                disabled={scraping || seeking}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted border border-border-subtle hover:text-text-accent hover:border-border-accent disabled:opacity-50 transition-all duration-fast"
-              >
-                {seeking ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <SkipForward className="h-3.5 w-3.5" />
-                )}
-                {seeking ? "Seeking..." : "Seek"}
-              </button>
-              <span className="text-text-disabled text-xs hidden sm:inline">
-                {seeking ? "Trying scrapers..." : "Seek tries each scraper until one returns results"}
-              </span>
-            </section>
-          )}
+          <NsfwGate>
+            {scrapers.length > 0 && (
+              <section className="surface-well px-4 py-3 flex flex-wrap items-center gap-3">
+                <Wand2 className="h-4 w-4 text-text-accent flex-shrink-0" />
+                <select
+                  className="control-input text-sm py-1.5 w-auto min-w-[140px]"
+                  value={selectedScraper}
+                  onChange={(e) => {
+                    setSelectedScraper(e.target.value);
+                    setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
+                  }}
+                >
+                  {scrapers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void handleScrape()}
+                  disabled={scraping || seeking}
+                >
+                  {scraping ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Search className="h-3.5 w-3.5" />
+                  )}
+                  {scraping ? "Scraping..." : "Scrape"}
+                </Button>
+                <button
+                  onClick={() => void handleSeek()}
+                  disabled={scraping || seeking}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-text-muted border border-border-subtle hover:text-text-accent hover:border-border-accent disabled:opacity-50 transition-all duration-fast"
+                >
+                  {seeking ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <SkipForward className="h-3.5 w-3.5" />
+                  )}
+                  {seeking ? "Seeking..." : "Seek"}
+                </button>
+                <span className="text-text-disabled text-xs hidden sm:inline">
+                  {seeking ? "Trying scrapers..." : "Seek tries each scraper until one returns results"}
+                </span>
+              </section>
+            )}
+          </NsfwGate>
 
           {/* Metadata form */}
           <section className="surface-card-sharp no-lift p-4 space-y-4">
@@ -1228,7 +1235,7 @@ export function SceneEdit({
                   count: p.sceneCount,
                 }))}
                 placeholder={`Type to add ${terms.performers.toLowerCase()}...`}
-                newItems={newFromScrape.performers}
+                newItems={nsfwMode === "off" ? undefined : newFromScrape.performers}
               />
             </FormField>
 
@@ -1241,7 +1248,7 @@ export function SceneEdit({
                   count: t.sceneCount,
                 }))}
                 placeholder="Type to add tags..."
-                newItems={newFromScrape.tags}
+                newItems={nsfwMode === "off" ? undefined : newFromScrape.tags}
               />
             </FormField>
           </section>
