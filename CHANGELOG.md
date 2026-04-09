@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-04-09
+
 ### Fixed
 
 - **SFW empty states** — Galleries (grid/list and browser) and Settings → Library now use neutral “empty” copy in SFW mode instead of text that implied NSFW content or libraries were present but hidden.
