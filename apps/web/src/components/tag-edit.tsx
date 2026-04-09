@@ -28,7 +28,7 @@ import {
   type NormalizedTagScrapeResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
-import { NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { TagForm, type TagFormValues } from "./tag-form";
 
 interface TagEditProps {
   id: string;
@@ -431,35 +431,15 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
             </div>
           )}
 
-          <div className="surface-well p-4 space-y-4">
-            <div className="text-kicker mb-1">Tag Info</div>
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">
-                  Name <span className="text-status-error ml-0.5">*</span>
-                </label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="control-input w-full py-1.5 text-sm" />
-              </div>
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Aliases</label>
-                <input type="text" value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="Comma-separated" className="control-input w-full py-1.5 text-sm" />
-              </div>
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  className="control-input w-full py-2 text-sm resize-y"
-                  placeholder="Tag description..."
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
-                {isNsfw && <span className="text-[0.68rem] text-text-muted">This tag will be hidden in SFW mode</span>}
-              </div>
-            </div>
-          </div>
+          <TagForm
+            values={{ name, description, aliases, isNsfw }}
+            onChange={(v) => {
+              setName(v.name);
+              setDescription(v.description);
+              setAliases(v.aliases);
+              setIsNsfw(v.isNsfw);
+            }}
+          />
         </div>
       </div>
     </div>

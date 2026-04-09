@@ -7,15 +7,11 @@ import {
   Loader2,
   X,
   Wand2,
-  Star,
   Upload,
   Image as ImageIcon,
   Check,
-  ChevronDown,
-  Search,
   SkipForward,
 } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchPerformerDetail,
@@ -38,25 +34,15 @@ import {
 } from "../lib/api";
 import { ImagePickerModal } from "./image-picker-modal";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
-import { NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
+import { PerformerForm } from "./performer-form";
 
 interface PerformerEditProps {
   id: string;
   onSaved?: () => void;
   onCancel?: () => void;
 }
-
-const genderOptions = [
-  "",
-  "Female",
-  "Male",
-  "Transgender Female",
-  "Transgender Male",
-  "Intersex",
-  "Non-Binary",
-];
 
 export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
   const terms = useTerms();
@@ -108,8 +94,6 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
   // Tags
   const [allTags, setAllTags] = useState<TagItem[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -430,31 +414,6 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
     });
   }
 
-  function addTag(tagName: string) {
-    const trimmed = tagName.trim();
-    if (!trimmed) return;
-    if (!tagNames.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
-      setTagNames([...tagNames, trimmed]);
-    }
-    setTagInput("");
-    setShowTagDropdown(false);
-  }
-
-  function removeTag(index: number) {
-    setTagNames(tagNames.filter((_, i) => i !== index));
-  }
-
-  const availableTags = allTags.filter(
-    (t) => !tagNames.some((tn) => tn.toLowerCase() === t.name.toLowerCase())
-  );
-  const filteredTags = tagInput.trim()
-    ? availableTags.filter((t) => t.name.toLowerCase().includes(tagInput.toLowerCase()))
-    : availableTags;
-  const tagPickerSuggestions = tagsVisibleInNsfwMode(
-    filteredTags,
-    performerTagPickerNsfwMode,
-  );
-
   if (loading) {
     return (
       <div className="surface-well p-16 flex items-center justify-center">
@@ -771,151 +730,37 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
           )}
 
           {/* Form fields */}
-          <div className="surface-well p-4 space-y-4">
-            <div className="text-kicker mb-1">Basic Info</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FieldInput label="Name" value={name} onChange={setName} required />
-              <FieldInput label="Disambiguation" value={disambiguation} onChange={setDisambiguation} />
-              <FieldInput label="Aliases" value={aliases} onChange={setAliases} className="col-span-full" placeholder="Comma-separated" />
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Gender</label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="control-input w-full py-1.5 text-sm"
-                >
-                  {genderOptions.map((g) => (
-                    <option key={g} value={g}>{g || "Not specified"}</option>
-                  ))}
-                </select>
-              </div>
-              <FieldInput label="Country" value={country} onChange={setCountry} />
-              <div className="col-span-full flex items-center gap-3">
-                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
-                {isNsfw && <span className="text-[0.68rem] text-text-muted">This performer will be hidden in SFW mode</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="surface-well p-4 space-y-4">
-            <div className="text-kicker mb-1">Physical Details</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FieldInput label="Birthdate" value={birthdate} onChange={setBirthdate} placeholder="YYYY-MM-DD" />
-              <FieldInput label="Ethnicity" value={ethnicity} onChange={setEthnicity} />
-              <FieldInput label="Height (cm)" value={height} onChange={setHeight} type="number" />
-              <FieldInput label="Weight (kg)" value={weight} onChange={setWeight} type="number" />
-              <FieldInput label="Measurements" value={measurements} onChange={setMeasurements} />
-              <FieldInput label="Eye Color" value={eyeColor} onChange={setEyeColor} />
-              <FieldInput label="Hair Color" value={hairColor} onChange={setHairColor} />
-            </div>
-          </div>
-
-          <div className="surface-well p-4 space-y-4">
-            <div className="text-kicker mb-1">Career & Body Art</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FieldInput label="Career Start" value={careerStart} onChange={setCareerStart} type="number" placeholder="Year" />
-              <FieldInput label="Career End" value={careerEnd} onChange={setCareerEnd} type="number" placeholder="Year" />
-              <FieldInput label="Tattoos" value={tattoos} onChange={setTattoos} className="col-span-full" />
-              <FieldInput label="Piercings" value={piercings} onChange={setPiercings} className="col-span-full" />
-            </div>
-          </div>
-
-          <div className="surface-well p-4 space-y-3">
-            <div className="text-kicker mb-1">Tags</div>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {tagNames.map((tag, i) => (
-                <span key={tag} className="inline-flex items-center gap-1 tag-chip tag-chip-default">
-                  {tag}
-                  <button onClick={() => removeTag(i)} className="text-text-disabled hover:text-text-primary">
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => {
-                  setTagInput(e.target.value);
-                  setShowTagDropdown(true);
-                }}
-                onFocus={() => setShowTagDropdown(true)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && tagInput.trim()) {
-                    e.preventDefault();
-                    addTag(tagInput);
-                  }
-                }}
-                placeholder="Add tag..."
-                className="control-input w-full py-1.5 text-sm"
-              />
-              {showTagDropdown && tagPickerSuggestions.length > 0 && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowTagDropdown(false)} />
-                  <div className="absolute left-0 right-0 top-full mt-1 z-50 surface-elevated max-h-40 overflow-y-auto py-1">
-                    {tagPickerSuggestions.slice(0, 20).map((tag) => (
-                      <button
-                        key={tag.id}
-                        onClick={() => addTag(tag.name)}
-                        className="w-full px-3 py-1.5 text-xs text-left text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
-                      >
-                        <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
-                        <span className="ml-2 text-text-disabled">{tag.sceneCount}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="surface-well p-4 space-y-3">
-            <div className="text-kicker mb-1">Biography</div>
-            <textarea
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              rows={4}
-              className="control-input w-full py-2 text-sm resize-y"
-              placeholder={`${terms.performer} biography...`}
-            />
-          </div>
+          <PerformerForm
+            values={{
+              name, disambiguation, aliases, gender, birthdate, country,
+              ethnicity, eyeColor, hairColor, height, weight, measurements,
+              tattoos, piercings, careerStart, careerEnd, details, tagNames, isNsfw,
+            }}
+            onChange={(v) => {
+              setName(v.name);
+              setDisambiguation(v.disambiguation);
+              setAliases(v.aliases);
+              setGender(v.gender);
+              setBirthdate(v.birthdate);
+              setCountry(v.country);
+              setEthnicity(v.ethnicity);
+              setEyeColor(v.eyeColor);
+              setHairColor(v.hairColor);
+              setHeight(v.height);
+              setWeight(v.weight);
+              setMeasurements(v.measurements);
+              setTattoos(v.tattoos);
+              setPiercings(v.piercings);
+              setCareerStart(v.careerStart);
+              setCareerEnd(v.careerEnd);
+              setDetails(v.details);
+              setTagNames(v.tagNames);
+              setIsNsfw(v.isNsfw);
+            }}
+            allTags={allTags}
+          />
         </div>
       </div>
-    </div>
-  );
-}
-
-function FieldInput({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-  required,
-  className,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  type?: string;
-  placeholder?: string;
-  required?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">
-        {label}
-        {required && <span className="text-status-error ml-0.5">*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="control-input w-full py-1.5 text-sm"
-      />
     </div>
   );
 }

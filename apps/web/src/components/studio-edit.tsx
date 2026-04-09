@@ -34,7 +34,7 @@ import {
   type StashBoxStudioResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
-import { NsfwEditToggle } from "./nsfw/nsfw-gate";
+import { StudioForm } from "./studio-form";
 
 interface StudioEditProps {
   id: string;
@@ -57,8 +57,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
   const [isNsfw, setIsNsfw] = useState(false);
   const [parentId, setParentId] = useState<string | null>(null);
   const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
-  const [parentSearch, setParentSearch] = useState("");
-  const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
+  const [initialParentName, setInitialParentName] = useState("");
 
   // Image
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +87,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       setUrl(s.url ?? "");
       setIsNsfw(s.isNsfw ?? false);
       setParentId(s.parentId);
-      setParentSearch(s.parent?.name ?? "");
+      setInitialParentName(s.parent?.name ?? "");
 
       // Exclude self from parent candidates
       setAllStudios(stRes.studios.filter((st) => st.id !== id));
@@ -231,7 +230,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       setAliases(refreshed.aliases ?? "");
       setUrl(refreshed.url ?? "");
       setParentId(refreshed.parentId);
-      setParentSearch(refreshed.parent?.name ?? "");
+      setInitialParentName(refreshed.parent?.name ?? "");
 
       if (scrapeEndpointId && scrapeRemoteId) {
         await autoSaveStashId("studio", id, scrapeEndpointId, scrapeRemoteId);
@@ -467,84 +466,19 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             </div>
           )}
 
-          <div className="surface-well p-4 space-y-4">
-            <div className="text-kicker mb-1">Studio Info</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="col-span-full sm:col-span-1">
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">
-                  Name <span className="text-status-error ml-0.5">*</span>
-                </label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="control-input w-full py-1.5 text-sm" />
-              </div>
-              <div>
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">URL</label>
-                <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="control-input w-full py-1.5 text-sm" />
-              </div>
-              <div className="relative">
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Parent Studio</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={parentSearch}
-                    onChange={(e) => { setParentSearch(e.target.value); setParentDropdownOpen(true); }}
-                    onFocus={() => setParentDropdownOpen(true)}
-                    onBlur={() => setTimeout(() => setParentDropdownOpen(false), 200)}
-                    placeholder="Search studios..."
-                    className="control-input w-full py-1.5 text-sm"
-                  />
-                  {parentId && (
-                    <button
-                      type="button"
-                      onClick={() => { setParentId(null); setParentSearch(""); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-                {parentDropdownOpen && parentSearch.length > 0 && (
-                  <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-surface-2 border border-border-subtle shadow-lg max-h-48 overflow-y-auto">
-                    {allStudios
-                      .filter((s) => s.name.toLowerCase().includes(parentSearch.toLowerCase()))
-                      .slice(0, 20)
-                      .map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setParentId(s.id);
-                            setParentSearch(s.name);
-                            setParentDropdownOpen(false);
-                          }}
-                          className={cn(
-                            "w-full text-left px-3 py-1.5 text-sm hover:bg-surface-3 transition-colors",
-                            s.id === parentId && "text-text-accent"
-                          )}
-                        >
-                          {s.name}
-                        </button>
-                      ))}
-                    {allStudios.filter((s) => s.name.toLowerCase().includes(parentSearch.toLowerCase())).length === 0 && (
-                      <div className="px-3 py-2 text-xs text-text-disabled">No studios found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="col-span-full">
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Aliases</label>
-                <input type="text" value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="Comma-separated" className="control-input w-full py-1.5 text-sm" />
-              </div>
-              <div className="col-span-full">
-                <label className="text-[0.68rem] text-text-muted font-medium mb-1 block">Description</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="control-input w-full py-2 text-sm resize-y" placeholder="Studio description..." />
-              </div>
-              <div className="col-span-full flex items-center gap-3">
-                <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
-                {isNsfw && <span className="text-[0.68rem] text-text-muted">This studio will be hidden in SFW mode</span>}
-              </div>
-            </div>
-          </div>
+          <StudioForm
+            values={{ name, url, description, aliases, isNsfw, parentId }}
+            onChange={(v) => {
+              setName(v.name);
+              setUrl(v.url);
+              setDescription(v.description);
+              setAliases(v.aliases);
+              setIsNsfw(v.isNsfw);
+              setParentId(v.parentId);
+            }}
+            allStudios={allStudios}
+            initialParentName={initialParentName}
+          />
         </div>
       </div>
     </div>

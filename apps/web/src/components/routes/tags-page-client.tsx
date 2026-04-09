@@ -13,6 +13,7 @@ import {
   List,
   Cloud,
   RotateCcw,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
@@ -349,6 +350,20 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
               <span className="hidden sm:inline">Clear</span>
             </button>
           )}
+
+          <div className="h-5 w-px bg-border-subtle" />
+
+          <Link
+            href="/tags/new"
+            className={cn(
+              "flex items-center gap-1 px-2 py-1.5",
+              "text-text-accent text-[0.72rem] hover:text-text-accent-bright hover:bg-surface-2",
+              "transition-colors duration-fast",
+            )}
+          >
+            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">New</span>
+          </Link>
         </div>
       )}
 

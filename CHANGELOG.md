@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Create pages for studios, performers, and tags** — New `/studios/new`, `/performers/new`, and `/tags/new` routes with full form UI for manually creating entities. Form fields are extracted into shared components (`StudioForm`, `PerformerForm`, `TagForm`) used by both the create and edit views, reducing duplication. Each list page toolbar includes a **+ New** button linking to the create page.
+
 ### Fixed
 
 - **Images grid infinite scroll** — Grid view on `/images` used a manual “Load more” button while feed view auto-loaded with an intersection sentinel. Grid now uses the same observer-based loading as the feed (and other library grids).
