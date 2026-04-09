@@ -16,6 +16,7 @@ import { stashboxRoutes } from "./routes/stashbox";
 import { galleriesRoutes } from "./routes/galleries";
 import { imagesRoutes } from "./routes/images";
 import { searchRoutes } from "./routes/search";
+import { changelogRoutes } from "./routes/changelog";
 import pkg from "../../../package.json";
 
 const app = Fastify({
@@ -42,6 +43,7 @@ app.get(apiRoutes.health, async () => ({
   service: "api",
   version: pkg.version,
 }));
+await app.register(changelogRoutes);
 
 // ─── Feature routes ───────────────────────────────────────────────
 await app.register(settingsRoutes);

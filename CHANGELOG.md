@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-04-09
+
+### Fixed
+
+- **Changelog API routing** — `/api/changelog` was routed by nginx to Fastify but implemented as a Next.js route, so it always returned 404 in Docker. Moved the endpoint to Fastify (`GET /changelog`), deleted the dead Next.js route, and cleaned up the now-unnecessary `outputFileTracingIncludes` and `outputFileTracingRoot` config from `next.config.mjs`.
+
 ## [0.3.0] - 2026-04-09
 
 ### Changed

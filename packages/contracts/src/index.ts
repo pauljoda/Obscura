@@ -1,5 +1,6 @@
 export const apiRoutes = {
   health: "/health",
+  changelog: "/changelog",
   jobs: "/jobs",
   jobQueueRun: "/jobs/queues/:queueName/run",
   jobCancelAll: "/jobs/cancel-all",
