@@ -28,6 +28,7 @@ import {
   type NormalizedTagScrapeResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
+import { NsfwGate } from "./nsfw/nsfw-gate";
 import { TagForm, type TagFormValues } from "./tag-form";
 
 interface TagEditProps {
@@ -386,11 +387,12 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
             </div>
           )}
 
-          {/* StashBox IDs */}
-          <div className="surface-well p-3 space-y-2">
-            <div className="text-kicker">StashBox IDs</div>
-            <StashIdChips entityType="tag" entityId={id} compact />
-          </div>
+          <NsfwGate>
+            <div className="surface-well p-3 space-y-2">
+              <div className="text-kicker">StashBox IDs</div>
+              <StashIdChips entityType="tag" entityId={id} compact />
+            </div>
+          </NsfwGate>
         </div>
 
         {/* Right column — form */}

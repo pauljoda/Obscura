@@ -34,6 +34,7 @@ import {
   type StashBoxStudioResult,
 } from "../lib/api";
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
+import { NsfwGate } from "./nsfw/nsfw-gate";
 import { StudioForm } from "./studio-form";
 
 interface StudioEditProps {
@@ -413,11 +414,12 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             </div>
           )}
 
-          {/* StashBox IDs */}
-          <div className="surface-well p-3 space-y-2">
-            <div className="text-kicker">StashBox IDs</div>
-            <StashIdChips entityType="studio" entityId={id} compact />
-          </div>
+          <NsfwGate>
+            <div className="surface-well p-3 space-y-2">
+              <div className="text-kicker">StashBox IDs</div>
+              <StashIdChips entityType="studio" entityId={id} compact />
+            </div>
+          </NsfwGate>
         </div>
 
         {/* Right column — form */}

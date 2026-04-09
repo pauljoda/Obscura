@@ -11,6 +11,7 @@ import {
   type StashIdEntry,
   type StashBoxEndpoint,
 } from "../lib/api";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface StashIdChipsProps {
   entityType: "scene" | "performer" | "studio" | "tag";
@@ -30,6 +31,9 @@ export function StashIdChips({
   onUpdate,
   compact = false,
 }: StashIdChipsProps) {
+  const { mode: nsfwMode } = useNsfw();
+  const hiddenInSfw = nsfwMode === "off";
+
   const [stashIds, setStashIds] = useState<StashIdEntry[]>(initialStashIds ?? []);
   const [endpoints, setEndpoints] = useState<StashBoxEndpoint[]>([]);
   const [loading, setLoading] = useState(!initialStashIds);
@@ -39,17 +43,24 @@ export function StashIdChips({
   const [inputStashId, setInputStashId] = useState("");
 
   useEffect(() => {
-    if (initialStashIds) {
-      setStashIds(initialStashIds);
+    if (hiddenInSfw) {
+      setLoading(false);
       return;
     }
+    if (initialStashIds) {
+      setStashIds(initialStashIds);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     fetchStashIds(entityType, entityId)
       .then((res) => setStashIds(res.stashIds))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [entityType, entityId, initialStashIds]);
+  }, [entityType, entityId, initialStashIds, hiddenInSfw]);
 
   useEffect(() => {
+    if (hiddenInSfw) return;
     if (showAddForm && endpoints.length === 0) {
       fetchStashBoxEndpoints()
         .then((res) => {
@@ -58,7 +69,7 @@ export function StashIdChips({
         })
         .catch(() => {});
     }
-  }, [showAddForm, endpoints.length]);
+  }, [showAddForm, endpoints.length, hiddenInSfw]);
 
   async function handleAdd() {
     if (!selectedEndpointId || !inputStashId.trim()) return;
@@ -91,6 +102,10 @@ export function StashIdChips({
     } catch {
       // ignore
     }
+  }
+
+  if (hiddenInSfw) {
+    return null;
   }
 
   if (loading) {

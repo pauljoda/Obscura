@@ -46,7 +46,13 @@ import {
   type TagItem,
 } from "../lib/api";
 import { StashIdChips } from "./stash-id-chips";
-import { NsfwBlur, NsfwChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
+import {
+  NsfwBlur,
+  NsfwChip,
+  NsfwGate,
+  NsfwTagLabel,
+  tagsVisibleInNsfwMode,
+} from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 
@@ -596,11 +602,12 @@ export function SceneDetail({
               />
             </div>
 
-            {/* StashBox IDs */}
-            <div className="pt-2 border-t border-border-subtle">
-              <h4 className="text-kicker mb-2">StashBox IDs</h4>
-              <StashIdChips entityType="scene" entityId={scene.id} compact />
-            </div>
+            <NsfwGate>
+              <div className="pt-2 border-t border-border-subtle">
+                <h4 className="text-kicker mb-2">StashBox IDs</h4>
+                <StashIdChips entityType="scene" entityId={scene.id} compact />
+              </div>
+            </NsfwGate>
           </div>
         </div>
       )}

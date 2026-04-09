@@ -35,7 +35,13 @@ import {
   type SceneListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
-import { NsfwBlur, NsfwChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import {
+  NsfwBlur,
+  NsfwChip,
+  NsfwGate,
+  NsfwTagLabel,
+  tagsVisibleInNsfwMode,
+} from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 
 interface PerformerPageClientProps {
@@ -431,11 +437,12 @@ export function PerformerPageClient({
             </div>
           ) : null}
 
-          {/* StashBox IDs */}
-          <div className="surface-well p-4">
-            <div className="mb-2 text-kicker">StashBox IDs</div>
-            <StashIdChips entityType="performer" entityId={id} compact />
-          </div>
+          <NsfwGate>
+            <div className="surface-well p-4">
+              <div className="mb-2 text-kicker">StashBox IDs</div>
+              <StashIdChips entityType="performer" entityId={id} compact />
+            </div>
+          </NsfwGate>
 
           <div className="separator" />
 
