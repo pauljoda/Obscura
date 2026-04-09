@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
