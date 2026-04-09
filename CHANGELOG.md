@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Gallery service layer** — Extracted gallery business logic (`listGalleries`, `getGalleryById`, `updateGallery`, `getGalleryStats`, `setCoverImage`, chapter CRUD) from route handlers into `apps/api/src/services/gallery.service.ts`.
 
+- **Scene service layer** — Extracted scene business logic (`listScenes`, `getSceneById`, `getSceneStats`, `updateScene`, `deleteScene`, marker CRUD, play/orgasm recording, thumbnail management) from route handlers into `apps/api/src/services/scene.service.ts`. Uses `AppError` for HTTP error responses.
+
 - **Filter presets** — Save and load named filter presets from a dropdown in the scene filter toolbar. Presets store active filters, sort field, and sort direction in localStorage. Supports overwrite, delete, and save-as-new workflows. Active preset persists across page refresh via the existing scenes list cookie.
 
 - **Multi-select filters** — Resolution, codec, and studio filters now support selecting multiple values simultaneously (e.g. filter by both H.264 and HEVC, or 1080p and 4K). API updated to accept arrays for these fields.
