@@ -309,10 +309,19 @@ export function ScenesPageClient({
 
   function handleApplyPreset(preset: FilterPreset) {
     startTransition(() => {
-      setActiveFilters(preset.filters);
-      setSortBy(preset.sortBy);
-      setSortDir(preset.sortDir);
-      setActivePresetId(preset.id);
+      if (activePresetId === preset.id) {
+        // Toggle off: clear filters back to defaults
+        const d = defaultScenesListPrefs();
+        setActiveFilters(d.activeFilters);
+        setSortBy(d.sortBy);
+        setSortDir(d.sortDir);
+        setActivePresetId(null);
+      } else {
+        setActiveFilters(preset.filters);
+        setSortBy(preset.sortBy);
+        setSortDir(preset.sortDir);
+        setActivePresetId(preset.id);
+      }
     });
   }
 
