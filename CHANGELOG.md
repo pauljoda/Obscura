@@ -38,6 +38,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Filter presets** — Save and load named filter presets from a dropdown in the scene filter toolbar. Presets store active filters, sort field, and sort direction in localStorage. Supports overwrite, delete, and save-as-new workflows. Active preset persists across page refresh via the existing scenes list cookie.
 
+- **Shared query/response types** — Added `PaginatedResponse<T>`, `ErrorResponse`, `ListQuery`, and entity-specific query types (`SceneListQuery`, `GalleryListQuery`, etc.) to `@obscura/contracts`. Added subpath exports for `@obscura/contracts/queries` and `@obscura/contracts/media`.
+
+- **API query helpers** — Shared helpers in `apps/api/src/lib/query-helpers.ts` for sorting (`buildOrderBy`), relation filtering (`resolveTagIds`, `resolvePerformerIds`), rating/date/boolean/resolution conditions, and pagination parsing. Eliminates 3x duplicated patterns across route handlers.
+
+- **Next.js error/loading boundaries** — Added global `error.tsx` (with retry) and `loading.tsx` (spinner) under the app route group, styled to the Dark Control Room design system.
+
+- **Testing infrastructure** — Set up vitest at root with 42 initial tests covering pure functions in `@obscura/contracts` (formatDuration, formatFileSize, getResolutionLabel, video format detection) and `@obscura/media-core` (isVideoFile, isImageFile, fileNameToTitle, normalizeNfoRating, getSidecarPaths, isAnimatedFormat).
+
+- **Type safety** — Replaced `Record<string, any>` with `Record<string, unknown>` in scraper routes.
+
 - **Multi-select filters** — Resolution, codec, and studio filters now support selecting multiple values simultaneously (e.g. filter by both H.264 and HEVC, or 1080p and 4K). API updated to accept arrays for these fields.
 
 - **Shared alphabetical filter section** — Tags, performers, and studios all use a unified `AlphabeticalFilterSection` component with search input, count display, and sticky letter-grouped layout for large lists. Extracted from the tags gold-standard pattern into `components/filters/`.
