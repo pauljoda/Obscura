@@ -32,6 +32,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Settings watched libraries (SFW)** — With content visibility Off, NSFW-marked library roots are hidden from the Watched Libraries list (same rule as other library views). If every configured root is NSFW, a short message explains that those entries are hidden and how to switch mode to manage them.
+
 - **Accent metadata pills (`pill-accent`)** — Replaced diagonal gradient, inner highlight, and outer glow with a flat `accent-950` fill and a single `1px` brass-tinted border so resolution and similar chips read as one clean edge (e.g. scene detail, media cards, filter chips).
 
 - **Video player direct mode chips** — When streaming the direct file with quality mode **Direct**, the top overlay no longer shows a duplicate neutral “Direct” chip next to the brass mode chip; **Loading…** and **Adaptive HLS** stream-type chips are unchanged.

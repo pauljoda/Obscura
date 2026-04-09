@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
@@ -132,6 +132,11 @@ export function SettingsPageClient({
   const [newRootScanImages, setNewRootScanImages] = useState(true);
   const [newRootIsNsfw, setNewRootIsNsfw] = useState(false);
   const { mode: nsfwMode, setMode: setNsfwMode } = useNsfw();
+  /** In SFW mode (Off), do not list NSFW-marked roots — same visibility as the rest of the app. */
+  const rootsVisibleInSettings = useMemo(() => {
+    if (nsfwMode === "off") return roots.filter((r) => !r.isNsfw);
+    return roots;
+  }, [roots, nsfwMode]);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scraperCount, setScraperCount] = useState(initialScraperCount);
@@ -491,9 +496,17 @@ export function SettingsPageClient({
               No library roots configured. Browse to a mounted folder to begin.
             </p>
           </div>
+        ) : rootsVisibleInSettings.length === 0 ? (
+          <div className="surface-card no-lift p-8 text-center">
+            <FolderOpen className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
+            <p className="text-sm text-text-muted">
+              NSFW libraries are hidden while content visibility is Off (SFW). Switch to Blur or Show in Content
+              Visibility below to view and edit them.
+            </p>
+          </div>
         ) : (
           <div className="space-y-1.5">
-            {roots.map((root) => (
+            {rootsVisibleInSettings.map((root) => (
               <div
                 key={root.id}
                 className={cn(
