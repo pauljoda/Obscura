@@ -16,6 +16,7 @@ export {
 // Primitives
 export { Button, type ButtonProps } from "./primitives/button";
 export { Badge, type BadgeProps } from "./primitives/badge";
+export { Checkbox, type CheckboxProps } from "./primitives/checkbox";
 
 // Composed components
 export { StatusLed, type LedStatus, type LedSize } from "./composed/status-led";

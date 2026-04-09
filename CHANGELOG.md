@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **`Checkbox` primitive (`@obscura/ui`)** — Dark Room–styled control: sharp corners, surface border, brass fill and glow when checked, Lucide checkmark, focus ring, and optional `indeterminate`. Replaces native `accent-*` inputs across list bulk-select headers, entity list cards, settings library-root options, performer filters, and scrape/bulk UIs.
+
 - **Galleries list: saved filters and sort** — The galleries index persists view mode, sort, sort direction, search, and tag/type filters in the `obscura-galleries-list` cookie (1 year, SameSite=Lax). The server reads the cookie on load so the first paint matches saved prefs. A **Clear** control resets to defaults and removes the cookie when the list is back to defaults.
 
 - **Scenes, performers, studios, tags: saved list prefs** — Same cookie pattern as galleries: **Scenes** (`obscura-scenes-list`: view, sort, search, resolution/tag/studio/performer filters), **Performers** (`obscura-performers-list`: view, sort, search, gender, favorites), **Studios** (`obscura-studios-list`: search, name sort direction, grid/list), **Tags** (`obscura-tags-list`: search, sort, list/cloud). Server-side fetches for scenes and performers use the cookie on first load; studios and tags hydrate display prefs from the cookie. Each list exposes **Clear** when not at defaults; the cookie is dropped when prefs match defaults.

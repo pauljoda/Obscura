@@ -24,6 +24,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import { fetchPerformers, updatePerformer, deletePerformer, type PerformerItem } from "../../lib/api";
 import { useNsfw } from "../nsfw/nsfw-context";
@@ -485,11 +486,9 @@ export function PerformersPageClient({
                 </select>
               </div>
               <label className="flex items-center gap-2 pt-6 text-xs text-text-secondary">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={favoriteOnly}
                   onChange={(event) => setFavoriteOnly(event.target.checked)}
-                  className="accent-[#c79b5c]"
                 />
                 Favorites only
               </label>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
+
 interface SelectAllHeaderProps {
   allSelected: boolean;
   onToggle: () => void;
@@ -15,12 +17,7 @@ export function SelectAllHeader({
 }: SelectAllHeaderProps) {
   return (
     <div className="surface-card-sharp flex items-center gap-3 px-3 py-2 mb-1">
-      <input
-        type="checkbox"
-        checked={allSelected}
-        onChange={onToggle}
-        className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer"
-      />
+      <Checkbox checked={allSelected} onChange={() => onToggle()} />
       <span className="text-[0.72rem] text-text-muted">
         {selectedCount > 0
           ? `${selectedCount} of ${totalVisible} selected`

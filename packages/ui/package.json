@@ -11,6 +11,7 @@
     "./lib/trickplay": "./src/lib/trickplay.ts",
     "./primitives/button": "./src/primitives/button.tsx",
     "./primitives/badge": "./src/primitives/badge.tsx",
+    "./primitives/checkbox": "./src/primitives/checkbox.tsx",
     "./composed/media-card": "./src/composed/media-card.tsx",
     "./composed/meter": "./src/composed/meter.tsx",
     "./composed/status-led": "./src/composed/status-led.tsx",

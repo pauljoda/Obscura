@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
@@ -217,11 +218,9 @@ export function BulkPerformerScrape() {
         </select>
 
         <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={autoAccept}
             onChange={(e) => setAutoAccept(e.target.checked)}
-            className="accent-[#c79b5c]"
             disabled={running}
           />
           Auto-accept

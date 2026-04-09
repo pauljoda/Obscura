@@ -13,6 +13,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchTagDetail,
@@ -483,7 +484,12 @@ function ScrapeField({
       className={cn("flex items-start gap-2 cursor-pointer transition-opacity", !enabled && "opacity-40")}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
     >
-      <input type="checkbox" checked={enabled} onChange={onToggle} className="accent-[#c79b5c] mt-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()} />
+      <Checkbox
+        checked={enabled}
+        onChange={() => onToggle()}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-0.5 flex-shrink-0"
+      />
       <div className="min-w-0">
         <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">{label}</span>
         <p className={cn("truncate text-[0.78rem]", enabled ? "text-text-primary" : "text-text-disabled line-through")}>{value}</p>

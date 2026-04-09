@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Star, Users } from "lucide-react";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import type { PerformerCardData } from "./performer-card-data";
 import { NsfwBlur, NsfwShowModeChip, NsfwText } from "../nsfw/nsfw-gate";
 import { entityTerms, formatVideoCount } from "../../lib/terminology";
@@ -84,12 +85,14 @@ function PerformerListCard({
     <Link href={performer.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
         {onToggleSelect && (
-          <input
-            type="checkbox"
+          <Checkbox
             checked={selected ?? false}
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.preventDefault(); onToggleSelect(performer.id); }}
-            className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+            onChange={(e) => {
+              e.preventDefault();
+              onToggleSelect(performer.id);
+            }}
+            className="flex-shrink-0"
           />
         )}
         <NsfwBlur isNsfw={performer.isNsfw ?? false} className="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">

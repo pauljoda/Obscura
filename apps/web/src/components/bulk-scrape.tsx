@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@obscura/ui/primitives/badge";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
@@ -1045,22 +1046,18 @@ export function BulkScrape() {
           </div>
 
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={autoAccept}
               onChange={(e) => setAutoAccept(e.target.checked)}
-              className="accent-[#c79b5c]"
               disabled={running}
             />
             Auto-accept
           </label>
 
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={showAll}
               onChange={(e) => setShowAll(e.target.checked)}
-              className="accent-[#c79b5c]"
               disabled={running}
             />
             Show all
@@ -1338,11 +1335,9 @@ function SceneRowCard({
                     )}
                   />
                   <div className="absolute top-1 left-1">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={row.selectedFields.has("image")}
                       onChange={() => onToggleField("image")}
-                      className="accent-[#c79b5c]"
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
@@ -1372,11 +1367,9 @@ function SceneRowCard({
               {row.normalized.performerNames.length > 0 && (
                 <div className={cn("transition-opacity", !row.selectedFields.has("performers") && "opacity-40")}>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={row.selectedFields.has("performers")}
                       onChange={() => onToggleField("performers")}
-                      className="accent-[#c79b5c]"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <span className="text-kicker">{entityTerms.performers}</span>
@@ -1412,11 +1405,9 @@ function SceneRowCard({
               {row.normalized.tagNames.length > 0 && (
                 <div className={cn("transition-opacity", !row.selectedFields.has("tags") && "opacity-40")}>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={row.selectedFields.has("tags")}
                       onChange={() => onToggleField("tags")}
-                      className="accent-[#c79b5c]"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <span className="text-kicker">Tags</span>
@@ -1730,7 +1721,11 @@ function StudioRowCard({
                     )}
                   />
                   <div className="absolute top-1 left-1">
-                    <input type="checkbox" checked={row.selectedFields.has("imageUrl")} onChange={() => onToggleField("imageUrl")} className="accent-[#c79b5c]" onClick={(e) => e.stopPropagation()} />
+                    <Checkbox
+                      checked={row.selectedFields.has("imageUrl")}
+                      onChange={() => onToggleField("imageUrl")}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </div>
                 </div>
               </div>
@@ -1874,11 +1869,10 @@ function ToggleableField({
       )}
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
     >
-      <input
-        type="checkbox"
+      <Checkbox
         checked={enabled}
-        onChange={onToggle}
-        className="accent-[#c79b5c] mt-0.5 flex-shrink-0"
+        onChange={() => onToggle()}
+        className="mt-0.5 flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
       />
       <div className="min-w-0">

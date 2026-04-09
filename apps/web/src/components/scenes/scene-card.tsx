@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Clock, Eye, Film, HardDrive, Star } from "lucide-react";
 import { MediaCard } from "@obscura/ui/composed/media-card";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import { SCENE_TAG_COLORS } from "../scene-tag-colors";
 import type { SceneCardData } from "./scene-card-data";
@@ -122,12 +123,14 @@ function SceneListCard({
     <Link href={scene.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
         {onToggleSelect && (
-          <input
-            type="checkbox"
+          <Checkbox
             checked={selected ?? false}
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { e.preventDefault(); onToggleSelect(scene.id); }}
-            className="accent-[#c79b5c] h-3.5 w-3.5 cursor-pointer flex-shrink-0"
+            onChange={(e) => {
+              e.preventDefault();
+              onToggleSelect(scene.id);
+            }}
+            className="flex-shrink-0"
           />
         )}
         <NsfwBlur isNsfw={scene.isNsfw ?? false}>

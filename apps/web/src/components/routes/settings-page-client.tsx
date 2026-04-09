@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Database,
@@ -426,40 +427,32 @@ export function SettingsPageClient({
                   placeholder={`Primary ${entityTerms.scenes.toLowerCase()}`}
                 />
               </div>
-              <label className="cursor-pointer pb-2 text-xs text-text-secondary">
-                <input
-                  type="checkbox"
-                  className="mr-2 accent-[#c79b5c]"
+              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
+                <Checkbox
                   checked={newRootRecursive}
                   onChange={(event) => setNewRootRecursive(event.target.checked)}
                 />
                 Recursive
               </label>
-              <label className="cursor-pointer pb-2 text-xs text-text-secondary">
-                <input
-                  type="checkbox"
-                  className="mr-2 accent-[#c79b5c]"
+              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
+                <Checkbox
                   checked={newRootScanVideos}
                   onChange={(event) => setNewRootScanVideos(event.target.checked)}
                 />
                 Videos
               </label>
-              <label className="cursor-pointer pb-2 text-xs text-text-secondary">
-                <input
-                  type="checkbox"
-                  className="mr-2 accent-[#c79b5c]"
+              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
+                <Checkbox
                   checked={newRootScanImages}
                   onChange={(event) => setNewRootScanImages(event.target.checked)}
                 />
                 Images
               </label>
-              <label className="cursor-pointer pb-2 text-xs text-text-secondary" title="Mark all content in this library as NSFW">
-                <input
-                  type="checkbox"
-                  className="mr-2 accent-[#c79b5c]"
-                  checked={newRootIsNsfw}
-                  onChange={(event) => setNewRootIsNsfw(event.target.checked)}
-                />
+              <label
+                className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary"
+                title="Mark all content in this library as NSFW"
+              >
+                <Checkbox checked={newRootIsNsfw} onChange={(event) => setNewRootIsNsfw(event.target.checked)} />
                 NSFW
               </label>
               <button
