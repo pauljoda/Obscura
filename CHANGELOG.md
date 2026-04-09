@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Performer service layer** — Extracted performer business logic (`listPerformers`, `getPerformerById`, `createPerformer`, `updatePerformer`, `deletePerformer`, favorite/rating setters, image upload/from-url/delete) from route handlers into `apps/api/src/services/performer.service.ts`. Uses `AppError` for HTTP error responses.
 
+- **Studio service layer** — Extracted studio business logic (`listStudios`, `getStudioById`, `createStudio`, `updateStudio`, `findOrCreateStudio`, `deleteStudio`, favorite/rating setters, image upload/from-url/delete) from route handlers into `apps/api/src/services/studio.service.ts`. Includes recursive parent resolution with loop prevention for find-or-create.
+
+- **Tag service layer** — Extracted tag business logic (`listTags`, `getTagById`, `createTag`, `updateTag`, `deleteTag`, favorite/rating setters, image upload/from-url/delete) from route handlers into `apps/api/src/services/tag.service.ts`. SFW-aware scene and image count aggregation.
+
 - **Filter presets** — Save and load named filter presets from a dropdown in the scene filter toolbar. Presets store active filters, sort field, and sort direction in localStorage. Supports overwrite, delete, and save-as-new workflows. Active preset persists across page refresh via the existing scenes list cookie.
 
 - **Multi-select filters** — Resolution, codec, and studio filters now support selecting multiple values simultaneously (e.g. filter by both H.264 and HEVC, or 1080p and 4K). API updated to accept arrays for these fields.
