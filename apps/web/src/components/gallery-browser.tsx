@@ -6,6 +6,7 @@ import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
 import { buildGalleryTree, type GalleryTreeNode } from "../lib/gallery-tree";
 import type { GalleryListItemDto } from "@obscura/contracts";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface GalleryBrowserProps {
   galleries: GalleryListItemDto[];
@@ -33,8 +34,13 @@ export function GalleryBrowser({ galleries }: GalleryBrowserProps) {
 }
 
 function TreeRow({ node, depth }: { node: GalleryTreeNode; depth: number }) {
+  const { mode: nsfwMode } = useNsfw();
   const [expanded, setExpanded] = useState(depth === 0);
   const hasChildren = node.children.length > 0;
+
+  if (nsfwMode === "off" && node.gallery.isNsfw === true) {
+    return null;
+  }
 
   return (
     <div>

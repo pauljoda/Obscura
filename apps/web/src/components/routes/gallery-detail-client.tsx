@@ -13,6 +13,7 @@ import { GalleryCard } from "../gallery-card";
 import { GalleryListItem } from "../gallery-list-item";
 import { fetchGalleryImages, toApiUrl, type TagItem } from "../../lib/api";
 import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
+import { useNsfw } from "../nsfw/nsfw-context";
 
 interface GalleryDetailClientProps {
   initialGallery: GalleryDetailDto;
@@ -30,6 +31,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
   const [imageViewMode, setImageViewMode] = useState<"grid" | "feed">("grid");
   const searchParams = useSearchParams();
   const handledDeepLinkImageId = useRef<string | null>(null);
+  const { mode: nsfwMode } = useNsfw();
 
   useEffect(() => {
     setGallery(initialGallery);
@@ -141,6 +143,14 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
     createdAt: gallery.createdAt,
   }));
 
+  const visibleChildGalleries =
+    nsfwMode === "off"
+      ? childGalleries.filter((c) => c.isNsfw !== true)
+      : childGalleries;
+
+  const subGalleryCountLabel =
+    nsfwMode === "off" ? visibleChildGalleries.length : gallery.children.length;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -158,7 +168,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
           </h1>
           <p className="text-text-muted text-[0.78rem] mt-0.5">
             {gallery.imageCount} images
-            {gallery.children.length > 0 && ` \u00B7 ${gallery.children.length} sub-galleries`}
+            {gallery.children.length > 0 && ` \u00B7 ${subGalleryCountLabel} sub-galleries`}
             {gallery.galleryType !== "virtual" && ` \u00B7 ${gallery.galleryType}`}
           </p>
         </div>
@@ -169,7 +179,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
         {/* Left: Sub-galleries + Images */}
         <div className="space-y-6">
           {/* Sub-galleries section (above images) */}
-          {gallery.children.length > 0 && (
+          {visibleChildGalleries.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-kicker">Sub-galleries</h3>
@@ -201,13 +211,13 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
 
               {subGalleryView === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                  {childGalleries.map((child) => (
+                  {visibleChildGalleries.map((child) => (
                     <GalleryCard key={child.id} gallery={child} />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {childGalleries.map((child) => (
+                  {visibleChildGalleries.map((child) => (
                     <GalleryListItem key={child.id} gallery={child} />
                   ))}
                 </div>

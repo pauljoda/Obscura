@@ -3,17 +3,23 @@
 import { useMemo } from "react";
 import { GalleryCard } from "./gallery-card";
 import type { GalleryListItemDto } from "@obscura/contracts";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface GalleryTimelineProps {
   galleries: GalleryListItemDto[];
 }
 
 export function GalleryTimeline({ galleries }: GalleryTimelineProps) {
+  const { mode: nsfwMode } = useNsfw();
+
   const grouped = useMemo(() => {
+    const visible =
+      nsfwMode === "off" ? galleries.filter((g) => g.isNsfw !== true) : galleries;
+
     const groups: { label: string; galleries: GalleryListItemDto[] }[] = [];
     const map = new Map<string, GalleryListItemDto[]>();
 
-    for (const gallery of galleries) {
+    for (const gallery of visible) {
       const date = gallery.date ?? gallery.createdAt;
       const d = new Date(date);
       const key = isNaN(d.getTime())
@@ -31,7 +37,7 @@ export function GalleryTimeline({ galleries }: GalleryTimelineProps) {
     }
 
     return groups;
-  }, [galleries]);
+  }, [galleries, nsfwMode]);
 
   if (grouped.length === 0) {
     return (

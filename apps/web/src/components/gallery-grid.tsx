@@ -9,6 +9,7 @@ import { GalleryBrowser } from "./gallery-browser";
 import { GalleryTimeline } from "./gallery-timeline";
 import type { GalleryViewMode } from "./gallery-filter-bar";
 import type { GalleryListItemDto } from "@obscura/contracts";
+import { useNsfw } from "./nsfw/nsfw-context";
 
 interface GalleryGridProps {
   galleries: GalleryListItemDto[];
@@ -27,7 +28,11 @@ export function GalleryGrid({
   loadingMore = false,
   onLoadMore,
 }: GalleryGridProps) {
+  const { mode: nsfwMode } = useNsfw();
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const galleryVisibleInShell = (g: GalleryListItemDto) =>
+    nsfwMode !== "off" || g.isNsfw !== true;
 
   // IntersectionObserver for auto-loading more galleries
   useEffect(() => {
@@ -88,6 +93,20 @@ export function GalleryGrid({
     </>
   );
 
+  const sfwHidesAllGalleriesMessage = (
+    <div className="surface-well flex flex-col items-center justify-center py-20 text-center">
+      <div className="flex h-16 w-16 items-center justify-center bg-surface-3 mb-4">
+        <Images className="h-8 w-8 text-text-disabled" />
+      </div>
+      <h3 className="text-base font-medium font-heading text-text-secondary mb-1">
+        No galleries in this view
+      </h3>
+      <p className="text-text-muted text-sm max-w-xs">
+        NSFW galleries are hidden while content mode is Off (SFW). Change content visibility in Settings to see them.
+      </p>
+    </div>
+  );
+
   if (viewMode === "browser") {
     return (
       <>
@@ -107,10 +126,19 @@ export function GalleryGrid({
   }
 
   if (viewMode === "list") {
+    const listGalleries = galleries.filter(galleryVisibleInShell);
+    if (listGalleries.length === 0) {
+      return (
+        <>
+          {sfwHidesAllGalleriesMessage}
+          {loadMoreSentinel}
+        </>
+      );
+    }
     return (
       <>
         <div className="space-y-1">
-          {galleries.map((gallery) => (
+          {listGalleries.map((gallery) => (
             <GalleryListItem key={gallery.id} gallery={gallery} />
           ))}
         </div>
@@ -120,10 +148,19 @@ export function GalleryGrid({
   }
 
   // Grid view (default)
+  const gridGalleries = galleries.filter(galleryVisibleInShell);
+  if (gridGalleries.length === 0) {
+    return (
+      <>
+        {sfwHidesAllGalleriesMessage}
+        {loadMoreSentinel}
+      </>
+    );
+  }
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-        {galleries.map((gallery, index) => (
+        {gridGalleries.map((gallery, index) => (
           <div
             key={gallery.id}
             style={{ animationDelay: `${Math.min(index, 20) * 20}ms` }}
