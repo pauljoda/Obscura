@@ -23,6 +23,7 @@ import {
   Settings,
   Trash2,
   ChevronRight,
+  ChevronLeft,
   ToggleLeft,
   ToggleRight,
   X,
@@ -490,99 +491,116 @@ export function SettingsPageClient({
         </div>
 
         {browserVisible ? (
-          <div className="surface-card no-lift space-y-3 border-border-accent/30 p-4">
-            <div className="bg-black/20 p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="truncate text-mono-sm text-text-accent">
-                  {browser?.path ?? "Loading..."}
-                </span>
+          <div className="surface-card no-lift space-y-4 border-border-accent/30 p-4">
+            <div className="bg-black/20 p-3 rounded-sm border border-border-subtle">
+              <div className="mb-3 flex items-center gap-2">
                 <button
                   onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
                   disabled={!browser?.parentPath}
-                  className="flex-shrink-0 px-2.5 py-1 text-xs text-text-muted transition-all hover:bg-surface-3/60 hover:text-text-primary disabled:opacity-40"
+                  className="flex items-center gap-1 flex-shrink-0 px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-3 hover:text-text-primary disabled:opacity-40 rounded-sm border border-border-subtle"
                 >
-                  Up One Level
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Up
                 </button>
+                <div className="flex-1 overflow-x-auto scrollbar-hidden bg-surface-1 border border-border-subtle px-3 py-1.5 rounded-sm">
+                  <span className="whitespace-nowrap text-mono-sm text-text-accent">
+                    {browser?.path ?? "Loading..."}
+                  </span>
+                </div>
               </div>
               <div className="scrollbar-hidden grid max-h-[260px] gap-1.5 overflow-y-auto md:grid-cols-2">
                 {browser?.directories.map((directory) => (
                   <button
                     key={directory.path}
                     type="button"
-                    className="surface-card px-3 py-2 text-left"
+                    className="surface-card px-3 py-2 text-left flex items-center gap-3 group hover:border-border-accent/50 transition-colors"
                     onClick={() => void openBrowser(directory.path)}
                   >
-                    <p className="truncate text-[0.8rem] font-medium">{directory.name}</p>
-                    <p className="truncate text-mono-sm text-text-disabled">{directory.path}</p>
+                    <FolderOpen className="h-4 w-4 text-text-disabled group-hover:text-text-accent transition-colors flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[0.8rem] font-medium group-hover:text-text-primary transition-colors">{directory.name}</p>
+                    </div>
                   </button>
                 ))}
                 {browser && browser.directories.length === 0 ? (
-                  <p className="col-span-full py-3 text-center text-xs text-text-disabled">
+                  <p className="col-span-full py-6 text-center text-xs text-text-disabled bg-surface-1/50 rounded-sm border border-border-subtle border-dashed">
                     No child directories found.
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-[180px] flex-1">
-                <label className="control-label mb-1">Label (optional)</label>
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="control-label">Label (optional)</label>
                 <input
-                  className="control-input w-full py-1.5 text-sm"
+                  className="control-input w-full max-w-md py-1.5 text-sm"
                   value={newRootLabel}
                   onChange={(event) => setNewRootLabel(event.target.value)}
                   placeholder={`Primary ${entityTerms.scenes.toLowerCase()}`}
                 />
               </div>
-              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
-                <Checkbox
-                  checked={newRootRecursive}
-                  onChange={(event) => setNewRootRecursive(event.target.checked)}
-                />
-                Recursive
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
-                <Checkbox
-                  checked={newRootScanVideos}
-                  onChange={(event) => setNewRootScanVideos(event.target.checked)}
-                />
-                Videos
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary">
-                <Checkbox
-                  checked={newRootScanImages}
-                  onChange={(event) => setNewRootScanImages(event.target.checked)}
-                />
-                Images
-              </label>
-              <label
-                className="flex cursor-pointer items-center gap-2 pb-2 text-xs text-text-secondary"
-                title="Mark all content in this library as NSFW"
-              >
-                <Checkbox checked={newRootIsNsfw} onChange={(event) => setNewRootIsNsfw(event.target.checked)} />
-                NSFW
-              </label>
-              <button
-                onClick={() => void handleAddRoot()}
-                disabled={addingRoot || !newRootPath}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-normal",
-                  "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)]",
-                  "hover:shadow-[var(--shadow-glow-accent-strong)] disabled:opacity-50",
-                )}
-              >
-                {addingRoot ? "Adding..." : "Add Library"}
-              </button>
-              <button
-                onClick={() => {
-                  setBrowserVisible(false);
-                  setNewRootPath("");
-                  setNewRootLabel("");
-                }}
-                className="px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
-              >
-                Cancel
-              </button>
+
+              <div className="space-y-2">
+                <label className="control-label">Library Options</label>
+                <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                  <ToggleCard
+                    label="Recursive"
+                    description="Scan all subfolders"
+                    checked={newRootRecursive}
+                    onChange={setNewRootRecursive}
+                  />
+                  <ToggleCard
+                    label="Videos"
+                    description="Scan video files"
+                    checked={newRootScanVideos}
+                    onChange={setNewRootScanVideos}
+                  />
+                  <ToggleCard
+                    label="Images"
+                    description="Scan image files"
+                    checked={newRootScanImages}
+                    onChange={setNewRootScanImages}
+                  />
+                  <ToggleCard
+                    label="Audio"
+                    description="Scan audio files"
+                    checked={newRootScanAudio}
+                    onChange={setNewRootScanAudio}
+                  />
+                  <ToggleCard
+                    label="NSFW"
+                    description="Mark content as adult"
+                    checked={newRootIsNsfw}
+                    onChange={setNewRootIsNsfw}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={() => void handleAddRoot()}
+                  disabled={addingRoot || !newRootPath}
+                  className={cn(
+                    "flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all duration-normal",
+                    "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)]",
+                    "hover:shadow-[var(--shadow-glow-accent-strong)] disabled:opacity-50 rounded-sm",
+                  )}
+                >
+                  {addingRoot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  {addingRoot ? "Adding..." : "Add Library"}
+                </button>
+                <button
+                  onClick={() => {
+                    setBrowserVisible(false);
+                    setNewRootPath("");
+                    setNewRootLabel("");
+                  }}
+                  className="px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-primary hover:bg-surface-2 rounded-sm"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
