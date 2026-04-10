@@ -54,6 +54,20 @@ export const apiRoutes = {
   // Unified metadata providers
   metadataProviders: "/metadata-providers",
   search: "/search",
+  // Audio
+  audioLibraries: "/audio-libraries",
+  audioLibraryDetail: "/audio-libraries/:id",
+  audioLibraryStats: "/audio-libraries/stats",
+  audioLibraryCover: "/audio-libraries/:id/cover",
+  audioLibraryIcon: "/audio-libraries/:id/icon",
+  audioTracks: "/audio-tracks",
+  audioTrackDetail: "/audio-tracks/:id",
+  audioTrackMarkers: "/audio-tracks/:id/markers",
+  audioTrackMarkerDetail: "/audio-tracks/markers/:id",
+  audioStream: "/audio-stream/:id",
+  audioTrackWaveform: "/assets/audio-tracks/:id/waveform",
+  audioLibraryCoverAsset: "/assets/audio-libraries/:id/cover",
+  audioLibraryIconAsset: "/assets/audio-libraries/:id/icon",
 } as const;
 
 export const API_BASE_URL =
@@ -82,6 +96,8 @@ export type {
   ImageListQuery,
   StudioListQuery,
   TagListQuery,
+  AudioLibraryListQuery,
+  AudioTrackListQuery,
   BulkUpdateResult,
 } from "./queries";
 
@@ -132,6 +148,30 @@ export const queueDefinitions = [
     name: "image-fingerprint",
     label: "Image Fingerprint",
     description: "Computes md5 and oshash fingerprints for images",
+    concurrency: 1,
+  },
+  {
+    name: "audio-scan",
+    label: "Audio Scan",
+    description: "Discovers audio tracks in configured media roots",
+    concurrency: 1,
+  },
+  {
+    name: "audio-probe",
+    label: "Audio Probe",
+    description: "Extracts technical metadata and embedded tags from audio files",
+    concurrency: 1,
+  },
+  {
+    name: "audio-fingerprint",
+    label: "Audio Fingerprint",
+    description: "Computes md5 and oshash fingerprints for audio tracks",
+    concurrency: 1,
+  },
+  {
+    name: "audio-waveform",
+    label: "Audio Waveform",
+    description: "Generates waveform peaks data for audio playback visualization",
     concurrency: 1,
   },
 ] as const;
@@ -191,6 +231,7 @@ export const jobTriggerKinds = [
   "schedule",
   "library-scan",
   "gallery-scan",
+  "audio-scan",
   "system",
 ] as const;
 
@@ -208,6 +249,7 @@ export interface LibraryRootDto {
   recursive: boolean;
   scanVideos: boolean;
   scanImages: boolean;
+  scanAudio: boolean;
   isNsfw: boolean;
   lastScannedAt: string | null;
   createdAt: string;
@@ -601,7 +643,7 @@ export interface NormalizedPerformerResult {
 
 // ─── Search DTOs ────────────────────────────────────────────────
 
-export type EntityKind = "scene" | "performer" | "studio" | "tag" | "gallery" | "image";
+export type EntityKind = "scene" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
 
 export interface SearchResultItem {
   id: string;
@@ -642,4 +684,108 @@ export interface JobsDashboardDto {
     enabled: boolean;
     intervalMinutes: number;
   };
+}
+
+// ─── Audio Library DTOs ────────────────────────────────────────
+
+export interface AudioLibraryListItemDto {
+  id: string;
+  title: string;
+  coverImagePath: string | null;
+  iconPath: string | null;
+  trackCount: number;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  date: string | null;
+  studioId: string | null;
+  studioName: string | null;
+  performers: { id: string; name: string }[];
+  tags: TagEmbedDto[];
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface AudioLibraryDetailDto {
+  id: string;
+  title: string;
+  details: string | null;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  folderPath: string | null;
+  parentId: string | null;
+  coverImagePath: string | null;
+  iconPath: string | null;
+  trackCount: number;
+  totalDuration: number | null;
+  studio: { id: string; name: string; url: string | null } | null;
+  performers: { id: string; name: string; gender: string | null; imagePath: string | null }[];
+  tags: TagEmbedDto[];
+  tracks: AudioTrackListItemDto[];
+  trackTotal: number;
+  trackLimit: number;
+  trackOffset: number;
+  children: { id: string; title: string; trackCount: number; coverImagePath: string | null; iconPath: string | null; isNsfw: boolean }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AudioLibraryStatsDto {
+  totalLibraries: number;
+  totalTracks: number;
+  totalDuration: number;
+  recentCount: number;
+}
+
+// ─── Audio Track DTOs ──────────────────────────────────────────
+
+export interface AudioTrackListItemDto {
+  id: string;
+  title: string;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  duration: number | null;
+  bitRate: number | null;
+  sampleRate: number | null;
+  channels: number | null;
+  codec: string | null;
+  fileSize: number | null;
+  embeddedArtist: string | null;
+  embeddedAlbum: string | null;
+  trackNumber: number | null;
+  waveformPath: string | null;
+  libraryId: string | null;
+  sortOrder: number;
+  studioId: string | null;
+  performers: { id: string; name: string }[];
+  tags: TagEmbedDto[];
+  playCount: number;
+  lastPlayedAt: string | null;
+  createdAt: string;
+}
+
+export interface AudioTrackDetailDto extends AudioTrackListItemDto {
+  details: string | null;
+  checksumMd5: string | null;
+  oshash: string | null;
+  filePath: string;
+  container: string | null;
+  resumeTime: number;
+  playDuration: number;
+  studio: { id: string; name: string } | null;
+  markers: AudioTrackMarkerDto[];
+  updatedAt: string;
+}
+
+export interface AudioTrackMarkerDto {
+  id: string;
+  trackId: string;
+  title: string;
+  seconds: number;
+  endSeconds: number | null;
+  primaryTag: TagEmbedDto | null;
 }

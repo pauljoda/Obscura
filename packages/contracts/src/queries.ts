@@ -101,6 +101,34 @@ export interface TagListQuery extends ListQuery {
   sceneCountMin?: number;
 }
 
+// ─── Audio Queries ──────────────────────────────────────────────
+
+export interface AudioLibraryListQuery extends ListQuery {
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string;
+  parent?: string;
+  root?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  trackCountMin?: number;
+  organized?: boolean;
+}
+
+export interface AudioTrackListQuery extends ListQuery {
+  library?: string;
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: boolean;
+}
+
 // ─── Bulk Operations ────────────────────────────────────────────
 
 export interface BulkUpdateResult {

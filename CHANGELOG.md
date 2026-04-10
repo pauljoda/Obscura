@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-09
+
+### Added
+
+- **Audio libraries schema** — New `audio_libraries` table for folder-based audio groupings with hierarchy (parentId), cover image, icon, and denormalized track count.
+- **Audio tracks schema** — New `audio_tracks` table for individual audio files with duration, bitrate, sample rate, channels, codec, embedded ID3 tags, waveform path, and playback tracking.
+- **Audio track markers** — New `audio_track_markers` table for temporal cue points on audio tracks.
+- **Audio join tables** — `audio_library_performers`, `audio_library_tags`, `audio_track_performers`, `audio_track_tags` for many-to-many relationships.
+- **Audio contracts** — DTOs (`AudioLibraryListItemDto`, `AudioLibraryDetailDto`, `AudioTrackListItemDto`, `AudioTrackDetailDto`), route constants, query types, and queue definitions for audio-scan, audio-probe, audio-fingerprint, and audio-waveform.
+- **Library root `scanAudio`** — New boolean flag on library roots to control audio file discovery.
+
 ## [0.3.3] - 2026-04-09
 
 ### Changed

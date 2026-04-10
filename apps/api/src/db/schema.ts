@@ -42,6 +42,8 @@ export const studiosRelations = relations(studios, ({ many, one }) => ({
   scenes: many(scenes),
   galleries: many(galleries),
   images: many(images),
+  audioLibraries: many(audioLibraries),
+  audioTracks: many(audioTracks),
   parent: one(studios, {
     fields: [studios.parentId],
     references: [studios.id],
@@ -95,6 +97,8 @@ export const performersRelations = relations(performers, ({ many }) => ({
   performerTags: many(performerTags),
   galleryPerformers: many(galleryPerformers),
   imagePerformers: many(imagePerformers),
+  audioLibraryPerformers: many(audioLibraryPerformers),
+  audioTrackPerformers: many(audioTrackPerformers),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -128,6 +132,8 @@ export const tagsRelations = relations(tags, ({ many, one }) => ({
   performerTags: many(performerTags),
   galleryTags: many(galleryTags),
   imageTags: many(imageTags),
+  audioLibraryTags: many(audioLibraryTags),
+  audioTrackTags: many(audioTrackTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -142,6 +148,7 @@ export const libraryRoots = pgTable(
     recursive: boolean("recursive").default(true).notNull(),
     scanVideos: boolean("scan_videos").default(true).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
+    scanAudio: boolean("scan_audio").default(true).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
     lastScannedAt: timestamp("last_scanned_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -756,6 +763,266 @@ export const imageTagsRelations = relations(imageTags, ({ one }) => ({
   }),
   tag: one(tags, {
     fields: [imageTags.tagId],
+    references: [tags.id],
+  }),
+}));
+
+// ─── Audio Libraries ──────────────────────────────────────────────
+export const audioLibraries = pgTable(
+  "audio_libraries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    details: text("details"),
+    date: text("date"),
+    rating: integer("rating"),
+    organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+
+    // Folder on disk
+    folderPath: text("folder_path"),
+
+    // Hierarchy
+    parentId: uuid("parent_id").references((): any => audioLibraries.id),
+
+    // User-uploaded media (cache dir paths)
+    coverImagePath: text("cover_image_path"),
+    iconPath: text("icon_path"),
+
+    // Denormalized count
+    trackCount: integer("track_count").default(0).notNull(),
+
+    // Relations
+    studioId: uuid("studio_id").references(() => studios.id),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("audio_libraries_parent_idx").on(table.parentId),
+    uniqueIndex("audio_libraries_folder_path_idx").on(table.folderPath),
+    index("audio_libraries_rating_idx").on(table.rating),
+    index("audio_libraries_created_at_idx").on(table.createdAt),
+    index("audio_libraries_studio_idx").on(table.studioId),
+  ]
+);
+
+export const audioLibrariesRelations = relations(audioLibraries, ({ one, many }) => ({
+  studio: one(studios, { fields: [audioLibraries.studioId], references: [studios.id] }),
+  parent: one(audioLibraries, { fields: [audioLibraries.parentId], references: [audioLibraries.id] }),
+  children: many(audioLibraries),
+  audioTracks: many(audioTracks),
+  audioLibraryPerformers: many(audioLibraryPerformers),
+  audioLibraryTags: many(audioLibraryTags),
+}));
+
+// ─── Audio Tracks ─────────────────────────────────────────────────
+export const audioTracks = pgTable(
+  "audio_tracks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    details: text("details"),
+    date: text("date"),
+    rating: integer("rating"),
+    organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+
+    // File info
+    filePath: text("file_path").notNull(),
+    fileSize: real("file_size"),
+    duration: real("duration"),
+    bitRate: integer("bit_rate"),
+    sampleRate: integer("sample_rate"),
+    channels: integer("channels"),
+    codec: text("codec"),
+    container: text("container"),
+
+    // Embedded tags from file (ID3, Vorbis comments, etc.)
+    embeddedArtist: text("embedded_artist"),
+    embeddedAlbum: text("embedded_album"),
+    trackNumber: integer("track_number"),
+
+    // Fingerprints
+    checksumMd5: text("checksum_md5"),
+    oshash: text("oshash"),
+
+    // Waveform peaks data (cache dir path to JSON file)
+    waveformPath: text("waveform_path"),
+
+    // Playback tracking
+    playCount: integer("play_count").default(0).notNull(),
+    playDuration: real("play_duration").default(0).notNull(),
+    resumeTime: real("resume_time").default(0).notNull(),
+    lastPlayedAt: timestamp("last_played_at"),
+
+    // Library membership
+    libraryId: uuid("library_id").references(() => audioLibraries.id, { onDelete: "set null" }),
+    sortOrder: integer("sort_order").default(0).notNull(),
+
+    // Relations
+    studioId: uuid("studio_id").references(() => studios.id),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("audio_tracks_file_path_idx").on(table.filePath),
+    index("audio_tracks_library_idx").on(table.libraryId),
+    index("audio_tracks_library_sort_idx").on(table.libraryId, table.sortOrder),
+    index("audio_tracks_studio_idx").on(table.studioId),
+    index("audio_tracks_rating_idx").on(table.rating),
+    index("audio_tracks_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const audioTracksRelations = relations(audioTracks, ({ one, many }) => ({
+  library: one(audioLibraries, { fields: [audioTracks.libraryId], references: [audioLibraries.id] }),
+  studio: one(studios, { fields: [audioTracks.studioId], references: [studios.id] }),
+  audioTrackPerformers: many(audioTrackPerformers),
+  audioTrackTags: many(audioTrackTags),
+  markers: many(audioTrackMarkers),
+}));
+
+// ─── Audio Track Markers ──────────────────────────────────────────
+export const audioTrackMarkers = pgTable(
+  "audio_track_markers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => audioTracks.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    seconds: real("seconds").notNull(),
+    endSeconds: real("end_seconds"),
+    primaryTagId: uuid("primary_tag_id").references(() => tags.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("audio_track_markers_track_idx").on(table.trackId),
+  ]
+);
+
+export const audioTrackMarkersRelations = relations(audioTrackMarkers, ({ one }) => ({
+  track: one(audioTracks, {
+    fields: [audioTrackMarkers.trackId],
+    references: [audioTracks.id],
+  }),
+  primaryTag: one(tags, {
+    fields: [audioTrackMarkers.primaryTagId],
+    references: [tags.id],
+  }),
+}));
+
+// ─── Audio Library ↔ Performer join ───────────────────────────────
+export const audioLibraryPerformers = pgTable(
+  "audio_library_performers",
+  {
+    libraryId: uuid("library_id")
+      .notNull()
+      .references(() => audioLibraries.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("audio_library_performers_pk").on(table.libraryId, table.performerId),
+    index("audio_library_performers_performer_idx").on(table.performerId),
+  ]
+);
+
+export const audioLibraryPerformersRelations = relations(audioLibraryPerformers, ({ one }) => ({
+  library: one(audioLibraries, {
+    fields: [audioLibraryPerformers.libraryId],
+    references: [audioLibraries.id],
+  }),
+  performer: one(performers, {
+    fields: [audioLibraryPerformers.performerId],
+    references: [performers.id],
+  }),
+}));
+
+// ─── Audio Library ↔ Tag join ─────────────────────────────────────
+export const audioLibraryTags = pgTable(
+  "audio_library_tags",
+  {
+    libraryId: uuid("library_id")
+      .notNull()
+      .references(() => audioLibraries.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("audio_library_tags_pk").on(table.libraryId, table.tagId),
+    index("audio_library_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const audioLibraryTagsRelations = relations(audioLibraryTags, ({ one }) => ({
+  library: one(audioLibraries, {
+    fields: [audioLibraryTags.libraryId],
+    references: [audioLibraries.id],
+  }),
+  tag: one(tags, {
+    fields: [audioLibraryTags.tagId],
+    references: [tags.id],
+  }),
+}));
+
+// ─── Audio Track ↔ Performer join ─────────────────────────────────
+export const audioTrackPerformers = pgTable(
+  "audio_track_performers",
+  {
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => audioTracks.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("audio_track_performers_pk").on(table.trackId, table.performerId),
+    index("audio_track_performers_performer_idx").on(table.performerId),
+  ]
+);
+
+export const audioTrackPerformersRelations = relations(audioTrackPerformers, ({ one }) => ({
+  track: one(audioTracks, {
+    fields: [audioTrackPerformers.trackId],
+    references: [audioTracks.id],
+  }),
+  performer: one(performers, {
+    fields: [audioTrackPerformers.performerId],
+    references: [performers.id],
+  }),
+}));
+
+// ─── Audio Track ↔ Tag join ───────────────────────────────────────
+export const audioTrackTags = pgTable(
+  "audio_track_tags",
+  {
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => audioTracks.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("audio_track_tags_pk").on(table.trackId, table.tagId),
+    index("audio_track_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const audioTrackTagsRelations = relations(audioTrackTags, ({ one }) => ({
+  track: one(audioTracks, {
+    fields: [audioTrackTags.trackId],
+    references: [audioTracks.id],
+  }),
+  tag: one(tags, {
+    fields: [audioTrackTags.tagId],
     references: [tags.id],
   }),
 }));
