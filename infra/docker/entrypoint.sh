@@ -42,29 +42,43 @@ su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname 
   su-exec postgres createdb -h 127.0.0.1 obscura
 
 # ── Start Redis ───────────────────────────────────────────────────
-# Use a dedicated config so we never inherit Alpine's /etc/redis.conf (e.g.
-# supervised systemd), which can prevent Redis from listening in this container.
+# Run redis-server in the foreground, backgrounded by the shell. Daemonizing
+# with `daemonize yes` caused silent startup failures on Alpine: once the
+# parent forks the child closes stdin/stdout/stderr, so any bind/pidfile/dir
+# error disappeared and BullMQ saw ECONNREFUSED on 127.0.0.1:6379. Keeping the
+# process attached gives us a real exit code and captured logs to diagnose.
 echo "[obscura] Starting Redis..."
 REDIS_CONF="/run/obscura-redis.conf"
+REDIS_LOG="/data/redis/redis.log"
 cat > "$REDIS_CONF" <<EOF
 bind 127.0.0.1
 port 6379
 dir $REDIS_DIR
-daemonize yes
-loglevel warning
+daemonize no
+pidfile /run/obscura-redis.pid
+logfile $REDIS_LOG
+loglevel notice
+protected-mode no
 EOF
-redis-server "$REDIS_CONF"
+redis-server "$REDIS_CONF" &
+REDIS_PID=$!
 
-echo "[obscura] Waiting for Redis to accept connections..."
+echo "[obscura] Waiting for Redis to accept connections (pid=$REDIS_PID)..."
 i=0
-while [ "$i" -lt 60 ]; do
+while :; do
+  if ! kill -0 "$REDIS_PID" 2>/dev/null; then
+    echo "[obscura] ERROR: redis-server exited before becoming ready. Last log lines:" >&2
+    tail -n 50 "$REDIS_LOG" 2>/dev/null || true
+    exit 1
+  fi
   if redis-cli -h 127.0.0.1 -p 6379 ping 2>/dev/null | grep -q PONG; then
     echo "[obscura] Redis is ready."
     break
   fi
   i=$((i + 1))
-  if [ "$i" -eq 60 ]; then
-    echo "[obscura] ERROR: Redis did not become ready on 127.0.0.1:6379 — check /data/redis permissions and logs." >&2
+  if [ "$i" -ge 60 ]; then
+    echo "[obscura] ERROR: Redis did not become ready on 127.0.0.1:6379 within 30s. Last log lines:" >&2
+    tail -n 50 "$REDIS_LOG" 2>/dev/null || true
     exit 1
   fi
   sleep 0.5

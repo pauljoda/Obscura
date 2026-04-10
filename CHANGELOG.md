@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.19] - 2026-04-10
+
+### Fixed
+
+- **Docker (unified image)** — Container hung at `Waiting for Redis to accept connections...` and API/worker kept hitting `ECONNREFUSED` on `127.0.0.1:6379`. The 0.7.18 fix still used `daemonize yes`, so after Redis forked, the child closed stdin/stdout/stderr and any bind / pidfile / `dir` failure was invisible. The entrypoint now runs `redis-server` in the foreground (backgrounded by the shell) with explicit `pidfile`, `logfile`, and `daemonize no`, monitors the child pid while waiting for `PONG`, and prints the tail of the Redis log on failure so startup errors are actually diagnosable.
+
 ## [0.7.18] - 2026-04-10
 
 ### Fixed
