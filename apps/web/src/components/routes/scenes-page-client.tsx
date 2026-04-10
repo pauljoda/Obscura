@@ -11,7 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { SceneGrid } from "../scene-grid";
+import { ImportButton, UploadDropZone } from "../upload";
 import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
@@ -382,9 +384,14 @@ export function ScenesPageClient({
   }
 
   const visibleIds = scenes.map((s) => s.id);
+  const router = useRouter();
 
   return (
-    <div className="space-y-4">
+    <UploadDropZone
+      target={{ kind: "scene" }}
+      onUploaded={() => router.refresh()}
+      className="relative space-y-4"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2.5">
@@ -395,10 +402,18 @@ export function ScenesPageClient({
             Browse and manage your media library
           </p>
         </div>
-        <span className="mt-1 text-mono-sm text-text-disabled">
-          {total}{" "}
-          {total === 1 ? terms.scene.toLowerCase() : terms.scenes.toLowerCase()}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="mt-1 text-mono-sm text-text-disabled">
+            {total}{" "}
+            {total === 1
+              ? terms.scene.toLowerCase()
+              : terms.scenes.toLowerCase()}
+          </span>
+          <ImportButton
+            target={{ kind: "scene" }}
+            onUploaded={() => router.refresh()}
+          />
+        </div>
       </div>
 
       {stats ? (
@@ -513,7 +528,7 @@ export function ScenesPageClient({
         onDeleteFromDisk={() => void handleBulkDelete(true)}
         loading={bulkLoading}
       />
-    </div>
+    </UploadDropZone>
   );
 }
 

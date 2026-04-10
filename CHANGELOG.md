@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.12] - 2026-04-10
+
+### Added
+
+- **Scenes page drag-drop + Import** — The `/scenes` view is now wrapped in `<UploadDropZone target={{ kind: "scene" }}>` and gains an `<ImportButton>` in the header. Drop any video files onto the grid (or click Import) and they land in the selected library root; when more than one enabled root has `scanVideos = true`, a picker modal appears. After each upload finishes the page calls `router.refresh()` so the new scene appears in the grid as soon as the scene row is inserted, and the standard `media-probe` → `fingerprint` → `preview` pipeline runs in the background.
+
 ## [0.8.11] - 2026-04-10
 
 ### Added
