@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-04-09
+
+### Added
+
+- **Audio library API** — Full CRUD for audio libraries: list (with hierarchy, tag/performer/studio filters, pagination), detail (with paginated tracks, children, total duration), stats, update (metadata + performers/tags inline creation), delete.
+- **Audio track API** — List, detail (with markers), update (metadata + performers/tags), play tracking, and audio streaming with Range request support for seeking.
+- **Audio track markers** — CRUD for temporal cue points on audio tracks, following the same pattern as scene markers.
+- **Audio streaming** — `GET /audio-stream/:id` serves audio files with proper MIME types and HTTP Range support for all supported formats.
+
 ## [0.4.2] - 2026-04-09
 
 ### Added

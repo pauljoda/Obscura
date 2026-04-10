@@ -17,6 +17,9 @@ import { galleriesRoutes } from "./routes/galleries";
 import { imagesRoutes } from "./routes/images";
 import { searchRoutes } from "./routes/search";
 import { changelogRoutes } from "./routes/changelog";
+import { audioLibrariesRoutes } from "./routes/audio-libraries";
+import { audioTracksRoutes } from "./routes/audio-tracks";
+import { audioStreamRoutes } from "./routes/audio-stream";
 import pkg from "../../../package.json";
 
 const app = Fastify({
@@ -59,6 +62,9 @@ await app.register(streamRoutes);
 await app.register(scrapersRoutes);
 await app.register(stashboxRoutes);
 await app.register(searchRoutes);
+await app.register(audioLibrariesRoutes);
+await app.register(audioTracksRoutes);
+await app.register(audioStreamRoutes);
 
 // ─── Start ────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 4000);
