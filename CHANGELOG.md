@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-04-09
+
+### Changed
+
+- **Audio player** — On the library detail page, the now-playing thumbnail uses the **library cover** when set; otherwise the music note placeholder.
+
 ## [0.6.5] - 2026-04-09
 
 ### Added

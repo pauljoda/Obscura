@@ -26,6 +26,8 @@ interface AudioPlayerProps {
   activeTrackId: string | null;
   onTrackChange: (trackId: string) => void;
   className?: string;
+  /** Resolved API URL for the parent audio library cover (album art). */
+  libraryCoverUrl?: string;
 }
 
 const API_BASE =
@@ -38,6 +40,7 @@ export function AudioPlayer({
   activeTrackId,
   onTrackChange,
   className,
+  libraryCoverUrl,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -306,8 +309,22 @@ export function AudioPlayer({
       {/* ─── Now playing + timeline (scene-style) + waveform film strip ─ */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-10 w-10 flex items-center justify-center bg-surface-3 flex-shrink-0">
-            <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
+          <div
+            className={cn(
+              "h-10 w-10 flex-shrink-0 overflow-hidden surface-card-sharp",
+              !libraryCoverUrl && "flex items-center justify-center bg-surface-3",
+            )}
+          >
+            {libraryCoverUrl ? (
+              <img
+                src={libraryCoverUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                decoding="async"
+              />
+            ) : (
+              <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             {activeTrack ? (

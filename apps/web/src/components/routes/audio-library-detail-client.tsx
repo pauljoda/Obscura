@@ -693,6 +693,7 @@ export function AudioLibraryDetailClient({
           activeTrackId={activeTrackId}
           onTrackChange={handleTrackChange}
           className="border-0 bg-transparent shadow-none"
+          libraryCoverUrl={coverUrl}
         />
       </div>
     </div>
