@@ -49,11 +49,12 @@ redis-server --daemonize yes --dir "$REDIS_DIR" --loglevel warning
 # Must succeed: an outdated schema causes widespread API 500s (queries reference
 # missing tables). Do not swallow errors — the old `|| true` hid failed pushes.
 # --force avoids interactive prompts in non-TTY Docker; back up /data before major upgrades.
+# Invoke drizzle-kit with plain Node — the production image has no pnpm (build-only tool).
 echo "[obscura] Applying database schema..."
-cd /app
 export CI=true
 export DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura"
-if ! pnpm --filter @obscura/api exec drizzle-kit push --force; then
+cd /app/apps/api
+if ! node node_modules/drizzle-kit/bin.cjs push --force; then
   echo "[obscura] ERROR: drizzle-kit push failed — check logs above. Database is not aligned with this image." >&2
   exit 1
 fi
