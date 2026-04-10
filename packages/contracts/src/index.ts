@@ -821,5 +821,4 @@ export interface AudioTrackMarkerDto {
   title: string;
   seconds: number;
   endSeconds: number | null;
-  primaryTag: TagEmbedDto | null;
 }

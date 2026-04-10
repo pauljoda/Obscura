@@ -93,14 +93,12 @@ export interface CreateMarkerBody {
   title: string;
   seconds: number;
   endSeconds?: number | null;
-  primaryTagName?: string | null;
 }
 
 export interface UpdateMarkerBody {
   title?: string;
   seconds?: number;
   endSeconds?: number | null;
-  primaryTagName?: string | null;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -535,7 +533,6 @@ export async function getSceneById(id: string) {
         with: { tag: true },
       },
       markers: {
-        with: { primaryTag: true },
         orderBy: asc(sceneMarkers.seconds),
       },
     },
@@ -608,13 +605,6 @@ export async function getSceneById(id: string) {
       title: m.title,
       seconds: m.seconds,
       endSeconds: m.endSeconds,
-      primaryTag: m.primaryTag
-        ? {
-            id: m.primaryTag.id,
-            name: m.primaryTag.name,
-            isNsfw: m.primaryTag.isNsfw,
-          }
-        : null,
     })),
     createdAt: scene.createdAt,
     updatedAt: scene.updatedAt,
@@ -825,7 +815,7 @@ export async function deleteScene(id: string, deleteFile: boolean) {
 }
 
 /**
- * Create a scene marker with optional primary tag (find-or-create).
+ * Create a scene marker.
  */
 export async function createMarker(sceneId: string, body: CreateMarkerBody) {
   if (!body.title?.trim() || body.seconds == null) {
@@ -840,23 +830,6 @@ export async function createMarker(sceneId: string, body: CreateMarkerBody) {
     throw new AppError(404, "Video not found");
   }
 
-  let primaryTagId: string | null = null;
-  if (body.primaryTagName?.trim()) {
-    const [existingTag] = await db
-      .select({ id: tags.id })
-      .from(tags)
-      .where(ilike(tags.name, body.primaryTagName.trim()))
-      .limit(1);
-    primaryTagId =
-      existingTag?.id ??
-      (
-        await db
-          .insert(tags)
-          .values({ name: body.primaryTagName.trim() })
-          .returning({ id: tags.id })
-      )[0].id;
-  }
-
   const [marker] = await db
     .insert(sceneMarkers)
     .values({
@@ -864,25 +837,14 @@ export async function createMarker(sceneId: string, body: CreateMarkerBody) {
       title: body.title.trim(),
       seconds: body.seconds,
       endSeconds: body.endSeconds ?? null,
-      primaryTagId,
     })
     .returning();
-
-  const primaryTag = primaryTagId
-    ? await db.query.tags.findFirst({
-        where: eq(tags.id, primaryTagId),
-        columns: { id: true, name: true },
-      })
-    : null;
 
   return {
     id: marker.id,
     title: marker.title,
     seconds: marker.seconds,
     endSeconds: marker.endSeconds,
-    primaryTag: primaryTag
-      ? { id: primaryTag.id, name: primaryTag.name }
-      : null,
   };
 }
 
@@ -901,26 +863,6 @@ export async function updateMarker(markerId: string, body: UpdateMarkerBody) {
   if (body.title !== undefined) update.title = body.title.trim();
   if (body.seconds !== undefined) update.seconds = body.seconds;
   if (body.endSeconds !== undefined) update.endSeconds = body.endSeconds;
-
-  if (body.primaryTagName !== undefined) {
-    if (!body.primaryTagName?.trim()) {
-      update.primaryTagId = null;
-    } else {
-      const [existingTag] = await db
-        .select({ id: tags.id })
-        .from(tags)
-        .where(ilike(tags.name, body.primaryTagName.trim()))
-        .limit(1);
-      update.primaryTagId =
-        existingTag?.id ??
-        (
-          await db
-            .insert(tags)
-            .values({ name: body.primaryTagName.trim() })
-            .returning({ id: tags.id })
-        )[0].id;
-    }
-  }
 
   await db
     .update(sceneMarkers)

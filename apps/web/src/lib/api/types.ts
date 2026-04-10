@@ -71,7 +71,6 @@ export interface SceneDetail extends SceneListItem {
     title: string;
     seconds: number;
     endSeconds: number | null;
-    primaryTag: TagEmbedDto | null;
   }[];
   updatedAt: string;
 }
@@ -221,7 +220,6 @@ export interface MarkerDto {
   title: string;
   seconds: number;
   endSeconds: number | null;
-  primaryTag: TagEmbedDto | null;
 }
 
 export interface TagDetail {

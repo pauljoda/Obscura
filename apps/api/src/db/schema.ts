@@ -372,7 +372,6 @@ export const sceneMarkers = pgTable(
     title: text("title").notNull(),
     seconds: real("seconds").notNull(),
     endSeconds: real("end_seconds"),
-    primaryTagId: uuid("primary_tag_id").references(() => tags.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -385,10 +384,6 @@ export const sceneMarkersRelations = relations(sceneMarkers, ({ one }) => ({
   scene: one(scenes, {
     fields: [sceneMarkers.sceneId],
     references: [scenes.id],
-  }),
-  primaryTag: one(tags, {
-    fields: [sceneMarkers.primaryTagId],
-    references: [tags.id],
   }),
 }));
 
@@ -897,7 +892,6 @@ export const audioTrackMarkers = pgTable(
     title: text("title").notNull(),
     seconds: real("seconds").notNull(),
     endSeconds: real("end_seconds"),
-    primaryTagId: uuid("primary_tag_id").references(() => tags.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -910,10 +904,6 @@ export const audioTrackMarkersRelations = relations(audioTrackMarkers, ({ one })
   track: one(audioTracks, {
     fields: [audioTrackMarkers.trackId],
     references: [audioTracks.id],
-  }),
-  primaryTag: one(tags, {
-    fields: [audioTrackMarkers.primaryTagId],
-    references: [tags.id],
   }),
 }));
 

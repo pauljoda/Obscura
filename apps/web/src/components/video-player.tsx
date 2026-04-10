@@ -28,7 +28,6 @@ interface Marker {
   id: string;
   time: number;
   title: string;
-  tag?: string;
 }
 
 interface VideoPlayerProps {

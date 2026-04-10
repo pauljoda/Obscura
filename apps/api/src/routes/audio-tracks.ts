@@ -62,7 +62,6 @@ export async function audioTracksRoutes(app: FastifyInstance) {
       title: string;
       seconds: number;
       endSeconds?: number | null;
-      primaryTagName?: string | null;
     };
     return audioTrackService.createMarker(id, body);
   });
@@ -74,7 +73,6 @@ export async function audioTracksRoutes(app: FastifyInstance) {
       title?: string;
       seconds?: number;
       endSeconds?: number | null;
-      primaryTagName?: string | null;
     };
     await audioTrackService.updateMarker(id, body);
     return { ok: true };

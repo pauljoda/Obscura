@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Loader2,
   Film,
-  Hash,
   Clock,
   Pencil,
   Trash2,
@@ -14,18 +13,24 @@ import {
   Heart,
   Upload,
   X,
-  Image as ImageIcon,
+  Images,
+  Music,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
+import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
 import { SceneGrid } from "../../../../components/scene-grid";
+import { GalleryGrid } from "../../../../components/gallery-grid";
+import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip, NsfwTagLabel } from "../../../../components/nsfw/nsfw-gate";
 import { useNsfw } from "../../../../components/nsfw/nsfw-context";
 import {
   fetchScenes,
+  fetchGalleries,
+  fetchAudioLibraries,
   fetchTags,
   fetchTagDetail,
   deleteTag,
@@ -35,7 +40,6 @@ import {
   deleteTagImage,
   toApiUrl,
   type SceneListItem,
-  type TagItem,
   type TagDetail,
 } from "../../../../lib/api";
 import { use } from "react";
@@ -54,7 +58,11 @@ export default function TagPage({ params }: TagPageProps) {
 
   const [tagDetail, setTagDetail] = useState<TagDetail | null>(null);
   const [scenes, setScenes] = useState<SceneListItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [totalScenes, setTotalScenes] = useState(0);
+  const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
+  const [totalGalleries, setTotalGalleries] = useState(0);
+  const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
+  const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -64,14 +72,29 @@ export default function TagPage({ params }: TagPageProps) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, tagsRes] = await Promise.all([
+      const [scenesRes, galleriesRes, audioRes, tagsRes] = await Promise.all([
         fetchScenes({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
+        fetchGalleries({
+          tag: [tagName],
+          root: "all",
+          limit: 100,
+          nsfw: nsfwMode,
+        }),
+        fetchAudioLibraries({
+          tag: [tagName],
+          root: "all",
+          limit: 100,
+          nsfw: nsfwMode,
+        }),
         fetchTags({ nsfw: nsfwMode }),
       ]);
       setScenes(scenesRes.scenes);
-      setTotal(scenesRes.total);
+      setTotalScenes(scenesRes.total);
+      setGalleries(galleriesRes.galleries);
+      setTotalGalleries(galleriesRes.total);
+      setAudioLibraries(audioRes.items);
+      setTotalAudioLibraries(audioRes.total);
 
-      // Resolve tag name to UUID, then fetch full detail
       const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
       if (match) {
         const detail = await fetchTagDetail(match.id, { nsfw: nsfwMode });
@@ -223,7 +246,19 @@ export default function TagPage({ params }: TagPageProps) {
 
         {!loading && (
           <>
-            <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {formatVideoCount(total)}</span>
+            <span className="flex items-center gap-1.5 text-sm text-text-muted">
+              <Film className="h-3.5 w-3.5" /> {formatVideoCount(totalScenes)}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm text-text-muted">
+              <Images className="h-3.5 w-3.5" />
+              {totalGalleries === 1 ? "1 gallery" : `${totalGalleries} galleries`}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm text-text-muted">
+              <Music className="h-3.5 w-3.5" />
+              {totalAudioLibraries === 1
+                ? "1 audio library"
+                : `${totalAudioLibraries} audio libraries`}
+            </span>
             {totalDuration > 0 && (
               <>
                 <div className="h-4 w-px bg-border-subtle" />
@@ -259,20 +294,53 @@ export default function TagPage({ params }: TagPageProps) {
 
       <div className="separator" />
 
-      {/* Scene grid */}
       <section>
         <h4 className="text-kicker mb-3">Tagged {terms.scenes}</h4>
         {loading ? (
           <div className="surface-well p-12 flex items-center justify-center">
             <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
           </div>
-        ) : total === 0 ? (
+        ) : totalScenes === 0 ? (
           <div className="surface-well p-12 text-center">
             <Film className="h-10 w-10 text-text-disabled mx-auto mb-3" />
             <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} with this tag.</p>
           </div>
         ) : (
           <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
+        )}
+      </section>
+
+      <div className="separator" />
+
+      <section>
+        <h4 className="text-kicker mb-3">Galleries</h4>
+        {loading ? (
+          <div className="surface-well p-12 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
+          </div>
+        ) : totalGalleries === 0 ? (
+          <div className="surface-well p-12 text-center">
+            <Images className="h-10 w-10 text-text-disabled mx-auto mb-3" />
+            <p className="text-text-muted text-sm">No galleries with this tag.</p>
+          </div>
+        ) : (
+          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+        )}
+      </section>
+
+      <div className="separator" />
+
+      <section>
+        <h4 className="text-kicker mb-3">Audio</h4>
+        {loading ? (
+          <div className="surface-well p-12 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
+          </div>
+        ) : (
+          <AudioLibraryAppearanceGrid
+            libraries={audioLibraries}
+            emptyMessage="No audio libraries with this tag."
+          />
         )}
       </section>
     </div>

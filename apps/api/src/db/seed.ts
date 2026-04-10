@@ -25,7 +25,6 @@ interface SceneDescriptor {
     title: string;
     seconds: number;
     endSeconds?: number;
-    primaryTag: string;
   }>;
 }
 
@@ -72,9 +71,9 @@ const sceneDescriptors: SceneDescriptor[] = [
     performers: ["Bunny", "Frank", "Rinky", "Gamera"],
     tags: ["Open Movie", "Animation", "Comedy", "Short Film", "Test Asset"],
     markers: [
-      { title: "Forest calm", seconds: 8, endSeconds: 70, primaryTag: "Comedy" },
-      { title: "Rodent ambush", seconds: 132, endSeconds: 210, primaryTag: "Action" },
-      { title: "Bunny retaliation", seconds: 382, endSeconds: 520, primaryTag: "Comedy" },
+      { title: "Forest calm", seconds: 8, endSeconds: 70 },
+      { title: "Rodent ambush", seconds: 132, endSeconds: 210 },
+      { title: "Bunny retaliation", seconds: 382, endSeconds: 520 },
     ],
   },
   {
@@ -95,9 +94,9 @@ const sceneDescriptors: SceneDescriptor[] = [
       "Test Asset",
     ],
     markers: [
-      { title: "Title reveal", seconds: 0, endSeconds: 4, primaryTag: "Trailer" },
-      { title: "Dragon glimpse", seconds: 8, endSeconds: 15, primaryTag: "Fantasy" },
-      { title: "Action montage", seconds: 18, endSeconds: 31, primaryTag: "Action" },
+      { title: "Title reveal", seconds: 0, endSeconds: 4 },
+      { title: "Dragon glimpse", seconds: 8, endSeconds: 15 },
+      { title: "Action montage", seconds: 18, endSeconds: 31 },
     ],
   },
   {
@@ -110,9 +109,9 @@ const sceneDescriptors: SceneDescriptor[] = [
     performers: ["Thom", "Celia"],
     tags: ["Open Movie", "Live Action", "Sci-Fi", "Short Film", "Test Asset"],
     markers: [
-      { title: "Rooftop setup", seconds: 0, endSeconds: 48, primaryTag: "Live Action" },
-      { title: "Robot escalation", seconds: 72, endSeconds: 122, primaryTag: "Sci-Fi" },
-      { title: "Canal finale", seconds: 138, endSeconds: 176, primaryTag: "Action" },
+      { title: "Rooftop setup", seconds: 0, endSeconds: 48 },
+      { title: "Robot escalation", seconds: 72, endSeconds: 122 },
+      { title: "Canal finale", seconds: 138, endSeconds: 176 },
     ],
   },
 ];
@@ -194,7 +193,6 @@ async function seed() {
           title: marker.title,
           seconds: marker.seconds,
           endSeconds: marker.endSeconds,
-          primaryTagId: tagMap[marker.primaryTag],
         }))
       );
       markerCount += descriptor.markers.length;

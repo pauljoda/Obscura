@@ -206,7 +206,6 @@ export function SceneDetail({
             id: m.id,
             time: m.seconds,
             title: m.title,
-            tag: m.primaryTag?.name,
           }))}
           duration={scene.duration ?? undefined}
           onPlayStarted={handlePlayStarted}
@@ -405,7 +404,6 @@ export function SceneDetail({
       {activeTab === "Markers" && (
         <SceneMarkerEditor
           scene={scene}
-          allTags={allTags}
           currentTimeRef={currentTimeRef}
           displayTime={displayTime}
           onRefresh={refreshScene}

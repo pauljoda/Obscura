@@ -237,14 +237,6 @@ export async function getAudioTrackById(id: string) {
     .where(eq(audioTrackMarkers.trackId, id))
     .orderBy(sql`${audioTrackMarkers.seconds} ASC`);
 
-  const markerTagIds = markers
-    .filter((m) => m.primaryTagId)
-    .map((m) => m.primaryTagId!);
-  const markerTags = markerTagIds.length > 0
-    ? await db.select({ id: tags.id, name: tags.name, isNsfw: tags.isNsfw }).from(tags).where(inArray(tags.id, markerTagIds))
-    : [];
-  const markerTagMap = new Map(markerTags.map((t) => [t.id, t]));
-
   return {
     id: track.id,
     title: track.title,
@@ -279,7 +271,6 @@ export async function getAudioTrackById(id: string) {
       title: m.title,
       seconds: m.seconds,
       endSeconds: m.endSeconds,
-      primaryTag: m.primaryTagId ? (markerTagMap.get(m.primaryTagId) ?? null) : null,
     })),
     playCount: track.playCount,
     playDuration: track.playDuration,
@@ -383,17 +374,10 @@ export async function recordPlay(id: string) {
 
 export async function createMarker(
   trackId: string,
-  body: { title: string; seconds: number; endSeconds?: number | null; primaryTagName?: string | null },
+  body: { title: string; seconds: number; endSeconds?: number | null },
 ) {
   const [track] = await db.select({ id: audioTracks.id }).from(audioTracks).where(eq(audioTracks.id, trackId)).limit(1);
   if (!track) throw new AppError(404, "Audio track not found");
-
-  let primaryTagId: string | null = null;
-  if (body.primaryTagName) {
-    const [existing] = await db.select({ id: tags.id }).from(tags).where(ilike(tags.name, body.primaryTagName.trim())).limit(1);
-    primaryTagId = existing?.id ??
-      (await db.insert(tags).values({ name: body.primaryTagName.trim() }).returning({ id: tags.id }))[0].id;
-  }
 
   const [marker] = await db
     .insert(audioTrackMarkers)
@@ -402,7 +386,6 @@ export async function createMarker(
       title: body.title,
       seconds: body.seconds,
       endSeconds: body.endSeconds ?? null,
-      primaryTagId,
     })
     .returning();
 
@@ -411,22 +394,12 @@ export async function createMarker(
 
 export async function updateMarker(
   markerId: string,
-  body: { title?: string; seconds?: number; endSeconds?: number | null; primaryTagName?: string | null },
+  body: { title?: string; seconds?: number; endSeconds?: number | null },
 ) {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (body.title !== undefined) updates.title = body.title;
   if (body.seconds !== undefined) updates.seconds = body.seconds;
   if (body.endSeconds !== undefined) updates.endSeconds = body.endSeconds;
-
-  if (body.primaryTagName !== undefined) {
-    if (body.primaryTagName) {
-      const [existing] = await db.select({ id: tags.id }).from(tags).where(ilike(tags.name, body.primaryTagName.trim())).limit(1);
-      updates.primaryTagId = existing?.id ??
-        (await db.insert(tags).values({ name: body.primaryTagName.trim() }).returning({ id: tags.id }))[0].id;
-    } else {
-      updates.primaryTagId = null;
-    }
-  }
 
   await db.update(audioTrackMarkers).set(updates).where(eq(audioTrackMarkers.id, markerId));
 }

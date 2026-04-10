@@ -8,10 +8,7 @@ import {
   updateMarker,
   deleteMarker,
   type SceneDetail as SceneDetailType,
-  type TagItem,
 } from "../../lib/api";
-import { NsfwTagLabel } from "../nsfw/nsfw-gate";
-import { useNsfw } from "../nsfw/nsfw-context";
 import {
   TimeMarkerForm,
   formatSecondsInput,
@@ -19,7 +16,6 @@ import {
 
 export interface SceneMarkerEditorProps {
   scene: SceneDetailType;
-  allTags: TagItem[];
   currentTimeRef: React.RefObject<number>;
   displayTime: number;
   onRefresh: () => void;
@@ -27,18 +23,14 @@ export interface SceneMarkerEditorProps {
 
 export function SceneMarkerEditor({
   scene,
-  allTags,
   currentTimeRef,
   displayTime,
   onRefresh,
 }: SceneMarkerEditorProps) {
-  const { mode: nsfwMode } = useNsfw();
-
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
   const [markerTitle, setMarkerTitle] = useState("");
   const [markerSeconds, setMarkerSeconds] = useState(0);
   const [markerEndSeconds, setMarkerEndSeconds] = useState<number | null>(null);
-  const [markerTagName, setMarkerTagName] = useState("");
   const [savingMarker, setSavingMarker] = useState(false);
 
   function startNewMarker() {
@@ -46,7 +38,6 @@ export function SceneMarkerEditor({
     setMarkerTitle("");
     setMarkerSeconds(Math.floor(currentTimeRef.current));
     setMarkerEndSeconds(null);
-    setMarkerTagName("");
   }
 
   function startEditMarker(m: SceneDetailType["markers"][0]) {
@@ -54,7 +45,6 @@ export function SceneMarkerEditor({
     setMarkerTitle(m.title);
     setMarkerSeconds(m.seconds);
     setMarkerEndSeconds(m.endSeconds);
-    setMarkerTagName(m.primaryTag?.name ?? "");
   }
 
   function cancelMarkerEdit() {
@@ -73,14 +63,12 @@ export function SceneMarkerEditor({
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
-          primaryTagName: markerTagName.trim() || null,
         });
       } else if (editingMarker) {
         await updateMarker(editingMarker, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
-          primaryTagName: markerTagName.trim() || null,
         });
       }
       setEditingMarker(null);
@@ -105,13 +93,10 @@ export function SceneMarkerEditor({
     title: markerTitle,
     seconds: markerSeconds,
     endSeconds: markerEndSeconds,
-    tagName: markerTagName,
-    allTags,
     saving: savingMarker,
     onTitleChange: setMarkerTitle,
     onSecondsChange: setMarkerSeconds,
     onEndSecondsChange: setMarkerEndSeconds,
-    onTagNameChange: setMarkerTagName,
     onSetCurrentTime: () =>
       setMarkerSeconds(Math.floor(currentTimeRef.current)),
     onSetCurrentEndTime: () =>
@@ -123,7 +108,6 @@ export function SceneMarkerEditor({
 
   return (
     <div className="space-y-3">
-      {/* Add marker button */}
       {editingMarker !== "new" && (
         <Button variant="secondary" size="sm" onClick={startNewMarker}>
           <Plus className="h-3.5 w-3.5" />
@@ -131,10 +115,8 @@ export function SceneMarkerEditor({
         </Button>
       )}
 
-      {/* New marker form */}
       {editingMarker === "new" && <TimeMarkerForm {...markerFormProps} />}
 
-      {/* Marker list */}
       {scene.markers.length === 0 && editingMarker !== "new" && (
         <div className="surface-well p-8 text-center">
           <p className="text-text-muted text-sm">No markers yet</p>
@@ -169,14 +151,6 @@ export function SceneMarkerEditor({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{marker.title}</p>
             </div>
-            {marker.primaryTag &&
-              (nsfwMode !== "off" || marker.primaryTag.isNsfw !== true) && (
-                <span className="tag-chip tag-chip-accent flex-shrink-0">
-                  <NsfwTagLabel isNsfw={marker.primaryTag.isNsfw}>
-                    {marker.primaryTag.name}
-                  </NsfwTagLabel>
-                </span>
-              )}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
               <button
                 type="button"

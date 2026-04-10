@@ -3,34 +3,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@obscura/ui/primitives/button";
 import { MapPin, X, Loader2 } from "lucide-react";
-import { NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
-import { useNsfw } from "../nsfw/nsfw-context";
-
-export interface TagSuggestion {
-  id: string;
-  name: string;
-  isNsfw: boolean;
-  sceneCount: number;
-}
-
-export interface TimeMarkerFormData {
-  title: string;
-  seconds: number;
-  endSeconds: number | null;
-  primaryTagName: string | null;
-}
 
 export interface TimeMarkerFormProps {
   title: string;
   seconds: number;
   endSeconds: number | null;
-  tagName: string;
-  allTags: TagSuggestion[];
   saving: boolean;
   onTitleChange: (v: string) => void;
   onSecondsChange: (v: number) => void;
   onEndSecondsChange: (v: number | null) => void;
-  onTagNameChange: (v: string) => void;
   onSetCurrentTime: () => void;
   onSetCurrentEndTime: () => void;
   onSave: (payload: { seconds: number; endSeconds: number | null }) => void;
@@ -73,20 +54,16 @@ export function TimeMarkerForm({
   title,
   seconds,
   endSeconds,
-  tagName,
-  allTags,
   saving,
   onTitleChange,
   onSecondsChange,
   onEndSecondsChange,
-  onTagNameChange,
   onSetCurrentTime,
   onSetCurrentEndTime,
   onSave,
   onCancel,
   saveLabel = "Save Marker",
 }: TimeMarkerFormProps) {
-  const { mode: nsfwMode } = useNsfw();
   const [startText, setStartText] = useState(() => formatSecondsInput(seconds));
   const [endText, setEndText] = useState(() =>
     endSeconds != null ? formatSecondsInput(endSeconds) : "",
@@ -162,17 +139,6 @@ export function TimeMarkerForm({
     onSave(payload);
   }
 
-  const [tagFocused, setTagFocused] = useState(false);
-  const filteredTags = tagFocused
-    ? (tagName.trim()
-        ? allTags.filter((t) =>
-            t.name.toLowerCase().includes(tagName.toLowerCase()),
-          )
-        : allTags
-      ).slice(0, 10)
-    : [];
-  const suggestionTags = tagsVisibleInNsfwMode(filteredTags, nsfwMode);
-
   return (
     <div className="surface-card-sharp p-4 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -243,42 +209,6 @@ export function TimeMarkerForm({
               >
                 <X className="h-3 w-3" />
               </button>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-1 sm:col-span-2">
-          <label className="text-xs text-text-muted">
-            Primary Tag (optional)
-          </label>
-          <div className="relative">
-            <input
-              className="control-input w-full"
-              value={tagName}
-              onChange={(e) => onTagNameChange(e.target.value)}
-              onFocus={() => setTagFocused(true)}
-              onBlur={() => setTimeout(() => setTagFocused(false), 150)}
-              placeholder="Tag name"
-            />
-            {suggestionTags.length > 0 && (
-              <div className="autocomplete-dropdown">
-                {suggestionTags.map((t) => (
-                  <div
-                    key={t.id}
-                    className="autocomplete-item"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onTagNameChange(t.name);
-                      setTagFocused(false);
-                    }}
-                  >
-                    <NsfwTagLabel isNsfw={t.isNsfw}>{t.name}</NsfwTagLabel>
-                    <span className="autocomplete-item-count">
-                      {t.sceneCount}
-                    </span>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </div>

@@ -105,7 +105,7 @@ export async function deleteScene(
 
 export async function createMarker(
   sceneId: string,
-  data: { title: string; seconds: number; endSeconds?: number | null; primaryTagName?: string | null },
+  data: { title: string; seconds: number; endSeconds?: number | null },
 ): Promise<MarkerDto> {
   return fetchApi(`/scenes/${sceneId}/markers`, {
     method: "POST",
@@ -115,7 +115,7 @@ export async function createMarker(
 
 export async function updateMarker(
   markerId: string,
-  data: { title?: string; seconds?: number; endSeconds?: number | null; primaryTagName?: string | null },
+  data: { title?: string; seconds?: number; endSeconds?: number | null },
 ): Promise<{ ok: true }> {
   return fetchApi(`/scenes/markers/${markerId}`, {
     method: "PATCH",
