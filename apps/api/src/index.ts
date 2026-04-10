@@ -33,9 +33,14 @@ await app.register(cors, {
   methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 
-// Multipart support for file uploads
+// Multipart support for file uploads.
+// The fileSize limit here is the ceiling for every route; per-category
+// caps (video 20 GiB, image 100 MiB, audio 1 GiB) are enforced inside
+// apps/api/src/lib/upload.ts and can be overridden via
+// OBSCURA_MAX_{VIDEO,IMAGE,AUDIO}_UPLOAD. The global ceiling is the max
+// of the three defaults so video imports stream without hitting this.
 await app.register(multipart, {
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 20 * 1024 * 1024 * 1024 }, // 20 GiB
 });
 
 // ─── Error handler ────────────────────────────────────────────────

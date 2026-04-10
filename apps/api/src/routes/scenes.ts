@@ -66,6 +66,52 @@ export async function scenesRoutes(app: FastifyInstance) {
     return sceneService.recordOrgasm(id);
   });
 
+  // ─── POST /scenes/upload (multipart upload) ───────────────────
+  // Imports a new video file into a library root. The libraryRootId
+  // field must be sent as a multipart text field alongside the file;
+  // the web client resolves it via GET /libraries?scanVideos=true.
+  app.post("/scenes/upload", async (request, reply) => {
+    const parts = request.parts();
+    let file: import("@fastify/multipart").MultipartFile | null = null;
+    let libraryRootId: string | null = null;
+    for await (const part of parts) {
+      if (part.type === "file") {
+        if (file) {
+          reply.code(400);
+          return { error: "Only one file per upload request is supported" };
+        }
+        file = part;
+        // Break so the stream is consumed by uploadScene — once a file
+        // part is read, later iteration would discard its bytes.
+        break;
+      }
+      if (part.type === "field" && part.fieldname === "libraryRootId") {
+        libraryRootId = typeof part.value === "string" ? part.value : null;
+      }
+    }
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+    // Late-binding: libraryRootId may arrive as a multipart field after
+    // the file header (browsers order form data by user intent, not spec),
+    // so read it off file.fields when the pre-file loop didn't find it.
+    if (!libraryRootId) {
+      const raw = (file.fields as Record<string, unknown> | undefined)?.[
+        "libraryRootId"
+      ];
+      if (raw && typeof raw === "object" && "value" in raw) {
+        const value = (raw as { value?: unknown }).value;
+        if (typeof value === "string") libraryRootId = value;
+      }
+    }
+    if (!libraryRootId) {
+      reply.code(400);
+      return { error: "libraryRootId field is required" };
+    }
+    return sceneService.uploadScene(libraryRootId, file);
+  });
+
   // ─── POST /scenes/:id/thumbnail (multipart upload) ────────────
   app.post("/scenes/:id/thumbnail", async (request, reply) => {
     const { id } = request.params as { id: string };

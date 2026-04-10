@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.8] - 2026-04-10
+
+### Added
+
+- **`POST /scenes/upload`** — New multipart endpoint that imports a video file into a selected library root and creates the matching `scenes` row. Expects a `libraryRootId` form field (sent before the file by the web client) and the file itself; streams the upload straight to disk (no `toBuffer()`), uses a collision-safe destination filename, copies the library root's NSFW flag onto the new scene, and immediately enqueues the standard `media-probe` → `fingerprint` → `preview` pipeline so the user does not need to trigger a rescan to get metadata, thumbnails, sprites, or trickplay. Returns `UploadSceneResponseDto`. Rejects disabled roots, roots with `scanVideos = false`, missing target directories, and anything that fails the shared upload validator.
+- **`apps/api/src/lib/job-enqueue.ts`** — Extracted `hasPendingJob`, `withTriggerMetadata`, and `enqueueQueueJob` out of `apps/api/src/routes/jobs.ts` so service-layer code (starting with the scene upload) can queue worker jobs without reaching into a route file. Behavior is identical; `routes/jobs.ts` continues to use its existing private helpers in this commit.
+
+### Changed
+
+- **`apps/api/src/index.ts`** — Raised the global `@fastify/multipart` `fileSize` cap from 10 MiB to 20 GiB so video imports can stream through. Per-category enforcement (20 GiB video, 100 MiB image, 1 GiB audio, each overridable via `OBSCURA_MAX_{VIDEO,IMAGE,AUDIO}_UPLOAD`) lives in `apps/api/src/lib/upload.ts` so smaller categories still reject oversized uploads.
+
 ## [0.8.7] - 2026-04-10
 
 ### Changed

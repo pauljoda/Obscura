@@ -33,11 +33,21 @@ import {
   writeNfo,
   allSceneVideoGeneratedDiskPaths,
   getGeneratedSceneDir,
+  fileNameToTitle,
   runProcess,
 } from "@obscura/media-core";
+import type { MultipartFile } from "@fastify/multipart";
+import type { UploadSceneResponseDto } from "@obscura/contracts";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
+import {
+  assertDirExists,
+  resolveCollisionSafePath,
+  streamToFile,
+  validateUpload,
+} from "../lib/upload";
+import { enqueueQueueJob } from "../lib/job-enqueue";
 
 const {
   scenes,
@@ -766,6 +776,102 @@ export async function updateScene(id: string, body: UpdateSceneBody) {
   }
 
   return { ok: true as const, id };
+}
+
+/**
+ * Upload a video file into a library root and create a scene row.
+ *
+ * Streams the multipart file straight to disk (no toBuffer) so large
+ * videos do not OOM, then enqueues the standard probe/fingerprint/preview
+ * pipeline so the newly-imported scene goes through the same post-scan
+ * processing as files discovered by the library scanner.
+ */
+export async function uploadScene(
+  libraryRootId: string,
+  file: MultipartFile,
+): Promise<UploadSceneResponseDto> {
+  const [root] = await db
+    .select()
+    .from(schema.libraryRoots)
+    .where(eq(schema.libraryRoots.id, libraryRootId))
+    .limit(1);
+  if (!root) {
+    throw new AppError(404, "Library root not found");
+  }
+  if (!root.scanVideos) {
+    throw new AppError(
+      400,
+      "Selected library root is not configured to receive video uploads",
+    );
+  }
+  if (!root.enabled) {
+    throw new AppError(400, "Selected library root is disabled");
+  }
+  if (!root.path) {
+    throw new AppError(500, "Library root is missing a filesystem path");
+  }
+
+  await assertDirExists(root.path);
+  const { safeName } = validateUpload(file, { category: "video" });
+  const dest = await resolveCollisionSafePath(root.path, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  // NSFW flag follows the library root by default, mirroring what
+  // library-scan does on newly-discovered files.
+  const [created] = await db
+    .insert(scenes)
+    .values({
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      organized: false,
+      isNsfw: root.isNsfw ?? false,
+    })
+    .returning({ id: scenes.id, title: scenes.title, filePath: scenes.filePath });
+
+  if (!created) {
+    throw new AppError(500, "Failed to create scene row after upload");
+  }
+
+  // Fire the standard per-scene pipeline so the user does not have to
+  // manually run a rescan. Deduped by target id inside enqueueQueueJob.
+  const target = {
+    type: "scene" as const,
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${root.label}`,
+  };
+  await enqueueQueueJob({
+    queueName: "media-probe",
+    jobName: "scene-media-probe",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "fingerprint",
+    jobName: "scene-fingerprint",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "preview",
+    jobName: "scene-preview",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath ?? dest,
+    libraryRootId: root.id,
+  };
 }
 
 /**
