@@ -4,7 +4,12 @@ import path from "node:path";
 import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import type { Job } from "bullmq";
-import { getSidecarPaths, probeVideoFile, runProcess } from "@obscura/media-core";
+import {
+  getSceneVideoGeneratedDiskPaths,
+  probeVideoFile,
+  runProcess,
+  sceneVideoGeneratedLayoutFromDedicated,
+} from "@obscura/media-core";
 import { db, scenes } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
@@ -138,12 +143,17 @@ export async function processPreview(job: Job) {
     await markJobProgress(job, "preview", 12);
   }
 
-  const sidecar = getSidecarPaths(scene.filePath);
+  const layout = sceneVideoGeneratedLayoutFromDedicated(
+    settings.metadataStorageDedicated ?? true
+  );
+  const genPaths = getSceneVideoGeneratedDiskPaths(scene.id, scene.filePath, layout);
 
-  const thumbnailFile = sidecar.thumbnail;
-  const previewFile = sidecar.preview;
-  const spriteFile = sidecar.sprite;
-  const trickplayFile = sidecar.trickplayVtt;
+  const thumbnailFile = genPaths.thumb;
+  const previewFile = genPaths.preview;
+  const spriteFile = genPaths.sprite;
+  const trickplayFile = genPaths.trickplay;
+
+  await mkdir(path.dirname(thumbnailFile), { recursive: true });
 
   const duration = metadata.duration ?? 0;
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
@@ -164,7 +174,7 @@ export async function processPreview(job: Job) {
     Math.round(scaleResolution(nativeH, 180, thumbQualityClamped))
   );
 
-  const cardFile = sidecar.cardThumbnail;
+  const cardFile = genPaths.card;
   const cardWidth = scaleResolution(nativeW, 160, thumbQualityClamped);
   const cardHeight = Math.max(
     Math.round((nativeH / nativeW) * cardWidth),

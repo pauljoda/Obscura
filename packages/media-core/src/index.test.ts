@@ -5,6 +5,9 @@ import {
   fileNameToTitle,
   normalizeNfoRating,
   getSidecarPaths,
+  getSceneVideoGeneratedDiskPaths,
+  allSceneVideoGeneratedDiskPaths,
+  sceneVideoGeneratedLayoutFromDedicated,
   isAnimatedFormat,
 } from "./index";
 
@@ -117,6 +120,55 @@ describe("getSidecarPaths", () => {
   it("strips original extension for nfo", () => {
     const paths = getSidecarPaths("/media/my-video.mkv");
     expect(paths.nfo).toBe("/media/my-video.nfo");
+  });
+});
+
+describe("getSceneVideoGeneratedDiskPaths", () => {
+  const sceneId = "550e8400-e29b-41d4-a716-446655440000";
+  const videoPath = "/media/videos/scene.mp4";
+
+  it("sidecar layout matches getSidecarPaths stems", () => {
+    const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "sidecar");
+    expect(p.thumb).toBe("/media/videos/scene-thumb.jpg");
+    expect(p.card).toBe("/media/videos/scene-card.jpg");
+    expect(p.preview).toBe("/media/videos/scene-preview.mp4");
+    expect(p.sprite).toBe("/media/videos/scene-sprite.jpg");
+    expect(p.trickplay).toBe("/media/videos/scene-trickplay.vtt");
+  });
+
+  it("dedicated layout uses cache root scenes/<id>/ and fixed filenames", () => {
+    const prev = process.env.OBSCURA_CACHE_DIR;
+    process.env.OBSCURA_CACHE_DIR = "/data/cache";
+    try {
+      const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "dedicated");
+      const base = `/data/cache/scenes/${sceneId}`;
+      expect(p.thumb).toBe(`${base}/thumbnail.jpg`);
+      expect(p.card).toBe(`${base}/card.jpg`);
+      expect(p.preview).toBe(`${base}/preview.mp4`);
+      expect(p.sprite).toBe(`${base}/sprite.jpg`);
+      expect(p.trickplay).toBe(`${base}/trickplay.vtt`);
+    } finally {
+      if (prev === undefined) delete process.env.OBSCURA_CACHE_DIR;
+      else process.env.OBSCURA_CACHE_DIR = prev;
+    }
+  });
+
+  it("allSceneVideoGeneratedDiskPaths dedupes across layouts", () => {
+    const prev = process.env.OBSCURA_CACHE_DIR;
+    process.env.OBSCURA_CACHE_DIR = "/c";
+    try {
+      const all = allSceneVideoGeneratedDiskPaths(sceneId, videoPath);
+      expect(all.length).toBe(10);
+      expect(new Set(all).size).toBe(10);
+    } finally {
+      if (prev === undefined) delete process.env.OBSCURA_CACHE_DIR;
+      else process.env.OBSCURA_CACHE_DIR = prev;
+    }
+  });
+
+  it("sceneVideoGeneratedLayoutFromDedicated maps booleans", () => {
+    expect(sceneVideoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
+    expect(sceneVideoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
   });
 });
 

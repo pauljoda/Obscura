@@ -174,6 +174,12 @@ export const queueDefinitions = [
     description: "Generates waveform peaks data for audio playback visualization",
     concurrency: 1,
   },
+  {
+    name: "library-maintenance",
+    label: "Library maintenance",
+    description: "Moves scene-generated video assets between cache and media-adjacent storage",
+    concurrency: 1,
+  },
 ] as const;
 
 /** BullMQ jobs per queue; default 1. Higher values increase CPU, disk, and memory use. */
@@ -282,6 +288,8 @@ export interface LibrarySettingsDto {
   /** Parallel jobs per queue in the worker process (1–32). */
   backgroundWorkerConcurrency: number;
   nsfwLanAutoEnable: boolean;
+  /** Scene video derivatives (thumb, preview, sprite, trickplay) in cache dir vs next to media. */
+  metadataStorageDedicated: boolean;
   createdAt: string;
   updatedAt: string;
 }

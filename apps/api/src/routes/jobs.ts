@@ -8,7 +8,7 @@ import {
   type JobTriggerKind,
   type QueueName,
 } from "@obscura/contracts";
-import { getSidecarPaths } from "@obscura/media-core";
+import { allSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
 import { getQueue } from "../lib/queues";
@@ -723,10 +723,9 @@ export async function jobsRoutes(app: FastifyInstance) {
       return { error: "Preview rebuild is not available for NSFW content in SFW mode" };
     }
 
-    // Delete existing sidecar files so stale assets aren't served
+    // Delete existing scene derivative files (dedicated cache and/or sidecar) so stale assets aren't served
     if (scene.filePath) {
-      const sidecar = getSidecarPaths(scene.filePath);
-      for (const file of Object.values(sidecar)) {
+      for (const file of allSceneVideoGeneratedDiskPaths(scene.id, scene.filePath)) {
         try {
           if (existsSync(file)) unlinkSync(file);
         } catch {
@@ -803,6 +802,38 @@ export async function jobsRoutes(app: FastifyInstance) {
       skipped: result.skipped,
       jobIds: result.jobIds,
     };
+  });
+
+  app.post("/jobs/migrate-scene-asset-storage", async (request, reply) => {
+    const body = (request.body ?? {}) as { targetDedicated?: unknown };
+    if (typeof body.targetDedicated !== "boolean") {
+      reply.code(400);
+      return { error: "targetDedicated (boolean) is required" };
+    }
+
+    const queue = getQueue("library-maintenance");
+    const payload = withTriggerMetadata(
+      { targetDedicated: body.targetDedicated },
+      {
+        by: "manual",
+        kind: "standard",
+        label: "Migrate scene generated asset paths",
+      },
+    );
+    const job = await queue.add("migrate-scene-assets", payload);
+
+    await recordQueuedJob({
+      queueName: "library-maintenance",
+      bullmqJobId: String(job.id),
+      targetType: "library",
+      targetId: "scene-asset-layout",
+      targetLabel: body.targetDedicated
+        ? "Scene assets to dedicated cache"
+        : "Scene assets beside media files",
+      payload,
+    });
+
+    return { ok: true as const, jobId: String(job.id) };
   });
 
   app.post("/jobs/acknowledge-failed", async (request, reply) => {

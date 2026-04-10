@@ -172,6 +172,8 @@ export const librarySettings = pgTable("library_settings", {
   trickplayQuality: integer("trickplay_quality").default(2).notNull(),
   backgroundWorkerConcurrency: integer("background_worker_concurrency").default(1).notNull(),
   nsfwLanAutoEnable: boolean("nsfw_lan_auto_enable").default(false).notNull(),
+  /** When true, scene thumbnails/previews/sprites/trickplay live under OBSCURA_CACHE_DIR; when false, beside the video file. */
+  metadataStorageDedicated: boolean("metadata_storage_dedicated").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

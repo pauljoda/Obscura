@@ -31,6 +31,7 @@ import {
 } from "@obscura/contracts";
 import {
   writeNfo,
+  allSceneVideoGeneratedDiskPaths,
   getGeneratedSceneDir,
   runProcess,
 } from "@obscura/media-core";
@@ -794,7 +795,16 @@ export async function deleteScene(id: string, deleteFile: boolean) {
   // Delete scene record (cascades handle scenePerformers, sceneTags, sceneMarkers)
   await db.delete(scenes).where(eq(scenes.id, id));
 
-  // Clean up generated files (thumbnails, sprites, HLS cache, etc.)
+  if (existing.filePath) {
+    for (const p of allSceneVideoGeneratedDiskPaths(id, existing.filePath)) {
+      try {
+        if (existsSync(p)) await unlink(p);
+      } catch {
+        // non-fatal
+      }
+    }
+  }
+
   const genDir = getGeneratedSceneDir(id);
   try {
     if (existsSync(genDir)) await rm(genDir, { recursive: true });

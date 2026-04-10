@@ -4,7 +4,6 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, asc } from "drizzle-orm";
 import {
-  getSidecarPaths,
   getGeneratedSceneDir,
   getGeneratedPerformerDir,
   getGeneratedStudioDir,
@@ -13,7 +12,9 @@ import {
   getGeneratedAudioTrackDir,
   getGeneratedAudioLibraryDir,
   extractZipMember,
+  getSceneVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
+import { ensureLibrarySettingsRow } from "../lib/library";
 
 const { scenes, galleries, images } = schema;
 
@@ -52,6 +53,17 @@ type SidecarKind = "thumb" | "card" | "sprite" | "preview" | "trickplay";
 function isSidecarKind(value: string): value is SidecarKind {
   return value in SIDECAR_MIME;
 }
+
+const KIND_TO_DISK_KEY: Record<
+  SidecarKind,
+  "thumb" | "card" | "sprite" | "preview" | "trickplay"
+> = {
+  thumb: "thumb",
+  card: "card",
+  sprite: "sprite",
+  preview: "preview",
+  trickplay: "trickplay",
+};
 
 /** Map legacy filenames (from old cache-based paths) to sidecar kinds */
 const LEGACY_NAME_MAP: Record<string, SidecarKind> = {
@@ -139,43 +151,32 @@ export async function assetsRoutes(app: FastifyInstance) {
       return { error: "Video not found" };
     }
 
-    const sidecar = getSidecarPaths(scene.filePath);
-    const kindToPath: Record<string, string> = {
-      thumb: sidecar.thumbnail,
-      card: sidecar.cardThumbnail,
-      sprite: sidecar.sprite,
-      preview: sidecar.preview,
-      trickplay: sidecar.trickplayVtt,
-    };
+    const libraryRow = await ensureLibrarySettingsRow();
+    const dedicatedPrimary = libraryRow.metadataStorageDedicated ?? true;
 
-    const assetPath = kindToPath[resolvedKind];
+    const pathsDedicated = getSceneVideoGeneratedDiskPaths(id, scene.filePath, "dedicated");
+    const pathsSidecar = getSceneVideoGeneratedDiskPaths(id, scene.filePath, "sidecar");
+    const primary = dedicatedPrimary ? pathsDedicated : pathsSidecar;
+    const secondary = dedicatedPrimary ? pathsSidecar : pathsDedicated;
+
+    const diskKey = KIND_TO_DISK_KEY[resolvedKind];
+    const primaryPath = primary[diskKey];
+    const secondaryPath = secondary[diskKey];
 
     // Generated scene assets are versioned on the client with `?v=<updatedAt>`,
     // so they can be cached aggressively without serving stale rebuilds.
     const cacheHeader = "public, max-age=31536000, immutable";
 
-    // Try sidecar path first, then fall back to legacy cache dir
-    if (existsSync(assetPath)) {
+    if (existsSync(primaryPath)) {
       reply.header("Cache-Control", cacheHeader);
       reply.header("Content-Type", SIDECAR_MIME[resolvedKind]);
-      return reply.send(createReadStream(assetPath));
+      return reply.send(createReadStream(primaryPath));
     }
 
-    // Legacy fallback: check old cache directory
-    const legacyDir = getGeneratedSceneDir(id);
-    const legacyNames: Record<SidecarKind, string> = {
-      thumb: "thumbnail.jpg",
-      card: "card.jpg",
-      sprite: "sprite.jpg",
-      preview: "preview.mp4",
-      trickplay: "trickplay.vtt",
-    };
-
-    const legacyPath = path.join(legacyDir, legacyNames[resolvedKind]);
-    if (existsSync(legacyPath)) {
+    if (existsSync(secondaryPath)) {
       reply.header("Cache-Control", cacheHeader);
-      reply.header("Content-Type", mimeForFile(legacyNames[resolvedKind]));
-      return reply.send(createReadStream(legacyPath));
+      reply.header("Content-Type", SIDECAR_MIME[resolvedKind]);
+      return reply.send(createReadStream(secondaryPath));
     }
 
     reply.code(404);

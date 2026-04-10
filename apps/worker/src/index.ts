@@ -27,6 +27,7 @@ import { processAudioScan } from "./processors/audio-scan.js";
 import { processAudioProbe } from "./processors/audio-probe.js";
 import { processAudioFingerprint } from "./processors/audio-fingerprint.js";
 import { processAudioWaveform } from "./processors/audio-waveform.js";
+import { processLibraryMaintenance } from "./processors/library-maintenance.js";
 
 // ─── Processor Map ──────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ const processorByQueue: Record<QueueName, (job: Job) => Promise<void>> = {
   "audio-probe": processAudioProbe,
   "audio-fingerprint": processAudioFingerprint,
   "audio-waveform": processAudioWaveform,
+  "library-maintenance": processLibraryMaintenance,
 };
 
 // ─── Worker Factory ─────────────────────────────────────────────────

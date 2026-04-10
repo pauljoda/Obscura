@@ -352,6 +352,66 @@ export function getSidecarPaths(videoFilePath: string) {
   };
 }
 
+/** Filenames under `getGeneratedSceneDir(sceneId)` for scene video derivatives (matches API asset legacy names). */
+export const SCENE_VIDEO_GENERATED_FILENAMES = {
+  thumb: "thumbnail.jpg",
+  card: "card.jpg",
+  sprite: "sprite.jpg",
+  preview: "preview.mp4",
+  trickplay: "trickplay.vtt",
+} as const;
+
+export type SceneVideoGeneratedLayout = "dedicated" | "sidecar";
+
+export interface SceneVideoGeneratedDiskPaths {
+  thumb: string;
+  card: string;
+  preview: string;
+  sprite: string;
+  trickplay: string;
+}
+
+export function sceneVideoGeneratedLayoutFromDedicated(dedicated: boolean): SceneVideoGeneratedLayout {
+  return dedicated ? "dedicated" : "sidecar";
+}
+
+/**
+ * Absolute disk paths for generated scene video assets (thumb, card, preview, sprite, trickplay VTT).
+ * Dedicated layout uses `OBSCURA_CACHE_DIR/scenes/<sceneId>/`; sidecar uses names next to the video file.
+ */
+export function getSceneVideoGeneratedDiskPaths(
+  sceneId: string,
+  videoFilePath: string,
+  layout: SceneVideoGeneratedLayout
+): SceneVideoGeneratedDiskPaths {
+  if (layout === "dedicated") {
+    const base = getGeneratedSceneDir(sceneId);
+    return {
+      thumb: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.thumb),
+      card: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.card),
+      preview: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.preview),
+      sprite: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.sprite),
+      trickplay: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.trickplay),
+    };
+  }
+
+  const sidecar = getSidecarPaths(videoFilePath);
+  return {
+    thumb: sidecar.thumbnail,
+    card: sidecar.cardThumbnail,
+    preview: sidecar.preview,
+    sprite: sidecar.sprite,
+    trickplay: sidecar.trickplayVtt,
+  };
+}
+
+/** Every absolute path where scene video derivatives may exist (both layouts). */
+export function allSceneVideoGeneratedDiskPaths(sceneId: string, videoFilePath: string): string[] {
+  const dedicated = getSceneVideoGeneratedDiskPaths(sceneId, videoFilePath, "dedicated");
+  const sidecar = getSceneVideoGeneratedDiskPaths(sceneId, videoFilePath, "sidecar");
+  return [...new Set([...Object.values(dedicated), ...Object.values(sidecar)])];
+}
+
 // ─── NFO metadata ──────────────────────────────────────────────────
 
 export interface NfoMetadata {

@@ -20,6 +20,12 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
     queueNames: ["library-scan", "gallery-scan", "audio-scan"],
   },
   {
+    id: "maintenance",
+    title: "Library maintenance",
+    description: "One-off tasks such as relocating generated scene files.",
+    queueNames: ["library-maintenance"],
+  },
+  {
     id: "scene-media",
     title: "Scene media pipeline",
     description: "Technical metadata, fingerprints, and previews for video scenes.",

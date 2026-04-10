@@ -24,6 +24,7 @@ const defaultSettings: LibrarySettings = {
   trickplayQuality: 2,
   backgroundWorkerConcurrency: 1,
   nsfwLanAutoEnable: false,
+  metadataStorageDedicated: true,
   createdAt: "",
   updatedAt: "",
 };

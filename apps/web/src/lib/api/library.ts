@@ -132,6 +132,16 @@ export async function rebuildPreviews(nsfwMode: string): Promise<{
   });
 }
 
+export async function migrateSceneAssetStorage(targetDedicated: boolean): Promise<{
+  ok: boolean;
+  jobId: string;
+}> {
+  return fetchApi("/jobs/migrate-scene-asset-storage", {
+    method: "POST",
+    body: JSON.stringify({ targetDedicated }),
+  });
+}
+
 export async function acknowledgeJobFailures(queueName?: string): Promise<{
   ok: boolean;
   queueName: string | null;

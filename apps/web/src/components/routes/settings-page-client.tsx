@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
@@ -50,6 +50,7 @@ import {
   fetchInstalledScrapers,
   fetchLibraryConfig,
   fetchStashBoxEndpoints,
+  migrateSceneAssetStorage,
   rebuildPreviews,
   runQueue,
   testStashBoxEndpoint,
@@ -100,6 +101,7 @@ function normalizeSettings(s: LibrarySettings): LibrarySettings {
     thumbnailQuality: s.thumbnailQuality ?? 2,
     trickplayQuality: s.trickplayQuality ?? 2,
     backgroundWorkerConcurrency: s.backgroundWorkerConcurrency ?? 1,
+    metadataStorageDedicated: s.metadataStorageDedicated ?? true,
   };
 }
 
@@ -153,6 +155,8 @@ export function SettingsPageClient({
   const [sbSaving, setSbSaving] = useState(false);
   const [sbTesting, setSbTesting] = useState<string | null>(null);
   const [sbTestResult, setSbTestResult] = useState<{ id: string; valid: boolean; error?: string } | null>(null);
+  const [metadataStorageDialogOpen, setMetadataStorageDialogOpen] = useState(false);
+  const [metadataStorageBusy, setMetadataStorageBusy] = useState(false);
 
   const savedSettings = useRef(normalizeSettings(initialSettings));
   const isDirty = settingsKeys.some((key) => settings[key] !== savedSettings.current[key]);
@@ -222,6 +226,7 @@ export function SettingsPageClient({
         thumbnailQuality: settings.thumbnailQuality,
         trickplayQuality: settings.trickplayQuality,
         backgroundWorkerConcurrency: settings.backgroundWorkerConcurrency,
+        metadataStorageDedicated: settings.metadataStorageDedicated,
       });
 
       const normalized = normalizeSettings(updated);
@@ -310,6 +315,87 @@ export function SettingsPageClient({
       setError(runError instanceof Error ? runError.message : "Failed to queue scan");
     }
   }
+
+  const revertMetadataStorageToggle = () => {
+    setSettings((current) => ({
+      ...current,
+      metadataStorageDedicated: savedSettings.current.metadataStorageDedicated,
+    }));
+  };
+
+  const handleMetadataStorageToggle = (checked: boolean) => {
+    if (checked === savedSettings.current.metadataStorageDedicated) return;
+    setSettings((current) => ({ ...current, metadataStorageDedicated: checked }));
+    setMetadataStorageDialogOpen(true);
+  };
+
+  const closeMetadataStorageDialogCancel = () => {
+    setMetadataStorageDialogOpen(false);
+    revertMetadataStorageToggle();
+  };
+
+  async function confirmMetadataStorageLeaveInPlace() {
+    setMetadataStorageBusy(true);
+    setError(null);
+    try {
+      const updated = await updateLibrarySettings({
+        ...settings,
+        metadataStorageDedicated: settings.metadataStorageDedicated,
+      });
+      const normalized = normalizeSettings(updated);
+      setSettings(normalized);
+      savedSettings.current = normalized;
+      setMetadataStorageDialogOpen(false);
+      setMessage("Setting saved.");
+      setTimeout(() => setMessage(null), 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save setting");
+      closeMetadataStorageDialogCancel();
+    } finally {
+      setMetadataStorageBusy(false);
+    }
+  }
+
+  async function confirmMetadataStorageMoveFiles() {
+    setMetadataStorageBusy(true);
+    setError(null);
+    const targetDedicated = settings.metadataStorageDedicated;
+    try {
+      const updated = await updateLibrarySettings({
+        ...settings,
+        metadataStorageDedicated: targetDedicated,
+      });
+      const normalized = normalizeSettings(updated);
+      setSettings(normalized);
+      savedSettings.current = normalized;
+      await migrateSceneAssetStorage(targetDedicated);
+      setMetadataStorageDialogOpen(false);
+      setMessage(
+        "Setting saved. Moving files in the background — open Jobs to watch progress.",
+      );
+      setTimeout(() => setMessage(null), 6000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save or queue file move");
+      closeMetadataStorageDialogCancel();
+    } finally {
+      setMetadataStorageBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!metadataStorageDialogOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !metadataStorageBusy) {
+        setMetadataStorageDialogOpen(false);
+        setSettings((current) => ({
+          ...current,
+          metadataStorageDedicated: savedSettings.current.metadataStorageDedicated,
+        }));
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [metadataStorageDialogOpen, metadataStorageBusy]);
 
   const totalBytes = storage?.totalBytes ?? 0;
 
@@ -976,6 +1062,14 @@ export function SettingsPageClient({
               void autoSaveSetting({ generateTrickplay: checked });
             }}
           />
+          <div className="md:col-span-2">
+            <ToggleCard
+              label="Store video previews in dedicated cache directory"
+              description="When on, thumbnails, preview clips, sprites, and trickplay data live under the app data volume (OBSCURA_CACHE_DIR, e.g. /data/cache). When off, those files are written next to each video. Scene .nfo files always stay beside the media file."
+              checked={settings.metadataStorageDedicated}
+              onChange={handleMetadataStorageToggle}
+            />
+          </div>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -1156,6 +1250,53 @@ export function SettingsPageClient({
 
       <div className="border-t border-border-subtle" />
       <DiagnosticsSection />
+
+      {metadataStorageDialogOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={metadataStorageBusy ? undefined : closeMetadataStorageDialogCancel}
+            aria-hidden
+          />
+          <div className="relative surface-elevated border border-border-subtle w-full max-w-md mx-4 p-6 space-y-4">
+            <h3 className="text-base font-heading font-semibold text-text-primary">
+              Relocate existing scene assets?
+            </h3>
+            <p className="text-[0.78rem] text-text-muted leading-relaxed">
+              You changed where new thumbnails, preview clips, sprites, and trickplay files are stored. Move
+              files that are already on disk to the new location, or leave them — the app will keep reading
+              from either place until you rebuild previews or move later from Jobs.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={metadataStorageBusy}
+                onClick={() => void confirmMetadataStorageMoveFiles()}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 text-[0.8rem] font-medium border border-border-accent/40 bg-accent-950/40 text-text-primary hover:bg-accent-950/55 transition-colors disabled:opacity-50"
+              >
+                {metadataStorageBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Move existing files
+              </button>
+              <button
+                type="button"
+                disabled={metadataStorageBusy}
+                onClick={() => void confirmMetadataStorageLeaveInPlace()}
+                className="w-full px-3.5 py-2.5 text-[0.8rem] font-medium border border-border-subtle bg-surface-2/40 text-text-secondary hover:border-border-accent/25 transition-colors disabled:opacity-50"
+              >
+                Leave files in place
+              </button>
+              <button
+                type="button"
+                disabled={metadataStorageBusy}
+                onClick={closeMetadataStorageDialogCancel}
+                className="w-full px-3.5 py-2 text-[0.75rem] text-text-muted hover:text-text-primary transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

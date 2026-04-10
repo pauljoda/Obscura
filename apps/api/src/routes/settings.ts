@@ -54,6 +54,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.backgroundWorkerConcurrency ?? settings.backgroundWorkerConcurrency
         ),
         nsfwLanAutoEnable: payload.nsfwLanAutoEnable ?? settings.nsfwLanAutoEnable,
+        metadataStorageDedicated:
+          payload.metadataStorageDedicated ?? settings.metadataStorageDedicated,
         updatedAt: new Date(),
       })
       .where(eq(librarySettings.id, settings.id))
