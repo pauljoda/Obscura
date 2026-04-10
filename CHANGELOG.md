@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.15] - 2026-04-10
+
+### Added
+
+- **`ConfirmDeleteDialog` — broader entity coverage + opt-in disk-delete** — The dialog now recognises `image`, `audio-track`, `gallery`, and `audio-library` entity types alongside the existing `scene` / `performer` / `studio` / `tag`, and exposes an explicit `allowDeleteFromDisk` prop instead of hard-coding the two-button layout to scenes. Scene call sites pass `allowDeleteFromDisk` to keep their legacy UX; new integrations opt in when they want the "also unlink source" affordance.
+- **Image delete from the lightbox** — The image lightbox toolbar gains a trash-can button that opens `ConfirmDeleteDialog` (with the disk option enabled) and calls `DELETE /images/:id`. After a successful delete the lightbox advances to the next image (or closes if the gallery is now empty) and the parent gallery's state updates through a new `onImageDeleted` callback on `<ImageLightbox>`.
+- **Audio track delete from the track list** — Track rows on audio library detail pages show a hover-reveal trash button that opens the generalised delete dialog and calls `DELETE /audio-tracks/:id`. Local library state removes the track immediately; the generated waveform/cover dir is cleaned up server-side and the source file is optionally unlinked.
+- **`deleteImage()` / `deleteAudioTrack()` web API helpers** — New thin wrappers in `apps/web/src/lib/api/media.ts` mirroring the existing `deleteScene()` signature with an optional `deleteFile` flag.
+
 ## [0.8.14] - 2026-04-10
 
 ### Added

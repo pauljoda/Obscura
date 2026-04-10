@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImportButton, UploadDropZone } from "../upload";
+import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
 import {
   Music,
   Play,
@@ -37,6 +38,7 @@ import {
   uploadAudioLibraryCover,
   deleteAudioLibraryCover,
   updateAudioTrack,
+  deleteAudioTrack,
   type TagItem,
   type PerformerItem,
   type StudioItem,
@@ -76,6 +78,38 @@ export function AudioLibraryDetailClient({
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [shufflePlayKey, setShufflePlayKey] = useState(0);
   const router = useRouter();
+  const [trackDeleteTarget, setTrackDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [trackDeleteLoading, setTrackDeleteLoading] = useState(false);
+
+  const handleTrackDelete = useCallback(
+    async (trackId: string, alsoFromDisk: boolean) => {
+      setTrackDeleteLoading(true);
+      try {
+        await deleteAudioTrack(trackId, alsoFromDisk);
+        setLibrary((prev) => ({
+          ...prev,
+          tracks: prev.tracks.filter((t) => t.id !== trackId),
+          trackCount: Math.max(0, prev.trackCount - 1),
+        }));
+        setTrackDeleteTarget(null);
+        if (activeTrackId === trackId) {
+          setActiveTrackId(null);
+        }
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to delete track", error);
+        alert(
+          error instanceof Error ? error.message : "Failed to delete track",
+        );
+      } finally {
+        setTrackDeleteLoading(false);
+      }
+    },
+    [activeTrackId, router],
+  );
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -697,6 +731,20 @@ export function AudioLibraryDetailClient({
                   <span className="text-xs text-text-muted font-mono flex-shrink-0 w-11 sm:w-12 text-right tabular-nums">
                     {track.duration ? formatDuration(track.duration) : "--:--"}
                   </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTrackDeleteTarget({ id: track.id, title: track.title });
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="flex-shrink-0 flex h-6 w-6 items-center justify-center text-text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-status-error focus:opacity-100"
+                    title="Delete track"
+                    aria-label={`Delete ${track.title}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               );
             })}
@@ -720,6 +768,25 @@ export function AudioLibraryDetailClient({
 
   return (
     <>
+      <ConfirmDeleteDialog
+        open={trackDeleteTarget != null}
+        onClose={() => !trackDeleteLoading && setTrackDeleteTarget(null)}
+        entityType="audio-track"
+        count={1}
+        allowDeleteFromDisk
+        onDeleteFromLibrary={() =>
+          trackDeleteTarget
+            ? void handleTrackDelete(trackDeleteTarget.id, false)
+            : undefined
+        }
+        onDeleteFromDisk={() =>
+          trackDeleteTarget
+            ? void handleTrackDelete(trackDeleteTarget.id, true)
+            : undefined
+        }
+        loading={trackDeleteLoading}
+      />
+
       {wrappedContent}
 
       <div

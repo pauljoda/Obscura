@@ -122,6 +122,22 @@ export async function deleteScene(
   return fetchApi(`/scenes/${id}${qs}`, { method: "DELETE" });
 }
 
+export async function deleteImage(
+  id: string,
+  deleteFile?: boolean,
+): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/images/${id}${qs}`, { method: "DELETE" });
+}
+
+export async function deleteAudioTrack(
+  id: string,
+  deleteFile?: boolean,
+): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/audio-tracks/${id}${qs}`, { method: "DELETE" });
+}
+
 export async function createMarker(
   sceneId: string,
   data: { title: string; seconds: number; endSeconds?: number | null },

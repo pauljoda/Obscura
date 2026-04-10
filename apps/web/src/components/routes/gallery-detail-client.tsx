@@ -334,6 +334,14 @@ export function GalleryDetailClient({
               prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))
             );
           }}
+          onImageDeleted={(imageId) => {
+            setImages((prev) => prev.filter((img) => img.id !== imageId));
+            setGallery((prev) => ({
+              ...prev,
+              imageCount: Math.max(0, prev.imageCount - 1),
+            }));
+            router.refresh();
+          }}
         />
       )}
     </div>

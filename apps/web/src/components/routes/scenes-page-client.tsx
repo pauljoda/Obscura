@@ -524,6 +524,7 @@ export function ScenesPageClient({
         onClose={() => setDeleteDialogOpen(false)}
         entityType="scene"
         count={selection.count}
+        allowDeleteFromDisk
         onDeleteFromLibrary={() => void handleBulkDelete(false)}
         onDeleteFromDisk={() => void handleBulkDelete(true)}
         loading={bulkLoading}

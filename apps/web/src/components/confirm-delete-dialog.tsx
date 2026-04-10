@@ -4,21 +4,48 @@ import { useCallback, useEffect } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@obscura/ui/primitives/button";
 
+export type DeletableEntity =
+  | "scene"
+  | "performer"
+  | "studio"
+  | "tag"
+  | "image"
+  | "audio-track"
+  | "gallery"
+  | "audio-library";
+
 interface ConfirmDeleteDialogProps {
   open: boolean;
   onClose: () => void;
-  entityType: "scene" | "performer" | "studio" | "tag";
+  entityType: DeletableEntity;
   count: number;
   onDeleteFromLibrary: () => void;
+  /**
+   * When provided together with `allowDeleteFromDisk`, renders a second
+   * "Delete from disk" button that also unlinks the source file. If
+   * omitted, only the single "Delete" button is shown.
+   */
   onDeleteFromDisk?: () => void;
+  /**
+   * Explicitly opts into showing the secondary "Delete from disk"
+   * button. Scenes have historically shown this by default — pass
+   * `true` at the scene call sites to keep that behavior. Defaults to
+   * `false` so new entity types show only the primary delete button
+   * unless the caller wants the disk-wipe affordance.
+   */
+  allowDeleteFromDisk?: boolean;
   loading?: boolean;
 }
 
-const entityLabels: Record<string, { singular: string; plural: string }> = {
+const entityLabels: Record<DeletableEntity, { singular: string; plural: string }> = {
   scene: { singular: "video", plural: "videos" },
   performer: { singular: "actor", plural: "actors" },
   studio: { singular: "studio", plural: "studios" },
   tag: { singular: "tag", plural: "tags" },
+  image: { singular: "image", plural: "images" },
+  "audio-track": { singular: "track", plural: "tracks" },
+  gallery: { singular: "gallery", plural: "galleries" },
+  "audio-library": { singular: "audio library", plural: "audio libraries" },
 };
 
 export function ConfirmDeleteDialog({
@@ -28,6 +55,7 @@ export function ConfirmDeleteDialog({
   count,
   onDeleteFromLibrary,
   onDeleteFromDisk,
+  allowDeleteFromDisk,
   loading,
 }: ConfirmDeleteDialogProps) {
   const handleKeyDown = useCallback(
@@ -47,7 +75,14 @@ export function ConfirmDeleteDialog({
 
   const label = entityLabels[entityType] ?? { singular: entityType, plural: entityType + "s" };
   const noun = count === 1 ? label.singular : label.plural;
-  const isScene = entityType === "scene";
+  // Show the two-button "library vs disk" layout whenever the caller
+  // explicitly enabled it AND provided an onDeleteFromDisk callback.
+  // Scene call sites get this by default to preserve their legacy UX
+  // when they pass `allowDeleteFromDisk` alongside the existing
+  // onDeleteFromDisk prop.
+  const showDiskOption =
+    (allowDeleteFromDisk ?? entityType === "scene") &&
+    typeof onDeleteFromDisk === "function";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -68,8 +103,8 @@ export function ConfirmDeleteDialog({
               Delete {count} {noun}
             </h3>
             <p className="mt-1.5 text-[0.78rem] text-text-muted leading-relaxed">
-              {isScene
-                ? "This will permanently remove the selected videos from the library. Generated files (thumbnails, sprites, preview clips) will be deleted."
+              {showDiskOption
+                ? `This will permanently remove the selected ${noun} from the library. Generated files will be deleted. You can also remove the source file${count === 1 ? "" : "s"} from disk.`
                 : `This will permanently delete the selected ${noun}. All associations and generated files will be removed.`}
             </p>
             <p className="mt-1 text-[0.72rem] text-status-error font-medium">
@@ -79,7 +114,7 @@ export function ConfirmDeleteDialog({
         </div>
 
         <div className="flex flex-col gap-2">
-          {isScene ? (
+          {showDiskOption ? (
             <>
               <Button
                 variant="danger"

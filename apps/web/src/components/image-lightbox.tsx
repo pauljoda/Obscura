@@ -13,13 +13,15 @@ import {
   ZoomIn,
   ZoomOut,
   Bookmark,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl } from "../lib/api";
+import { toApiUrl, deleteImage } from "../lib/api";
 import { isVideoImage } from "../lib/image-media";
 import { NsfwBlur } from "./nsfw/nsfw-gate";
 import { ImageLightboxFilmstrip } from "./image-lightbox-filmstrip";
 import { ImageLightboxInfo } from "./image-lightbox-info";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { ImageListItemDto, GalleryChapterDto } from "@obscura/contracts";
 
 interface ImageLightboxProps {
@@ -28,6 +30,12 @@ interface ImageLightboxProps {
   chapters?: GalleryChapterDto[];
   onClose: () => void;
   onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
+  /**
+   * Called after a successful delete so the parent can remove the image
+   * from its local state and optionally refresh. When provided, a delete
+   * affordance is shown in the lightbox toolbar.
+   */
+  onImageDeleted?: (imageId: string) => void;
   availableTags?: import("../lib/api").TagItem[];
   availablePerformers?: import("../lib/api").PerformerItem[];
 }
@@ -38,6 +46,7 @@ export function ImageLightbox({
   chapters = [],
   onClose,
   onImageUpdate,
+  onImageDeleted,
   availableTags,
   availablePerformers,
 }: ImageLightboxProps) {
@@ -48,6 +57,8 @@ export function ImageLightbox({
   const [isDragging, setIsDragging] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [slideshowActive, setSlideshowActive] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingImage, setDeletingImage] = useState(false);
   const [slideshowInterval] = useState(4000);
   const [showChapters, setShowChapters] = useState(false);
 
@@ -57,6 +68,35 @@ export function ImageLightbox({
 
   const currentImage = images[currentIndex];
   const fullUrl = currentImage ? toApiUrl(currentImage.fullPath) ?? null : null;
+
+  const handleDeleteImage = useCallback(
+    async (alsoFromDisk: boolean) => {
+      if (!currentImage || deletingImage) return;
+      setDeletingImage(true);
+      try {
+        await deleteImage(currentImage.id, alsoFromDisk);
+        onImageDeleted?.(currentImage.id);
+        setDeleteDialogOpen(false);
+        // If this was the last image, close the lightbox; otherwise
+        // snap to the next image (or the previous one at the end).
+        if (images.length <= 1) {
+          onClose();
+        } else if (currentIndex >= images.length - 1) {
+          setCurrentIndex(currentIndex - 1);
+        }
+      } catch (error) {
+        // Surface the error inline — the confirm dialog stays open
+        // so the user can try again or cancel.
+        console.error("Failed to delete image", error);
+        alert(
+          error instanceof Error ? error.message : "Failed to delete image",
+        );
+      } finally {
+        setDeletingImage(false);
+      }
+    },
+    [currentImage, deletingImage, images.length, currentIndex, onClose, onImageDeleted],
+  );
 
   // Reset zoom/pan on index change
   useEffect(() => {
@@ -281,6 +321,16 @@ export function ImageLightbox({
             <Info className="h-4 w-4" />
           </button>
 
+          {onImageDeleted ? (
+            <button
+              onClick={() => setDeleteDialogOpen(true)}
+              className="p-2 text-white/60 hover:text-status-error transition-colors"
+              title="Delete image"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : null}
+
           {/* Fullscreen */}
           <button
             onClick={() => {
@@ -411,6 +461,17 @@ export function ImageLightbox({
         onImageUpdate={onImageUpdate}
         availableTags={availableTags}
         availablePerformers={availablePerformers}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onClose={() => !deletingImage && setDeleteDialogOpen(false)}
+        entityType="image"
+        count={1}
+        allowDeleteFromDisk
+        onDeleteFromLibrary={() => void handleDeleteImage(false)}
+        onDeleteFromDisk={() => void handleDeleteImage(true)}
+        loading={deletingImage}
       />
     </div>
   );
