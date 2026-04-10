@@ -9,12 +9,13 @@ import {
 
 let bossPromise: Promise<PgBoss> | null = null;
 
+// Fallback mirrors apps/worker/src/lib/db.ts so the worker can run in a dev
+// shell without an explicit env load.
 function databaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL must be set for pg-boss");
-  }
-  return url;
+  return (
+    process.env.DATABASE_URL ??
+    "postgres://obscura:obscura@localhost:5432/obscura"
+  );
 }
 
 export function initQueues(): Promise<PgBoss> {

@@ -8,12 +8,14 @@ import { queueDefinitions, type QueueName } from "@obscura/contracts";
 
 let bossPromise: Promise<PgBoss> | null = null;
 
+// Fallback mirrors apps/api/src/db/index.ts so the API can run in a dev shell
+// without an explicit env load (the dev docker-compose postgres exposes the
+// `obscura:obscura@localhost:5432/obscura` credentials).
 function databaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL must be set for pg-boss");
-  }
-  return url;
+  return (
+    process.env.DATABASE_URL ??
+    "postgres://obscura:obscura@localhost:5432/obscura"
+  );
 }
 
 export function initQueues(): Promise<PgBoss> {

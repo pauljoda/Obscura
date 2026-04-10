@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-04-10
+
+### Fixed
+
+- **Dev startup** — API and worker crashed on boot with `DATABASE_URL must be set for pg-boss` when started from a plain dev shell (`tsx watch` doesn't auto-load `.env`, and the old BullMQ code had a `redis://localhost:6379` fallback that masked the same problem). The pg-boss facades in `apps/api/src/lib/queues.ts` and `apps/worker/src/lib/queues.ts` now fall back to `postgres://obscura:obscura@localhost:5432/obscura` — the same default used by the drizzle client — so both services come up against the dev docker-compose Postgres without any environment plumbing. With the API alive again, the cascading `TypeError: fetch failed` / `ECONNREFUSED` errors in the web app's server-rendered routes go away.
+
 ## [0.8.3] - 2026-04-10
 
 ### Fixed
