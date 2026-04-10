@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { normalizeBackgroundWorkerConcurrency } from "@obscura/contracts";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 import { db, schema } from "../db";
 import {
   browseDirectories,
@@ -64,8 +64,34 @@ export async function settingsRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  app.get("/libraries", async () => {
-    const roots = await db.select().from(libraryRoots).orderBy(asc(libraryRoots.path));
+  app.get("/libraries", async (request) => {
+    const query = request.query as {
+      scanVideos?: string;
+      scanImages?: string;
+      scanAudio?: string;
+      enabled?: string;
+    };
+    const asBool = (raw?: string) => {
+      if (raw == null) return undefined;
+      if (raw === "true" || raw === "1") return true;
+      if (raw === "false" || raw === "0") return false;
+      return undefined;
+    };
+    const filters: SQL[] = [];
+    const scanVideos = asBool(query.scanVideos);
+    const scanImages = asBool(query.scanImages);
+    const scanAudio = asBool(query.scanAudio);
+    const enabled = asBool(query.enabled);
+    if (scanVideos != null) filters.push(eq(libraryRoots.scanVideos, scanVideos));
+    if (scanImages != null) filters.push(eq(libraryRoots.scanImages, scanImages));
+    if (scanAudio != null) filters.push(eq(libraryRoots.scanAudio, scanAudio));
+    if (enabled != null) filters.push(eq(libraryRoots.enabled, enabled));
+    const whereClause = filters.length > 0 ? and(...filters) : undefined;
+    const roots = await db
+      .select()
+      .from(libraryRoots)
+      .where(whereClause)
+      .orderBy(asc(libraryRoots.path));
     return { roots };
   });
 

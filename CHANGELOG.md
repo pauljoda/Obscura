@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-04-10
+
+### Changed
+
+- **`GET /libraries`** — Now accepts optional `scanVideos`, `scanImages`, `scanAudio`, and `enabled` query params (each parsed as `true`/`false`/`1`/`0`). Used by the upcoming scene upload flow to enumerate roots that are eligible targets for video uploads; missing params preserve the prior "return everything" behavior so existing callers are unaffected.
+
 ## [0.8.6] - 2026-04-10
 
 ### Added
