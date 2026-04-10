@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { unlink, rm } from "node:fs/promises";
 import { db, schema } from "../db";
 import {
   eq,
@@ -6,7 +8,20 @@ import {
   inArray,
   and,
 } from "drizzle-orm";
+import type { MultipartFile } from "@fastify/multipart";
+import type { UploadAudioTrackResponseDto } from "@obscura/contracts";
+import {
+  fileNameToTitle,
+  getGeneratedAudioTrackDir,
+} from "@obscura/media-core";
 import { AppError } from "../plugins/error-handler";
+import {
+  assertDirExists,
+  resolveCollisionSafePath,
+  streamToFile,
+  validateUpload,
+} from "../lib/upload";
+import { enqueueQueueJob } from "../lib/job-enqueue";
 import {
   buildOrderBy,
   toArray,
@@ -24,6 +39,7 @@ const {
   audioTrackPerformers,
   audioTrackTags,
   audioTrackMarkers,
+  audioLibraries,
   performers,
   tags,
   studios,
@@ -406,4 +422,155 @@ export async function updateMarker(
 
 export async function deleteMarker(markerId: string) {
   await db.delete(audioTrackMarkers).where(eq(audioTrackMarkers.id, markerId));
+}
+
+// ─── uploadTrack ───────────────────────────────────────────────
+
+/**
+ * Upload an audio file into an audio library's folder and create the
+ * matching `audio_tracks` row. Requires the library to have a folderPath
+ * that exists on disk.
+ */
+export async function uploadTrack(
+  libraryId: string,
+  file: MultipartFile,
+): Promise<UploadAudioTrackResponseDto> {
+  const [library] = await db
+    .select({
+      id: audioLibraries.id,
+      title: audioLibraries.title,
+      folderPath: audioLibraries.folderPath,
+      isNsfw: audioLibraries.isNsfw,
+    })
+    .from(audioLibraries)
+    .where(eq(audioLibraries.id, libraryId))
+    .limit(1);
+  if (!library) {
+    throw new AppError(404, "Audio library not found");
+  }
+  if (!library.folderPath) {
+    throw new AppError(400, "Audio library is not folder-backed");
+  }
+  await assertDirExists(library.folderPath);
+
+  const { safeName } = validateUpload(file, { category: "audio" });
+  const dest = await resolveCollisionSafePath(library.folderPath, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  const [created] = await db
+    .insert(audioTracks)
+    .values({
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      libraryId: library.id,
+      organized: false,
+      isNsfw: library.isNsfw ?? false,
+    })
+    .returning({
+      id: audioTracks.id,
+      title: audioTracks.title,
+      filePath: audioTracks.filePath,
+    });
+
+  if (!created) {
+    throw new AppError(500, "Failed to create audio track row after upload");
+  }
+
+  await db
+    .update(audioLibraries)
+    .set({
+      trackCount: sql`${audioLibraries.trackCount} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(audioLibraries.id, library.id));
+
+  const target = {
+    type: "audio-track" as const,
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${library.title}`,
+  };
+  await enqueueQueueJob({
+    queueName: "audio-probe",
+    jobName: "audio-probe",
+    data: { trackId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "audio-fingerprint",
+    jobName: "audio-fingerprint",
+    data: { trackId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "audio-waveform",
+    jobName: "audio-waveform",
+    data: { trackId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath,
+    libraryId: library.id,
+  };
+}
+
+// ─── deleteTrack ───────────────────────────────────────────────
+
+/**
+ * Delete a single audio track. Cascades join tables + markers via FK,
+ * wipes the generated waveform/cover dir, and optionally unlinks the
+ * source file on disk.
+ */
+export async function deleteTrack(id: string, deleteFile: boolean) {
+  const [existing] = await db
+    .select({
+      id: audioTracks.id,
+      filePath: audioTracks.filePath,
+      libraryId: audioTracks.libraryId,
+    })
+    .from(audioTracks)
+    .where(eq(audioTracks.id, id))
+    .limit(1);
+  if (!existing) {
+    throw new AppError(404, "Audio track not found");
+  }
+
+  await db.delete(audioTracks).where(eq(audioTracks.id, id));
+
+  if (existing.libraryId) {
+    await db
+      .update(audioLibraries)
+      .set({
+        trackCount: sql`GREATEST(${audioLibraries.trackCount} - 1, 0)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(audioLibraries.id, existing.libraryId));
+  }
+
+  const genDir = getGeneratedAudioTrackDir(id);
+  try {
+    if (existsSync(genDir)) await rm(genDir, { recursive: true });
+  } catch {
+    // non-fatal
+  }
+
+  if (deleteFile && existing.filePath) {
+    try {
+      if (existsSync(existing.filePath)) await unlink(existing.filePath);
+    } catch {
+      // non-fatal
+    }
+  }
+
+  return { ok: true as const };
 }

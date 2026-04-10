@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import * as audioLibraryService from "../services/audio-library.service";
+import * as audioTrackService from "../services/audio-track.service";
 
 export async function audioLibrariesRoutes(app: FastifyInstance) {
   // ─── GET /audio-libraries ──────────────────────────────────────
@@ -87,5 +88,18 @@ export async function audioLibrariesRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     await audioLibraryService.deleteAudioLibrary(id);
     return { ok: true };
+  });
+
+  // ─── POST /audio-libraries/:id/tracks/upload (multipart) ───────
+  // Imports an audio file into a library's folder. Requires the
+  // library to have a folderPath that exists on disk.
+  app.post("/audio-libraries/:id/tracks/upload", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const file = await request.file();
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+    return audioTrackService.uploadTrack(id, file);
   });
 }

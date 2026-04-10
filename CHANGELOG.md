@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.10] - 2026-04-10
+
+### Added
+
+- **`POST /audio-libraries/:id/tracks/upload`** — Multipart endpoint that imports an audio file into an audio library's `folderPath` and creates the matching `audio_tracks` row. Bumps the parent library's denormalized `trackCount`, inherits `isNsfw` from the parent, and enqueues the standard `audio-probe` → `audio-fingerprint` → `audio-waveform` pipeline so the new track gets duration / sample rate / waveform peaks without a rescan.
+- **`DELETE /audio-tracks/:id`** — Single-track delete endpoint (previously only markers had a DELETE route). Cascades `audioTrackPerformers` / `audioTrackTags` / `audioTrackMarkers` via FK, decrements the parent library's `trackCount`, removes the generated waveform/cover dir under `getGeneratedAudioTrackDir(id)`, and accepts `?deleteFile=true` to also unlink the source file.
+
 ## [0.8.9] - 2026-04-10
 
 ### Added

@@ -30,6 +30,13 @@ export async function audioTracksRoutes(app: FastifyInstance) {
     return audioTrackService.getAudioTrackById(id);
   });
 
+  // ─── DELETE /audio-tracks/:id ──────────────────────────────────
+  app.delete("/audio-tracks/:id", async (request) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as { deleteFile?: string };
+    return audioTrackService.deleteTrack(id, query.deleteFile === "true");
+  });
+
   // ─── PATCH /audio-tracks/:id ───────────────────────────────────
   app.patch("/audio-tracks/:id", async (request) => {
     const { id } = request.params as { id: string };
