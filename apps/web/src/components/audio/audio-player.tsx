@@ -50,6 +50,7 @@ export function AudioPlayer({
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [shuffle, setShuffle] = useState(false);
   const prevTrackIdRef = useRef<string | null>(null);
+  const wantPlayRef = useRef(false);
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
   const activeIndex = activeTrack ? tracks.findIndex((t) => t.id === activeTrackId) : -1;
@@ -64,10 +65,11 @@ export function AudioPlayer({
 
     if (prevTrackIdRef.current !== activeTrack.id) {
       prevTrackIdRef.current = activeTrack.id;
-      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
       setCurrentTime(0);
       setDuration(activeTrack.duration ?? 0);
-      audio.play().catch(() => {});
+      wantPlayRef.current = true;
+      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
+      audio.load();
     }
   }, [activeTrack]);
 
@@ -91,6 +93,11 @@ export function AudioPlayer({
 
   // ─── Audio events ─────────────────────────────────────────────
 
+  // Refs for callbacks declared below — avoids re-registering listeners
+  const handleTrackEndRef = useRef<() => void>(() => {});
+  const activeTrackIdRef = useRef(activeTrackId);
+  activeTrackIdRef.current = activeTrackId;
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -103,17 +110,25 @@ export function AudioPlayer({
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onEnded = () => {
-      if (activeTrack) {
-        fetch(`${API_BASE}/audio-tracks/${activeTrack.id}/play`, { method: "POST" }).catch(() => {});
+    const onCanPlay = () => {
+      if (wantPlayRef.current) {
+        wantPlayRef.current = false;
+        audio.play().catch(() => {});
       }
-      handleTrackEnd();
+    };
+    const onEnded = () => {
+      const trackId = activeTrackIdRef.current;
+      if (trackId) {
+        fetch(`${API_BASE}/audio-tracks/${trackId}/play`, { method: "POST" }).catch(() => {});
+      }
+      handleTrackEndRef.current();
     };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
+    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("ended", onEnded);
 
     return () => {
@@ -121,9 +136,10 @@ export function AudioPlayer({
       audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("ended", onEnded);
     };
-  }, [activeTrack?.id, repeat, shuffle, tracks.length]);
+  }, []); // Register once — callbacks use refs
 
   // ─── Track end logic ──────────────────────────────────────────
 
@@ -157,6 +173,9 @@ export function AudioPlayer({
     }
   }, [repeat, shuffle, activeTrackId, activeIndex, tracks, onTrackChange]);
 
+  // Keep the ref fresh for the audio event listeners
+  handleTrackEndRef.current = handleTrackEnd;
+
   // ─── Playback controls ────────────────────────────────────────
 
   const playAll = useCallback(() => {
@@ -175,6 +194,13 @@ export function AudioPlayer({
     if (!audio) return;
     if (!activeTrack) {
       playAll();
+      return;
+    }
+    // Ensure source is loaded
+    if (!audio.src || audio.src === window.location.href) {
+      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
+      audio.load();
+      wantPlayRef.current = true;
       return;
     }
     if (audio.paused) {

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-04-09
+
+### Fixed
+
+- **Audio playback not starting** — The player now loads the audio source via `audio.load()` and triggers `play()` on the `canplay` event, rather than calling `play()` synchronously after setting `src` (which rejected before the media was ready). Audio event listeners are now registered once using refs for callback access, avoiding stale closures. `togglePlay` also handles the case where the user clicks play before any source has been loaded.
+
 ## [0.5.4] - 2026-04-09
 
 ### Fixed
