@@ -408,66 +408,67 @@ export function AudioPlayer({
         </div>
       )}
 
-      {/* ─── Transport controls ─────────────────────────────────── */}
-      <div className="flex items-center px-4 py-2.5 gap-1">
-        <button
-          type="button"
-          onClick={() => setShuffle((s) => !s)}
-          title={shuffle ? "Shuffle: on" : "Shuffle: off"}
-          className={cn(
-            "p-2 transition-colors",
-            shuffle ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
-          )}
-        >
-          <Shuffle className="h-3.5 w-3.5" />
-        </button>
+      {/* ─── Transport controls (centered) + volume (right) ─────────── */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 px-4 py-2.5">
+        <div className="min-w-0" aria-hidden />
+        <div className="flex items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShuffle((s) => !s)}
+            title={shuffle ? "Shuffle: on" : "Shuffle: off"}
+            className={cn(
+              "p-2 transition-colors",
+              shuffle ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
+            )}
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+          </button>
 
-        <button
-          type="button"
-          onClick={handlePrev}
-          disabled={!activeTrack && tracks.length === 0}
-          className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
-        >
-          <SkipBack className="h-4 w-4" />
-        </button>
+          <button
+            type="button"
+            onClick={handlePrev}
+            disabled={!activeTrack && tracks.length === 0}
+            className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
+          >
+            <SkipBack className="h-4 w-4" />
+          </button>
 
-        <button
-          type="button"
-          onClick={togglePlay}
-          className={cn(
-            "p-3 mx-1 transition-all",
-            playing
-              ? "bg-accent-500 text-bg shadow-[0_0_12px_rgba(196,154,90,0.3)]"
-              : "bg-surface-3 text-text-primary hover:bg-surface-4 hover:text-accent-400",
-          )}
-        >
-          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-        </button>
+          <button
+            type="button"
+            onClick={togglePlay}
+            className={cn(
+              "p-3 mx-1 transition-all",
+              playing
+                ? "bg-accent-500 text-bg shadow-[0_0_12px_rgba(196,154,90,0.3)]"
+                : "bg-surface-3 text-text-primary hover:bg-surface-4 hover:text-accent-400",
+            )}
+          >
+            {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+          </button>
 
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={!activeTrack && tracks.length === 0}
-          className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
-        >
-          <SkipForward className="h-4 w-4" />
-        </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={!activeTrack && tracks.length === 0}
+            className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
+          >
+            <SkipForward className="h-4 w-4" />
+          </button>
 
-        <button
-          type="button"
-          onClick={cycleRepeat}
-          title={repeat === "off" ? "Repeat: off" : repeat === "all" ? "Repeat: all" : "Repeat: one"}
-          className={cn(
-            "p-2 transition-colors",
-            repeat !== "off" ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
-          )}
-        >
-          {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
-        </button>
+          <button
+            type="button"
+            onClick={cycleRepeat}
+            title={repeat === "off" ? "Repeat: off" : repeat === "all" ? "Repeat: all" : "Repeat: one"}
+            className={cn(
+              "p-2 transition-colors",
+              repeat !== "off" ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
+            )}
+          >
+            {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
+          </button>
+        </div>
 
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-1.5 group/vol">
+        <div className="flex min-w-0 justify-end items-center gap-1.5 group/vol">
           <button
             type="button"
             onClick={toggleMute}
