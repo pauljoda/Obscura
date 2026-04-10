@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-04-09
+
+### Fixed
+
+- **Audio nav icon** — Added `music` to the sidebar icon map so the Audio nav entry renders its icon correctly.
+
 ## [0.5.1] - 2026-04-09
 
 ### Added
