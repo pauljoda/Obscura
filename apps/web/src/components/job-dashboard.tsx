@@ -161,10 +161,10 @@ function ForceRebuildBadge({ job }: { job: JobRun }) {
 
 function describeRunResult(queueName: string, enqueued: number, skipped: number) {
   if (queueName === "library-maintenance" && enqueued === 1) {
-    return "Queued scene asset migration for all videos (NSFW and SFW).";
+    return "Cleaning up files.";
   }
   if (queueName === "library-maintenance" && enqueued === 0 && skipped > 0) {
-    return "Scene asset migration is already queued or running.";
+    return "File cleanup is already in progress.";
   }
 
   const parts = [
@@ -911,7 +911,7 @@ function FailedJobCard({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
           </p>
           <pre className="whitespace-pre-wrap break-words font-mono text-[0.75rem] leading-5 text-status-error-text">
             {maintenanceJobLogRedacted(job, nsfwMode) && job.error
-              ? "Error details are hidden in SFW mode."
+              ? "Error details are hidden."
               : job.error ?? "No error message recorded."}
           </pre>
         </div>
