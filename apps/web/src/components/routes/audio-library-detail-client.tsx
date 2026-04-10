@@ -231,8 +231,18 @@ export function AudioLibraryDetailClient({
           </NsfwBlur>
           <div className="flex-1 min-w-0 py-1">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-xs text-text-muted uppercase tracking-wider font-medium mb-1">Audio Library</p>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {editMode ? (
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="flex-1 min-w-0 bg-surface-2 border border-border-subtle px-2 py-1.5 text-2xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500"
+                />
+              ) : (
+                <h1 className="flex-1 min-w-0 text-2xl font-heading font-semibold leading-tight">
+                  {library.title}
+                </h1>
+              )}
+              <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
                 {editMode ? (
                   <>
                     <button
@@ -266,16 +276,6 @@ export function AudioLibraryDetailClient({
                 )}
               </div>
             </div>
-
-            {editMode ? (
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full mt-1 bg-surface-2 border border-border-subtle px-2 py-1.5 text-xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500"
-              />
-            ) : (
-              <h1 className="text-2xl font-heading font-semibold leading-tight">{library.title}</h1>
-            )}
 
             {editMode ? (
               <div className="mt-3 space-y-3">

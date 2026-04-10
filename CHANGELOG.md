@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-04-09
+
+### Changed
+
+- **Audio library detail** — Removed the redundant “Audio Library” kicker; the library title (and edit field) is the primary heading, with actions aligned on the same row.
+
 ## [0.6.0] - 2026-04-09
 
 ### Added
