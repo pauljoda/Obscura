@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.15] - 2026-04-10
+
+### Fixed
+
+- **Web** — Tailwind v4 now scans `packages/ui` via `@source`, so utilities from `@obscura/ui` (including `peer-checked` on the checkbox) are emitted. Checkboxes again show the brass fill, glow, and check icon when selected.
+
 ## [0.7.14] - 2026-04-10
 
 ### Fixed

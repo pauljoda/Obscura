@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* @obscura/ui is linked under node_modules; Tailwind v4 skips node_modules when scanning, so register the workspace package explicitly. */
+@source "../../../../packages/ui/src";
+
 /*
  * Obscura Design System — Dark Control Room
  *
