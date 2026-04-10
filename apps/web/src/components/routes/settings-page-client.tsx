@@ -631,7 +631,7 @@ export function SettingsPageClient({
                   !root.enabled && "opacity-50",
                 )}
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div className="min-w-0 flex items-center gap-3">
                     <div className={cn("led flex-shrink-0", root.enabled ? "led-active" : "led-idle")} />
                     <div className="min-w-0">
@@ -639,8 +639,8 @@ export function SettingsPageClient({
                       <p className="mt-0.5 truncate text-mono-sm text-text-disabled">{root.path}</p>
                     </div>
                   </div>
-                  <div className="flex flex-shrink-0 items-center gap-3">
-                    <span className="text-[0.62rem] text-text-disabled">
+                  <div className="flex flex-wrap items-center gap-3 md:flex-shrink-0">
+                    <span className="text-[0.62rem] text-text-disabled whitespace-nowrap">
                       {formatTimestamp(root.lastScannedAt)}
                     </span>
                     {/* Media type toggles */}
@@ -708,7 +708,7 @@ export function SettingsPageClient({
                     </div>
                     <button
                       onClick={() => void handleToggleRoot(root)}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary whitespace-nowrap"
                     >
                       {root.enabled ? (
                         <ToggleRight className="h-4 w-4 text-text-accent" />
