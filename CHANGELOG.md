@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.13] - 2026-04-10
+
+### Added
+
+- **Gallery detail drag-drop + Import** — Folder-backed galleries (`galleryType === "folder"`) now show an `<ImportButton>` in the detail header and accept drag-dropped image files anywhere in the gallery view. Uploaded images land in the gallery's `folderPath` and get `image-thumbnail` + `image-fingerprint` jobs automatically so thumbnails materialise without a rescan. Zip and virtual galleries leave the affordance hidden — they have no on-disk folder to write into.
+
 ## [0.8.12] - 2026-04-10
 
 ### Added

@@ -3,9 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, Images, LayoutGrid, LayoutList, Newspaper } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
+import { ImportButton, UploadDropZone } from "../upload";
 import { ImageFeed } from "../image-feed";
 import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
@@ -35,8 +36,12 @@ export function GalleryDetailClient({
   const [subGalleryView, setSubGalleryView] = useState<"grid" | "list">("grid");
   const [imageViewMode, setImageViewMode] = useState<"grid" | "feed">("grid");
   const searchParams = useSearchParams();
+  const router = useRouter();
   const handledDeepLinkImageId = useRef<string | null>(null);
   const { mode: nsfwMode } = useNsfw();
+  // Only folder-backed galleries have an on-disk location we can import
+  // new images into. Zip and virtual galleries disable the affordance.
+  const canImport = gallery.galleryType === "folder";
 
   useEffect(() => {
     setGallery(initialGallery);
@@ -156,28 +161,37 @@ export function GalleryDetailClient({
   const subGalleryCountLabel =
     nsfwMode === "off" ? visibleChildGalleries.length : gallery.children.length;
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link
-          href={backHref}
-          className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="flex items-center gap-2.5">
-            <Images className="h-5 w-5 text-text-accent" />
-            {gallery.title}
-          </h1>
-          <p className="text-text-muted text-[0.78rem] mt-0.5">
-            {gallery.imageCount} images
-            {gallery.children.length > 0 && ` \u00B7 ${subGalleryCountLabel} sub-galleries`}
-            {gallery.galleryType !== "virtual" && ` \u00B7 ${gallery.galleryType}`}
-          </p>
-        </div>
+  const header = (
+    <div className="flex items-center gap-3">
+      <Link
+        href={backHref}
+        className="flex h-8 w-8 items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Link>
+      <div className="flex-1">
+        <h1 className="flex items-center gap-2.5">
+          <Images className="h-5 w-5 text-text-accent" />
+          {gallery.title}
+        </h1>
+        <p className="text-text-muted text-[0.78rem] mt-0.5">
+          {gallery.imageCount} images
+          {gallery.children.length > 0 && ` \u00B7 ${subGalleryCountLabel} sub-galleries`}
+          {gallery.galleryType !== "virtual" && ` \u00B7 ${gallery.galleryType}`}
+        </p>
       </div>
+      {canImport ? (
+        <ImportButton
+          target={{ kind: "image", galleryId: gallery.id }}
+          onUploaded={() => router.refresh()}
+        />
+      ) : null}
+    </div>
+  );
+
+  const body = (
+    <div className="space-y-4">
+      {header}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
@@ -323,5 +337,17 @@ export function GalleryDetailClient({
         />
       )}
     </div>
+  );
+
+  if (!canImport) return body;
+
+  return (
+    <UploadDropZone
+      target={{ kind: "image", galleryId: gallery.id }}
+      onUploaded={() => router.refresh()}
+      className="relative"
+    >
+      {body}
+    </UploadDropZone>
   );
 }
