@@ -40,10 +40,26 @@ RUN mkdir -p /web-standalone && \
     cp -r apps/web/public /web-standalone/web/public && \
     cp CHANGELOG.md /web-standalone/web/CHANGELOG.md
 
-# ── Stage 3: Unified production image ────────────────────────────
+# ── Stage 3: Build audiowaveform from source ────────────────────
+FROM alpine:3.20 AS audiowaveform-builder
+
+RUN apk add --no-cache \
+    cmake make g++ \
+    libmad-dev libsndfile-dev libgd-dev \
+    boost-dev boost-program_options boost-regex \
+    git
+
+RUN git clone --depth 1 https://github.com/bbc/audiowaveform.git /build/audiowaveform \
+  && cd /build/audiowaveform \
+  && mkdir build && cd build \
+  && cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=0 .. \
+  && make -j"$(nproc)" \
+  && make install
+
+# ── Stage 4: Unified production image ────────────────────────────
 FROM node:22-alpine AS runner
 
-# Install runtime dependencies
+# Install runtime dependencies (including audiowaveform runtime libs)
 RUN apk add --no-cache \
     ffmpeg \
     libheif \
@@ -52,8 +68,12 @@ RUN apk add --no-cache \
     redis \
     nginx \
     su-exec \
+    libmad libsndfile libgd boost-program_options boost-regex \
   && mkdir -p /data/postgres /data/redis /data/cache /media /run/postgresql \
   && chown -R postgres:postgres /data/postgres /run/postgresql
+
+# Copy audiowaveform binary from builder
+COPY --from=audiowaveform-builder /usr/local/bin/audiowaveform /usr/local/bin/audiowaveform
 
 WORKDIR /app
 
