@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-04-10
+
+### Added
+
+- **`apps/api/src/lib/upload.ts`** — Shared multipart-upload helper used by the upcoming scene/image/audio upload endpoints. Provides category-scoped allow-lists (video, image, audio) with mime + extension validation, `OBSCURA_MAX_{VIDEO,IMAGE,AUDIO}_UPLOAD` env overrides on the default size caps (20 GiB / 100 MiB / 1 GiB), filename sanitisation that rejects directory traversal, a collision-safe destination resolver (`name.ext` → `name (1).ext` → …), an `assertDirExists` guard that returns a clear 400 when the target folder is missing, and a `streamToFile` helper that pipes `@fastify/multipart` streams directly to disk (no `toBuffer()` so large videos do not OOM), cleaning up partial writes on error or truncation.
+
 ## [0.8.5] - 2026-04-10
 
 ### Added
