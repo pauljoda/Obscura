@@ -60,13 +60,42 @@ logfile $REDIS_LOG
 loglevel notice
 protected-mode no
 EOF
-redis-server "$REDIS_CONF" &
-REDIS_PID=$!
+REDIS_RDB_QUARANTINED=0
+start_redis() {
+  : > "$REDIS_LOG"
+  redis-server "$REDIS_CONF" &
+  REDIS_PID=$!
+}
 
+# A dump.rdb written by a newer Redis (e.g. 8.x uses RDB v12) is fatal for the
+# Alpine-packaged Redis 7.2.x bundled in this image: "Can't handle RDB format
+# version". Move any incompatible snapshot aside exactly once and let Redis
+# start fresh. Queue state is transient (BullMQ jobs can be re-triggered).
+quarantine_rdb_if_incompatible() {
+  if grep -q "Can't handle RDB format version" "$REDIS_LOG" 2>/dev/null \
+     && [ -f "$REDIS_DIR/dump.rdb" ] \
+     && [ "$REDIS_RDB_QUARANTINED" -eq 0 ]; then
+    QUAR="$REDIS_DIR/dump.rdb.incompatible-$(date +%Y%m%d-%H%M%S)"
+    echo "[obscura] Redis cannot load $REDIS_DIR/dump.rdb (newer RDB format)." >&2
+    echo "[obscura] Moving it aside to $QUAR and starting fresh. Queue state will be lost." >&2
+    mv "$REDIS_DIR/dump.rdb" "$QUAR"
+    REDIS_RDB_QUARANTINED=1
+    return 0
+  fi
+  return 1
+}
+
+start_redis
 echo "[obscura] Waiting for Redis to accept connections (pid=$REDIS_PID)..."
 i=0
 while :; do
   if ! kill -0 "$REDIS_PID" 2>/dev/null; then
+    if quarantine_rdb_if_incompatible; then
+      start_redis
+      echo "[obscura] Restarted Redis after quarantining incompatible dump (pid=$REDIS_PID)."
+      i=0
+      continue
+    fi
     echo "[obscura] ERROR: redis-server exited before becoming ready. Last log lines:" >&2
     tail -n 50 "$REDIS_LOG" 2>/dev/null || true
     exit 1

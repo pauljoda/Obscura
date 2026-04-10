@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.20] - 2026-04-10
+
+### Fixed
+
+- **Docker (unified image)** — Container refused to start because `/data/redis/dump.rdb` had been written by a newer Redis (`RDB format version 12`) and the Alpine-packaged Redis 7.2.9 in this image only handles up to version 11, crashing on every boot with `Can't handle RDB format version 12`. The entrypoint now detects this specific failure, quarantines the incompatible snapshot to `dump.rdb.incompatible-<timestamp>`, and restarts Redis once so the container can come up. Pending queue state is lost on migration (BullMQ jobs can be re-triggered from the UI).
+
 ## [0.7.19] - 2026-04-10
 
 ### Fixed
