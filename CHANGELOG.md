@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-04-09
+
+### Fixed
+
+- **Waveform generation fallback** — When `audiowaveform` binary is not installed (local dev), waveform generation now falls back to pure ffmpeg + Node PCM peak computation instead of crashing with `ENOENT`.
+
+### Changed
+
+- **Audio player redesign** — Static library-level player that's always visible. Shows "now playing" info, waveform seek bar, and transport controls (shuffle, prev, play/pause, next, repeat). Play button glows when active. Volume slider expands on hover. Track list shows animated bars for the playing track, play icon on hover for others.
+- **Play All button** — Prominent brass "Play All" button in the library header starts playback from the first track (or random if shuffle is on).
+- **Loop and shuffle** — Three repeat modes (off → all → one) and shuffle toggle. When a track ends: repeat-one restarts it, shuffle picks a random next, repeat-all wraps around, otherwise advances sequentially.
+- **Previous track behavior** — Pressing previous when more than 3 seconds into a track restarts it instead of going to the prior track.
+
 ## [0.5.3] - 2026-04-09
 
 ### Fixed

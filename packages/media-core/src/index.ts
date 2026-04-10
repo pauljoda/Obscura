@@ -805,9 +805,88 @@ export async function probeAudioFile(filePath: string): Promise<ProbeAudioFileMe
 /** Formats natively supported by the audiowaveform binary. */
 const audiowaveformNativeFormats = new Set([".mp3", ".wav", ".flac", ".ogg", ".opus"]);
 
+/** Check whether a binary exists on the system PATH. */
+async function hasBinary(name: string): Promise<boolean> {
+  try {
+    await runProcess("which", [name]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Generate waveform peaks JSON using the BBC audiowaveform binary.
- * For formats not natively supported, pipes through ffmpeg first.
+ * ffmpeg-only fallback: decode audio to raw PCM, compute peaks in Node.
+ * Produces the same JSON format as audiowaveform: `{ data: number[] }`.
+ */
+async function generateWaveformWithFfmpeg(
+  inputPath: string,
+  outputPath: string,
+  pixelsPerSecond: number,
+): Promise<void> {
+  // Get duration first
+  const probeResult = await runProcess("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration",
+    "-of", "json",
+    inputPath,
+  ]);
+  const probeParsed = JSON.parse(probeResult.stdout) as { format?: { duration?: string } };
+  const duration = Number(probeParsed.format?.duration ?? 0);
+  if (duration <= 0) {
+    await writeFile(outputPath, JSON.stringify({ data: [] }), "utf8");
+    return;
+  }
+
+  const totalSamples = Math.ceil(duration * pixelsPerSecond);
+  const sampleRate = 8000; // low rate is fine for peaks
+  const totalPcmSamples = Math.ceil(duration * sampleRate);
+  const samplesPerBucket = Math.max(1, Math.floor(totalPcmSamples / totalSamples));
+
+  // Decode to raw 16-bit signed LE mono PCM
+  const pcmResult = await new Promise<Buffer>((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i", inputPath,
+      "-f", "s16le", "-ac", "1", "-ar", String(sampleRate),
+      "pipe:1",
+    ], { stdio: ["ignore", "pipe", "ignore"] });
+
+    const chunks: Buffer[] = [];
+    ffmpeg.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+    ffmpeg.on("close", (code) => {
+      if (code === 0) resolve(Buffer.concat(chunks));
+      else reject(new Error(`ffmpeg waveform decode exited with code ${code}`));
+    });
+    ffmpeg.on("error", reject);
+  });
+
+  // Compute min/max peaks per bucket
+  const data: number[] = [];
+  const sampleCount = Math.floor(pcmResult.length / 2); // 16-bit = 2 bytes per sample
+
+  for (let bucket = 0; bucket < totalSamples; bucket++) {
+    const startSample = bucket * samplesPerBucket;
+    const endSample = Math.min(startSample + samplesPerBucket, sampleCount);
+    let min = 0;
+    let max = 0;
+
+    for (let i = startSample; i < endSample; i++) {
+      const sample = pcmResult.readInt16LE(i * 2);
+      if (sample < min) min = sample;
+      if (sample > max) max = sample;
+    }
+
+    data.push(min, max);
+  }
+
+  await writeFile(outputPath, JSON.stringify({ data }), "utf8");
+}
+
+/**
+ * Generate waveform peaks JSON for audio playback visualization.
+ *
+ * Prefers BBC audiowaveform if installed; falls back to pure ffmpeg + Node
+ * PCM peak computation when the binary is not available (e.g. local dev).
  *
  * Output: JSON file with `{ data: number[] }` — array of min/max amplitude pairs.
  */
@@ -816,10 +895,17 @@ export async function generateAudioWaveform(
   outputPath: string,
   pixelsPerSecond = 20,
 ): Promise<void> {
+  const useAudiowaveform = await hasBinary("audiowaveform");
+
+  if (!useAudiowaveform) {
+    // Fallback: ffmpeg + Node PCM peak computation
+    await generateWaveformWithFfmpeg(inputPath, outputPath, pixelsPerSecond);
+    return;
+  }
+
   const ext = path.extname(inputPath).toLowerCase();
 
   if (audiowaveformNativeFormats.has(ext)) {
-    // Direct: audiowaveform reads the file natively
     await runProcess("audiowaveform", [
       "-i", inputPath,
       "--pixels-per-second", String(pixelsPerSecond),
@@ -827,9 +913,7 @@ export async function generateAudioWaveform(
       "-o", outputPath,
     ]);
   } else {
-    // Pipe through ffmpeg for unsupported formats (aac, m4a, wma, aiff, etc.)
-    // ffmpeg → wav → audiowaveform via temp file
-    // We use a pipe approach via shell for simplicity
+    // Pipe through ffmpeg for unsupported formats
     await new Promise<void>((resolve, reject) => {
       const ffmpeg = spawn("ffmpeg", [
         "-i", inputPath, "-f", "wav", "-ac", "1", "-ar", "16000", "pipe:1",

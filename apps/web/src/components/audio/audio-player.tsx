@@ -7,20 +7,27 @@ import {
   SkipForward,
   SkipBack,
   Volume2,
+  Volume1,
   VolumeX,
+  Repeat,
+  Repeat1,
+  Shuffle,
+  Music,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
 import type { AudioTrackListItemDto } from "@obscura/contracts";
-import { toApiUrl } from "../../lib/api";
 import { AudioWaveformCanvas } from "./audio-waveform-canvas";
 
+export type RepeatMode = "off" | "all" | "one";
+
 interface AudioPlayerProps {
-  track: AudioTrackListItemDto;
-  onNext?: () => void;
-  onPrev?: () => void;
-  hasNext?: boolean;
-  hasPrev?: boolean;
+  /** All tracks in this library, in order */
+  tracks: AudioTrackListItemDto[];
+  /** Currently active track ID (null = nothing playing) */
+  activeTrackId: string | null;
+  /** Called when the player selects a new track */
+  onTrackChange: (trackId: string) => void;
 }
 
 const API_BASE =
@@ -29,37 +36,49 @@ const API_BASE =
     : "http://localhost:4000";
 
 export function AudioPlayer({
-  track,
-  onNext,
-  onPrev,
-  hasNext = false,
-  hasPrev = false,
+  tracks,
+  activeTrackId,
+  onTrackChange,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(track.duration ?? 0);
+  const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [waveformData, setWaveformData] = useState<number[] | null>(null);
-  const prevTrackIdRef = useRef(track.id);
+  const [repeat, setRepeat] = useState<RepeatMode>("off");
+  const [shuffle, setShuffle] = useState(false);
+  const prevTrackIdRef = useRef<string | null>(null);
 
-  // Load new track when it changes
+  const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
+  const activeIndex = activeTrack ? tracks.findIndex((t) => t.id === activeTrackId) : -1;
+  const hasNext = activeIndex >= 0 && activeIndex < tracks.length - 1;
+  const hasPrev = activeIndex > 0;
+
+  // ─── Track change ─────────────────────────────────────────────
+
   useEffect(() => {
-    if (prevTrackIdRef.current !== track.id) {
-      prevTrackIdRef.current = track.id;
+    const audio = audioRef.current;
+    if (!audio || !activeTrack) return;
+
+    if (prevTrackIdRef.current !== activeTrack.id) {
+      prevTrackIdRef.current = activeTrack.id;
+      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
       setCurrentTime(0);
-      setPlaying(true);
+      setDuration(activeTrack.duration ?? 0);
+      audio.play().catch(() => {});
     }
-  }, [track.id]);
+  }, [activeTrack]);
 
-  // Load waveform data
+  // ─── Load waveform ────────────────────────────────────────────
+
   useEffect(() => {
-    if (!track.waveformPath) {
+    if (!activeTrack?.waveformPath) {
       setWaveformData(null);
       return;
     }
-    const url = `${API_BASE}/assets/${track.waveformPath}`;
+    const url = `${API_BASE}/assets/${activeTrack.waveformPath}`;
     fetch(url)
       .then((res) => res.json())
       .then((json) => {
@@ -68,22 +87,27 @@ export function AudioPlayer({
         }
       })
       .catch(() => setWaveformData(null));
-  }, [track.waveformPath]);
+  }, [activeTrack?.waveformPath]);
 
-  // Audio element event handlers
+  // ─── Audio events ─────────────────────────────────────────────
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const onDurationChange = () => setDuration(audio.duration || track.duration || 0);
+    const onDurationChange = () => {
+      if (audio.duration && Number.isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
     const onEnded = () => {
-      setPlaying(false);
-      // Record play
-      fetch(`${API_BASE}/audio-tracks/${track.id}/play`, { method: "POST" }).catch(() => {});
-      onNext?.();
+      if (activeTrack) {
+        fetch(`${API_BASE}/audio-tracks/${activeTrack.id}/play`, { method: "POST" }).catch(() => {});
+      }
+      handleTrackEnd();
     };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
@@ -99,27 +123,91 @@ export function AudioPlayer({
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
     };
-  }, [track.id, track.duration, onNext]);
+  }, [activeTrack?.id, repeat, shuffle, tracks.length]);
 
-  // Auto-play on track change
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = `${API_BASE}/audio-stream/${track.id}`;
-    if (playing) {
-      audio.play().catch(() => {});
+  // ─── Track end logic ──────────────────────────────────────────
+
+  const handleTrackEnd = useCallback(() => {
+    if (repeat === "one") {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+      return;
     }
-  }, [track.id]);
+
+    if (shuffle) {
+      const otherTracks = tracks.filter((t) => t.id !== activeTrackId);
+      if (otherTracks.length > 0) {
+        const random = otherTracks[Math.floor(Math.random() * otherTracks.length)];
+        onTrackChange(random.id);
+      } else if (repeat === "all" && tracks.length > 0) {
+        onTrackChange(tracks[0].id);
+      }
+      return;
+    }
+
+    if (activeIndex >= 0 && activeIndex < tracks.length - 1) {
+      onTrackChange(tracks[activeIndex + 1].id);
+    } else if (repeat === "all" && tracks.length > 0) {
+      onTrackChange(tracks[0].id);
+    } else {
+      setPlaying(false);
+    }
+  }, [repeat, shuffle, activeTrackId, activeIndex, tracks, onTrackChange]);
+
+  // ─── Playback controls ────────────────────────────────────────
+
+  const playAll = useCallback(() => {
+    if (tracks.length > 0) {
+      if (shuffle) {
+        const random = tracks[Math.floor(Math.random() * tracks.length)];
+        onTrackChange(random.id);
+      } else {
+        onTrackChange(tracks[0].id);
+      }
+    }
+  }, [tracks, shuffle, onTrackChange]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    if (!activeTrack) {
+      playAll();
+      return;
+    }
     if (audio.paused) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
     }
-  }, []);
+  }, [activeTrack, playAll]);
+
+  const handleNext = useCallback(() => {
+    if (shuffle) {
+      const otherTracks = tracks.filter((t) => t.id !== activeTrackId);
+      if (otherTracks.length > 0) {
+        onTrackChange(otherTracks[Math.floor(Math.random() * otherTracks.length)].id);
+      }
+    } else if (hasNext) {
+      onTrackChange(tracks[activeIndex + 1].id);
+    } else if (repeat === "all" && tracks.length > 0) {
+      onTrackChange(tracks[0].id);
+    }
+  }, [shuffle, hasNext, activeIndex, tracks, activeTrackId, repeat, onTrackChange]);
+
+  const handlePrev = useCallback(() => {
+    const audio = audioRef.current;
+    // If more than 3s in, restart current track
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    if (hasPrev) {
+      onTrackChange(tracks[activeIndex - 1].id);
+    }
+  }, [hasPrev, activeIndex, tracks, onTrackChange]);
 
   const handleSeek = useCallback((time: number) => {
     const audio = audioRef.current;
@@ -147,94 +235,163 @@ export function AudioPlayer({
     }
   }, []);
 
+  const cycleRepeat = useCallback(() => {
+    setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off"));
+  }, []);
+
+  const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
-    <div className="surface-card-sharp p-4 space-y-3">
+    <div className="surface-panel border border-border-subtle">
       <audio ref={audioRef} preload="metadata" />
 
-      {/* Track info */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{track.title}</p>
-          {track.embeddedArtist && (
-            <p className="text-xs text-text-muted truncate">{track.embeddedArtist}</p>
-          )}
+      {/* ─── Now playing + waveform ─────────────────────────────── */}
+      <div className="px-4 pt-4 pb-2">
+        {/* Track info row */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-10 w-10 flex items-center justify-center bg-surface-3 flex-shrink-0">
+            <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
+          </div>
+          <div className="flex-1 min-w-0">
+            {activeTrack ? (
+              <>
+                <p className="text-sm font-medium truncate text-text-primary">{activeTrack.title}</p>
+                <p className="text-xs text-text-muted truncate">
+                  {activeTrack.embeddedArtist ?? "Unknown artist"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-text-muted">No track playing</p>
+                <p className="text-xs text-text-disabled">Select a track or press play</p>
+              </>
+            )}
+          </div>
+          <span className="text-xs font-mono text-text-muted tabular-nums flex-shrink-0">
+            {activeTrack ? (
+              <>{formatDuration(currentTime) ?? "0:00"}<span className="text-text-disabled"> / {formatDuration(duration) ?? "0:00"}</span></>
+            ) : (
+              "--:--"
+            )}
+          </span>
         </div>
+
+        {/* Waveform / seek bar */}
+        {activeTrack && waveformData ? (
+          <AudioWaveformCanvas
+            peaks={waveformData}
+            duration={duration}
+            currentTime={currentTime}
+            onSeek={handleSeek}
+            height={40}
+          />
+        ) : (
+          <div
+            className="relative h-1.5 bg-surface-3 overflow-hidden cursor-pointer group"
+            onClick={(e) => {
+              if (!activeTrack || duration <= 0) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              handleSeek((e.clientX - rect.left) / rect.width * duration);
+            }}
+          >
+            <div
+              className="absolute inset-y-0 left-0 bg-accent-500 transition-[width] duration-75"
+              style={{ width: `${progress}%` }}
+            />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 h-3 w-3 bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ left: `calc(${progress}% - 6px)` }}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Waveform / progress bar */}
-      {waveformData ? (
-        <AudioWaveformCanvas
-          peaks={waveformData}
-          duration={duration}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-        />
-      ) : (
-        <div className="relative h-10 surface-well overflow-hidden">
-          <div
-            className="absolute inset-y-0 left-0 bg-accent-500/20"
-            style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }}
-          />
-          <input
-            type="range"
-            min={0}
-            max={duration || 1}
-            step={0.1}
-            value={currentTime}
-            onChange={(e) => handleSeek(Number(e.target.value))}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-        </div>
-      )}
+      {/* ─── Transport controls ─────────────────────────────────── */}
+      <div className="flex items-center px-4 py-2.5 gap-1">
+        {/* Shuffle */}
+        <button
+          type="button"
+          onClick={() => setShuffle((s) => !s)}
+          title={shuffle ? "Shuffle: on" : "Shuffle: off"}
+          className={cn(
+            "p-2 transition-colors",
+            shuffle ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
+          )}
+        >
+          <Shuffle className="h-3.5 w-3.5" />
+        </button>
 
-      {/* Controls */}
-      <div className="flex items-center gap-4">
-        {/* Time */}
-        <span className="text-xs font-mono text-text-muted w-20">
-          {formatDuration(currentTime)} / {formatDuration(duration)}
-        </span>
+        {/* Prev */}
+        <button
+          type="button"
+          onClick={handlePrev}
+          disabled={!activeTrack && tracks.length === 0}
+          className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
+        >
+          <SkipBack className="h-4 w-4" />
+        </button>
 
-        {/* Transport */}
-        <div className="flex items-center gap-2 flex-1 justify-center">
-          <button
-            type="button"
-            onClick={onPrev}
-            disabled={!hasPrev}
-            className="p-1.5 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
-          >
-            <SkipBack className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={togglePlay}
-            className="p-2.5 surface-card-sharp hover:border-border-accent text-accent-500 transition-colors"
-          >
-            {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          </button>
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!hasNext}
-            className="p-1.5 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
-          >
-            <SkipForward className="h-4 w-4" />
-          </button>
-        </div>
+        {/* Play / Pause */}
+        <button
+          type="button"
+          onClick={togglePlay}
+          className={cn(
+            "p-3 mx-1 transition-all",
+            playing
+              ? "bg-accent-500 text-bg shadow-[0_0_12px_rgba(196,154,90,0.3)]"
+              : "bg-surface-3 text-text-primary hover:bg-surface-4 hover:text-accent-400",
+          )}
+        >
+          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+        </button>
+
+        {/* Next */}
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={!activeTrack && tracks.length === 0}
+          className="p-2 text-text-muted hover:text-text-primary disabled:text-text-disabled transition-colors"
+        >
+          <SkipForward className="h-4 w-4" />
+        </button>
+
+        {/* Repeat */}
+        <button
+          type="button"
+          onClick={cycleRepeat}
+          title={repeat === "off" ? "Repeat: off" : repeat === "all" ? "Repeat: all" : "Repeat: one"}
+          className={cn(
+            "p-2 transition-colors",
+            repeat !== "off" ? "text-accent-500" : "text-text-disabled hover:text-text-muted",
+          )}
+        >
+          {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
 
         {/* Volume */}
-        <div className="flex items-center gap-2 w-28">
-          <button type="button" onClick={toggleMute} className="text-text-muted hover:text-text-primary transition-colors">
-            {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        <div className="flex items-center gap-1.5 group/vol">
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="p-1.5 text-text-disabled hover:text-text-muted transition-colors"
+          >
+            <VolumeIcon className="h-3.5 w-3.5" />
           </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={muted ? 0 : volume}
-            onChange={handleVolumeChange}
-            className="flex-1 h-1 accent-accent-500"
-          />
+          <div className="w-0 overflow-hidden group-hover/vol:w-20 transition-all duration-200">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={muted ? 0 : volume}
+              onChange={handleVolumeChange}
+              className="w-full h-1 accent-accent-500 cursor-pointer"
+            />
+          </div>
         </div>
       </div>
     </div>
