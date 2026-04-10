@@ -15,6 +15,7 @@ import {
   type UploadTarget,
 } from "./upload-types";
 import { LibraryRootPicker } from "./library-root-picker";
+import { AudioLibraryPicker } from "./audio-library-picker";
 
 interface UploadDropZoneProps {
   target: UploadTarget;
@@ -52,11 +53,29 @@ export function UploadDropZone({
   const category = categoryForTarget(target);
   const accept = acceptForCategory(category);
 
+  // Portable "is this a file drag?" check. `DataTransfer.types` is a
+  // `ReadonlyArray<string>` in modern browsers but a `DOMStringList` in
+  // some older Chromium builds — DOMStringList has `.contains()` but not
+  // `.includes()`, so we iterate manually instead of calling either.
+  const dragHasFiles = (dt: DataTransfer | null | undefined) => {
+    if (!dt) return false;
+    const types = dt.types;
+    if (!types) return false;
+    for (let i = 0; i < types.length; i += 1) {
+      if (types[i] === "Files") return true;
+    }
+    return false;
+  };
+
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       if (!enabled) return;
-      if (!e.dataTransfer?.types.includes("Files")) return;
+      if (!dragHasFiles(e.dataTransfer)) return;
+      // Claim the event so the browser treats this element as a valid
+      // drop target. Without preventDefault on BOTH enter and over the
+      // eventual `drop` event never fires.
       e.preventDefault();
+      e.stopPropagation();
       dragDepthRef.current += 1;
       setIsDragging(true);
     },
@@ -66,7 +85,10 @@ export function UploadDropZone({
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!enabled) return;
-      if (!e.dataTransfer?.types.includes("Files")) return;
+      if (!dragHasFiles(e.dataTransfer)) return;
+      // Must preventDefault on EVERY dragover — not just the first — or
+      // the browser forgets we want the drop. This is the usual cause
+      // of "drag hover shows the overlay but the drop does nothing".
       e.preventDefault();
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = "copy";
@@ -78,7 +100,10 @@ export function UploadDropZone({
   const handleDragLeave = useCallback(
     (e: React.DragEvent) => {
       if (!enabled) return;
-      e.preventDefault();
+      // Do not gate on dragHasFiles here — once we're tracking a file
+      // drag via the depth counter we need to decrement on EVERY leave,
+      // otherwise nested children's leaves get skipped and the overlay
+      // sticks after the user drags back out of the page.
       dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
       if (dragDepthRef.current === 0) {
         setIsDragging(false);
@@ -91,6 +116,7 @@ export function UploadDropZone({
     (e: React.DragEvent) => {
       if (!enabled) return;
       e.preventDefault();
+      e.stopPropagation();
       dragDepthRef.current = 0;
       setIsDragging(false);
       const dropped = e.dataTransfer?.files;
@@ -100,19 +126,39 @@ export function UploadDropZone({
     [enabled, uploader],
   );
 
-  // Reset drag state if the user drops outside the window.
+  // Safety net: swallow stray file drops that land outside the drop
+  // zone so the browser does not navigate the tab to the file. Without
+  // this, a drop that misses the zone by a few pixels opens the file
+  // in place of the app. The zone's own handlers still run first for
+  // drops that DO land inside it — this only fires for drops that
+  // bubble all the way up to the window with defaults intact.
   useEffect(() => {
+    if (!enabled) return;
+    const preventDefaultIfFiles = (e: DragEvent) => {
+      if (!dragHasFiles(e.dataTransfer)) return;
+      e.preventDefault();
+    };
+    const onWindowDrop = (e: DragEvent) => {
+      if (dragHasFiles(e.dataTransfer)) {
+        e.preventDefault();
+      }
+      dragDepthRef.current = 0;
+      setIsDragging(false);
+    };
     const onDragEndGlobal = () => {
       dragDepthRef.current = 0;
       setIsDragging(false);
     };
+    window.addEventListener("dragover", preventDefaultIfFiles);
+    window.addEventListener("drop", onWindowDrop);
     window.addEventListener("dragend", onDragEndGlobal);
-    window.addEventListener("drop", onDragEndGlobal);
     return () => {
+      window.removeEventListener("dragover", preventDefaultIfFiles);
+      window.removeEventListener("drop", onWindowDrop);
       window.removeEventListener("dragend", onDragEndGlobal);
-      window.removeEventListener("drop", onDragEndGlobal);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   const total = uploader.files.length;
   const done = uploader.files.filter((f) => f.status === "done").length;
@@ -189,6 +235,13 @@ export function UploadDropZone({
         roots={uploader.candidateRoots}
         onConfirm={uploader.confirmRootPick}
         onCancel={uploader.cancelRootPick}
+      />
+
+      <AudioLibraryPicker
+        open={uploader.needsAudioLibraryPicker}
+        libraries={uploader.candidateAudioLibraries}
+        onConfirm={uploader.confirmAudioLibraryPick}
+        onCancel={uploader.cancelAudioLibraryPick}
       />
     </div>
   );

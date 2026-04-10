@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Music, FolderOpen } from "lucide-react";
+import { ImportButton, UploadDropZone } from "../upload";
 import { cn } from "@obscura/ui/lib/utils";
 import { buildHierarchyTree } from "@obscura/ui/lib/tree";
 import type {
@@ -33,6 +35,7 @@ export function AudioPageClient({
   initialStudios,
 }: AudioPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"browser" | "grid">("grid");
   const libraries = initialLibraries;
 
@@ -46,9 +49,13 @@ export function AudioPageClient({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <UploadDropZone
+      target={{ kind: "audio" }}
+      onUploaded={() => router.refresh()}
+      className="relative flex flex-col gap-6"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-heading font-semibold">Audio</h1>
           <p className="text-sm text-text-muted mt-0.5">
@@ -58,29 +65,35 @@ export function AudioPageClient({
             )}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={cn(
-              "px-3 py-1.5 text-xs transition-colors",
-              viewMode === "grid"
-                ? "surface-card-sharp text-text-accent"
-                : "text-text-muted hover:text-text-primary",
-            )}
-          >
-            Grid
-          </button>
-          <button
-            onClick={() => setViewMode("browser")}
-            className={cn(
-              "px-3 py-1.5 text-xs transition-colors",
-              viewMode === "browser"
-                ? "surface-card-sharp text-text-accent"
-                : "text-text-muted hover:text-text-primary",
-            )}
-          >
-            Browser
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "px-3 py-1.5 text-xs transition-colors",
+                viewMode === "grid"
+                  ? "surface-card-sharp text-text-accent"
+                  : "text-text-muted hover:text-text-primary",
+              )}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode("browser")}
+              className={cn(
+                "px-3 py-1.5 text-xs transition-colors",
+                viewMode === "browser"
+                  ? "surface-card-sharp text-text-accent"
+                  : "text-text-muted hover:text-text-primary",
+              )}
+            >
+              Browser
+            </button>
+          </div>
+          <ImportButton
+            target={{ kind: "audio" }}
+            onUploaded={() => router.refresh()}
+          />
         </div>
       </div>
 
@@ -129,7 +142,7 @@ export function AudioPageClient({
           )}
         </div>
       )}
-    </div>
+    </UploadDropZone>
   );
 }
 

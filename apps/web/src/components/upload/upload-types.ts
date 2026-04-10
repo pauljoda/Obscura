@@ -1,10 +1,13 @@
-import type { LibraryRootSummaryDto } from "@obscura/contracts";
+import type {
+  AudioLibraryListItemDto,
+  LibraryRootSummaryDto,
+} from "@obscura/contracts";
 
 /** Describes where an upload should land. */
 export type UploadTarget =
   | { kind: "scene"; libraryRootId?: string }
   | { kind: "image"; galleryId: string }
-  | { kind: "audio"; audioLibraryId: string };
+  | { kind: "audio"; audioLibraryId?: string };
 
 export type UploadCategory = "video" | "image" | "audio";
 
@@ -45,4 +48,6 @@ export interface UseUploaderState {
   isUploading: boolean;
   needsRootPicker: boolean;
   candidateRoots: LibraryRootSummaryDto[];
+  needsAudioLibraryPicker: boolean;
+  candidateAudioLibraries: AudioLibraryListItemDto[];
 }

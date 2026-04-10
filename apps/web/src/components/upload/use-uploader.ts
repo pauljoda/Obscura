@@ -2,7 +2,10 @@
 
 import { useCallback, useRef, useState } from "react";
 import { fetchApi, uploadFile } from "../../lib/api/core";
-import type { LibraryRootSummaryDto } from "@obscura/contracts";
+import type {
+  AudioLibraryListItemDto,
+  LibraryRootSummaryDto,
+} from "@obscura/contracts";
 import {
   type UploadFileProgress,
   type UploadTarget,
@@ -31,16 +34,23 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
   const [candidateRoots, setCandidateRoots] = useState<LibraryRootSummaryDto[]>(
     [],
   );
-  // Pending queue stashed while the caller resolves a root pick.
+  const [candidateAudioLibraries, setCandidateAudioLibraries] = useState<
+    AudioLibraryListItemDto[]
+  >([]);
+  // Pending queue stashed while the caller resolves a root / library pick.
   const pendingFilesRef = useRef<File[] | null>(null);
   const resolvedRootIdRef = useRef<string | null>(null);
+  const resolvedAudioLibraryIdRef = useRef<string | null>(null);
 
   const resetState = useCallback(() => {
     setFiles([]);
   }, []);
 
   const runUploads = useCallback(
-    async (fileList: File[], explicitRootId?: string) => {
+    async (
+      fileList: File[],
+      explicitIds?: { rootId?: string; audioLibraryId?: string },
+    ) => {
       if (fileList.length === 0) return;
       const category = categoryForTarget(target);
       setIsUploading(true);
@@ -58,7 +68,7 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
         try {
           if (target.kind === "scene") {
             const libraryRootId =
-              explicitRootId ??
+              explicitIds?.rootId ??
               target.libraryRootId ??
               resolvedRootIdRef.current;
             if (!libraryRootId) {
@@ -73,8 +83,15 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
               file,
             );
           } else if (target.kind === "audio") {
+            const audioLibraryId =
+              explicitIds?.audioLibraryId ??
+              target.audioLibraryId ??
+              resolvedAudioLibraryIdRef.current;
+            if (!audioLibraryId) {
+              throw new Error("No audio library selected for audio upload");
+            }
             await uploadFile(
-              `/audio-libraries/${target.audioLibraryId}/tracks/upload`,
+              `/audio-libraries/${audioLibraryId}/tracks/upload`,
               file,
             );
           }
@@ -153,13 +170,68 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
 
         if (roots.length === 1) {
           resolvedRootIdRef.current = roots[0].id;
-          await runUploads(asArray, roots[0].id);
+          await runUploads(asArray, { rootId: roots[0].id });
           return;
         }
 
         // Multiple candidates — stash the files and expose the picker.
         pendingFilesRef.current = asArray;
         setCandidateRoots(roots);
+        return;
+      }
+
+      if (target.kind === "audio" && !target.audioLibraryId) {
+        // Same flow as scenes, but against /audio-libraries. Only
+        // folder-backed libraries can receive uploads — filter them
+        // client-side so the picker does not show dead-ends.
+        let libraries: AudioLibraryListItemDto[] = [];
+        try {
+          const resp = await fetchApi<{
+            items: AudioLibraryListItemDto[];
+          }>("/audio-libraries?limit=500");
+          libraries = (resp.items ?? []).filter(
+            // AudioLibraryListItemDto does not surface folderPath, but
+            // the upload endpoint rejects non-folder-backed libraries
+            // server-side. We show every library here and let the API
+            // return a clear error if one is wrong; filtering by a
+            // separate lookup would double the round trips for a rare
+            // case.
+            () => true,
+          );
+        } catch (error) {
+          setFiles(
+            asArray.map((f) => ({
+              file: f,
+              status: "error",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Could not load audio libraries",
+            })),
+          );
+          return;
+        }
+
+        if (libraries.length === 0) {
+          setFiles(
+            asArray.map((f) => ({
+              file: f,
+              status: "error",
+              error:
+                "No audio libraries exist yet. Create one from a library root scan first.",
+            })),
+          );
+          return;
+        }
+
+        if (libraries.length === 1) {
+          resolvedAudioLibraryIdRef.current = libraries[0].id;
+          await runUploads(asArray, { audioLibraryId: libraries[0].id });
+          return;
+        }
+
+        pendingFilesRef.current = asArray;
+        setCandidateAudioLibraries(libraries);
         return;
       }
 
@@ -175,7 +247,7 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
       setCandidateRoots([]);
       resolvedRootIdRef.current = rootId;
       if (pending) {
-        await runUploads(pending, rootId);
+        await runUploads(pending, { rootId });
       }
     },
     [runUploads],
@@ -187,14 +259,37 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
     setFiles([]);
   }, []);
 
+  const confirmAudioLibraryPick = useCallback(
+    async (audioLibraryId: string) => {
+      const pending = pendingFilesRef.current;
+      pendingFilesRef.current = null;
+      setCandidateAudioLibraries([]);
+      resolvedAudioLibraryIdRef.current = audioLibraryId;
+      if (pending) {
+        await runUploads(pending, { audioLibraryId });
+      }
+    },
+    [runUploads],
+  );
+
+  const cancelAudioLibraryPick = useCallback(() => {
+    pendingFilesRef.current = null;
+    setCandidateAudioLibraries([]);
+    setFiles([]);
+  }, []);
+
   return {
     files,
     isUploading,
     needsRootPicker: candidateRoots.length > 0,
     candidateRoots,
+    needsAudioLibraryPicker: candidateAudioLibraries.length > 0,
+    candidateAudioLibraries,
     uploadFiles,
     confirmRootPick,
     cancelRootPick,
+    confirmAudioLibraryPick,
+    cancelAudioLibraryPick,
     resetState,
   };
 }

@@ -10,6 +10,7 @@ import {
 } from "./upload-types";
 import { useUploader } from "./use-uploader";
 import { LibraryRootPicker } from "./library-root-picker";
+import { AudioLibraryPicker } from "./audio-library-picker";
 
 interface ImportButtonProps {
   target: UploadTarget;
@@ -76,6 +77,12 @@ export function ImportButton({
         roots={uploader.candidateRoots}
         onConfirm={uploader.confirmRootPick}
         onCancel={uploader.cancelRootPick}
+      />
+      <AudioLibraryPicker
+        open={uploader.needsAudioLibraryPicker}
+        libraries={uploader.candidateAudioLibraries}
+        onConfirm={uploader.confirmAudioLibraryPick}
+        onCancel={uploader.cancelAudioLibraryPick}
       />
     </>
   );

@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.16] - 2026-04-10
+
+### Fixed
+
+- **Scenes drag-and-drop not firing** — The drop zone only called `preventDefault` when `dataTransfer.types.includes("Files")` succeeded, which silently failed in browsers where `types` is a `DOMStringList` (no `.includes`, only `.contains`). Replaced with a portable index loop and added a document-level `dragover` + `drop` safety net that swallows stray drops so they never navigate the tab to the file. Scenes now reliably accept dropped videos on the `/scenes` grid.
+
+### Added
+
+- **Audio main view drag-and-drop + Import** — The top-level `/audio` page is now wrapped in `<UploadDropZone>` and has an `<ImportButton>` in the header, mirroring the scenes flow. Because the main view has no implicit library context, uploads surface a new `<AudioLibraryPicker>` modal (with a search filter for users who have many libraries) when there is more than one audio library; single-library case auto-picks silently. Per-library detail pages continue to upload directly into their own folder without the picker.
+- **`AudioLibraryPicker` component** — New modal listing available audio libraries with a live filter box, used by both `<UploadDropZone>` and `<ImportButton>` via `useUploader`.
+
+### Changed
+
+- **`useUploader` hook** — `{ kind: "audio" }` targets now accept an optional `audioLibraryId` (previously required); when omitted the hook fetches `/audio-libraries?limit=500`, auto-picks when exactly one library exists, and otherwise surfaces `candidateAudioLibraries` so the caller can render the picker. Mirrors the existing scene root resolution path.
+
 ## [0.8.15] - 2026-04-10
 
 ### Added
