@@ -5,23 +5,52 @@
 <h1 align="center">Obscura</h1>
 
 <p align="center">
-  A private, self-hosted media browser built for a single trusted user.
+  <strong>A modern, self-hosted private media browser.</strong>
   <br />
-  Video-first. Image and gallery support. Designed to run on your LAN.
+  Video-first. First-class images, galleries, and audio. Designed for a single trusted user on a private LAN.
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> &middot;
+  <a href="#highlights">Highlights</a> &middot;
   <a href="#features">Features</a> &middot;
   <a href="#configuration">Configuration</a> &middot;
   <a href="#development">Development</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Obscura dashboard" width="100%" />
+</p>
+
+---
+
+## What is Obscura?
+
+Obscura is a **modern alternative for anyone who wants a Stash-style private media library** with a focus on usability, polish, and quality-of-life. Stash is a great project with a deep ecosystem — Obscura keeps the core idea (a self-hosted, metadata-rich library with community scrapers) and rebuilds the experience around a refined mobile-first UI, a streamlined scanning pipeline, and a single Docker image with zero configuration.
+
+If you like the Stash model but want a faster, cleaner interface that feels native on phones and desktops alike, Obscura is built for you.
+
+---
+
+## Highlights
+
+- **Video, images, galleries, and audio** — all first-class library entities, not afterthoughts.
+- **SFW / NSFW split personality** — swap the entire library between safe-for-work and full modes with a global keyboard shortcut on desktop or a hidden gesture on mobile.
+- **Mobile first** — built for phones from day one. The desktop view is an expansion of the mobile design, not the other way around.
+- **Stash-compatible metadata** — native StashDB support and full compatibility with community Stash scraper plugins.
+- **Bulk scrape everything** — pick what to identify and Obscura iterates every installed scraper for you. No more one-by-one.
+- **Rich playback** — HLS adaptive streaming with on-demand ffmpeg transcoding, a scrollable/grabable frame strip, and one-click marker + thumbnail creation from any frame.
+- **Link everything together** — scenes, galleries, audio, performers, and studios all cross-reference with the same rich metadata surface.
+- **Automated scanning** — point it at a folder, walk away. Obscura scans on a schedule and notices new files.
+- **Command palette + global search** — `⌘K` from anywhere, or a dedicated search page with scene, performer, studio, tag, and gallery results.
+- **Drag-and-drop uploads** — add files from the browser, remove from the library, or remove from disk entirely.
+- **One image, one port** — everything runs in a single Docker container. No external Postgres, no Redis URLs, no env wrangling.
+
 ---
 
 ## Quick Start
 
-Obscura ships as a **single Docker image** with everything included — no external databases, no multi-service setup, no configuration required.
+Obscura ships as a **single Docker image** with PostgreSQL, nginx, ffmpeg, and all three services bundled. No external databases. No configuration required.
 
 ### Docker Run
 
@@ -61,48 +90,134 @@ Open **http://localhost:8008** and you're done.
 
 | Mount | Purpose |
 |-------|---------|
-| `/data` | Database, cache, thumbnails, HLS transcodes — everything Obscura generates |
+| `/data` | Database, cache, thumbnails, trickplay sprites, HLS transcodes |
 | `/media` | Your media library. Mount one or more directories here |
 
-That's it. No environment variables, no database credentials, no Redis URLs. The image manages PostgreSQL, Redis, and all application services internally.
+You can map as many subdirectories under `/media` as you like and register each one as a library root in Settings.
 
 ---
 
 ## Features
 
-### Media Library
+### Library Dashboard
 
-Browse and manage your video library with a responsive grid layout. Scene cards display thumbnails, duration, resolution, and metadata at a glance. Filter by performer, studio, tag, or search by title.
+An at-a-glance overview of your collection: totals, recent activity, queue state, and live job status.
 
-### Video Playback
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="100%" />
+</p>
 
-HLS adaptive streaming powered by ffmpeg. On-demand transcoding with cached renditions. Keyboard controls, poster frames, and a film-strip trickplay scrubber with sprite sheet previews.
+### Videos
 
-### Metadata Management
+A responsive grid of scene cards with thumbnails, duration, resolution badges, and quick metadata. Filter, sort, and view as cards or a compact list.
 
-Rich metadata display including performers, studios, tags, and file details. Scraper system with community scraper support for automated metadata matching. Tagger UI for reviewing and merging scraped results.
+<p align="center">
+  <img src="docs/screenshots/scenes.png" alt="Video library" width="100%" />
+</p>
 
-### Library Scanning
+### Rich Video Playback
 
-Point Obscura at a directory and it will discover, fingerprint, and catalog your media. Background workers handle probing, thumbnail generation, sprite sheet extraction, and HLS cache preparation.
+Direct playback of common formats plus on-demand HLS transcoding for anything the browser won't play natively. The scrollable frame strip under the player lets you scrub by thumbnail — and turn any frame into a marker or a custom preview image with a single click.
 
-### Stash Import
+<p align="center">
+  <img src="docs/screenshots/scene-detail.png" alt="Scene detail with player, frame strip, and metadata" width="100%" />
+</p>
 
-Migrate from an existing Stash database. Scenes, performers, studios, and tags are normalized into Obscura-owned records while preserving source provenance for auditability.
+### Strong Metadata, Everywhere
 
-### Settings
+Every entity carries the same rich metadata surface — title, studio, performers, tags, ratings, custom notes, and provenance. StashDB and community Stash scrapers are supported natively, so migrating is painless.
 
-Configure library roots, scan behavior, and application preferences through the web UI. All settings are persisted to the database and take effect immediately.
+<p align="center">
+  <img src="docs/screenshots/performers.png" alt="Performers" width="49%" />
+  <img src="docs/screenshots/studios.png" alt="Studios" width="49%" />
+</p>
+
+### Bulk Scraping
+
+Select a batch of unmatched scenes, galleries, or performers and Obscura will iterate every installed scraper to find a match. No more identifying things one at a time.
+
+<p align="center">
+  <img src="docs/screenshots/scrape.png" alt="Bulk identify" width="100%" />
+</p>
+
+### Community Scrapers
+
+Browse, install, enable, and disable community Stash scrapers directly from the UI. The full public index is built in — no manual file copying.
+
+<p align="center">
+  <img src="docs/screenshots/scrapers.png" alt="Community scrapers" width="100%" />
+</p>
+
+### Image Galleries
+
+Folder-based and archive-based galleries are first-class. Browse, tag, rate, link performers and studios, and view them in grid or lightbox modes.
+
+<p align="center">
+  <img src="docs/screenshots/galleries.png" alt="Galleries" width="100%" />
+</p>
+
+### Audio Libraries
+
+Organize and play your audio collection with the same metadata pipeline — libraries, tracks, cover art, tags, and performer/studio linking. Includes a built-in player with shuffle and playlist support.
+
+<p align="center">
+  <img src="docs/screenshots/audio.png" alt="Audio libraries" width="49%" />
+  <img src="docs/screenshots/audio-library.png" alt="Audio library detail" width="49%" />
+</p>
+
+### Global Search + Command Palette
+
+Press `⌘K` (or `Ctrl+K`) from anywhere to jump to anything. There's also a dedicated search page that spans scenes, performers, studios, galleries, tags, and audio libraries.
+
+<p align="center">
+  <img src="docs/screenshots/search.png" alt="Global search" width="100%" />
+</p>
+
+### Library Scanning + Settings
+
+Register multiple library roots, choose whether generated assets (trickplays, sprites, previews, HLS cache) live next to your media files or in a dedicated cache volume, and enable automatic periodic scanning so new files show up on their own.
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings and generation pipeline" width="100%" />
+</p>
+
+### Job Control
+
+A live view of every queue and job — library scan, probe, fingerprint, thumbnail, sprite, HLS, import, scrape. Retry, cancel, and watch progress in real time.
+
+<p align="center">
+  <img src="docs/screenshots/jobs.png" alt="Job control" width="100%" />
+</p>
+
+### SFW / NSFW Mode
+
+Flip the entire library between safe-for-work and full modes with a global keyboard shortcut on desktop, or a hidden gesture on mobile. Per-root NSFW flags propagate to all scenes, images, galleries, audio libraries, and tracks under that path.
+
+### First-Class Mobile
+
+Every view is designed for a phone first. Navigation, playback, scanning, scraping — everything works on mobile, not just "sort of."
+
+<p align="center">
+  <img src="docs/screenshots/mobile-dashboard.png" alt="Mobile dashboard" width="24%" />
+  <img src="docs/screenshots/mobile-scenes.png" alt="Mobile videos" width="24%" />
+  <img src="docs/screenshots/mobile-scene-detail.png" alt="Mobile scene detail" width="24%" />
+  <img src="docs/screenshots/mobile-galleries.png" alt="Mobile galleries" width="24%" />
+</p>
+
+### Uploads & Removal
+
+Drag files directly into the browser, or use the upload picker. Remove items from the library, or remove them from disk entirely — your choice, per action.
 
 ---
 
 ## Configuration
 
-Obscura works out of the box with zero configuration. For advanced use cases, the following environment variables are available:
+Obscura works out of the box with zero configuration. These environment variables are available for advanced use:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OBSCURA_CACHE_DIR` | `/data/cache` | Directory for HLS cache, thumbnails, sprites |
+| `OBSCURA_CACHE_DIR` | `/data/cache` | Directory for HLS cache, thumbnails, sprites, previews |
+| `OBSCURA_MAX_VIDEO_UPLOAD` | `21474836480` | Max bytes for a single upload (default ~21 GiB) |
 
 ### Multiple Media Directories
 
@@ -114,11 +229,26 @@ docker run -d \
   -p 8008:8008 \
   -v obscura-data:/data \
   -v /mnt/nas/videos:/media/videos \
-  -v /mnt/nas/clips:/media/clips \
+  -v /mnt/nas/photos:/media/photos \
+  -v /mnt/nas/music:/media/music \
   ghcr.io/pauljoda/obscura:latest
 ```
 
-Then add each as a library root in **Settings > Library**.
+Then add each one as a library root in **Settings → Library**. Per-root, you can choose whether generated assets live alongside the media files or in Obscura's dedicated cache directory.
+
+---
+
+## Design Language
+
+Obscura uses a **Dark Control Room** visual system inspired by Blackmagic DaVinci Resolve, high-end audio rack gear, and film color-grading suites.
+
+- **Surface hierarchy** — Five levels from near-black graphite to elevated panel gray
+- **Accent** — Burnished brass (`#c49a5a`), used sparingly for active and selected states, always with glow
+- **Typography** — Geist (headings), Inter (body), JetBrains Mono (metadata and utility)
+- **Motion** — Weighted and deliberate, precision machinery, no bounce
+- **Shape** — Sharp corners everywhere (`border-radius: 0`)
+
+Full specification in [`docs/design-language.md`](docs/design-language.md).
 
 ---
 
@@ -126,31 +256,16 @@ Then add each as a library root in **Settings > Library**.
 
 The single image bundles:
 
-| Component | Version | Role |
-|-----------|---------|------|
-| **Next.js** | 15 | Web frontend (React 19, Tailwind CSS 4) |
-| **Fastify** | 5 | HTTP API (Drizzle ORM) |
-| **BullMQ** | 5 | Background job worker |
-| **PostgreSQL** | 16 | Database |
-| **Redis** | 7 | Job queue |
-| **ffmpeg** | latest | Video transcoding |
-| **nginx** | latest | Reverse proxy |
+| Component | Role |
+|-----------|------|
+| **Next.js 15** | Web frontend (React 19, Tailwind CSS 4) |
+| **Fastify 5** | HTTP API (Drizzle ORM) |
+| **pg-boss** | Background job queue (Postgres-backed, no Redis) |
+| **PostgreSQL 16** | Database |
+| **ffmpeg** | Video and audio transcoding |
+| **nginx** | Reverse proxy on port 8008 |
 
-All services run inside the container, coordinated by a single entrypoint. Port **8008** is the only exposed port — nginx routes API requests internally.
-
----
-
-## Design Language
-
-Obscura uses a **Dark Control Room** visual system inspired by Blackmagic DaVinci Resolve, high-end audio rack gear, and film color grading suites.
-
-- **Surface hierarchy**: Five levels from near-black graphite to elevated panel gray
-- **Accent**: Burnished brass (#c79b5c) — used sparingly for active and selected states
-- **Typography**: Geist (headings), Inter (body), JetBrains Mono (metadata and utility)
-- **Motion**: Weighted and deliberate — precision machinery, no bounce
-- **Status indicators**: Muted LED-style colors, not bright saturated alerts
-
-Full specification in [`docs/design-language.md`](docs/design-language.md).
+All services run inside the container, coordinated by a single entrypoint. Port **8008** is the only exposed port.
 
 ---
 
@@ -160,56 +275,35 @@ Full specification in [`docs/design-language.md`](docs/design-language.md).
 
 - Node.js 22+
 - pnpm 10+
-- Docker and Docker Compose (for PostgreSQL and Redis)
+- Docker and Docker Compose (for PostgreSQL)
 
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/pauljoda/obscura.git
 cd obscura
 
-# Install dependencies
 pnpm install
 
-# Start infrastructure (PostgreSQL only — pg-boss manages the job queue in-DB)
+# Start PostgreSQL (pg-boss manages the queue inside the DB)
 docker compose -f infra/docker/docker-compose.yml up postgres -d
 
-# Push database schema
+# Push schema
 pnpm --filter @obscura/api db:push
 
-# Start all services in development mode
+# Start all services in dev mode
 pnpm dev
 ```
 
-The web UI will be available at `http://localhost:8008` and the API at `http://localhost:4000`.
-
-### Project Structure
-
-```
-obscura/
-├── apps/
-│   ├── web/             Next.js 15 frontend
-│   ├── api/             Fastify 5 API server
-│   └── worker/          BullMQ background worker
-├── packages/
-│   ├── ui/              Design tokens & shared components
-│   ├── contracts/       Typed DTOs & route constants
-│   ├── config/          Shared TypeScript config
-│   ├── media-core/      Media discovery & fingerprint
-│   └── stash-import/    Stash migration adapter
-├── infra/docker/        Dockerfiles & compose stacks
-├── scripts/release/     Version validation tooling
-└── docs/                Architecture & design docs
-```
+The web UI runs at `http://localhost:8008` and the API at `http://localhost:4000`.
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start all services in development mode |
+| `pnpm dev` | Start all services in development |
 | `pnpm build` | Build all apps and packages |
-| `pnpm check` | Run lint and typecheck across the monorepo |
+| `pnpm check` | Lint and typecheck across the monorepo |
 | `pnpm release:check` | Validate version and changelog alignment |
 | `pnpm --filter @obscura/api db:push` | Push schema changes to PostgreSQL |
 | `pnpm --filter @obscura/api db:studio` | Open Drizzle Studio |
@@ -225,6 +319,6 @@ docker run -p 8008:8008 -v obscura-data:/data -v /your/media:/media obscura
 
 ## License
 
-This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 You are free to share and adapt this work for non-commercial purposes, with attribution, under the same license terms. See [LICENSE](LICENSE) for details.

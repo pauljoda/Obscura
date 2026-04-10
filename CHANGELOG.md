@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.21] - 2026-04-10
+
+### Docs
+
+- **Rewrote `README.md` as a visuals-focused tour of the app.** Added a `docs/screenshots/` folder with desktop and mobile captures of the dashboard, scenes, scene detail (player + frame strip + metadata), galleries, audio library overview and detail, performers, studios, tags, bulk identify, community scrapers, global search, settings, and job control. Positioned Obscura as a modern, mobile-first alternative for users who want the Stash-style private library experience with a refined UI. Highlighted SFW/NSFW mode with global shortcut + hidden mobile gesture, first-class mobile support, native StashDB + community scraper support, bulk scraping across all installed scrapers, rich playback with scrollable frame strip and marker/thumbnail generation, gallery and audio libraries, flexible cache location (per-root or dedicated), automated periodic scanning, global search and command palette, HLS transcoding, and drag-and-drop uploads.
+
+## [0.8.20] - 2026-04-10
+
 ### Fixed
 
 - **Library NSFW flag now applies to all media under that root** — Toggling a library root’s NSFW setting updates every scene, image, gallery, audio library, and audio track whose files live under that path (not only videos). Gallery and audio rescans also refresh `isNsfw` on existing rows so it stays aligned with the root. Clearing NSFW on a root still recomputes each scene from tags, performers, and studio; other media types under the root are cleared to non-NSFW.
