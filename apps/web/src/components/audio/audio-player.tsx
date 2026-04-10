@@ -17,7 +17,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
 import type { AudioTrackListItemDto } from "@obscura/contracts";
-import { AudioWaveformCanvas } from "./audio-waveform-canvas";
+import { AudioWaveformFilmstrip } from "./audio-waveform-filmstrip";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -46,6 +46,8 @@ export function AudioPlayer({
   const [waveformData, setWaveformData] = useState<number[] | null>(null);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [shuffle, setShuffle] = useState(false);
+  const [timelineDragging, setTimelineDragging] = useState(false);
+  const timelineDraggingRef = useRef(false);
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
   const activeIndex = activeTrack ? tracks.findIndex((t) => t.id === activeTrackId) : -1;
@@ -299,7 +301,7 @@ export function AudioPlayer({
     <div className="surface-panel border border-border-subtle">
       <audio ref={audioRef} preload="auto" />
 
-      {/* ─── Now playing + waveform ─────────────────────────────── */}
+      {/* ─── Now playing + timeline (scene-style) + waveform film strip ─ */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 mb-3">
           <div className="h-10 w-10 flex items-center justify-center bg-surface-3 flex-shrink-0">
@@ -329,34 +331,63 @@ export function AudioPlayer({
           </span>
         </div>
 
-        {activeTrack && waveformData ? (
-          <AudioWaveformCanvas
-            peaks={waveformData}
-            duration={duration}
-            currentTime={currentTime}
-            onSeek={handleSeek}
-            height={40}
-          />
-        ) : (
+        {activeTrack && duration > 0 && (
           <div
-            className="relative h-1.5 bg-surface-3 overflow-hidden cursor-pointer group"
-            onClick={(e) => {
-              if (!activeTrack || duration <= 0) return;
-              const rect = e.currentTarget.getBoundingClientRect();
-              handleSeek((e.clientX - rect.left) / rect.width * duration);
+            className="video-progress-track group/track mb-2"
+            data-dragging={timelineDragging}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              timelineDraggingRef.current = true;
+              setTimelineDragging(true);
+              const rect = event.currentTarget.getBoundingClientRect();
+              const nextPercent = Math.max(
+                0,
+                Math.min(1, (event.clientX - rect.left) / rect.width),
+              );
+              handleSeek(nextPercent * duration);
+            }}
+            onPointerMove={(event) => {
+              if (!timelineDraggingRef.current) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const nextPercent = Math.max(
+                0,
+                Math.min(1, (event.clientX - rect.left) / rect.width),
+              );
+              handleSeek(nextPercent * duration);
+            }}
+            onPointerUp={(event) => {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+              timelineDraggingRef.current = false;
+              setTimelineDragging(false);
+            }}
+            onPointerCancel={() => {
+              timelineDraggingRef.current = false;
+              setTimelineDragging(false);
+            }}
+            onPointerLeave={() => {
+              if (!timelineDraggingRef.current) {
+                setTimelineDragging(false);
+              }
             }}
           >
             <div
-              className="absolute inset-y-0 left-0 bg-accent-500 transition-[width] duration-75"
+              className="video-progress-fill"
               style={{ width: `${progress}%` }}
-            />
-            <div
-              className="absolute top-1/2 -translate-y-1/2 h-3 w-3 bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ left: `calc(${progress}% - 6px)` }}
             />
           </div>
         )}
       </div>
+
+      {activeTrack && waveformData && duration > 0 && (
+        <div className="border-t border-border-subtle bg-black overflow-hidden">
+          <AudioWaveformFilmstrip
+            peaks={waveformData}
+            duration={duration}
+            audioRef={audioRef}
+            onSeek={handleSeek}
+          />
+        </div>
+      )}
 
       {/* ─── Transport controls ─────────────────────────────────── */}
       <div className="flex items-center px-4 py-2.5 gap-1">

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-04-09
+
+### Changed
+
+- **Audio player** — Matches the scene **film strip** pattern: a standard `video-progress-track` timeline in the main chrome for coarse seek, and a separate **waveform strip** below with a fixed center playhead; the waveform translates under the head during playback and supports drag + desktop wheel scrub (like video trickplay). Removed the old single-canvas waveform seeker.
+
 ## [0.6.2] - 2026-04-09
 
 ### Fixed
