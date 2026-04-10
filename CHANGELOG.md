@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-04-09
+
+### Changed
+
+- **Audio library detail** — Metadata (performers, tags, library info) and sub-library cards now appear above the track list.
+
 ## [0.5.7] - 2026-04-09
 
 ### Added

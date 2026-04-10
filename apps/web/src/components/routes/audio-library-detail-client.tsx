@@ -118,6 +118,27 @@ export function AudioLibraryDetailClient({
         onTrackChange={handleTrackChange}
       />
 
+      {/* ─── Metadata ───────────────────────────────────────────── */}
+      <MetadataPanel
+        sidebar={
+          <>
+            <h4 className="text-kicker">Library Info</h4>
+            <div className="space-y-2.5">
+              <InfoRow icon={Music} label="Tracks" value={String(library.trackCount)} />
+              {library.totalDuration != null && library.totalDuration > 0 && (
+                <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
+              )}
+              {library.folderPath && (
+                <div className="text-xs text-text-disabled break-all mt-2">{library.folderPath}</div>
+              )}
+            </div>
+          </>
+        }
+      >
+        <PerformersSection performers={library.performers} parentIsNsfw={library.isNsfw} />
+        <TagsSection tags={library.tags} />
+      </MetadataPanel>
+
       {/* ─── Sub-libraries ──────────────────────────────────────── */}
       {library.children.length > 0 && (
         <section>
@@ -238,27 +259,6 @@ export function AudioLibraryDetailClient({
           </div>
         )}
       </section>
-
-      {/* ─── Metadata ───────────────────────────────────────────── */}
-      <MetadataPanel
-        sidebar={
-          <>
-            <h4 className="text-kicker">Library Info</h4>
-            <div className="space-y-2.5">
-              <InfoRow icon={Music} label="Tracks" value={String(library.trackCount)} />
-              {library.totalDuration != null && library.totalDuration > 0 && (
-                <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
-              )}
-              {library.folderPath && (
-                <div className="text-xs text-text-disabled break-all mt-2">{library.folderPath}</div>
-              )}
-            </div>
-          </>
-        }
-      >
-        <PerformersSection performers={library.performers} parentIsNsfw={library.isNsfw} />
-        <TagsSection tags={library.tags} />
-      </MetadataPanel>
     </div>
   );
 }
