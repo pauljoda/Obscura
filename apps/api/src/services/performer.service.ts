@@ -25,19 +25,17 @@ import { getGeneratedPerformerDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import type { SortConfig } from "../lib/query-helpers";
+import {
+  performerAudioLibraryCountExpr,
+  performerImageAppearanceCountExpr,
+  performerSfwSceneCountExpr,
+} from "../lib/appearance-count-expressions";
 
 const { performers, performerTags, scenePerformers, tags, scenes } = schema;
 
 // ─── SQL Expressions ──────────────────────────────────────────
 
-/** Count of scenes viewable in SFW mode (non-NSFW scenes) for this performer row. */
-const sfwPerformerSceneCountExpr = sql<number>`(
-  SELECT COUNT(*)::int
-  FROM scene_performers sp
-  INNER JOIN scenes s ON s.id = sp.scene_id
-  WHERE sp.performer_id = ${performers.id}
-    AND (s.is_nsfw IS NOT TRUE)
-)`;
+const sfwPerformerSceneCountExpr = performerSfwSceneCountExpr();
 
 // ─── Query Types ──────────────────────────────────────────────
 
@@ -263,6 +261,8 @@ export async function listPerformers(query: ListPerformersQuery) {
         rating: performers.rating,
         isNsfw: performers.isNsfw,
         sceneCount: sceneCountSelect,
+        imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
+        audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
         country: performers.country,
         createdAt: performers.createdAt,
       })
@@ -280,6 +280,9 @@ export async function listPerformers(query: ListPerformersQuery) {
   return {
     performers: rows.map((r) => ({
       ...r,
+      sceneCount: Number(r.sceneCount ?? 0),
+      imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
+      audioLibraryCount: Number(r.audioLibraryCount ?? 0),
       createdAt: r.createdAt.toISOString(),
     })),
     total: countResult[0]?.count ?? 0,

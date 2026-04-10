@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, Film, Heart, Star } from "lucide-react";
+import { Building2, Heart, Star } from "lucide-react";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import type { StudioCardData } from "./studio-card-data";
 import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
-import { formatVideoCount } from "../../lib/terminology";
+import { MediaAppearanceCounts } from "../shared/media-appearance-counts";
 
 interface StudioEntityCardProps {
   studio: StudioCardData;
@@ -62,11 +62,13 @@ export function StudioEntityCard({
               <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
             )}
           </div>
-          <div className="flex items-center gap-3 text-[0.65rem] text-text-disabled">
-            <span className="flex items-center gap-1">
-              <Film className="h-2.5 w-2.5" />
-              {formatVideoCount(studio.sceneCount)}
-            </span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-disabled">
+            <MediaAppearanceCounts
+              sceneCount={studio.sceneCount}
+              imageAppearanceCount={studio.imageAppearanceCount}
+              audioLibraryCount={studio.audioLibraryCount}
+              compact
+            />
             {studio.rating != null && studio.rating > 0 && (
               <span className="flex items-center gap-0.5">
                 <Star className="h-2.5 w-2.5 text-accent-500 fill-accent-500" />
@@ -124,9 +126,12 @@ function StudioListCard({
           <span className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
             {studio.name}
           </span>
-          <p className="text-[0.68rem] text-text-disabled">
-            {formatVideoCount(studio.sceneCount)}
-          </p>
+          <MediaAppearanceCounts
+            sceneCount={studio.sceneCount}
+            imageAppearanceCount={studio.imageAppearanceCount}
+            audioLibraryCount={studio.audioLibraryCount}
+            className="truncate"
+          />
         </div>
 
         <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
@@ -163,9 +168,13 @@ function StudioCompactCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{studio.name}</div>
-        <div className="text-[0.68rem] text-text-muted truncate">
-          {formatVideoCount(studio.sceneCount)}
-        </div>
+        <MediaAppearanceCounts
+          sceneCount={studio.sceneCount}
+          imageAppearanceCount={studio.imageAppearanceCount}
+          audioLibraryCount={studio.audioLibraryCount}
+          compact
+          className="truncate"
+        />
       </div>
       <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">studio</span>
     </>

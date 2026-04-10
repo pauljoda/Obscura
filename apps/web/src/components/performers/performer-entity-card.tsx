@@ -5,7 +5,8 @@ import { Star, Users } from "lucide-react";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import type { PerformerCardData } from "./performer-card-data";
 import { NsfwBlur, NsfwShowModeChip, NsfwText } from "../nsfw/nsfw-gate";
-import { entityTerms, formatVideoCount } from "../../lib/terminology";
+import { entityTerms } from "../../lib/terminology";
+import { MediaAppearanceCounts } from "../shared/media-appearance-counts";
 
 interface PerformerEntityCardProps {
   performer: PerformerCardData;
@@ -62,10 +63,12 @@ export function PerformerEntityCard({
           <NsfwText isNsfw={performer.isNsfw ?? false} className="truncate text-sm font-medium transition-colors duration-fast group-hover:text-text-accent block">
             {performer.name}
           </NsfwText>
-          <p className="text-[0.68rem] text-text-disabled">
-            {formatVideoCount(performer.sceneCount)}
-            {performer.gender ? ` · ${performer.gender}` : ""}
-          </p>
+          <MediaAppearanceCounts
+            sceneCount={performer.sceneCount}
+            imageAppearanceCount={performer.imageAppearanceCount}
+            audioLibraryCount={performer.audioLibraryCount}
+            trailing={performer.gender ?? null}
+          />
         </div>
       </article>
     </Link>
@@ -116,10 +119,15 @@ function PerformerListCard({
           <NsfwText isNsfw={performer.isNsfw ?? false} className="text-[0.8rem] font-medium text-text-primary truncate block group-hover:text-text-accent transition-colors duration-fast">
             {performer.name}
           </NsfwText>
-          <p className="text-[0.68rem] text-text-disabled truncate">
-            {formatVideoCount(performer.sceneCount)}
-            {performer.gender ? ` · ${performer.gender}` : ""}
-          </p>
+          <div className="min-w-0">
+            <MediaAppearanceCounts
+              sceneCount={performer.sceneCount}
+              imageAppearanceCount={performer.imageAppearanceCount}
+              audioLibraryCount={performer.audioLibraryCount}
+              trailing={performer.gender ?? null}
+              className="truncate"
+            />
+          </div>
         </div>
 
         <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
@@ -156,9 +164,14 @@ function PerformerCompactCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{performer.name}</div>
-        <div className="text-[0.68rem] text-text-muted truncate">
-          {[performer.gender, formatVideoCount(performer.sceneCount)].filter(Boolean).join(" · ")}
-        </div>
+        <MediaAppearanceCounts
+          sceneCount={performer.sceneCount}
+          imageAppearanceCount={performer.imageAppearanceCount}
+          audioLibraryCount={performer.audioLibraryCount}
+          compact
+          trailing={performer.gender ?? null}
+          className="truncate"
+        />
       </div>
       <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">
         {entityTerms.performer.toLowerCase()}

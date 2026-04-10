@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-04-09
+
+### Added
+
+- **Performer & studio list API** — Each row includes `imageAppearanceCount` (linked galleries plus standalone images) and `audioLibraryCount` (linked audio libraries for performers; studio-assigned libraries for studios). Counts respect SFW mode the same way scene counts do.
+- **Entity cards** — Actor and studio grid/list/compact cards show **Film / Images / Music** icons with numeric counts via shared `MediaAppearanceCounts`.
+
+### Changed
+
+- **Search** — Performer and studio results use the same cross-media counts in SQL, meta payloads, and subtitles.
+
 ## [0.6.8] - 2026-04-09
 
 ### Added

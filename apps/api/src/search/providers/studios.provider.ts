@@ -1,6 +1,11 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, count, ne } from "drizzle-orm";
+import { ilike, or, sql, and, gte, count, ne, desc } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import {
+  studioAudioLibraryCountExpr,
+  studioImageAppearanceCountExpr,
+  studioSfwSceneCountExpr,
+} from "../../lib/appearance-count-expressions";
 
 const { studios } = schema;
 
@@ -11,6 +16,7 @@ export const studiosSearchProvider: SearchProvider = {
 
   async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
+    const sfwOnly = filters.nsfw === "off";
 
     const matchCondition = or(
       ilike(studios.name, term),
@@ -20,7 +26,7 @@ export const studiosSearchProvider: SearchProvider = {
 
     const conditions = [matchCondition];
     if (filters.rating) conditions.push(gte(studios.rating, filters.rating));
-    if (filters.nsfw === "off") conditions.push(ne(studios.isNsfw, true));
+    if (sfwOnly) conditions.push(ne(studios.isNsfw, true));
 
     const where = and(...conditions);
 
@@ -32,18 +38,22 @@ export const studiosSearchProvider: SearchProvider = {
       ELSE 30
     END`;
 
+    const sceneCountSelect = sfwOnly ? studioSfwSceneCountExpr() : studios.sceneCount;
+
     const [rows, countResult] = await Promise.all([
       db.select({
         id: studios.id,
         name: studios.name,
         imagePath: studios.imagePath,
         rating: studios.rating,
-        sceneCount: studios.sceneCount,
+        sceneCount: sceneCountSelect,
+        imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
+        audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
         score: scoreExpr,
       })
         .from(studios)
         .where(where)
-        .orderBy(sql`${scoreExpr} DESC`, sql`${studios.sceneCount} DESC`)
+        .orderBy(desc(scoreExpr), desc(sceneCountSelect))
         .limit(limit)
         .offset(offset),
       db.select({ total: count() }).from(studios).where(where),
@@ -53,17 +63,27 @@ export const studiosSearchProvider: SearchProvider = {
 
     return {
       total,
-      items: rows.map((r) => ({
-        id: r.id,
-        kind: "studio" as const,
-        title: r.name,
-        subtitle: r.sceneCount > 0 ? `${r.sceneCount} scenes` : null,
-        imagePath: r.imagePath ?? null,
-        href: `/studios/${r.id}`,
-        rating: r.rating,
-        score: r.score,
-        meta: { sceneCount: r.sceneCount },
-      })),
+      items: rows.map((r) => {
+        const sceneCount = Number(r.sceneCount ?? 0);
+        const imageAppearanceCount = Number(r.imageAppearanceCount ?? 0);
+        const audioLibraryCount = Number(r.audioLibraryCount ?? 0);
+        const bits = [
+          sceneCount > 0 ? `${sceneCount} videos` : null,
+          imageAppearanceCount > 0 ? `${imageAppearanceCount} images` : null,
+          audioLibraryCount > 0 ? `${audioLibraryCount} audio` : null,
+        ].filter(Boolean);
+        return {
+          id: r.id,
+          kind: "studio" as const,
+          title: r.name,
+          subtitle: bits.length > 0 ? bits.join(" · ") : null,
+          imagePath: r.imagePath ?? null,
+          href: `/studios/${r.id}`,
+          rating: r.rating,
+          score: r.score,
+          meta: { sceneCount, imageAppearanceCount, audioLibraryCount },
+        };
+      }),
     };
   },
 };

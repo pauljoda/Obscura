@@ -98,6 +98,9 @@ export interface StudioItem {
   rating: number | null;
   isNsfw: boolean;
   sceneCount: number;
+  /** Galleries + images with this studio (SFW mode excludes NSFW entities). */
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
 }
 
 export interface PerformerItem {
@@ -110,6 +113,9 @@ export interface PerformerItem {
   rating: number | null;
   isNsfw: boolean;
   sceneCount: number;
+  /** Linked galleries plus standalone images (SFW mode excludes NSFW entities). */
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
   country: string | null;
   createdAt: string;
 }

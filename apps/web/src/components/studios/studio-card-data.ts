@@ -8,6 +8,8 @@ export interface StudioCardData {
   href: string;
   name: string;
   sceneCount: number;
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
   favorite: boolean;
   imagePath?: string;
   rating?: number;
@@ -25,6 +27,8 @@ export function studioItemToCardData(studio: StudioItem): StudioCardData {
     href: `/studios/${studio.id}`,
     name: studio.name,
     sceneCount: studio.sceneCount,
+    imageAppearanceCount: studio.imageAppearanceCount,
+    audioLibraryCount: studio.audioLibraryCount,
     favorite: studio.favorite,
     imagePath: studio.imagePath ? toApiUrl(studio.imagePath) : studio.imageUrl ?? undefined,
     rating: studio.rating ?? undefined,
@@ -40,6 +44,8 @@ export function searchStudioItemToCardData(item: SearchResultItem): StudioCardDa
     href: item.href,
     name: item.title,
     sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
+    imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,
+    audioLibraryCount: readMetaNumber(item.meta, "audioLibraryCount") ?? 0,
     favorite: false,
     imagePath: toApiUrl(item.imagePath) ?? undefined,
     rating: item.rating ?? undefined,

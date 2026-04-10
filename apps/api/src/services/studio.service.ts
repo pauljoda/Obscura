@@ -20,6 +20,10 @@ import {
 import { getGeneratedStudioDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
+import {
+  studioAudioLibraryCountExpr,
+  studioImageAppearanceCountExpr,
+} from "../lib/appearance-count-expressions";
 
 const { scenes, studios } = schema;
 
@@ -27,7 +31,24 @@ const { scenes, studios } = schema;
 
 export async function listStudios(sfwOnly: boolean) {
   const rows = await db
-    .select()
+    .select({
+      id: studios.id,
+      name: studios.name,
+      description: studios.description,
+      aliases: studios.aliases,
+      url: studios.url,
+      parentId: studios.parentId,
+      imageUrl: studios.imageUrl,
+      imagePath: studios.imagePath,
+      favorite: studios.favorite,
+      rating: studios.rating,
+      isNsfw: studios.isNsfw,
+      sceneCount: studios.sceneCount,
+      createdAt: studios.createdAt,
+      updatedAt: studios.updatedAt,
+      imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
+      audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
+    })
     .from(studios)
     .where(sfwOnly ? ne(studios.isNsfw, true) : undefined)
     .orderBy(asc(studios.name));
@@ -61,6 +82,8 @@ export async function listStudios(sfwOnly: boolean) {
       rating: r.rating,
       isNsfw: r.isNsfw,
       sceneCount: sfwOnly ? (sfwSceneByStudio.get(r.id) ?? 0) : r.sceneCount,
+      imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
+      audioLibraryCount: Number(r.audioLibraryCount ?? 0),
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     })),

@@ -8,6 +8,8 @@ export interface PerformerCardData {
   href: string;
   name: string;
   sceneCount: number;
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
   favorite: boolean;
   imagePath?: string;
   rating?: number;
@@ -31,6 +33,8 @@ export function performerItemToCardData(performer: PerformerItem): PerformerCard
     href: `/performers/${performer.id}`,
     name: performer.name,
     sceneCount: performer.sceneCount,
+    imageAppearanceCount: performer.imageAppearanceCount,
+    audioLibraryCount: performer.audioLibraryCount,
     favorite: performer.favorite,
     imagePath: toApiUrl(performer.imagePath) ?? undefined,
     rating: performer.rating ?? undefined,
@@ -47,6 +51,8 @@ export function searchPerformerItemToCardData(item: SearchResultItem): Performer
     href: item.href,
     name: item.title,
     sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
+    imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,
+    audioLibraryCount: readMetaNumber(item.meta, "audioLibraryCount") ?? 0,
     favorite: false,
     imagePath: toApiUrl(item.imagePath) ?? undefined,
     rating: item.rating ?? undefined,

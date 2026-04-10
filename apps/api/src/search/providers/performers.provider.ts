@@ -1,6 +1,11 @@
 import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, count, ne } from "drizzle-orm";
+import { ilike, or, sql, and, gte, count, ne, desc } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import {
+  performerAudioLibraryCountExpr,
+  performerImageAppearanceCountExpr,
+  performerSfwSceneCountExpr,
+} from "../../lib/appearance-count-expressions";
 
 const { performers } = schema;
 
@@ -11,6 +16,7 @@ export const performersSearchProvider: SearchProvider = {
 
   async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
+    const sfwOnly = filters.nsfw === "off";
 
     const matchCondition = or(
       ilike(performers.name, term),
@@ -20,7 +26,7 @@ export const performersSearchProvider: SearchProvider = {
 
     const conditions = [matchCondition];
     if (filters.rating) conditions.push(gte(performers.rating, filters.rating));
-    if (filters.nsfw === "off") conditions.push(ne(performers.isNsfw, true));
+    if (sfwOnly) conditions.push(ne(performers.isNsfw, true));
 
     const where = and(...conditions);
 
@@ -32,6 +38,8 @@ export const performersSearchProvider: SearchProvider = {
       ELSE 30
     END`;
 
+    const sceneCountSelect = sfwOnly ? performerSfwSceneCountExpr() : performers.sceneCount;
+
     const [rows, countResult] = await Promise.all([
       db.select({
         id: performers.id,
@@ -40,12 +48,14 @@ export const performersSearchProvider: SearchProvider = {
         gender: performers.gender,
         imagePath: performers.imagePath,
         rating: performers.rating,
-        sceneCount: performers.sceneCount,
+        sceneCount: sceneCountSelect,
+        imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
+        audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
         score: scoreExpr,
       })
         .from(performers)
         .where(where)
-        .orderBy(sql`${scoreExpr} DESC`, sql`${performers.sceneCount} DESC`)
+        .orderBy(desc(scoreExpr), desc(sceneCountSelect))
         .limit(limit)
         .offset(offset),
       db.select({ total: count() }).from(performers).where(where),
@@ -55,19 +65,34 @@ export const performersSearchProvider: SearchProvider = {
 
     return {
       total,
-      items: rows.map((r) => ({
-        id: r.id,
-        kind: "performer" as const,
-        title: r.name,
-        subtitle: [r.gender, r.sceneCount > 0 ? `${r.sceneCount} scenes` : null]
-          .filter(Boolean)
-          .join(" · ") || null,
-        imagePath: r.imagePath ?? null,
-        href: `/performers/${r.id}`,
-        rating: r.rating,
-        score: r.score,
-        meta: { gender: r.gender, sceneCount: r.sceneCount, disambiguation: r.disambiguation },
-      })),
+      items: rows.map((r) => {
+        const sceneCount = Number(r.sceneCount ?? 0);
+        const imageAppearanceCount = Number(r.imageAppearanceCount ?? 0);
+        const audioLibraryCount = Number(r.audioLibraryCount ?? 0);
+        const bits = [
+          r.gender,
+          sceneCount > 0 ? `${sceneCount} videos` : null,
+          imageAppearanceCount > 0 ? `${imageAppearanceCount} images` : null,
+          audioLibraryCount > 0 ? `${audioLibraryCount} audio` : null,
+        ].filter(Boolean);
+        return {
+          id: r.id,
+          kind: "performer" as const,
+          title: r.name,
+          subtitle: bits.length > 0 ? bits.join(" · ") : null,
+          imagePath: r.imagePath ?? null,
+          href: `/performers/${r.id}`,
+          rating: r.rating,
+          score: r.score,
+          meta: {
+            gender: r.gender,
+            sceneCount,
+            imageAppearanceCount,
+            audioLibraryCount,
+            disambiguation: r.disambiguation,
+          },
+        };
+      }),
     };
   },
 };
