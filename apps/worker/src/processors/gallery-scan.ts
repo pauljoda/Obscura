@@ -162,6 +162,10 @@ export async function processGalleryScan(job: Job) {
 
     if (existingGallery) {
       galleryId = existingGallery.id;
+      await db
+        .update(galleries)
+        .set({ isNsfw: root.isNsfw, updatedAt: new Date() })
+        .where(eq(galleries.id, galleryId));
     } else {
       // Find parent gallery
       const parentDir = path.dirname(dirPath);
@@ -211,7 +215,7 @@ export async function processGalleryScan(job: Job) {
         imageId = existingImage.id;
         await db
           .update(images)
-          .set({ galleryId, sortOrder: i, updatedAt: new Date() })
+          .set({ galleryId, sortOrder: i, isNsfw: root.isNsfw, updatedAt: new Date() })
           .where(eq(images.id, imageId));
         // Check if existing image is missing thumbnail or animated preview
         const [imgRow] = await db
@@ -292,6 +296,10 @@ export async function processGalleryScan(job: Job) {
 
     if (existingGallery) {
       galleryId = existingGallery.id;
+      await db
+        .update(galleries)
+        .set({ isNsfw: root.isNsfw, updatedAt: new Date() })
+        .where(eq(galleries.id, galleryId));
     } else {
       const [created] = await db
         .insert(galleries)
@@ -355,7 +363,7 @@ export async function processGalleryScan(job: Job) {
       } else {
         await db
           .update(images)
-          .set({ galleryId, sortOrder: i, updatedAt: new Date() })
+          .set({ galleryId, sortOrder: i, isNsfw: root.isNsfw, updatedAt: new Date() })
           .where(eq(images.id, existingImage.id));
         // Re-enqueue thumbnail if missing or preview missing for video formats
         const [imgRow] = await db

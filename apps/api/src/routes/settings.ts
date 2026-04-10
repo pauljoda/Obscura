@@ -9,6 +9,7 @@ import {
   getStorageStats,
   verifyDirectory,
 } from "../lib/library";
+import { syncMediaNsfwWithLibraryRoot } from "../lib/library-root-nsfw-sync";
 
 const { libraryRoots, librarySettings } = schema;
 
@@ -181,6 +182,14 @@ export async function settingsRoutes(app: FastifyInstance) {
         })
         .where(eq(libraryRoots.id, id))
         .returning();
+
+      if (updated && body.isNsfw !== undefined) {
+        const prevNsfw = existing.isNsfw === true;
+        const nextNsfw = updated.isNsfw === true;
+        if (prevNsfw !== nextNsfw) {
+          await syncMediaNsfwWithLibraryRoot(db, updated.path, nextNsfw);
+        }
+      }
 
       return updated;
     } catch (error) {

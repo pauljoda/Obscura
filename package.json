@@ -1,6 +1,6 @@
 {
   "name": "obscura",
-  "version": "0.8.19",
+  "version": "0.8.20",
   "private": true,
   "packageManager": "pnpm@10.30.3",
   "scripts": {

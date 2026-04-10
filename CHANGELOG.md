@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Library NSFW flag now applies to all media under that root** — Toggling a library root’s NSFW setting updates every scene, image, gallery, audio library, and audio track whose files live under that path (not only videos). Gallery and audio rescans also refresh `isNsfw` on existing rows so it stays aligned with the root. Clearing NSFW on a root still recomputes each scene from tags, performers, and studio; other media types under the root are cleared to non-NSFW.
 - Tag and studio deletion now detaches foreign-key references before removing the row (see [0.8.19]).
 
 ## [0.8.19] - 2026-04-10

@@ -103,6 +103,10 @@ export async function processAudioScan(job: Job) {
 
     if (existingLib) {
       libraryId = existingLib.id;
+      await db
+        .update(audioLibraries)
+        .set({ isNsfw: root.isNsfw, updatedAt: new Date() })
+        .where(eq(audioLibraries.id, libraryId));
     } else {
       // Find parent library
       const parentDir = path.dirname(dirPath);
@@ -147,7 +151,7 @@ export async function processAudioScan(job: Job) {
         trackId = existingTrack.id;
         await db
           .update(audioTracks)
-          .set({ libraryId, sortOrder: i, updatedAt: new Date() })
+          .set({ libraryId, sortOrder: i, isNsfw: root.isNsfw, updatedAt: new Date() })
           .where(eq(audioTracks.id, trackId));
         // Re-enqueue probe if duration is missing
         if (existingTrack.duration == null) {
