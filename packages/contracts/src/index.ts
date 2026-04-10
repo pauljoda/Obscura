@@ -210,11 +210,6 @@ export function resolveQueueWorkerConcurrency(
 
 export type QueueName = (typeof queueDefinitions)[number]["name"];
 
-export const queueRedisRetention = {
-  completed: 5,
-  failed: 20,
-} as const;
-
 export const jobRunRetention = {
   completed: 40,
   dismissed: 40,

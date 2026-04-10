@@ -1,6 +1,6 @@
 {
   "name": "@obscura/worker",
-  "version": "0.7.20",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,9 +12,8 @@
   "dependencies": {
     "@obscura/contracts": "workspace:*",
     "@obscura/media-core": "workspace:*",
-    "bullmq": "^5.73.0",
     "drizzle-orm": "^0.45.2",
-    "ioredis": "^5.10.1",
+    "pg-boss": "^10.3.2",
     "postgres": "^3.4.8",
     "sharp": "^0.34.5"
   },

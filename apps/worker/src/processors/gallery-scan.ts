@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverImageFilesAndDirs,
   fileNameToTitle,

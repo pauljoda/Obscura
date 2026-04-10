@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import { eq } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   getSceneVideoGeneratedDiskPaths,
   probeVideoFile,

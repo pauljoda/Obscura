@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { copyFile, mkdir, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { isNotNull } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import { getSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, scenes } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";

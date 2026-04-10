@@ -12,7 +12,7 @@ import { allSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
 import { pruneUntrackedLibraryReferences } from "../lib/library-prune";
-import { getQueue } from "../lib/queues";
+import { cancelJob, deleteJob, sendJob } from "../lib/queues";
 
 const { jobRuns, libraryRoots, scenes, audioTracks } = schema;
 
@@ -151,20 +151,19 @@ async function enqueueQueueJob(input: {
     return null;
   }
 
-  const queue = getQueue(input.queueName);
   const payload = withTriggerMetadata(input.data, input.trigger);
-  const job = await queue.add(input.jobName, payload);
+  const jobId = await sendJob(input.queueName, payload);
 
   await recordQueuedJob({
     queueName: input.queueName,
-    bullmqJobId: String(job.id),
+    bullmqJobId: jobId,
     targetType: input.target.type ?? null,
     targetId: input.target.id ?? null,
     targetLabel: input.target.label ?? null,
     payload,
   });
 
-  return job;
+  return { id: jobId };
 }
 
 /** One job moves all scenes' generated video assets; deduped by target id `scene-asset-layout`. */
@@ -454,18 +453,12 @@ async function cancelJobRunById(jobRunId: string, reason = "Cancelled by user") 
   }
 
   const queueName = run.queueName as QueueName;
-  const queue = getQueue(queueName);
-  const redisJob = await queue.getJob(run.bullmqJobId);
-  const redisState = redisJob ? await redisJob.getState() : null;
+  const previousStatus = run.status;
 
-  if (redisJob) {
-    if (redisState === "waiting" || redisState === "delayed") {
-      await redisJob.remove();
-    } else if (redisState === "active") {
-      await redisJob.moveToFailed(new Error(reason), "0", true);
-      await queue.clean(0, 1_000, "failed");
-    }
-  }
+  // pg-boss only cancels created/retry-state jobs. For active jobs it's a
+  // no-op; the handler finishes naturally and our overwrite below ensures
+  // the UI shows it dismissed.
+  await cancelJob(queueName, run.bullmqJobId);
 
   await db
     .update(jobRuns)
@@ -480,33 +473,30 @@ async function cancelJobRunById(jobRunId: string, reason = "Cancelled by user") 
   return {
     kind: "cancelled" as const,
     run,
-    redisState,
+    queueState: previousStatus,
   };
 }
 
 async function cancelQueueJobs(queueName: QueueName, reason = "Cancelled by user") {
-  const queue = getQueue(queueName);
+  const pending = await db
+    .select({ id: jobRuns.id, externalId: jobRuns.bullmqJobId, status: jobRuns.status })
+    .from(jobRuns)
+    .where(
+      and(
+        eq(jobRuns.queueName, queueName),
+        inArray(jobRuns.status, ["waiting", "active", "delayed"])
+      )
+    );
 
-  const waitingJobs = await queue.getWaiting();
-  const delayedJobs = await queue.getDelayed();
   let waitingRemoved = 0;
-  for (const job of [...waitingJobs, ...delayedJobs]) {
-    try {
-      await job.remove();
-      waitingRemoved += 1;
-    } catch {
-      // Job may have moved on before removal.
-    }
-  }
-
-  const activeJobs = await queue.getActive();
   let activeRemoved = 0;
-  for (const job of activeJobs) {
-    try {
-      await job.moveToFailed(new Error(reason), "0", true);
+
+  for (const row of pending) {
+    await cancelJob(queueName, row.externalId);
+    if (row.status === "active") {
       activeRemoved += 1;
-    } catch {
-      // Job may have already completed
+    } else {
+      waitingRemoved += 1;
     }
   }
 
@@ -519,8 +509,6 @@ async function cancelQueueJobs(queueName: QueueName, reason = "Cancelled by user
         inArray(jobRuns.status, ["waiting", "active", "delayed"])
       )
     );
-
-  await queue.clean(0, 100_000, "failed");
 
   return {
     queueName,
@@ -539,43 +527,56 @@ export async function jobsRoutes(app: FastifyInstance) {
       .orderBy(desc(jobRuns.finishedAt))
       .limit(1);
 
-    const queues = await Promise.all(
-      queueDefinitions.map(async (definition) => {
-        const queue = getQueue(definition.name);
-        const counts = await queue.getJobCounts("active", "waiting", "delayed");
-        const [failedRow] = await db
-          .select({ total: sql<number>`count(*)::int` })
-          .from(jobRuns)
-          .where(and(eq(jobRuns.queueName, definition.name), eq(jobRuns.status, "failed")));
-        const [completedRow] = await db
-          .select({ total: sql<number>`count(*)::int` })
-          .from(jobRuns)
-          .where(and(eq(jobRuns.queueName, definition.name), eq(jobRuns.status, "completed")));
-        const failed = failedRow?.total ?? 0;
-        const waiting = counts.waiting ?? 0;
-        const delayed = counts.delayed ?? 0;
-        const active = counts.active ?? 0;
-        const status =
-          failed > 0 ? "warning" : active > 0 || waiting > 0 || delayed > 0 ? "active" : "idle";
-
-        return {
-          name: definition.name,
-          label: definition.label,
-          description: definition.description,
-          status,
-          concurrency: resolveQueueWorkerConcurrency(
-            definition.concurrency,
-            settings.backgroundWorkerConcurrency
-          ),
-          active,
-          waiting,
-          delayed,
-          backlog: waiting + delayed,
-          completed: completedRow?.total ?? 0,
-          failed,
-        };
+    // Single Postgres source of truth for all status counts. Previously this
+    // called `queue.getJobCounts` (Redis/BullMQ) for waiting/active/delayed
+    // and Postgres for failed/completed, which led to dashboard drift when
+    // the two backends disagreed.
+    const countsRows = await db
+      .select({
+        queueName: jobRuns.queueName,
+        status: jobRuns.status,
+        total: sql<number>`count(*)::int`,
       })
-    );
+      .from(jobRuns)
+      .groupBy(jobRuns.queueName, jobRuns.status);
+
+    const countsByQueue = new Map<string, Record<string, number>>();
+    for (const row of countsRows) {
+      let bucket = countsByQueue.get(row.queueName);
+      if (!bucket) {
+        bucket = {};
+        countsByQueue.set(row.queueName, bucket);
+      }
+      bucket[row.status] = row.total;
+    }
+
+    const queues = queueDefinitions.map((definition) => {
+      const bucket = countsByQueue.get(definition.name) ?? {};
+      const waiting = bucket.waiting ?? 0;
+      const delayed = bucket.delayed ?? 0;
+      const active = bucket.active ?? 0;
+      const failed = bucket.failed ?? 0;
+      const completed = bucket.completed ?? 0;
+      const status =
+        failed > 0 ? "warning" : active > 0 || waiting > 0 || delayed > 0 ? "active" : "idle";
+
+      return {
+        name: definition.name,
+        label: definition.label,
+        description: definition.description,
+        status,
+        concurrency: resolveQueueWorkerConcurrency(
+          definition.concurrency,
+          settings.backgroundWorkerConcurrency
+        ),
+        active,
+        waiting,
+        delayed,
+        backlog: waiting + delayed,
+        completed,
+        failed,
+      };
+    });
 
     const activeJobs = await db
       .select()
@@ -700,7 +701,7 @@ export async function jobsRoutes(app: FastifyInstance) {
       ok: true,
       jobRunId,
       queueName: result.run.queueName,
-      redisState: result.redisState,
+      queueState: result.queueState,
     };
   });
 
@@ -788,7 +789,6 @@ export async function jobsRoutes(app: FastifyInstance) {
       })
       .where(eq(scenes.id, sceneId));
 
-    const queue = getQueue("preview");
     const payload = withTriggerMetadata(
       { sceneId },
       {
@@ -797,18 +797,18 @@ export async function jobsRoutes(app: FastifyInstance) {
         label: "Force rebuild preview from Operations",
       }
     );
-    const job = await queue.add("scene-preview", payload);
+    const jobId = await sendJob("preview", payload);
 
     await recordQueuedJob({
       queueName: "preview",
-      bullmqJobId: String(job.id),
+      bullmqJobId: jobId,
       targetType: "scene",
       targetId: scene.id,
       targetLabel: scene.title,
       payload,
     });
 
-    return { ok: true, jobId: String(job.id) };
+    return { ok: true, jobId };
   });
 
   app.post("/jobs/rebuild-previews", async (request) => {
@@ -891,24 +891,25 @@ export async function jobsRoutes(app: FastifyInstance) {
       return { error: "Unknown queue" };
     }
 
-    const targetQueues = queueName
-      ? [queueName]
-      : (queueDefinitions.map((definition) => definition.name) as QueueName[]);
-
-    const redisRemovedByQueue: Record<string, number> = {};
-    let redisRemovedTotal = 0;
-
-    for (const name of targetQueues) {
-      const queue = getQueue(name);
-      const removedIds = await queue.clean(0, 100_000, "failed");
-      redisRemovedByQueue[name] = removedIds.length;
-      redisRemovedTotal += removedIds.length;
-    }
-
-    const whereClause =
+    // Best-effort delete from pg-boss for failed rows we're acknowledging.
+    // pg-boss auto-archives failed jobs on its own retention schedule so
+    // this is just a courtesy cleanup — failed counts in the UI come from
+    // `jobRuns` regardless.
+    const failedWhere =
       queueName !== undefined
         ? and(eq(jobRuns.status, "failed"), eq(jobRuns.queueName, queueName))
         : eq(jobRuns.status, "failed");
+
+    const failedRows = await db
+      .select({ id: jobRuns.id, externalId: jobRuns.bullmqJobId, queueName: jobRuns.queueName })
+      .from(jobRuns)
+      .where(failedWhere);
+
+    const externalRemovedByQueue: Record<string, number> = {};
+    for (const row of failedRows) {
+      await deleteJob(row.queueName as QueueName, row.externalId);
+      externalRemovedByQueue[row.queueName] = (externalRemovedByQueue[row.queueName] ?? 0) + 1;
+    }
 
     const updatedRows = await db
       .update(jobRuns)
@@ -917,15 +918,14 @@ export async function jobsRoutes(app: FastifyInstance) {
         error: null,
         updatedAt: new Date(),
       })
-      .where(whereClause)
+      .where(failedWhere)
       .returning({ id: jobRuns.id });
 
     return {
       ok: true,
       queueName: queueName ?? null,
-      redisRemoved: redisRemovedTotal,
-      redisRemovedByQueue,
       runsUpdated: updatedRows.length,
+      externalRemovedByQueue,
     };
   });
 }

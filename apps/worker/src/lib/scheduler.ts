@@ -1,12 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
-import {
-  jobRunRetention,
-  queueDefinitions,
-  resolveQueueWorkerConcurrency,
-} from "@obscura/contracts";
-import type { Worker } from "bullmq";
+import { jobRunRetention } from "@obscura/contracts";
 import { db, libraryRoots, librarySettings, jobRuns } from "./db.js";
-import { redis } from "./queues.js";
 import { enqueueLibraryRootJob } from "./enqueue.js";
 import { pruneUntrackedLibraryReferences } from "./helpers.js";
 
@@ -21,16 +15,26 @@ export async function ensureLibrarySettingsRow() {
 }
 
 let scheduling = false;
-const scheduleLockKey = "obscura:worker:schedule-library-scan";
+
+/**
+ * Cross-process coordination: a session-level Postgres advisory lock keyed
+ * by a deterministic hash of the scheduler name. Replaces the old Redis
+ * SET NX lock so the worker no longer needs a Redis connection.
+ */
+const SCHEDULE_LOCK_KEY = "obscura:worker:schedule-library-scan";
 
 export async function scheduleRecurringScans() {
   if (scheduling) {
     return;
   }
 
-  const lockToken = `${process.pid}:${Date.now()}`;
-  const lockAcquired = await redis.set(scheduleLockKey, lockToken, "PX", 55_000, "NX");
-  if (!lockAcquired) {
+  const lockResult = await db.execute<{ locked: boolean }>(sql`
+    SELECT pg_try_advisory_lock(hashtext(${SCHEDULE_LOCK_KEY})) AS locked
+  `);
+  const acquired = Boolean(
+    (lockResult as unknown as Array<{ locked: boolean }>)[0]?.locked
+  );
+  if (!acquired) {
     return;
   }
 
@@ -74,20 +78,10 @@ export async function scheduleRecurringScans() {
     }
   } finally {
     scheduling = false;
-    if ((await redis.get(scheduleLockKey)) === lockToken) {
-      await redis.del(scheduleLockKey);
-    }
+    await db.execute(sql`
+      SELECT pg_advisory_unlock(hashtext(${SCHEDULE_LOCK_KEY}))
+    `);
   }
-}
-
-export async function syncWorkerConcurrencyFromSettings(workers: Worker[]) {
-  const row = await ensureLibrarySettingsRow();
-  queueDefinitions.forEach((definition, i) => {
-    workers[i].concurrency = resolveQueueWorkerConcurrency(
-      definition.concurrency,
-      row.backgroundWorkerConcurrency
-    );
-  });
 }
 
 export async function pruneJobRunHistory() {

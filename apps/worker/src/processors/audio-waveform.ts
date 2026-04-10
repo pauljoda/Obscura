@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { eq } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import { generateAudioWaveform, getGeneratedAudioTrackDir } from "@obscura/media-core";
 import { db, schema } from "../lib/db.js";
 import { markJobActive } from "../lib/job-tracking.js";

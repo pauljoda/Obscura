@@ -1,5 +1,5 @@
 import { eq, inArray, like } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverVideoFiles,
   fileNameToTitle,

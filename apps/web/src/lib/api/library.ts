@@ -105,7 +105,7 @@ export async function cancelJobRun(jobRunId: string): Promise<{
   ok: boolean;
   jobRunId: string;
   queueName: string;
-  redisState: string | null;
+  queueState: string | null;
 }> {
   return fetchApi(`/jobs/${jobRunId}/cancel`, { method: "POST" });
 }

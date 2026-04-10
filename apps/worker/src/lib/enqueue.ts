@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { QueueName } from "@obscura/contracts";
 import { db, scenes, images, audioTracks } from "./db.js";
-import { getWorkerQueue } from "./queues.js";
+import { sendJob } from "./queues.js";
 import {
   type QueueTarget,
   type QueueTrigger,
@@ -21,19 +21,22 @@ export async function enqueueJobIfNeeded(input: {
     return null;
   }
 
-  const queue = getWorkerQueue(input.queueName);
   const payload = withTriggerMetadata(input.data, input.trigger);
-  const job = await queue.add(input.jobName, payload);
+  const jobId = await sendJob(input.queueName, payload);
 
-  await upsertJobRun(job, input.queueName, {
-    status: "waiting",
-    targetType: input.target.type ?? null,
-    targetId: input.target.id ?? null,
-    targetLabel: input.target.label ?? null,
-    payload,
-  });
+  await upsertJobRun(
+    { id: jobId, data: payload },
+    input.queueName,
+    {
+      status: "waiting",
+      targetType: input.target.type ?? null,
+      targetId: input.target.id ?? null,
+      targetLabel: input.target.label ?? null,
+      payload,
+    }
+  );
 
-  return job;
+  return { id: jobId };
 }
 
 export async function enqueuePendingSceneJob(

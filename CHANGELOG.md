@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-04-10
+
+### Changed
+
+- **Job queue backend** — Replaced BullMQ + Redis with **pg-boss**. The worker, API, and Operations dashboard now use PostgreSQL as the sole queue backend and single source of truth for job state. Dashboard counts (waiting / active / delayed / failed / completed) are served from one grouped query against `job_runs` instead of splitting between Redis and Postgres, which fixes the recurring "refresh to see" drift where BullMQ and the mirror disagreed.
+- **Distributed lock** — `scheduleRecurringScans` now uses a Postgres `pg_try_advisory_lock` instead of a Redis `SET NX` key.
+- **Concurrency model** — pg-boss v10 expresses per-queue concurrency as `batchSize`; jobs in a batch run in parallel via `Promise.all`. Worker concurrency is fixed at process start — to change `backgroundWorkerConcurrency`, restart the worker (previously BullMQ was resized in-place every 15s).
+- **API response** — `/jobs/:id/cancel` now returns `queueState` instead of `redisState`; `/jobs/acknowledge-failed` returns `externalRemovedByQueue` instead of `redisRemovedByQueue`.
+
+### Removed
+
+- Redis from the unified Docker image, dev `docker-compose.yml`, and all service env files. No more `redis-server`, `/data/redis`, RDB format-version migrations, memory-overcommit warnings, or Alpine Redis package pins.
+- `bullmq` and `ioredis` dependencies from `@obscura/api` and `@obscura/worker`.
+- `queueRedisRetention` from `@obscura/contracts` — pg-boss manages its own archival/retention.
+- `REDIS_URL` from `.env.example` and the entrypoint.
+
+### Migration notes
+
+- **Pending jobs from earlier versions are lost.** BullMQ queue state lived in Redis, which is gone. On first boot of 0.8.0, re-run any scans/imports from Operations if needed. Historical `job_runs` rows are preserved.
+- pg-boss creates its own `pgboss` Postgres schema lazily on first start; no manual migration is required. It lives alongside Obscura's drizzle-managed schema without touching it.
+- `max_connections` in the embedded Postgres tune-up was raised from 20 to 40 to accommodate pg-boss's pool in addition to API, worker, and drizzle push.
+- Existing `/data/redis` directories on deployed volumes are now unused and can be deleted manually to reclaim space.
+
 ## [0.7.20] - 2026-04-10
 
 ### Fixed

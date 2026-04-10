@@ -65,12 +65,11 @@ RUN apk add --no-cache \
     libheif \
     postgresql16 \
     postgresql16-contrib \
-    redis \
     nginx \
     su-exec \
     libmad libid3tag libsndfile libgd \
     boost1.84-filesystem boost1.84-program_options boost1.84-regex \
-  && mkdir -p /data/postgres /data/redis /data/cache /media /run/postgresql \
+  && mkdir -p /data/postgres /data/cache /media /run/postgresql \
   && chown -R postgres:postgres /data/postgres /run/postgresql
 
 # Copy audiowaveform binary from builder

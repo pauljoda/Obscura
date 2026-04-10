@@ -20,6 +20,7 @@ import { changelogRoutes } from "./routes/changelog";
 import { audioLibrariesRoutes } from "./routes/audio-libraries";
 import { audioTracksRoutes } from "./routes/audio-tracks";
 import { audioStreamRoutes } from "./routes/audio-stream";
+import { initQueues, stopQueues } from "./lib/queues";
 import pkg from "../../../package.json";
 
 const app = Fastify({
@@ -70,7 +71,19 @@ await app.register(audioStreamRoutes);
 const port = Number(process.env.PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
 
+// Boot pg-boss before accepting traffic so the first /jobs request doesn't
+// pay the one-time schema creation cost.
+await initQueues();
+
 app.listen({ port, host }).catch((error) => {
   app.log.error(error);
   process.exit(1);
 });
+
+async function shutdown() {
+  await stopQueues();
+  await app.close();
+  process.exit(0);
+}
+process.on("SIGINT", () => void shutdown());
+process.on("SIGTERM", () => void shutdown());

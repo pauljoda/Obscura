@@ -1,7 +1,17 @@
-import type { Job } from "bullmq";
 import { and, eq, inArray } from "drizzle-orm";
 import type { JobKind, JobTriggerKind, QueueName } from "@obscura/contracts";
 import { db, jobRuns } from "./db.js";
+
+/**
+ * Minimal job shape the worker/processors hand to the tracking helpers.
+ * Replaces BullMQ's `Job` — pg-boss jobs are simpler and we only need
+ * the id, the payload, and the retry count.
+ */
+export type JobLike = {
+  id: string;
+  data: Record<string, unknown>;
+  attemptsMade?: number;
+};
 
 export type JobPayload = Record<string, unknown> & {
   jobKind?: JobKind;
@@ -46,11 +56,12 @@ export function formatJobError(error: unknown) {
 }
 
 export async function upsertJobRun(
-  job: Job,
+  job: JobLike,
   queueName: QueueName,
   patch: Partial<typeof jobRuns.$inferInsert>
 ) {
   const payload = (patch.payload ?? (job.data as JobPayload) ?? {}) as JobPayload;
+  const attempts = patch.attempts ?? job.attemptsMade ?? 0;
 
   await db
     .insert(jobRuns)
@@ -58,7 +69,7 @@ export async function upsertJobRun(
       bullmqJobId: String(job.id),
       queueName,
       status: patch.status ?? "waiting",
-      attempts: patch.attempts ?? job.attemptsMade,
+      attempts,
       progress: patch.progress ?? 0,
       targetType: patch.targetType ?? null,
       targetId: patch.targetId ?? null,
@@ -73,7 +84,7 @@ export async function upsertJobRun(
       target: jobRuns.bullmqJobId,
       set: {
         status: patch.status ?? "waiting",
-        attempts: patch.attempts ?? job.attemptsMade,
+        attempts,
         progress: patch.progress ?? 0,
         targetType: patch.targetType ?? null,
         targetId: patch.targetId ?? null,
@@ -88,7 +99,7 @@ export async function upsertJobRun(
 }
 
 export async function markJobActive(
-  job: Job,
+  job: JobLike,
   queueName: QueueName,
   target: { type?: string; id?: string; label?: string } = {}
 ) {
@@ -97,33 +108,32 @@ export async function markJobActive(
     targetType: target.type ?? null,
     targetId: target.id ?? null,
     targetLabel: target.label ?? null,
-    attempts: job.attemptsMade,
+    attempts: job.attemptsMade ?? 0,
     startedAt: new Date(),
   });
 }
 
-export async function markJobProgress(job: Job, queueName: QueueName, progress: number) {
-  await job.updateProgress(progress);
+export async function markJobProgress(job: JobLike, queueName: QueueName, progress: number) {
   await upsertJobRun(job, queueName, {
     status: "active",
     progress,
-    attempts: job.attemptsMade,
+    attempts: job.attemptsMade ?? 0,
   });
 }
 
-export async function markJobCompleted(job: Job, queueName: QueueName) {
+export async function markJobCompleted(job: JobLike, queueName: QueueName) {
   await upsertJobRun(job, queueName, {
     status: "completed",
     progress: 100,
-    attempts: job.attemptsMade,
+    attempts: job.attemptsMade ?? 0,
     finishedAt: new Date(),
   });
 }
 
-export async function markJobFailed(job: Job, queueName: QueueName, error: unknown) {
+export async function markJobFailed(job: JobLike, queueName: QueueName, error: unknown) {
   await upsertJobRun(job, queueName, {
     status: "failed",
-    attempts: job.attemptsMade,
+    attempts: job.attemptsMade ?? 0,
     error: formatJobError(error),
     finishedAt: new Date(),
   });

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import { probeAudioFile, fileNameToTitle } from "@obscura/media-core";
 import { db, schema } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";

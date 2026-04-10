@@ -280,7 +280,7 @@ export function JobDashboard() {
     try {
       const response = await cancelJobRun(job.id);
       setMessage(
-        `Cancelled ${displayJobHeading(job, nsfwMode)} from ${response.queueName}${response.redisState ? ` (${response.redisState})` : ""}.`
+        `Cancelled ${displayJobHeading(job, nsfwMode)} from ${response.queueName}${response.queueState ? ` (${response.queueState})` : ""}.`
       );
       setError(null);
       await loadDashboard();

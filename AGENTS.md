@@ -37,7 +37,7 @@ Obscura is a private self-hosted media browser. It is video-first, but supports 
 ```
 apps/web/          — Next.js 15 App Router frontend (port 8008)
 apps/api/          — Fastify 5 HTTP API (port 4000)
-apps/worker/       — BullMQ background worker
+apps/worker/       — pg-boss background worker
 
 packages/ui/       — Design tokens, shared components (shadcn/ui base)
 packages/contracts/ — Typed DTOs, route constants, job identifiers
@@ -53,15 +53,15 @@ docs/              — Architecture and design language docs
 ## Architecture
 
 - Monorepo with `pnpm` workspaces and `turbo`.
-- Three services: web (Next.js), api (Fastify), worker (BullMQ).
-- PostgreSQL 16 for persistence, Redis 7 for queue coordination.
+- Three services: web (Next.js), api (Fastify), worker (pg-boss).
+- PostgreSQL 16 is the sole stateful dependency — used for both application data and the job queue.
 - All services share typed contracts via `@obscura/contracts`.
 
 ## Key Architectural Decisions
 
 1. **Separate services** — UI, API, and worker run as independent processes. This keeps concerns isolated and allows independent scaling.
 2. **PostgreSQL + Drizzle ORM** — Typed schema with push-based migrations during development, SQL migration files for production.
-3. **BullMQ + Redis** — Durable job queues for scan, probe, thumbnail, sprite, HLS, and import jobs. Restart-safe with progress reporting.
+3. **pg-boss job queue** — Postgres-backed job queues for scan, probe, thumbnail, sprite, HLS, and import jobs. Job state is mirrored into the `job_runs` table, which is the single source of truth for the Operations dashboard. No Redis.
 4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the API.
 5. **Stash as import source** — Stash is a migration/import source, not the application schema. Imported data is normalized into Obscura-owned tables.
 6. **Typed contracts** — All DTOs, route paths, and job identifiers live in `@obscura/contracts` and are shared across all apps.
@@ -103,7 +103,7 @@ docs/              — Architecture and design language docs
 ## Docker
 
 - Development: `docker compose -f infra/docker/docker-compose.yml up` runs all services with hot reload.
-- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, Redis, nginx, ffmpeg, and all three services.
+- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, nginx, ffmpeg, and all three services.
 - Per-service Dockerfiles remain in `infra/docker/` for development; the unified build uses `infra/docker/unified.Dockerfile`.
 - nginx reverse proxy on port 8008 routes `/api/*` to Fastify (4000) and everything else to Next.js (3000) internally.
 - Volumes: `/data` (database, cache, thumbnails) and `/media` (user media library).

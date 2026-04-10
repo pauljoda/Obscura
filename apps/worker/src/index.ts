@@ -1,4 +1,3 @@
-import { Worker, type Job } from "bullmq";
 import {
   queueDefinitions,
   resolveQueueWorkerConcurrency,
@@ -6,12 +5,20 @@ import {
 } from "@obscura/contracts";
 
 import { queryClient } from "./lib/db.js";
-import { redis, redisUrl, workerQueues } from "./lib/queues.js";
-import { markJobCompleted, markJobFailed } from "./lib/job-tracking.js";
+import {
+  initQueues,
+  registerWorker,
+  stopQueues,
+  type WorkerHandler,
+} from "./lib/queues.js";
+import {
+  markJobCompleted,
+  markJobFailed,
+  type JobLike,
+} from "./lib/job-tracking.js";
 import {
   ensureLibrarySettingsRow,
   scheduleRecurringScans,
-  syncWorkerConcurrencyFromSettings,
   pruneJobRunHistory,
 } from "./lib/scheduler.js";
 
@@ -31,7 +38,7 @@ import { processLibraryMaintenance } from "./processors/library-maintenance.js";
 
 // ─── Processor Map ──────────────────────────────────────────────────
 
-const processorByQueue: Record<QueueName, (job: Job) => Promise<void>> = {
+const processorByQueue: Record<QueueName, (job: JobLike) => Promise<void>> = {
   "library-scan": processLibraryScan,
   "media-probe": processMediaProbe,
   fingerprint: processFingerprint,
@@ -47,47 +54,42 @@ const processorByQueue: Record<QueueName, (job: Job) => Promise<void>> = {
   "library-maintenance": processLibraryMaintenance,
 };
 
-// ─── Worker Factory ─────────────────────────────────────────────────
+// ─── Worker Handler Factory ─────────────────────────────────────────
+// Wraps each processor so we can mirror state into the `jobRuns` table
+// (the single source of truth for UI rendering of queue state).
 
-function createWorker(
+function wrapProcessor(
   queueName: QueueName,
-  processor: (job: Job) => Promise<void>,
-  concurrency: number
-) {
-  return new Worker(
-    queueName,
-    async (job) => {
-      try {
-        await processor(job);
-        await markJobCompleted(job, queueName);
-      } catch (error) {
-        await markJobFailed(job, queueName, error);
-        throw error;
-      }
-    },
-    {
-      connection: redis,
-      concurrency,
+  processor: (job: JobLike) => Promise<void>
+): WorkerHandler {
+  return async (job) => {
+    try {
+      await processor(job);
+      await markJobCompleted(job, queueName);
+    } catch (error) {
+      await markJobFailed(job, queueName, error);
+      throw error;
     }
-  );
+  };
 }
 
 // ─── Bootstrap ──────────────────────────────────────────────────────
 
+await initQueues();
 const libraryRowForWorkers = await ensureLibrarySettingsRow();
-const workers = queueDefinitions.map((definition) =>
-  createWorker(
-    definition.name,
-    processorByQueue[definition.name],
-    resolveQueueWorkerConcurrency(definition.concurrency, libraryRowForWorkers.backgroundWorkerConcurrency)
-  )
-);
+
+for (const definition of queueDefinitions) {
+  const concurrency = resolveQueueWorkerConcurrency(
+    definition.concurrency,
+    libraryRowForWorkers.backgroundWorkerConcurrency
+  );
+  await registerWorker(definition.name, wrapProcessor(definition.name, processorByQueue[definition.name]), concurrency);
+}
 
 // ─── Recurring Timers ───────────────────────────────────────────────
-
-setInterval(() => {
-  void syncWorkerConcurrencyFromSettings(workers);
-}, 15_000);
+// Worker concurrency is fixed at process start — to change it, restart the
+// worker. pg-boss does not expose a hot "resize team" primitive the way
+// BullMQ did, and the previous 15s resync was the only caller of it.
 
 await scheduleRecurringScans();
 setInterval(() => {
@@ -106,7 +108,7 @@ console.log(
     {
       service: "worker",
       queues: queueDefinitions.map((definition) => definition.name),
-      redisUrl,
+      backend: "pg-boss",
       backgroundWorkerConcurrency: resolveQueueWorkerConcurrency(
         1,
         libraryRowForWorkers.backgroundWorkerConcurrency
@@ -119,10 +121,15 @@ console.log(
 
 // ─── Graceful Shutdown ──────────────────────────────────────────────
 
-process.on("SIGINT", async () => {
-  await Promise.all(workers.map((worker) => worker.close()));
-  await Promise.all(Object.values(workerQueues).map((queue) => queue.close()));
-  await redis.quit();
+async function shutdown() {
+  await stopQueues();
   await queryClient.end();
   process.exit(0);
+}
+
+process.on("SIGINT", () => {
+  void shutdown();
+});
+process.on("SIGTERM", () => {
+  void shutdown();
 });

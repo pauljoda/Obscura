@@ -2,7 +2,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { eq } from "drizzle-orm";
-import type { Job } from "bullmq";
+import type { JobLike as Job } from "../lib/job-tracking.js";
 import { computeMd5, computeOsHash, extractZipMember } from "@obscura/media-core";
 import { db, images } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";

@@ -1,31 +1,117 @@
-import { Queue } from "bullmq";
-import IORedis from "ioredis";
+import PgBoss from "pg-boss";
 import {
   queueDefinitions,
-  queueRedisRetention,
+  resolveQueueWorkerConcurrency,
   type QueueName,
 } from "@obscura/contracts";
 
-export const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+// ─── pg-boss lifecycle (worker side) ───────────────────────────────
 
-export const redis = new IORedis(redisUrl, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-});
+let bossPromise: Promise<PgBoss> | null = null;
 
-export const workerQueues = Object.fromEntries(
-  queueDefinitions.map((definition) => [
-    definition.name,
-    new Queue(definition.name, {
-      connection: redis,
-      defaultJobOptions: {
-        removeOnComplete: queueRedisRetention.completed,
-        removeOnFail: queueRedisRetention.failed,
-      },
-    }),
-  ])
-) as Record<QueueName, Queue>;
+function databaseUrl(): string {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL must be set for pg-boss");
+  }
+  return url;
+}
 
-export function getWorkerQueue(queueName: QueueName) {
-  return workerQueues[queueName];
+export function initQueues(): Promise<PgBoss> {
+  if (!bossPromise) {
+    bossPromise = (async () => {
+      const boss = new PgBoss({
+        connectionString: databaseUrl(),
+        archiveCompletedAfterSeconds: 60 * 60,
+        retentionDays: 3,
+      });
+
+      boss.on("error", (error) => {
+        console.error("[worker] pg-boss error", error);
+      });
+
+      await boss.start();
+
+      for (const definition of queueDefinitions) {
+        await boss.createQueue(definition.name);
+      }
+
+      return boss;
+    })();
+  }
+  return bossPromise;
+}
+
+export function getBoss(): Promise<PgBoss> {
+  return initQueues();
+}
+
+// ─── Enqueue helpers ───────────────────────────────────────────────
+
+export async function sendJob(
+  queueName: QueueName,
+  data: Record<string, unknown>
+): Promise<string> {
+  const boss = await getBoss();
+  const id = await boss.send(queueName, data);
+  if (!id) {
+    throw new Error(`pg-boss refused to enqueue job on queue ${queueName}`);
+  }
+  return id;
+}
+
+// ─── Worker registration ──────────────────────────────────────────
+
+export type WorkerHandler = (job: { id: string; data: Record<string, unknown> }) => Promise<void>;
+
+export type RegisteredWorker = {
+  queueName: QueueName;
+  workerId: string;
+  concurrency: number;
+};
+
+/**
+ * Register a pg-boss `work` handler for a queue. pg-boss v10 no longer
+ * exposes `teamSize/teamConcurrency` — concurrency is instead expressed via
+ * `batchSize`: the handler receives up to N jobs at once and we run them in
+ * parallel to match the requested concurrency.
+ */
+export async function registerWorker(
+  queueName: QueueName,
+  handler: WorkerHandler,
+  concurrency: number
+): Promise<RegisteredWorker> {
+  const boss = await getBoss();
+  const workerId = await boss.work<Record<string, unknown>>(
+    queueName,
+    { batchSize: Math.max(1, concurrency) },
+    async (jobs) => {
+      await Promise.all(
+        jobs.map((job) => handler({ id: job.id, data: job.data ?? {} }))
+      );
+    }
+  );
+  return { queueName, workerId, concurrency };
+}
+
+export async function unregisterWorker(workerId: string): Promise<void> {
+  const boss = await getBoss();
+  try {
+    await boss.offWork({ id: workerId });
+  } catch {
+    // already gone
+  }
+}
+
+export function effectiveConcurrency(
+  definitionConcurrency: number,
+  backgroundWorkerConcurrency: unknown
+): number {
+  return resolveQueueWorkerConcurrency(definitionConcurrency, backgroundWorkerConcurrency);
+}
+
+export async function stopQueues(): Promise<void> {
+  if (!bossPromise) return;
+  const boss = await bossPromise;
+  await boss.stop({ graceful: true });
 }
