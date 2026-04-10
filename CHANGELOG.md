@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-04-10
+
+### Added
+
+- **`@obscura/contracts`** — New upload route constants (`sceneUpload`, `galleryImageUpload`, `audioLibraryTrackUpload`) and DTOs (`LibraryRootSummaryDto`, `UploadSceneResponseDto`, `UploadImageResponseDto`, `UploadAudioTrackResponseDto`) to back the upcoming in-app file-import UI. No behavior yet — these just pre-declare the API surface that subsequent commits will fill in.
+
 ## [0.8.4] - 2026-04-10
 
 ### Fixed

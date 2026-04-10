@@ -14,10 +14,12 @@ export const apiRoutes = {
   scenes: "/scenes",
   sceneDetail: "/scenes/:id",
   sceneStats: "/scenes/stats",
+  sceneUpload: "/scenes/upload",
   galleries: "/galleries",
   galleryDetail: "/galleries/:id",
   galleryStats: "/galleries/stats",
   galleryCover: "/galleries/:id/cover",
+  galleryImageUpload: "/galleries/:id/images/upload",
   galleryChapters: "/galleries/:id/chapters",
   galleryChapterDetail: "/galleries/chapters/:id",
   images: "/images",
@@ -60,6 +62,7 @@ export const apiRoutes = {
   audioLibraryStats: "/audio-libraries/stats",
   audioLibraryCover: "/audio-libraries/:id/cover",
   audioLibraryIcon: "/audio-libraries/:id/icon",
+  audioLibraryTrackUpload: "/audio-libraries/:id/tracks/upload",
   audioTracks: "/audio-tracks",
   audioTrackDetail: "/audio-tracks/:id",
   audioTrackMarkers: "/audio-tracks/:id/markers",
@@ -241,6 +244,38 @@ export type JobTriggerKind = (typeof jobTriggerKinds)[number];
 export const jobKinds = ["standard", "force-rebuild"] as const;
 
 export type JobKind = (typeof jobKinds)[number];
+
+/** Lightweight library root summary used by upload target pickers. */
+export interface LibraryRootSummaryDto {
+  id: string;
+  path: string;
+  label: string;
+  enabled: boolean;
+  scanVideos: boolean;
+  scanImages: boolean;
+  scanAudio: boolean;
+}
+
+export interface UploadSceneResponseDto {
+  id: string;
+  title: string;
+  filePath: string;
+  libraryRootId: string;
+}
+
+export interface UploadImageResponseDto {
+  id: string;
+  title: string;
+  filePath: string;
+  galleryId: string;
+}
+
+export interface UploadAudioTrackResponseDto {
+  id: string;
+  title: string;
+  filePath: string;
+  libraryId: string;
+}
 
 export interface LibraryRootDto {
   id: string;
