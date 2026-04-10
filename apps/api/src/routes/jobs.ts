@@ -166,6 +166,29 @@ async function enqueueQueueJob(input: {
   return job;
 }
 
+/** One job moves all scenes' generated video assets; deduped by target id `scene-asset-layout`. */
+async function queueSceneAssetStorageMigration(
+  targetDedicated: boolean,
+  trigger: QueueTrigger,
+  targetLabel: string,
+  options?: { sfwRedactJobLog?: boolean }
+) {
+  return enqueueQueueJob({
+    queueName: "library-maintenance",
+    jobName: "migrate-scene-assets",
+    data: {
+      targetDedicated,
+      ...(options?.sfwRedactJobLog ? { sfwRedactJobLog: true as const } : {}),
+    },
+    target: {
+      type: "library",
+      id: "scene-asset-layout",
+      label: targetLabel,
+    },
+    trigger,
+  });
+}
+
 async function enqueueLibraryScans(trigger: QueueTrigger = {}, sfwOnly = false) {
   const roots = await db
     .select()
@@ -625,6 +648,22 @@ export async function jobsRoutes(app: FastifyInstance) {
       result = await enqueueAudioScans(manualTrigger, sfwOnly);
     } else if (queueName === "audio-probe" || queueName === "audio-fingerprint" || queueName === "audio-waveform") {
       result = await enqueueMissingAudioTrackJobs(queueName, manualTrigger, sfwOnly);
+    } else if (queueName === "library-maintenance") {
+      const settings = await ensureLibrarySettingsRow();
+      const targetDedicated = settings.metadataStorageDedicated ?? true;
+      // Always migrate every scene on disk; SFW request only affects job labels (no file paths in UI).
+      const targetLabel = sfwOnly
+        ? "Relocate scene generated files"
+        : targetDedicated
+          ? "Scene assets to dedicated cache"
+          : "Scene assets beside media files";
+      const job = await queueSceneAssetStorageMigration(targetDedicated, manualTrigger, targetLabel, {
+        sfwRedactJobLog: sfwOnly,
+      });
+      result = {
+        jobIds: job ? [String(job.id)] : [],
+        skipped: job ? 0 : 1,
+      };
     } else {
       result = await enqueueMissingSceneJobs(queueName, manualTrigger, sfwOnly);
     }
@@ -811,27 +850,28 @@ export async function jobsRoutes(app: FastifyInstance) {
       return { error: "targetDedicated (boolean) is required" };
     }
 
-    const queue = getQueue("library-maintenance");
-    const payload = withTriggerMetadata(
-      { targetDedicated: body.targetDedicated },
+    const sfwOnly = readSfwOnly(request);
+    const targetLabel = sfwOnly
+      ? "Relocate scene generated files"
+      : body.targetDedicated
+        ? "Scene assets to dedicated cache"
+        : "Scene assets beside media files";
+
+    const job = await queueSceneAssetStorageMigration(
+      body.targetDedicated,
       {
         by: "manual",
         kind: "standard",
         label: "Migrate scene generated asset paths",
       },
+      targetLabel,
+      { sfwRedactJobLog: sfwOnly }
     );
-    const job = await queue.add("migrate-scene-assets", payload);
 
-    await recordQueuedJob({
-      queueName: "library-maintenance",
-      bullmqJobId: String(job.id),
-      targetType: "library",
-      targetId: "scene-asset-layout",
-      targetLabel: body.targetDedicated
-        ? "Scene assets to dedicated cache"
-        : "Scene assets beside media files",
-      payload,
-    });
+    if (!job) {
+      reply.code(409);
+      return { error: "Scene asset migration is already queued or running" };
+    }
 
     return { ok: true as const, jobId: String(job.id) };
   });

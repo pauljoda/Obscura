@@ -28,13 +28,18 @@ async function consolidateGeneratedFile(from: string, to: string) {
 }
 
 export async function processLibraryMaintenance(job: Job) {
-  const payload = job.data as JobPayload & { targetDedicated?: boolean };
+  const payload = job.data as JobPayload & { targetDedicated?: boolean; sfwRedactJobLog?: boolean };
   const targetDedicated = Boolean(payload.targetDedicated);
+  const sfwRedact = Boolean(payload.sfwRedactJobLog);
 
   await markJobActive(job, "library-maintenance", {
     type: "library",
     id: "scene-asset-layout",
-    label: targetDedicated ? "Scene assets → dedicated cache" : "Scene assets → beside media",
+    label: sfwRedact
+      ? "Relocate scene generated files"
+      : targetDedicated
+        ? "Scene assets → dedicated cache"
+        : "Scene assets → beside media",
   });
 
   const fromLayout = targetDedicated ? "sidecar" : "dedicated";

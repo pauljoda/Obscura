@@ -11,11 +11,16 @@ import {
 import type { JobRun } from "../../lib/api";
 import { formatQueueName, formatRelativeTime } from "./dashboard-utils";
 
-function RecentJobRow({ job }: { job: JobRun }) {
+function RecentJobRow({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
   const isSuccess = job.status === "completed";
   const isError = job.status === "failed";
   const isDismissed = job.status === "dismissed";
   const isActive = job.status === "active";
+
+  const targetLabel =
+    nsfwMode === "off" && job.queueName === "library-maintenance"
+      ? "Relocate scene generated files"
+      : job.targetLabel;
 
   return (
     <div className="group flex items-center gap-3 px-4 py-3 transition-colors duration-fast hover:bg-surface-3/35">
@@ -36,9 +41,9 @@ function RecentJobRow({ job }: { job: JobRun }) {
         <span className="text-sm text-text-secondary">
           {formatQueueName(job.queueName)}
         </span>
-        {job.targetLabel && (
+        {targetLabel && (
           <span className="text-text-muted text-sm ml-1.5 truncate">
-            — {job.targetLabel}
+            — {targetLabel}
           </span>
         )}
       </div>
@@ -56,9 +61,11 @@ function RecentJobRow({ job }: { job: JobRun }) {
 export function DashboardRecentActivity({
   loading,
   jobs,
+  nsfwMode,
 }: {
   loading: boolean;
   jobs: JobRun[] | null | undefined;
+  nsfwMode: string;
 }) {
   const list = jobs?.slice(0, 8) ?? [];
 
@@ -81,7 +88,7 @@ export function DashboardRecentActivity({
       ) : list.length > 0 ? (
         <div className="surface-card no-lift overflow-hidden divide-y divide-border-subtle">
           {list.map((job) => (
-            <RecentJobRow key={job.id} job={job} />
+            <RecentJobRow key={job.id} job={job} nsfwMode={nsfwMode} />
           ))}
         </div>
       ) : (

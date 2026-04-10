@@ -129,6 +129,20 @@ function jobHeading(job: JobRun) {
   return job.targetLabel ?? `${job.queueLabel} task`;
 }
 
+function maintenanceJobLogRedacted(job: JobRun, nsfwMode: string) {
+  return nsfwMode === "off" && job.queueName === "library-maintenance";
+}
+
+function displayJobHeading(job: JobRun, nsfwMode: string) {
+  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Relocate scene generated files";
+  return jobHeading(job);
+}
+
+function displayDescribeTrigger(job: JobRun, nsfwMode: string) {
+  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Background file layout task";
+  return describeTrigger(job);
+}
+
 function jobBadgeVariant(job: JobRun) {
   return isForceRebuildJob(job) ? "error" : "accent";
 }
@@ -146,6 +160,13 @@ function ForceRebuildBadge({ job }: { job: JobRun }) {
 }
 
 function describeRunResult(queueName: string, enqueued: number, skipped: number) {
+  if (queueName === "library-maintenance" && enqueued === 1) {
+    return "Queued scene asset migration for all videos (NSFW and SFW).";
+  }
+  if (queueName === "library-maintenance" && enqueued === 0 && skipped > 0) {
+    return "Scene asset migration is already queued or running.";
+  }
+
   const parts = [
     `Queued ${enqueued} ${queueName} job${enqueued === 1 ? "" : "s"}`,
   ];
@@ -252,7 +273,7 @@ export function JobDashboard() {
     try {
       const response = await cancelJobRun(job.id);
       setMessage(
-        `Cancelled ${jobHeading(job)} from ${response.queueName}${response.redisState ? ` (${response.redisState})` : ""}.`
+        `Cancelled ${displayJobHeading(job, nsfwMode)} from ${response.queueName}${response.redisState ? ` (${response.redisState})` : ""}.`
       );
       setError(null);
       await loadDashboard();
@@ -497,6 +518,7 @@ export function JobDashboard() {
               <ActiveJobCard
                 key={job.id}
                 job={job}
+                nsfwMode={nsfwMode}
                 cancellingJobRunId={cancellingJobRunId}
                 onCancelJob={handleCancelJob}
               />
@@ -537,7 +559,9 @@ export function JobDashboard() {
         </div>
         <div className="space-y-2">
           {dashboard?.failedJobs.length ? (
-            dashboard.failedJobs.map((job) => <FailedJobCard key={job.id} job={job} />)
+            dashboard.failedJobs.map((job) => (
+              <FailedJobCard key={job.id} job={job} nsfwMode={nsfwMode} />
+            ))
           ) : (
             <EmptyPanel
               title="No active failures"
@@ -563,7 +587,7 @@ export function JobDashboard() {
           <div className="divide-y divide-border-subtle/50">
             {dashboard?.completedJobs.length ? (
               dashboard.completedJobs.map((job) => (
-                <CompletedJobRow key={job.id} job={job} />
+                <CompletedJobRow key={job.id} job={job} nsfwMode={nsfwMode} />
               ))
             ) : (
               <div className="px-4 py-6 text-center text-sm text-text-disabled">
@@ -756,10 +780,12 @@ function QueueMetric({
 
 function ActiveJobCard({
   job,
+  nsfwMode,
   cancellingJobRunId,
   onCancelJob,
 }: {
   job: JobRun;
+  nsfwMode: string;
   cancellingJobRunId: string | null;
   onCancelJob: (job: JobRun) => Promise<void>;
 }) {
@@ -798,8 +824,8 @@ function ActiveJobCard({
               {statusLabel(job.status)}
             </span>
           </div>
-          <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{jobHeading(job)}</h3>
-          <p className="mt-1 text-[0.74rem] text-text-muted">{describeTrigger(job)}</p>
+          <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</h3>
+          <p className="mt-1 text-[0.74rem] text-text-muted">{displayDescribeTrigger(job, nsfwMode)}</p>
         </div>
         <div className="text-right">
           <p className="text-ephemeral">{formatElapsed(job)}</p>
@@ -839,7 +865,7 @@ function ActiveJobCard({
   );
 }
 
-function FailedJobCard({ job }: { job: JobRun }) {
+function FailedJobCard({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
   return (
     <details className="surface-card no-lift border-status-error/25 p-4" open>
       <summary className="cursor-pointer list-none">
@@ -855,8 +881,8 @@ function FailedJobCard({ job }: { job: JobRun }) {
                 failed
               </span>
             </div>
-            <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{jobHeading(job)}</h3>
-            <p className="mt-1 text-[0.74rem] text-text-muted">{describeTrigger(job)}</p>
+            <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</h3>
+            <p className="mt-1 text-[0.74rem] text-text-muted">{displayDescribeTrigger(job, nsfwMode)}</p>
           </div>
           <div className="text-right">
             <p className="text-ephemeral">{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</p>
@@ -884,7 +910,9 @@ function FailedJobCard({ job }: { job: JobRun }) {
             Error output
           </p>
           <pre className="whitespace-pre-wrap break-words font-mono text-[0.75rem] leading-5 text-status-error-text">
-            {job.error ?? "No error message recorded."}
+            {maintenanceJobLogRedacted(job, nsfwMode) && job.error
+              ? "Error details are hidden in SFW mode."
+              : job.error ?? "No error message recorded."}
           </pre>
         </div>
       </div>
@@ -892,12 +920,12 @@ function FailedJobCard({ job }: { job: JobRun }) {
   );
 }
 
-function CompletedJobRow({ job }: { job: JobRun }) {
+function CompletedJobRow({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
   return (
     <div className="grid gap-3 px-4 py-3 md:grid-cols-[1.1fr_0.8fr_0.8fr]">
       <div className="min-w-0">
-        <p className="truncate text-[0.84rem] font-medium text-text-primary">{jobHeading(job)}</p>
-        <p className="mt-1 truncate text-mono-sm text-text-disabled">{describeTrigger(job)}</p>
+        <p className="truncate text-[0.84rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</p>
+        <p className="mt-1 truncate text-mono-sm text-text-disabled">{displayDescribeTrigger(job, nsfwMode)}</p>
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">

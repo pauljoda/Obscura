@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Library maintenance queue** — Running `library-maintenance` from Jobs now enqueues one scene-asset migration job (matching the current “dedicated vs beside media” setting) instead of reporting zero jobs. Migration always processes every scene with a file path; SFW mode only affects job labels and redacted UI copy, not which files are moved.
+- **Scene asset migration API** — `POST /jobs/migrate-scene-asset-storage` uses the same deduplication as other jobs and returns 409 when a migration is already active; respects `nsfw` in the body for SFW-safe labels.
+
+## [0.7.0] - 2026-04-09
+
 ### Added
 
 - **Scene generated asset storage** — Library setting `metadataStorageDedicated` (default on) stores video thumbnails, preview clips, sprites, and trickplay VTT under `OBSCURA_CACHE_DIR` instead of next to each media file. Settings offers moving existing files (background `library-maintenance` job) or leaving them in place; the API serves from the active layout first with fallback to the other. Scene `.nfo` files always stay beside the video. New endpoint `POST /jobs/migrate-scene-asset-storage` with `{ "targetDedicated": boolean }`. `@obscura/media-core` adds `getSceneVideoGeneratedDiskPaths` and related helpers.

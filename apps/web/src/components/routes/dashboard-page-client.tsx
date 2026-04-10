@@ -63,7 +63,7 @@ export function DashboardPageClient({
           <DashboardQueueRack queues={jobs.queues} />
         ) : <div />}
 
-        <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} />
+        <DashboardRecentActivity loading={loading} jobs={jobs?.recentJobs} nsfwMode={mode} />
       </div>
     </div>
   );

@@ -368,14 +368,21 @@ export function SettingsPageClient({
       const normalized = normalizeSettings(updated);
       setSettings(normalized);
       savedSettings.current = normalized;
-      await migrateSceneAssetStorage(targetDedicated);
+      await migrateSceneAssetStorage(targetDedicated, nsfwMode);
       setMetadataStorageDialogOpen(false);
       setMessage(
         "Setting saved. Moving files in the background — open Jobs to watch progress.",
       );
       setTimeout(() => setMessage(null), 6000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save or queue file move");
+      let msg = err instanceof Error ? err.message : "Failed to save or queue file move";
+      try {
+        const parsed = JSON.parse(msg) as { error?: string };
+        if (parsed?.error) msg = parsed.error;
+      } catch {
+        /* keep msg */
+      }
+      setError(msg);
       closeMetadataStorageDialogCancel();
     } finally {
       setMetadataStorageBusy(false);

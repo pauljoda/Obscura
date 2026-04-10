@@ -132,13 +132,16 @@ export async function rebuildPreviews(nsfwMode: string): Promise<{
   });
 }
 
-export async function migrateSceneAssetStorage(targetDedicated: boolean): Promise<{
+export async function migrateSceneAssetStorage(
+  targetDedicated: boolean,
+  nsfwMode: string,
+): Promise<{
   ok: boolean;
   jobId: string;
 }> {
   return fetchApi("/jobs/migrate-scene-asset-storage", {
     method: "POST",
-    body: JSON.stringify({ targetDedicated }),
+    body: JSON.stringify({ targetDedicated, nsfw: nsfwMode }),
   });
 }
 
