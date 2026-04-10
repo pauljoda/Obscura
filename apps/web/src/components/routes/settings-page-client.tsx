@@ -34,6 +34,7 @@ import {
   Droplet,
   Flame,
   Music,
+  Clock,
 } from "lucide-react";
 import {
   BACKGROUND_WORKER_CONCURRENCY_MAX,
@@ -622,107 +623,123 @@ export function SettingsPageClient({
             <p className="text-sm text-text-muted">No library roots to display.</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {rootsVisibleInSettings.map((root) => (
               <div
                 key={root.id}
                 className={cn(
-                  "surface-card no-lift p-3.5 transition-opacity duration-fast",
+                  "surface-card no-lift flex flex-col gap-3 p-4 transition-opacity duration-fast",
                   !root.enabled && "opacity-50",
                 )}
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div className={cn("led flex-shrink-0", root.enabled ? "led-active" : "led-idle")} />
+                {/* Top Row: Info & Primary Actions */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex items-start gap-3">
+                    <div className={cn("led mt-1.5 flex-shrink-0", root.enabled ? "led-active" : "led-idle")} />
                     <div className="min-w-0">
-                      <p className="text-[0.8rem] font-semibold">{root.label}</p>
-                      <p className="mt-0.5 truncate text-mono-sm text-text-disabled">{root.path}</p>
+                      <h3 className="text-[0.85rem] font-semibold text-text-primary truncate">{root.label}</h3>
+                      <p className="mt-1.5 truncate text-mono-sm text-text-disabled bg-surface-1/50 border border-border-subtle px-2 py-0.5 inline-block max-w-full shadow-sm">
+                        {root.path}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 md:flex-shrink-0">
-                    <span className="text-[0.62rem] text-text-disabled whitespace-nowrap">
-                      {formatTimestamp(root.lastScannedAt)}
-                    </span>
-                    {/* Media type toggles */}
-                    <div className="flex items-center gap-1 border-l border-border-subtle pl-3">
-                      <button
-                        onClick={() => void handleToggleMediaType(root, "scanVideos")}
-                        title={root.scanVideos ? "Videos: scanning" : "Videos: skipped"}
-                        className={cn(
-                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
-                          root.scanVideos
-                            ? "text-text-accent bg-accent-950/50"
-                            : "text-text-disabled hover:text-text-muted"
-                        )}
-                      >
-                        <Film className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Video</span>
-                      </button>
-                      <button
-                        onClick={() => void handleToggleMediaType(root, "scanImages")}
-                        title={root.scanImages ? "Images: scanning" : "Images: skipped"}
-                        className={cn(
-                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
-                          root.scanImages
-                            ? "text-text-accent bg-accent-950/50"
-                            : "text-text-disabled hover:text-text-muted"
-                        )}
-                      >
-                        <Image className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Image</span>
-                      </button>
-                      <button
-                        onClick={() => void handleToggleMediaType(root, "scanAudio")}
-                        title={root.scanAudio ? "Audio: scanning" : "Audio: skipped"}
-                        className={cn(
-                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
-                          root.scanAudio
-                            ? "text-text-accent bg-accent-950/50"
-                            : "text-text-disabled hover:text-text-muted"
-                        )}
-                      >
-                        <Music className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Audio</span>
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const next = !root.isNsfw;
-                          setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: next } : r)));
-                          try {
-                            await updateLibraryRoot(root.id, { isNsfw: next });
-                          } catch {
-                            setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: !next } : r)));
-                          }
-                        }}
-                        title={root.isNsfw ? "NSFW library: on" : "NSFW library: off"}
-                        className={cn(
-                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
-                          root.isNsfw
-                            ? "text-text-accent bg-accent-950/50"
-                            : "text-text-disabled hover:text-text-muted"
-                        )}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">NSFW</span>
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => void handleToggleRoot(root)}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary whitespace-nowrap"
+                      className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                      title={root.enabled ? "Disable Library" : "Enable Library"}
                     >
                       {root.enabled ? (
                         <ToggleRight className="h-4 w-4 text-text-accent" />
                       ) : (
                         <ToggleLeft className="h-4 w-4" />
                       )}
-                      {root.enabled ? "Disable" : "Enable"}
                     </button>
                     <button
                       onClick={() => void handleDeleteRoot(root)}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error"
+                      className="p-1.5 text-text-muted hover:text-status-error hover:bg-status-error/10 transition-colors"
+                      title="Remove Library"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Configuration Toggles & Meta */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border-subtle/50">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[0.65rem] font-medium text-text-muted uppercase tracking-wider mr-1 hidden sm:inline-block">Scans:</span>
+                    
+                    <button
+                      onClick={() => void handleToggleMediaType(root, "scanVideos")}
+                      title={root.scanVideos ? "Videos: scanning" : "Videos: skipped"}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium border transition-all duration-fast",
+                        root.scanVideos
+                          ? "bg-accent-950/30 border-border-accent text-text-accent shadow-[var(--shadow-glow-accent)]"
+                          : "bg-surface-1 border-border-subtle text-text-disabled hover:text-text-muted hover:border-border-default"
+                      )}
+                    >
+                      <Film className="h-3.5 w-3.5" />
+                      Video
+                    </button>
+                    
+                    <button
+                      onClick={() => void handleToggleMediaType(root, "scanImages")}
+                      title={root.scanImages ? "Images: scanning" : "Images: skipped"}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium border transition-all duration-fast",
+                        root.scanImages
+                          ? "bg-accent-950/30 border-border-accent text-text-accent shadow-[var(--shadow-glow-accent)]"
+                          : "bg-surface-1 border-border-subtle text-text-disabled hover:text-text-muted hover:border-border-default"
+                      )}
+                    >
+                      <Image className="h-3.5 w-3.5" />
+                      Image
+                    </button>
+
+                    <button
+                      onClick={() => void handleToggleMediaType(root, "scanAudio")}
+                      title={root.scanAudio ? "Audio: scanning" : "Audio: skipped"}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium border transition-all duration-fast",
+                        root.scanAudio
+                          ? "bg-accent-950/30 border-border-accent text-text-accent shadow-[var(--shadow-glow-accent)]"
+                          : "bg-surface-1 border-border-subtle text-text-disabled hover:text-text-muted hover:border-border-default"
+                      )}
+                    >
+                      <Music className="h-3.5 w-3.5" />
+                      Audio
+                    </button>
+
+                    <div className="w-px h-4 bg-border-subtle mx-1 hidden sm:block" />
+
+                    <button
+                      onClick={async () => {
+                        const next = !root.isNsfw;
+                        setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: next } : r)));
+                        try {
+                          await updateLibraryRoot(root.id, { isNsfw: next });
+                        } catch {
+                          setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, isNsfw: !next } : r)));
+                        }
+                      }}
+                      title={root.isNsfw ? "NSFW library: on" : "NSFW library: off"}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium border transition-all duration-fast",
+                        root.isNsfw
+                          ? "bg-accent-950/30 border-border-accent text-text-accent shadow-[var(--shadow-glow-accent)]"
+                          : "bg-surface-1 border-border-subtle text-text-disabled hover:text-text-muted hover:border-border-default"
+                      )}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      NSFW
+                    </button>
+                  </div>
+                  
+                  <div className="text-[0.65rem] text-text-disabled flex items-center gap-1.5 whitespace-nowrap ml-auto">
+                    <Clock className="h-3 w-3" />
+                    Last scan: {formatTimestamp(root.lastScannedAt)}
                   </div>
                 </div>
               </div>
