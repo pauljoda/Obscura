@@ -25,6 +25,7 @@ interface AudioPlayerProps {
   tracks: AudioTrackListItemDto[];
   activeTrackId: string | null;
   onTrackChange: (trackId: string) => void;
+  className?: string;
 }
 
 const API_BASE =
@@ -36,6 +37,7 @@ export function AudioPlayer({
   tracks,
   activeTrackId,
   onTrackChange,
+  className,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -298,7 +300,7 @@ export function AudioPlayer({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="surface-panel border border-border-subtle">
+    <div className={cn("surface-panel border border-border-subtle", className)}>
       <audio ref={audioRef} preload="auto" />
 
       {/* ─── Now playing + timeline (scene-style) + waveform film strip ─ */}

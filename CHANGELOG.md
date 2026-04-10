@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-04-09
+
+### Changed
+
+- **Audio library player** — Playback UI is a fixed bottom dock (`surface-elevated`) above the mobile tab bar; desktop aligns with the main column (`md:left-60` / `md:left-14`). Page content uses extra bottom padding so the track list scrolls clear of the player. Added `AppChromeProvider` / `useAppChrome` for sidebar-aware fixed UI. `AudioPlayer` accepts optional `className`.
+
 ## [0.6.3] - 2026-04-09
 
 ### Changed

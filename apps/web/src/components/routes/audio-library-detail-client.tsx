@@ -37,6 +37,7 @@ import { AudioPlayer } from "../audio/audio-player";
 import { ChipInput } from "../shared/chip-input";
 import { AudioLibraryStudioField } from "../audio/audio-library-studio-field";
 import { revalidateAudioLibraryCache } from "../../app/actions/revalidate-audio-library";
+import { useAppChrome } from "../app-chrome-context";
 
 interface AudioLibraryDetailClientProps {
   library: AudioLibraryDetailDto;
@@ -62,6 +63,7 @@ export function AudioLibraryDetailClient({
   allTags: initialTagSuggestions,
 }: AudioLibraryDetailClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const { sidebarCollapsed } = useAppChrome();
   const [library, setLibrary] = useState(initialLibrary);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
 
@@ -202,7 +204,8 @@ export function AudioLibraryDetailClient({
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
+    <div className="flex flex-col gap-6 pb-64 md:pb-60">
       <Link
         href="/audio"
         className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-accent transition-colors w-fit"
@@ -468,12 +471,6 @@ export function AudioLibraryDetailClient({
         </section>
       )}
 
-      <AudioPlayer
-        tracks={visibleTracks}
-        activeTrackId={activeTrackId}
-        onTrackChange={handleTrackChange}
-      />
-
       <section>
         <h2 className="text-kicker mb-3">Tracks</h2>
         {visibleTracks.length === 0 ? (
@@ -553,5 +550,26 @@ export function AudioLibraryDetailClient({
         )}
       </section>
     </div>
+
+    <div
+      className={cn(
+        "fixed z-[45] max-w-[100vw] pointer-events-none",
+        "bottom-14 left-0 right-0 px-2 pt-1",
+        "md:bottom-4 md:px-5",
+        sidebarCollapsed ? "md:left-14" : "md:left-60",
+      )}
+      role="region"
+      aria-label="Audio playback"
+    >
+      <div className="pointer-events-auto surface-elevated overflow-hidden">
+        <AudioPlayer
+          tracks={visibleTracks}
+          activeTrackId={activeTrackId}
+          onTrackChange={handleTrackChange}
+          className="border-0 bg-transparent shadow-none"
+        />
+      </div>
+    </div>
+    </>
   );
 }
