@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.18] - 2026-04-10
+
+### Fixed
+
+- **Docker (unified image)** — API and worker could not reach Redis (`ECONNREFUSED` on `127.0.0.1:6379`) when the packaged default `redis.conf` expected systemd supervision or otherwise prevented the server from listening. Startup now uses a minimal config under `/run` and waits for `redis-cli PONG` before schema push and Node processes start.
+
 ## [0.7.17] - 2026-04-10
 
 ### Fixed

@@ -42,8 +42,33 @@ su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname 
   su-exec postgres createdb -h 127.0.0.1 obscura
 
 # ── Start Redis ───────────────────────────────────────────────────
+# Use a dedicated config so we never inherit Alpine's /etc/redis.conf (e.g.
+# supervised systemd), which can prevent Redis from listening in this container.
 echo "[obscura] Starting Redis..."
-redis-server --daemonize yes --dir "$REDIS_DIR" --loglevel warning
+REDIS_CONF="/run/obscura-redis.conf"
+cat > "$REDIS_CONF" <<EOF
+bind 127.0.0.1
+port 6379
+dir $REDIS_DIR
+daemonize yes
+loglevel warning
+EOF
+redis-server "$REDIS_CONF"
+
+echo "[obscura] Waiting for Redis to accept connections..."
+i=0
+while [ "$i" -lt 60 ]; do
+  if redis-cli -h 127.0.0.1 -p 6379 ping 2>/dev/null | grep -q PONG; then
+    echo "[obscura] Redis is ready."
+    break
+  fi
+  i=$((i + 1))
+  if [ "$i" -eq 60 ]; then
+    echo "[obscura] ERROR: Redis did not become ready on 127.0.0.1:6379 — check /data/redis permissions and logs." >&2
+    exit 1
+  fi
+  sleep 0.5
+done
 
 # ── Push database schema ──────────────────────────────────────────
 # Must succeed: an outdated schema causes widespread API 500s (queries reference
