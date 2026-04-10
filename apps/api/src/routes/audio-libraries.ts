@@ -46,6 +46,24 @@ export async function audioLibrariesRoutes(app: FastifyInstance) {
     );
   });
 
+  // ─── POST /audio-libraries/:id/cover (multipart) ───────────────
+  app.post("/audio-libraries/:id/cover", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const file = await request.file();
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+    const buffer = await file.toBuffer();
+    return audioLibraryService.setAudioLibraryCover(id, buffer);
+  });
+
+  // ─── DELETE /audio-libraries/:id/cover ─────────────────────────
+  app.delete("/audio-libraries/:id/cover", async (request) => {
+    const { id } = request.params as { id: string };
+    return audioLibraryService.clearAudioLibraryCover(id);
+  });
+
   // ─── PATCH /audio-libraries/:id ────────────────────────────────
   app.patch("/audio-libraries/:id", async (request) => {
     const { id } = request.params as { id: string };

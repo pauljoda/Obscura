@@ -1,3 +1,7 @@
+import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { getGeneratedAudioLibraryDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import {
   eq,
@@ -510,4 +514,54 @@ export async function deleteAudioLibrary(id: string) {
   const [lib] = await db.select({ id: audioLibraries.id }).from(audioLibraries).where(eq(audioLibraries.id, id)).limit(1);
   if (!lib) throw new AppError(404, "Audio library not found");
   await db.delete(audioLibraries).where(eq(audioLibraries.id, id));
+}
+
+const AUDIO_LIBRARY_COVER_FILE = "cover-custom.jpg";
+
+function audioLibraryCoverAssetPath(libraryId: string) {
+  return `/assets/audio-libraries/${libraryId}/cover`;
+}
+
+/** Save multipart image bytes as the library cover (JPEG on disk). */
+export async function setAudioLibraryCover(id: string, buffer: Buffer) {
+  if (!buffer.length) {
+    throw new AppError(400, "Empty file");
+  }
+  const [lib] = await db.select({ id: audioLibraries.id }).from(audioLibraries).where(eq(audioLibraries.id, id)).limit(1);
+  if (!lib) throw new AppError(404, "Audio library not found");
+
+  const dir = getGeneratedAudioLibraryDir(id);
+  await mkdir(dir, { recursive: true });
+  const filePath = path.join(dir, AUDIO_LIBRARY_COVER_FILE);
+  await writeFile(filePath, buffer);
+
+  const coverImagePath = audioLibraryCoverAssetPath(id);
+  await db
+    .update(audioLibraries)
+    .set({ coverImagePath, updatedAt: new Date() })
+    .where(eq(audioLibraries.id, id));
+
+  return { ok: true as const, coverImagePath };
+}
+
+/** Remove user-uploaded cover file and clear `coverImagePath`. */
+export async function clearAudioLibraryCover(id: string) {
+  const [lib] = await db
+    .select({ id: audioLibraries.id })
+    .from(audioLibraries)
+    .where(eq(audioLibraries.id, id))
+    .limit(1);
+  if (!lib) throw new AppError(404, "Audio library not found");
+
+  const filePath = path.join(getGeneratedAudioLibraryDir(id), AUDIO_LIBRARY_COVER_FILE);
+  if (existsSync(filePath)) {
+    await unlink(filePath);
+  }
+
+  await db
+    .update(audioLibraries)
+    .set({ coverImagePath: null, updatedAt: new Date() })
+    .where(eq(audioLibraries.id, id));
+
+  return { ok: true as const };
 }

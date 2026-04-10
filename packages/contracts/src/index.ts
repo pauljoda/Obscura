@@ -745,6 +745,19 @@ export interface AudioLibraryPatchDto {
   tagNames?: string[];
 }
 
+/** PATCH /audio-tracks/:id */
+export interface AudioTrackPatchDto {
+  title?: string;
+  details?: string | null;
+  date?: string | null;
+  rating?: number | null;
+  organized?: boolean;
+  isNsfw?: boolean;
+  studioName?: string | null;
+  performerNames?: string[];
+  tagNames?: string[];
+}
+
 export interface AudioLibraryStatsDto {
   totalLibraries: number;
   totalTracks: number;

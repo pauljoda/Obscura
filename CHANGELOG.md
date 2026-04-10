@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-04-09
+
+### Added
+
+- **Audio library cover art** — `POST /audio-libraries/:id/cover` (multipart) and `DELETE /audio-libraries/:id/cover` save or clear a custom JPEG in the audio-library cache dir; `GET /assets/audio-libraries/:id/cover` serves it. Library detail edit mode adds **Art** / **Clear** on the cover.
+- **Per-track star ratings** — Track rows use an interactive `StarRatingPicker` (clicks do not change the playing track) wired to existing `PATCH /audio-tracks/:id` with `{ rating }`. Client helpers `uploadAudioLibraryCover`, `deleteAudioLibraryCover`, `updateAudioTrack`; contract type `AudioTrackPatchDto`.
+
 ## [0.6.4] - 2026-04-09
 
 ### Changed

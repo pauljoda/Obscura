@@ -2,6 +2,7 @@ import type {
   EntityKind,
   AudioLibraryDetailDto,
   AudioLibraryPatchDto,
+  AudioTrackPatchDto,
   GalleryDetailDto,
   GalleryListItemDto,
   GalleryImagesPageDto,
@@ -324,6 +325,27 @@ export async function updateAudioLibrary(
   data: AudioLibraryPatchDto,
 ): Promise<{ ok: true }> {
   return fetchApi(`/audio-libraries/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function uploadAudioLibraryCover(
+  id: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/audio-libraries/${id}/cover`, file);
+}
+
+export async function deleteAudioLibraryCover(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/audio-libraries/${id}/cover`, { method: "DELETE" });
+}
+
+export async function updateAudioTrack(
+  id: string,
+  data: AudioTrackPatchDto,
+): Promise<{ ok: true }> {
+  return fetchApi(`/audio-tracks/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });

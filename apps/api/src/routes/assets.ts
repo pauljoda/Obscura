@@ -11,6 +11,7 @@ import {
   getGeneratedTagDir,
   getGeneratedImageDir,
   getGeneratedAudioTrackDir,
+  getGeneratedAudioLibraryDir,
   extractZipMember,
 } from "@obscura/media-core";
 
@@ -315,6 +316,19 @@ export async function assetsRoutes(app: FastifyInstance) {
     reply.header("Cache-Control", "public, max-age=3600");
     reply.header("Content-Type", mimeForFile(ext));
     return reply.send(createReadStream(image.filePath));
+  });
+
+  // ─── Audio library cover: /assets/audio-libraries/:id/cover ─────
+  app.get("/assets/audio-libraries/:id/cover", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const coverPath = path.join(getGeneratedAudioLibraryDir(id), "cover-custom.jpg");
+    if (existsSync(coverPath)) {
+      reply.header("Cache-Control", "no-cache");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(coverPath));
+    }
+    reply.code(404);
+    return { error: "Cover not found" };
   });
 
   // ─── Audio track waveform: /assets/audio-tracks/:id/waveform.json ─

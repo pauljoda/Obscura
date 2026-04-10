@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import {
   Music,
@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Calendar,
   Building2,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
@@ -29,6 +31,9 @@ import {
   fetchTags,
   fetchPerformers,
   fetchStudios,
+  uploadAudioLibraryCover,
+  deleteAudioLibraryCover,
+  updateAudioTrack,
   type TagItem,
   type PerformerItem,
   type StudioItem,
@@ -90,11 +95,75 @@ export function AudioLibraryDetailClient({
     initialLibrary.tags.map((t) => t.name),
   );
 
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
+
   useEffect(() => {
     setLibrary(initialLibrary);
   }, [initialLibrary.id, initialLibrary.updatedAt]);
 
-  const coverUrl = toApiUrl(library.coverImagePath);
+  const trackFetchLimit = useMemo(
+    () => Math.max(library.trackTotal, library.tracks.length, 100),
+    [library.trackTotal, library.tracks.length],
+  );
+
+  const coverUrl = toApiUrl(library.coverImagePath, library.updatedAt);
+
+  const reloadLibrary = useCallback(async () => {
+    const next = await fetchAudioLibraryDetail(library.id, { trackLimit: trackFetchLimit });
+    setLibrary(next);
+  }, [library.id, trackFetchLimit]);
+
+  const handleCoverFile = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      setCoverBusy(true);
+      try {
+        await uploadAudioLibraryCover(library.id, file);
+        await revalidateAudioLibraryCache(library.id);
+        await reloadLibrary();
+      } finally {
+        setCoverBusy(false);
+      }
+    },
+    [library.id, reloadLibrary],
+  );
+
+  const handleRemoveCover = useCallback(async () => {
+    if (!library.coverImagePath) return;
+    setCoverBusy(true);
+    try {
+      await deleteAudioLibraryCover(library.id);
+      await revalidateAudioLibraryCache(library.id);
+      await reloadLibrary();
+    } finally {
+      setCoverBusy(false);
+    }
+  }, [library.coverImagePath, library.id, reloadLibrary]);
+
+  const handleTrackRating = useCallback(
+    async (trackId: string, newRating: number | null) => {
+      const prevRating =
+        library.tracks.find((t) => t.id === trackId)?.rating ?? null;
+      setLibrary((l) => ({
+        ...l,
+        tracks: l.tracks.map((t) =>
+          t.id === trackId ? { ...t, rating: newRating } : t,
+        ),
+      }));
+      try {
+        await updateAudioTrack(trackId, { rating: newRating });
+      } catch {
+        setLibrary((l) => ({
+          ...l,
+          tracks: l.tracks.map((t) =>
+            t.id === trackId ? { ...t, rating: prevRating } : t,
+          ),
+        }));
+      }
+    },
+    [library.tracks],
+  );
 
   const visibleTracks = library.tracks.filter(
     (t) => nsfwMode !== "off" || !t.isNsfw,
@@ -177,8 +246,9 @@ export function AudioLibraryDetailClient({
         tagNames,
       });
       await revalidateAudioLibraryCache(library.id);
-      const trackLimit = Math.max(library.trackTotal, library.tracks.length, 100);
-      const next = await fetchAudioLibraryDetail(library.id, { trackLimit });
+      const next = await fetchAudioLibraryDetail(library.id, {
+        trackLimit: trackFetchLimit,
+      });
       setLibrary(next);
       resetFormFromLibrary(next);
       setEditMode(false);
@@ -201,6 +271,7 @@ export function AudioLibraryDetailClient({
     performerNames,
     tagNames,
     resetFormFromLibrary,
+    trackFetchLimit,
   ]);
 
   return (
@@ -216,22 +287,63 @@ export function AudioLibraryDetailClient({
 
       <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
         <div className="flex gap-6 items-start flex-1 min-w-0">
-          <NsfwBlur
-            isNsfw={library.isNsfw}
-            className="w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0 overflow-hidden surface-card-sharp"
-          >
-            {coverUrl ? (
-              <img
-                src={coverUrl}
-                alt={library.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
-                <Music className="h-12 w-12 text-white/20" />
+          <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0">
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              aria-label="Upload album art"
+              onChange={(e) => {
+                void handleCoverFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <NsfwBlur
+              isNsfw={library.isNsfw}
+              className="w-full h-full overflow-hidden surface-card-sharp"
+            >
+              {coverUrl ? (
+                <img
+                  src={coverUrl}
+                  alt={library.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
+                  <Music className="h-12 w-12 text-white/20" />
+                </div>
+              )}
+            </NsfwBlur>
+            {editMode && (
+              <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1 border-t border-border-subtle bg-black/75 p-1">
+                <button
+                  type="button"
+                  disabled={coverBusy}
+                  onClick={() => coverInputRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-primary hover:bg-surface-3/80 disabled:opacity-50"
+                >
+                  {coverBusy ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Upload className="h-3 w-3" />
+                  )}
+                  Art
+                </button>
+                {library.coverImagePath ? (
+                  <button
+                    type="button"
+                    disabled={coverBusy}
+                    onClick={() => void handleRemoveCover()}
+                    className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-muted hover:text-red-300 hover:bg-surface-3/80 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Clear
+                  </button>
+                ) : null}
               </div>
             )}
-          </NsfwBlur>
+          </div>
           <div className="flex-1 min-w-0 py-1">
             <div className="flex items-start justify-between gap-3">
               {editMode ? (
@@ -479,27 +591,35 @@ export function AudioLibraryDetailClient({
           </div>
         ) : (
           <div className="surface-well">
-            <div className="flex items-center gap-3 px-4 py-2 border-b border-border-subtle text-xs text-text-disabled uppercase tracking-wider">
-              <span className="w-8 text-right">#</span>
-              <span className="flex-1">Title</span>
-              <span className="w-12 text-right">Time</span>
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 border-b border-border-subtle text-xs text-text-disabled uppercase tracking-wider">
+              <span className="w-7 sm:w-8 text-right shrink-0">#</span>
+              <span className="flex-1 min-w-0">Title</span>
+              <span className="w-[5.5rem] shrink-0 text-center">Rating</span>
+              <span className="w-11 sm:w-12 text-right shrink-0">Time</span>
             </div>
             {visibleTracks.map((track, index) => {
               const isActive = track.id === activeTrackId;
 
               return (
-                <button
+                <div
                   key={track.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleTrackChange(track.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleTrackChange(track.id);
+                    }
+                  }}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group",
+                    "w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 text-left transition-colors group cursor-pointer",
                     "hover:bg-surface-2",
                     isActive && "bg-surface-2",
                     index < visibleTracks.length - 1 && "border-b border-border-subtle",
                   )}
                 >
-                  <span className="w-8 text-right text-xs font-mono flex-shrink-0">
+                  <span className="w-7 sm:w-8 text-right text-xs font-mono flex-shrink-0">
                     {isActive ? (
                       <span className="inline-flex items-center justify-center">
                         <span className="flex gap-[2px] items-end h-3">
@@ -534,16 +654,22 @@ export function AudioLibraryDetailClient({
                     )}
                   </div>
 
-                  {track.rating != null && (
-                    <div className="flex-shrink-0 hidden sm:block">
-                      <StarRatingPicker value={track.rating} readOnly />
-                    </div>
-                  )}
+                  <div
+                    className="flex-shrink-0 w-[5.5rem] flex justify-center scale-[0.85] sm:scale-100 origin-center"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    role="presentation"
+                  >
+                    <StarRatingPicker
+                      value={track.rating}
+                      onChange={(v) => void handleTrackRating(track.id, v)}
+                    />
+                  </div>
 
-                  <span className="text-xs text-text-muted font-mono flex-shrink-0 w-12 text-right tabular-nums">
+                  <span className="text-xs text-text-muted font-mono flex-shrink-0 w-11 sm:w-12 text-right tabular-nums">
                     {track.duration ? formatDuration(track.duration) : "--:--"}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>
