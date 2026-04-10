@@ -25,7 +25,7 @@ import {
   studioImageAppearanceCountExpr,
 } from "../lib/appearance-count-expressions";
 
-const { scenes, studios } = schema;
+const { scenes, studios, galleries, images, audioLibraries, audioTracks } = schema;
 
 // ─── listStudios ──────────────────────────────────────────────
 
@@ -330,7 +330,37 @@ export async function findOrCreateStudio(body: {
 // ─── deleteStudio ─────────────────────────────────────────────
 
 export async function deleteStudio(id: string) {
-  const [deleted] = await db.delete(studios).where(eq(studios.id, id)).returning({ id: studios.id });
+  const deleted = await db.transaction(async (tx) => {
+    // Child studios and media rows reference this id (no ON DELETE SET NULL) — detach first.
+    await tx
+      .update(studios)
+      .set({ parentId: null, updatedAt: new Date() })
+      .where(eq(studios.parentId, id));
+    await tx
+      .update(scenes)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(scenes.studioId, id));
+    await tx
+      .update(galleries)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(galleries.studioId, id));
+    await tx
+      .update(images)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(images.studioId, id));
+    await tx
+      .update(audioLibraries)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(audioLibraries.studioId, id));
+    await tx
+      .update(audioTracks)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(audioTracks.studioId, id));
+
+    const [row] = await tx.delete(studios).where(eq(studios.id, id)).returning({ id: studios.id });
+    return row;
+  });
+
   if (!deleted) throw new AppError(404, "Studio not found");
   // Cleanup generated image directory
   try {

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- Tag and studio deletion now detaches foreign-key references before removing the row (see [0.8.19]).
+
+## [0.8.19] - 2026-04-10
+
+### Fixed
+
+- **Deleting tags failed when the tag was a parent or still linked to content** — `tags.parent_id` has no `ON DELETE` rule, and some databases may lack `ON DELETE CASCADE` on join tables. `deleteTag` now clears child `parent_id`, removes all `scene_tags` / `performer_tags` / `gallery_tags` / `image_tags` / `audio_library_tags` / `audio_track_tags` rows for that tag, then deletes the tag.
+- **Deleting studios failed while scenes or other entities still referenced them** — Foreign keys from `scenes`, `galleries`, `images`, `audio_libraries`, and `audio_tracks` block studio removal. `deleteStudio` now nulls those `studio_id` values (and child `parent_id` on studios) in a transaction before deleting the studio row.
+
 ## [0.8.18] - 2026-04-10
 
 ### Fixed

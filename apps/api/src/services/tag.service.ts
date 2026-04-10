@@ -18,7 +18,17 @@ import { getGeneratedTagDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 
-const { scenes, tags, sceneTags, imageTags, images } = schema;
+const {
+  tags,
+  scenes,
+  sceneTags,
+  performerTags,
+  galleryTags,
+  imageTags,
+  audioLibraryTags,
+  audioTrackTags,
+  images,
+} = schema;
 
 // ─── listTags ─────────────────────────────────────────────────
 
@@ -201,7 +211,26 @@ export async function createTag(body: {
 // ─── deleteTag ────────────────────────────────────────────────
 
 export async function deleteTag(id: string) {
-  const [deleted] = await db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
+  const deleted = await db.transaction(async (tx) => {
+    // Child tags reference this row via parent_id (no ON DELETE) — detach first.
+    await tx
+      .update(tags)
+      .set({ parentId: null, updatedAt: new Date() })
+      .where(eq(tags.parentId, id));
+
+    // Remove entity associations explicitly so delete succeeds even if the DB
+    // predates ON DELETE CASCADE on join tables.
+    await tx.delete(sceneTags).where(eq(sceneTags.tagId, id));
+    await tx.delete(performerTags).where(eq(performerTags.tagId, id));
+    await tx.delete(galleryTags).where(eq(galleryTags.tagId, id));
+    await tx.delete(imageTags).where(eq(imageTags.tagId, id));
+    await tx.delete(audioLibraryTags).where(eq(audioLibraryTags.tagId, id));
+    await tx.delete(audioTrackTags).where(eq(audioTrackTags.tagId, id));
+
+    const [row] = await tx.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
+    return row;
+  });
+
   if (!deleted) throw new AppError(404, "Tag not found");
   // Cleanup generated image directory
   try {
