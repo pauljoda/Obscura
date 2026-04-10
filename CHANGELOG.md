@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-04-09
+
+### Fixed
+
+- **Audio waveform display** — Added missing `GET /assets/audio-tracks/:id/waveform.json` API route. The worker was generating waveform JSON files correctly, but the API had no handler to serve them, so the audio player silently fell back to no waveform. The player now also logs fetch failures to the console instead of swallowing them.
+
 ## [0.6.1] - 2026-04-09
 
 ### Changed

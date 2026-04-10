@@ -92,13 +92,20 @@ export function AudioPlayer({
     }
     const url = `${API_BASE}/assets/${activeTrack.waveformPath}`;
     fetch(url)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Waveform fetch failed: ${res.status}`);
+        return res.json();
+      })
       .then((json) => {
         if (json.data && Array.isArray(json.data)) {
           setWaveformData(json.data);
         }
       })
-      .catch(() => setWaveformData(null));
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error("Failed to load waveform:", err);
+        setWaveformData(null);
+      });
   }, [activeTrack?.waveformPath]);
 
   // ─── Refs for callbacks (avoid re-registering event listeners) ─

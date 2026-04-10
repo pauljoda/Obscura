@@ -10,6 +10,7 @@ import {
   getGeneratedStudioDir,
   getGeneratedTagDir,
   getGeneratedImageDir,
+  getGeneratedAudioTrackDir,
   extractZipMember,
 } from "@obscura/media-core";
 
@@ -314,5 +315,20 @@ export async function assetsRoutes(app: FastifyInstance) {
     reply.header("Cache-Control", "public, max-age=3600");
     reply.header("Content-Type", mimeForFile(ext));
     return reply.send(createReadStream(image.filePath));
+  });
+
+  // ─── Audio track waveform: /assets/audio-tracks/:id/waveform.json ─
+  app.get("/assets/audio-tracks/:id/waveform.json", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const waveformPath = path.join(getGeneratedAudioTrackDir(id), "waveform.json");
+    if (existsSync(waveformPath)) {
+      reply.header("Cache-Control", "public, max-age=86400, immutable");
+      reply.header("Content-Type", "application/json");
+      return reply.send(createReadStream(waveformPath));
+    }
+
+    reply.code(404);
+    return { error: "Waveform not found" };
   });
 }
