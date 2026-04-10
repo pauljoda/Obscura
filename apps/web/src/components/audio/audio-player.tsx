@@ -28,6 +28,11 @@ interface AudioPlayerProps {
   className?: string;
   /** Resolved API URL for the parent audio library cover (album art). */
   libraryCoverUrl?: string;
+  /**
+   * Increment from the parent (e.g. library “Shuffle” control) to turn shuffle on,
+   * pick a random track from `tracks`, and start playback.
+   */
+  shufflePlayKey?: number;
 }
 
 const API_BASE =
@@ -47,6 +52,7 @@ export function AudioPlayer({
   onTrackChange,
   className,
   libraryCoverUrl,
+  shufflePlayKey = 0,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -59,6 +65,7 @@ export function AudioPlayer({
   const [shuffle, setShuffle] = useState(false);
   const [timelineDragging, setTimelineDragging] = useState(false);
   const timelineDraggingRef = useRef(false);
+  const lastShufflePlayKey = useRef(0);
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
   const activeIndex = activeTrack ? tracks.findIndex((t) => t.id === activeTrackId) : -1;
@@ -120,6 +127,27 @@ export function AudioPlayer({
         setWaveformData(null);
       });
   }, [activeTrack?.waveformPath]);
+
+  useEffect(() => {
+    if (
+      shufflePlayKey === 0 ||
+      shufflePlayKey === lastShufflePlayKey.current ||
+      tracks.length === 0
+    ) {
+      return;
+    }
+    lastShufflePlayKey.current = shufflePlayKey;
+    setShuffle(true);
+    const random = tracks[Math.floor(Math.random() * tracks.length)];
+    if (random.id === activeTrackId) {
+      const audio = audioRef.current;
+      if (audio) {
+        void audio.play();
+      }
+    } else {
+      onTrackChange(random.id);
+    }
+  }, [shufflePlayKey, tracks, onTrackChange, activeTrackId]);
 
   // ─── Refs for callbacks (avoid re-registering event listeners) ─
 

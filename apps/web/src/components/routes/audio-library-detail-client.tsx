@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Music,
   Play,
+  Shuffle,
   ChevronLeft,
   Edit2,
   Save,
@@ -71,6 +72,7 @@ export function AudioLibraryDetailClient({
   const { sidebarCollapsed } = useAppChrome();
   const [library, setLibrary] = useState(initialLibrary);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+  const [shufflePlayKey, setShufflePlayKey] = useState(0);
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -198,6 +200,12 @@ export function AudioLibraryDetailClient({
   const handlePlayAll = useCallback(() => {
     if (visibleTracks.length > 0) {
       setActiveTrackId(visibleTracks[0].id);
+    }
+  }, [visibleTracks]);
+
+  const handleShufflePlay = useCallback(() => {
+    if (visibleTracks.length > 0) {
+      setShufflePlayKey((k) => k + 1);
     }
   }, [visibleTracks]);
 
@@ -467,14 +475,24 @@ export function AudioLibraryDetailClient({
                   </div>
                 )}
                 {visibleTracks.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handlePlayAll}
-                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
-                  >
-                    <Play className="h-4 w-4" />
-                    Play All
-                  </button>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePlayAll}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
+                    >
+                      <Play className="h-4 w-4" />
+                      Play All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShufflePlay}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 border border-border-subtle bg-surface-2 text-sm font-medium text-text-primary hover:bg-surface-3 hover:border-border-accent/40 transition-colors"
+                    >
+                      <Shuffle className="h-4 w-4 text-accent-400" />
+                      Shuffle
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -694,6 +712,7 @@ export function AudioLibraryDetailClient({
           onTrackChange={handleTrackChange}
           className="border-0 bg-transparent shadow-none"
           libraryCoverUrl={coverUrl}
+          shufflePlayKey={shufflePlayKey}
         />
       </div>
     </div>
