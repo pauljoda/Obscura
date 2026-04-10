@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Library scan** — Stale reference cleanup (scenes, images, galleries outside enabled roots or missing on disk) runs once at the start of each manual library-scan dispatch and scheduled scan tick, before per-root jobs are queued. With no watched folders, “Run scan” still performs that cleanup so the library is not left pointing at removed paths.
 - **Jobs** — Library maintenance run notification uses neutral copy (“Cleaning up files.”) instead of referencing content modes.
 
 ### Fixed

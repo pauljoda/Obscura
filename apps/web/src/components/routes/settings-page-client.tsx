@@ -310,7 +310,13 @@ export function SettingsPageClient({
   async function handleRunScan() {
     try {
       const response = await runQueue("library-scan", nsfwMode);
-      setMessage(`Queued ${response.enqueued} library scan job${response.enqueued === 1 ? "" : "s"}.`);
+      if (response.enqueued === 0 && response.skipped === 0) {
+        setMessage("Stale library references cleared. Add a watched folder to scan new files.");
+      } else if (response.enqueued === 0 && response.skipped > 0) {
+        setMessage("Stale references cleared; every library scan is already queued or running.");
+      } else {
+        setMessage(`Queued ${response.enqueued} library scan job${response.enqueued === 1 ? "" : "s"}.`);
+      }
     } catch (runError) {
       setError(runError instanceof Error ? runError.message : "Failed to queue scan");
     }

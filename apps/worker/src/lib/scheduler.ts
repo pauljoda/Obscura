@@ -8,6 +8,7 @@ import type { Worker } from "bullmq";
 import { db, libraryRoots, librarySettings, jobRuns } from "./db.js";
 import { redis } from "./queues.js";
 import { enqueueLibraryRootJob } from "./enqueue.js";
+import { pruneUntrackedLibraryReferences } from "./helpers.js";
 
 export async function ensureLibrarySettingsRow() {
   const [existing] = await db.select().from(librarySettings).limit(1);
@@ -47,10 +48,6 @@ export async function scheduleRecurringScans() {
       .where(eq(libraryRoots.enabled, true))
       .orderBy(libraryRoots.path);
 
-    if (enabledRoots.length === 0) {
-      return;
-    }
-
     const [lastRun] = await db
       .select({ createdAt: jobRuns.createdAt })
       .from(jobRuns)
@@ -60,6 +57,12 @@ export async function scheduleRecurringScans() {
 
     const intervalMs = Math.max(5, settings.scanIntervalMinutes) * 60_000;
     if (lastRun && Date.now() - new Date(lastRun.createdAt).getTime() < intervalMs) {
+      return;
+    }
+
+    await pruneUntrackedLibraryReferences();
+
+    if (enabledRoots.length === 0) {
       return;
     }
 

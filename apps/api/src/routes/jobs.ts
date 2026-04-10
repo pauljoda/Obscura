@@ -11,6 +11,7 @@ import {
 import { allSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
+import { pruneUntrackedLibraryReferences } from "../lib/library-prune";
 import { getQueue } from "../lib/queues";
 
 const { jobRuns, libraryRoots, scenes, audioTracks } = schema;
@@ -190,6 +191,8 @@ async function queueSceneAssetStorageMigration(
 }
 
 async function enqueueLibraryScans(trigger: QueueTrigger = {}, sfwOnly = false) {
+  await pruneUntrackedLibraryReferences(db);
+
   const roots = await db
     .select()
     .from(libraryRoots)

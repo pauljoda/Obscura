@@ -15,7 +15,7 @@ import {
   enqueueAudioRootJob,
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
-import { pruneUntrackedLibraryReferences, removeGeneratedSceneDirs } from "../lib/helpers.js";
+import { removeGeneratedSceneDirs } from "../lib/helpers.js";
 
 export async function processLibraryScan(job: Job) {
   const libraryRootId = String(job.data.libraryRootId);
@@ -34,8 +34,6 @@ export async function processLibraryScan(job: Job) {
     id: root.id,
     label: root.label,
   });
-
-  await pruneUntrackedLibraryReferences();
 
   const settings = await ensureLibrarySettingsRow();
 

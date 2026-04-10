@@ -167,6 +167,13 @@ function describeRunResult(queueName: string, enqueued: number, skipped: number)
     return "File cleanup is already in progress.";
   }
 
+  if (queueName === "library-scan" && enqueued === 0 && skipped === 0) {
+    return "Stale library references cleared. Add a watched folder to scan new files.";
+  }
+  if (queueName === "library-scan" && enqueued === 0 && skipped > 0) {
+    return "Stale references cleared; every library scan is already queued or running.";
+  }
+
   const parts = [
     `Queued ${enqueued} ${queueName} job${enqueued === 1 ? "" : "s"}`,
   ];
