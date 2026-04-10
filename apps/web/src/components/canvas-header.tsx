@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
+import { LogoMark } from "./logo";
 import { useSearchPalette } from "./search/search-context";
 import { entityTerms } from "../lib/terminology";
 
@@ -46,31 +47,44 @@ export function CanvasHeader() {
   const searchShortcutKbd = appleMod ? "⌘K" : "Ctrl+K";
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border-subtle px-5">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-1.5 text-mono-sm" aria-label="Breadcrumb">
-        {crumbs.length === 0 ? (
-          <span className="text-text-muted">Dashboard</span>
-        ) : (
-          crumbs.map((crumb) => (
-            <span key={crumb.href} className="flex items-center gap-1.5">
-              {crumb !== crumbs[0] && (
-                <span className="text-text-disabled">/</span>
-              )}
-              {crumb.isLast ? (
-                <span className="text-text-primary">{crumb.label}</span>
-              ) : (
-                <Link
-                  href={crumb.href}
-                  className="text-text-muted hover:text-text-primary transition-colors duration-fast"
-                >
-                  {crumb.label}
-                </Link>
-              )}
-            </span>
-          ))
-        )}
-      </nav>
+    <header className="flex h-14 items-center justify-between gap-3 border-b border-border-subtle px-5">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Link
+          href="/"
+          aria-label="Dashboard"
+          className={cn(
+            "md:hidden flex h-8 w-8 shrink-0 items-center justify-center",
+            "text-text-muted hover:text-text-primary hover:bg-surface-2",
+            "transition-colors duration-fast",
+          )}
+        >
+          <LogoMark size={24} alt="" />
+        </Link>
+        {/* Breadcrumbs */}
+        <nav className="flex min-w-0 items-center gap-1.5 text-mono-sm" aria-label="Breadcrumb">
+          {crumbs.length === 0 ? (
+            <span className="truncate text-text-muted">Dashboard</span>
+          ) : (
+            crumbs.map((crumb) => (
+              <span key={crumb.href} className="flex min-w-0 items-center gap-1.5">
+                {crumb !== crumbs[0] && (
+                  <span className="shrink-0 text-text-disabled">/</span>
+                )}
+                {crumb.isLast ? (
+                  <span className="truncate text-text-primary">{crumb.label}</span>
+                ) : (
+                  <Link
+                    href={crumb.href}
+                    className="shrink-0 text-text-muted hover:text-text-primary transition-colors duration-fast"
+                  >
+                    {crumb.label}
+                  </Link>
+                )}
+              </span>
+            ))
+          )}
+        </nav>
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">

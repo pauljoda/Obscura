@@ -3,13 +3,15 @@ import { cn } from "@obscura/ui/lib/utils";
 interface LogoMarkProps {
   className?: string;
   size?: number;
+  /** Empty when the parent link/button supplies the accessible name. */
+  alt?: string;
 }
 
-export function LogoMark({ className, size = 28 }: LogoMarkProps) {
+export function LogoMark({ className, size = 28, alt = "Obscura" }: LogoMarkProps) {
   return (
     <img
       src="/logo.svg"
-      alt="Obscura"
+      alt={alt}
       width={size}
       height={size}
       className={className}
