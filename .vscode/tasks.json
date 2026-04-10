@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Obscura: Docker Up",
+      "type": "shell",
+      "command": "docker compose -f infra/docker/docker-compose.yml up -d postgres",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": [],
+      "detail": "Boots the dev Postgres container. pg-boss runs the job queue in-DB — no Redis required."
+    }
+  ]
+}

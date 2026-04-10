@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [0.8.2] - 2026-04-10
+## [0.8.3] - 2026-04-10
+
+### Fixed
+
+- **`.gitignore`** — `.vscode/` was ignored wholesale, which silently dropped the `.vscode/tasks.json` referenced in 0.8.1 and 0.8.2's changelog entries (the commits updated docs and versions but never actually checked in the file). Now ignores `.vscode/*` with explicit allowlist for `launch.json`, `tasks.json`, `settings.json`, and `extensions.json` so shared dev configs travel with the repo.
+
+### Added
+
+- **`.vscode/launch.json`** — Single `Obscura: Full Stack` launch configuration that runs `pnpm dev` with `Obscura: Docker Up` as the preLaunchTask. Replaces the workspace-level launch so the full-stack dev command travels with the repo (appears as `(folder)` in the Run & Debug picker whenever this folder is loaded — standalone or inside a multi-root workspace).
+- **`.vscode/tasks.json`** — Single `Obscura: Docker Up` task that boots just the Postgres container (consumed by the launch config above as its preLaunchTask).
+
+
 
 ### Changed
 
