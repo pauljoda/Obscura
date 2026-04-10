@@ -719,7 +719,8 @@ export function ImagesPageClient({
           images={images}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxOpen(false)}
-          availableTags={initialTags}
+          availableTags={filterTags}
+          availablePerformers={filterPerformers}
           onImageUpdate={(imageId, patch) => {
             setImages((prev) =>
               prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))

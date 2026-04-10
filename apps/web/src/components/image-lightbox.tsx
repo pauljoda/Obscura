@@ -29,6 +29,7 @@ interface ImageLightboxProps {
   onClose: () => void;
   onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
   availableTags?: import("../lib/api").TagItem[];
+  availablePerformers?: import("../lib/api").PerformerItem[];
 }
 
 export function ImageLightbox({
@@ -38,6 +39,7 @@ export function ImageLightbox({
   onClose,
   onImageUpdate,
   availableTags,
+  availablePerformers,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
@@ -408,6 +410,7 @@ export function ImageLightbox({
         onClose={() => setShowInfo(false)}
         onImageUpdate={onImageUpdate}
         availableTags={availableTags}
+        availablePerformers={availablePerformers}
       />
     </div>
   );

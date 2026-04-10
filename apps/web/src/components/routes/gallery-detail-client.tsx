@@ -11,16 +11,21 @@ import { ImageLightbox } from "../image-lightbox";
 import { GalleryMetadataPanel } from "../gallery-metadata-panel";
 import { GalleryCard } from "../gallery-card";
 import { GalleryListItem } from "../gallery-list-item";
-import { fetchGalleryImages, toApiUrl, type TagItem } from "../../lib/api";
+import { fetchGalleryImages, toApiUrl, type PerformerItem, type TagItem } from "../../lib/api";
 import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
 import { useNsfw } from "../nsfw/nsfw-context";
 
 interface GalleryDetailClientProps {
   initialGallery: GalleryDetailDto;
   availableTags?: TagItem[];
+  availablePerformers?: PerformerItem[];
 }
 
-export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDetailClientProps) {
+export function GalleryDetailClient({
+  initialGallery,
+  availableTags,
+  availablePerformers = [],
+}: GalleryDetailClientProps) {
   const [gallery, setGallery] = useState(initialGallery);
   const [images, setImages] = useState<ImageListItemDto[]>(initialGallery.images);
   const [imageTotal] = useState(initialGallery.imageTotal);
@@ -292,6 +297,8 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
           <div className="surface-well p-4">
             <GalleryMetadataPanel
               gallery={gallery}
+              availableTags={availableTags}
+              availablePerformers={availablePerformers}
               onGalleryUpdate={handleGalleryUpdate}
               onChapterJump={handleChapterJump}
             />
@@ -307,6 +314,7 @@ export function GalleryDetailClient({ initialGallery, availableTags }: GalleryDe
           chapters={gallery.chapters}
           onClose={() => setLightboxOpen(false)}
           availableTags={availableTags}
+          availablePerformers={availablePerformers}
           onImageUpdate={(imageId, patch) => {
             setImages((prev) =>
               prev.map((img) => (img.id === imageId ? { ...img, ...patch } : img))

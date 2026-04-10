@@ -234,8 +234,15 @@ export async function fetchAudioLibraries(params?: {
   return fetchApi(`/audio-libraries${qs}`);
 }
 
-export async function fetchGalleryDetail(id: string): Promise<GalleryDetailDto> {
-  return fetchApi(`/galleries/${id}`);
+export async function fetchGalleryDetail(
+  id: string,
+  params?: { imageLimit?: number; imageOffset?: number },
+): Promise<GalleryDetailDto> {
+  const qs = buildQueryString({
+    imageLimit: params?.imageLimit,
+    imageOffset: params?.imageOffset,
+  });
+  return fetchApi(`/galleries/${id}${qs}`);
 }
 
 export async function fetchGalleryImages(

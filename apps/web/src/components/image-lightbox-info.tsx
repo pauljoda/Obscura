@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { X, Star, Pencil, Save, XCircle, CheckCircle2, Search } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { updateImage, type TagItem } from "../lib/api";
+import { updateImage, fetchImageDetail, type PerformerItem, type TagItem } from "../lib/api";
+import { useTerms } from "../lib/terminology";
 import type { ImageListItemDto } from "@obscura/contracts";
 import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
+import { ChipInput } from "./shared/chip-input";
 
 interface ImageLightboxInfoProps {
   image: ImageListItemDto;
@@ -14,6 +17,7 @@ interface ImageLightboxInfoProps {
   onClose: () => void;
   onImageUpdate?: (imageId: string, patch: Partial<ImageListItemDto>) => void;
   availableTags?: TagItem[];
+  availablePerformers?: PerformerItem[];
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -24,7 +28,15 @@ function formatFileSize(bytes: number | null): string {
   return `${kb.toFixed(0)} KB`;
 }
 
-export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availableTags = [] }: ImageLightboxInfoProps) {
+export function ImageLightboxInfo({
+  image,
+  open,
+  onClose,
+  onImageUpdate,
+  availableTags = [],
+  availablePerformers = [],
+}: ImageLightboxInfoProps) {
+  const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const imageTagsVisible = tagsVisibleInNsfwMode(image.tags, nsfwMode);
   const [editing, setEditing] = useState(false);
@@ -32,9 +44,15 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
   const [editOrganized, setEditOrganized] = useState(image.organized);
   const [editIsNsfw, setEditIsNsfw] = useState(image.isNsfw ?? false);
   const [editTags, setEditTags] = useState(image.tags.map((t) => t.name));
+  const [editPerformers, setEditPerformers] = useState(image.performers.map((p) => p.name));
   const [tagSearch, setTagSearch] = useState("");
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const performerSuggestions = useMemo(
+    () => availablePerformers.map((p) => ({ name: p.name, count: p.sceneCount })),
+    [availablePerformers],
+  );
 
   // Reset edit state when image changes
   const startEdit = useCallback(() => {
@@ -42,6 +60,7 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
     setEditOrganized(image.organized);
     setEditIsNsfw(image.isNsfw ?? false);
     setEditTags(image.tags.map((t) => t.name));
+    setEditPerformers(image.performers.map((p) => p.name));
     setTagSearch("");
     setTagPickerOpen(false);
     setEditing(true);
@@ -59,27 +78,21 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
         organized: editOrganized,
         isNsfw: editIsNsfw,
         tagNames: editTags,
+        performerNames: editPerformers,
       });
+      const detail = await fetchImageDetail(image.id);
       onImageUpdate?.(image.id, {
-        rating: editRating,
-        organized: editOrganized,
-        isNsfw: editIsNsfw,
-        tags: editTags.map((name, i) => {
-          const known = availableTags.find(
-            (t) => t.name.toLowerCase() === name.toLowerCase(),
-          );
-          return {
-            id: known?.id ?? `temp-${i}`,
-            name,
-            isNsfw: known?.isNsfw ?? false,
-          };
-        }),
+        rating: detail.rating,
+        organized: detail.organized,
+        isNsfw: detail.isNsfw,
+        tags: detail.tags,
+        performers: detail.performers,
       });
       setEditing(false);
     } finally {
       setSaving(false);
     }
-  }, [image.id, editRating, editOrganized, editIsNsfw, editTags, availableTags, onImageUpdate]);
+  }, [image.id, editRating, editOrganized, editIsNsfw, editTags, editPerformers, onImageUpdate]);
 
   const handleRatingClick = useCallback((value: number) => {
     if (editing) {
@@ -205,6 +218,35 @@ export function ImageLightboxInfo({ image, open, onClose, onImageUpdate, availab
         ) : image.isNsfw ? (
           <NsfwChip />
         ) : null}
+
+        {/* Performers */}
+        <div>
+          <div className="text-kicker mb-1">{terms.performers}</div>
+          {editing ? (
+            <ChipInput
+              values={editPerformers}
+              onChange={setEditPerformers}
+              suggestions={performerSuggestions}
+              placeholder={`Add ${terms.performer.toLowerCase()}…`}
+            />
+          ) : image.performers.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {image.performers.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/performers/${p.id}`}
+                  className="text-[0.72rem] text-text-primary hover:text-text-accent truncate"
+                >
+                  {p.name}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <span className="text-[0.68rem] text-text-disabled">
+              No {terms.performers.toLowerCase()}
+            </span>
+          )}
+        </div>
 
         {/* Tags */}
         <div>

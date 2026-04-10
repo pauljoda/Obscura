@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-04-09
+
+### Added
+
+- **Gallery & image metadata** — Gallery edit mode includes **Actors** and **Tags** chip inputs (same `performerNames` / `tagNames` PATCH as the API). Read view always shows both sections with empty copy when none. After save, gallery performers/tags refresh from the API without reloading the full image grid.
+- **Image lightbox** — Edit panel adds **Actors** (`ChipInput` + suggestions); save sends `performerNames` and rehydrates from `GET /images/:id`. Images index lightbox passes tag/performer lists that respect NSFW refetch.
+
+### Changed
+
+- **Gallery detail page** — Loads performer suggestions server-side (with NSFW cookie) alongside tags.
+
 ## [0.6.7] - 2026-04-09
 
 ### Added

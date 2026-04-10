@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Star,
   CheckCircle2,
@@ -11,24 +11,32 @@ import {
   XCircle,
   Bookmark,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@obscura/ui/lib/utils";
-import { updateGallery } from "../lib/api";
+import { updateGallery, fetchGalleryDetail, type TagItem, type PerformerItem } from "../lib/api";
+import { useTerms } from "../lib/terminology";
 import { revalidateGalleryCache } from "../app/actions/revalidate-gallery";
-import type { GalleryDetailDto, GalleryChapterDto } from "@obscura/contracts";
+import type { GalleryDetailDto } from "@obscura/contracts";
 import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
+import { ChipInput } from "./shared/chip-input";
 
 interface GalleryMetadataPanelProps {
   gallery: GalleryDetailDto;
+  availableTags?: TagItem[];
+  availablePerformers?: PerformerItem[];
   onGalleryUpdate?: (updated: Partial<GalleryDetailDto>) => void;
   onChapterJump?: (imageIndex: number) => void;
 }
 
 export function GalleryMetadataPanel({
   gallery,
+  availableTags = [],
+  availablePerformers = [],
   onGalleryUpdate,
   onChapterJump,
 }: GalleryMetadataPanelProps) {
+  const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const galleryTagsVisible = tagsVisibleInNsfwMode(gallery.tags, nsfwMode);
   const [editMode, setEditMode] = useState(false);
@@ -37,7 +45,36 @@ export function GalleryMetadataPanel({
   const [editPhotographer, setEditPhotographer] = useState(gallery.photographer ?? "");
   const [editDate, setEditDate] = useState(gallery.date ?? "");
   const [editIsNsfw, setEditIsNsfw] = useState(gallery.isNsfw ?? false);
+  const [editTagNames, setEditTagNames] = useState<string[]>([]);
+  const [editPerformerNames, setEditPerformerNames] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (editMode) return;
+    setEditTitle(gallery.title);
+    setEditDetails(gallery.details ?? "");
+    setEditPhotographer(gallery.photographer ?? "");
+    setEditDate(gallery.date ?? "");
+    setEditIsNsfw(gallery.isNsfw ?? false);
+    setEditTagNames(gallery.tags.map((t) => t.name));
+    setEditPerformerNames(gallery.performers.map((p) => p.name));
+  }, [gallery, editMode]);
+
+  const tagSuggestions = useMemo(
+    () => availableTags.map((t) => ({ name: t.name, count: t.sceneCount + t.imageCount })),
+    [availableTags],
+  );
+
+  const performerSuggestions = useMemo(
+    () => availablePerformers.map((p) => ({ name: p.name, count: p.sceneCount })),
+    [availablePerformers],
+  );
+
+  const beginEdit = () => {
+    setEditTagNames(gallery.tags.map((t) => t.name));
+    setEditPerformerNames(gallery.performers.map((p) => p.name));
+    setEditMode(true);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -48,6 +85,8 @@ export function GalleryMetadataPanel({
         photographer: editPhotographer || null,
         date: editDate || null,
         isNsfw: editIsNsfw,
+        tagNames: editTagNames,
+        performerNames: editPerformerNames,
       });
       onGalleryUpdate?.({
         title: editTitle,
@@ -59,6 +98,11 @@ export function GalleryMetadataPanel({
       if (result.affectedGalleryIds?.length) {
         await revalidateGalleryCache(result.affectedGalleryIds);
       }
+      const refreshed = await fetchGalleryDetail(gallery.id, { imageLimit: 1, imageOffset: 0 });
+      onGalleryUpdate?.({
+        performers: refreshed.performers,
+        tags: refreshed.tags,
+      });
       setEditMode(false);
     } finally {
       setSaving(false);
@@ -71,6 +115,8 @@ export function GalleryMetadataPanel({
     setEditPhotographer(gallery.photographer ?? "");
     setEditDate(gallery.date ?? "");
     setEditIsNsfw(gallery.isNsfw ?? false);
+    setEditTagNames(gallery.tags.map((t) => t.name));
+    setEditPerformerNames(gallery.performers.map((p) => p.name));
     setEditMode(false);
   };
 
@@ -108,11 +154,15 @@ export function GalleryMetadataPanel({
             <h2 className="text-base font-heading font-medium text-text-primary">
               {gallery.title}
             </h2>
-            {gallery.isNsfw && <div className="mt-1"><NsfwChip /></div>}
+            {gallery.isNsfw && (
+              <div className="mt-1">
+                <NsfwChip />
+              </div>
+            )}
           </div>
         )}
         <button
-          onClick={editMode ? handleCancel : () => setEditMode(true)}
+          onClick={editMode ? handleCancel : beginEdit}
           className="ml-2 p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
         >
           {editMode ? <XCircle className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
@@ -134,7 +184,7 @@ export function GalleryMetadataPanel({
                   "h-5 w-5",
                   gallery.rating != null && gallery.rating >= value
                     ? "text-accent-500 fill-accent-500"
-                    : "text-text-disabled"
+                    : "text-text-disabled",
                 )}
               />
             </button>
@@ -149,7 +199,7 @@ export function GalleryMetadataPanel({
           "flex items-center gap-2 w-full px-2 py-1.5 text-[0.78rem] transition-colors",
           gallery.organized
             ? "bg-accent-950 text-accent-300"
-            : "text-text-muted hover:bg-surface-2"
+            : "text-text-muted hover:bg-surface-2",
         )}
       >
         <CheckCircle2 className="h-4 w-4" />
@@ -217,15 +267,66 @@ export function GalleryMetadataPanel({
         </div>
       )}
 
+      {/* Tags — view or edit */}
+      <div>
+        <div className="text-kicker mb-1.5">{terms.tags}</div>
+        {editMode ? (
+          <ChipInput
+            values={editTagNames}
+            onChange={setEditTagNames}
+            suggestions={tagSuggestions}
+            placeholder="Add tag…"
+          />
+        ) : galleryTagsVisible.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {galleryTagsVisible.map((tag) => (
+              <span key={tag.id} className="tag-chip tag-chip-default">
+                <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[0.72rem] text-text-disabled">No tags</p>
+        )}
+      </div>
+
+      {/* Performers — view or edit */}
+      <div>
+        <div className="text-kicker mb-1.5">{terms.performers}</div>
+        {editMode ? (
+          <ChipInput
+            values={editPerformerNames}
+            onChange={setEditPerformerNames}
+            suggestions={performerSuggestions}
+            placeholder={`Add ${terms.performer.toLowerCase()}…`}
+          />
+        ) : gallery.performers.length > 0 ? (
+          <div className="space-y-1">
+            {gallery.performers.map((performer) => (
+              <Link
+                key={performer.id}
+                href={`/performers/${performer.id}`}
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-2 transition-colors"
+              >
+                <div className="h-6 w-6 bg-surface-3 flex-shrink-0" />
+                <span className="text-[0.78rem] text-text-primary">{performer.name}</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[0.72rem] text-text-disabled">No {terms.performers.toLowerCase()}</p>
+        )}
+      </div>
+
       {/* Save button */}
       {editMode && (
         <button
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={saving}
           className={cn(
             "flex items-center gap-2 w-full justify-center px-3 py-2 text-[0.78rem]",
             "bg-accent-800 text-accent-100 hover:bg-accent-700 transition-colors",
-            saving && "opacity-50 cursor-wait"
+            saving && "opacity-50 cursor-wait",
           )}
         >
           <Save className="h-3.5 w-3.5" />
@@ -237,42 +338,7 @@ export function GalleryMetadataPanel({
       {gallery.studio && (
         <div>
           <div className="text-kicker mb-1.5">Studio</div>
-          <span className="pill-accent px-2 py-0.5 text-[0.68rem]">
-            {gallery.studio.name}
-          </span>
-        </div>
-      )}
-
-      {/* Tags */}
-      {galleryTagsVisible.length > 0 && (
-        <div>
-          <div className="text-kicker mb-1.5">Tags</div>
-          <div className="flex flex-wrap gap-1">
-            {galleryTagsVisible.map((tag) => (
-              <span key={tag.id} className="tag-chip tag-chip-default">
-                <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Actors */}
-      {gallery.performers.length > 0 && (
-        <div>
-          <div className="text-kicker mb-1.5">Actors</div>
-          <div className="space-y-1">
-            {gallery.performers.map((performer) => (
-              <a
-                key={performer.id}
-                href={`/performers/${performer.id}`}
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface-2 transition-colors"
-              >
-                <div className="h-6 w-6 bg-surface-3 flex-shrink-0" />
-                <span className="text-[0.78rem] text-text-primary">{performer.name}</span>
-              </a>
-            ))}
-          </div>
+          <span className="pill-accent px-2 py-0.5 text-[0.68rem]">{gallery.studio.name}</span>
         </div>
       )}
 

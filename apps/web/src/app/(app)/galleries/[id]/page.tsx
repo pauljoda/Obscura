@@ -1,7 +1,13 @@
 export const dynamic = "force-dynamic";
 
-import { fetchGalleryDetail, fetchTags } from "../../../../lib/server-api";
+import { cookies } from "next/headers";
+import {
+  fetchGalleryDetail,
+  fetchPerformers,
+  fetchTags,
+} from "../../../../lib/server-api";
 import { GalleryDetailClient } from "../../../../components/routes/gallery-detail-client";
+import { parseNsfwModeCookie } from "../../../../lib/nsfw-cookie";
 
 interface GalleryDetailPageProps {
   params: Promise<{ id: string }>;
@@ -9,10 +15,25 @@ interface GalleryDetailPageProps {
 
 export default async function GalleryDetailPage({ params }: GalleryDetailPageProps) {
   const { id } = await params;
-  const [gallery, tagsData] = await Promise.all([
+  const cookieStore = await cookies();
+  const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
+
+  const [gallery, tagsData, performersData] = await Promise.all([
     fetchGalleryDetail(id),
-    fetchTags(),
+    fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] })),
+    fetchPerformers({
+      nsfw: nsfwMode,
+      sort: "scenes",
+      order: "desc",
+      limit: 400,
+    }).catch(() => ({ performers: [], total: 0, limit: 400, offset: 0 })),
   ]);
 
-  return <GalleryDetailClient initialGallery={gallery} availableTags={tagsData.tags} />;
+  return (
+    <GalleryDetailClient
+      initialGallery={gallery}
+      availableTags={tagsData.tags}
+      availablePerformers={performersData.performers}
+    />
+  );
 }
