@@ -14,7 +14,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import {
-  fetchPerformers,
+  fetchAllPerformers,
   fetchInstalledScrapers,
   scrapePerformerApi,
   applyPerformerScrape,
@@ -45,7 +45,7 @@ export function BulkPerformerScrape() {
     setLoading(true);
     try {
       const [perfRes, scrapersRes] = await Promise.all([
-        fetchPerformers({ sort: "name", order: "asc", limit: 100 }),
+        fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchInstalledScrapers(),
       ]);
 

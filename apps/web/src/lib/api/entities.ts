@@ -62,6 +62,29 @@ export async function fetchPerformers(params?: {
   return fetchApi(`/performers${qs}`);
 }
 
+const FETCH_ALL_PERFORMERS_PAGE_SIZE = 2000;
+
+/** Fetches every matching performer by paging until `total` is reached (Identify / bulk flows). */
+export async function fetchAllPerformers(
+  params?: Omit<NonNullable<Parameters<typeof fetchPerformers>[0]>, "limit" | "offset">,
+): Promise<{ performers: PerformerItem[]; total: number }> {
+  const performers: PerformerItem[] = [];
+  let offset = 0;
+  let total = 0;
+  for (;;) {
+    const res = await fetchPerformers({
+      ...params,
+      limit: FETCH_ALL_PERFORMERS_PAGE_SIZE,
+      offset,
+    });
+    total = res.total;
+    performers.push(...res.performers);
+    if (res.performers.length < FETCH_ALL_PERFORMERS_PAGE_SIZE || performers.length >= total) break;
+    offset += FETCH_ALL_PERFORMERS_PAGE_SIZE;
+  }
+  return { performers, total };
+}
+
 export async function fetchTags(params?: { nsfw?: string }): Promise<{ tags: TagItem[] }> {
   const qs = buildQueryString({ nsfw: params?.nsfw });
   return fetchApi(`/tags${qs}`);

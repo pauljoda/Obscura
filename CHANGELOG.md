@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.16] - 2026-04-10
+
+### Fixed
+
+- **Identify & Resolve** — Scene and performer lists were capped at 100 rows server-side regardless of client `limit`, so Identify tabs and the Resolve queue could not show the full library. List endpoints now allow up to 50,000 rows per request, and the web app pages that need everything use paged `fetchAllScenes` / `fetchAllPerformers` until `total` is satisfied.
+- **Resolve review** — Pending scrape results load with paging (and the API cap raised to 10,000 per call) so large tagger queues are not truncated at 100–200 items.
+
 ## [0.7.15] - 2026-04-10
 
 ### Fixed

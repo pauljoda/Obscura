@@ -287,6 +287,29 @@ export async function fetchScrapeResults(params?: {
   });
 }
 
+const SCRAPE_RESULTS_PAGE_SIZE = 500;
+
+export async function fetchAllPendingScrapeResults(): Promise<{
+  results: ScrapeResultDto[];
+  total: number;
+}> {
+  const results: ScrapeResultDto[] = [];
+  let offset = 0;
+  let total = 0;
+  for (;;) {
+    const res = await fetchScrapeResults({
+      status: "pending",
+      limit: SCRAPE_RESULTS_PAGE_SIZE,
+      offset,
+    });
+    total = res.total;
+    results.push(...res.results);
+    if (res.results.length < SCRAPE_RESULTS_PAGE_SIZE || results.length >= total) break;
+    offset += SCRAPE_RESULTS_PAGE_SIZE;
+  }
+  return { results, total };
+}
+
 // ─── Audio ────────────────────────────────────────────────────
 
 export async function fetchAudioLibraries(params?: {

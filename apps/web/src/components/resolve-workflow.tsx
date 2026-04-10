@@ -19,7 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import {
-  fetchScenes,
+  fetchAllScenes,
   fetchInstalledScrapers,
   scrapeScene,
   acceptScrapeResult,
@@ -69,7 +69,7 @@ export function ResolveWorkflow() {
     setLoading(true);
     try {
       const [scenesRes, scrapersRes] = await Promise.all([
-        fetchScenes({ sort: "created_at", limit: 100 }),
+        fetchAllScenes({ sort: "created_at" }),
         fetchInstalledScrapers(),
       ]);
 

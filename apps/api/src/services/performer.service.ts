@@ -24,7 +24,7 @@ import {
 import { getGeneratedPerformerDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
-import type { SortConfig } from "../lib/query-helpers";
+import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
 import {
   performerAudioLibraryCountExpr,
   performerImageAppearanceCountExpr,
@@ -153,8 +153,7 @@ async function writePerformerImage(id: string, buffer: Buffer) {
  * List performers with filtering, sorting, and pagination.
  */
 export async function listPerformers(query: ListPerformersQuery) {
-  const limit = Math.min(Number(query.limit) || 50, 100);
-  const offset = Number(query.offset) || 0;
+  const { limit, offset } = parsePagination(query.limit, query.offset, 50, MAX_ENTITY_LIST_LIMIT);
   const sfwOnly = query.nsfw === "off";
 
   // Build WHERE conditions

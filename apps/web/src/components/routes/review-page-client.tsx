@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import {
-  fetchScrapeResults,
+  fetchAllScrapeResults,
   acceptScrapeResult,
   rejectScrapeResult,
   type ScrapeResult,
@@ -32,7 +32,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
   const loadResults = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await fetchScrapeResults({ status: "pending", limit: 100 });
+      const res = await fetchAllScrapeResults({ status: "pending" });
       setResults(res.results);
     } finally {
       setRefreshing(false);

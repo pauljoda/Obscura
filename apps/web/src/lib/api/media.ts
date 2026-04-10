@@ -69,6 +69,25 @@ export async function fetchScenes(params: {
   return fetchApi(`/scenes${qs}`);
 }
 
+const FETCH_ALL_PAGE_SIZE = 2000;
+
+/** Fetches every matching scene by paging until `total` is reached (Identify / bulk flows). */
+export async function fetchAllScenes(
+  params: Omit<Parameters<typeof fetchScenes>[0], "limit" | "offset">,
+): Promise<{ scenes: SceneListItem[]; total: number }> {
+  const scenes: SceneListItem[] = [];
+  let offset = 0;
+  let total = 0;
+  for (;;) {
+    const res = await fetchScenes({ ...params, limit: FETCH_ALL_PAGE_SIZE, offset });
+    total = res.total;
+    scenes.push(...res.scenes);
+    if (res.scenes.length < FETCH_ALL_PAGE_SIZE || scenes.length >= total) break;
+    offset += FETCH_ALL_PAGE_SIZE;
+  }
+  return { scenes, total };
+}
+
 export async function fetchSceneDetail(id: string): Promise<SceneDetail> {
   return fetchApi(`/scenes/${id}`);
 }

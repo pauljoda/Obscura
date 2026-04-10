@@ -37,7 +37,7 @@ import {
 } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
-import type { SortConfig } from "../lib/query-helpers";
+import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
 
 const {
   scenes,
@@ -159,8 +159,7 @@ async function saveCustomThumbnail(
  * List scenes with filtering, sorting, and pagination.
  */
 export async function listScenes(query: ListScenesQuery) {
-  const limit = Math.min(Number(query.limit) || 50, 100);
-  const offset = Number(query.offset) || 0;
+  const { limit, offset } = parsePagination(query.limit, query.offset, 50, MAX_ENTITY_LIST_LIMIT);
 
   const conditions = [];
 

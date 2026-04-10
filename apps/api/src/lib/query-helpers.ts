@@ -211,6 +211,9 @@ export function buildResolutionConditions(
 
 // ─── Pagination Helpers ─────────────────────────────────────────
 
+/** Max rows per request for `/scenes` and `/performers` list (grid pages use small limits; bulk identify may page up to this). */
+export const MAX_ENTITY_LIST_LIMIT = 50_000;
+
 /**
  * Parse and clamp limit/offset from raw query strings.
  */

@@ -16,8 +16,8 @@ import {
   Tag,
 } from "lucide-react";
 import {
-  fetchScenes,
-  fetchPerformers,
+  fetchAllScenes,
+  fetchAllPerformers,
   fetchStudios,
   fetchTags,
   fetchInstalledScrapers,
@@ -109,8 +109,8 @@ export function BulkScrape() {
     setLoading(true);
     try {
       const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes] = await Promise.all([
-        fetchScenes({ sort: "created_at", limit: 500 }),
-        fetchPerformers({ sort: "name", order: "asc", limit: 200 }),
+        fetchAllScenes({ sort: "created_at" }),
+        fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
         fetchTags(),
         fetchInstalledScrapers(),

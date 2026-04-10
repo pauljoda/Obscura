@@ -90,6 +90,30 @@ export async function fetchScrapeResults(params?: {
   return fetchApi(`/scrapers/results${qs}`);
 }
 
+const SCRAPE_RESULTS_PAGE_SIZE = 500;
+
+/** Loads all scrape results for the given filters (e.g. full pending queue). */
+export async function fetchAllScrapeResults(params?: {
+  status?: string;
+  sceneId?: string;
+}): Promise<{ results: ScrapeResult[]; total: number }> {
+  const results: ScrapeResult[] = [];
+  let offset = 0;
+  let total = 0;
+  for (;;) {
+    const res = await fetchScrapeResults({
+      ...params,
+      limit: SCRAPE_RESULTS_PAGE_SIZE,
+      offset,
+    });
+    total = res.total;
+    results.push(...res.results);
+    if (res.results.length < SCRAPE_RESULTS_PAGE_SIZE || results.length >= total) break;
+    offset += SCRAPE_RESULTS_PAGE_SIZE;
+  }
+  return { results, total };
+}
+
 export async function acceptScrapeResult(
   id: string,
   fields?: string[],

@@ -751,7 +751,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
       offset?: string;
     };
 
-    const limit = Math.min(Number(query.limit) || 50, 200);
+    const limit = Math.min(Number(query.limit) || 50, 10_000);
     const offset = Number(query.offset) || 0;
 
     const conditions = [];
