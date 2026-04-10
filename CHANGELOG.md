@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Docker (CI)** — Alpine 3.20 audiowaveform build installs `gd-dev` (Alpine’s GD headers package; `libgd-dev` does not exist) and `libid3tag-dev` so CMake can find LibGD and LibId3Tag. Runner image includes `libid3tag` for the linked binary.
+
 - **Scene markers (time fields)** — Start/end time inputs use draft text while typing and commit on blur or Save, so partial values like `1` or `1:3` are no longer immediately rewritten. End time placeholder shows an em dash (`—`) instead of the literal `\u2014`. Save sends parsed times from the draft so values are correct even if the field was not blurred first.
 
 - **Scene detail** — Description text wraps long unbroken strings and stays within the content column (`w-full max-w-full min-w-0 break-words` instead of overflowing past `max-w-3xl`).

@@ -45,7 +45,7 @@ FROM alpine:3.20 AS audiowaveform-builder
 
 RUN apk add --no-cache \
     cmake make g++ \
-    libmad-dev libsndfile-dev libgd-dev \
+    libmad-dev libid3tag-dev libsndfile-dev gd-dev \
     boost-dev boost-program_options boost-regex \
     git
 
@@ -68,7 +68,7 @@ RUN apk add --no-cache \
     redis \
     nginx \
     su-exec \
-    libmad libsndfile libgd boost-program_options boost-regex \
+    libmad libid3tag libsndfile libgd boost-program_options boost-regex \
   && mkdir -p /data/postgres /data/redis /data/cache /media /run/postgresql \
   && chown -R postgres:postgres /data/postgres /run/postgresql
 
