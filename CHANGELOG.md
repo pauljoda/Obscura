@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-04-09
+
+### Fixed
+
+- **Audio playback never starts** — Removed the fragile `wantPlayRef`/`canplay` handoff and now directly call `audio.play()` after setting `src`, which modern browsers handle via the returned Promise. Added `loadedmetadata` and `error` event handlers for better observability, switched preload to `"auto"` so buffering starts immediately, and hardened the track-change effect to depend on the track ID string rather than the object reference.
+
 ## [0.5.5] - 2026-04-09
 
 ### Fixed

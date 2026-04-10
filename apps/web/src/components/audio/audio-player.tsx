@@ -22,11 +22,8 @@ import { AudioWaveformCanvas } from "./audio-waveform-canvas";
 export type RepeatMode = "off" | "all" | "one";
 
 interface AudioPlayerProps {
-  /** All tracks in this library, in order */
   tracks: AudioTrackListItemDto[];
-  /** Currently active track ID (null = nothing playing) */
   activeTrackId: string | null;
-  /** Called when the player selects a new track */
   onTrackChange: (trackId: string) => void;
 }
 
@@ -49,31 +46,44 @@ export function AudioPlayer({
   const [waveformData, setWaveformData] = useState<number[] | null>(null);
   const [repeat, setRepeat] = useState<RepeatMode>("off");
   const [shuffle, setShuffle] = useState(false);
-  const prevTrackIdRef = useRef<string | null>(null);
-  const wantPlayRef = useRef(false);
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
   const activeIndex = activeTrack ? tracks.findIndex((t) => t.id === activeTrackId) : -1;
   const hasNext = activeIndex >= 0 && activeIndex < tracks.length - 1;
   const hasPrev = activeIndex > 0;
 
-  // ─── Track change ─────────────────────────────────────────────
+  // ─── Load track into audio element ────────────────────────────
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !activeTrack) return;
+    if (!audio) return;
 
-    if (prevTrackIdRef.current !== activeTrack.id) {
-      prevTrackIdRef.current = activeTrack.id;
+    if (!activeTrack) {
+      audio.removeAttribute("src");
+      audio.load();
+      setPlaying(false);
+      setCurrentTime(0);
+      return;
+    }
+
+    const newSrc = `${API_BASE}/audio-stream/${activeTrack.id}`;
+    // Only reload if the track actually changed
+    if (audio.src !== newSrc) {
+      audio.src = newSrc;
       setCurrentTime(0);
       setDuration(activeTrack.duration ?? 0);
-      wantPlayRef.current = true;
-      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
-      audio.load();
+      // Attempt to play; resolves once enough data is buffered
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("Audio play failed:", err);
+        });
+      }
     }
-  }, [activeTrack]);
+  }, [activeTrack?.id]);
 
-  // ─── Load waveform ────────────────────────────────────────────
+  // ─── Waveform data ────────────────────────────────────────────
 
   useEffect(() => {
     if (!activeTrack?.waveformPath) {
@@ -91,31 +101,33 @@ export function AudioPlayer({
       .catch(() => setWaveformData(null));
   }, [activeTrack?.waveformPath]);
 
-  // ─── Audio events ─────────────────────────────────────────────
+  // ─── Refs for callbacks (avoid re-registering event listeners) ─
 
-  // Refs for callbacks declared below — avoids re-registering listeners
-  const handleTrackEndRef = useRef<() => void>(() => {});
   const activeTrackIdRef = useRef(activeTrackId);
   activeTrackIdRef.current = activeTrackId;
+
+  const handleTrackEndRef = useRef<() => void>(() => {});
+  // Set later after handleTrackEnd is defined
+
+  // ─── Audio event listeners (registered once per mount) ────────
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
     const onDurationChange = () => {
-      if (audio.duration && Number.isFinite(audio.duration)) {
+      if (Number.isFinite(audio.duration)) {
         setDuration(audio.duration);
       }
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onCanPlay = () => {
-      if (wantPlayRef.current) {
-        wantPlayRef.current = false;
-        audio.play().catch(() => {});
-      }
-    };
     const onEnded = () => {
       const trackId = activeTrackIdRef.current;
       if (trackId) {
@@ -123,23 +135,30 @@ export function AudioPlayer({
       }
       handleTrackEndRef.current();
     };
+    const onError = () => {
+      // eslint-disable-next-line no-console
+      console.error("Audio element error:", audio.error);
+      setPlaying(false);
+    };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
     audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
-    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
 
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
       audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
     };
-  }, []); // Register once — callbacks use refs
+  }, []);
 
   // ─── Track end logic ──────────────────────────────────────────
 
@@ -173,7 +192,7 @@ export function AudioPlayer({
     }
   }, [repeat, shuffle, activeTrackId, activeIndex, tracks, onTrackChange]);
 
-  // Keep the ref fresh for the audio event listeners
+  // Keep ref fresh for event listeners
   handleTrackEndRef.current = handleTrackEnd;
 
   // ─── Playback controls ────────────────────────────────────────
@@ -192,19 +211,21 @@ export function AudioPlayer({
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // No track loaded yet — start the first one
     if (!activeTrack) {
       playAll();
       return;
     }
-    // Ensure source is loaded
-    if (!audio.src || audio.src === window.location.href) {
-      audio.src = `${API_BASE}/audio-stream/${activeTrack.id}`;
-      audio.load();
-      wantPlayRef.current = true;
-      return;
-    }
+
     if (audio.paused) {
-      audio.play().catch(() => {});
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error("Audio play failed:", err);
+        });
+      }
     } else {
       audio.pause();
     }
@@ -225,7 +246,6 @@ export function AudioPlayer({
 
   const handlePrev = useCallback(() => {
     const audio = audioRef.current;
-    // If more than 3s in, restart current track
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
       return;
@@ -270,11 +290,10 @@ export function AudioPlayer({
 
   return (
     <div className="surface-panel border border-border-subtle">
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="auto" />
 
       {/* ─── Now playing + waveform ─────────────────────────────── */}
       <div className="px-4 pt-4 pb-2">
-        {/* Track info row */}
         <div className="flex items-center gap-3 mb-3">
           <div className="h-10 w-10 flex items-center justify-center bg-surface-3 flex-shrink-0">
             <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
@@ -303,7 +322,6 @@ export function AudioPlayer({
           </span>
         </div>
 
-        {/* Waveform / seek bar */}
         {activeTrack && waveformData ? (
           <AudioWaveformCanvas
             peaks={waveformData}
@@ -335,7 +353,6 @@ export function AudioPlayer({
 
       {/* ─── Transport controls ─────────────────────────────────── */}
       <div className="flex items-center px-4 py-2.5 gap-1">
-        {/* Shuffle */}
         <button
           type="button"
           onClick={() => setShuffle((s) => !s)}
@@ -348,7 +365,6 @@ export function AudioPlayer({
           <Shuffle className="h-3.5 w-3.5" />
         </button>
 
-        {/* Prev */}
         <button
           type="button"
           onClick={handlePrev}
@@ -358,7 +374,6 @@ export function AudioPlayer({
           <SkipBack className="h-4 w-4" />
         </button>
 
-        {/* Play / Pause */}
         <button
           type="button"
           onClick={togglePlay}
@@ -372,7 +387,6 @@ export function AudioPlayer({
           {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
         </button>
 
-        {/* Next */}
         <button
           type="button"
           onClick={handleNext}
@@ -382,7 +396,6 @@ export function AudioPlayer({
           <SkipForward className="h-4 w-4" />
         </button>
 
-        {/* Repeat */}
         <button
           type="button"
           onClick={cycleRepeat}
@@ -395,10 +408,8 @@ export function AudioPlayer({
           {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
         </button>
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Volume */}
         <div className="flex items-center gap-1.5 group/vol">
           <button
             type="button"
