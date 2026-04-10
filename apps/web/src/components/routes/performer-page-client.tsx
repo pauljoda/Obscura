@@ -17,15 +17,22 @@ import {
   Eye,
   Palette,
   Heart,
+  Images,
+  Music,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { useTerms, formatVideoCount } from "../../lib/terminology";
+import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
 import { SceneGrid } from "../scene-grid";
+import { GalleryGrid } from "../gallery-grid";
+import { AudioLibraryAppearanceGrid } from "../audio/audio-library-appearance-grid";
 import { PerformerEdit } from "../performer-edit";
 import {
   deletePerformer,
+  fetchAudioLibraries,
+  fetchGalleries,
   fetchPerformerDetail,
   fetchScenes,
   setPerformerRating,
@@ -49,6 +56,10 @@ interface PerformerPageClientProps {
   initialPerformer: PerformerDetail | null;
   initialScenes: SceneListItem[];
   initialTotalScenes: number;
+  initialGalleries: GalleryListItemDto[];
+  initialTotalGalleries: number;
+  initialAudioLibraries: AudioLibraryListItemDto[];
+  initialTotalAudioLibraries: number;
 }
 
 export function PerformerPageClient({
@@ -56,6 +67,10 @@ export function PerformerPageClient({
   initialPerformer,
   initialScenes,
   initialTotalScenes,
+  initialGalleries,
+  initialTotalGalleries,
+  initialAudioLibraries,
+  initialTotalAudioLibraries,
 }: PerformerPageClientProps) {
   const router = useRouter();
   const terms = useTerms();
@@ -64,6 +79,10 @@ export function PerformerPageClient({
   const [performer, setPerformer] = useState(initialPerformer);
   const [scenes, setScenes] = useState(initialScenes);
   const [totalScenes, setTotalScenes] = useState(initialTotalScenes);
+  const [galleries, setGalleries] = useState(initialGalleries);
+  const [totalGalleries, setTotalGalleries] = useState(initialTotalGalleries);
+  const [audioLibraries, setAudioLibraries] = useState(initialAudioLibraries);
+  const [totalAudioLibraries, setTotalAudioLibraries] = useState(initialTotalAudioLibraries);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -76,14 +95,29 @@ export function PerformerPageClient({
       const performerResponse = await fetchPerformerDetail(id, { nsfw: nsfwMode });
       setPerformer(performerResponse);
 
-      const scenesResponse = await fetchScenes({
-        performer: [performerResponse.name],
-        limit: 100,
-        nsfw: nsfwMode,
-      });
+      const name = performerResponse.name;
+      const [scenesResponse, galleriesResponse, audioResponse] = await Promise.all([
+        fetchScenes({ performer: [name], limit: 100, nsfw: nsfwMode }),
+        fetchGalleries({
+          performer: [name],
+          root: "all",
+          limit: 100,
+          nsfw: nsfwMode,
+        }),
+        fetchAudioLibraries({
+          performer: [name],
+          root: "all",
+          limit: 100,
+          nsfw: nsfwMode,
+        }),
+      ]);
 
       setScenes(scenesResponse.scenes);
       setTotalScenes(scenesResponse.total);
+      setGalleries(galleriesResponse.galleries);
+      setTotalGalleries(galleriesResponse.total);
+      setAudioLibraries(audioResponse.items);
+      setTotalAudioLibraries(audioResponse.total);
       setNotFound(false);
     } catch (error) {
       console.error(error);
@@ -98,8 +132,21 @@ export function PerformerPageClient({
     setPerformer(initialPerformer);
     setScenes(initialScenes);
     setTotalScenes(initialTotalScenes);
+    setGalleries(initialGalleries);
+    setTotalGalleries(initialTotalGalleries);
+    setAudioLibraries(initialAudioLibraries);
+    setTotalAudioLibraries(initialTotalAudioLibraries);
     setNotFound(initialPerformer == null);
-  }, [id, initialPerformer, initialScenes, initialTotalScenes]);
+  }, [
+    id,
+    initialPerformer,
+    initialScenes,
+    initialTotalScenes,
+    initialGalleries,
+    initialTotalGalleries,
+    initialAudioLibraries,
+    initialTotalAudioLibraries,
+  ]);
 
   useEffect(() => {
     if (prevNsfwForRefetch.current === nsfwMode) return;
@@ -397,6 +444,18 @@ export function PerformerPageClient({
                 <Film className="h-4 w-4" />
                 <span className="text-mono-sm">{formatVideoCount(totalScenes)}</span>
               </div>
+              <div className="flex items-center gap-1.5 text-sm text-text-muted">
+                <Images className="h-4 w-4" />
+                <span className="text-mono-sm">
+                  {totalGalleries === 1 ? "1 gallery" : `${totalGalleries} galleries`}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm text-text-muted">
+                <Music className="h-4 w-4" />
+                <span className="text-mono-sm">
+                  {totalAudioLibraries === 1 ? "1 audio library" : `${totalAudioLibraries} audio libraries`}
+                </span>
+              </div>
               {performer.isNsfw && <NsfwChip />}
             </div>
           </div>
@@ -458,6 +517,32 @@ export function PerformerPageClient({
                 </p>
               </div>
             )}
+          </section>
+
+          <div className="separator" />
+
+          <section>
+            <h4 className="mb-3 text-kicker">Galleries</h4>
+            {totalGalleries > 0 ? (
+              <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+            ) : (
+              <div className="surface-well p-8 text-center">
+                <Images className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
+                <p className="text-sm text-text-muted">
+                  No galleries are linked to this {terms.performer.toLowerCase()}.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <div className="separator" />
+
+          <section>
+            <h4 className="mb-3 text-kicker">Audio</h4>
+            <AudioLibraryAppearanceGrid
+              libraries={audioLibraries}
+              emptyMessage={`No audio libraries list this ${terms.performer.toLowerCase()}.`}
+            />
           </section>
         </div>
       </div>

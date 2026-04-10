@@ -22,6 +22,7 @@ export async function galleriesRoutes(app: FastifyInstance) {
       dateTo?: string;
       imageCountMin?: string;
       organized?: string;
+      nsfw?: string;
     };
     return galleryService.listGalleries(query);
   });

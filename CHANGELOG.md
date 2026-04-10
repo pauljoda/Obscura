@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-04-09
+
+### Added
+
+- **Performer & studio detail** — Each page loads **galleries** and **audio libraries** linked via join tables / `studioId`, with summary counts and grid sections (same NSFW behavior as the main library lists). Server and client use `root=all` so nested galleries and sub-libraries are included when filtering by performer or studio.
+- **Web API client** — `fetchAudioLibraries` for browser-side fetches (e.g. performer refetch on NSFW mode change).
+
+### Changed
+
+- **Gallery list API** — `GET /galleries` accepts optional `nsfw=off` to exclude NSFW galleries, consistent with scenes and audio library lists.
+
 ## [0.6.6] - 2026-04-09
 
 ### Changed

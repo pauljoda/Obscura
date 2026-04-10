@@ -101,6 +101,8 @@ interface ListGalleriesQuery {
   dateTo?: string;
   imageCountMin?: string;
   organized?: string;
+  /** When `off`, exclude galleries marked NSFW (matches scenes/audio list behavior). */
+  nsfw?: string;
 }
 
 interface UpdateGalleryBody {
@@ -127,6 +129,10 @@ export async function listGalleries(query: ListGalleriesQuery) {
     conditions.push(eq(galleries.parentId, query.parent));
   } else if (query.root !== "all" && !query.search) {
     conditions.push(sql`${galleries.parentId} IS NULL`);
+  }
+
+  if (query.nsfw === "off") {
+    conditions.push(eq(galleries.isNsfw, false));
   }
 
   // Text search

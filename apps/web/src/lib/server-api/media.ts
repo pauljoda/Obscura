@@ -107,6 +107,7 @@ export async function fetchGalleries(params?: {
   dateTo?: string;
   imageCountMin?: number;
   organized?: string;
+  nsfw?: string;
   limit?: number;
   offset?: number;
 }) {
@@ -125,6 +126,7 @@ export async function fetchGalleries(params?: {
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
+      nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
     },

@@ -1,6 +1,7 @@
 import type {
   EntityKind,
   AudioLibraryDetailDto,
+  AudioLibraryListItemDto,
   AudioLibraryPatchDto,
   AudioTrackPatchDto,
   GalleryDetailDto,
@@ -155,6 +156,7 @@ export async function fetchGalleries(params?: {
   dateTo?: string;
   imageCountMin?: number;
   organized?: string;
+  nsfw?: string;
   limit?: number;
   offset?: number;
 }): Promise<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }> {
@@ -173,6 +175,7 @@ export async function fetchGalleries(params?: {
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
+      nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
     },
@@ -183,6 +186,52 @@ export async function fetchGalleries(params?: {
   );
 
   return fetchApi(`/galleries${qs}`);
+}
+
+export async function fetchAudioLibraries(params?: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  parent?: string;
+  root?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  trackCountMin?: number;
+  organized?: string;
+  nsfw?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ items: AudioLibraryListItemDto[]; total: number }> {
+  const qs = buildQueryString(
+    {
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      studio: params?.studio,
+      parent: params?.parent,
+      root: params?.root,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      trackCountMin: params?.trackCountMin,
+      organized: params?.organized,
+      nsfw: params?.nsfw,
+      limit: params?.limit,
+      offset: params?.offset,
+    },
+    {
+      tag: params?.tag,
+      performer: params?.performer,
+    },
+  );
+
+  return fetchApi(`/audio-libraries${qs}`);
 }
 
 export async function fetchGalleryDetail(id: string): Promise<GalleryDetailDto> {

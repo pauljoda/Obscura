@@ -14,6 +14,8 @@ import {
   X,
   Image as ImageIcon,
   Film,
+  Images,
+  Music,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +25,10 @@ import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
 import { useNsfw } from "../../../../components/nsfw/nsfw-context";
+import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
 import {
+  fetchAudioLibraries,
+  fetchGalleries,
   fetchScenes,
   fetchStudioDetail,
   deleteStudio,
@@ -34,8 +39,9 @@ import {
   toApiUrl,
   type SceneListItem,
   type StudioDetail,
-  type StudioChildRef,
 } from "../../../../lib/api";
+import { GalleryGrid } from "../../../../components/gallery-grid";
+import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
 import { use, useEffect } from "react";
 import { useTerms, formatVideoCount } from "../../../../lib/terminology";
 
@@ -52,6 +58,10 @@ export default function StudioPage({ params }: StudioPageProps) {
   const [studio, setStudio] = useState<StudioDetail | null>(null);
   const [scenes, setScenes] = useState<SceneListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
+  const [totalGalleries, setTotalGalleries] = useState(0);
+  const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
+  const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -64,9 +74,17 @@ export default function StudioPage({ params }: StudioPageProps) {
     try {
       const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
-      const scenesData = await fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode });
+      const [scenesData, galleriesData, audioData] = await Promise.all([
+        fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode }),
+        fetchGalleries({ studio: id, root: "all", limit: 100, nsfw: nsfwMode }),
+        fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
+      ]);
       setScenes(scenesData.scenes);
       setTotal(scenesData.total);
+      setGalleries(galleriesData.galleries);
+      setTotalGalleries(galleriesData.total);
+      setAudioLibraries(audioData.items);
+      setTotalAudioLibraries(audioData.total);
       setNotFound(false);
     } catch {
       setNotFound(true);
@@ -222,7 +240,17 @@ export default function StudioPage({ params }: StudioPageProps) {
 
         <div className="h-4 w-px bg-border-subtle" />
 
-        <span className="flex items-center gap-1.5 text-sm text-text-muted"><Film className="h-3.5 w-3.5" /> {formatVideoCount(total)}</span>
+        <span className="flex items-center gap-1.5 text-sm text-text-muted">
+          <Film className="h-3.5 w-3.5" /> {formatVideoCount(total)}
+        </span>
+        <span className="flex items-center gap-1.5 text-sm text-text-muted">
+          <Images className="h-3.5 w-3.5" />
+          {totalGalleries === 1 ? "1 gallery" : `${totalGalleries} galleries`}
+        </span>
+        <span className="flex items-center gap-1.5 text-sm text-text-muted">
+          <Music className="h-3.5 w-3.5" />
+          {totalAudioLibraries === 1 ? "1 audio library" : `${totalAudioLibraries} audio libraries`}
+        </span>
 
         {studio.url && (
           <>
@@ -292,6 +320,30 @@ export default function StudioPage({ params }: StudioPageProps) {
       <section>
         <h4 className="text-kicker mb-3">{terms.scenes}</h4>
         <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
+      </section>
+
+      <div className="separator" />
+
+      <section>
+        <h4 className="text-kicker mb-3">Galleries</h4>
+        {totalGalleries > 0 ? (
+          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+        ) : (
+          <div className="surface-well p-8 text-center">
+            <Images className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
+            <p className="text-sm text-text-muted">No galleries are linked to this studio.</p>
+          </div>
+        )}
+      </section>
+
+      <div className="separator" />
+
+      <section>
+        <h4 className="text-kicker mb-3">Audio</h4>
+        <AudioLibraryAppearanceGrid
+          libraries={audioLibraries}
+          emptyMessage="No audio libraries are linked to this studio."
+        />
       </section>
     </div>
   );
