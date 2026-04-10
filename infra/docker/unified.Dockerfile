@@ -1,5 +1,5 @@
 # ── Stage 1: Install dependencies ─────────────────────────────────
-FROM node:22-alpine AS deps
+FROM node:22-alpine3.20 AS deps
 
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
@@ -18,7 +18,7 @@ COPY packages/stash-import/package.json packages/stash-import/package.json
 RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: Build all services ──────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:22-alpine3.20 AS builder
 
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
@@ -57,7 +57,7 @@ RUN git clone --depth 1 https://github.com/bbc/audiowaveform.git /build/audiowav
   && make install
 
 # ── Stage 4: Unified production image ────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:22-alpine3.20 AS runner
 
 # Install runtime dependencies (including audiowaveform runtime libs)
 RUN apk add --no-cache \
@@ -68,7 +68,8 @@ RUN apk add --no-cache \
     redis \
     nginx \
     su-exec \
-    libmad libid3tag libsndfile libgd boost-program_options boost-regex \
+    libmad libid3tag libsndfile libgd \
+    boost1.84-filesystem boost1.84-program_options boost1.84-regex \
   && mkdir -p /data/postgres /data/redis /data/cache /media /run/postgresql \
   && chown -R postgres:postgres /data/postgres /run/postgresql
 

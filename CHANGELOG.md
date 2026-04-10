@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.17] - 2026-04-10
+
+### Fixed
+
+- **Docker (unified image)** — Production `audiowaveform` failed at runtime with missing `libboost_filesystem` and `libid3tag` / unresolved symbols when `node:22-alpine` drifted ahead of the `alpine:3.20` audiowaveform build stage. The runner now installs `boost1.84-filesystem` (and pins Boost runtime packages to `boost1.84-*`), and all Node stages use `node:22-alpine3.20` so shared-library SONAMEs match the copied binary.
+
 ## [0.7.16] - 2026-04-10
 
 ### Fixed
