@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-04-09
+
+### Fixed
+
+- **Audio scan dispatch** — Added manual dispatch handlers for `audio-scan`, `gallery-scan`, `audio-probe`, `audio-fingerprint`, and `audio-waveform` queues in the jobs API. Previously only `library-scan` had a dedicated handler; all other queues fell through to scene-only logic.
+
+### Changed
+
+- **Jobs page grouping** — Audio queues now grouped into "Library scans" (audio-scan alongside library-scan and gallery-scan) and a new "Audio pipeline" section (audio-probe, audio-fingerprint, audio-waveform) on the jobs dashboard.
+
 ## [0.5.2] - 2026-04-09
 
 ### Fixed

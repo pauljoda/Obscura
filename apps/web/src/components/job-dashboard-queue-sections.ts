@@ -15,9 +15,9 @@ export type JobQueueSection = {
 export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
   {
     id: "scans",
-    title: "Library & gallery scans",
+    title: "Library scans",
     description: "High-level discovery across configured media roots.",
-    queueNames: ["library-scan", "gallery-scan"],
+    queueNames: ["library-scan", "gallery-scan", "audio-scan"],
   },
   {
     id: "scene-media",
@@ -36,6 +36,12 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
     title: "Gallery image pipeline",
     description: "Thumbnails and fingerprints for gallery images.",
     queueNames: ["image-thumbnail", "image-fingerprint"],
+  },
+  {
+    id: "audio-pipeline",
+    title: "Audio pipeline",
+    description: "Metadata extraction, fingerprints, and waveform generation for audio tracks.",
+    queueNames: ["audio-probe", "audio-fingerprint", "audio-waveform"],
   },
 ] as const;
 

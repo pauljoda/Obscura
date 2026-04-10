@@ -13,7 +13,7 @@ import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
 import { getQueue } from "../lib/queues";
 
-const { jobRuns, libraryRoots, scenes } = schema;
+const { jobRuns, libraryRoots, scenes, audioTracks } = schema;
 
 type JobPayload = Record<string, unknown> & {
   jobKind?: JobKind;
@@ -278,6 +278,140 @@ async function enqueueMissingSceneJobs(
   return { jobIds: createdJobIds, skipped };
 }
 
+// ─── Audio & Gallery scan dispatch ────────────────────────────────
+
+async function enqueueGalleryScans(trigger: QueueTrigger = {}, sfwOnly = false) {
+  const roots = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.enabled, true))
+    .orderBy(libraryRoots.path);
+
+  const createdJobIds: string[] = [];
+  let skipped = 0;
+
+  for (const root of roots) {
+    if (!(root.scanImages ?? true)) {
+      skipped += 1;
+      continue;
+    }
+
+    const job = await enqueueQueueJob({
+      queueName: "gallery-scan",
+      jobName: "gallery-root-scan",
+      data: {
+        libraryRootId: root.id,
+        ...(sfwOnly ? { sfwOnly: true } : {}),
+      },
+      target: {
+        type: "library-root",
+        id: root.id,
+        label: root.label,
+      },
+      trigger,
+    });
+
+    if (job) {
+      createdJobIds.push(String(job.id));
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { jobIds: createdJobIds, skipped };
+}
+
+async function enqueueAudioScans(trigger: QueueTrigger = {}, sfwOnly = false) {
+  const roots = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.enabled, true))
+    .orderBy(libraryRoots.path);
+
+  const createdJobIds: string[] = [];
+  let skipped = 0;
+
+  for (const root of roots) {
+    if (!(root.scanAudio ?? true)) {
+      skipped += 1;
+      continue;
+    }
+
+    const job = await enqueueQueueJob({
+      queueName: "audio-scan",
+      jobName: "audio-root-scan",
+      data: {
+        libraryRootId: root.id,
+        ...(sfwOnly ? { sfwOnly: true } : {}),
+      },
+      target: {
+        type: "library-root",
+        id: root.id,
+        label: root.label,
+      },
+      trigger,
+    });
+
+    if (job) {
+      createdJobIds.push(String(job.id));
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { jobIds: createdJobIds, skipped };
+}
+
+async function enqueueMissingAudioTrackJobs(
+  queueName: QueueName,
+  trigger: QueueTrigger = {},
+  _sfwOnly = false,
+) {
+  let trackRows: Array<{ id: string; title: string }> = [];
+
+  if (queueName === "audio-probe") {
+    trackRows = await db
+      .select({ id: audioTracks.id, title: audioTracks.title })
+      .from(audioTracks)
+      .where(or(isNull(audioTracks.duration), isNull(audioTracks.codec)));
+  } else if (queueName === "audio-fingerprint") {
+    trackRows = await db
+      .select({ id: audioTracks.id, title: audioTracks.title })
+      .from(audioTracks)
+      .where(or(isNull(audioTracks.checksumMd5), isNull(audioTracks.oshash)));
+  } else if (queueName === "audio-waveform") {
+    trackRows = await db
+      .select({ id: audioTracks.id, title: audioTracks.title })
+      .from(audioTracks)
+      .where(isNull(audioTracks.waveformPath));
+  }
+
+  const createdJobIds: string[] = [];
+  let skipped = 0;
+
+  for (const track of trackRows) {
+    const job = await enqueueQueueJob({
+      queueName,
+      jobName: `audio-${queueName}`,
+      data: { trackId: track.id },
+      target: {
+        type: "audio-track",
+        id: track.id,
+        label: track.title,
+      },
+      trigger,
+    });
+
+    if (job) {
+      createdJobIds.push(String(job.id));
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { jobIds: createdJobIds, skipped };
+}
+
 async function cancelJobRunById(jobRunId: string, reason = "Cancelled by user") {
   const [run] = await db
     .select()
@@ -476,23 +610,24 @@ export async function jobsRoutes(app: FastifyInstance) {
 
     const sfwOnly = readSfwOnly(request);
 
-    const result =
-      queueName === "library-scan"
-        ? await enqueueLibraryScans(
-            {
-              by: "manual",
-              label: "Started from Operations",
-            },
-            sfwOnly
-          )
-        : await enqueueMissingSceneJobs(
-            queueName,
-            {
-              by: "manual",
-              label: "Started from Operations",
-            },
-            sfwOnly
-          );
+    const manualTrigger: QueueTrigger = {
+      by: "manual",
+      label: "Started from Operations",
+    };
+
+    let result: { jobIds: string[]; skipped: number };
+
+    if (queueName === "library-scan") {
+      result = await enqueueLibraryScans(manualTrigger, sfwOnly);
+    } else if (queueName === "gallery-scan") {
+      result = await enqueueGalleryScans(manualTrigger, sfwOnly);
+    } else if (queueName === "audio-scan") {
+      result = await enqueueAudioScans(manualTrigger, sfwOnly);
+    } else if (queueName === "audio-probe" || queueName === "audio-fingerprint" || queueName === "audio-waveform") {
+      result = await enqueueMissingAudioTrackJobs(queueName, manualTrigger, sfwOnly);
+    } else {
+      result = await enqueueMissingSceneJobs(queueName, manualTrigger, sfwOnly);
+    }
 
     return {
       ok: true,
