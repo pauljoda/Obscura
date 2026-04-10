@@ -4,6 +4,7 @@ import {
   Film,
   Image,
   Images,
+  Music,
   Tag,
   Users,
   type LucideIcon,
@@ -16,6 +17,8 @@ export const ALL_SEARCH_KINDS: EntityKind[] = [
   "tag",
   "gallery",
   "image",
+  "audio-library",
+  "audio-track",
 ];
 
 interface SearchKindConfig {
@@ -31,4 +34,6 @@ export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
   tag: { label: "Tags", icon: Tag, href: "/tags" },
   gallery: { label: "Galleries", icon: Images, href: "/galleries" },
   image: { label: "Images", icon: Image, href: "/images" },
+  "audio-library": { label: "Audio Libraries", icon: Music, href: "/audio" },
+  "audio-track": { label: "Audio Tracks", icon: Music, href: "/audio" },
 };

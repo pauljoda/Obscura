@@ -4,6 +4,9 @@ import type {
   GalleryStatsDto,
   ImageListItemDto,
   ScrapeResultDto,
+  AudioLibraryListItemDto,
+  AudioLibraryDetailDto,
+  AudioLibraryStatsDto,
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
 import type {
@@ -279,5 +282,70 @@ export async function fetchScrapeResults(params?: {
   }>(`/scrapers/results${qs}`, {
     revalidate: 15,
     tags: ["scrape-results"],
+  });
+}
+
+// ─── Audio ────────────────────────────────────────────────────
+
+export async function fetchAudioLibraries(params?: {
+  search?: string;
+  sort?: string;
+  order?: string;
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  parent?: string;
+  root?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  trackCountMin?: number;
+  organized?: string;
+  nsfw?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const qs = buildQueryString(
+    {
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      studio: params?.studio,
+      parent: params?.parent,
+      root: params?.root,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      trackCountMin: params?.trackCountMin,
+      organized: params?.organized,
+      nsfw: params?.nsfw,
+      limit: params?.limit,
+      offset: params?.offset,
+    },
+    {
+      tag: params?.tag,
+      performer: params?.performer,
+    },
+  );
+
+  return serverFetch<{ items: AudioLibraryListItemDto[]; total: number }>(
+    `/audio-libraries${qs}`,
+    { tags: ["audio-libraries"] },
+  );
+}
+
+export async function fetchAudioLibraryDetail(id: string) {
+  return serverFetch<AudioLibraryDetailDto>(`/audio-libraries/${id}`, {
+    revalidate: 0,
+    tags: ["audio-libraries", `audio-library-${id}`],
+  });
+}
+
+export async function fetchAudioLibraryStats(nsfw?: string) {
+  const qs = buildQueryString({ nsfw });
+  return serverFetch<AudioLibraryStatsDto>(`/audio-libraries/stats${qs}`, {
+    tags: ["audio-libraries"],
   });
 }

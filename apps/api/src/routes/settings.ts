@@ -86,6 +86,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       recursive?: boolean;
       scanVideos?: boolean;
       scanImages?: boolean;
+      scanAudio?: boolean;
     };
 
     try {
@@ -101,6 +102,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           recursive: body.recursive ?? true,
           scanVideos: body.scanVideos ?? true,
           scanImages: body.scanImages ?? true,
+          scanAudio: body.scanAudio ?? true,
         })
         .returning();
 
@@ -120,6 +122,7 @@ export async function settingsRoutes(app: FastifyInstance) {
       recursive?: boolean;
       scanVideos?: boolean;
       scanImages?: boolean;
+      scanAudio?: boolean;
       isNsfw?: boolean;
     };
 
@@ -144,6 +147,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           recursive: body.recursive ?? existing.recursive,
           scanVideos: body.scanVideos ?? existing.scanVideos,
           scanImages: body.scanImages ?? existing.scanImages,
+          scanAudio: body.scanAudio ?? existing.scanAudio,
           isNsfw: body.isNsfw ?? existing.isNsfw,
           updatedAt: new Date(),
         })

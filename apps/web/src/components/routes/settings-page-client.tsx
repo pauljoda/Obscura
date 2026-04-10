@@ -32,6 +32,7 @@ import {
   Shield,
   Droplet,
   Flame,
+  Music,
 } from "lucide-react";
 import {
   BACKGROUND_WORKER_CONCURRENCY_MAX,
@@ -130,6 +131,7 @@ export function SettingsPageClient({
   const [newRootRecursive, setNewRootRecursive] = useState(true);
   const [newRootScanVideos, setNewRootScanVideos] = useState(true);
   const [newRootScanImages, setNewRootScanImages] = useState(true);
+  const [newRootScanAudio, setNewRootScanAudio] = useState(true);
   const [newRootIsNsfw, setNewRootIsNsfw] = useState(false);
   const { mode: nsfwMode, setMode: setNsfwMode } = useNsfw();
   /** In SFW mode (Off), do not list NSFW-marked roots — same visibility as the rest of the app. */
@@ -250,6 +252,7 @@ export function SettingsPageClient({
         recursive: newRootRecursive,
         scanVideos: newRootScanVideos,
         scanImages: newRootScanImages,
+        scanAudio: newRootScanAudio,
         isNsfw: newRootIsNsfw,
       });
 
@@ -278,7 +281,7 @@ export function SettingsPageClient({
     }
   }
 
-  async function handleToggleMediaType(root: LibraryRoot, field: "scanVideos" | "scanImages") {
+  async function handleToggleMediaType(root: LibraryRoot, field: "scanVideos" | "scanImages" | "scanAudio") {
     const next = !root[field];
     setRoots((prev) => prev.map((r) => (r.id === root.id ? { ...r, [field]: next } : r)));
     try {
@@ -550,6 +553,19 @@ export function SettingsPageClient({
                       >
                         <Image className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Image</span>
+                      </button>
+                      <button
+                        onClick={() => void handleToggleMediaType(root, "scanAudio")}
+                        title={root.scanAudio ? "Audio: scanning" : "Audio: skipped"}
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-1 text-[0.65rem] transition-colors",
+                          root.scanAudio
+                            ? "text-text-accent bg-accent-950/50"
+                            : "text-text-disabled hover:text-text-muted"
+                        )}
+                      >
+                        <Music className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Audio</span>
                       </button>
                       <button
                         onClick={async () => {

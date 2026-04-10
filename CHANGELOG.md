@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-09
+
+### Added
+
+- **Audio section** — New `/audio` route with grid and browser views for audio libraries, and `/audio/:id` detail page with track list, inline audio player, and waveform visualization.
+- **Audio player** — Inline audio player with play/pause, seek, volume, next/prev track, waveform canvas with pointer drag scrubbing, and playhead glow effect.
+- **Audio waveform canvas** — Custom canvas component rendering BBC audiowaveform peaks data with brass accent gradient for played portion and pointer drag-to-seek interaction.
+- **Settings: audio scanning** — Library root settings now include a `scanAudio` toggle alongside `scanVideos` and `scanImages`.
+- **Search: audio entities** — Audio libraries and tracks appear in search results.
+
+### Changed
+
+- **Navigation** — Replaced "Images" nav entry with "Audio". Images are now accessible as a view mode within Galleries.
+- **Settings API** — Library root create/update endpoints now accept `scanAudio` field.
+
 ## [0.4.3] - 2026-04-09
 
 ### Added
