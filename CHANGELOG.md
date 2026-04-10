@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-04-09
+
+### Added
+
+- **Audio file discovery** — `discoverAudioFilesAndDirs()` walks directory trees finding `.mp3`, `.flac`, `.wav`, `.ogg`, `.aac`, `.m4a`, `.wma`, `.opus`, `.aiff`, `.alac`, and other audio formats.
+- **Audio probing** — `probeAudioFile()` extracts duration, bitrate, sample rate, channels, codec, container, and embedded ID3/Vorbis tags (artist, album, title, track number) via ffprobe.
+- **Waveform generation** — `generateAudioWaveform()` uses BBC audiowaveform binary to produce JSON peaks data for playback visualization. Pipes through ffmpeg for formats audiowaveform doesn't natively support.
+- **Audio cache directories** — `getGeneratedAudioLibraryDir()` and `getGeneratedAudioTrackDir()` for audio asset storage.
+
 ## [0.4.0] - 2026-04-09
 
 ### Added

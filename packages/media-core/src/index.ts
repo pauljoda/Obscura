@@ -666,3 +666,204 @@ export async function probeImageFile(filePath: string): Promise<{
     return { width: null, height: null, format: null };
   }
 }
+
+// ─── Audio discovery ──────────────────────────────────────────────
+
+export const supportedAudioExtensions = new Set([
+  ".mp3", ".flac", ".wav", ".ogg", ".aac", ".m4a", ".wma", ".opus",
+  ".aiff", ".aif", ".alac", ".ape", ".dsf", ".dff", ".wv",
+]);
+
+export function isAudioFile(filePath: string): boolean {
+  const ext = path.extname(filePath).toLowerCase();
+  if (!supportedAudioExtensions.has(ext)) return false;
+  const stem = path.basename(filePath, ext);
+  return !generatedSuffixPattern.test(stem);
+}
+
+export interface AudioDiscoveryResult {
+  /** Directories containing at least one audio file directly */
+  dirs: string[];
+  /** All audio files found (absolute paths) */
+  audioFiles: string[];
+}
+
+export async function discoverAudioFilesAndDirs(
+  rootPath: string,
+  recursive = true,
+): Promise<AudioDiscoveryResult> {
+  const dirs: Set<string> = new Set();
+  const audioFiles: string[] = [];
+
+  async function walk(dirPath: string) {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+
+      const entryPath = path.join(dirPath, entry.name);
+
+      if (entry.isDirectory()) {
+        if (recursive) {
+          await walk(entryPath);
+        }
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+
+      if (isAudioFile(entryPath)) {
+        audioFiles.push(entryPath);
+        dirs.add(dirPath);
+      }
+    }
+  }
+
+  await walk(rootPath);
+
+  return {
+    dirs: [...dirs].sort(),
+    audioFiles: audioFiles.sort(),
+  };
+}
+
+// ─── Audio probing ────────────────────────────────────────────────
+
+interface FfprobeFormatTags {
+  artist?: string;
+  album?: string;
+  title?: string;
+  track?: string;
+  ARTIST?: string;
+  ALBUM?: string;
+  TITLE?: string;
+  TRACK?: string;
+}
+
+interface FfprobeAudioResult {
+  streams?: FfprobeStream[];
+  format?: FfprobeFormat & { tags?: FfprobeFormatTags };
+}
+
+export interface ProbeAudioFileMetadata {
+  filePath: string;
+  fileName: string;
+  duration: number | null;
+  fileSize: number | null;
+  bitRate: number | null;
+  sampleRate: number | null;
+  channels: number | null;
+  codec: string | null;
+  container: string | null;
+  embeddedArtist: string | null;
+  embeddedAlbum: string | null;
+  embeddedTitle: string | null;
+  trackNumber: number | null;
+}
+
+export async function probeAudioFile(filePath: string): Promise<ProbeAudioFileMetadata> {
+  const { stdout } = await runProcess("ffprobe", [
+    "-v", "error",
+    "-show_entries",
+    "format=duration,size,bit_rate,format_name:format_tags=artist,album,title,track:stream=codec_name,sample_rate,channels",
+    "-of", "json",
+    filePath,
+  ]);
+
+  const parsed = JSON.parse(stdout) as FfprobeAudioResult;
+  const audioStream = parsed.streams?.find((s) => s.codec_name);
+  const tags = parsed.format?.tags;
+  const formatName = parsed.format?.format_name?.split(",")[0] ?? null;
+  const extContainer = path.extname(filePath).replace(".", "").toLowerCase();
+
+  // Tags can be capitalized or lowercase depending on format
+  const artist = tags?.artist ?? tags?.ARTIST ?? null;
+  const album = tags?.album ?? tags?.ALBUM ?? null;
+  const title = tags?.title ?? tags?.TITLE ?? null;
+  const trackStr = tags?.track ?? tags?.TRACK ?? null;
+  const trackNumber = trackStr ? parseInt(trackStr, 10) : null;
+
+  return {
+    filePath,
+    fileName: path.basename(filePath),
+    duration: parsed.format?.duration ? Number(parsed.format.duration) : null,
+    fileSize: parsed.format?.size ? Number(parsed.format.size) : null,
+    bitRate: parsed.format?.bit_rate ? Number(parsed.format.bit_rate) : null,
+    sampleRate: audioStream?.sample_rate ? Number(audioStream.sample_rate) : null,
+    channels: audioStream?.channels ?? null,
+    codec: audioStream?.codec_name ?? null,
+    container: formatName ?? (extContainer || null),
+    embeddedArtist: artist || null,
+    embeddedAlbum: album || null,
+    embeddedTitle: title || null,
+    trackNumber: Number.isFinite(trackNumber) ? trackNumber : null,
+  };
+}
+
+// ─── Audio waveform generation ────────────────────────────────────
+
+/** Formats natively supported by the audiowaveform binary. */
+const audiowaveformNativeFormats = new Set([".mp3", ".wav", ".flac", ".ogg", ".opus"]);
+
+/**
+ * Generate waveform peaks JSON using the BBC audiowaveform binary.
+ * For formats not natively supported, pipes through ffmpeg first.
+ *
+ * Output: JSON file with `{ data: number[] }` — array of min/max amplitude pairs.
+ */
+export async function generateAudioWaveform(
+  inputPath: string,
+  outputPath: string,
+  pixelsPerSecond = 20,
+): Promise<void> {
+  const ext = path.extname(inputPath).toLowerCase();
+
+  if (audiowaveformNativeFormats.has(ext)) {
+    // Direct: audiowaveform reads the file natively
+    await runProcess("audiowaveform", [
+      "-i", inputPath,
+      "--pixels-per-second", String(pixelsPerSecond),
+      "-b", "8",
+      "-o", outputPath,
+    ]);
+  } else {
+    // Pipe through ffmpeg for unsupported formats (aac, m4a, wma, aiff, etc.)
+    // ffmpeg → wav → audiowaveform via temp file
+    // We use a pipe approach via shell for simplicity
+    await new Promise<void>((resolve, reject) => {
+      const ffmpeg = spawn("ffmpeg", [
+        "-i", inputPath, "-f", "wav", "-ac", "1", "-ar", "16000", "pipe:1",
+      ], { stdio: ["ignore", "pipe", "ignore"] });
+
+      const aw = spawn("audiowaveform", [
+        "--input-format", "wav",
+        "--pixels-per-second", String(pixelsPerSecond),
+        "-b", "8",
+        "-o", outputPath,
+      ], { stdio: ["pipe", "ignore", "pipe"] });
+
+      ffmpeg.stdout.pipe(aw.stdin);
+
+      let awStderr = "";
+      aw.stderr.on("data", (chunk) => { awStderr += chunk.toString(); });
+
+      aw.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`audiowaveform exited with code ${code}: ${awStderr}`));
+      });
+
+      ffmpeg.on("error", reject);
+      aw.on("error", reject);
+    });
+  }
+}
+
+// ─── Audio cache directories ──────────────────────────────────────
+
+export function getGeneratedAudioLibraryDir(libraryId: string) {
+  return path.join(getCacheRootDir(), "audio-libraries", libraryId);
+}
+
+export function getGeneratedAudioTrackDir(trackId: string) {
+  return path.join(getCacheRootDir(), "audio-tracks", trackId);
+}
