@@ -31,6 +31,13 @@ export async function imagesRoutes(app: FastifyInstance) {
     return imageService.getImageById(id);
   });
 
+  // ─── DELETE /images/:id ──────────────────────────────────────────
+  app.delete("/images/:id", async (request) => {
+    const { id } = request.params as { id: string };
+    const query = request.query as { deleteFile?: string };
+    return imageService.deleteImage(id, query.deleteFile === "true");
+  });
+
   // ─── PATCH /images/:id ───────────────────────────────────────────
   app.patch("/images/:id", async (request) => {
     const { id } = request.params as { id: string };

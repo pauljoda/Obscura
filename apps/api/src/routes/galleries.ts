@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import * as galleryService from "../services/gallery.service";
+import * as imageService from "../services/image.service";
 
 export async function galleriesRoutes(app: FastifyInstance) {
   // ─── GET /galleries ──────────────────────────────────────────────
@@ -78,6 +79,19 @@ export async function galleriesRoutes(app: FastifyInstance) {
   app.delete("/galleries/:id", async (request) => {
     const { id } = request.params as { id: string };
     return galleryService.deleteGallery(id);
+  });
+
+  // ─── POST /galleries/:id/images/upload (multipart) ──────────────
+  // Imports an image file into a folder-backed gallery. Fails for
+  // zip/virtual galleries because they have no on-disk folder.
+  app.post("/galleries/:id/images/upload", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const file = await request.file();
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+    return imageService.uploadImage(id, file);
   });
 
   // ─── POST /galleries/:id/cover ───────────────────────────────────

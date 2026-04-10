@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { unlink, rm } from "node:fs/promises";
+import path from "node:path";
 import { db, schema } from "../db";
 import {
   eq,
@@ -8,8 +11,18 @@ import {
   inArray,
   and,
 } from "drizzle-orm";
+import type { MultipartFile } from "@fastify/multipart";
+import type { UploadImageResponseDto } from "@obscura/contracts";
+import { fileNameToTitle, getGeneratedImageDir } from "@obscura/media-core";
 import { getImagePreviewPath, isVideoImageFormat } from "../lib/image-media";
 import { AppError } from "../plugins/error-handler";
+import {
+  assertDirExists,
+  resolveCollisionSafePath,
+  streamToFile,
+  validateUpload,
+} from "../lib/upload";
+import { enqueueQueueJob } from "../lib/job-enqueue";
 import {
   buildOrderBy,
   toArray,
@@ -27,6 +40,7 @@ const {
   images,
   imagePerformers,
   imageTags,
+  galleries,
   performers,
   tags,
   studios,
@@ -446,4 +460,155 @@ export async function bulkUpdateImages(body: BulkUpdateImagesBody) {
   });
 
   return { ok: true, count: body.ids.length };
+}
+
+// ─── uploadImage ───────────────────────────────────────────────
+
+/**
+ * Upload an image file into a folder-backed gallery and create the
+ * matching `images` row. Rejects galleries that are not folder-backed
+ * (zip / virtual galleries have no on-disk folder to write into).
+ */
+export async function uploadImage(
+  galleryId: string,
+  file: MultipartFile,
+): Promise<UploadImageResponseDto> {
+  const [gallery] = await db
+    .select({
+      id: galleries.id,
+      title: galleries.title,
+      galleryType: galleries.galleryType,
+      folderPath: galleries.folderPath,
+      isNsfw: galleries.isNsfw,
+    })
+    .from(galleries)
+    .where(eq(galleries.id, galleryId))
+    .limit(1);
+  if (!gallery) {
+    throw new AppError(404, "Gallery not found");
+  }
+  if (gallery.galleryType !== "folder" || !gallery.folderPath) {
+    throw new AppError(
+      400,
+      "Uploads are only supported on folder-backed galleries",
+    );
+  }
+  await assertDirExists(gallery.folderPath);
+
+  const { safeName } = validateUpload(file, { category: "image" });
+  const dest = await resolveCollisionSafePath(gallery.folderPath, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  const [created] = await db
+    .insert(images)
+    .values({
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      galleryId: gallery.id,
+      organized: false,
+      isNsfw: gallery.isNsfw ?? false,
+    })
+    .returning({ id: images.id, title: images.title, filePath: images.filePath });
+
+  if (!created) {
+    throw new AppError(500, "Failed to create image row after upload");
+  }
+
+  // Bump the denormalized imageCount on the parent gallery so the list
+  // view reflects the new image without waiting for a rescan.
+  await db
+    .update(galleries)
+    .set({ imageCount: sql`${galleries.imageCount} + 1`, updatedAt: new Date() })
+    .where(eq(galleries.id, gallery.id));
+
+  const target = {
+    type: "image" as const,
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${gallery.title}`,
+  };
+  await enqueueQueueJob({
+    queueName: "image-thumbnail",
+    jobName: "image-thumbnail",
+    data: { imageId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "image-fingerprint",
+    jobName: "image-fingerprint",
+    data: { imageId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath,
+    galleryId: gallery.id,
+  };
+}
+
+// ─── deleteImage ───────────────────────────────────────────────
+
+/**
+ * Delete a single image. Mirrors deleteScene: DB row first (cascades
+ * handle imagePerformers/imageTags), then the generated thumb dir, then
+ * optionally the source file on disk.
+ */
+export async function deleteImage(id: string, deleteFile: boolean) {
+  const [existing] = await db
+    .select({
+      id: images.id,
+      filePath: images.filePath,
+      galleryId: images.galleryId,
+    })
+    .from(images)
+    .where(eq(images.id, id))
+    .limit(1);
+  if (!existing) {
+    throw new AppError(404, "Image not found");
+  }
+
+  await db.delete(images).where(eq(images.id, id));
+
+  // Bump parent gallery count down (gallery FK is onDelete: "set null",
+  // so the image no longer points at it — decrement directly).
+  if (existing.galleryId) {
+    await db
+      .update(galleries)
+      .set({
+        imageCount: sql`GREATEST(${galleries.imageCount} - 1, 0)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(galleries.id, existing.galleryId));
+  }
+
+  const genDir = getGeneratedImageDir(id);
+  try {
+    if (existsSync(genDir)) await rm(genDir, { recursive: true });
+  } catch {
+    // non-fatal
+  }
+
+  // Only unlink the source if the caller asked for it AND the path looks
+  // like a real file (not a zip member "archive.zip::member.jpg").
+  if (
+    deleteFile &&
+    existing.filePath &&
+    !existing.filePath.includes("::")
+  ) {
+    try {
+      if (existsSync(existing.filePath)) await unlink(existing.filePath);
+    } catch {
+      // non-fatal
+    }
+  }
+
+  return { ok: true as const };
 }

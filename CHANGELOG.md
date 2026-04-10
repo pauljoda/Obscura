@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-04-10
+
+### Added
+
+- **`POST /galleries/:id/images/upload`** — Multipart endpoint that imports an image into a folder-backed gallery. Streams straight to disk under the gallery's `folderPath`, creates the `images` row, bumps the parent gallery's denormalized `imageCount`, and enqueues the standard `image-thumbnail` + `image-fingerprint` pipeline so the new image picks up a thumbnail and fingerprint without a rescan. Rejects zip and virtual galleries (no on-disk folder). Inherits `isNsfw` from the parent gallery.
+- **`DELETE /images/:id`** — Single-image delete endpoint (previously only bulk delete via PATCH was available). Cascades `imagePerformers` / `imageTags` via FK, removes the generated thumbnail directory under `getGeneratedImageDir(id)`, decrements the parent gallery's `imageCount`, and accepts `?deleteFile=true` to also unlink the source file from disk (refused on zip members).
+
 ## [0.8.8] - 2026-04-10
 
 ### Added
