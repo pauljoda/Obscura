@@ -21,8 +21,21 @@ export async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> 
   return res.json();
 }
 
-export async function uploadFile<T>(path: string, file: File): Promise<T> {
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  extraFields?: Record<string, string>,
+): Promise<T> {
   const form = new FormData();
+  // Extra fields are appended BEFORE the file so the server can read
+  // them off file.fields / via iterative parts() before consuming the
+  // file stream (critical for routes like /scenes/upload that need
+  // libraryRootId before accepting the payload).
+  if (extraFields) {
+    for (const [key, value] of Object.entries(extraFields)) {
+      form.append(key, value);
+    }
+  }
   form.append("file", file);
 
   const res = await fetch(`${API_BASE}${path}`, {

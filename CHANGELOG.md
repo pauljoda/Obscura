@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.11] - 2026-04-10
+
+### Added
+
+- **`apps/web/src/components/upload/*`** — New reusable upload primitives backing the upcoming drag-drop + Import button integration across library views. `UploadDropZone` wraps any page and shows a sharp-cornered "Drop to add" overlay while a drag is active, plus a dismissable status strip that reports per-file success/failure. `ImportButton` opens a native file picker for the same flow. `useUploader` is the shared orchestration hook — it handles the scene upload's multi-root resolution (auto-picks when only one library root has `scanVideos = true`, otherwise surfaces `<LibraryRootPicker>` for a choice), runs uploads sequentially (stable on home LANs), and tracks per-file state for the status strip. No page integrations yet — follow-up commits mount these primitives on the scenes, gallery, and audio library detail views.
+
+### Changed
+
+- **`uploadFile()` in `apps/web/src/lib/api/core.ts`** — Now takes an optional `extraFields` object that is appended to the `FormData` body BEFORE the file part. The scene upload endpoint needs `libraryRootId` to be present when the file stream starts, so order matters here; the helper forwards the object directly to `FormData.append` so the server-side iteration order matches.
+
 ## [0.8.10] - 2026-04-10
 
 ### Added
