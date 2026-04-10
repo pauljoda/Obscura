@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.12] - 2026-04-10
+
 ### Added
 
 - **Audio library** — **Shuffle** next to **Play All** turns shuffle on in the player, starts on a random track, and continues in shuffle order.
