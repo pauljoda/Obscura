@@ -27,4 +27,11 @@ export const {
   studios,
   scenePerformers,
   sceneTags,
+  audioLibraries,
+  audioTracks,
+  audioTrackMarkers,
+  audioLibraryPerformers,
+  audioLibraryTags,
+  audioTrackPerformers,
+  audioTrackTags,
 } = schema;

@@ -23,6 +23,10 @@ import { processMetadataImport } from "./processors/metadata-import.js";
 import { processGalleryScan } from "./processors/gallery-scan.js";
 import { processImageThumbnail } from "./processors/image-thumbnail.js";
 import { processImageFingerprint } from "./processors/image-fingerprint.js";
+import { processAudioScan } from "./processors/audio-scan.js";
+import { processAudioProbe } from "./processors/audio-probe.js";
+import { processAudioFingerprint } from "./processors/audio-fingerprint.js";
+import { processAudioWaveform } from "./processors/audio-waveform.js";
 
 // ─── Processor Map ──────────────────────────────────────────────────
 
@@ -35,6 +39,10 @@ const processorByQueue: Record<QueueName, (job: Job) => Promise<void>> = {
   "gallery-scan": processGalleryScan,
   "image-thumbnail": processImageThumbnail,
   "image-fingerprint": processImageFingerprint,
+  "audio-scan": processAudioScan,
+  "audio-probe": processAudioProbe,
+  "audio-fingerprint": processAudioFingerprint,
+  "audio-waveform": processAudioWaveform,
 };
 
 // ─── Worker Factory ─────────────────────────────────────────────────

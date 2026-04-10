@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { QueueName } from "@obscura/contracts";
-import { db, scenes, images } from "./db.js";
+import { db, scenes, images, audioTracks } from "./db.js";
 import { getWorkerQueue } from "./queues.js";
 import {
   type QueueTarget,
@@ -137,6 +137,62 @@ export async function enqueueGalleryRootJob(
   await enqueueJobIfNeeded({
     queueName: "gallery-scan",
     jobName: "gallery-root-scan",
+    data: {
+      libraryRootId: root.id,
+      ...(opts?.sfwOnly ? { sfwOnly: true } : {}),
+    },
+    target: {
+      type: "library-root",
+      id: root.id,
+      label: root.label,
+    },
+    trigger,
+  });
+}
+
+export async function enqueuePendingAudioTrackJob(
+  queueName: QueueName,
+  trackId: string,
+  trigger: QueueTrigger = {},
+) {
+  if (
+    await hasPendingJob(queueName, {
+      type: "audio-track",
+      id: trackId,
+    })
+  ) {
+    return;
+  }
+
+  const [track] = await db
+    .select({ id: audioTracks.id, title: audioTracks.title })
+    .from(audioTracks)
+    .where(eq(audioTracks.id, trackId))
+    .limit(1);
+
+  if (!track) return;
+
+  await enqueueJobIfNeeded({
+    queueName,
+    jobName: `audio-${queueName}`,
+    data: { trackId },
+    target: {
+      type: "audio-track",
+      id: track.id,
+      label: track.title,
+    },
+    trigger,
+  });
+}
+
+export async function enqueueAudioRootJob(
+  root: { id: string; label: string },
+  trigger: QueueTrigger = {},
+  opts?: { sfwOnly?: boolean },
+) {
+  await enqueueJobIfNeeded({
+    queueName: "audio-scan",
+    jobName: "audio-root-scan",
     data: {
       libraryRootId: root.id,
       ...(opts?.sfwOnly ? { sfwOnly: true } : {}),

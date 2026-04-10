@@ -12,6 +12,7 @@ import { propagateSceneNsfw } from "../lib/nsfw.js";
 import {
   enqueuePendingSceneJob,
   enqueueGalleryRootJob,
+  enqueueAudioRootJob,
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { pruneUntrackedLibraryReferences, removeGeneratedSceneDirs } from "../lib/helpers.js";
@@ -231,6 +232,19 @@ export async function processLibraryScan(job: Job) {
   const scanImages = root.scanImages ?? true;
   if (scanImages) {
     await enqueueGalleryRootJob(
+      root,
+      {
+        by: "library-scan",
+        label: `Queued during ${root.label} scan`,
+      },
+      gallerySfwOpts
+    );
+  }
+
+  // Trigger audio scan if this root has audio scanning enabled
+  const scanAudio = root.scanAudio ?? true;
+  if (scanAudio) {
+    await enqueueAudioRootJob(
       root,
       {
         by: "library-scan",

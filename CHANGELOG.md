@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-04-09
+
+### Added
+
+- **Audio scan processor** — Discovers audio files in library roots, creates folder-based audio libraries with parent-child hierarchy, upserts tracks, and enqueues downstream probe/fingerprint jobs. Cleans up stale libraries and tracks on rescan.
+- **Audio probe processor** — Extracts technical metadata and embedded ID3/Vorbis tags from audio files using ffprobe. Updates title from embedded tags when current title is just the filename. Enqueues waveform generation as downstream job.
+- **Audio fingerprint processor** — Computes MD5 and OSHash fingerprints for audio tracks.
+- **Audio waveform processor** — Generates JSON peaks data using BBC audiowaveform binary for playback visualization.
+- **Library scan audio trigger** — Library scan now triggers audio scan after gallery scan when `scanAudio` is enabled on the root.
+
 ## [0.4.1] - 2026-04-09
 
 ### Added
