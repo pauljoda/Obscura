@@ -46,10 +46,17 @@ echo "[obscura] Starting Redis..."
 redis-server --daemonize yes --dir "$REDIS_DIR" --loglevel warning
 
 # ── Push database schema ──────────────────────────────────────────
+# Must succeed: an outdated schema causes widespread API 500s (queries reference
+# missing tables). Do not swallow errors — the old `|| true` hid failed pushes.
+# --force avoids interactive prompts in non-TTY Docker; back up /data before major upgrades.
 echo "[obscura] Applying database schema..."
-cd /app/apps/api
-DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
-  node node_modules/drizzle-kit/bin.cjs push 2>&1 || true
+cd /app
+export CI=true
+export DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura"
+if ! pnpm --filter @obscura/api exec drizzle-kit push --force; then
+  echo "[obscura] ERROR: drizzle-kit push failed — check logs above. Database is not aligned with this image." >&2
+  exit 1
+fi
 
 # ── Start API server ──────────────────────────────────────────────
 # Run tsx from the api directory so Node resolves it from apps/api/node_modules

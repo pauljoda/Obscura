@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.13] - 2026-04-10
+
+### Fixed
+
+- **Docker (unified image)** — The entrypoint no longer ignores `drizzle-kit push` failures (`|| true`). A failed schema push left PostgreSQL missing tables required by the API (e.g. cross-media count queries), which surfaced as widespread HTTP 500s on `/api/performers`, `/api/studios`, `/api/jobs`, and scene asset routes. Startup now runs `pnpm --filter @obscura/api exec drizzle-kit push --force` (with `CI=true`) and **exits non-zero** if push fails so the problem is visible in container logs. `--force` avoids interactive prompts in non-TTY containers; back up `/data` before upgrading across breaking schema changes.
+
 ## [0.7.12] - 2026-04-10
 
 ### Added
