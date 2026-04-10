@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-04-09
+
+### Added
+
+- **On-the-fly audio transcoding** — The audio stream route now detects tracks whose codec isn't natively supported by browsers (ALAC, APE, WMA, AIFF, DSD, etc.) and transcodes them to MP3 192kbps via ffmpeg on the fly. Browser-native codecs (MP3, AAC, Opus, Vorbis, FLAC, PCM) continue to stream directly with HTTP Range support for seeking. Fixes the `NotSupportedError: Failed to load because no supported source was found` error for ALAC files in Chrome/Firefox.
+
 ## [0.5.6] - 2026-04-09
 
 ### Fixed
