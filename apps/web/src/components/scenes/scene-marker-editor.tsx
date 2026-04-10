@@ -61,22 +61,25 @@ export function SceneMarkerEditor({
     setEditingMarker(null);
   }
 
-  async function handleSaveMarker() {
+  async function handleSaveMarker(payload: {
+    seconds: number;
+    endSeconds: number | null;
+  }) {
     if (!markerTitle.trim()) return;
     setSavingMarker(true);
     try {
       if (editingMarker === "new") {
         await createMarker(scene.id, {
           title: markerTitle.trim(),
-          seconds: markerSeconds,
-          endSeconds: markerEndSeconds,
+          seconds: payload.seconds,
+          endSeconds: payload.endSeconds,
           primaryTagName: markerTagName.trim() || null,
         });
       } else if (editingMarker) {
         await updateMarker(editingMarker, {
           title: markerTitle.trim(),
-          seconds: markerSeconds,
-          endSeconds: markerEndSeconds,
+          seconds: payload.seconds,
+          endSeconds: payload.endSeconds,
           primaryTagName: markerTagName.trim() || null,
         });
       }
@@ -113,7 +116,8 @@ export function SceneMarkerEditor({
       setMarkerSeconds(Math.floor(currentTimeRef.current)),
     onSetCurrentEndTime: () =>
       setMarkerEndSeconds(Math.floor(currentTimeRef.current)),
-    onSave: () => void handleSaveMarker(),
+    onSave: (payload: { seconds: number; endSeconds: number | null }) =>
+      void handleSaveMarker(payload),
     onCancel: cancelMarkerEdit,
   };
 

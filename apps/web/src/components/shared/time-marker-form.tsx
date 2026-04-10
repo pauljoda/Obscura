@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@obscura/ui/primitives/button";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
@@ -33,7 +33,7 @@ export interface TimeMarkerFormProps {
   onTagNameChange: (v: string) => void;
   onSetCurrentTime: () => void;
   onSetCurrentEndTime: () => void;
-  onSave: () => void;
+  onSave: (payload: { seconds: number; endSeconds: number | null }) => void;
   onCancel: () => void;
   /** Override the save button label (default: "Save Marker") */
   saveLabel?: string;
@@ -45,12 +45,28 @@ export function formatSecondsInput(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function parseTimeInput(value: string): number {
-  const parts = value.split(":").map(Number);
-  if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
-  if (parts.length === 3)
-    return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
-  return Number(value) || 0;
+/** Parses mm:ss, hh:mm:ss, or raw seconds. Returns null if empty or not parseable. */
+export function parseTimeInput(value: string): number | null {
+  const v = value.trim();
+  if (v === "") return null;
+  if (v.includes(":")) {
+    const parts = v.split(":").map((p) => p.trim());
+    if (parts.some((p) => p !== "" && Number.isNaN(Number(p)))) return null;
+    if (parts.length === 2) {
+      const m = Number(parts[0]) || 0;
+      const s = Number(parts[1]) || 0;
+      return m * 60 + s;
+    }
+    if (parts.length === 3) {
+      const h = Number(parts[0]) || 0;
+      const m = Number(parts[1]) || 0;
+      const s = Number(parts[2]) || 0;
+      return h * 3600 + m * 60 + s;
+    }
+    return null;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function TimeMarkerForm({
@@ -71,6 +87,81 @@ export function TimeMarkerForm({
   saveLabel = "Save Marker",
 }: TimeMarkerFormProps) {
   const { mode: nsfwMode } = useNsfw();
+  const [startText, setStartText] = useState(() => formatSecondsInput(seconds));
+  const [endText, setEndText] = useState(() =>
+    endSeconds != null ? formatSecondsInput(endSeconds) : "",
+  );
+
+  useEffect(() => {
+    setStartText(formatSecondsInput(seconds));
+  }, [seconds]);
+
+  useEffect(() => {
+    setEndText(endSeconds != null ? formatSecondsInput(endSeconds) : "");
+  }, [endSeconds]);
+
+  function commitStartTime() {
+    const parsed = parseTimeInput(startText);
+    if (parsed === null) {
+      setStartText(formatSecondsInput(seconds));
+      return;
+    }
+    onSecondsChange(Math.max(0, Math.floor(parsed)));
+  }
+
+  function commitEndTime() {
+    const v = endText.trim();
+    if (v === "") {
+      onEndSecondsChange(null);
+      setEndText("");
+      return;
+    }
+    const parsed = parseTimeInput(v);
+    if (parsed === null) {
+      setEndText(
+        endSeconds != null ? formatSecondsInput(endSeconds) : "",
+      );
+      return;
+    }
+    onEndSecondsChange(Math.max(0, Math.floor(parsed)));
+  }
+
+  /** Parses draft fields; returns null if start (required) is invalid. */
+  function readCommittedTimes(): {
+    seconds: number;
+    endSeconds: number | null;
+  } | null {
+    const startParsed = parseTimeInput(startText);
+    if (startParsed === null) {
+      setStartText(formatSecondsInput(seconds));
+      return null;
+    }
+    const sec = Math.max(0, Math.floor(startParsed));
+    if (endText.trim() === "") {
+      return { seconds: sec, endSeconds: null };
+    }
+    const endParsed = parseTimeInput(endText);
+    if (endParsed === null) {
+      setEndText(
+        endSeconds != null ? formatSecondsInput(endSeconds) : "",
+      );
+      return null;
+    }
+    return {
+      seconds: sec,
+      endSeconds: Math.max(0, Math.floor(endParsed)),
+    };
+  }
+
+  function handleSaveClick() {
+    if (!title.trim()) return;
+    const payload = readCommittedTimes();
+    if (!payload) return;
+    onSecondsChange(payload.seconds);
+    onEndSecondsChange(payload.endSeconds);
+    onSave(payload);
+  }
+
   const [tagFocused, setTagFocused] = useState(false);
   const filteredTags = tagFocused
     ? (tagName.trim()
@@ -100,9 +191,13 @@ export function TimeMarkerForm({
           <label className="text-xs text-text-muted">Start Time</label>
           <div className="flex items-center gap-2">
             <input
-              className="control-input flex-1"
-              value={formatSecondsInput(seconds)}
-              onChange={(e) => onSecondsChange(parseTimeInput(e.target.value))}
+              className="control-input flex-1 min-w-0"
+              value={startText}
+              onChange={(e) => setStartText(e.target.value)}
+              onBlur={() => commitStartTime()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
               placeholder="0:00"
             />
             <button
@@ -121,13 +216,14 @@ export function TimeMarkerForm({
           <label className="text-xs text-text-muted">End Time (optional)</label>
           <div className="flex items-center gap-2">
             <input
-              className="control-input flex-1"
-              value={endSeconds != null ? formatSecondsInput(endSeconds) : ""}
-              onChange={(e) => {
-                const v = e.target.value.trim();
-                onEndSecondsChange(v ? parseTimeInput(v) : null);
+              className="control-input flex-1 min-w-0"
+              value={endText}
+              onChange={(e) => setEndText(e.target.value)}
+              onBlur={() => commitEndTime()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
               }}
-              placeholder="\u2014"
+              placeholder="—"
             />
             <button
               type="button"
@@ -195,7 +291,7 @@ export function TimeMarkerForm({
         <Button
           variant="primary"
           size="sm"
-          onClick={onSave}
+          onClick={handleSaveClick}
           disabled={saving || !title.trim()}
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}

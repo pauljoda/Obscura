@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Scene markers (time fields)** — Start/end time inputs use draft text while typing and commit on blur or Save, so partial values like `1` or `1:3` are no longer immediately rewritten. End time placeholder shows an em dash (`—`) instead of the literal `\u2014`. Save sends parsed times from the draft so values are correct even if the field was not blurred first.
+
 - **Scene detail** — Description text wraps long unbroken strings and stays within the content column (`w-full max-w-full min-w-0 break-words` instead of overflowing past `max-w-3xl`).
 - **Library maintenance queue** — Running `library-maintenance` from Jobs now enqueues one scene-asset migration job (matching the current “dedicated vs beside media” setting) instead of reporting zero jobs. Migration always processes every scene with a file path; SFW mode only affects job labels and redacted UI copy, not which files are moved.
 - **Scene asset migration API** — `POST /jobs/migrate-scene-asset-storage` uses the same deduplication as other jobs and returns 409 when a migration is already active; respects `nsfw` in the body for SFW-safe labels.
