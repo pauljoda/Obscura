@@ -10,8 +10,7 @@ Obscura is organized as a Docker-first monorepo with three primary services:
 
 Supporting services:
 
-- `postgres` - application database
-- `redis` - queue coordination and worker state
+- `postgres` - application database **and** the job queue backend (via pg-boss). No separate queue service is required.
 
 ## Responsibility Boundaries
 

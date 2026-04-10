@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-04-10
+
+### Fixed
+
+- **Docs & dev tooling** — `README.md` and `docs/architecture.md` still told contributors to start a `redis` service alongside Postgres, which failed with `no such service: redis` after 0.8.0 removed Redis from `docker-compose.yml`. Documentation now reflects the pg-boss architecture.
+
+### Added
+
+- **`.vscode/tasks.json`** — Versioned VS Code tasks for `Obscura: Start infra (Postgres)`, `Stop infra`, `Apply DB schema`, and `Dev (all services)`, so the dev workflow is checked in and does not depend on each machine's personal workspace config.
+
 ## [0.8.0] - 2026-04-10
 
 ### Changed

@@ -172,8 +172,8 @@ cd obscura
 # Install dependencies
 pnpm install
 
-# Start infrastructure (PostgreSQL + Redis)
-docker compose -f infra/docker/docker-compose.yml up postgres redis -d
+# Start infrastructure (PostgreSQL only — pg-boss manages the job queue in-DB)
+docker compose -f infra/docker/docker-compose.yml up postgres -d
 
 # Push database schema
 pnpm --filter @obscura/api db:push
