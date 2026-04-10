@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ImportButton, UploadDropZone } from "../upload";
 import {
   Music,
   Play,
@@ -73,6 +75,7 @@ export function AudioLibraryDetailClient({
   const [library, setLibrary] = useState(initialLibrary);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [shufflePlayKey, setShufflePlayKey] = useState(0);
+  const router = useRouter();
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -282,8 +285,7 @@ export function AudioLibraryDetailClient({
     trackFetchLimit,
   ]);
 
-  return (
-    <>
+  const content = (
     <div className="flex flex-col gap-6 pb-64 md:pb-60">
       <Link
         href="/audio"
@@ -602,7 +604,15 @@ export function AudioLibraryDetailClient({
       )}
 
       <section>
-        <h2 className="text-kicker mb-3">Tracks</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-kicker">Tracks</h2>
+          {library.folderPath ? (
+            <ImportButton
+              target={{ kind: "audio", audioLibraryId: library.id }}
+              onUploaded={() => router.refresh()}
+            />
+          ) : null}
+        </div>
         {visibleTracks.length === 0 ? (
           <div className="surface-well p-8 text-center">
             <p className="text-text-muted text-sm">No tracks in this library</p>
@@ -694,28 +704,45 @@ export function AudioLibraryDetailClient({
         )}
       </section>
     </div>
+  );
 
-    <div
-      className={cn(
-        "fixed z-[45] max-w-[100vw] pointer-events-none",
-        "bottom-[calc(3.5rem+6px)] left-0 right-0 px-2 pt-1",
-        "md:bottom-4 md:px-5",
-        sidebarCollapsed ? "md:left-14" : "md:left-60",
-      )}
-      role="region"
-      aria-label="Audio playback"
+  const wrappedContent = library.folderPath ? (
+    <UploadDropZone
+      target={{ kind: "audio", audioLibraryId: library.id }}
+      onUploaded={() => router.refresh()}
+      className="relative"
     >
-      <div className="pointer-events-auto surface-elevated overflow-hidden">
-        <AudioPlayer
-          tracks={visibleTracks}
-          activeTrackId={activeTrackId}
-          onTrackChange={handleTrackChange}
-          className="border-0 bg-transparent shadow-none"
-          libraryCoverUrl={coverUrl}
-          shufflePlayKey={shufflePlayKey}
-        />
+      {content}
+    </UploadDropZone>
+  ) : (
+    content
+  );
+
+  return (
+    <>
+      {wrappedContent}
+
+      <div
+        className={cn(
+          "fixed z-[45] max-w-[100vw] pointer-events-none",
+          "bottom-[calc(3.5rem+6px)] left-0 right-0 px-2 pt-1",
+          "md:bottom-4 md:px-5",
+          sidebarCollapsed ? "md:left-14" : "md:left-60",
+        )}
+        role="region"
+        aria-label="Audio playback"
+      >
+        <div className="pointer-events-auto surface-elevated overflow-hidden">
+          <AudioPlayer
+            tracks={visibleTracks}
+            activeTrackId={activeTrackId}
+            onTrackChange={handleTrackChange}
+            className="border-0 bg-transparent shadow-none"
+            libraryCoverUrl={coverUrl}
+            shufflePlayKey={shufflePlayKey}
+          />
+        </div>
       </div>
-    </div>
     </>
   );
 }

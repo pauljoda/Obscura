@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.14] - 2026-04-10
+
+### Added
+
+- **Audio library detail drag-drop + Import** — Audio library detail pages with a `folderPath` now wrap the main content in `<UploadDropZone>` and show an `<ImportButton>` next to the "Tracks" section header. Drop any audio files on the page and they land inside the library's folder; each file's `audio-probe` → `audio-fingerprint` → `audio-waveform` pipeline kicks off immediately so the new track shows up with duration, peaks, and metadata on the next refresh. The fixed-position audio player sits outside the drop zone so it keeps receiving drag events for its own controls.
+
 ## [0.8.13] - 2026-04-10
 
 ### Added
