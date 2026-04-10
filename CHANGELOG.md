@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-04-09
+
+### Changed
+
+- **Shared component extraction** — Extracted ChipInput, StarRatingPicker, MetadataRow, TimeMarkerForm, HierarchyBrowser, and MetadataPanel into `components/shared/` for reuse across scenes, galleries, and upcoming audio feature.
+- **Generic tree utility** — Extracted `buildHierarchyTree` into `@obscura/ui/lib/tree` for any entity with parent-child hierarchy (galleries, audio libraries).
+- **Scrub interaction hook** — Extracted `useScrubInteraction` into `@obscura/ui/lib/scrub` for reuse by video film strip and upcoming audio waveform player.
+- **Refactored consumers** — `scene-edit.tsx`, `scene-marker-editor.tsx`, `scene-metadata-panel.tsx`, `gallery-browser.tsx`, and `gallery-tree.ts` now use shared components.
+
 ## [0.3.2] - 2026-04-09
 
 ### Fixed
