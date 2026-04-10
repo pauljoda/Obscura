@@ -362,7 +362,7 @@ export function SceneDetail({
 
       {/* Description */}
       {scene.details && (
-        <p className="text-text-secondary text-[0.85rem] leading-relaxed max-w-3xl">
+        <p className="text-text-secondary text-[0.85rem] leading-relaxed w-full max-w-full min-w-0 break-words">
           {scene.details}
         </p>
       )}
