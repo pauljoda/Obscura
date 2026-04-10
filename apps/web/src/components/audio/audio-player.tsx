@@ -393,21 +393,17 @@ export function AudioPlayer({
       {/* ─── Now playing + timeline (scene-style) + waveform film strip ─ */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 mb-3">
-          <div
-            className={cn(
-              "h-10 w-10 flex-shrink-0 overflow-hidden surface-card-sharp",
-              !libraryCoverUrl && "flex items-center justify-center bg-surface-3",
-            )}
-          >
-            {libraryCoverUrl ? (
+          {/* Album art — fallback icon always visible underneath in case the image 404s */}
+          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden surface-card-sharp flex items-center justify-center bg-surface-3">
+            <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
+            {libraryCoverUrl && (
               <img
                 src={libraryCoverUrl}
                 alt=""
-                className="h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
                 decoding="async"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
-            ) : (
-              <Music className={cn("h-4 w-4", activeTrack ? "text-accent-500" : "text-text-disabled")} />
             )}
           </div>
           <div className="flex-1 min-w-0">

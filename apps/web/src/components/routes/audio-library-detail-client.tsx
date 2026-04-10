@@ -347,17 +347,19 @@ export function AudioLibraryDetailClient({
               isNsfw={library.isNsfw}
               className="w-full h-full overflow-hidden surface-card-sharp"
             >
-              {coverUrl ? (
-                <img
-                  src={coverUrl}
-                  alt={library.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
+              <div className="relative w-full h-full">
                 <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
                   <Music className="h-12 w-12 text-white/20" />
                 </div>
-              )}
+                {coverUrl && (
+                  <img
+                    src={coverUrl}
+                    alt={library.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                )}
+              </div>
             </NsfwBlur>
             {editMode && (
               <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1 border-t border-border-subtle bg-black/75 p-1">
@@ -617,13 +619,12 @@ export function AudioLibraryDetailClient({
                     href={`/audio/${child.id}`}
                     className="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors"
                   >
-                    <div className="aspect-square overflow-hidden">
-                      {childCover ? (
-                        <img src={childCover} alt={child.title} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[i % SCENE_CARD_GRADIENTS.length])}>
-                          <Music className="h-8 w-8 text-white/20" />
-                        </div>
+                    <div className="aspect-square overflow-hidden relative">
+                      <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[i % SCENE_CARD_GRADIENTS.length])}>
+                        <Music className="h-8 w-8 text-white/20" />
+                      </div>
+                      {childCover && (
+                        <img src={childCover} alt={child.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       )}
                     </div>
                     <div className="p-2">

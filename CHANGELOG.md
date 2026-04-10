@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.18] - 2026-04-10
+
+### Fixed
+
+- **nginx `client_max_body_size 20m` silently rejected large video uploads** — The unified Docker image's nginx reverse proxy had a 20 MB body limit, which would cause large video uploads to fail at the nginx layer before they ever reached Fastify. Raised to 21 GiB to match the API's `OBSCURA_MAX_VIDEO_UPLOAD` default.
+- **`/assets/` paths not routed to the API in Docker** — Requests for static assets (thumbnails, waveforms, covers, HLS segments) sent to a path starting with `/assets/` without the `/api/` prefix were falling through to Next.js, returning 404. Added an explicit `location /assets/` block in nginx.conf that proxies directly to Fastify.
+- **Broken-image boxes for audio library cover art** — When a cover image path is stored in the database but the underlying file no longer exists on disk (e.g., after a cache volume is recreated), the browser's `<img>` element would render a broken-image icon inside the cover box. Added `onError` handlers to all audio library cover images (grid cards, detail sidebar, child sub-library cards, and the audio player album art slot) that hide the failed image and reveal the gradient/icon fallback behind it.
+
 ## [0.8.17] - 2026-04-10
 
 ### Fixed

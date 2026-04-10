@@ -161,18 +161,18 @@ function AudioLibraryCard({
       href={`/audio/${library.id}`}
       className="group surface-card-sharp overflow-hidden hover:border-border-accent transition-colors"
     >
-      <NsfwBlur isNsfw={library.isNsfw} className="aspect-square overflow-hidden">
-        {coverUrl ? (
+      <NsfwBlur isNsfw={library.isNsfw} className="aspect-square overflow-hidden relative">
+        <div className={cn("w-full h-full flex items-center justify-center", gradientClass)}>
+          <Music className="h-10 w-10 text-white/20" />
+        </div>
+        {coverUrl && (
           <img
             src={coverUrl}
             alt={library.title}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
-        ) : (
-          <div className={cn("w-full h-full flex items-center justify-center", gradientClass)}>
-            <Music className="h-10 w-10 text-white/20" />
-          </div>
         )}
       </NsfwBlur>
       <div className="p-2.5">
