@@ -2,16 +2,11 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { Music, Play, Pause, ChevronLeft } from "lucide-react";
+import { Music, Play, ChevronLeft } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
 import type { AudioLibraryDetailDto } from "@obscura/contracts";
-import {
-  MetadataPanel,
-  PerformersSection,
-  TagsSection,
-  InfoRow,
-} from "../shared/metadata-panel";
+import { PerformersSection, TagsSection, InfoRow } from "../shared/metadata-panel";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 import { NsfwBlur } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
@@ -58,86 +53,80 @@ export function AudioLibraryDetailClient({
         Audio
       </Link>
 
-      {/* ─── Header ─────────────────────────────────────────────── */}
-      <div className="flex gap-6 items-start">
-        <NsfwBlur
-          isNsfw={library.isNsfw}
-          className="w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0 overflow-hidden surface-card-sharp"
-        >
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={library.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
-              <Music className="h-12 w-12 text-white/20" />
+      {/* ─── Hero: cover + title | library info card ───────────── */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
+        <div className="flex gap-6 items-start flex-1 min-w-0">
+          <NsfwBlur
+            isNsfw={library.isNsfw}
+            className="w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0 overflow-hidden surface-card-sharp"
+          >
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt={library.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
+                <Music className="h-12 w-12 text-white/20" />
+              </div>
+            )}
+          </NsfwBlur>
+          <div className="flex-1 min-w-0 py-1">
+            <p className="text-xs text-text-muted uppercase tracking-wider font-medium mb-1">Audio Library</p>
+            <h1 className="text-2xl font-heading font-semibold leading-tight">{library.title}</h1>
+            {library.details && (
+              <p className="text-sm text-text-muted mt-1.5 line-clamp-2">{library.details}</p>
+            )}
+            <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
+              <span>{library.trackCount} track{library.trackCount !== 1 ? "s" : ""}</span>
+              {library.totalDuration != null && library.totalDuration > 0 && (
+                <>
+                  <span className="text-text-disabled">&middot;</span>
+                  <span>{formatDuration(library.totalDuration)}</span>
+                </>
+              )}
             </div>
-          )}
-        </NsfwBlur>
-        <div className="flex-1 min-w-0 py-1">
-          <p className="text-xs text-text-muted uppercase tracking-wider font-medium mb-1">Audio Library</p>
-          <h1 className="text-2xl font-heading font-semibold leading-tight">{library.title}</h1>
-          {library.details && (
-            <p className="text-sm text-text-muted mt-1.5 line-clamp-2">{library.details}</p>
-          )}
-          <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
-            <span>{library.trackCount} track{library.trackCount !== 1 ? "s" : ""}</span>
-            {library.totalDuration != null && library.totalDuration > 0 && (
-              <>
-                <span className="text-text-disabled">&middot;</span>
-                <span>{formatDuration(library.totalDuration)}</span>
-              </>
+            {library.rating != null && (
+              <div className="mt-2">
+                <StarRatingPicker value={library.rating} readOnly />
+              </div>
+            )}
+
+            {visibleTracks.length > 0 && (
+              <button
+                type="button"
+                onClick={handlePlayAll}
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
+              >
+                <Play className="h-4 w-4" />
+                Play All
+              </button>
             )}
           </div>
-          {library.rating != null && (
-            <div className="mt-2">
-              <StarRatingPicker value={library.rating} readOnly />
-            </div>
-          )}
+        </div>
 
-          {/* Play All button */}
-          {visibleTracks.length > 0 && (
-            <button
-              type="button"
-              onClick={handlePlayAll}
-              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
-            >
-              <Play className="h-4 w-4" />
-              Play All
-            </button>
-          )}
+        <div className="surface-panel p-4 space-y-3 w-full lg:w-72 lg:flex-shrink-0 lg:self-stretch">
+          <h4 className="text-kicker">Library Info</h4>
+          <div className="space-y-2.5">
+            <InfoRow icon={Music} label="Tracks" value={String(library.trackCount)} />
+            {library.totalDuration != null && library.totalDuration > 0 && (
+              <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
+            )}
+            {library.folderPath && (
+              <div className="text-xs text-text-disabled break-all pt-1 border-t border-border-subtle">
+                {library.folderPath}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ─── Player (always visible) ────────────────────────────── */}
-      <AudioPlayer
-        tracks={visibleTracks}
-        activeTrackId={activeTrackId}
-        onTrackChange={handleTrackChange}
-      />
-
-      {/* ─── Metadata ───────────────────────────────────────────── */}
-      <MetadataPanel
-        sidebar={
-          <>
-            <h4 className="text-kicker">Library Info</h4>
-            <div className="space-y-2.5">
-              <InfoRow icon={Music} label="Tracks" value={String(library.trackCount)} />
-              {library.totalDuration != null && library.totalDuration > 0 && (
-                <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
-              )}
-              {library.folderPath && (
-                <div className="text-xs text-text-disabled break-all mt-2">{library.folderPath}</div>
-              )}
-            </div>
-          </>
-        }
-      >
+      {/* ─── Performers & tags ──────────────────────────────────── */}
+      <div className="space-y-5">
         <PerformersSection performers={library.performers} parentIsNsfw={library.isNsfw} />
         <TagsSection tags={library.tags} />
-      </MetadataPanel>
+      </div>
 
       {/* ─── Sub-libraries ──────────────────────────────────────── */}
       {library.children.length > 0 && (
@@ -173,6 +162,13 @@ export function AudioLibraryDetailClient({
           </div>
         </section>
       )}
+
+      {/* ─── Player ───────────────────────────────────────────────── */}
+      <AudioPlayer
+        tracks={visibleTracks}
+        activeTrackId={activeTrackId}
+        onTrackChange={handleTrackChange}
+      />
 
       {/* ─── Track list ─────────────────────────────────────────── */}
       <section>

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.9] - 2026-04-09
+
+### Changed
+
+- **Audio library detail** — Hero row places cover and title beside the Library Info card; performers and tags follow; player and track list are last. Sub-libraries stay between tags and playback.
+
 ## [0.5.8] - 2026-04-09
 
 ### Changed
