@@ -35,6 +35,12 @@ const API_BASE =
     ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000")
     : "http://localhost:4000";
 
+function isKeyboardShortcutSuppressed(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return Boolean(target.closest("input, textarea, select"));
+}
+
 export function AudioPlayer({
   tracks,
   activeTrackId,
@@ -298,6 +304,56 @@ export function AudioPlayer({
   const cycleRepeat = useCallback(() => {
     setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off"));
   }, []);
+
+  useEffect(() => {
+    const seekBy = (delta: number) => {
+      const audio = audioRef.current;
+      if (!audio || !activeTrack) return;
+      const max =
+        duration > 0 && Number.isFinite(duration)
+          ? duration
+          : Number.isFinite(audio.duration) && audio.duration > 0
+            ? audio.duration
+            : Number.POSITIVE_INFINITY;
+      handleSeek(Math.max(0, Math.min(max, audio.currentTime + delta)));
+    };
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (isKeyboardShortcutSuppressed(event.target)) return;
+
+      switch (event.key.toLowerCase()) {
+        case " ":
+          event.preventDefault();
+          togglePlay();
+          break;
+        case "k":
+          if (event.metaKey || event.ctrlKey) break;
+          event.preventDefault();
+          togglePlay();
+          break;
+        case "arrowleft":
+          seekBy(-5);
+          break;
+        case "arrowright":
+          seekBy(5);
+          break;
+        case "j":
+          seekBy(-10);
+          break;
+        case "l":
+          seekBy(10);
+          break;
+        case "m":
+          toggleMute();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [activeTrack, duration, handleSeek, toggleMute, togglePlay]);
 
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;

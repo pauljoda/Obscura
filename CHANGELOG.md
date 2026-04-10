@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Audio player** — Global keyboard shortcuts on the audio library view (when focus is not in an input, textarea, select, or contenteditable): **Space** or **k** play/pause, **←**/**→** seek ±5s, **j**/**l** seek ±10s, **m** mute—aligned with the video player.
+
 - **Tag detail** — The tag page loads linked **galleries** and **audio libraries** in addition to videos (same idea as the performer detail page), with summary counts for each media type.
 
 ### Changed
