@@ -447,17 +447,26 @@ export async function updateAudioLibrary(
     if (body.organized !== undefined) updates.organized = body.organized;
     if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
-    // Studio
+    // Studio: find or create by name (same behavior as scene updates)
     if (body.studioName !== undefined) {
-      if (body.studioName) {
-        const [existing] = await tx
+      const trimmed = body.studioName?.trim() ?? "";
+      if (!trimmed) {
+        updates.studioId = null;
+      } else {
+        const [existingStudio] = await tx
           .select({ id: studios.id })
           .from(studios)
-          .where(ilike(studios.name, body.studioName.trim()))
+          .where(ilike(studios.name, trimmed))
           .limit(1);
-        updates.studioId = existing?.id ?? null;
-      } else {
-        updates.studioId = null;
+        if (existingStudio) {
+          updates.studioId = existingStudio.id;
+        } else {
+          const [created] = await tx
+            .insert(studios)
+            .values({ name: trimmed })
+            .returning({ id: studios.id });
+          updates.studioId = created!.id;
+        }
       }
     }
 

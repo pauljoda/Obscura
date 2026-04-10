@@ -1,36 +1,124 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Music, Play, ChevronLeft } from "lucide-react";
+import {
+  Music,
+  Play,
+  ChevronLeft,
+  Edit2,
+  Save,
+  XCircle,
+  Loader2,
+  CheckCircle2,
+  Calendar,
+  Building2,
+} from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
 import type { AudioLibraryDetailDto } from "@obscura/contracts";
 import { PerformersSection, TagsSection, InfoRow } from "../shared/metadata-panel";
 import { StarRatingPicker } from "../shared/star-rating-picker";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwEditToggle, NsfwGate } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
-import { toApiUrl } from "../../lib/api";
-import type { TagItem } from "../../lib/api";
+import {
+  toApiUrl,
+  fetchAudioLibraryDetail,
+  updateAudioLibrary,
+  fetchTags,
+  fetchPerformers,
+  fetchStudios,
+  type TagItem,
+  type PerformerItem,
+  type StudioItem,
+} from "../../lib/api";
 import { AudioPlayer } from "../audio/audio-player";
+import { ChipInput } from "../shared/chip-input";
+import { AudioLibraryStudioField } from "../audio/audio-library-studio-field";
+import { revalidateAudioLibraryCache } from "../../app/actions/revalidate-audio-library";
 
 interface AudioLibraryDetailClientProps {
   library: AudioLibraryDetailDto;
   allTags: TagItem[];
 }
 
+function populateFormState(data: AudioLibraryDetailDto) {
+  return {
+    title: data.title,
+    details: data.details ?? "",
+    date: data.date ?? "",
+    rating: data.rating,
+    isNsfw: data.isNsfw ?? false,
+    organized: data.organized,
+    studioName: data.studio?.name ?? "",
+    performerNames: data.performers.map((p) => p.name),
+    tagNames: data.tags.map((t) => t.name),
+  };
+}
+
 export function AudioLibraryDetailClient({
-  library,
-  allTags,
+  library: initialLibrary,
+  allTags: initialTagSuggestions,
 }: AudioLibraryDetailClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const [library, setLibrary] = useState(initialLibrary);
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<TagItem[]>(initialTagSuggestions);
+  const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
+  const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
+  const [suggestionsReady, setSuggestionsReady] = useState(false);
+
+  const [title, setTitle] = useState(initialLibrary.title);
+  const [details, setDetails] = useState(initialLibrary.details ?? "");
+  const [date, setDate] = useState(initialLibrary.date ?? "");
+  const [rating, setRating] = useState<number | null>(initialLibrary.rating);
+  const [isNsfw, setIsNsfw] = useState(initialLibrary.isNsfw ?? false);
+  const [organized, setOrganized] = useState(initialLibrary.organized);
+  const [studioName, setStudioName] = useState(initialLibrary.studio?.name ?? "");
+  const [performerNames, setPerformerNames] = useState<string[]>(() =>
+    initialLibrary.performers.map((p) => p.name),
+  );
+  const [tagNames, setTagNames] = useState<string[]>(() =>
+    initialLibrary.tags.map((t) => t.name),
+  );
+
+  useEffect(() => {
+    setLibrary(initialLibrary);
+  }, [initialLibrary.id, initialLibrary.updatedAt]);
+
   const coverUrl = toApiUrl(library.coverImagePath);
 
   const visibleTracks = library.tracks.filter(
     (t) => nsfwMode !== "off" || !t.isNsfw,
   );
+
+  const tagSuggestions = useMemo(
+    () => allTags.map((t) => ({ name: t.name })),
+    [allTags],
+  );
+  const performerSuggestions = useMemo(
+    () => allPerformers.map((p) => ({ name: p.name })),
+    [allPerformers],
+  );
+
+  const resetFormFromLibrary = useCallback((data: AudioLibraryDetailDto) => {
+    const f = populateFormState(data);
+    setTitle(f.title);
+    setDetails(f.details);
+    setDate(f.date);
+    setRating(f.rating);
+    setIsNsfw(f.isNsfw);
+    setOrganized(f.organized);
+    setStudioName(f.studioName);
+    setPerformerNames(f.performerNames);
+    setTagNames(f.tagNames);
+  }, []);
 
   const handleTrackChange = useCallback((trackId: string) => {
     setActiveTrackId(trackId);
@@ -42,9 +130,79 @@ export function AudioLibraryDetailClient({
     }
   }, [visibleTracks]);
 
+  const beginEdit = useCallback(async () => {
+    setEditError(null);
+    resetFormFromLibrary(library);
+    setEditMode(true);
+    setSuggestionsReady(false);
+    setLoadError(null);
+    try {
+      const [tagsRes, perfRes, studioRes] = await Promise.all([
+        fetchTags({ nsfw: nsfwMode }),
+        fetchPerformers({ nsfw: nsfwMode, limit: 500 }),
+        fetchStudios({ nsfw: nsfwMode }),
+      ]);
+      setAllTags(tagsRes.tags);
+      setAllPerformers(perfRes.performers);
+      setAllStudios(studioRes.studios);
+      setSuggestionsReady(true);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load suggestions");
+      setSuggestionsReady(true);
+    }
+  }, [library, nsfwMode, resetFormFromLibrary]);
+
+  const cancelEdit = useCallback(() => {
+    resetFormFromLibrary(library);
+    setEditMode(false);
+    setEditError(null);
+    setLoadError(null);
+  }, [library, resetFormFromLibrary]);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    setEditError(null);
+    try {
+      await updateAudioLibrary(library.id, {
+        title: title.trim(),
+        details: details.trim() || null,
+        date: date.trim() || null,
+        rating,
+        organized,
+        isNsfw,
+        studioName: studioName.trim() || null,
+        performerNames,
+        tagNames,
+      });
+      await revalidateAudioLibraryCache(library.id);
+      const trackLimit = Math.max(library.trackTotal, library.tracks.length, 100);
+      const next = await fetchAudioLibraryDetail(library.id, { trackLimit });
+      setLibrary(next);
+      resetFormFromLibrary(next);
+      setEditMode(false);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    library.id,
+    library.trackTotal,
+    library.tracks.length,
+    title,
+    details,
+    date,
+    rating,
+    organized,
+    isNsfw,
+    studioName,
+    performerNames,
+    tagNames,
+    resetFormFromLibrary,
+  ]);
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Back link */}
       <Link
         href="/audio"
         className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-accent transition-colors w-fit"
@@ -53,7 +211,6 @@ export function AudioLibraryDetailClient({
         Audio
       </Link>
 
-      {/* ─── Hero: cover + title | library info card ───────────── */}
       <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
         <div className="flex gap-6 items-start flex-1 min-w-0">
           <NsfwBlur
@@ -73,35 +230,138 @@ export function AudioLibraryDetailClient({
             )}
           </NsfwBlur>
           <div className="flex-1 min-w-0 py-1">
-            <p className="text-xs text-text-muted uppercase tracking-wider font-medium mb-1">Audio Library</p>
-            <h1 className="text-2xl font-heading font-semibold leading-tight">{library.title}</h1>
-            {library.details && (
-              <p className="text-sm text-text-muted mt-1.5 line-clamp-2">{library.details}</p>
-            )}
-            <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
-              <span>{library.trackCount} track{library.trackCount !== 1 ? "s" : ""}</span>
-              {library.totalDuration != null && library.totalDuration > 0 && (
-                <>
-                  <span className="text-text-disabled">&middot;</span>
-                  <span>{formatDuration(library.totalDuration)}</span>
-                </>
-              )}
-            </div>
-            {library.rating != null && (
-              <div className="mt-2">
-                <StarRatingPicker value={library.rating} readOnly />
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs text-text-muted uppercase tracking-wider font-medium mb-1">Audio Library</p>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {editMode ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                      className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+                      aria-label="Cancel editing"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving || !title.trim()}
+                      className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-surface-2 transition-colors disabled:opacity-50"
+                      aria-label="Save changes"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={beginEdit}
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                    aria-label="Edit library"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
+            </div>
+
+            {editMode ? (
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full mt-1 bg-surface-2 border border-border-subtle px-2 py-1.5 text-xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500"
+              />
+            ) : (
+              <h1 className="text-2xl font-heading font-semibold leading-tight">{library.title}</h1>
             )}
 
-            {visibleTracks.length > 0 && (
-              <button
-                type="button"
-                onClick={handlePlayAll}
-                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
-              >
-                <Play className="h-4 w-4" />
-                Play All
-              </button>
+            {editMode ? (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="text-kicker mb-1.5">Description</div>
+                  <textarea
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    rows={4}
+                    className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-500 resize-y min-h-[5rem]"
+                  />
+                </div>
+                <div>
+                  <div className="text-kicker mb-1.5 flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Date
+                  </div>
+                  <input
+                    type="date"
+                    value={date.length >= 10 ? date.slice(0, 10) : ""}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full max-w-[12rem] bg-surface-2 border border-border-subtle px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-500"
+                  />
+                </div>
+                <NsfwGate>
+                  <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
+                </NsfwGate>
+                <div>
+                  <div className="text-kicker mb-1.5">Rating</div>
+                  <StarRatingPicker value={rating} onChange={setRating} />
+                </div>
+                <AudioLibraryStudioField
+                  value={studioName}
+                  onChange={setStudioName}
+                  allStudios={allStudios}
+                  nsfwMode={nsfwMode}
+                  disabled={!suggestionsReady}
+                />
+                <button
+                  type="button"
+                  onClick={() => setOrganized((o) => !o)}
+                  className={cn(
+                    "flex items-center gap-2 w-full max-w-xs px-2 py-2 text-sm transition-colors border border-border-subtle",
+                    organized
+                      ? "bg-accent-950/40 text-accent-300 border-accent-800/50"
+                      : "text-text-muted hover:bg-surface-2",
+                  )}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {organized ? "Marked organized" : "Mark as organized"}
+                </button>
+                {loadError && (
+                  <p className="text-xs text-amber-400/90">{loadError} — you can still type new names.</p>
+                )}
+                {editError && <p className="text-xs text-red-400/90">{editError}</p>}
+              </div>
+            ) : (
+              <>
+                {library.details && (
+                  <p className="text-sm text-text-muted mt-1.5 line-clamp-3 whitespace-pre-wrap">{library.details}</p>
+                )}
+                <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
+                  <span>{library.trackCount} track{library.trackCount !== 1 ? "s" : ""}</span>
+                  {library.totalDuration != null && library.totalDuration > 0 && (
+                    <>
+                      <span className="text-text-disabled">&middot;</span>
+                      <span>{formatDuration(library.totalDuration)}</span>
+                    </>
+                  )}
+                </div>
+                {library.rating != null && (
+                  <div className="mt-2">
+                    <StarRatingPicker value={library.rating} readOnly />
+                  </div>
+                )}
+                {visibleTracks.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handlePlayAll}
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-accent-500 text-bg text-sm font-medium hover:bg-accent-400 transition-colors shadow-[0_0_16px_rgba(196,154,90,0.2)]"
+                  >
+                    <Play className="h-4 w-4" />
+                    Play All
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -113,6 +373,24 @@ export function AudioLibraryDetailClient({
             {library.totalDuration != null && library.totalDuration > 0 && (
               <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
             )}
+            {library.studio && (
+              <InfoRow icon={Building2} label="Studio" value={library.studio.name} />
+            )}
+            {library.date && !editMode && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-text-muted flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Date
+                </span>
+                <span className="text-mono-sm">{library.date.slice(0, 10)}</span>
+              </div>
+            )}
+            {!editMode && library.organized && (
+              <div className="flex items-center gap-2 text-xs text-accent-400/90 pt-0.5">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Organized
+              </div>
+            )}
             {library.folderPath && (
               <div className="text-xs text-text-disabled break-all pt-1 border-t border-border-subtle">
                 {library.folderPath}
@@ -122,13 +400,40 @@ export function AudioLibraryDetailClient({
         </div>
       </div>
 
-      {/* ─── Performers & tags ──────────────────────────────────── */}
       <div className="space-y-5">
-        <PerformersSection performers={library.performers} parentIsNsfw={library.isNsfw} />
-        <TagsSection tags={library.tags} />
+        {editMode ? (
+          <>
+            <section>
+              <h4 className="text-kicker mb-3">Artists</h4>
+              <ChipInput
+                values={performerNames}
+                onChange={setPerformerNames}
+                suggestions={performerSuggestions}
+                placeholder="Add artist…"
+              />
+            </section>
+            <section>
+              <h4 className="text-kicker mb-3">Tags</h4>
+              <ChipInput
+                values={tagNames}
+                onChange={setTagNames}
+                suggestions={tagSuggestions}
+                placeholder="Add tag…"
+              />
+            </section>
+          </>
+        ) : (
+          <>
+            <PerformersSection
+              performers={library.performers}
+              parentIsNsfw={library.isNsfw}
+              headingLabel="Artists"
+            />
+            <TagsSection tags={library.tags} />
+          </>
+        )}
       </div>
 
-      {/* ─── Sub-libraries ──────────────────────────────────────── */}
       {library.children.length > 0 && (
         <section>
           <h2 className="text-kicker mb-3">Sub-Libraries</h2>
@@ -163,14 +468,12 @@ export function AudioLibraryDetailClient({
         </section>
       )}
 
-      {/* ─── Player ───────────────────────────────────────────────── */}
       <AudioPlayer
         tracks={visibleTracks}
         activeTrackId={activeTrackId}
         onTrackChange={handleTrackChange}
       />
 
-      {/* ─── Track list ─────────────────────────────────────────── */}
       <section>
         <h2 className="text-kicker mb-3">Tracks</h2>
         {visibleTracks.length === 0 ? (
@@ -179,13 +482,11 @@ export function AudioLibraryDetailClient({
           </div>
         ) : (
           <div className="surface-well">
-            {/* Header row */}
             <div className="flex items-center gap-3 px-4 py-2 border-b border-border-subtle text-xs text-text-disabled uppercase tracking-wider">
               <span className="w-8 text-right">#</span>
               <span className="flex-1">Title</span>
               <span className="w-12 text-right">Time</span>
             </div>
-            {/* Track rows */}
             {visibleTracks.map((track, index) => {
               const isActive = track.id === activeTrackId;
 
@@ -201,7 +502,6 @@ export function AudioLibraryDetailClient({
                     index < visibleTracks.length - 1 && "border-b border-border-subtle",
                   )}
                 >
-                  {/* Track number / playing indicator */}
                   <span className="w-8 text-right text-xs font-mono flex-shrink-0">
                     {isActive ? (
                       <span className="inline-flex items-center justify-center">
@@ -221,7 +521,6 @@ export function AudioLibraryDetailClient({
                     )}
                   </span>
 
-                  {/* Title + artist */}
                   <div className="flex-1 min-w-0">
                     <p className={cn(
                       "text-sm truncate",
@@ -238,14 +537,12 @@ export function AudioLibraryDetailClient({
                     )}
                   </div>
 
-                  {/* Rating (if any) */}
                   {track.rating != null && (
                     <div className="flex-shrink-0 hidden sm:block">
                       <StarRatingPicker value={track.rating} readOnly />
                     </div>
                   )}
 
-                  {/* Duration */}
                   <span className="text-xs text-text-muted font-mono flex-shrink-0 w-12 text-right tabular-nums">
                     {track.duration ? formatDuration(track.duration) : "--:--"}
                   </span>

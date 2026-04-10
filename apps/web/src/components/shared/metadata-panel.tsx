@@ -63,21 +63,25 @@ export function MetadataPanel({
 export function PerformersSection({
   performers,
   parentIsNsfw = false,
+  headingLabel,
 }: {
   performers: PerformerEmbed[];
   parentIsNsfw?: boolean;
+  /** When set (e.g. "Artists" on audio libraries), overrides terminology.performers for the heading only. */
+  headingLabel?: string;
 }) {
   const terms = useTerms();
+  const heading = headingLabel ?? terms.performers;
 
   return (
     <section>
       <h4 className="text-kicker mb-3 flex items-center gap-2">
         <User className="h-3.5 w-3.5" />
-        {terms.performers}
+        {heading}
       </h4>
       {performers.length === 0 ? (
         <p className="text-text-disabled text-sm">
-          No {terms.performers.toLowerCase()} tagged
+          No {heading.toLowerCase()} tagged
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">

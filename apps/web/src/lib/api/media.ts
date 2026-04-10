@@ -1,5 +1,7 @@
 import type {
   EntityKind,
+  AudioLibraryDetailDto,
+  AudioLibraryPatchDto,
   GalleryDetailDto,
   GalleryListItemDto,
   GalleryImagesPageDto,
@@ -301,6 +303,27 @@ export async function updateImage(
   },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/images/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchAudioLibraryDetail(
+  id: string,
+  params?: { trackLimit?: number; trackOffset?: number },
+): Promise<AudioLibraryDetailDto> {
+  const qs = buildQueryString({
+    trackLimit: params?.trackLimit,
+    trackOffset: params?.trackOffset,
+  });
+  return fetchApi(`/audio-libraries/${id}${qs}`);
+}
+
+export async function updateAudioLibrary(
+  id: string,
+  data: AudioLibraryPatchDto,
+): Promise<{ ok: true }> {
+  return fetchApi(`/audio-libraries/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });

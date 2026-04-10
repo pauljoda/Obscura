@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-09
+
+### Added
+
+- **Audio library editing** — Detail page supports inline edit (pencil control): title, description, date, NSFW flag, rating, studio, organized state, artists (performer links), and tags. Saves via existing `PATCH /audio-libraries/:id`, then refetches the library and revalidates cache. Performers are labeled **Artists** on this page only. Added `AudioLibraryPatchDto` in contracts and client helpers `fetchAudioLibraryDetail` / `updateAudioLibrary`.
+
+### Fixed
+
+- **Audio library studio on save** — `PATCH /audio-libraries/:id` now finds or creates a studio by name (aligned with scene updates) instead of dropping `studioId` when the name did not match an existing row.
+
 ## [0.5.9] - 2026-04-09
 
 ### Changed
