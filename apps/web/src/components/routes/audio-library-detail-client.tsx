@@ -680,7 +680,7 @@ export function AudioLibraryDetailClient({
     <div
       className={cn(
         "fixed z-[45] max-w-[100vw] pointer-events-none",
-        "bottom-14 left-0 right-0 px-2 pt-1",
+        "bottom-[calc(3.5rem+6px)] left-0 right-0 px-2 pt-1",
         "md:bottom-4 md:px-5",
         sidebarCollapsed ? "md:left-14" : "md:left-60",
       )}

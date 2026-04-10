@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Audio library (mobile)** — The fixed audio player sits slightly above the bottom tab bar (`6px` gap) instead of flush against it.
+
 - **Markers** — Scene and audio-track markers no longer store or expose a “primary tag.” The marker form and list UI only edit title and time range; `primary_tag_id` was removed from `scene_markers` and `audio_track_markers` (run `apps/api/sql/0007_drop_marker_primary_tag.sql` on existing PostgreSQL databases, or `pnpm --filter @obscura/api db:push` in dev). Create/update marker API bodies no longer accept `primaryTagName`; responses omit `primaryTag` on marker objects.
 
 - **Audio player** — Transport controls (shuffle, skip, play/pause, repeat) are centered in the bar; volume stays right-aligned.
