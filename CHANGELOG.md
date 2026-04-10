@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.17] - 2026-04-10
+
+### Fixed
+
+- **`<Checkbox>` not showing the checked state in the scenes list view** — The primitive rendered the checked/unchecked visual through Tailwind's `peer-checked:` sibling selectors plus an arbitrary-variant chain (`peer-checked:[&>svg]:opacity-100`), which is fragile: the combinator occasionally escapes Tailwind v4's class scanner when the component ships from a workspace package, and the CSS `:checked` state can desync from the controlled React `checked` prop for a frame when the checkbox is nested in interactive wrappers like the `<Link>` scene list row. Reworked the primitive to drive the box background, border, glow, and check-mark visibility directly from the `checked` prop via `cva` state variants. Behavior is otherwise unchanged — same DOM shape, same click surface, same indeterminate support — but the selected state now renders reliably the instant the prop flips.
+
 ## [0.8.16] - 2026-04-10
 
 ### Fixed
