@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-04-10
+
+### Changed
+
+- **`.vscode/tasks.json`** — Collapsed to a single `Obscura: Full Stack` task that chains Postgres startup, drizzle schema push, and `pnpm dev`. Removed the individual infra / stop / db / dev tasks; run those manually from the terminal when needed.
+
 ## [0.8.1] - 2026-04-10
 
 ### Fixed
