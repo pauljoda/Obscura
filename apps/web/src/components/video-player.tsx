@@ -33,6 +33,7 @@ import {
   isDocumentFullscreen,
 } from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
+import { AssSubtitleOverlay } from "./ass-subtitle-overlay";
 import { fetchSceneSubtitleCues } from "../lib/api/media";
 import type { SceneSubtitleTrackDto, SubtitleCueDto } from "../lib/api/types";
 import {
@@ -43,6 +44,19 @@ import {
   writeLocalSubtitleAppearance,
 } from "../lib/subtitle-appearance";
 import { SubtitleSettingsPanel } from "./subtitle-settings-panel";
+
+function isAssTrackActive(
+  activeSubtitleId: string | null | undefined,
+  tracks: readonly SceneSubtitleTrackDto[],
+): boolean {
+  if (!activeSubtitleId) return false;
+  const track = tracks.find((t) => t.id === activeSubtitleId);
+  if (!track) return false;
+  return (
+    (track.sourceFormat === "ass" || track.sourceFormat === "ssa") &&
+    !!track.sourceUrl
+  );
+}
 
 interface Marker {
   id: string;
@@ -1229,9 +1243,32 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         </div>
       )}
 
+      {/* Advanced SubStation rendering — when the active track was ingested
+          as .ass/.ssa we hand the original file to libass (via JASSUB) so
+          positioning, fonts, colors, and karaoke render with full fidelity.
+          The plain-text caption box below is suppressed in that case. */}
+      {(() => {
+        if (!activeSubtitleId) return null;
+        const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
+        if (!track) return null;
+        if (track.sourceFormat !== "ass" && track.sourceFormat !== "ssa") {
+          return null;
+        }
+        if (!track.sourceUrl) return null;
+        return (
+          <AssSubtitleOverlay
+            key={track.id}
+            videoRef={videoRef}
+            sceneId={track.sceneId}
+            trackId={track.id}
+            opacity={appearance.opacity}
+          />
+        );
+      })()}
+
       {/* Caption overlay — deliberately NO z-index so the controls
           (which come later in DOM order) paint on top when visible. */}
-      {activeCueText && (
+      {activeCueText && !isAssTrackActive(activeSubtitleId, subtitleTracks) && (
         <div
           className="pointer-events-none absolute inset-x-0 flex justify-center px-4"
           style={{

@@ -20,6 +20,9 @@ coverage
 apps/web/public/media/scenes/
 apps/web/public/media/performers/
 
+# JASSUB worker/wasm assets copied from node_modules by predev/prebuild
+apps/web/public/jassub/
+
 # OS
 .DS_Store
 Thumbs.db

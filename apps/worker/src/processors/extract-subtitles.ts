@@ -103,6 +103,16 @@ export async function processExtractSubtitles(job: Job) {
       `embedded-${language}-${streamIndex}.vtt`
     );
 
+    // For ass/ssa streams, also copy the raw codec bytes out so the player
+    // can render them with full libass fidelity through JASSUB.
+    const isAss = codec === "ass" || codec === "ssa";
+    const sourceOutPath = isAss
+      ? path.join(outDir, `embedded-${language}-${streamIndex}.ass`)
+      : null;
+    const sourceFormat: "vtt" | "ass" | "ssa" = isAss
+      ? (codec as "ass" | "ssa")
+      : "vtt";
+
     try {
       await runProcess("ffmpeg", [
         "-y",
@@ -123,6 +133,29 @@ export async function processExtractSubtitles(job: Job) {
       continue;
     }
 
+    if (sourceOutPath) {
+      try {
+        await runProcess("ffmpeg", [
+          "-y",
+          "-v",
+          "error",
+          "-i",
+          scene.filePath,
+          "-map",
+          `0:${streamIndex}`,
+          "-c:s",
+          "copy",
+          sourceOutPath,
+        ]);
+      } catch (err) {
+        console.warn(
+          `[extract-subtitles] raw ASS extract failed on stream ${streamIndex} of scene ${scene.id}: ${(err as Error).message}`
+        );
+        // Non-fatal — we still have the VTT fallback.
+        await unlink(sourceOutPath).catch(() => undefined);
+      }
+    }
+
     // Verify the output file has content.
     try {
       const info = await stat(outPath);
@@ -138,7 +171,11 @@ export async function processExtractSubtitles(job: Job) {
     // keep (sceneId, language, source) unique). We keep just one per language
     // per source — the latest extraction wins.
     const existing = await db
-      .select({ id: sceneSubtitles.id, storagePath: sceneSubtitles.storagePath })
+      .select({
+        id: sceneSubtitles.id,
+        storagePath: sceneSubtitles.storagePath,
+        sourcePath: sceneSubtitles.sourcePath,
+      })
       .from(sceneSubtitles)
       .where(
         and(
@@ -154,9 +191,18 @@ export async function processExtractSubtitles(job: Job) {
       if (row.storagePath && row.storagePath !== outPath) {
         await unlink(row.storagePath).catch(() => undefined);
       }
+      if (row.sourcePath && row.sourcePath !== sourceOutPath) {
+        await unlink(row.sourcePath).catch(() => undefined);
+      }
       await db
         .update(sceneSubtitles)
-        .set({ storagePath: outPath, label, format: "vtt" })
+        .set({
+          storagePath: outPath,
+          label,
+          format: "vtt",
+          sourceFormat,
+          sourcePath: sourceOutPath,
+        })
         .where(eq(sceneSubtitles.id, row.id));
     } else {
       await db.insert(sceneSubtitles).values({
@@ -166,6 +212,8 @@ export async function processExtractSubtitles(job: Job) {
         format: "vtt",
         source: "embedded",
         storagePath: outPath,
+        sourceFormat,
+        sourcePath: sourceOutPath,
         isDefault: false,
       });
     }

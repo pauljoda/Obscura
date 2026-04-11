@@ -41,10 +41,18 @@ export async function ingestSidecarSubtitlesForScene(
       continue;
     }
 
+    const basename = sanitize(path.basename(sidecar.path));
     const outPath = path.join(
       outDir,
-      `sidecar-${sidecar.language}-${sanitize(path.basename(sidecar.path))}.vtt`
+      `sidecar-${sidecar.language}-${basename}.vtt`
     );
+    const preservesRaw = sidecar.format === "ass" || sidecar.format === "ssa";
+    const sourceOutPath = preservesRaw
+      ? path.join(
+          outDir,
+          `sidecar-${sidecar.language}-${basename}.${sidecar.format}`
+        )
+      : null;
 
     try {
       if (sidecar.format === "vtt") {
@@ -53,6 +61,11 @@ export async function ingestSidecarSubtitlesForScene(
         const content = await readFile(sidecar.path, "utf8");
         const vtt = normalizeSubtitleToVtt(content, sidecar.format);
         await writeFile(outPath, vtt, "utf8");
+        if (sourceOutPath) {
+          // Preserve the raw .ass/.ssa file so the player can render it with
+          // full libass fidelity instead of falling back to stripped VTT.
+          await writeFile(sourceOutPath, content, "utf8");
+        }
       }
     } catch (err) {
       console.warn(
@@ -63,7 +76,11 @@ export async function ingestSidecarSubtitlesForScene(
 
     // Upsert: one row per (sceneId, language, source="sidecar").
     const existing = await db
-      .select({ id: sceneSubtitles.id, storagePath: sceneSubtitles.storagePath })
+      .select({
+        id: sceneSubtitles.id,
+        storagePath: sceneSubtitles.storagePath,
+        sourcePath: sceneSubtitles.sourcePath,
+      })
       .from(sceneSubtitles)
       .where(
         and(
@@ -79,9 +96,18 @@ export async function ingestSidecarSubtitlesForScene(
       if (row.storagePath && row.storagePath !== outPath) {
         await unlink(row.storagePath).catch(() => undefined);
       }
+      if (row.sourcePath && row.sourcePath !== sourceOutPath) {
+        await unlink(row.sourcePath).catch(() => undefined);
+      }
       await db
         .update(sceneSubtitles)
-        .set({ storagePath: outPath, label: sidecar.label, format: "vtt" })
+        .set({
+          storagePath: outPath,
+          label: sidecar.label,
+          format: "vtt",
+          sourceFormat: sidecar.format,
+          sourcePath: sourceOutPath,
+        })
         .where(eq(sceneSubtitles.id, row.id));
     } else {
       await db.insert(sceneSubtitles).values({
@@ -91,6 +117,8 @@ export async function ingestSidecarSubtitlesForScene(
         format: "vtt",
         source: "sidecar",
         storagePath: outPath,
+        sourceFormat: sidecar.format,
+        sourcePath: sourceOutPath,
         isDefault: false,
       });
     }

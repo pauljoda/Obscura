@@ -410,6 +410,11 @@ export const sceneSubtitles = pgTable(
     format: text("format").notNull(),
     source: text("source").notNull(),
     storagePath: text("storage_path").notNull(),
+    // Original on-disk format ("vtt" | "srt" | "ass" | "ssa"). When "ass"/"ssa"
+    // we also keep the raw file at `sourcePath` so the player can render it
+    // with full libass fidelity.
+    sourceFormat: text("source_format").notNull().default("vtt"),
+    sourcePath: text("source_path"),
     isDefault: boolean("is_default").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

@@ -17,6 +17,7 @@ export const apiRoutes = {
   sceneUpload: "/scenes/upload",
   sceneSubtitles: "/scenes/:id/subtitles",
   sceneSubtitleDetail: "/scenes/:id/subtitles/:trackId",
+  sceneSubtitleSource: "/scenes/:id/subtitles/:trackId/source",
   sceneSubtitleCues: "/scenes/:id/subtitles/:trackId/cues",
   sceneSubtitleExtract: "/scenes/:id/subtitles/extract",
   galleries: "/galleries",
@@ -206,6 +207,15 @@ export const queueDefinitions = [
 
 export type SubtitleSource = "sidecar" | "upload" | "embedded";
 
+/**
+ * The original on-disk format. `vtt` means the server only has a WebVTT
+ * representation. `ass`/`ssa` means the original Advanced SubStation file is
+ * preserved alongside the VTT fallback, and the player can render it with
+ * full libass fidelity (fonts, positioning, colors, karaoke, animations) via
+ * the `sourceUrl`.
+ */
+export type SubtitleSourceFormat = "vtt" | "srt" | "ass" | "ssa";
+
 export interface SceneSubtitleTrackDto {
   id: string;
   sceneId: string;
@@ -213,8 +223,11 @@ export interface SceneSubtitleTrackDto {
   label: string | null;
   format: "vtt";
   source: SubtitleSource;
+  sourceFormat: SubtitleSourceFormat;
   isDefault: boolean;
   url: string;
+  /** Present when the server has preserved the original file (e.g. .ass). */
+  sourceUrl: string | null;
   createdAt: string;
 }
 

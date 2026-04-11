@@ -8,7 +8,10 @@
         "name": "next"
       }
     ],
-    "isolatedModules": true
+    "isolatedModules": true,
+    // JASSUB pulls in `abslink`, whose declaration files import `./foo.ts`.
+    // With `noEmit: true` (from tsconfig.base) it's safe to allow this.
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",

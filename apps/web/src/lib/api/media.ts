@@ -100,6 +100,22 @@ export async function fetchSceneSubtitleCues(
   return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}/cues`);
 }
 
+/**
+ * Fetch the raw source file (e.g. .ass) for a subtitle track. Used by the ASS
+ * renderer to hand the original file to libass/JASSUB with all styling intact.
+ */
+export async function fetchSceneSubtitleSource(
+  sceneId: string,
+  trackId: string,
+): Promise<string> {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const res = await fetch(`${base}/scenes/${sceneId}/subtitles/${trackId}/source`);
+  if (!res.ok) {
+    throw new Error(`Failed to load subtitle source: ${res.status}`);
+  }
+  return res.text();
+}
+
 export async function uploadSceneSubtitle(
   sceneId: string,
   file: File,

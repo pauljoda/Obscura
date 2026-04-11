@@ -3,7 +3,9 @@
   "version": "0.16.1-dev",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-jassub-assets.mjs",
     "dev": "next dev --port 8008",
+    "prebuild": "node scripts/copy-jassub-assets.mjs",
     "build": "next build",
     "start": "next start --port 8008",
     "lint": "tsc --project tsconfig.json --noEmit",
@@ -13,6 +15,7 @@
     "@obscura/contracts": "workspace:*",
     "@obscura/ui": "workspace:*",
     "hls.js": "^1.6.15",
+    "jassub": "2.4.2",
     "lucide-react": "^1.7.0",
     "next": "^15.0.0",
     "react": "^19.0.0",

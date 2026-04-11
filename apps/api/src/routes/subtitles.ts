@@ -77,6 +77,29 @@ export async function subtitlesRoutes(app: FastifyInstance) {
     return vtt;
   });
 
+  // ─── GET /scenes/:id/subtitles/:trackId/source ────────────────
+  // Serves the original source file (e.g. .ass) so the web player can
+  // render it with full libass fidelity via JASSUB. 404s for tracks that
+  // were ingested directly as VTT/SRT — clients should fall back to the
+  // parsed cue pipeline in that case.
+  app.get(
+    "/scenes/:id/subtitles/:trackId/source",
+    async (request, reply) => {
+      const { id, trackId } = request.params as { id: string; trackId: string };
+      const { content, format } = await subtitlesService.readSubtitleSource(
+        id,
+        trackId,
+      );
+      const mime =
+        format === "ass" || format === "ssa"
+          ? "text/x-ssa; charset=utf-8"
+          : "text/plain; charset=utf-8";
+      reply.header("content-type", mime);
+      reply.header("cache-control", "private, max-age=300");
+      return content;
+    },
+  );
+
   // ─── GET /scenes/:id/subtitles/:trackId/cues ──────────────────
   // Parsed cue array for the transcript panel.
   app.get("/scenes/:id/subtitles/:trackId/cues", async (request) => {
