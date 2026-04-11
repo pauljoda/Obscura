@@ -25,6 +25,10 @@ interface FilmStripProps {
   markers?: FilmStripMarker[];
   /** True while user scrubs via pointer (any device) or wheel (desktop); parent may hide player chrome. */
   onStripInteractionChange?: (active: boolean) => void;
+  /** Seconds to add to `video.currentTime` to convert local player time
+   *  into scene time. Non-zero after the player has restarted its HLS
+   *  encode from a scrub offset. Defaults to 0 for direct playback. */
+  timeOffset?: number;
 }
 
 const STRIP_HEIGHT = 52;
@@ -40,7 +44,10 @@ export function FilmStrip({
   onSeek,
   markers = [],
   onStripInteractionChange,
+  timeOffset = 0,
 }: FilmStripProps) {
+  const timeOffsetRef = useRef(timeOffset);
+  timeOffsetRef.current = timeOffset;
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<HTMLDivElement>(null);
@@ -110,7 +117,10 @@ export function FilmStrip({
     [frames, frameWidth]
   );
 
-  // rAF loop: read video.currentTime every frame and set transform directly
+  // rAF loop: read video.currentTime every frame and set transform directly.
+  // Converts local player time to scene time via the current offset so the
+  // playhead tracks the scene timeline when the HLS encode has been
+  // restarted from a scrub target.
   useEffect(() => {
     if (!frames || frames.length === 0) return;
 
@@ -121,7 +131,7 @@ export function FilmStrip({
         return;
       }
 
-      applyPosition(video.currentTime);
+      applyPosition(video.currentTime + timeOffsetRef.current);
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -147,8 +157,8 @@ export function FilmStrip({
       const pixelsPerSecond = trackWidth / duration;
       const timeDelta = raw / pixelsPerSecond;
       const video = videoRef.current;
-      const current = video?.currentTime ?? 0;
-      const newTime = Math.max(0, Math.min(duration, current + timeDelta));
+      const currentScene = (video?.currentTime ?? 0) + timeOffsetRef.current;
+      const newTime = Math.max(0, Math.min(duration, currentScene + timeDelta));
       applyPosition(newTime);
       onSeek(newTime);
       notifyWheelScrubActivity();
@@ -183,7 +193,8 @@ export function FilmStrip({
       interactionCbRef.current?.(true);
       draggingRef.current = true;
       dragStartXRef.current = e.clientX;
-      dragStartTimeRef.current = videoRef.current?.currentTime ?? 0;
+      dragStartTimeRef.current =
+        (videoRef.current?.currentTime ?? 0) + timeOffsetRef.current;
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     },
     [frames, videoRef, clearWheelIdleTimer]
@@ -214,8 +225,9 @@ export function FilmStrip({
   const jumpFrame = useCallback(
     (direction: -1 | 1) => {
       if (!frames || frames.length === 0) return;
-      const time = videoRef.current?.currentTime ?? 0;
-      const currentIndex = findFrameAtTime(frames, time);
+      const sceneTime =
+        (videoRef.current?.currentTime ?? 0) + timeOffsetRef.current;
+      const currentIndex = findFrameAtTime(frames, sceneTime);
       const nextIndex = Math.max(
         0,
         Math.min(frames.length - 1, currentIndex + direction)

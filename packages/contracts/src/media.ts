@@ -194,6 +194,10 @@ export interface HlsStatus {
   state: HlsPackageState;
   renditions: HlsRendition[];
   error?: string;
+  /** Seconds into the source where the current encode begins. 0 for a
+   *  full-length encode, >0 after a scrub-triggered restart. The client
+   *  maps local player time back to scene time by adding this offset. */
+  startSec?: number;
 }
 
 export const HLS_RETRY_AFTER_SECONDS = 2;
