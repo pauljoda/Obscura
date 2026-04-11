@@ -62,10 +62,11 @@ export async function processImageThumbnail(job: Job) {
       ffmpegArgs.push("-ss", "1");
     }
     ffmpegArgs.push("-i", inputPath);
-    if (isVideo) {
-      ffmpegArgs.push("-frames:v", "1");
-    }
-    ffmpegArgs.push("-vf", "scale=640:-1", "-q:v", "3", thumbPath);
+    // Always cap output to a single frame — animated formats (GIF, APNG,
+    // multi-frame WebP/TIFF) otherwise trip the image2 muxer's
+    // "Cannot write more than one file with the same name" error.
+    ffmpegArgs.push("-frames:v", "1");
+    ffmpegArgs.push("-vf", "scale=640:-1", "-q:v", "3", "-update", "1", thumbPath);
 
     await runProcess("ffmpeg", ffmpegArgs);
 

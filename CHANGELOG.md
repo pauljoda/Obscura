@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Image thumbnail generation no longer fails on animated images during gallery scans.** ffmpeg's image2 muxer was rejecting multi-frame inputs (animated GIF/APNG, multi-frame WebP/TIFF) with `Cannot write more than one file with the same name. Are you missing the -update option or a sequence pattern?`. The worker now always passes `-frames:v 1 -update 1` when writing the JPEG thumbnail, so the first frame is extracted regardless of source format.
 - **Legacy push-managed installs no longer 500 on scene detail / pHash / settings pages after upgrade.** The startup migrator's legacy-install bridge seeds every drizzle journal entry as "already applied" so the migrator treats the existing schema as the baseline — but that meant any schema added between push's last sync and the bridge never actually landed (missing `scene_subtitles.source_format`/`source_path`, `library_settings.generate_phash`, and the `fingerprint_submissions` table, depending on when you upgraded). A new `reconcileSchema` step runs after the migrator on every boot and idempotently re-applies those deltas, so broken legacy installs self-heal the next time they redeploy — no manual SQL required.
 
 ### Docs
