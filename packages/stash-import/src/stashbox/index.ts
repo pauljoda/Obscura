@@ -1,4 +1,5 @@
 export { StashBoxClient, StashBoxError } from "./client";
+export type { FingerprintSubmissionInput } from "./client";
 export {
   normalizeStashBoxScene,
   normalizeStashBoxPerformer,

@@ -6,12 +6,24 @@
  */
 
 import type {
+  FingerprintAlgorithm,
   StashBoxFingerprint,
   StashBoxScene,
   StashBoxPerformer,
   StashBoxStudio,
   StashBoxTag,
 } from "./types";
+
+export interface FingerprintSubmissionInput {
+  scene_id: string;
+  fingerprint: {
+    hash: string;
+    algorithm: FingerprintAlgorithm;
+    /** Duration in integer seconds. Stash refuses to submit when duration == 0. */
+    duration: number;
+  };
+  unmatch?: boolean;
+}
 
 // ─── GraphQL Fragments ─────────────────────────────────────────────
 
@@ -124,6 +136,21 @@ query FindScenesBySceneFingerprints($fingerprints: [[FingerprintQueryInput!]!]!)
   }
 }
 ${ALL_FRAGMENTS}`;
+
+const FIND_SCENE_BY_ID = `
+query FindSceneByID($id: ID!) {
+  findScene(id: $id) {
+    ...SceneFragment
+  }
+}
+${ALL_FRAGMENTS}`;
+
+// Mutation for contributing a single fingerprint (md5/oshash/phash) to a
+// StashBox-protocol server. Input shape matches upstream stash-box schema.
+const SUBMIT_FINGERPRINT = `
+mutation SubmitFingerprint($input: FingerprintSubmission!) {
+  submitFingerprint(input: $input)
+}`;
 
 const SEARCH_SCENE = `
 query SearchScene($term: String!) {
@@ -273,6 +300,29 @@ export class StashBoxClient {
       { term },
     );
     return data.searchScene ?? [];
+  }
+
+  /** Look up a scene by remote StashBox ID. Null when deleted upstream. */
+  async findSceneById(id: string): Promise<StashBoxScene | null> {
+    const data = await this.query<{ findScene: StashBoxScene | null }>(
+      FIND_SCENE_BY_ID,
+      { id },
+    );
+    return data.findScene ?? null;
+  }
+
+  /**
+   * Submit a single fingerprint (md5/oshash/phash) to associate it with a
+   * remote StashBox scene. Mirrors Stash's SubmitFingerprints loop: one
+   * mutation per (scene, algorithm) pair, serialized through the token bucket.
+   * Returns the server's boolean ack.
+   */
+  async submitFingerprint(input: FingerprintSubmissionInput): Promise<boolean> {
+    const data = await this.query<{ submitFingerprint: boolean }>(
+      SUBMIT_FINGERPRINT,
+      { input },
+    );
+    return data.submitFingerprint === true;
   }
 
   // ── Performer Queries ──────────────────────────────────────────

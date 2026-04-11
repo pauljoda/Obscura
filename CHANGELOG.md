@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `StashBoxClient.findSceneById` (`FindSceneByID` query) and `StashBoxClient.submitFingerprint` (`SubmitFingerprint` mutation) in `@obscura/stash-import`, matching Stash's upstream schema shape. These are the building blocks for fetching a scene by its known remote ID and for contributing a single fingerprint back to a StashBox-protocol server.
+
+### Changed
+
+- **StashBox clients are now cached per endpoint in a process-wide map.** Previously each route handler `new`'d up a fresh `StashBoxClient`, so the internal 240-rpm token bucket was effectively reset on every request — bulk operations like identify-all could blow right past it. A new `apps/api/src/lib/stashbox-clients.ts` module hands out a cached instance keyed by endpoint UUID, invalidated on PATCH/DELETE so credential changes take effect immediately. Rate limiting now actually holds across concurrent requests, which is load-bearing for the upcoming fingerprint contribution bulk-submit flow.
+
 - New `fingerprint_submissions` table tracking per-(scene, endpoint, algorithm, hash) contribution history to StashBox-protocol servers. Powers the pHashes tab's "already submitted" indicators and prevents accidentally re-submitting identical hashes.
 
 ### Changed

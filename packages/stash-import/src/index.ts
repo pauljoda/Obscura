@@ -56,6 +56,7 @@ export type {
   StashBoxStudio,
   StashBoxTag,
   FingerprintAlgorithm,
+  FingerprintSubmissionInput,
 } from "./stashbox";
 
 // Legacy types (kept for compatibility)

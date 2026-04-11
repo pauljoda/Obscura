@@ -10,6 +10,10 @@ import {
   hasUsableNormalizedSceneResult,
   type StashBoxFingerprint,
 } from "@obscura/stash-import";
+import {
+  getStashBoxClient,
+  invalidateStashBoxClient,
+} from "../lib/stashbox-clients";
 
 const {
   stashBoxEndpoints,
@@ -25,10 +29,6 @@ const {
 function maskApiKey(key: string): string {
   if (key.length <= 4) return "••••";
   return "••••" + key.slice(-4);
-}
-
-function buildClient(endpoint: { endpoint: string; apiKey: string }): StashBoxClient {
-  return new StashBoxClient(endpoint.endpoint, endpoint.apiKey);
 }
 
 // ─── Routes ────────────────────────────────────────────────────────
@@ -139,6 +139,10 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .set(updates)
       .where(eq(stashBoxEndpoints.id, id));
 
+    // URL or API key may have changed — drop any cached client so the next
+    // request rebuilds with current credentials (and a fresh rate-limit bucket).
+    invalidateStashBoxClient(id);
+
     const [updated] = await db
       .select()
       .from(stashBoxEndpoints)
@@ -167,6 +171,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
     if (!deleted) {
       return reply.code(404).send({ error: "StashBox endpoint not found" });
     }
+    invalidateStashBoxClient(id);
     return { ok: true };
   });
 
@@ -184,7 +189,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "StashBox endpoint not found" });
     }
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
     const result = await client.testConnection();
     return result;
   });
@@ -230,7 +235,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Video not found" });
     }
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
     const triedMethods: string[] = [];
 
     // Priority 1: Fingerprint lookup
@@ -365,7 +370,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Actor not found" });
     }
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
 
     try {
       const results = await client.searchPerformers(performer.name);
@@ -406,7 +411,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
 
     if (!ep) return reply.code(404).send({ error: "StashBox endpoint not found" });
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
     try {
       const studio = await client.findStudio(body.query);
       return { studio };
@@ -435,7 +440,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
 
     if (!ep) return reply.code(404).send({ error: "StashBox endpoint not found" });
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
     try {
       const tags = await client.queryTags(body.query);
       return { tags };
@@ -464,7 +469,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
 
     if (!ep) return reply.code(404).send({ error: "StashBox endpoint not found" });
 
-    const client = buildClient(ep);
+    const client = getStashBoxClient(ep);
     try {
       const performers = await client.searchPerformers(body.query);
       const normalized = performers.map((p) => normalizeStashBoxPerformer(p));
