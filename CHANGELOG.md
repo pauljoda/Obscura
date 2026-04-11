@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-04-11
 ### Changed
 
 - **Reworked the build and release process.** `latest` now always resolves to the most recent tagged release instead of the tip of `main`, so users pinning `:latest` only ever move forward when a real version is cut. Every push to `main` now builds a `:dev` image (plus `:sha-<short>` and `:<version>-<short>` per-commit tags) via the new `publish-dev.yml` workflow, leaving `:latest` alone. Releases are cut server-side by a new `release.yml` workflow: pick a bump (`patch` / `minor` / `major`) or an explicit version in the Actions UI and it bumps every `package.json`, promotes `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, commits + tags, pushes a post-release `X.Y.(Z+1)-dev` marker back to `main`, builds the unified image with `RELEASE_STRICT=1`, publishes it as `latest` / `X.Y.Z` / `X.Y` / `X`, and creates a GitHub Release whose body is the extracted changelog section. Versions no longer bump on every commit — between releases the repo carries a `-dev` pre-release marker (starting at `0.14.0-dev`). `pnpm release:check` now accepts `-dev` versions in non-release mode and still enforces a matching CHANGELOG heading when called with `--release` (the Dockerfile gates this on a new `RELEASE_STRICT` build arg). Added `scripts/release/cut.mjs` which owns all version-bumping and changelog-rewriting logic and is callable locally for dry runs (`pnpm release:cut --phase release --bump minor --dry-run`).
