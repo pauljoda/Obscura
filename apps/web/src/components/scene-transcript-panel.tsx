@@ -122,8 +122,10 @@ export function SceneTranscriptPanel({
   }, [cues, currentTime]);
 
   // Auto-scroll the active cue into view WITHIN the list container only —
-  // never the page viewport. We compute the desired scrollTop manually so
-  // there is zero chance of scrollIntoView bubbling up to the window.
+  // never the page viewport. We use getBoundingClientRect() rather than
+  // offsetTop so this works regardless of which ancestor is the
+  // offsetParent. Target: the active cue sits vertically centered in the
+  // list's visible area.
   useEffect(() => {
     if (currentIndex < 0) return;
     const sinceLastUserScroll = Date.now() - lastUserScrollRef.current;
@@ -135,23 +137,34 @@ export function SceneTranscriptPanel({
     );
     if (!el) return;
 
-    // Target scrollTop that centers the cue inside the list's visible area.
-    const target =
-      el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
-    const clamped = Math.max(
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    // Distance from the top of the container's visible area to the top of
+    // the cue. Positive = cue is below the top; negative = above.
+    const elOffsetFromVisibleTop = elRect.top - containerRect.top;
+    // Where the cue *should* sit: visually centered.
+    const desiredOffset = container.clientHeight / 2 - el.clientHeight / 2;
+    // How far the container needs to scroll to put it there.
+    const delta = elOffsetFromVisibleTop - desiredOffset;
+
+    if (Math.abs(delta) < 2) return;
+
+    const nextScrollTop = Math.max(
       0,
-      Math.min(target, container.scrollHeight - container.clientHeight),
+      Math.min(
+        container.scrollTop + delta,
+        container.scrollHeight - container.clientHeight,
+      ),
     );
-    if (Math.abs(container.scrollTop - clamped) < 2) return;
 
     // Flag the next scroll event as programmatic so handleScroll doesn't
     // treat it as a user action and trip the 3-second cooldown.
     isAutoScrollingRef.current = true;
-    container.scrollTo({ top: clamped, behavior: "smooth" });
+    container.scrollTo({ top: nextScrollTop, behavior: "smooth" });
     // Release the flag a tick later — smooth scroll fires multiple events.
     window.setTimeout(() => {
       isAutoScrollingRef.current = false;
-    }, 400);
+    }, 500);
   }, [currentIndex]);
 
   const handleScroll = useCallback(() => {

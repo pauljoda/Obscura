@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-04-10
+
+### Fixed
+
+- **Transcript auto-scroll now truly centers the active cue.** The previous fix used `el.offsetTop` relative to the list container, which is only correct when the container is the element's `offsetParent` — it wasn't, so the active line landed at an arbitrary position inside the visible area instead of the middle. Switched to `getBoundingClientRect()` delta math so the active cue is reliably centered regardless of positioning ancestry.
+
 ## [0.10.0] - 2026-04-10
 
 ### Added
