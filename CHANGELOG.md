@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Audio stat cards now respect the NSFW mode.** The Libraries / Total Tracks / Total Duration / This Week cards on the Audio index are hydrated from `fetchAudioLibraryStats(nsfwMode)` — the server page reads the `obscura-nsfw-mode` cookie and passes it through, and the client also refetches stats whenever the NSFW mode toggles, matching the Scenes behavior. In SFW mode the totals now exclude NSFW-flagged libraries and tracks instead of still counting hidden content. Added a client-side `fetchAudioLibraryStats` helper in `apps/web/src/lib/api/media.ts` so the refetch doesn't have to go through the server API layer.
+
 ## [0.15.0] - 2026-04-11
 ### Changed
 

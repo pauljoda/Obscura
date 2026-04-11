@@ -3,6 +3,7 @@ import type {
   AudioLibraryDetailDto,
   AudioLibraryListItemDto,
   AudioLibraryPatchDto,
+  AudioLibraryStatsDto,
   AudioTrackPatchDto,
   GalleryDetailDto,
   GalleryListItemDto,
@@ -318,6 +319,13 @@ export async function fetchAudioLibraries(params?: {
   );
 
   return fetchApi(`/audio-libraries${qs}`);
+}
+
+export async function fetchAudioLibraryStats(
+  nsfw?: string,
+): Promise<AudioLibraryStatsDto> {
+  const qs = buildQueryString({ nsfw });
+  return fetchApi(`/audio-libraries/stats${qs}`);
 }
 
 export async function fetchGalleryDetail(

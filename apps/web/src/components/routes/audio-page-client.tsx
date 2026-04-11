@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Music, FolderOpen, Clock, TrendingUp, Library } from "lucide-react";
@@ -18,7 +18,7 @@ import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import type { TagItem, StudioItem } from "../../lib/api";
-import { toApiUrl } from "../../lib/api";
+import { toApiUrl, fetchAudioLibraryStats } from "../../lib/api";
 
 interface AudioPageClientProps {
   initialLibraries: AudioLibraryListItemDto[];
@@ -39,6 +39,17 @@ export function AudioPageClient({
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"browser" | "grid">("grid");
   const libraries = initialLibraries;
+  const [stats, setStats] = useState(initialStats);
+
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
+
+  useEffect(() => {
+    void fetchAudioLibraryStats(nsfwMode)
+      .then(setStats)
+      .catch(() => {});
+  }, [nsfwMode]);
 
   const tree = useMemo(
     () =>
@@ -102,21 +113,21 @@ export function AudioPageClient({
         <StatCard
           icon={<Library className="h-4 w-4" />}
           label="Libraries"
-          value={String(initialStats.totalLibraries)}
+          value={String(stats.totalLibraries)}
           gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
         />
         <StatCard
           icon={<Music className="h-4 w-4" />}
           label="Total Tracks"
-          value={String(initialStats.totalTracks)}
+          value={String(stats.totalTracks)}
           gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
         />
         <StatCard
           icon={<Clock className="h-4 w-4" />}
           label="Total Duration"
           value={
-            initialStats.totalDuration > 0
-              ? (formatDuration(initialStats.totalDuration) ?? "—")
+            stats.totalDuration > 0
+              ? (formatDuration(stats.totalDuration) ?? "—")
               : "—"
           }
           gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
@@ -124,7 +135,7 @@ export function AudioPageClient({
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
           label="This Week"
-          value={`+${initialStats.recentCount}`}
+          value={`+${stats.recentCount}`}
           accent
           gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
         />
