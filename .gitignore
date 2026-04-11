@@ -41,3 +41,6 @@ npm-debug.log*
 
 # Temp
 tmp
+
+# Release workflow artifact (regenerated on every release cut)
+RELEASE_NOTES.md

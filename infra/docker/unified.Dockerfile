@@ -30,7 +30,15 @@ COPY . .
 
 # Build web with API URL pointing to the nginx /api proxy
 ENV NEXT_PUBLIC_API_URL=/api
-RUN pnpm release:check --release && pnpm turbo run build
+# RELEASE_STRICT=1 enforces that package.json version matches a versioned
+# CHANGELOG heading (set for release builds only). Dev builds only run the
+# lightweight structural check.
+ARG RELEASE_STRICT=0
+RUN if [ "$RELEASE_STRICT" = "1" ]; then \
+      pnpm release:check --release; \
+    else \
+      pnpm release:check; \
+    fi && pnpm turbo run build
 
 # Prepare standalone web in a separate location so it doesn't
 # clobber node_modules when copied into the runner

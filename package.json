@@ -1,6 +1,6 @@
 {
   "name": "obscura",
-  "version": "0.13.0",
+  "version": "0.14.0-dev",
   "private": true,
   "packageManager": "pnpm@10.30.3",
   "scripts": {
@@ -10,7 +10,8 @@
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",
     "test": "vitest run",
-    "release:check": "node scripts/release/check-version.mjs"
+    "release:check": "node scripts/release/check-version.mjs",
+    "release:cut": "node scripts/release/cut.mjs"
   },
   "devDependencies": {
     "turbo": "^2.0.14",

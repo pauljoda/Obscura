@@ -96,6 +96,20 @@ Open **http://localhost:8008** and you're done.
 
 You can map as many subdirectories under `/media` as you like and register each one as a library root in Settings.
 
+### Image tags
+
+Obscura publishes two channels to `ghcr.io/pauljoda/obscura`:
+
+| Tag | What it is | When to use |
+|-----|------------|-------------|
+| `latest` | The most recent tagged release (`vX.Y.Z`) | Default for end users. Stable, versioned, paired with a GitHub Release and changelog entry |
+| `X.Y.Z` / `X.Y` / `X` | A specific released version (or minor / major line) | Pin to a known version for reproducible deploys |
+| `dev` | Every commit on `main` after CI passes | Bleeding edge. Expect churn. Good for testing fixes before a release |
+| `sha-abc1234` | A specific commit SHA on `main` | Pin to an exact dev build for rollback or bisection |
+| `X.Y.Z-abc1234` | A specific commit against the in-progress `X.Y.Z-dev` cycle | Same as `sha-…` but self-describing — shows which release this dev build is headed toward |
+
+If you're running Obscura as your media browser and want things to Just Work, use `:latest`. If you want to try a change that hasn't shipped yet, use `:dev`. See [CHANGELOG.md](CHANGELOG.md) for everything that's gone into each release, and the [GitHub Releases page](https://github.com/pauljoda/obscura/releases) for the same notes rendered with assets.
+
 ---
 
 ## Features
@@ -350,9 +364,31 @@ The web UI runs at `http://localhost:8008` and the API at `http://localhost:4000
 ### Building the Docker Image Locally
 
 ```bash
+# Dev-style build (does not require a matching CHANGELOG release heading)
 docker build -f infra/docker/unified.Dockerfile -t obscura .
+
+# Release-style build (enforces package.json version matches a released
+# CHANGELOG heading — fails on -dev versions). Used by the Release workflow.
+docker build -f infra/docker/unified.Dockerfile --build-arg RELEASE_STRICT=1 -t obscura .
+
 docker run -p 8008:8008 -v obscura-data:/data -v /your/media:/media obscura
 ```
+
+### Releases
+
+Obscura follows [Semantic Versioning](https://semver.org/) and [Keep a Changelog](https://keepachangelog.com/).
+
+- Every commit to `main` rebuilds the `:dev` image and appends entries to `## [Unreleased]` in `CHANGELOG.md`. The root `package.json` carries a `X.Y.Z-dev` marker between releases.
+- Releases are cut server-side by the **Release** GitHub Action. Maintainers trigger it from the Actions tab with a `patch` / `minor` / `major` bump (or an explicit `X.Y.Z`). The workflow:
+  1. Runs `scripts/release/cut.mjs --phase release`: bumps every `package.json`, promotes `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, and writes `RELEASE_NOTES.md` from the new section.
+  2. Creates commit `chore(release): vX.Y.Z` and tag `vX.Y.Z`.
+  3. Runs `scripts/release/cut.mjs --phase post`: bumps to `X.Y.(Z+1)-dev` and commits `chore(release): begin vX.Y.(Z+1)-dev cycle`.
+  4. Pushes main + tag.
+  5. Builds the unified Docker image with `RELEASE_STRICT=1` from the release tag and pushes `latest`, `X.Y.Z`, `X.Y`, and `X` to GHCR.
+  6. Creates a GitHub Release for `vX.Y.Z` with the extracted changelog as the body.
+- Users consuming `:latest` always get the most recent released build — never a half-finished `main`. Users who want to test unreleased changes can pin `:dev` or a specific `:sha-…` tag.
+
+See the release runbook and full policy in [CLAUDE.md](CLAUDE.md#how-to-publish-a-release).
 
 ---
 
