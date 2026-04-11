@@ -1,6 +1,6 @@
 {
   "name": "@obscura/web",
-  "version": "0.16.1-dev",
+  "version": "0.17.0",
   "private": true,
   "scripts": {
     "predev": "node scripts/copy-jassub-assets.mjs",

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-04-11
 ### Fixed
 
 - **Clicking a tag chip from the scene detail page showed a UUID and listed every scene as tagged.** The tag chips rendered by `metadata-panel.tsx` and the view-mode tag list in `scene-edit.tsx` linked to `/tags/${tag.id}` (UUID), but the `/tags/[id]` route treats the path segment as the tag *name* and filters scenes/galleries/audio by that name. The UUID never matched a real tag name, so the header rendered the raw UUID and the listings fell back to unfiltered results. Both call sites now link to `/tags/${encodeURIComponent(tag.name)}`, matching the convention already used by the tags index and search result cards.
