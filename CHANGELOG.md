@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- New `fingerprint_submissions` table tracking per-(scene, endpoint, algorithm, hash) contribution history to StashBox-protocol servers. Powers the pHashes tab's "already submitted" indicators and prevents accidentally re-submitting identical hashes.
+
+### Changed
+
+- **Accepting a StashBox identify result now auto-links the scene to its remote stash ID.** Previously the acceptance flow applied title/date/performer/tag metadata but silently dropped the remote scene ID, so no `stash_ids` row was ever created from an identify run — users would have to open the scene and paste the ID manually before they could ever contribute fingerprints back. Accept now inserts the `stash_ids` row inside the same transaction, keyed on `(scene, entityType, stashBoxEndpointId)` with `onConflictDoNothing`, so the scene is immediately eligible for fingerprint contribution.
+
+### Added
+
 - New **Generate pHash** library setting (default off). When enabled, the worker's fingerprint job also computes a Stash-compatible perceptual hash via the bundled `obscura-phash` helper. CPU-heavy — 25 ffmpeg frame extractions per scene — so it stays off until explicitly enabled.
 - New `POST /jobs/phash-backfill` endpoint that enqueues a `fingerprint` job with `phashOnly: true` for every scene that has a known duration and no stored phash. Lets admins populate hashes for their existing library in one click after enabling the setting.
 - `computePhash(filePath, duration)` helper in `@obscura/media-core` that shells out to the bundled `obscura-phash` binary and returns a 16-char hex perceptual hash. Returns `null` when duration is unknown or <= 0, and gracefully skips with a warning when the helper binary is missing on PATH (dev fallback).

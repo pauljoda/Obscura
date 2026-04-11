@@ -520,6 +520,53 @@ export const stashIdsRelations = relations(stashIds, ({ one }) => ({
   }),
 }));
 
+// ─── Fingerprint Submissions (contribution history) ──────────────────
+// One row per (scene, endpoint, algorithm, hash) that we have attempted to
+// submit to a StashBox-protocol server via the `submitFingerprint` mutation.
+// Used by the web pHashes tab to render per-scene submission state and to
+// avoid re-submitting an identical hash on every click.
+export const fingerprintSubmissions = pgTable(
+  "fingerprint_submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sceneId: uuid("scene_id")
+      .notNull()
+      .references(() => scenes.id, { onDelete: "cascade" }),
+    stashBoxEndpointId: uuid("stash_box_endpoint_id")
+      .notNull()
+      .references(() => stashBoxEndpoints.id, { onDelete: "cascade" }),
+    algorithm: text("algorithm").notNull(), // "MD5" | "OSHASH" | "PHASH"
+    hash: text("hash").notNull(),
+    status: text("status").notNull(), // "success" | "error"
+    error: text("error"),
+    submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("fingerprint_submissions_unique").on(
+      table.sceneId,
+      table.stashBoxEndpointId,
+      table.algorithm,
+      table.hash,
+    ),
+    index("fingerprint_submissions_scene_idx").on(table.sceneId),
+    index("fingerprint_submissions_endpoint_idx").on(table.stashBoxEndpointId),
+  ],
+);
+
+export const fingerprintSubmissionsRelations = relations(
+  fingerprintSubmissions,
+  ({ one }) => ({
+    scene: one(scenes, {
+      fields: [fingerprintSubmissions.sceneId],
+      references: [scenes.id],
+    }),
+    stashBoxEndpoint: one(stashBoxEndpoints, {
+      fields: [fingerprintSubmissions.stashBoxEndpointId],
+      references: [stashBoxEndpoints.id],
+    }),
+  }),
+);
+
 // ─── Scrape Results ─────────────────────────────────────────────────
 export const scrapeResults = pgTable(
   "scrape_results",

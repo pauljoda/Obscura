@@ -32,6 +32,7 @@ const {
   studios,
   scenePerformers,
   sceneTags,
+  stashIds,
 } = schema;
 
 function getScrapersDir() {
@@ -1063,6 +1064,26 @@ export async function scrapersRoutes(app: FastifyInstance) {
             .where(eq(scenes.id, result.sceneId));
         } catch {
           // Image download failed — non-fatal
+        }
+      }
+
+      // Auto-link stash_ids when accepting a StashBox result so the scene is
+      // immediately contributable via the pHashes tab. Only runs for results
+      // sourced from a StashBox endpoint — community-scraper results have no
+      // remote scene_id to submit against.
+      if (result.stashBoxEndpointId) {
+        const rawScene = result.rawResult as (StashScrapedScene & { id?: string }) | null;
+        const remoteStashId = typeof rawScene?.id === "string" ? rawScene.id : null;
+        if (remoteStashId) {
+          await tx
+            .insert(stashIds)
+            .values({
+              entityType: "scene",
+              entityId: result.sceneId,
+              stashBoxEndpointId: result.stashBoxEndpointId,
+              stashId: remoteStashId,
+            })
+            .onConflictDoNothing();
         }
       }
 

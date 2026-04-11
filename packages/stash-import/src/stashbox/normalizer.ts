@@ -89,6 +89,9 @@ export function normalizeStashBoxPerformer(
  */
 export function stashBoxSceneToRawResult(scene: StashBoxScene): Record<string, unknown> {
   return {
+    // Remote StashBox scene ID — read back at accept time to auto-link the
+    // local scene to its remote fingerprint submission target.
+    id: scene.id,
     title: scene.title,
     code: scene.code,
     details: scene.details,
