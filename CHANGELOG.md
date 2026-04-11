@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-04-10
+
+### Docs
+
+- **README: new Subtitles & Live Transcripts section** documenting the full subtitle feature set — sidecar discovery, embedded extraction, manual upload, the transcript tab, desktop dock mode with resize, three caption styles (Stylized / Classic / Outline), the in-player style panel, and library-wide defaults with live preview. Added a "Subtitles & live transcripts" bullet to the Highlights list. Four new screenshots referenced: `scene-transcript-tab.png`, `scene-detail-transcript-docked.png`, `scene-detail-subtitle-style-panel.png`, and `settings-subtitles.png`.
+
 ## [0.11.1] - 2026-04-10
 
 ### Fixed

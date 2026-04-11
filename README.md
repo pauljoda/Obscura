@@ -40,6 +40,7 @@ If you like the Stash model but want a faster, cleaner interface that feels nati
 - **Stash-compatible metadata** — native StashDB support and full compatibility with community Stash scraper plugins.
 - **Bulk scrape everything** — pick what to identify and Obscura iterates every installed scraper for you. No more one-by-one.
 - **Rich playback** — HLS adaptive streaming with on-demand ffmpeg transcoding, a scrollable/grabable frame strip, and one-click marker + thumbnail creation from any frame.
+- **Subtitles & live transcripts** — multi-language sidecar / embedded / uploaded tracks, three player caption styles, a clickable transcript panel that can dock next to the video on desktop.
 - **Link everything together** — scenes, galleries, audio, performers, and studios all cross-reference with the same rich metadata surface.
 - **Automated scanning** — point it at a folder, walk away. Obscura scans on a schedule and notices new files.
 - **Command palette + global search** — `⌘K` from anywhere, or a dedicated search page with scene, performer, studio, tag, and gallery results.
@@ -121,6 +122,44 @@ Direct playback of common formats plus on-demand HLS transcoding for anything th
 
 <p align="center">
   <img src="docs/screenshots/scene-detail.png" alt="Scene detail with player, frame strip, and metadata" width="100%" />
+</p>
+
+### Subtitles & Live Transcripts
+
+Obscura treats subtitles as a first-class feature. Three ingestion paths are wired up end-to-end:
+
+- **Sidecar discovery** — drop a `.srt` / `.vtt` / `.ass` next to a video (optionally tagged with a language, e.g. `movie.en.srt`) and it gets picked up on the next library scan.
+- **Embedded extraction** — a background worker job runs `ffmpeg` against videos with soft-subtitle streams and converts each track to WebVTT automatically. Image-based subtitle codecs (PGS, VobSub) are skipped gracefully.
+- **Manual upload** — drop a file in from the scene page with an inline language picker.
+
+All tracks land in a shared **Transcript** tab where you can rename them inline, delete them, or trigger a re-extract. The transcript itself shows the full cue list with the current line highlighted, past lines grayed but still clickable, and a single click on any cue seeks the player.
+
+<p align="center">
+  <img src="docs/screenshots/scene-transcript-tab.png" alt="Transcript tab with track management and scrolling cue list" width="100%" />
+</p>
+
+On desktop, a **Dock next to video** button pins the transcript directly beside the player with a draggable resize handle between them — watch and read at the same time, no context switching. The dock preference and last-used width persist in `localStorage`, follow you across scenes, and auto-collapse on scenes without subtitles so you never see empty space.
+
+<p align="center">
+  <img src="docs/screenshots/scene-detail-transcript-docked.png" alt="Docked transcript sidecar next to the video player" width="100%" />
+</p>
+
+The player renders captions through a custom overlay with three visual styles you can switch between on the fly:
+
+- **Stylized** — Dark Room brass-edged plate with a subtle glow, matches the rest of the UI.
+- **Classic** — flat translucent-black box with plain white text, the look of most media players.
+- **Outline** — white text with a black stroke and no box, maximum transparency over the picture.
+
+Text size and vertical position are continuously adjustable, and an in-player settings side panel lets you tweak everything live on top of whatever is currently playing. Per-user overrides persist locally; a reset button snaps you back to the library defaults.
+
+<p align="center">
+  <img src="docs/screenshots/scene-detail-subtitle-style-panel.png" alt="In-player subtitle style side panel with live preview" width="100%" />
+</p>
+
+Library-wide defaults — auto-enable on load, preferred-language priority list (first match wins, with ISO 639-1 ↔ 639-2 equivalence so `en` also matches `eng`), default caption style, text size, and position — are all configurable from the global settings page, with a live dummy-frame preview that updates as you tweak the controls.
+
+<p align="center">
+  <img src="docs/screenshots/settings-subtitles.png" alt="Global subtitle settings with live preview" width="100%" />
 </p>
 
 ### Strong Metadata, Everywhere
