@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Music, FolderOpen } from "lucide-react";
+import { Music, FolderOpen, Clock, TrendingUp, Library } from "lucide-react";
 import { ImportButton, UploadDropZone } from "../upload";
 import { cn } from "@obscura/ui/lib/utils";
 import { buildHierarchyTree } from "@obscura/ui/lib/tree";
@@ -14,8 +14,9 @@ import type {
 import { formatDuration } from "@obscura/contracts";
 import { HierarchyBrowser } from "../shared/hierarchy-browser";
 import { useNsfw } from "../nsfw/nsfw-context";
-import { NsfwBlur } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import type { TagItem, StudioItem } from "../../lib/api";
 import { toApiUrl } from "../../lib/api";
 
@@ -55,14 +56,14 @@ export function AudioPageClient({
       className="relative flex flex-col gap-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-heading font-semibold">Audio</h1>
-          <p className="text-sm text-text-muted mt-0.5">
-            {initialStats.totalLibraries} libraries &middot; {initialStats.totalTracks} tracks
-            {initialStats.totalDuration > 0 && (
-              <> &middot; {formatDuration(initialStats.totalDuration)}</>
-            )}
+          <h1 className="flex items-center gap-2.5">
+            <Music className="h-5 w-5 text-text-accent" />
+            Audio
+          </h1>
+          <p className="mt-1 text-[0.78rem] text-text-muted">
+            Browse and play your audio libraries
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -95,6 +96,38 @@ export function AudioPageClient({
             onUploaded={() => router.refresh()}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <StatCard
+          icon={<Library className="h-4 w-4" />}
+          label="Libraries"
+          value={String(initialStats.totalLibraries)}
+          gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+        />
+        <StatCard
+          icon={<Music className="h-4 w-4" />}
+          label="Total Tracks"
+          value={String(initialStats.totalTracks)}
+          gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+        />
+        <StatCard
+          icon={<Clock className="h-4 w-4" />}
+          label="Total Duration"
+          value={
+            initialStats.totalDuration > 0
+              ? (formatDuration(initialStats.totalDuration) ?? "—")
+              : "—"
+          }
+          gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+        />
+        <StatCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="This Week"
+          value={`+${initialStats.recentCount}`}
+          accent
+          gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
+        />
       </div>
 
       {/* Content */}
@@ -174,6 +207,9 @@ function AudioLibraryCard({
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
         )}
+        <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+          <NsfwShowModeChip isNsfw={library.isNsfw} />
+        </div>
       </NsfwBlur>
       <div className="p-2.5">
         <h3 className="text-sm font-medium truncate">{library.title}</h3>
@@ -187,5 +223,51 @@ function AudioLibraryCard({
         )}
       </div>
     </Link>
+  );
+}
+
+function StatCard({
+  accent,
+  icon,
+  label,
+  value,
+  gradientClass,
+}: {
+  accent?: boolean;
+  icon: ReactNode;
+  label: string;
+  value: string;
+  gradientClass: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
+        accent && "border-border-accent shadow-[var(--shadow-glow-accent)]",
+      )}
+    >
+      <div
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
+          gradientClass,
+        )}
+      />
+      <div className="flex items-center justify-between ml-1.5">
+        <span className="text-[0.6rem] font-semibold tracking-[0.15em] uppercase text-text-muted">
+          {label}
+        </span>
+        <div className={cn("opacity-70", accent ? "text-text-accent" : "text-text-disabled")}>
+          {icon}
+        </div>
+      </div>
+      <div
+        className={cn(
+          "ml-1.5 mt-1 text-lg font-mono tracking-tight",
+          accent ? "text-glow-accent" : "text-text-primary",
+        )}
+      >
+        {value}
+      </div>
+    </div>
   );
 }

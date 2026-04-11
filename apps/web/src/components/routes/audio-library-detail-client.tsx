@@ -25,7 +25,7 @@ import { formatDuration } from "@obscura/contracts";
 import type { AudioLibraryDetailDto } from "@obscura/contracts";
 import { PerformersSection, TagsSection, InfoRow } from "../shared/metadata-panel";
 import { StarRatingPicker } from "../shared/star-rating-picker";
-import { NsfwBlur, NsfwEditToggle, NsfwGate } from "../nsfw/nsfw-gate";
+import { NsfwBlur, NsfwChip, NsfwEditToggle, NsfwGate, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 import {
@@ -207,6 +207,11 @@ export function AudioLibraryDetailClient({
   const visibleTracks = library.tracks.filter(
     (t) => nsfwMode !== "off" || !t.isNsfw,
   );
+  const visibleDuration = visibleTracks.reduce(
+    (sum, t) => sum + (t.duration ?? 0),
+    0,
+  );
+  const visibleTrackCount = visibleTracks.length;
 
   const tagSuggestions = useMemo(
     () => allTags.map((t) => ({ name: t.name })),
@@ -359,6 +364,9 @@ export function AudioLibraryDetailClient({
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                 )}
+                <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+                  <NsfwShowModeChip isNsfw={library.isNsfw} />
+                </div>
               </div>
             </NsfwBlur>
             {editMode && (
@@ -499,13 +507,14 @@ export function AudioLibraryDetailClient({
                   <p className="text-sm text-text-muted mt-1.5 line-clamp-3 whitespace-pre-wrap">{library.details}</p>
                 )}
                 <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
-                  <span>{library.trackCount} track{library.trackCount !== 1 ? "s" : ""}</span>
-                  {library.totalDuration != null && library.totalDuration > 0 && (
+                  <span>{visibleTrackCount} track{visibleTrackCount !== 1 ? "s" : ""}</span>
+                  {visibleDuration > 0 && (
                     <>
                       <span className="text-text-disabled">&middot;</span>
-                      <span>{formatDuration(library.totalDuration)}</span>
+                      <span>{formatDuration(visibleDuration)}</span>
                     </>
                   )}
+                  {library.isNsfw && <NsfwChip />}
                 </div>
                 {library.rating != null && (
                   <div className="mt-2">
@@ -540,9 +549,9 @@ export function AudioLibraryDetailClient({
         <div className="surface-panel p-4 space-y-3 w-full lg:w-72 lg:flex-shrink-0 lg:self-stretch">
           <h4 className="text-kicker">Library Info</h4>
           <div className="space-y-2.5">
-            <InfoRow icon={Music} label="Tracks" value={String(library.trackCount)} />
-            {library.totalDuration != null && library.totalDuration > 0 && (
-              <InfoRow icon={Play} label="Duration" value={formatDuration(library.totalDuration) ?? "--:--"} />
+            <InfoRow icon={Music} label="Tracks" value={String(visibleTrackCount)} />
+            {visibleDuration > 0 && (
+              <InfoRow icon={Play} label="Duration" value={formatDuration(visibleDuration) ?? "--:--"} />
             )}
             {library.studio && (
               <InfoRow icon={Building2} label="Studio" value={library.studio.name} />
@@ -619,14 +628,17 @@ export function AudioLibraryDetailClient({
                     href={`/audio/${child.id}`}
                     className="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors"
                   >
-                    <div className="aspect-square overflow-hidden relative">
+                    <NsfwBlur isNsfw={child.isNsfw} className="aspect-square overflow-hidden relative">
                       <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[i % SCENE_CARD_GRADIENTS.length])}>
                         <Music className="h-8 w-8 text-white/20" />
                       </div>
                       {childCover && (
                         <img src={childCover} alt={child.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                       )}
-                    </div>
+                      <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+                        <NsfwShowModeChip isNsfw={child.isNsfw} />
+                      </div>
+                    </NsfwBlur>
                     <div className="p-2">
                       <h3 className="text-xs font-medium truncate">{child.title}</h3>
                       <p className="text-[0.65rem] text-text-muted">{child.trackCount} tracks</p>
