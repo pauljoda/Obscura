@@ -661,7 +661,7 @@ export function SceneEdit({
                   {sceneTagsVisibleInViewMode.map((tag) => (
                     <Link
                       key={tag.id}
-                      href={`/tags/${tag.id}`}
+                      href={`/tags/${encodeURIComponent(tag.name)}`}
                       className="tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                     >
                       <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
