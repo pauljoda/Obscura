@@ -1,6 +1,6 @@
 {
   "name": "@obscura/web",
-  "version": "0.16.0",
+  "version": "0.16.1-dev",
   "private": true,
   "scripts": {
     "dev": "next dev --port 8008",
