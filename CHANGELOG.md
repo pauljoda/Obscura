@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-04-10
+
+### Added
+
+- **CC chip on scene cards.** Scenes that have at least one subtitle track now show a small "CC" chip in the lower-right corner of their thumbnail, above the duration badge. The scene list API runs a single `SELECT DISTINCT scene_id FROM scene_subtitles WHERE scene_id IN (...)` per page (no N+1) and sets `hasSubtitles` on each `SceneListItem` / `SceneDetail` DTO. The chip is brass-tinted and matches the Dark Room language.
+
+### Fixed
+
+- **Caption overlay no longer covers the player controls.** The custom subtitle caption plate was rendered with `z-10` inside the player container, which painted it above the bottom control bar whenever a cue was active at the default 88% vertical position. Removed the z-index entirely so stacking now follows DOM order — the caption sits naturally below both the top and bottom control layers, which come later in the tree, so play/pause, timestamp, and the quality/captions dropdowns are always visible when surfaced.
+- **Docked transcript resize handle is visible and grabbable again.** When the dock layout switched to `lg:items-start` in 0.11.1 (to stop a tall transcript from growing the row), the resize handle collapsed to zero height because it had no intrinsic content. Switched back to `lg:items-stretch` — safe now that the transcript side has an explicit pinned height tied to the video wrapper — and made the handle itself more visible: wider hit target (`w-2`), a darker default background, and a centered 2px vertical pill indicator that brightens to the brass accent on hover and drag.
+
 ## [0.11.3] - 2026-04-10
 
 ### Added

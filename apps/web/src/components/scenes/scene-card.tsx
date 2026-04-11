@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Eye, Film, HardDrive, Star } from "lucide-react";
+import { Captions, Clock, Eye, Film, HardDrive, Star } from "lucide-react";
 import { MediaCard } from "@obscura/ui/composed/media-card";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
@@ -151,6 +151,15 @@ function SceneListCard({
             )}
             <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
               <NsfwShowModeChip isNsfw={scene.isNsfw} />
+              {scene.hasSubtitles && (
+                <span
+                  className="inline-flex items-center gap-0.5 bg-black/70 text-accent-100 border border-accent-500/40 px-1 py-px text-[0.5rem] font-mono uppercase tracking-[0.12em]"
+                  title="Closed captions available"
+                >
+                  <Captions className="h-2.5 w-2.5" />
+                  CC
+                </span>
+              )}
               {scene.duration ? (
                 <span className="text-[0.55rem] font-mono bg-black/70 text-white/80 px-1">
                   {scene.duration}

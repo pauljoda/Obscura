@@ -29,6 +29,7 @@ export interface SceneCardData {
   rating?: number;
   views?: number;
   isNsfw?: boolean;
+  hasSubtitles?: boolean;
 }
 
 function readMetaString(meta: SearchResultItem["meta"], key: string): string | undefined {
@@ -66,6 +67,7 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
     rating: scene.rating ?? undefined,
     views: scene.playCount,
     isNsfw: scene.isNsfw,
+    hasSubtitles: scene.hasSubtitles ?? false,
   };
 }
 

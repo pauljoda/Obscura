@@ -367,7 +367,7 @@ export function SceneDetail({
         <div
           ref={dockContainerRef}
           className={cn(
-            isTranscriptDocked && "lg:flex lg:items-start lg:gap-0",
+            isTranscriptDocked && "lg:flex lg:items-stretch lg:gap-0",
           )}
         >
           <div
@@ -415,9 +415,11 @@ export function SceneDetail({
                 onPointerMove={handleResizeMove}
                 onPointerUp={handleResizeEnd}
                 onPointerCancel={handleResizeEnd}
-                className="hidden lg:block w-1.5 shrink-0 cursor-col-resize bg-border-default hover:bg-border-accent active:bg-border-accent transition-colors"
+                className="hidden lg:flex w-2 shrink-0 cursor-col-resize items-center justify-center bg-surface-3 hover:bg-accent-950 active:bg-accent-950 transition-colors group"
                 style={{ touchAction: "none" }}
-              />
+              >
+                <span className="h-8 w-[2px] bg-border-default group-hover:bg-border-accent group-active:bg-border-accent transition-colors" />
+              </div>
               <div
                 className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-w-0 lg:overflow-hidden"
                 style={

@@ -966,9 +966,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         </div>
       )}
 
+      {/* Caption overlay — deliberately NO z-index so the controls
+          (which come later in DOM order) paint on top when visible. */}
       {activeCueText && (
         <div
-          className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4"
+          className="pointer-events-none absolute inset-x-0 flex justify-center px-4"
           style={{
             top: `${appearance.positionPercent}%`,
             transform: "translateY(-100%)",

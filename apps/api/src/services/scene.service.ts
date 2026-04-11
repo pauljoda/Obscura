@@ -60,6 +60,19 @@ const {
   studios,
 } = schema;
 
+/**
+ * Return a Set of scene IDs (from the provided list) that have at least
+ * one subtitle track. Uses DISTINCT to avoid loading full rows.
+ */
+async function fetchSubtitledSceneIds(sceneIds: string[]): Promise<Set<string>> {
+  if (sceneIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ sceneId: sceneSubtitles.sceneId })
+    .from(sceneSubtitles)
+    .where(inArray(sceneSubtitles.sceneId, sceneIds));
+  return new Set(rows.map((r) => r.sceneId));
+}
+
 // ─── Query Types ───────────────────────────────────────────────
 
 export interface ListScenesQuery {
@@ -428,6 +441,8 @@ export async function listScenes(query: ListScenesQuery) {
           .where(inArray(sceneTags.sceneId, sceneIds))
       : [];
 
+  const subtitledIds = await fetchSubtitledSceneIds(sceneIds);
+
   // Assemble response
   const result = sceneRows.map((scene) => ({
     id: scene.id,
@@ -463,6 +478,7 @@ export async function listScenes(query: ListScenesQuery) {
     playCount: scene.playCount,
     orgasmCount: scene.orgasmCount,
     studioId: scene.studioId,
+    hasSubtitles: subtitledIds.has(scene.id),
     performers: perfJoins
       .filter((p) => p.sceneId === scene.id)
       .map((p) => ({
@@ -593,6 +609,7 @@ export async function getSceneById(id: string) {
     trickplayVttPath: scene.trickplayVttPath,
     playCount: scene.playCount,
     orgasmCount: scene.orgasmCount,
+    hasSubtitles: (scene.subtitles?.length ?? 0) > 0,
     playDuration: scene.playDuration,
     resumeTime: scene.resumeTime,
     lastPlayedAt: scene.lastPlayedAt,

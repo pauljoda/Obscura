@@ -45,6 +45,8 @@ export interface SceneListItem {
   playCount: number;
   orgasmCount: number;
   studioId: string | null;
+  /** True if at least one subtitle track is attached to this scene. */
+  hasSubtitles: boolean;
   performers: {
     id: string;
     name: string;
