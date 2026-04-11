@@ -65,9 +65,27 @@ export function SceneDetail({
     null,
   );
   /** User's persisted preference. The actual docked state also requires
-   *  the current scene to have at least one subtitle track. */
+   *  the current scene to have at least one subtitle track AND a desktop-
+   *  sized viewport — below the `lg` breakpoint the transcript always
+   *  falls back into the tab, since a split layout would crowd the
+   *  video into uselessness on a phone. */
   const [userWantsDock, setUserWantsDock] = useState(false);
   const [dockVideoPercent, setDockVideoPercent] = useState(80);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+
+  // Track the `lg` breakpoint (1024px) with matchMedia. Default to false
+  // during SSR / first render so mobile layout wins on the initial paint;
+  // the effect upgrades immediately on the client.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = (event?: MediaQueryListEvent) => {
+      setIsDesktopViewport(event ? event.matches : mq.matches);
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
   const dockContainerRef = useRef<HTMLDivElement>(null);
   const videoWrapperRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
@@ -329,7 +347,7 @@ export function SceneDetail({
   const activeStars = ratingHover > 0 ? ratingHover : ratingStars;
 
   const hasSubtitles = (scene.subtitleTracks?.length ?? 0) > 0;
-  const isTranscriptDocked = userWantsDock && hasSubtitles;
+  const isTranscriptDocked = userWantsDock && hasSubtitles && isDesktopViewport;
 
   return (
     <div className="space-y-5">

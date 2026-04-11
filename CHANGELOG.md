@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-04-10
+
+### Added
+
+- **Screenshots for the Subtitles & Live Transcripts README section** are now in place under `docs/screenshots/` — `scene-detail-transcript-docked.png`, `scene-detail-subtitle-style-panel.png`, `scene-transcript-tab.png`, and `settings-subtitles.png`.
+
+### Fixed
+
+- **Transcript dock preference is now ignored below the `lg` (1024px) breakpoint.** Previously, if the user had enabled the docked sidecar on desktop and then opened a scene on their phone, the Transcript tab still rendered in its "docked" state (showing only the tracks management + a banner) — which left the mobile user with no transcript at all, since the sidecar itself is `hidden lg:flex`. The scene detail now watches `matchMedia("(min-width: 1024px)")` and treats the dock as fully off below that threshold, so on mobile the Transcript tab always renders the full panel regardless of the persisted preference. The preference is untouched — move back to a desktop viewport and the sidecar returns automatically.
+
 ## [0.11.2] - 2026-04-10
 
 ### Docs
