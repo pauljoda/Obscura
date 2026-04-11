@@ -340,7 +340,11 @@ export async function streamRoutes(app: FastifyInstance) {
       return { error: "HLS manifest missing on disk", retryAfter: HLS_RETRY_AFTER_SECONDS };
     }
 
-    reply.header("Cache-Control", "public, max-age=60");
+    const tracker = peekHlsTracker(id);
+    reply.header(
+      "Cache-Control",
+      tracker?.isEncodeActive ? "no-store" : "public, max-age=60",
+    );
     reply.header("Content-Type", mimeForExt(".m3u8"));
     return reply.send(createReadStream(masterManifestPath));
   });
@@ -372,12 +376,29 @@ export async function streamRoutes(app: FastifyInstance) {
     const resolvedAsset = resolveAssetPath(cacheDir, assetPath);
 
     if (!resolvedAsset || !existsSync(resolvedAsset)) {
+      // While ffmpeg is still encoding in the background, a segment the
+      // player asks for may not be on disk yet — return 503 so hls.js
+      // retries rather than giving up.
+      if (tracker.isEncodeActive) {
+        reply.code(503);
+        reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
+        reply.header("Cache-Control", "no-store");
+        return { error: "Segment still encoding", retryAfter: HLS_RETRY_AFTER_SECONDS };
+      }
       reply.code(404);
       return { error: "Stream asset not found" };
     }
 
-    reply.header("Cache-Control", "public, max-age=300");
-    reply.header("Content-Type", mimeForExt(path.extname(resolvedAsset).toLowerCase()));
+    // Variant playlists get re-fetched by hls.js to discover new segments
+    // while the encode is active — don't let a CDN/browser cache pin an
+    // early partial playlist.
+    const ext = path.extname(resolvedAsset).toLowerCase();
+    if (ext === ".m3u8" && tracker.isEncodeActive) {
+      reply.header("Cache-Control", "no-store");
+    } else {
+      reply.header("Cache-Control", "public, max-age=300");
+    }
+    reply.header("Content-Type", mimeForExt(ext));
     return reply.send(createReadStream(resolvedAsset));
   });
 }

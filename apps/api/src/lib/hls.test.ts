@@ -174,6 +174,54 @@ describe("getHlsStatus", () => {
     expect(builderCalls).toBe(1);
   });
 
+  it("flips to ready as soon as master.m3u8 and first segments exist, before ffmpeg finishes", async () => {
+    const { peekHlsTracker, startHlsGeneration, setHlsBuilder } = await hlsModulePromise;
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // Builder writes the "partial" package up front, then blocks on a gate
+    // simulating ffmpeg still encoding later segments.
+    setHlsBuilder(async (_sceneId, _sourcePath, renditions, cacheDir) => {
+      for (const r of renditions) {
+        const variantDir = path.join(cacheDir, r.name);
+        await mkdir(variantDir, { recursive: true });
+        await writeFile(path.join(variantDir, "index.m3u8"), "#EXTM3U\n");
+        await writeFile(path.join(variantDir, "segment_000.ts"), "fake-ts-bytes");
+      }
+      await writeFile(path.join(cacheDir, "master.m3u8"), "#EXTM3U\n");
+      await gate;
+      // Once released, pretend ffmpeg wrote later segments too.
+      for (const r of renditions) {
+        await writeFile(path.join(cacheDir, r.name, "segment_001.ts"), "fake-ts-bytes");
+      }
+    });
+
+    const source = makeSource("partial-ready.mp4");
+    const promise = startHlsGeneration("scene-partial", source, 480);
+
+    // Poll for early-ready for up to ~2s. The watcher flips the tracker
+    // on its own polling cadence (250ms).
+    let earlyReady = false;
+    for (let i = 0; i < 20; i += 1) {
+      const entry = peekHlsTracker("scene-partial");
+      if (entry?.state === "ready" && entry.isEncodeActive) {
+        earlyReady = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    expect(earlyReady).toBe(true);
+
+    release();
+    await promise;
+    const entry = peekHlsTracker("scene-partial");
+    expect(entry?.state).toBe("ready");
+    expect(entry?.isEncodeActive).toBe(false);
+  });
+
   it("includes rendition list even while pending so clients can seed the quality menu", async () => {
     const { getHlsStatus } = await hlsModulePromise;
     await stubBuilderPending();

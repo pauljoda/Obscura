@@ -30,11 +30,18 @@ function getHlsCacheDir() {
 export interface HlsTrackerEntry {
   state: HlsPackageState;
   renditions: HlsRendition[];
+  /** True while ffmpeg is still encoding, even after we've flipped to `ready`. */
+  isEncodeActive: boolean;
   error?: string;
   promise?: Promise<HlsPackage>;
 }
 
 const trackerState = new Map<string, HlsTrackerEntry>();
+
+function log(sceneId: string, message: string) {
+  // eslint-disable-next-line no-console
+  console.log(`[hls ${sceneId.slice(0, 8)}] ${message}`);
+}
 
 function getSceneCacheDir(sceneId: string) {
   return path.join(getHlsCacheDir(), sceneId);
@@ -80,7 +87,7 @@ export type HlsBuilder = (
 ) => Promise<void>;
 
 async function ffmpegHlsBuilder(
-  _sceneId: string,
+  sceneId: string,
   sourcePath: string,
   renditions: HlsRendition[],
   cacheDir: string
@@ -113,10 +120,13 @@ async function ffmpegHlsBuilder(
     args.push(
       `-c:v:${index}`,
       "libx264",
+      // `veryfast` encodes ~10x faster than `slow` for roughly the same
+      // bitrate ceiling — good enough for on-demand HLS where the user is
+      // waiting on first-frame. Quality is still bounded by the CRF.
       `-preset:v:${index}`,
-      "slow",
+      "veryfast",
       `-profile:v:${index}`,
-      "high",
+      "main",
       `-pix_fmt:v:${index}`,
       "yuv420p",
       `-sc_threshold:v:${index}`,
@@ -151,12 +161,17 @@ async function ffmpegHlsBuilder(
   args.push(
     "-f",
     "hls",
+    // EVENT means segments append to the playlist and ENDLIST is written
+    // on completion — letting the player start mid-encode and re-poll the
+    // playlist for new segments as ffmpeg writes them.
     "-hls_playlist_type",
-    "vod",
+    "event",
+    "-hls_list_size",
+    "0",
     "-hls_time",
     "6",
     "-hls_flags",
-    "independent_segments",
+    "independent_segments+append_list",
     "-master_pl_name",
     "master.m3u8",
     "-var_stream_map",
@@ -166,7 +181,9 @@ async function ffmpegHlsBuilder(
     path.join(cacheDir, "%v", "index.m3u8")
   );
 
+  log(sceneId, `ffmpeg start (${variantCount} renditions, preset=veryfast)`);
   await runProcess("ffmpeg", args);
+  log(sceneId, "ffmpeg exit ok");
 }
 
 let activeBuilder: HlsBuilder = ffmpegHlsBuilder;
@@ -179,6 +196,31 @@ export function setHlsBuilder(builder: HlsBuilder) {
 /** Reset tracker state — for tests. */
 export function resetHlsTracker() {
   trackerState.clear();
+}
+
+/**
+ * Polls the cache dir until the master playlist and at least one segment
+ * per variant exist — the moment the package becomes playable. Returns
+ * false on timeout or when the abort flag flips.
+ */
+async function waitForPartialHlsPackage(
+  cacheDir: string,
+  renditions: HlsRendition[],
+  isAborted: () => boolean,
+  timeoutMs = 5 * 60 * 1000
+): Promise<boolean> {
+  const masterPath = path.join(cacheDir, "master.m3u8");
+  const firstSegments = renditions.map((r) => path.join(cacheDir, r.name, "segment_000.ts"));
+
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (isAborted()) return false;
+    if (existsSync(masterPath) && firstSegments.every((p) => existsSync(p))) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return false;
 }
 
 async function buildHlsPackage(
@@ -230,13 +272,16 @@ export async function getHlsStatus(
   const cacheDir = getSceneCacheDir(sceneId);
 
   const existing = trackerState.get(sceneId);
+  if (existing && existing.state === "ready") {
+    return { state: "ready", renditions: existing.renditions };
+  }
   if (existing && existing.state === "pending") {
     return { state: "pending", renditions };
   }
 
   // Disk may have been populated by a previous process — probe cheaply.
   if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
-    trackerState.set(sceneId, { state: "ready", renditions });
+    trackerState.set(sceneId, { state: "ready", renditions, isEncodeActive: false });
     return { state: "ready", renditions };
   }
 
@@ -251,7 +296,10 @@ export async function getHlsStatus(
 
 /**
  * Fire-and-forget build. Multiple callers share a single promise via the
- * tracker so concurrent requests coalesce to one ffmpeg invocation.
+ * tracker so concurrent requests coalesce to one ffmpeg invocation. The
+ * tracker flips to `ready` as soon as master.m3u8 and the first segment of
+ * each variant exist on disk — letting the player start playing while
+ * ffmpeg continues writing later segments in the background.
  */
 export function startHlsGeneration(
   sceneId: string,
@@ -262,27 +310,79 @@ export function startHlsGeneration(
   if (existing?.promise && existing.state === "pending") {
     return existing.promise;
   }
+  if (existing?.promise && existing.state === "ready" && existing.isEncodeActive) {
+    return existing.promise;
+  }
 
   const renditions = getHlsRenditions(sourceHeight);
+  const cacheDir = getSceneCacheDir(sceneId);
+
+  let watcherAborted = false;
+  const markReadyEarly = () => {
+    const current = trackerState.get(sceneId);
+    if (!current || current.state === "error") return;
+    if (current.state === "ready") return;
+    trackerState.set(sceneId, {
+      ...current,
+      state: "ready",
+      renditions,
+      isEncodeActive: true,
+    });
+    log(sceneId, "partial package ready (master + first segments) — playback can start");
+  };
+
+  void (async () => {
+    const found = await waitForPartialHlsPackage(cacheDir, renditions, () => watcherAborted);
+    if (found) markReadyEarly();
+  })();
+
+  log(sceneId, "build kicked off");
   const promise = buildHlsPackage(sceneId, sourcePath, sourceHeight)
     .then((pkg) => {
-      trackerState.set(sceneId, { state: "ready", renditions: pkg.renditions });
+      watcherAborted = true;
+      trackerState.set(sceneId, {
+        state: "ready",
+        renditions: pkg.renditions,
+        isEncodeActive: false,
+      });
+      log(sceneId, "encode complete, package fully ready");
       return pkg;
     })
     .catch((error: unknown) => {
+      watcherAborted = true;
       const message = error instanceof Error ? error.message : String(error);
-      trackerState.set(sceneId, { state: "error", renditions, error: message });
+      const current = trackerState.get(sceneId);
+      if (current?.state === "ready") {
+        // Already playing from a partial package — keep serving what exists
+        // but mark the encode as dead so the segment route can 404 instead
+        // of 503 on missing files.
+        trackerState.set(sceneId, { ...current, isEncodeActive: false });
+        log(sceneId, `encode failed after partial ready: ${message}`);
+      } else {
+        trackerState.set(sceneId, {
+          state: "error",
+          renditions,
+          isEncodeActive: false,
+          error: message,
+        });
+        log(sceneId, `encode failed: ${message}`);
+      }
       throw error;
     });
 
-  trackerState.set(sceneId, { state: "pending", renditions, promise });
+  trackerState.set(sceneId, {
+    state: "pending",
+    renditions,
+    isEncodeActive: true,
+    promise,
+  });
   return promise;
 }
 
 /**
- * Legacy blocking call: awaits until the package is ready. Kept for callers
- * (e.g. direct consumers) that really do need to wait. HTTP routes should
- * prefer getHlsStatus + 503 so clients can poll.
+ * Legacy blocking call: awaits until the package is fully ready. Kept for
+ * callers that really do need to wait. HTTP routes should prefer
+ * getHlsStatus + 503 so clients can poll.
  */
 export async function ensureHlsPackage(
   sceneId: string,
@@ -294,7 +394,7 @@ export async function ensureHlsPackage(
     return existing.promise;
   }
 
-  if (existing?.state === "ready") {
+  if (existing?.state === "ready" && !existing.isEncodeActive) {
     const cacheDir = getSceneCacheDir(sceneId);
     const renditions = getHlsRenditions(sourceHeight);
     if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
