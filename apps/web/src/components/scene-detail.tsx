@@ -64,6 +64,72 @@ export function SceneDetail({
   const [librarySettings, setLibrarySettings] = useState<LibrarySettings | null>(
     null,
   );
+  /** User's persisted preference. The actual docked state also requires
+   *  the current scene to have at least one subtitle track. */
+  const [userWantsDock, setUserWantsDock] = useState(false);
+  const [dockVideoPercent, setDockVideoPercent] = useState(80);
+  const dockContainerRef = useRef<HTMLDivElement>(null);
+  const isResizingRef = useRef(false);
+
+  // Load dock preference + width on mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem("obscura:transcript-docked") === "1") {
+      setUserWantsDock(true);
+    }
+    const savedWidth = Number(
+      window.localStorage.getItem("obscura:transcript-dock-width"),
+    );
+    if (Number.isFinite(savedWidth) && savedWidth >= 40 && savedWidth <= 92) {
+      setDockVideoPercent(savedWidth);
+    }
+  }, []);
+
+  const toggleTranscriptDock = useCallback(() => {
+    setUserWantsDock((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          "obscura:transcript-docked",
+          next ? "1" : "0",
+        );
+      }
+      return next;
+    });
+  }, []);
+
+  function handleResizeStart(event: React.PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    isResizingRef.current = true;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleResizeMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!isResizingRef.current) return;
+    const container = dockContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = ((event.clientX - rect.left) / rect.width) * 100;
+    const clamped = Math.max(40, Math.min(92, pct));
+    setDockVideoPercent(clamped);
+  }
+
+  function handleResizeEnd(event: React.PointerEvent<HTMLDivElement>) {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // pointer capture may have already been released
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "obscura:transcript-dock-width",
+        String(Math.round(dockVideoPercent)),
+      );
+    }
+  }
 
   // Fetch library-level subtitle defaults once on mount.
   useEffect(() => {
@@ -233,6 +299,9 @@ export function SceneDetail({
   const ratingStars = scene.rating ? Math.round(scene.rating / 20) : 0;
   const activeStars = ratingHover > 0 ? ratingHover : ratingStars;
 
+  const hasSubtitles = (scene.subtitleTracks?.length ?? 0) > 0;
+  const isTranscriptDocked = userWantsDock && hasSubtitles;
+
   return (
     <div className="space-y-5">
       {/* Back link */}
@@ -244,31 +313,80 @@ export function SceneDetail({
         {terms.scenes}
       </Link>
 
-      {/* Video Player */}
+      {/* Video Player — optionally side-by-side with a docked transcript
+          on desktop widths (>= lg). On smaller viewports the player stays
+          full-width and the dock sidecar collapses automatically. */}
       <NsfwBlur isNsfw={scene.isNsfw ?? false}>
-        <VideoPlayer
-          ref={playerRef}
-          src={toApiUrl(scene.streamUrl)}
-          directSrc={toApiUrl(scene.directStreamUrl)}
-          poster={toApiUrl(scene.thumbnailPath)}
-          markers={scene.markers.map((m) => ({
-            id: m.id,
-            time: m.seconds,
-            title: m.title,
-          }))}
-          duration={scene.duration ?? undefined}
-          onPlayStarted={handlePlayStarted}
-          onTimeUpdate={handleTimeUpdate}
-          trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
-          trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
-          subtitleTracks={scene.subtitleTracks ?? []}
-          activeSubtitleTrackId={activeSubtitleId}
-          onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
-          subtitleAssetBase={
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-          }
-          subtitleDefaults={subtitleDefaults}
-        />
+        <div
+          ref={dockContainerRef}
+          className={cn(
+            isTranscriptDocked && "lg:flex lg:items-stretch lg:gap-0",
+          )}
+        >
+          <div
+            className={cn(
+              isTranscriptDocked && "lg:min-w-0",
+            )}
+            style={
+              isTranscriptDocked
+                ? { flex: `0 0 ${dockVideoPercent}%` }
+                : undefined
+            }
+          >
+            <VideoPlayer
+              ref={playerRef}
+              src={toApiUrl(scene.streamUrl)}
+              directSrc={toApiUrl(scene.directStreamUrl)}
+              poster={toApiUrl(scene.thumbnailPath)}
+              markers={scene.markers.map((m) => ({
+                id: m.id,
+                time: m.seconds,
+                title: m.title,
+              }))}
+              duration={scene.duration ?? undefined}
+              onPlayStarted={handlePlayStarted}
+              onTimeUpdate={handleTimeUpdate}
+              trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
+              trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
+              subtitleTracks={scene.subtitleTracks ?? []}
+              activeSubtitleTrackId={activeSubtitleId}
+              onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
+              subtitleAssetBase={
+                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
+              }
+              subtitleDefaults={subtitleDefaults}
+            />
+          </div>
+          {isTranscriptDocked && (
+            <>
+              <div
+                role="separator"
+                aria-label="Resize transcript panel"
+                aria-orientation="vertical"
+                onPointerDown={handleResizeStart}
+                onPointerMove={handleResizeMove}
+                onPointerUp={handleResizeEnd}
+                onPointerCancel={handleResizeEnd}
+                className="hidden lg:block w-1.5 shrink-0 cursor-col-resize bg-border-default hover:bg-border-accent active:bg-border-accent transition-colors"
+                style={{ touchAction: "none" }}
+              />
+              <div className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-w-0">
+                <SceneTranscriptPanel
+                  sceneId={scene.id}
+                  tracks={scene.subtitleTracks ?? []}
+                  activeTrackId={activeSubtitleId}
+                  onActiveTrackIdChange={handleActiveSubtitleChange}
+                  currentTime={displayTime}
+                  onSeek={handleSeek}
+                  onTracksChanged={refreshScene}
+                  variant="list-only"
+                  isDocked
+                  onDockToggle={toggleTranscriptDock}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </NsfwBlur>
 
       {/* Scene header */}
@@ -473,15 +591,44 @@ export function SceneDetail({
       )}
 
       {activeTab === "Transcript" && (
-        <SceneTranscriptPanel
-          sceneId={scene.id}
-          tracks={scene.subtitleTracks ?? []}
-          activeTrackId={activeSubtitleId}
-          onActiveTrackIdChange={handleActiveSubtitleChange}
-          currentTime={displayTime}
-          onSeek={handleSeek}
-          onTracksChanged={refreshScene}
-        />
+        isTranscriptDocked ? (
+          <div className="space-y-3">
+            <div className="surface-well px-3 py-2 text-[0.78rem] text-text-muted flex items-center justify-between gap-2">
+              <span>Transcript is docked next to the video.</span>
+              <button
+                type="button"
+                onClick={toggleTranscriptDock}
+                className="text-text-accent hover:text-text-accent-bright transition-colors"
+              >
+                Move it back here
+              </button>
+            </div>
+            <SceneTranscriptPanel
+              sceneId={scene.id}
+              tracks={scene.subtitleTracks ?? []}
+              activeTrackId={activeSubtitleId}
+              onActiveTrackIdChange={handleActiveSubtitleChange}
+              currentTime={displayTime}
+              onSeek={handleSeek}
+              onTracksChanged={refreshScene}
+              variant="tracks-only"
+              isDocked
+              onDockToggle={toggleTranscriptDock}
+            />
+          </div>
+        ) : (
+          <SceneTranscriptPanel
+            sceneId={scene.id}
+            tracks={scene.subtitleTracks ?? []}
+            activeTrackId={activeSubtitleId}
+            onActiveTrackIdChange={handleActiveSubtitleChange}
+            currentTime={displayTime}
+            onSeek={handleSeek}
+            onTracksChanged={refreshScene}
+            onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
+            isDocked={false}
+          />
+        )
       )}
 
       {activeTab === "Files" && <SceneFileInfo scene={scene} />}

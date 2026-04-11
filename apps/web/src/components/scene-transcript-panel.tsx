@@ -7,7 +7,17 @@ import {
   useRef,
   useState,
 } from "react";
-import { Check, Loader2, Pencil, Trash2, Upload, Wand2, X } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  PanelRightClose,
+  PanelRightOpen,
+  Pencil,
+  Trash2,
+  Upload,
+  Wand2,
+  X,
+} from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type {
   SceneSubtitleTrackDto,
@@ -21,6 +31,8 @@ import {
   uploadSceneSubtitle,
 } from "../lib/api";
 
+export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
+
 interface SceneTranscriptPanelProps {
   sceneId: string;
   tracks: SceneSubtitleTrackDto[];
@@ -29,6 +41,12 @@ interface SceneTranscriptPanelProps {
   currentTime: number;
   onSeek: (time: number) => void;
   onTracksChanged: () => void;
+  /** Which sections of the panel to render. Default "full". */
+  variant?: TranscriptPanelVariant;
+  /** Whether the panel is currently docked next to the video. */
+  isDocked?: boolean;
+  /** If provided, renders a dock/undock toggle button (desktop only). */
+  onDockToggle?: () => void;
 }
 
 function formatTime(seconds: number) {
@@ -60,7 +78,13 @@ export function SceneTranscriptPanel({
   currentTime,
   onSeek,
   onTracksChanged,
+  variant = "full",
+  isDocked = false,
+  onDockToggle,
 }: SceneTranscriptPanelProps) {
+  const showTrackManagement = variant !== "list-only";
+  const showTranscriptList = variant !== "tracks-only";
+  const isListOnly = variant === "list-only";
   const [cues, setCues] = useState<SubtitleCueDto[]>([]);
   const [loadingCues, setLoadingCues] = useState(false);
   const [cuesError, setCuesError] = useState<string | null>(null);
@@ -242,12 +266,39 @@ export function SceneTranscriptPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      className={cn(
+        "flex flex-col",
+        isListOnly ? "h-full min-h-0 space-y-0" : "space-y-4",
+      )}
+    >
       {/* Track management row */}
+      {showTrackManagement && (
       <div className="surface-card-sharp p-3 space-y-3">
-        <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">
-          Tracks
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">
+            Tracks
+          </span>
+          {onDockToggle && (
+            <button
+              type="button"
+              onClick={onDockToggle}
+              className="hidden lg:inline-flex items-center gap-1.5 border border-border-default px-2 py-0.5 text-[0.65rem] text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
+              title={
+                isDocked
+                  ? "Move transcript back into this tab"
+                  : "Dock transcript next to the video"
+              }
+            >
+              {isDocked ? (
+                <PanelRightClose className="h-3 w-3" />
+              ) : (
+                <PanelRightOpen className="h-3 w-3" />
+              )}
+              {isDocked ? "Undock" : "Dock next to video"}
+            </button>
+          )}
+        </div>
         {tracks.length === 0 ? (
           <div className="text-[0.78rem] text-text-muted">
             No subtitle tracks yet. Upload a .vtt/.srt file or extract from
@@ -405,23 +456,46 @@ export function SceneTranscriptPanel({
           </button>
         </div>
       </div>
+      )}
 
       {/* Transcript */}
-      <div className="surface-card-sharp">
+      {showTranscriptList && (
+      <div
+        className={cn(
+          "surface-card-sharp flex flex-col",
+          isListOnly && "flex-1 min-h-0",
+        )}
+      >
         <div className="flex items-center justify-between border-b border-border-default px-3 py-2">
           <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">
             Transcript
           </span>
-          {cues.length > 0 && (
-            <span className="text-[0.65rem] text-text-disabled">
-              {cues.length} lines
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {cues.length > 0 && (
+              <span className="text-[0.65rem] text-text-disabled">
+                {cues.length} lines
+              </span>
+            )}
+            {isListOnly && onDockToggle && (
+              <button
+                type="button"
+                onClick={onDockToggle}
+                className="text-text-muted hover:text-text-accent transition-colors"
+                title="Move transcript back into the tab"
+                aria-label="Undock transcript"
+              >
+                <PanelRightClose className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
         <div
           ref={listRef}
           onScroll={handleScroll}
-          className="surface-well max-h-[28rem] overflow-y-auto"
+          className={cn(
+            "surface-well overflow-y-auto",
+            isListOnly ? "flex-1 min-h-0" : "max-h-[28rem]",
+          )}
         >
           {loadingCues && (
             <div className="flex items-center justify-center py-10 text-text-muted text-[0.78rem]">
@@ -475,6 +549,7 @@ export function SceneTranscriptPanel({
             })}
         </div>
       </div>
+      )}
     </div>
   );
 }

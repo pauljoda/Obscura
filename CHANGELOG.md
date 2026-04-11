@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-04-10
+
+### Added
+
+- **Dockable transcript sidecar on desktop.** The transcript panel can now be pinned next to the video for live reading while you watch. A "Dock next to video" button appears in the Transcript tab's track management header (desktop only, and only on scenes that have subtitle tracks). When docked, the video takes 80% of the row by default and the transcript fills the rest; a 1.5px drag handle between them lets you resize (clamped to 40–92% video width). The dock preference and last-used width are persisted in `localStorage`, so the preference follows you across scenes — when you open a scene without subtitles the sidecar auto-collapses to full-width video, and when the next scene has subtitles the sidecar reappears at your chosen width automatically. The sidecar has its own undock button, and while it's active the Transcript tab shows a banner plus the track management controls (upload/extract/rename/delete) without duplicating the scrolling transcript.
+
+### Changed
+
+- `SceneTranscriptPanel` now accepts a `variant` prop (`"full" | "tracks-only" | "list-only"`) so the same component can render as the normal tab view, the management-only header when docked, or the full-height scrolling list in the sidecar. The transcript cue list uses flex layout with `min-h-0` to fill the container height in list-only mode.
+
 ## [0.10.1] - 2026-04-10
 
 ### Fixed
