@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   StashBoxClient,
   StashBoxError,
@@ -22,6 +22,7 @@ const {
   scenes,
   performers,
   scraperPackages,
+  fingerprintSubmissions,
 } = schema;
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -237,6 +238,62 @@ export async function stashboxRoutes(app: FastifyInstance) {
 
     const client = getStashBoxClient(ep);
     const triedMethods: string[] = [];
+
+    // Priority 0: Short-circuit via known remote stash_id.
+    // When the scene is already linked to a StashBox scene ID (from a previous
+    // identify+accept, a manual paste, or an import), fetch it directly. That
+    // skips the fingerprint/title cascade and keeps the contribution target
+    // stable even when the file was re-encoded (new md5/oshash/phash).
+    const [linkedStashId] = await db
+      .select({ stashId: stashIds.stashId })
+      .from(stashIds)
+      .where(
+        and(
+          eq(stashIds.entityType, "scene"),
+          eq(stashIds.entityId, scene.id),
+          eq(stashIds.stashBoxEndpointId, ep.id),
+        ),
+      )
+      .limit(1);
+
+    if (linkedStashId) {
+      triedMethods.push("stashid");
+      try {
+        const stashScene = await client.findSceneById(linkedStashId.stashId);
+        if (stashScene) {
+          const normalized = normalizeStashBoxScene(stashScene);
+          if (hasUsableNormalizedSceneResult(normalized)) {
+            const rawResult = stashBoxSceneToRawResult(stashScene);
+            const [result] = await db
+              .insert(scrapeResults)
+              .values({
+                sceneId: scene.id,
+                stashBoxEndpointId: ep.id,
+                action: "findById",
+                matchType: "stashid",
+                status: "pending",
+                rawResult,
+                proposedTitle: normalized.title,
+                proposedDate: normalized.date,
+                proposedDetails: normalized.details,
+                proposedUrl: normalized.url,
+                proposedStudioName: normalized.studioName,
+                proposedPerformerNames: normalized.performerNames,
+                proposedTagNames: normalized.tagNames,
+                proposedImageUrl: normalized.imageUrl,
+              })
+              .returning();
+
+            return { result, normalized, matchType: "stashid", triedMethods };
+          }
+        }
+        // null or unusable → fall through to existing cascade so a deleted
+        // upstream scene does not trap the user.
+      } catch (err) {
+        if (!(err instanceof StashBoxError)) throw err;
+        // Non-fatal — fall through to fingerprint/title.
+      }
+    }
 
     // Priority 1: Fingerprint lookup
     const fingerprints: StashBoxFingerprint[] = [];
@@ -585,6 +642,260 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Stash ID not found" });
     }
     return { ok: true };
+  });
+
+  // ─── POST /stashbox-endpoints/:id/submit-fingerprints ────────────
+  // Submit every algorithm we have on a scene (md5/oshash/phash) to the
+  // remote endpoint via the submitFingerprint mutation. Mirrors Stash's
+  // SubmitFingerprints loop — one mutation per (scene, algorithm) pair,
+  // serialized through the cached client's 240-rpm bucket.
+  app.post(
+    "/stashbox-endpoints/:id/submit-fingerprints",
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = (request.body ?? {}) as {
+        sceneId?: string;
+        algorithms?: Array<"MD5" | "OSHASH" | "PHASH">;
+      };
+
+      if (!body.sceneId) {
+        return reply.code(400).send({ error: "sceneId is required" });
+      }
+
+      const [ep] = await db
+        .select()
+        .from(stashBoxEndpoints)
+        .where(eq(stashBoxEndpoints.id, id))
+        .limit(1);
+      if (!ep) return reply.code(404).send({ error: "StashBox endpoint not found" });
+      if (!ep.enabled)
+        return reply.code(400).send({ error: "StashBox endpoint is disabled" });
+
+      const [scene] = await db
+        .select({
+          id: scenes.id,
+          title: scenes.title,
+          duration: scenes.duration,
+          checksumMd5: scenes.checksumMd5,
+          oshash: scenes.oshash,
+          phash: scenes.phash,
+        })
+        .from(scenes)
+        .where(eq(scenes.id, body.sceneId))
+        .limit(1);
+      if (!scene) return reply.code(404).send({ error: "Video not found" });
+
+      if (!scene.duration || scene.duration <= 0) {
+        return reply
+          .code(400)
+          .send({ error: "Scene duration is required to submit fingerprints" });
+      }
+
+      const [link] = await db
+        .select({ stashId: stashIds.stashId })
+        .from(stashIds)
+        .where(
+          and(
+            eq(stashIds.entityType, "scene"),
+            eq(stashIds.entityId, scene.id),
+            eq(stashIds.stashBoxEndpointId, ep.id),
+          ),
+        )
+        .limit(1);
+      if (!link) {
+        return reply.code(404).send({
+          error:
+            "Scene is not linked to this StashBox endpoint — run identify and accept a match first",
+        });
+      }
+
+      const requested = body.algorithms
+        ? new Set(body.algorithms)
+        : new Set<"MD5" | "OSHASH" | "PHASH">(["MD5", "OSHASH", "PHASH"]);
+
+      const candidates: Array<{
+        algorithm: "MD5" | "OSHASH" | "PHASH";
+        hash: string;
+      }> = [];
+      if (requested.has("MD5") && scene.checksumMd5)
+        candidates.push({ algorithm: "MD5", hash: scene.checksumMd5 });
+      if (requested.has("OSHASH") && scene.oshash)
+        candidates.push({ algorithm: "OSHASH", hash: scene.oshash });
+      if (requested.has("PHASH") && scene.phash)
+        candidates.push({ algorithm: "PHASH", hash: scene.phash });
+
+      if (candidates.length === 0) {
+        return reply
+          .code(400)
+          .send({ error: "Scene has no fingerprints to submit" });
+      }
+
+      const client = getStashBoxClient(ep);
+      const durationSeconds = Math.max(1, Math.round(scene.duration));
+      const submissions: Array<{
+        algorithm: "MD5" | "OSHASH" | "PHASH";
+        hash: string;
+        status: "success" | "error";
+        error?: string;
+      }> = [];
+
+      for (const c of candidates) {
+        let status: "success" | "error" = "error";
+        let error: string | undefined;
+        try {
+          const ok = await client.submitFingerprint({
+            scene_id: link.stashId,
+            fingerprint: {
+              hash: c.hash,
+              algorithm: c.algorithm,
+              duration: durationSeconds,
+            },
+          });
+          status = ok ? "success" : "error";
+          if (!ok) error = "Endpoint returned false";
+        } catch (err) {
+          status = "error";
+          error = err instanceof Error ? err.message : String(err);
+        }
+
+        await db
+          .insert(fingerprintSubmissions)
+          .values({
+            sceneId: scene.id,
+            stashBoxEndpointId: ep.id,
+            algorithm: c.algorithm,
+            hash: c.hash,
+            status,
+            error: error ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [
+              fingerprintSubmissions.sceneId,
+              fingerprintSubmissions.stashBoxEndpointId,
+              fingerprintSubmissions.algorithm,
+              fingerprintSubmissions.hash,
+            ],
+            set: {
+              status,
+              error: error ?? null,
+              submittedAt: new Date(),
+            },
+          });
+
+        submissions.push({
+          algorithm: c.algorithm,
+          hash: c.hash,
+          status,
+          ...(error ? { error } : {}),
+        });
+      }
+
+      return { submissions };
+    },
+  );
+
+  // ─── GET /phash-contributions ────────────────────────────────────
+  // Paginated list of scenes that have at least one linked stash_id,
+  // with their stash_id chips, available fingerprint hashes, and the
+  // latest submission state per (endpoint, algorithm). Drives the web
+  // pHashes tab.
+  app.get("/phash-contributions", async (request) => {
+    const query = request.query as { page?: string; pageSize?: string };
+    const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
+    const pageSize = Math.min(
+      100,
+      Math.max(1, Number.parseInt(query.pageSize ?? "25", 10) || 25),
+    );
+    const offset = (page - 1) * pageSize;
+
+    const sceneIdRows = await db
+      .selectDistinct({ id: stashIds.entityId })
+      .from(stashIds)
+      .where(eq(stashIds.entityType, "scene"))
+      .orderBy(stashIds.entityId);
+
+    const total = sceneIdRows.length;
+    const pageIds = sceneIdRows.slice(offset, offset + pageSize).map((r) => r.id);
+
+    if (pageIds.length === 0) {
+      return { total, page, pageSize, items: [] };
+    }
+
+    const sceneRows = await db
+      .select({
+        id: scenes.id,
+        title: scenes.title,
+        thumbnailPath: scenes.thumbnailPath,
+        duration: scenes.duration,
+        checksumMd5: scenes.checksumMd5,
+        oshash: scenes.oshash,
+        phash: scenes.phash,
+      })
+      .from(scenes)
+      .where(inArray(scenes.id, pageIds));
+
+    const linkRows = await db
+      .select({
+        id: stashIds.id,
+        entityId: stashIds.entityId,
+        endpointId: stashIds.stashBoxEndpointId,
+        stashId: stashIds.stashId,
+        endpointName: stashBoxEndpoints.name,
+      })
+      .from(stashIds)
+      .innerJoin(
+        stashBoxEndpoints,
+        eq(stashIds.stashBoxEndpointId, stashBoxEndpoints.id),
+      )
+      .where(
+        and(eq(stashIds.entityType, "scene"), inArray(stashIds.entityId, pageIds)),
+      );
+
+    const submissionRows = await db
+      .select({
+        sceneId: fingerprintSubmissions.sceneId,
+        endpointId: fingerprintSubmissions.stashBoxEndpointId,
+        algorithm: fingerprintSubmissions.algorithm,
+        hash: fingerprintSubmissions.hash,
+        status: fingerprintSubmissions.status,
+        error: fingerprintSubmissions.error,
+        submittedAt: fingerprintSubmissions.submittedAt,
+      })
+      .from(fingerprintSubmissions)
+      .where(inArray(fingerprintSubmissions.sceneId, pageIds))
+      .orderBy(desc(fingerprintSubmissions.submittedAt));
+
+    const items = sceneRows.map((scene) => ({
+      scene: {
+        id: scene.id,
+        title: scene.title,
+        thumbnailPath: scene.thumbnailPath,
+        duration: scene.duration,
+        checksumMd5: scene.checksumMd5,
+        oshash: scene.oshash,
+        phash: scene.phash,
+      },
+      stashIds: linkRows
+        .filter((l) => l.entityId === scene.id)
+        .map((l) => ({
+          id: l.id,
+          endpointId: l.endpointId,
+          endpointName: l.endpointName,
+          stashId: l.stashId,
+        })),
+      submissions: submissionRows
+        .filter((s) => s.sceneId === scene.id)
+        .map((s) => ({
+          endpointId: s.endpointId,
+          algorithm: s.algorithm,
+          hash: s.hash,
+          status: s.status,
+          error: s.error,
+          submittedAt: s.submittedAt.toISOString(),
+        })),
+    }));
+
+    return { total, page, pageSize, items };
   });
 
   // ─── GET /metadata-providers ─────────────────────────────────────

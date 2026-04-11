@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Identify now short-circuits when a scene is already linked.** `POST /stashbox-endpoints/:id/identify` first checks for an existing `stash_ids` row for the target endpoint. When one exists, it fetches the remote scene by ID and returns a `matchType: "stashid"` scrape result, skipping the fingerprint/title cascade entirely. If the upstream scene was deleted it falls through to the existing cascade so the user can re-link.
+- **New `POST /stashbox-endpoints/:id/submit-fingerprints` route.** Submits every available fingerprint (md5/oshash/phash) on a scene to the remote endpoint, records the per-(algorithm, hash) result in `fingerprint_submissions`, and returns the per-algorithm outcome. Refuses when duration is 0 or when no `stash_ids` row links the scene. Serialized through the cached client's rate limiter so bulk submissions from the upcoming pHashes tab stay within the 240-rpm budget.
+- **New `GET /phash-contributions` route.** Paginated list of scenes with at least one linked stash_id, joined with their hashes, their linked stash_id chips (with endpoint names), and their per-(endpoint, algorithm) submission history. Powers the pHashes tab.
 - `StashBoxClient.findSceneById` (`FindSceneByID` query) and `StashBoxClient.submitFingerprint` (`SubmitFingerprint` mutation) in `@obscura/stash-import`, matching Stash's upstream schema shape. These are the building blocks for fetching a scene by its known remote ID and for contributing a single fingerprint back to a StashBox-protocol server.
 
 ### Changed
