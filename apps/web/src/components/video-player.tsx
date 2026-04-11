@@ -45,6 +45,26 @@ import {
 } from "../lib/subtitle-appearance";
 import { SubtitleSettingsPanel } from "./subtitle-settings-panel";
 
+/**
+ * iOS / iPadOS Safari decodes HEVC in fMP4 only when the bitstream matches
+ * a narrow set of parameters (hvc1 tag, specific profile/tier, etc.).
+ * MKV-sourced HEVC remuxed by ffmpeg often fails on these devices even
+ * though desktop browsers play it fine. For any iOS device we prefer HLS
+ * when a manifest is available, since the server transcodes renditions
+ * into an iOS-compatible form.
+ */
+function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ reports as MacIntel but exposes touch points.
+  return (
+    navigator.platform === "MacIntel" &&
+    typeof (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints === "number" &&
+    (navigator as Navigator & { maxTouchPoints: number }).maxTouchPoints > 1
+  );
+}
+
 function isAssTrackActive(
   activeSubtitleId: string | null | undefined,
   tracks: readonly SceneSubtitleTrackDto[],
@@ -446,12 +466,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // For a brand-new video pick the default mode from the library setting
     // (falling back to `direct` when a direct source is available, otherwise
     // `hls`). For a quality switch keep the mode the user selected.
+    // iOS Safari chokes on HEVC remuxes that desktop handles fine, so when
+    // a manifest is available we prefer HLS there regardless of the setting.
+    const preferHlsForIos = Boolean(src) && isIosDevice();
     const initialMode: "direct" | "hls" =
-      defaultPlaybackMode === "hls" && src
+      preferHlsForIos
         ? "hls"
-        : directSrc
-          ? "direct"
-          : "hls";
+        : defaultPlaybackMode === "hls" && src
+          ? "hls"
+          : directSrc
+            ? "direct"
+            : "hls";
     const effectiveMode: "direct" | "hls" = isNewSource ? initialMode : streamMode;
 
     if (isNewSource) {
