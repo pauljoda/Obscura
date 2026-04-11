@@ -33,7 +33,8 @@ import {
   isDocumentFullscreen,
 } from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
-import type { SceneSubtitleTrackDto } from "../lib/api/types";
+import { fetchSceneSubtitleCues } from "../lib/api/media";
+import type { SceneSubtitleTrackDto, SubtitleCueDto } from "../lib/api/types";
 import {
   captionClassName,
   pickPreferredSubtitleTrack,
@@ -74,7 +75,6 @@ interface VideoPlayerProps {
   activeSubtitleTrackId?: string | null;
   onActiveSubtitleTrackIdChange?: (id: string | null) => void;
   onActiveCueChange?: (cue: ActiveCue | null) => void;
-  subtitleAssetBase?: string;
   /** When true, parent has already decided the subtitle state (including
    *  an explicit "Off") — the player will not run its library-default
    *  auto-enable pass. */
@@ -214,7 +214,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     activeSubtitleTrackId: controlledSubtitleId,
     onActiveSubtitleTrackIdChange,
     onActiveCueChange,
-    subtitleAssetBase,
     subtitleChoiceLocked = false,
     subtitleDefaults,
     defaultPlaybackMode,
@@ -933,123 +932,105 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     return () => window.removeEventListener("keydown", handleKey);
   });
 
-  // ─── Subtitle track mode management ────────────────────────────
-  // Keep all <track> elements in "hidden" mode for the selected one (so the
-  // browser parses cues but doesn't draw them — we render our own overlay)
-  // and "disabled" for every other track.
-  //
-  // Re-runs on source changes because hls.js's attachMedia replaces the
-  // media element's source via MSE, which resets text track cue buffers.
-  // Setting t.mode = "hidden" when it is already "hidden" is a no-op for
-  // the browser — so we first park every track at "disabled" and then
-  // flip the active one to "hidden" to force a fresh cue fetch.
+  // ─── Subtitle cue pipeline ─────────────────────────────────────
+  // We fetch parsed cues directly from the API instead of relying on
+  // <track> elements. The native text-track machinery is unreliable when
+  // the media element is backed by an MSE source (hls.js): Chrome won't
+  // refetch cues after a source swap, and hls.js's own SubtitleTrack-
+  // Controller likes to muck with textTracks[*].mode. Driving the overlay
+  // from a plain fetch + timeupdate gives us deterministic behavior in
+  // direct, HLS, and mode-switch scenarios.
+  const [activeTrackCues, setActiveTrackCues] = useState<SubtitleCueDto[]>([]);
+  const activeCuesRef = useRef<SubtitleCueDto[]>([]);
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    activeCuesRef.current = activeTrackCues;
+  }, [activeTrackCues]);
 
-    const apply = () => {
-      const tracks = video.textTracks;
-      // First pass: park everything.
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i];
-        if (!t) continue;
-        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
-        t.mode = "disabled";
-      }
-      // Second pass: activate the matching one.
-      if (!activeSubtitleId) return;
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i];
-        if (!t) continue;
-        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
-        const matches =
-          (t.id && t.id === activeSubtitleId) ||
-          (!t.id && t.label && subtitleTracks.find((s) => s.id === activeSubtitleId)?.label === t.label);
-        if (matches) {
-          t.mode = "hidden";
-          break;
-        }
-      }
-    };
-
-    apply();
-    // Text tracks can be attached late (e.g. after hls.js re-initialises
-    // the media element), so re-apply whenever a new track shows up.
-    const tracks = video.textTracks;
-    tracks.addEventListener?.("addtrack", apply);
-    // Also re-apply after the media element finishes (re)loading — some
-    // browsers drop cue buffers when the source swaps and only refetch
-    // once the element reaches HAVE_METADATA again.
-    video.addEventListener("loadedmetadata", apply);
-    return () => {
-      tracks.removeEventListener?.("addtrack", apply);
-      video.removeEventListener("loadedmetadata", apply);
-    };
-  }, [activeSubtitleId, subtitleTracks, src, directSrc, streamMode]);
-
-  // Subscribe to cuechange on the active (hidden) track and surface the cue
-  // text for the overlay + transcript sync.
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !activeSubtitleId) {
+    if (!activeSubtitleId) {
+      setActiveTrackCues([]);
+      setActiveCueText(null);
+      onActiveCueChange?.(null);
+      return;
+    }
+    const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
+    if (!track) {
+      setActiveTrackCues([]);
       setActiveCueText(null);
       onActiveCueChange?.(null);
       return;
     }
 
-    let cleanupFn: (() => void) | null = null;
+    let cancelled = false;
+    fetchSceneSubtitleCues(track.sceneId, track.id)
+      .then(({ cues }) => {
+        if (cancelled) return;
+        setActiveTrackCues(cues);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setActiveTrackCues([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSubtitleId, subtitleTracks, onActiveCueChange]);
 
-    const attach = () => {
-      const tracks = video.textTracks;
-      let target: TextTrack | null = null;
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i];
-        if (!t) continue;
-        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
-        if (t.id && t.id === activeSubtitleId) {
-          target = t;
+  // Drive the overlay off the video's timeupdate (plus seeking/seeked so
+  // we react instantly to scrubs without waiting for the next ~250ms
+  // timeupdate tick). Also re-evaluate whenever the cue set or active
+  // track changes so a freshly-loaded cue list renders on the current
+  // frame instead of waiting for the next tick.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let lastIndex = -1;
+    const evaluate = () => {
+      const cues = activeCuesRef.current;
+      if (!activeSubtitleId || cues.length === 0) {
+        if (lastIndex !== -1) {
+          lastIndex = -1;
+          setActiveCueText(null);
+          onActiveCueChange?.(null);
+        }
+        return;
+      }
+      const t = video.currentTime;
+      // Linear scan is fine — subtitle cue counts are in the low thousands
+      // at most and this runs on timeupdate (~4Hz).
+      let idx = -1;
+      for (let i = 0; i < cues.length; i++) {
+        const cue = cues[i];
+        if (!cue) continue;
+        if (t >= cue.start && t < cue.end) {
+          idx = i;
           break;
         }
       }
-      if (!target) return;
-
-      const handler = () => {
-        const active = target!.activeCues;
-        if (!active || active.length === 0) {
-          setActiveCueText(null);
-          onActiveCueChange?.(null);
-          return;
-        }
-        const first = active[0] as VTTCue;
-        const text = (first.text ?? "").replace(/<[^>]+>/g, "");
-        setActiveCueText(text || null);
-        onActiveCueChange?.({
-          start: first.startTime,
-          end: first.endTime,
-          text,
-        });
-      };
-
-      target.addEventListener("cuechange", handler);
-      handler();
-      cleanupFn = () => target!.removeEventListener("cuechange", handler);
+      if (idx === lastIndex) return;
+      lastIndex = idx;
+      if (idx === -1) {
+        setActiveCueText(null);
+        onActiveCueChange?.(null);
+        return;
+      }
+      const cue = cues[idx]!;
+      const text = cue.text.replace(/<[^>]+>/g, "");
+      setActiveCueText(text || null);
+      onActiveCueChange?.({ start: cue.start, end: cue.end, text });
     };
 
-    attach();
-    // Textract may attach late.
-    const tracks = video.textTracks;
-    const onAdd = () => {
-      cleanupFn?.();
-      cleanupFn = null;
-      attach();
-    };
-    tracks.addEventListener?.("addtrack", onAdd);
-
+    evaluate();
+    video.addEventListener("timeupdate", evaluate);
+    video.addEventListener("seeking", evaluate);
+    video.addEventListener("seeked", evaluate);
     return () => {
-      tracks.removeEventListener?.("addtrack", onAdd);
-      cleanupFn?.();
+      video.removeEventListener("timeupdate", evaluate);
+      video.removeEventListener("seeking", evaluate);
+      video.removeEventListener("seeked", evaluate);
     };
-  }, [activeSubtitleId, onActiveCueChange, src, directSrc, streamMode]);
+  }, [activeSubtitleId, activeTrackCues, onActiveCueChange]);
 
   function togglePlay() {
     const video = videoRef.current;
@@ -1237,29 +1218,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onClick={togglePlay}
           playsInline
           crossOrigin="anonymous"
-        >
-          {subtitleTracks.map((track) => {
-            const href = subtitleAssetBase
-              ? `${subtitleAssetBase}${track.url}`
-              : track.url;
-            // Keying on the current source forces React to unmount and
-            // remount the <track> element whenever the player switches
-            // between direct and HLS — the browser then treats the cues
-            // as freshly-attached and refetches them, which is the only
-            // reliable way to get the text-track cue buffer repopulated
-            // after an MSE source swap in Chrome.
-            return (
-              <track
-                key={`${track.id}|${streamMode}|${src ?? ""}|${directSrc ?? ""}`}
-                id={track.id}
-                kind="subtitles"
-                src={href}
-                srcLang={track.language === "und" ? undefined : track.language}
-                label={track.label ?? languageLabel(track.language)}
-              />
-            );
-          })}
-        </video>
+        />
       ) : (
         <div className="flex aspect-video items-center justify-center bg-surface-1">
           <div className="text-center">

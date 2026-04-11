@@ -439,9 +439,6 @@ export function SceneDetail({
               activeSubtitleTrackId={activeSubtitleId}
               onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
               subtitleChoiceLocked={subtitleChoiceLocked}
-              subtitleAssetBase={
-                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-              }
               subtitleDefaults={subtitleDefaults}
               defaultPlaybackMode={defaultPlaybackMode}
             />
