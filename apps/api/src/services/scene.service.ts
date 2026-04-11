@@ -33,6 +33,7 @@ import {
   writeNfo,
   allSceneVideoGeneratedDiskPaths,
   getGeneratedSceneDir,
+  getSidecarPaths,
   fileNameToTitle,
   runProcess,
 } from "@obscura/media-core";
@@ -1240,4 +1241,100 @@ export async function resetThumbnail(id: string) {
     .where(eq(scenes.id, id));
 
   return { ok: true as const, thumbnailPath: defaultUrl };
+}
+
+/**
+ * Reset all accepted metadata on a scene back to its fresh-off-disk state.
+ *
+ * Clears title (to the filename stem), details, date, rating, url, studio,
+ * performers, tags, and `organized`. Leaves the file, fingerprints, playback
+ * stats, generated previews, and user-authored markers/subtitles alone — the
+ * point is that *metadata* drifted, not identity.
+ *
+ * Also deletes the `.nfo` sidecar so a follow-up library scan cannot re-import
+ * the same stale metadata, and re-enqueues the standard probe + fingerprint
+ * pipeline so technical fields are re-derived.
+ */
+export async function resetSceneMetadata(id: string) {
+  const existing = await db.query.scenes.findFirst({
+    where: eq(scenes.id, id),
+    columns: { id: true, filePath: true },
+  });
+
+  if (!existing) {
+    throw new AppError(404, "Video not found");
+  }
+
+  const fallbackTitle = existing.filePath
+    ? fileNameToTitle(existing.filePath)
+    : "Untitled";
+
+  await db.transaction(async (tx) => {
+    await tx.delete(scenePerformers).where(eq(scenePerformers.sceneId, id));
+    await tx.delete(sceneTags).where(eq(sceneTags.sceneId, id));
+
+    await tx
+      .update(scenes)
+      .set({
+        title: fallbackTitle,
+        details: null,
+        date: null,
+        rating: null,
+        url: null,
+        studioId: null,
+        organized: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(scenes.id, id));
+
+    await tx.execute(sql`
+      UPDATE performers SET scene_count = (
+        SELECT count(*) FROM scene_performers WHERE performer_id = performers.id
+      )
+    `);
+    await tx.execute(sql`
+      UPDATE tags SET scene_count = (
+        SELECT count(*) FROM scene_tags WHERE tag_id = tags.id
+      )
+    `);
+  });
+
+  // Remove the NFO sidecar — otherwise a subsequent library scan would
+  // read it back and re-apply the same stale metadata we just cleared.
+  if (existing.filePath) {
+    try {
+      const nfoPath = getSidecarPaths(existing.filePath).nfo;
+      if (existsSync(nfoPath)) await unlink(nfoPath);
+    } catch {
+      // non-fatal — sidecar may not exist or be unwritable
+    }
+  }
+
+  // Re-run the standard per-scene pipeline so technical probe fields and
+  // fingerprints are refreshed from disk. Preview assets are left alone.
+  const target = {
+    type: "scene" as const,
+    id,
+    label: fallbackTitle,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: "Reset scene metadata",
+  };
+  await enqueueQueueJob({
+    queueName: "media-probe",
+    jobName: "scene-media-probe",
+    data: { sceneId: id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "fingerprint",
+    jobName: "scene-fingerprint",
+    data: { sceneId: id },
+    target,
+    trigger,
+  });
+
+  return { ok: true as const, id, title: fallbackTitle };
 }

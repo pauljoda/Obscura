@@ -22,6 +22,7 @@ import {
   Heart,
   CheckCircle2,
   RefreshCw,
+  Eraser,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -30,6 +31,7 @@ import {
   fetchTags,
   updateScene,
   rebuildScenePreview,
+  resetSceneMetadata,
   trackPlay,
   trackOrgasm,
   toApiUrl,
@@ -347,6 +349,39 @@ export function SceneDetail({
     setTimeout(() => setRebuildPreviewState("idle"), 4000);
   }
 
+  const [resetMetadataState, setResetMetadataState] = useState<
+    "idle" | "running" | "done"
+  >("idle");
+
+  async function handleResetMetadata() {
+    if (resetMetadataState !== "idle") return;
+    const confirmed = window.confirm(
+      "Reset metadata?\n\n" +
+        "This clears the title, details, date, rating, URL, studio, performers, and tags, " +
+        "deletes the .nfo sidecar, and re-runs the probe and fingerprint jobs. " +
+        "Markers, playback stats, and the file on disk are preserved.\n\n" +
+        "This cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    setResetMetadataState("running");
+    try {
+      await resetSceneMetadata(id);
+    } catch (err) {
+      setResetMetadataState("idle");
+      setError(err instanceof Error ? err.message : "Failed to reset metadata");
+      return;
+    }
+    try {
+      const fresh = await fetchSceneDetail(id);
+      setScene(fresh);
+    } catch {
+      // non-fatal — reset succeeded, refresh failed
+    }
+    setResetMetadataState("done");
+    setTimeout(() => setResetMetadataState("idle"), 4000);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -592,6 +627,40 @@ export function SceneDetail({
               }
             >
               <CheckCircle2 className="h-4 w-4" />
+            </button>
+
+            {/* Reset metadata — revert to fresh-off-disk state */}
+            <button
+              type="button"
+              onClick={() => void handleResetMetadata()}
+              disabled={resetMetadataState !== "idle"}
+              className={cn(
+                "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
+                resetMetadataState === "done"
+                  ? "text-success-text"
+                  : resetMetadataState === "running"
+                    ? "text-text-accent"
+                    : "text-text-disabled hover:text-danger-text hover:bg-surface-2",
+                resetMetadataState !== "idle" && "cursor-default",
+              )}
+              title={
+                resetMetadataState === "done"
+                  ? "Metadata reset"
+                  : resetMetadataState === "running"
+                    ? "Resetting..."
+                    : "Reset all metadata to fresh-off-disk state (clears title, tags, performers, studio, etc.)"
+              }
+            >
+              {resetMetadataState === "done" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Eraser
+                  className={cn(
+                    "h-4 w-4",
+                    resetMetadataState === "running" && "animate-pulse",
+                  )}
+                />
+              )}
             </button>
 
             {/* Rebuild preview */}

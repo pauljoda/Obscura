@@ -190,6 +190,12 @@ export async function deleteScene(
   return fetchApi(`/scenes/${id}${qs}`, { method: "DELETE" });
 }
 
+export async function resetSceneMetadata(
+  id: string,
+): Promise<{ ok: true; id: string; title: string }> {
+  return fetchApi(`/scenes/${id}/reset-metadata`, { method: "POST" });
+}
+
 export async function deleteImage(
   id: string,
   deleteFile?: boolean,

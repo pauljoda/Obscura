@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **New "Reset metadata" button on the scene details page.** Clears the title (reverts it to the filename stem), details, date, rating, URL, studio, performers, and tags, deletes the `.nfo` sidecar so a follow-up scan cannot re-import the same stale data, and re-enqueues the probe and fingerprint jobs so the scene goes back through the standard pipeline. Markers, playback stats, generated previews, fingerprints, and the file on disk are all preserved — use this when a wrong scraper match has been accepted and you want to identify the scene from scratch without touching the media file. Exposed as `POST /scenes/:id/reset-metadata` on the API.
+
 ## [0.18.0] - 2026-04-11
 ### Fixed
 

@@ -34,6 +34,12 @@ export async function scenesRoutes(app: FastifyInstance) {
     return sceneService.deleteScene(id, query.deleteFile === "true");
   });
 
+  // ─── POST /scenes/:id/reset-metadata ──────────────────────────
+  app.post("/scenes/:id/reset-metadata", async (request) => {
+    const { id } = request.params as { id: string };
+    return sceneService.resetSceneMetadata(id);
+  });
+
   // ─── POST /scenes/:id/markers ──────────────────────────────────
   app.post("/scenes/:id/markers", async (request) => {
     const { id } = request.params as { id: string };
