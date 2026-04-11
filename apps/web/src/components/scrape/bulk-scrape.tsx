@@ -5,6 +5,7 @@ import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Check,
+  Fingerprint,
   Loader2,
   ScanSearch,
   Play,
@@ -44,6 +45,7 @@ import { ScrapeSceneRows, runSceneScrape, acceptAllScenes } from "./scrape-scene
 import { ScrapePerformerRows, runPerformerScrape, acceptAllPerformers } from "./scrape-performers-tab";
 import { ScrapeStudioRows, runStudioScrape, acceptAllStudios } from "./scrape-studios-tab";
 import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
+import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
 /* ─── Component ─────────────────────────────────────────────────── */
 
@@ -189,7 +191,16 @@ export function BulkScrape() {
 
   /* ─── Stats ──────────────────────────────────────────────────── */
 
-  const rows = tab === "scenes" ? sceneRows : tab === "performers" ? perfRows : tab === "studios" ? studioRows : tagRows;
+  const rows =
+    tab === "scenes"
+      ? sceneRows
+      : tab === "performers"
+        ? perfRows
+        : tab === "studios"
+          ? studioRows
+          : tab === "tags"
+            ? tagRows
+            : [];
   const foundCount = rows.filter((r) => r.status === "found").length;
   const acceptedCount = rows.filter((r) => r.status === "accepted").length;
   const missedCount = rows.filter((r) => r.status === "no-result" || r.status === "error").length;
@@ -270,6 +281,7 @@ export function BulkScrape() {
           { key: "performers" as Tab, label: entityTerms.performers, icon: Users, count: perfRows.length },
           { key: "studios" as Tab, label: "Studios", icon: Building2, count: studioRows.length },
           { key: "tags" as Tab, label: "Tags", icon: Tag, count: tagRows.length },
+          { key: "phashes" as Tab, label: "pHashes", icon: Fingerprint, count: null as number | null },
         ]).map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
@@ -284,11 +296,18 @@ export function BulkScrape() {
           >
             <Icon className="h-3.5 w-3.5" />
             {label}
-            <span className="text-mono-sm text-text-disabled ml-1">{count}</span>
+            {count !== null && (
+              <span className="text-mono-sm text-text-disabled ml-1">{count}</span>
+            )}
           </button>
         ))}
       </div>
 
+      {/* pHashes tab is self-contained — skips the shared stats/controls/run pipeline */}
+      {tab === "phashes" && <ScrapePhashesTab />}
+
+      {tab !== "phashes" && (
+        <>
       {/* Stats strip */}
       {processedCount > 0 && (
         <div className="grid grid-cols-4 gap-2">
@@ -483,6 +502,8 @@ export function BulkScrape() {
             />
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

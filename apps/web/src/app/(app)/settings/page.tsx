@@ -16,6 +16,7 @@ const defaultSettings: LibrarySettings = {
   scanIntervalMinutes: 60,
   autoGenerateMetadata: true,
   autoGenerateFingerprints: true,
+  generatePhash: false,
   autoGeneratePreview: true,
   generateTrickplay: true,
   trickplayIntervalSeconds: 10,
