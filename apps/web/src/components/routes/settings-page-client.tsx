@@ -62,6 +62,7 @@ import {
   fetchLibraryConfig,
   fetchStashBoxEndpoints,
   migrateSceneAssetStorage,
+  backfillPhashes,
   rebuildPreviews,
   runQueue,
   testStashBoxEndpoint,
@@ -1196,6 +1197,15 @@ export function SettingsPageClient({
             }}
           />
           <ToggleCard
+            label="Perceptual hash (pHash)"
+            description="Stash-compatible video phash via the bundled helper. CPU-heavy (25 ffmpeg frame extractions per scene) but required to contribute fingerprints back to StashDB / ThePornDB."
+            checked={settings.generatePhash}
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, generatePhash: checked }));
+              void autoSaveSetting({ generatePhash: checked });
+            }}
+          />
+          <ToggleCard
             label="Preview assets"
             description="Thumbnails and short preview clips."
             checked={settings.autoGeneratePreview}
@@ -1369,6 +1379,8 @@ export function SettingsPageClient({
 function DiagnosticsSection() {
   const [rebuilding, setRebuilding] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [backfillingPhash, setBackfillingPhash] = useState(false);
+  const [phashResult, setPhashResult] = useState<string | null>(null);
   const { mode: nsfwMode } = useNsfw();
 
   const handleRebuildPreviews = async () => {
@@ -1383,6 +1395,21 @@ function DiagnosticsSection() {
       setResult("Failed to queue rebuild");
     } finally {
       setRebuilding(false);
+    }
+  };
+
+  const handleBackfillPhashes = async () => {
+    setBackfillingPhash(true);
+    setPhashResult(null);
+    try {
+      const res = await backfillPhashes(nsfwMode);
+      setPhashResult(
+        `Queued ${res.enqueued} ${res.enqueued === 1 ? "video" : "videos"} for pHash generation`,
+      );
+    } catch {
+      setPhashResult("Failed to queue backfill");
+    } finally {
+      setBackfillingPhash(false);
     }
   };
 
@@ -1423,6 +1450,36 @@ function DiagnosticsSection() {
             </button>
             {result && (
               <p className="text-[0.68rem] text-text-muted">{result}</p>
+            )}
+          </div>
+        </div>
+        <div className="surface-card p-3 space-y-2">
+          <div>
+            <p className="text-[0.78rem] font-medium text-text-primary">
+              Backfill perceptual hashes
+            </p>
+            <p className="text-[0.68rem] text-text-muted">
+              Queue a Stash-compatible pHash generation job for every {entityTerms.scene.toLowerCase()} that has a
+              known duration but no stored phash. Required before you can contribute those hashes to StashDB /
+              ThePornDB from the Identify → pHashes tab. CPU-heavy (25 ffmpeg frame extractions per scene).
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBackfillPhashes}
+              disabled={backfillingPhash}
+              className="inline-flex items-center gap-1.5 border border-border-accent/40 bg-accent-950/30 px-3 py-1.5 text-[0.72rem] font-medium text-text-accent transition-colors hover:bg-accent-950/50 hover:shadow-[var(--shadow-glow-accent)] disabled:opacity-50"
+            >
+              {backfillingPhash ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {backfillingPhash ? "Queuing..." : "Backfill pHashes"}
+            </button>
+            {phashResult && (
+              <p className="text-[0.68rem] text-text-muted">{phashResult}</p>
             )}
           </div>
         </div>

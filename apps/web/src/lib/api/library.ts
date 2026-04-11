@@ -120,6 +120,18 @@ export async function rebuildScenePreview(sceneId: string, nsfwMode: string): Pr
   });
 }
 
+export async function backfillPhashes(nsfwMode: string): Promise<{
+  ok: boolean;
+  enqueued: number;
+  skipped: number;
+  jobIds: string[];
+}> {
+  return fetchApi("/jobs/phash-backfill", {
+    method: "POST",
+    body: JSON.stringify({ nsfw: nsfwMode }),
+  });
+}
+
 export async function rebuildPreviews(nsfwMode: string): Promise<{
   ok: boolean;
   enqueued: number;
