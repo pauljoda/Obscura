@@ -282,24 +282,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [usingAdaptiveStream, setUsingAdaptiveStream] = useState(false);
   const [playerNotice, setPlayerNotice] = useState<string | null>(null);
   const [hlsInitializing, setHlsInitializing] = useState(false);
-  /** Seconds into the source where the *currently loaded* HLS stream's
-   *  local t=0 sits. Scene time = video.currentTime + hlsStartOffset.
-   *  Always 0 for direct playback. Bumped after a scrub-triggered
-   *  /hls/restart so the film strip and seek bar stay in scene time. */
-  const [hlsStartOffset, setHlsStartOffset] = useState(0);
-  const hlsStartOffsetRef = useRef(0);
-  hlsStartOffsetRef.current = hlsStartOffset;
-  /** True while a /hls/restart request is in flight so the seekTo path
-   *  doesn't keep firing new restarts on every pointer move. */
-  const hlsRestartPendingRef = useRef(false);
-  /** Stable indirection so the imperative handle (and any other caller
-   *  defined before seekTo) can invoke the latest seekTo closure. */
-  const seekToRef = useRef<((time: number) => void) | null>(null);
-  /** Bumped after a successful /hls/restart to force the HLS init effect
-   *  to tear down the current Hls instance and reload the master playlist
-   *  from the new encode. */
-  const [hlsReloadToken, setHlsReloadToken] = useState(0);
-  const hlsReloadTokenRef = useRef(0);
+  /** When the user scrubs past the seekable range in progressive HLS, we
+   * remember the desired target here and re-seek once the playlist grows
+   * to cover it. */
+  const [deferredSeekTarget, setDeferredSeekTarget] = useState<number | null>(null);
   const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
   const [internalSubtitleId, setInternalSubtitleId] = useState<string | null>(null);
   const [activeCueText, setActiveCueText] = useState<string | null>(null);
@@ -377,10 +363,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     ref,
     () => ({
       seekTo(time: number) {
-        // External callers (markers, transcript jumps, etc.) pass scene
-        // time. Route through the main seekTo so the HLS-restart path
-        // handles out-of-range targets uniformly.
-        seekToRef.current?.(time);
+        const video = videoRef.current;
+        if (!video) return;
+        const dur = duration || video.duration || 0;
+        video.currentTime = Math.max(0, Math.min(dur || time, time));
       },
     }),
     [duration],
@@ -419,13 +405,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   // Fetch the HLS status endpoint when the source changes so we can seed the
   // quality menu with real rendition labels even before hls.js has parsed the
-  // manifest. This also kicks the backend into starting ffmpeg early, and
-  // gives us the current `startSec` so scene-time display is correct from
-  // frame one on scenes that were previously restart-from-offset encoded.
+  // manifest. This also kicks the backend into starting ffmpeg early.
   useEffect(() => {
     if (!src) {
       seededRenditionsRef.current = [];
-      setHlsStartOffset(0);
       return;
     }
     const statusUrl = hlsStatusUrlForSrc(src);
@@ -436,9 +419,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       const status = await fetchHlsStatus(statusUrl, controller.signal);
       if (!status || controller.signal.aborted) return;
       seededRenditionsRef.current = status.renditions;
-      if (typeof status.startSec === "number" && Number.isFinite(status.startSec)) {
-        setHlsStartOffset(status.startSec);
-      }
       // Only seed options if the real level list isn't already in place.
       setQualityOptions((current) => {
         const hasRealLevels = current.some((opt) => typeof opt.value === "number");
@@ -463,13 +443,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const isNewSource = srcKey !== prevSrcKeyRef.current;
     prevSrcKeyRef.current = srcKey;
 
-    // A /hls/restart bumped the token; the caller has already cleared
-    // pendingSeekTime so the new stream's local 0 (= scene time at the
-    // new offset) is the intended playhead.
-    const isHlsReload =
-      !isNewSource && hlsReloadToken !== hlsReloadTokenRef.current;
-    hlsReloadTokenRef.current = hlsReloadToken;
-
     // For a brand-new video pick the default mode from the library setting
     // (falling back to `direct` when a direct source is available, otherwise
     // `hls`). For a quality switch keep the mode the user selected.
@@ -491,9 +464,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setQualityMode(effectiveMode === "direct" ? "direct" : "auto");
       setStreamMode(effectiveMode);
       pendingSeedNameRef.current = null;
-      // Direct playback has no HLS offset; the HLS branch will re-seed this
-      // from the status endpoint if/when it activates.
-      if (effectiveMode === "direct") setHlsStartOffset(0);
+      setDeferredSeekTarget(null);
       // Seed from any renditions already fetched by the status effect.
       const seeded = seededRenditionsRef.current;
       if (seeded.length > 0) {
@@ -510,10 +481,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setUsingAdaptiveStream(false);
       setHlsInitializing(false);
       pendingAutoPlayRef.current = false;
-      pendingSeekTimeRef.current = null;
-    } else if (isHlsReload) {
-      // HLS restart-from-offset: restartHlsAtSceneTime already reset the
-      // pending refs; don't re-capture the stale local time here.
       pendingSeekTimeRef.current = null;
     } else {
       // Quality switch — capture position and play state so we can restore
@@ -804,7 +771,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       destroyHls();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, directSrc, propDuration, streamMode, defaultPlaybackMode, hlsReloadToken]);
+  }, [src, directSrc, propDuration, streamMode, defaultPlaybackMode]);
 
   // Sync streamMode from qualityMode — only triggers source re-init when
   // switching between direct and adaptive (not when changing HLS levels)
@@ -855,21 +822,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
     const updateBuffered = () => {
       const bufferedEnd = video.buffered.length > 0 ? video.buffered.end(video.buffered.length - 1) : 0;
-      // Scene-time view of the buffered end, so the progress bar's green
-      // fill sits in the right place when the HLS encode started at an
-      // offset. `bufferAhead` stays in local time — it's a relative read.
-      const sceneBufferedEnd = bufferedEnd + hlsStartOffsetRef.current;
-      const nextBufferedProgress = duration > 0 ? (sceneBufferedEnd / duration) * 100 : 0;
+      const nextBufferedProgress = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
       setBufferedProgress(nextBufferedProgress);
       setBufferAhead(Math.max(0, bufferedEnd - video.currentTime));
     };
 
-    const sceneTimeFromLocal = (local: number) => local + hlsStartOffsetRef.current;
-
     const handleTimeUpdate = () => {
-      const sceneTime = sceneTimeFromLocal(video.currentTime);
-      setCurrentTime(sceneTime);
-      onTimeUpdate?.(sceneTime);
+      setCurrentTime(video.currentTime);
+      onTimeUpdate?.(video.currentTime);
       updateBuffered();
     };
 
@@ -879,20 +839,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // the DB, which is always correct — prefer the larger of the two so
     // the film strip and seek bar are sized for the whole video from the
     // very first frame. We still listen to `durationchange` for the
-    // direct-stream case where `propDuration` might be stale. When the
-    // current stream is a restart-from-offset encode, `video.duration`
-    // is `fullDuration - startSec`, so adding the offset back gives the
-    // scene total.
+    // direct-stream case where `propDuration` might be stale.
     const applyDuration = () => {
       const videoDur = Number.isFinite(video.duration) ? video.duration : 0;
-      const next = Math.max(videoDur + hlsStartOffsetRef.current, propDuration ?? 0);
+      const next = Math.max(videoDur, propDuration ?? 0);
       if (next > 0) setDuration(next);
     };
 
     const onLoadedMetadata = () => {
       applyDuration();
       updateBuffered();
-      onTimeUpdate?.(sceneTimeFromLocal(video.currentTime));
+      onTimeUpdate?.(video.currentTime);
     };
 
     const onDurationChange = () => {
@@ -900,9 +857,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     };
 
     const onSeeked = () => {
-      const sceneTime = sceneTimeFromLocal(video.currentTime);
-      setCurrentTime(sceneTime);
-      onTimeUpdate?.(sceneTime);
+      setCurrentTime(video.currentTime);
+      onTimeUpdate?.(video.currentTime);
     };
 
     const onProgress = () => updateBuffered();
@@ -1128,51 +1084,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       return;
     }
 
-    const sceneNow = hlsStartOffsetRef.current + video.currentTime;
-    seekTo(Math.max(0, Math.min(duration, sceneNow + delta)));
-  }
-
-  async function restartHlsAtSceneTime(sceneTarget: number) {
-    if (hlsRestartPendingRef.current) return;
-    if (!src) return;
-    const video = videoRef.current;
-    if (!video) return;
-
-    hlsRestartPendingRef.current = true;
-    try {
-      const restartUrl = src.replace(/\/hls\/master\.m3u8(?:\?.*)?$/, "/hls/restart");
-      const startSec = Math.max(0, Math.floor(sceneTarget));
-      const res = await fetch(restartUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ startSec }),
-      });
-      if (!res.ok) {
-        setPlayerNotice(`Could not re-seek HLS (${res.status})`);
-        return;
-      }
-      const payload = (await res.json()) as { startSec?: number };
-      const newOffset = Number.isFinite(payload.startSec)
-        ? (payload.startSec as number)
-        : startSec;
-
-      // The new stream starts at local t=0, which corresponds to scene
-      // time = newOffset. Clear any deferred target, stash the auto-play
-      // intent, then bump the reload token so the HLS init effect tears
-      // down the current Hls instance and reloads the (now-replaced)
-      // master playlist from the fresh encode.
-      pendingSeekTimeRef.current = null;
-      pendingAutoPlayRef.current = !video.paused;
-      video.pause();
-      setHlsStartOffset(newOffset);
-      setHlsReloadToken((t) => t + 1);
-    } catch (err) {
-      setPlayerNotice(
-        `Re-seek failed: ${err instanceof Error ? err.message : "unknown error"}`,
-      );
-    } finally {
-      hlsRestartPendingRef.current = false;
-    }
+    video.currentTime = Math.max(0, Math.min(duration, video.currentTime + delta));
   }
 
   function seekTo(time: number) {
@@ -1181,42 +1093,52 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       return;
     }
 
-    const sceneTarget = Math.max(0, Math.min(duration || time, time));
+    const target = Math.max(0, Math.min(duration || time, time));
 
-    if (streamMode === "hls") {
-      const offset = hlsStartOffsetRef.current;
-      const localTarget = sceneTarget - offset;
-
-      // Out of range in the *current* encode → kill the encode and
-      // restart ffmpeg from the new offset. The user's dropped position
-      // is preserved: the new stream's local t=0 will map back to
-      // `sceneTarget` once the first segment lands.
-      const seekable = video.seekable;
-      const seekableEnd =
-        seekable.length > 0 ? seekable.end(seekable.length - 1) : 0;
-      const outOfRange =
-        localTarget < -0.5 ||
-        localTarget > seekableEnd + 0.5;
-
-      if (outOfRange) {
-        // Optimistically update UI state so the film strip settles at the
-        // drop position while the restart is in flight. setCurrentTime is
-        // in scene time.
-        setCurrentTime(sceneTarget);
-          void restartHlsAtSceneTime(sceneTarget);
+    // In progressive HLS the variant playlist only lists segments ffmpeg
+    // has already produced, so `video.seekable.end` grows over time. If the
+    // user scrubs past that boundary, we can't actually seek there yet —
+    // jump to the latest available position and remember the intended
+    // target. A watcher effect re-seeks once the playlist catches up.
+    if (streamMode === "hls" && video.seekable.length > 0) {
+      const seekableEnd = video.seekable.end(video.seekable.length - 1);
+      if (Number.isFinite(seekableEnd) && target > seekableEnd + 0.5) {
+        setDeferredSeekTarget(target);
+        video.currentTime = Math.max(0, seekableEnd - 0.5);
         return;
       }
-
-      video.currentTime = Math.max(0, localTarget);
-      return;
     }
 
-    // Direct mode: offset is always 0.
-    video.currentTime = sceneTarget;
+    setDeferredSeekTarget(null);
+    video.currentTime = target;
   }
 
-  // Keep the imperative-handle seekTo in sync with the latest closure.
-  seekToRef.current = seekTo;
+  // Re-seek once the HLS playlist grows to cover a scrub target that was
+  // beyond the seekable range when the user first asked for it.
+  useEffect(() => {
+    if (deferredSeekTarget == null) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const attemptReseek = () => {
+      if (video.seekable.length === 0) return false;
+      const end = video.seekable.end(video.seekable.length - 1);
+      if (!Number.isFinite(end)) return false;
+      if (end + 0.25 >= deferredSeekTarget) {
+        video.currentTime = Math.min(duration || deferredSeekTarget, deferredSeekTarget);
+        setDeferredSeekTarget(null);
+        return true;
+      }
+      return false;
+    };
+
+    if (attemptReseek()) return;
+
+    const interval = window.setInterval(() => {
+      attemptReseek();
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [deferredSeekTarget, duration]);
 
   function toggleMute() {
     const video = videoRef.current;
@@ -1417,6 +1339,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           {selectedQualityLabel && (
             <span className="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
+            </span>
+          )}
+          {deferredSeekTarget != null && (
+            <span className="player-chip border-warning/30 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/85">
+              Seeking to {formatTime(deferredSeekTarget)} · still encoding
             </span>
           )}
           {playerNotice && (
@@ -1761,7 +1688,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           onSeek={seekTo}
           markers={markers}
           onStripInteractionChange={handleFilmStripInteraction}
-          timeOffset={streamMode === "hls" ? hlsStartOffset : 0}
         />
       </div>
     )}

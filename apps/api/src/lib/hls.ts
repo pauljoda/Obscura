@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { getCacheRootDir } from "@obscura/media-core";
 import {
@@ -9,6 +8,7 @@ import {
   type HlsRendition,
   type HlsStatus,
 } from "@obscura/contracts/media";
+import { runProcess } from "./media";
 
 export interface HlsPackage {
   outputDir: string;
@@ -21,14 +21,7 @@ interface HlsCacheMetadata {
   sourceSize: number;
   sourceMtimeMs: number;
   renditions: HlsRendition[];
-  /** Seconds into the source where this encode begins. 0 for a full-length
-   * encode, >0 for a restart-from-offset after a scrub past the encode head. */
-  startSec: number;
 }
-
-/** Tracks the ffmpeg child for a running encode so a scrub-triggered
- *  restart can SIGTERM the current process before wiping the cache dir. */
-const activeEncodeChildren = new Map<string, ChildProcess>();
 
 function getHlsCacheDir() {
   return path.join(getCacheRootDir(), "hls");
@@ -41,11 +34,6 @@ export interface HlsTrackerEntry {
   isEncodeActive: boolean;
   error?: string;
   promise?: Promise<HlsPackage>;
-  /** Seconds into the source where the current encode begins. Mirrored
-   *  to disk in metadata.json once the encode lands, but kept here too so
-   *  `getHlsStatus` can report it during the pending window (the cache
-   *  dir is wiped on restart and metadata.json is written last). */
-  startSec: number;
 }
 
 const trackerState = new Map<string, HlsTrackerEntry>();
@@ -72,8 +60,7 @@ async function readMetadata(cacheDir: string) {
 async function isPackageFresh(
   cacheDir: string,
   sourcePath: string,
-  renditions: HlsRendition[],
-  startSec: number
+  renditions: HlsRendition[]
 ) {
   const metadata = await readMetadata(cacheDir);
   if (!metadata) {
@@ -87,33 +74,23 @@ async function isPackageFresh(
     metadata.sourcePath === sourcePath &&
     metadata.sourceSize === sourceStats.size &&
     metadata.sourceMtimeMs === sourceStats.mtimeMs &&
-    (metadata.startSec ?? 0) === startSec &&
     JSON.stringify(metadata.renditions) === JSON.stringify(renditions) &&
     existsSync(masterManifestPath)
   );
-}
-
-/** Returns the start offset (seconds into the source) for the most recent
- *  encode that landed on disk — 0 for a full-length encode. */
-export async function readStartSecFromCache(sceneId: string): Promise<number> {
-  const metadata = await readMetadata(getSceneCacheDir(sceneId));
-  return metadata?.startSec ?? 0;
 }
 
 export type HlsBuilder = (
   sceneId: string,
   sourcePath: string,
   renditions: HlsRendition[],
-  cacheDir: string,
-  startSec: number
+  cacheDir: string
 ) => Promise<void>;
 
 async function ffmpegHlsBuilder(
   sceneId: string,
   sourcePath: string,
   renditions: HlsRendition[],
-  cacheDir: string,
-  startSec: number
+  cacheDir: string
 ): Promise<void> {
   const variantCount = renditions.length;
   const splitTargets = Array.from({ length: variantCount }, (_, index) => `[v${index}]`).join("");
@@ -129,18 +106,11 @@ async function ffmpegHlsBuilder(
     "-loglevel",
     "error",
     "-nostats",
+    "-i",
+    sourcePath,
+    "-filter_complex",
+    filterComplex,
   ];
-
-  if (startSec > 0) {
-    // Fast seek before `-i`: ffmpeg jumps to the nearest preceding keyframe
-    // before decoding starts, which is orders of magnitude faster than an
-    // accurate seek after the decoder is spun up. The output timeline is
-    // zero-based — the client maps back to the original scene timeline
-    // using the `startSec` it requested.
-    args.push("-ss", startSec.toFixed(3));
-  }
-
-  args.push("-i", sourcePath, "-filter_complex", filterComplex);
 
   for (let index = 0; index < variantCount; index += 1) {
     args.push("-map", `[v${index}out]`, "-map", "0:a:0?");
@@ -211,65 +181,9 @@ async function ffmpegHlsBuilder(
     path.join(cacheDir, "%v", "index.m3u8")
   );
 
-  log(
-    sceneId,
-    `ffmpeg start (${variantCount} renditions, preset=veryfast, startSec=${startSec})`,
-  );
-
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
-    activeEncodeChildren.set(sceneId, child);
-
-    let stderr = "";
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-      if (stderr.length > 16_384) {
-        stderr = stderr.slice(-16_384);
-      }
-    });
-
-    child.on("error", (err) => {
-      activeEncodeChildren.delete(sceneId);
-      reject(err);
-    });
-
-    child.on("close", (code, signal) => {
-      activeEncodeChildren.delete(sceneId);
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      // SIGTERM from a restart is expected — surface a specific error so the
-      // tracker can distinguish it from a genuine encode failure.
-      if (signal === "SIGTERM") {
-        reject(new Error("aborted"));
-        return;
-      }
-      reject(
-        new Error(
-          `ffmpeg exited with code ${code ?? "unknown"}${
-            stderr ? `: ${stderr.trim()}` : ""
-          }`,
-        ),
-      );
-    });
-  });
-
+  log(sceneId, `ffmpeg start (${variantCount} renditions, preset=veryfast)`);
+  await runProcess("ffmpeg", args);
   log(sceneId, "ffmpeg exit ok");
-}
-
-/** SIGTERM any running ffmpeg encoder for this scene. Returns true if a
- *  child was signaled, false if none was active. */
-function abortActiveEncode(sceneId: string): boolean {
-  const child = activeEncodeChildren.get(sceneId);
-  if (!child) return false;
-  try {
-    child.kill("SIGTERM");
-  } catch {
-    // If the process is already dead the signal will throw ESRCH — that's
-    // fine, we're going to wipe the cache dir next anyway.
-  }
-  return true;
 }
 
 let activeBuilder: HlsBuilder = ffmpegHlsBuilder;
@@ -312,21 +226,20 @@ async function waitForPartialHlsPackage(
 async function buildHlsPackage(
   sceneId: string,
   sourcePath: string,
-  sourceHeight: number | null,
-  startSec: number
+  sourceHeight: number | null
 ): Promise<HlsPackage> {
   const cacheDir = getSceneCacheDir(sceneId);
   const renditions = getHlsRenditions(sourceHeight);
   const masterManifestPath = path.join(cacheDir, "master.m3u8");
 
-  if (await isPackageFresh(cacheDir, sourcePath, renditions, startSec)) {
+  if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
     return { outputDir: cacheDir, masterManifestPath, renditions };
   }
 
   await rm(cacheDir, { recursive: true, force: true });
   await mkdir(cacheDir, { recursive: true });
 
-  await activeBuilder(sceneId, sourcePath, renditions, cacheDir, startSec);
+  await activeBuilder(sceneId, sourcePath, renditions, cacheDir);
 
   const sourceStats = await stat(sourcePath);
   const metadata: HlsCacheMetadata = {
@@ -334,7 +247,6 @@ async function buildHlsPackage(
     sourceSize: sourceStats.size,
     sourceMtimeMs: sourceStats.mtimeMs,
     renditions,
-    startSec,
   };
 
   await writeFile(
@@ -358,49 +270,28 @@ export async function getHlsStatus(
 ): Promise<HlsStatus> {
   const renditions = getHlsRenditions(sourceHeight);
   const cacheDir = getSceneCacheDir(sceneId);
-  const cachedStart = await readStartSecFromCache(sceneId);
 
   const existing = trackerState.get(sceneId);
   if (existing && existing.state === "ready") {
-    return {
-      state: "ready",
-      renditions: existing.renditions,
-      startSec: existing.startSec ?? cachedStart,
-    };
+    return { state: "ready", renditions: existing.renditions };
   }
   if (existing && existing.state === "pending") {
-    return {
-      state: "pending",
-      renditions,
-      startSec: existing.startSec ?? cachedStart,
-    };
+    return { state: "pending", renditions };
   }
 
-  // Disk may have been populated by a previous process — probe cheaply. We
-  // treat any cached offset as acceptable here: if the client wants a
-  // different offset it will hit the /restart route explicitly.
-  if (await isPackageFresh(cacheDir, sourcePath, renditions, cachedStart)) {
-    trackerState.set(sceneId, {
-      state: "ready",
-      renditions,
-      isEncodeActive: false,
-      startSec: cachedStart,
-    });
-    return { state: "ready", renditions, startSec: cachedStart };
+  // Disk may have been populated by a previous process — probe cheaply.
+  if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
+    trackerState.set(sceneId, { state: "ready", renditions, isEncodeActive: false });
+    return { state: "ready", renditions };
   }
 
   if (existing && existing.state === "error") {
-    return {
-      state: "error",
-      renditions,
-      error: existing.error,
-      startSec: existing.startSec ?? cachedStart,
-    };
+    return { state: "error", renditions, error: existing.error };
   }
 
   // Nothing on disk and no active build — start one in the background.
   startHlsGeneration(sceneId, sourcePath, sourceHeight);
-  return { state: "pending", renditions, startSec: cachedStart };
+  return { state: "pending", renditions };
 }
 
 /**
@@ -413,8 +304,7 @@ export async function getHlsStatus(
 export function startHlsGeneration(
   sceneId: string,
   sourcePath: string,
-  sourceHeight: number | null,
-  startSec = 0,
+  sourceHeight: number | null
 ): Promise<HlsPackage> {
   const existing = trackerState.get(sceneId);
   if (existing?.promise && existing.state === "pending") {
@@ -437,7 +327,6 @@ export function startHlsGeneration(
       state: "ready",
       renditions,
       isEncodeActive: true,
-      startSec,
     });
     log(sceneId, "partial package ready (master + first segments) — playback can start");
   };
@@ -447,15 +336,14 @@ export function startHlsGeneration(
     if (found) markReadyEarly();
   })();
 
-  log(sceneId, `build kicked off (startSec=${startSec})`);
-  const promise = buildHlsPackage(sceneId, sourcePath, sourceHeight, startSec)
+  log(sceneId, "build kicked off");
+  const promise = buildHlsPackage(sceneId, sourcePath, sourceHeight)
     .then((pkg) => {
       watcherAborted = true;
       trackerState.set(sceneId, {
         state: "ready",
         renditions: pkg.renditions,
         isEncodeActive: false,
-        startSec,
       });
       log(sceneId, "encode complete, package fully ready");
       return pkg;
@@ -463,14 +351,6 @@ export function startHlsGeneration(
     .catch((error: unknown) => {
       watcherAborted = true;
       const message = error instanceof Error ? error.message : String(error);
-      // A scrub-triggered restart SIGTERMs the active ffmpeg; surface that
-      // as a clean tracker clear rather than an error state, because a new
-      // build is about to take over.
-      if (message === "aborted") {
-        trackerState.delete(sceneId);
-        log(sceneId, "encode aborted for restart");
-        throw error;
-      }
       const current = trackerState.get(sceneId);
       if (current?.state === "ready") {
         // Already playing from a partial package — keep serving what exists
@@ -484,7 +364,6 @@ export function startHlsGeneration(
           renditions,
           isEncodeActive: false,
           error: message,
-          startSec,
         });
         log(sceneId, `encode failed: ${message}`);
       }
@@ -496,7 +375,6 @@ export function startHlsGeneration(
     renditions,
     isEncodeActive: true,
     promise,
-    startSec,
   });
   return promise;
 }
@@ -519,8 +397,7 @@ export async function ensureHlsPackage(
   if (existing?.state === "ready" && !existing.isEncodeActive) {
     const cacheDir = getSceneCacheDir(sceneId);
     const renditions = getHlsRenditions(sourceHeight);
-    const cachedStart = await readStartSecFromCache(sceneId);
-    if (await isPackageFresh(cacheDir, sourcePath, renditions, cachedStart)) {
+    if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
       return {
         outputDir: cacheDir,
         masterManifestPath: path.join(cacheDir, "master.m3u8"),
@@ -530,40 +407,6 @@ export async function ensureHlsPackage(
   }
 
   return startHlsGeneration(sceneId, sourcePath, sourceHeight);
-}
-
-/**
- * Abort any running encode for the scene, wipe the cache dir, and kick off
- * a fresh encode starting at `startSec` seconds into the source. Returns
- * the new (pending) promise so callers can observe readiness.
- *
- * The film strip calls this when the user scrubs past the currently
- * encoded range, so the new stream lands near-instantly at the drop
- * position instead of forcing the user to wait for the linear encode to
- * catch up.
- */
-export async function restartHlsFromOffset(
-  sceneId: string,
-  sourcePath: string,
-  sourceHeight: number | null,
-  startSec: number,
-): Promise<HlsPackage> {
-  const cacheDir = getSceneCacheDir(sceneId);
-
-  if (abortActiveEncode(sceneId)) {
-    // Wait briefly for the child to settle so the `.catch` branch of the
-    // previous promise has a chance to delete the tracker entry before we
-    // overwrite it. Otherwise startHlsGeneration may see a stale `pending`
-    // entry and return the (already rejecting) old promise.
-    await new Promise((r) => setTimeout(r, 50));
-  }
-
-  trackerState.delete(sceneId);
-  await rm(cacheDir, { recursive: true, force: true });
-  await mkdir(cacheDir, { recursive: true });
-
-  log(sceneId, `restart requested at startSec=${startSec}`);
-  return startHlsGeneration(sceneId, sourcePath, sourceHeight, startSec);
 }
 
 /** Read tracker state without side effects — for tests and diagnostics. */

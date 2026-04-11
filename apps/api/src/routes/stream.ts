@@ -5,12 +5,7 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { mkdir, stat, writeFile, readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import {
-  getHlsStatus,
-  peekHlsTracker,
-  restartHlsFromOffset,
-  startHlsGeneration,
-} from "../lib/hls";
+import { getHlsStatus, peekHlsTracker, startHlsGeneration } from "../lib/hls";
 import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
 import { getCacheRootDir, runProcess } from "@obscura/media-core";
 
@@ -304,34 +299,6 @@ export async function streamRoutes(app: FastifyInstance) {
     const status = await getHlsStatus(id, scene.filePath, scene.height);
     reply.header("Cache-Control", "no-store");
     return status;
-  });
-
-  app.post("/stream/:id/hls/restart", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const scene = await getSceneSource(id);
-
-    if (!scene?.filePath) {
-      reply.code(404);
-      return { error: "Video file not found on disk" };
-    }
-
-    const body = (request.body ?? {}) as { startSec?: unknown };
-    const rawStart = typeof body.startSec === "number" ? body.startSec : NaN;
-    if (!Number.isFinite(rawStart) || rawStart < 0) {
-      reply.code(400);
-      return { error: "startSec must be a non-negative number" };
-    }
-
-    // Fire-and-forget the restart so the HTTP response doesn't wait on the
-    // initial ffmpeg prelude. The client will poll /status and hang-GET the
-    // first segment as usual.
-    const startSec = Math.floor(rawStart);
-    restartHlsFromOffset(id, scene.filePath, scene.height, startSec).catch(() => {
-      // Error is recorded in the tracker and surfaced via /status.
-    });
-
-    reply.header("Cache-Control", "no-store");
-    return { state: "pending" as const, startSec };
   });
 
   app.get("/stream/:id/hls/master.m3u8", async (request, reply) => {

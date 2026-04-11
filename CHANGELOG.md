@@ -6,10 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Changed
-
-- **Scrubbing in HLS now kills the in-progress encode and restarts ffmpeg from the drop position.** Previously, scrubbing past the part ffmpeg had already written snapped the playhead back to the encode head and either refused to move or silently waited for the linear encode to catch up (minutes of dead time for a 2h file). Dropping the scrubber anywhere outside the current encoded range now `POST`s `/stream/:id/hls/restart` with the target scene time: the backend SIGTERMs the running ffmpeg, wipes the per-scene HLS cache dir, and launches a new encode with `-ss <startSec>`, while the player tears down its `hls.js` instance and reloads the freshly-regenerated master playlist. The new stream's local `t=0` maps back to the scene time where you dropped it, so the film strip, seek bar, time display, buffered indicator, and `onTimeUpdate` callback all stay in scene time via a tracked `hlsStartOffset`. A scrub-triggered SIGTERM is now distinguished from a real encode failure so it doesn't flip the tracker into an error state.
-
 ### Fixed
 
 - **Film strip scrubbing no longer gets stuck in HLS mode.** Since the backend started serving the HLS variant playlist progressively while ffmpeg is still encoding, `video.duration` on first load reports only the portion of the playlist already written — sometimes as little as a minute. The player was writing that partial value into its duration state on `loadedmetadata`, which sized the film strip and scrub bar to the encoded portion instead of the full video, so scrubbing anywhere past the encode head was impossible. The player now prefers the scene's stored duration over `video.duration` (the DB value is always the true total) and also subscribes to the `durationchange` event so any later growth still flows through. Scrubbing past the encode head still defers the seek with the existing "still encoding" chip.
