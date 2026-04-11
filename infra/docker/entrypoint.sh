@@ -42,19 +42,26 @@ su-exec postgres pg_ctl -D "$PGDATA" -l /data/postgres/log -w -t 30 start
 su-exec postgres psql -h 127.0.0.1 -tc "SELECT 1 FROM pg_database WHERE datname = 'obscura'" | grep -q 1 || \
   su-exec postgres createdb -h 127.0.0.1 obscura
 
-# ── Push database schema ──────────────────────────────────────────
-# Must succeed: an outdated schema causes widespread API 500s (queries reference
-# missing tables). Do not swallow errors — the old `|| true` hid failed pushes.
-# --force avoids interactive prompts in non-TTY Docker; back up /data before major upgrades.
-# Invoke drizzle-kit with plain Node — the production image has no pnpm (build-only tool).
+# ── Apply database migrations ─────────────────────────────────────
+# Runs the versioned migration files committed under apps/api/drizzle/ via
+# drizzle-orm's migrator. Replaces the previous `drizzle-kit push --force`
+# which blindly applied every diff (including destructive drops) at every
+# boot — one drifted column and users could lose data on upgrade.
+#
+# The runner also bridges "legacy push installs" (deployments that originally
+# created their schema via drizzle-kit push and therefore have no
+# __drizzle_migrations table). For those it applies the small set of
+# pre-baseline deltas this release expects, then seeds the migrations table
+# so the migrator treats the existing schema as the baseline and only runs
+# *new* migrations added after this release.
+#
 # pg-boss creates its own `pgboss` schema lazily on first API/worker start
 # and is independent of drizzle — no action needed here.
-echo "[obscura] Applying database schema..."
-export CI=true
+echo "[obscura] Applying database migrations..."
 export DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura"
 cd /app/apps/api
-if ! node node_modules/drizzle-kit/bin.cjs push --force; then
-  echo "[obscura] ERROR: drizzle-kit push failed — check logs above. Database is not aligned with this image." >&2
+if ! node_modules/.bin/tsx src/db/migrate.ts; then
+  echo "[obscura] ERROR: database migration failed — check logs above. Database is not aligned with this image." >&2
   exit 1
 fi
 

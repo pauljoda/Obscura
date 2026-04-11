@@ -94,7 +94,15 @@ docs/              — Architecture and design language docs
 - PostgreSQL 16 via `postgres` driver and `drizzle-orm`.
 - Schema defined in `apps/api/src/db/schema.ts`.
 - Core entities: scenes, performers, studios, tags, fingerprints, library_roots, settings.
-- Run `pnpm --filter @obscura/api db:push` to apply schema changes in development.
+- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `apps/api/drizzle/` and are applied by `apps/api/src/db/migrate.ts` (runs from both `pnpm --filter @obscura/api db:migrate` and the production Docker entrypoint). Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
+- **Adding a schema change:**
+  1. Edit `apps/api/src/db/schema.ts`.
+  2. Run `pnpm --filter @obscura/api db:generate` to produce a new `drizzle/NNNN_<name>.sql` file.
+  3. **Open the file and read it.** drizzle-kit is conservative but will emit destructive SQL (drops, column renames seen as drop+add) when it can't tell your intent — fix it by hand before committing.
+  4. Commit both the `.sql` file and the updated `drizzle/meta/_journal.json` alongside the schema edit.
+  5. Apply locally with `pnpm --filter @obscura/api db:migrate` and verify data is intact.
+- **Never run `db:push` against a deployment you care about.** It bypasses the migration ledger, applies every inferred diff in one shot, and — with `--force` — has no veto for destructive drops. `db:push` is only appropriate for throwaway/fresh dev databases. The production Docker entrypoint used to run `drizzle-kit push --force` on every boot and nearly wiped real data on an upgrade — that's why this repo now ships migrations instead.
+- **Legacy install bridge.** `apps/api/src/db/migrate.ts` detects deployments that were originally provisioned with `drizzle-kit push` (core tables exist, `drizzle.__drizzle_migrations` does not). For those it applies a small set of pre-baseline deltas specific to this release, then seeds every journal entry into `__drizzle_migrations` so the migrator treats the existing schema as the baseline and only runs *new* migrations added on top. If you need to ship a pre-baseline delta in a future release, add it to the `hasCore && !hasMigrationsTable` block **and** a corresponding new migration file — existing installs hit the bridge; fresh installs hit the migration.
 
 ## Design System Rules
 
