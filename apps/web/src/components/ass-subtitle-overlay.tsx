@@ -62,9 +62,10 @@ export function AssSubtitleOverlay({
           wasmUrl: "/jassub/jassub-worker.wasm",
           modernWasmUrl: "/jassub/jassub-worker-modern.wasm",
           // Ask the browser to use any locally-installed fonts that match the
-          // names referenced by the ASS styles. Falls back to default.woff2.
+          // names referenced by the ASS styles. Falls back to default.woff2
+          // for unmatched glyphs.
           availableFonts: { "liberation sans": "/jassub/default.woff2" },
-          fallbackFont: "liberation sans",
+          defaultFont: "liberation sans",
           queryFonts: "local",
         } as never);
         instanceRef.current = instance;
