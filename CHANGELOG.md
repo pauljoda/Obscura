@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Docs
+
+- New `docs/phash-contribution.md` walks through the full pHash contribution pipeline: why we share Stash's exact sprite algorithm, the identify → accept → auto-link → submit flow, the GraphQL mutation shape, the cached-client rate-limiter design, and a troubleshooting section.
+
 ### Added
 
 - **New "Perceptual hash (pHash)" toggle on the library settings page** and a "Backfill pHashes" button in the Diagnostics section. Flipping the toggle turns on pHash generation for all future fingerprint jobs; the backfill button enqueues a job for every existing scene that has a duration but no stored phash.
