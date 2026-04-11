@@ -374,26 +374,56 @@ export async function streamRoutes(app: FastifyInstance) {
 
     const cacheDir = path.join(getCacheRootDir(), "hls", id);
     const resolvedAsset = resolveAssetPath(cacheDir, assetPath);
-
-    if (!resolvedAsset || !existsSync(resolvedAsset)) {
-      // While ffmpeg is still encoding in the background, a segment the
-      // player asks for may not be on disk yet — return 503 so hls.js
-      // retries rather than giving up.
-      if (tracker.isEncodeActive) {
-        reply.code(503);
-        reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
-        reply.header("Cache-Control", "no-store");
-        return { error: "Segment still encoding", retryAfter: HLS_RETRY_AFTER_SECONDS };
-      }
+    if (!resolvedAsset) {
       reply.code(404);
       return { error: "Stream asset not found" };
     }
 
-    // Variant playlists get re-fetched by hls.js to discover new segments
-    // while the encode is active — don't let a CDN/browser cache pin an
-    // early partial playlist.
+    // Hanging GET: while ffmpeg is still encoding in the background, the
+    // player pre-buffers segments ahead of the encode head. Instead of
+    // returning 503 and letting hls.js log a red console error on every
+    // lookahead miss, hold the request here and poll the filesystem until
+    // the segment appears (or the encode dies / we time out).
+    if (!existsSync(resolvedAsset)) {
+      if (!peekHlsTracker(id)?.isEncodeActive) {
+        reply.code(404);
+        return { error: "Stream asset not found" };
+      }
+
+      const HANG_TIMEOUT_MS = 30_000;
+      const POLL_MS = 200;
+      const start = Date.now();
+      while (Date.now() - start < HANG_TIMEOUT_MS) {
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        if (existsSync(resolvedAsset)) break;
+        if (!peekHlsTracker(id)?.isEncodeActive) break;
+      }
+
+      if (!existsSync(resolvedAsset)) {
+        const stillActive = peekHlsTracker(id)?.isEncodeActive ?? false;
+        if (stillActive) {
+          reply.code(503);
+          reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
+          reply.header("Cache-Control", "no-store");
+          return { error: "Segment still encoding", retryAfter: HLS_RETRY_AFTER_SECONDS };
+        }
+        reply.code(404);
+        return { error: "Stream asset not found" };
+      }
+
+      // Small stabilization wait so we don't stream a half-written segment.
+      // ffmpeg writes the segment then appends to the playlist; by the time
+      // the playlist has the reference hls.js won't usually race us, but a
+      // 25ms settle makes this safe.
+      await new Promise((r) => setTimeout(r, 25));
+    }
+
+    const latest = peekHlsTracker(id);
     const ext = path.extname(resolvedAsset).toLowerCase();
-    if (ext === ".m3u8" && tracker.isEncodeActive) {
+    if (ext === ".m3u8" && latest?.isEncodeActive) {
+      // Variant playlists get re-fetched by hls.js to discover new segments
+      // while the encode is active — don't let a cache pin an early partial
+      // playlist.
       reply.header("Cache-Control", "no-store");
     } else {
       reply.header("Cache-Control", "public, max-age=300");

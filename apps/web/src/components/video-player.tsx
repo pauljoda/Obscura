@@ -762,7 +762,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     if (typeof qualityMode === "number") {
-      hls.nextLevel = qualityMode;
+      // Immediate switch (flushes buffer) — matches user intent when they
+      // explicitly pick a quality. `nextLevel` would only swap at the next
+      // fragment boundary, making the change feel laggy.
+      hls.currentLevel = qualityMode;
+      setActiveQualityLabel(getLevelLabel(hls.levels[qualityMode] ?? {}, qualityMode));
     }
   }, [qualityMode]);
 
@@ -1203,7 +1207,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {(hlsInitializing || usingAdaptiveStream || qualityMode !== "direct") && (
             <span className="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75">
-              {hlsInitializing ? "Loading…" : usingAdaptiveStream ? "Adaptive HLS" : "Direct"}
+              {hlsInitializing
+                ? "Loading…"
+                : usingAdaptiveStream
+                  ? qualityMode === "auto"
+                    ? "Adaptive HLS"
+                    : typeof qualityMode === "number"
+                      ? "HLS"
+                      : "Adaptive HLS"
+                  : "Direct"}
             </span>
           )}
           {selectedQualityLabel && (
