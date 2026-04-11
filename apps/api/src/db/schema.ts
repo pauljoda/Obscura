@@ -272,6 +272,7 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
   scenePerformers: many(scenePerformers),
   sceneTags: many(sceneTags),
   markers: many(sceneMarkers),
+  subtitles: many(sceneSubtitles),
 }));
 
 // ─── Scene ↔ Performer join ─────────────────────────────────────────
@@ -383,6 +384,39 @@ export const sceneMarkers = pgTable(
 export const sceneMarkersRelations = relations(sceneMarkers, ({ one }) => ({
   scene: one(scenes, {
     fields: [sceneMarkers.sceneId],
+    references: [scenes.id],
+  }),
+}));
+
+// ─── Scene Subtitles ────────────────────────────────────────────────
+export const sceneSubtitles = pgTable(
+  "scene_subtitles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sceneId: uuid("scene_id")
+      .notNull()
+      .references(() => scenes.id, { onDelete: "cascade" }),
+    language: text("language").notNull(),
+    label: text("label"),
+    format: text("format").notNull(),
+    source: text("source").notNull(),
+    storagePath: text("storage_path").notNull(),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("scene_subtitles_scene_idx").on(table.sceneId),
+    uniqueIndex("scene_subtitles_scene_lang_source_idx").on(
+      table.sceneId,
+      table.language,
+      table.source
+    ),
+  ]
+);
+
+export const sceneSubtitlesRelations = relations(sceneSubtitles, ({ one }) => ({
+  scene: one(scenes, {
+    fields: [sceneSubtitles.sceneId],
     references: [scenes.id],
   }),
 }));

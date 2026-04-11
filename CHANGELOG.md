@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-04-10
+
+### Added
+
+- **Multi-language subtitles end-to-end.** Obscura now loads, renders, and manages subtitle tracks for videos in any supported language. Three ingestion paths are wired up: sidecar discovery during library scan (`movie.en.srt` / `movie.ja.vtt` / etc. next to the video file), manual upload from the scene detail page (accepts `.vtt`/`.srt`/`.ass`/`.ssa`, converted to WebVTT on ingest), and embedded-track extraction via a new `extract-subtitles` worker queue that runs ffmpeg to pull soft-subtitle streams out of `.mkv`/`.mp4` containers. Extraction auto-runs after media probe and can be re-triggered from the scene UI. Image-based subtitle codecs (PGS/VobSub) are skipped gracefully.
+- **Player subtitle rendering and selector.** The video player now renders a captions toggle in the control bar (next to quality/speed) listing every available track with language and source chip. The selected track drives a custom Dark Room caption overlay — opaque plate, brass edge glow, text-shadow — positioned above the controls instead of the browser's default white-box renderer. "Off" disables captions. The active language is persisted per-scene in `localStorage`.
+- **Transcript tab on scene detail.** A new "Transcript" tab shows the full cue list for the active subtitle track. Past cues are grayed but still clickable, the current cue is highlighted with a brass border and glow, and upcoming cues render normally. Clicking any line seeks the player to that cue. The active line auto-scrolls into view (with a short pause after manual user scrolling so it doesn't fight you). The tab also hosts track management: language picker, upload control, "Extract embedded" button, and per-track delete.
+- New `scene_subtitles` table with a unique `(scene_id, language, source)` index, and a new `SceneSubtitleTrackDto` / `SubtitleCueDto` in `@obscura/contracts`.
+- New API routes: `GET/POST /scenes/:id/subtitles`, `GET/DELETE /scenes/:id/subtitles/:trackId`, `GET /scenes/:id/subtitles/:trackId/cues`, `POST /scenes/:id/subtitles/extract`.
+- WebVTT as the canonical on-disk format; SRT and ASS/SSA are converted at ingest by pure-TS helpers in `@obscura/media-core/src/subtitles.ts` so the frontend only ever deals with one parser.
+
 ## [0.8.21] - 2026-04-10
 
 ### Docs

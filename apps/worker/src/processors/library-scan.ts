@@ -16,6 +16,7 @@ import {
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedSceneDirs } from "../lib/helpers.js";
+import { ingestSidecarSubtitlesForScene } from "../lib/sidecar-subtitles.js";
 
 export async function processLibraryScan(job: Job) {
   const libraryRootId = String(job.data.libraryRootId);
@@ -165,6 +166,15 @@ export async function processLibraryScan(job: Job) {
 
     // Propagate isNsfw: library root flag takes precedence, then relation-based
     await propagateSceneNsfw(scene.id, root.isNsfw);
+
+    // Ingest sidecar subtitle files next to the video (idempotent).
+    try {
+      await ingestSidecarSubtitlesForScene(scene.id, filePath);
+    } catch (err) {
+      console.warn(
+        `[library-scan] sidecar subtitle ingest failed for ${filePath}: ${(err as Error).message}`
+      );
+    }
 
     const sfwOnly = Boolean(job.data.sfwOnly);
     const [nsfwRow] = await db

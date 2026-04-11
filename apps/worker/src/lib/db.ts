@@ -12,6 +12,7 @@ export { schema };
 
 export const {
   scenes,
+  sceneSubtitles,
   libraryRoots,
   librarySettings,
   jobRuns,

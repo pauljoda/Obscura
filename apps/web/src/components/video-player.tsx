@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type Hls from "hls.js";
 import {
+  Captions,
   ChevronDown,
   Gauge,
   Loader2,
@@ -23,11 +31,22 @@ import {
   isDocumentFullscreen,
 } from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
+import type { SceneSubtitleTrackDto } from "../lib/api/types";
 
 interface Marker {
   id: string;
   time: number;
   title: string;
+}
+
+export interface VideoPlayerHandle {
+  seekTo: (time: number) => void;
+}
+
+export interface ActiveCue {
+  start: number;
+  end: number;
+  text: string;
 }
 
 interface VideoPlayerProps {
@@ -41,6 +60,21 @@ interface VideoPlayerProps {
   onTimeUpdate?: (time: number) => void;
   trickplaySprite?: string;
   trickplayVtt?: string;
+  subtitleTracks?: SceneSubtitleTrackDto[];
+  activeSubtitleTrackId?: string | null;
+  onActiveSubtitleTrackIdChange?: (id: string | null) => void;
+  onActiveCueChange?: (cue: ActiveCue | null) => void;
+  subtitleAssetBase?: string;
+}
+
+function languageLabel(language: string): string {
+  if (!language || language === "und") return "Unknown";
+  try {
+    const dn = new Intl.DisplayNames(undefined, { type: "language" });
+    return dn.of(language) ?? language.toUpperCase();
+  } catch {
+    return language.toUpperCase();
+  }
 }
 
 type QualityMode = "auto" | "direct" | number;
@@ -86,18 +120,26 @@ function getLevelLabel(level: { height?: number; name?: string }, index: number)
   return `Level ${index + 1}`;
 }
 
-export function VideoPlayer({
-  src,
-  directSrc,
-  poster,
-  markers = [],
-  duration: propDuration,
-  onMarkerClick,
-  onPlayStarted,
-  onTimeUpdate,
-  trickplaySprite,
-  trickplayVtt,
-}: VideoPlayerProps) {
+export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
+  {
+    src,
+    directSrc,
+    poster,
+    markers = [],
+    duration: propDuration,
+    onMarkerClick,
+    onPlayStarted,
+    onTimeUpdate,
+    trickplaySprite,
+    trickplayVtt,
+    subtitleTracks = [],
+    activeSubtitleTrackId: controlledSubtitleId,
+    onActiveSubtitleTrackIdChange,
+    onActiveCueChange,
+    subtitleAssetBase,
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -140,6 +182,33 @@ export function VideoPlayer({
   const [usingAdaptiveStream, setUsingAdaptiveStream] = useState(false);
   const [playerNotice, setPlayerNotice] = useState<string | null>(null);
   const [hlsInitializing, setHlsInitializing] = useState(false);
+  const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
+  const [internalSubtitleId, setInternalSubtitleId] = useState<string | null>(null);
+  const [activeCueText, setActiveCueText] = useState<string | null>(null);
+
+  const activeSubtitleId =
+    controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId;
+
+  function selectSubtitle(id: string | null) {
+    if (controlledSubtitleId === undefined) {
+      setInternalSubtitleId(id);
+    }
+    onActiveSubtitleTrackIdChange?.(id);
+    setSubtitleMenuOpen(false);
+  }
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      seekTo(time: number) {
+        const video = videoRef.current;
+        if (!video) return;
+        const dur = duration || video.duration || 0;
+        video.currentTime = Math.max(0, Math.min(dur || time, time));
+      },
+    }),
+    [duration],
+  );
 
   function clearControlsTimer() {
     if (controlsTimeoutRef.current) {
@@ -572,6 +641,102 @@ export function VideoPlayer({
     return () => window.removeEventListener("keydown", handleKey);
   });
 
+  // ─── Subtitle track mode management ────────────────────────────
+  // Keep all <track> elements in "hidden" mode for the selected one (so the
+  // browser parses cues but doesn't draw them — we render our own overlay)
+  // and "disabled" for every other track.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const apply = () => {
+      const tracks = video.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i];
+        if (!t) continue;
+        // Skip trickplay/metadata tracks — we only touch subtitles.
+        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
+        const matches =
+          (t.id && t.id === activeSubtitleId) ||
+          (!t.id && t.label && subtitleTracks.find((s) => s.id === activeSubtitleId)?.label === t.label);
+        t.mode = matches ? "hidden" : "disabled";
+      }
+    };
+
+    apply();
+    // textTracks can be populated async after the <track> element mounts —
+    // re-apply on addtrack as well.
+    const tracks = video.textTracks;
+    tracks.addEventListener?.("addtrack", apply);
+    return () => {
+      tracks.removeEventListener?.("addtrack", apply);
+    };
+  }, [activeSubtitleId, subtitleTracks]);
+
+  // Subscribe to cuechange on the active (hidden) track and surface the cue
+  // text for the overlay + transcript sync.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !activeSubtitleId) {
+      setActiveCueText(null);
+      onActiveCueChange?.(null);
+      return;
+    }
+
+    let cleanupFn: (() => void) | null = null;
+
+    const attach = () => {
+      const tracks = video.textTracks;
+      let target: TextTrack | null = null;
+      for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i];
+        if (!t) continue;
+        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
+        if (t.id && t.id === activeSubtitleId) {
+          target = t;
+          break;
+        }
+      }
+      if (!target) return;
+
+      const handler = () => {
+        const active = target!.activeCues;
+        if (!active || active.length === 0) {
+          setActiveCueText(null);
+          onActiveCueChange?.(null);
+          return;
+        }
+        const first = active[0] as VTTCue;
+        const text = (first.text ?? "").replace(/<[^>]+>/g, "");
+        setActiveCueText(text || null);
+        onActiveCueChange?.({
+          start: first.startTime,
+          end: first.endTime,
+          text,
+        });
+      };
+
+      target.addEventListener("cuechange", handler);
+      handler();
+      cleanupFn = () => target!.removeEventListener("cuechange", handler);
+    };
+
+    attach();
+    // Textract may attach late.
+    const tracks = video.textTracks;
+    const onAdd = () => {
+      cleanupFn?.();
+      cleanupFn = null;
+      attach();
+    };
+    tracks.addEventListener?.("addtrack", onAdd);
+
+    return () => {
+      tracks.removeEventListener?.("addtrack", onAdd);
+      cleanupFn?.();
+    };
+  }, [activeSubtitleId, onActiveCueChange, src, directSrc]);
+
   function togglePlay() {
     const video = videoRef.current;
     if (!video) {
@@ -711,13 +876,43 @@ export function VideoPlayer({
           className="aspect-video w-full bg-black"
           onClick={togglePlay}
           playsInline
-        />
+          crossOrigin="anonymous"
+        >
+          {subtitleTracks.map((track) => {
+            const href = subtitleAssetBase
+              ? `${subtitleAssetBase}${track.url}`
+              : track.url;
+            return (
+              <track
+                key={track.id}
+                id={track.id}
+                kind="subtitles"
+                src={href}
+                srcLang={track.language === "und" ? undefined : track.language}
+                label={track.label ?? languageLabel(track.language)}
+              />
+            );
+          })}
+        </video>
       ) : (
         <div className="flex aspect-video items-center justify-center bg-surface-1">
           <div className="text-center">
             <Play className="mx-auto mb-3 h-16 w-16 text-text-disabled" />
             <p className="text-sm text-text-muted">No video source</p>
             <p className="mt-1 text-xs text-text-disabled">Video playback will appear here</p>
+          </div>
+        </div>
+      )}
+
+      {activeCueText && (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4 transition-all duration-normal",
+            showControls ? "bottom-[110px] sm:bottom-[128px]" : "bottom-8 sm:bottom-10",
+          )}
+        >
+          <div className="video-caption-overlay max-w-[86%] whitespace-pre-line text-center text-[0.95rem] sm:text-lg font-medium leading-snug text-white">
+            {activeCueText}
           </div>
         </div>
       )}
@@ -911,12 +1106,75 @@ export function VideoPlayer({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {subtitleTracks.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubtitleMenuOpen((open) => !open);
+                    setQualityMenuOpen(false);
+                    setSpeedMenuOpen(false);
+                  }}
+                  aria-label="Subtitles"
+                  className={cn(
+                    "player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
+                    activeSubtitleId ? "text-accent-100" : "text-white/82",
+                  )}
+                >
+                  <Captions className="h-3.5 w-3.5" />
+                  <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                </button>
+                {subtitleMenuOpen && (
+                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[180px] player-dropdown p-1">
+                    <button
+                      type="button"
+                      onClick={() => selectSubtitle(null)}
+                      className={cn(
+                        "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                        !activeSubtitleId
+                          ? "bg-accent-500/18 text-accent-100"
+                          : "text-white/78 hover:bg-white/8 hover:text-white",
+                      )}
+                    >
+                      <span>Off</span>
+                      {!activeSubtitleId && (
+                        <span className="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>
+                      )}
+                    </button>
+                    {subtitleTracks.map((track) => {
+                      const isActive = activeSubtitleId === track.id;
+                      const displayName =
+                        track.label ?? languageLabel(track.language);
+                      return (
+                        <button
+                          key={track.id}
+                          type="button"
+                          onClick={() => selectSubtitle(track.id)}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                            isActive
+                              ? "bg-accent-500/18 text-accent-100"
+                              : "text-white/78 hover:bg-white/8 hover:text-white",
+                          )}
+                        >
+                          <span className="truncate">{displayName}</span>
+                          <span className="text-[0.55rem] sm:text-[0.6rem] uppercase tracking-[0.16em] text-white/50">
+                            {track.source}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => {
                   setQualityMenuOpen((open) => !open);
                   setSpeedMenuOpen(false);
+                  setSubtitleMenuOpen(false);
                 }}
                 className="player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
               >
@@ -1007,7 +1265,7 @@ export function VideoPlayer({
     )}
     </div>
   );
-}
+});
 
 function MetricChip({
   icon,

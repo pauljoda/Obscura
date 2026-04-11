@@ -15,6 +15,10 @@ export const apiRoutes = {
   sceneDetail: "/scenes/:id",
   sceneStats: "/scenes/stats",
   sceneUpload: "/scenes/upload",
+  sceneSubtitles: "/scenes/:id/subtitles",
+  sceneSubtitleDetail: "/scenes/:id/subtitles/:trackId",
+  sceneSubtitleCues: "/scenes/:id/subtitles/:trackId/cues",
+  sceneSubtitleExtract: "/scenes/:id/subtitles/extract",
   galleries: "/galleries",
   galleryDetail: "/galleries/:id",
   galleryStats: "/galleries/stats",
@@ -183,7 +187,33 @@ export const queueDefinitions = [
     description: "Moves scene-generated video assets between cache and media-adjacent storage",
     concurrency: 1,
   },
+  {
+    name: "extract-subtitles",
+    label: "Extract Subtitles",
+    description: "Extracts embedded subtitle tracks from video files as WebVTT",
+    concurrency: 1,
+  },
 ] as const;
+
+export type SubtitleSource = "sidecar" | "upload" | "embedded";
+
+export interface SceneSubtitleTrackDto {
+  id: string;
+  sceneId: string;
+  language: string;
+  label: string | null;
+  format: "vtt";
+  source: SubtitleSource;
+  isDefault: boolean;
+  url: string;
+  createdAt: string;
+}
+
+export interface SubtitleCueDto {
+  start: number;
+  end: number;
+  text: string;
+}
 
 /** BullMQ jobs per queue; default 1. Higher values increase CPU, disk, and memory use. */
 export const BACKGROUND_WORKER_CONCURRENCY_MIN = 1;

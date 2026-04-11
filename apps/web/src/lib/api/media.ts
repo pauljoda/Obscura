@@ -92,6 +92,46 @@ export async function fetchSceneDetail(id: string): Promise<SceneDetail> {
   return fetchApi(`/scenes/${id}`);
 }
 
+export async function fetchSceneSubtitleCues(
+  sceneId: string,
+  trackId: string,
+): Promise<{ cues: import("@obscura/contracts").SubtitleCueDto[] }> {
+  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}/cues`);
+}
+
+export async function uploadSceneSubtitle(
+  sceneId: string,
+  file: File,
+  language: string,
+  label?: string,
+): Promise<{ track: import("@obscura/contracts").SceneSubtitleTrackDto }> {
+  const form = new FormData();
+  form.append("language", language);
+  if (label) form.append("label", label);
+  form.append("file", file);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/scenes/${sceneId}/subtitles`,
+    { method: "POST", body: form },
+  );
+  if (!res.ok) {
+    throw new Error((await res.text()) || `Upload failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function deleteSceneSubtitle(
+  sceneId: string,
+  trackId: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}`, { method: "DELETE" });
+}
+
+export async function extractSceneSubtitles(
+  sceneId: string,
+): Promise<{ enqueued: boolean; jobId: string | null }> {
+  return fetchApi(`/scenes/${sceneId}/subtitles/extract`, { method: "POST" });
+}
+
 export async function updateScene(
   id: string,
   data: {

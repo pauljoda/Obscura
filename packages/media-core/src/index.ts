@@ -322,6 +322,12 @@ export function getGeneratedSceneDir(sceneId: string) {
   return path.join(getCacheRootDir(), "scenes", sceneId);
 }
 
+export function getSceneSubtitlesDir(sceneId: string) {
+  return path.join(getGeneratedSceneDir(sceneId), "subtitles");
+}
+
+export * from "./subtitles";
+
 export function getGeneratedPerformerDir(performerId: string) {
   return path.join(getCacheRootDir(), "performers", performerId);
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { SceneEdit } from "./scene-edit";
+import { SceneTranscriptPanel } from "./scene-transcript-panel";
+import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Star,
@@ -35,20 +36,8 @@ import { SceneMetadataPanel } from "./scenes/scene-metadata-panel";
 import { SceneMarkerEditor } from "./scenes/scene-marker-editor";
 import { SceneFileInfo } from "./scenes/scene-file-info";
 
-const tabs = ["Details", "Metadata", "Markers", "Files"] as const;
+const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
 type Tab = (typeof tabs)[number];
-
-const VideoPlayer = dynamic(
-  () => import("./video-player").then((module) => module.VideoPlayer),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="surface-well flex items-center justify-center py-16 text-sm text-text-muted">
-        Loading player...
-      </div>
-    ),
-  },
-);
 
 export function SceneDetail({
   id,
@@ -67,6 +56,32 @@ export function SceneDetail({
   const [savingRating, setSavingRating] = useState(false);
   const currentTimeRef = useRef(0);
   const [allTags, setAllTags] = useState<TagItem[]>(initialTags);
+  const playerRef = useRef<VideoPlayerHandle | null>(null);
+  const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null);
+
+  // Persist selected subtitle track per-scene in localStorage.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem(`obscura:subtitle-lang:${id}`);
+    if (saved) setActiveSubtitleId(saved === "__off__" ? null : saved);
+  }, [id]);
+
+  const handleActiveSubtitleChange = useCallback(
+    (next: string | null) => {
+      setActiveSubtitleId(next);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          `obscura:subtitle-lang:${id}`,
+          next ?? "__off__",
+        );
+      }
+    },
+    [id],
+  );
+
+  const handleSeek = useCallback((time: number) => {
+    playerRef.current?.seekTo(time);
+  }, []);
   const { mode: nsfwMode } = useNsfw();
   const explicitCounterLabels = nsfwMode === "show";
   const terms = useTerms();
@@ -199,6 +214,7 @@ export function SceneDetail({
       {/* Video Player */}
       <NsfwBlur isNsfw={scene.isNsfw ?? false}>
         <VideoPlayer
+          ref={playerRef}
           src={toApiUrl(scene.streamUrl)}
           directSrc={toApiUrl(scene.directStreamUrl)}
           poster={toApiUrl(scene.thumbnailPath)}
@@ -212,6 +228,12 @@ export function SceneDetail({
           onTimeUpdate={handleTimeUpdate}
           trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
           trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
+          subtitleTracks={scene.subtitleTracks ?? []}
+          activeSubtitleTrackId={activeSubtitleId}
+          onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
+          subtitleAssetBase={
+            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
+          }
         />
       </NsfwBlur>
 
@@ -385,6 +407,12 @@ export function SceneDetail({
                 {scene.markers.length}
               </span>
             )}
+            {tab === "Transcript" &&
+              (scene.subtitleTracks?.length ?? 0) > 0 && (
+                <span className="ml-1.5 text-[0.6rem] text-text-disabled">
+                  {scene.subtitleTracks!.length}
+                </span>
+              )}
           </button>
         ))}
       </div>
@@ -407,6 +435,18 @@ export function SceneDetail({
           currentTimeRef={currentTimeRef}
           displayTime={displayTime}
           onRefresh={refreshScene}
+        />
+      )}
+
+      {activeTab === "Transcript" && (
+        <SceneTranscriptPanel
+          sceneId={scene.id}
+          tracks={scene.subtitleTracks ?? []}
+          activeTrackId={activeSubtitleId}
+          onActiveTrackIdChange={handleActiveSubtitleChange}
+          currentTime={displayTime}
+          onSeek={handleSeek}
+          onTracksChanged={refreshScene}
         />
       )}
 

@@ -3,6 +3,7 @@ import type { JobLike as Job } from "../lib/job-tracking.js";
 import { probeVideoFile } from "@obscura/media-core";
 import { db, scenes } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import { enqueuePendingSceneJob } from "../lib/enqueue.js";
 
 /** Probe the file on disk and persist format/dimensions/duration into `scenes`. */
 export async function applyVideoProbeToScene(sceneId: string, filePath: string) {
@@ -44,4 +45,17 @@ export async function processMediaProbe(job: Job) {
 
   await applyVideoProbeToScene(scene.id, scene.filePath);
   await markJobProgress(job, "media-probe", 70);
+
+  // Auto-extract embedded subtitle tracks (best-effort; the processor
+  // tolerates videos with no subtitle streams).
+  try {
+    await enqueuePendingSceneJob("extract-subtitles", scene.id, {
+      by: "system",
+      label: "Queued after media probe",
+    });
+  } catch (err) {
+    console.warn(
+      `[media-probe] failed to enqueue extract-subtitles for ${scene.id}: ${(err as Error).message}`
+    );
+  }
 }

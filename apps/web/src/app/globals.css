@@ -387,6 +387,28 @@
       0 0 0 0.5px rgba(255, 255, 255, 0.04);
   }
 
+  /* Transcript: current cue gets a subtle brass text glow. */
+  .text-shadow-cue {
+    text-shadow:
+      0 0 8px rgba(199, 155, 92, 0.35),
+      0 0 2px rgba(199, 155, 92, 0.45);
+  }
+
+  /* Custom subtitle caption overlay — opaque plate, brass edge glow,
+     no border-radius per Dark Room rules. */
+  .video-caption-overlay {
+    background: rgba(8, 9, 12, 0.82);
+    padding: 0.4rem 0.9rem;
+    border-left: 2px solid rgba(199, 155, 92, 0.6);
+    border-right: 2px solid rgba(199, 155, 92, 0.6);
+    box-shadow:
+      0 0 20px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.85),
+      0 0 10px rgba(199, 155, 92, 0.18);
+  }
+
   /* Gradient-fade separator */
   .separator {
     height: 1px;

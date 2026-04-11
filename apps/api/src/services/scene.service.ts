@@ -54,6 +54,7 @@ const {
   scenePerformers,
   sceneTags,
   sceneMarkers,
+  sceneSubtitles,
   performers,
   tags,
   studios,
@@ -544,6 +545,9 @@ export async function getSceneById(id: string) {
       markers: {
         orderBy: asc(sceneMarkers.seconds),
       },
+      subtitles: {
+        orderBy: asc(sceneSubtitles.createdAt),
+      },
     },
   });
 
@@ -614,6 +618,18 @@ export async function getSceneById(id: string) {
       title: m.title,
       seconds: m.seconds,
       endSeconds: m.endSeconds,
+    })),
+    subtitleTracks: scene.subtitles.map((s) => ({
+      id: s.id,
+      sceneId: s.sceneId,
+      language: s.language,
+      label: s.label,
+      format: "vtt" as const,
+      source: s.source as "sidecar" | "upload" | "embedded",
+      isDefault: s.isDefault,
+      url: `/scenes/${s.sceneId}/subtitles/${s.id}`,
+      createdAt:
+        s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
     })),
     createdAt: scene.createdAt,
     updatedAt: scene.updatedAt,

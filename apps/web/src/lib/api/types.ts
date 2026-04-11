@@ -9,9 +9,11 @@ import type {
   LibraryBrowseDto,
   LibraryRootDto,
   LibrarySettingsDto,
+  SceneSubtitleTrackDto,
   ScrapeResultDto,
   ScraperPackageDto,
   StorageStatsDto,
+  SubtitleCueDto,
   TagEmbedDto,
 } from "@obscura/contracts";
 
@@ -72,8 +74,11 @@ export interface SceneDetail extends SceneListItem {
     seconds: number;
     endSeconds: number | null;
   }[];
+  subtitleTracks: SceneSubtitleTrackDto[];
   updatedAt: string;
 }
+
+export type { SceneSubtitleTrackDto, SubtitleCueDto };
 
 export type GalleryListItem = GalleryListItemDto;
 
