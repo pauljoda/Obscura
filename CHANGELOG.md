@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-04-11
 ### Fixed
 
 - **Image thumbnail generation no longer fails on animated images during gallery scans.** ffmpeg's image2 muxer was rejecting multi-frame inputs (animated GIF/APNG, multi-frame WebP/TIFF) with `Cannot write more than one file with the same name. Are you missing the -update option or a sequence pattern?`. The worker now always passes `-frames:v 1 -update 1` when writing the JPEG thumbnail, so the first frame is extracted regardless of source format.
