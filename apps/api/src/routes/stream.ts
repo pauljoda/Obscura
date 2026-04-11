@@ -5,7 +5,8 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { mkdir, stat, writeFile, readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { ensureHlsPackage } from "../lib/hls";
+import { getHlsStatus, peekHlsTracker, startHlsGeneration } from "../lib/hls";
+import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
 import { getCacheRootDir, runProcess } from "@obscura/media-core";
 
 const { scenes } = schema;
@@ -286,6 +287,20 @@ export async function streamRoutes(app: FastifyInstance) {
     return sendRangeStream(reply, scene.filePath, request.headers.range);
   });
 
+  app.get("/stream/:id/hls/status", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const scene = await getSceneSource(id);
+
+    if (!scene?.filePath) {
+      reply.code(404);
+      return { error: "Video file not found on disk" };
+    }
+
+    const status = await getHlsStatus(id, scene.filePath, scene.height);
+    reply.header("Cache-Control", "no-store");
+    return status;
+  });
+
   app.get("/stream/:id/hls/master.m3u8", async (request, reply) => {
     const { id } = request.params as { id: string };
     const scene = await getSceneSource(id);
@@ -295,11 +310,39 @@ export async function streamRoutes(app: FastifyInstance) {
       return { error: "Video file not found on disk" };
     }
 
-    const hlsPackage = await ensureHlsPackage(id, scene.filePath, scene.height);
+    const status = await getHlsStatus(id, scene.filePath, scene.height);
+
+    if (status.state === "error") {
+      reply.code(500);
+      return { error: status.error ?? "HLS generation failed" };
+    }
+
+    if (status.state !== "ready") {
+      // Kick off if idle; otherwise getHlsStatus already flipped us to pending.
+      startHlsGeneration(id, scene.filePath, scene.height).catch(() => {
+        // Error is tracked in tracker state; /status and subsequent requests
+        // will surface it.
+      });
+      reply.code(503);
+      reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
+      reply.header("Cache-Control", "no-store");
+      return { error: "HLS package is still being generated", retryAfter: HLS_RETRY_AFTER_SECONDS };
+    }
+
+    const cacheDir = path.join(getCacheRootDir(), "hls", id);
+    const masterManifestPath = path.join(cacheDir, "master.m3u8");
+
+    if (!existsSync(masterManifestPath)) {
+      // Ready in tracker but file missing on disk — re-trigger.
+      startHlsGeneration(id, scene.filePath, scene.height).catch(() => {});
+      reply.code(503);
+      reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
+      return { error: "HLS manifest missing on disk", retryAfter: HLS_RETRY_AFTER_SECONDS };
+    }
+
     reply.header("Cache-Control", "public, max-age=60");
     reply.header("Content-Type", mimeForExt(".m3u8"));
-
-    return reply.send(createReadStream(hlsPackage.masterManifestPath));
+    return reply.send(createReadStream(masterManifestPath));
   });
 
   app.get("/stream/:id/hls/*", async (request, reply) => {
@@ -312,8 +355,21 @@ export async function streamRoutes(app: FastifyInstance) {
       return { error: "Video file not found on disk" };
     }
 
-    const hlsPackage = await ensureHlsPackage(id, scene.filePath, scene.height);
-    const resolvedAsset = resolveAssetPath(hlsPackage.outputDir, assetPath);
+    const tracker = peekHlsTracker(id);
+    if (!tracker || tracker.state === "pending") {
+      reply.code(503);
+      reply.header("Retry-After", String(HLS_RETRY_AFTER_SECONDS));
+      reply.header("Cache-Control", "no-store");
+      return { error: "HLS package not ready", retryAfter: HLS_RETRY_AFTER_SECONDS };
+    }
+
+    if (tracker.state === "error") {
+      reply.code(500);
+      return { error: tracker.error ?? "HLS generation failed" };
+    }
+
+    const cacheDir = path.join(getCacheRootDir(), "hls", id);
+    const resolvedAsset = resolveAssetPath(cacheDir, assetPath);
 
     if (!resolvedAsset || !existsSync(resolvedAsset)) {
       reply.code(404);

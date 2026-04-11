@@ -10,7 +10,8 @@
     "db:studio": "drizzle-kit studio",
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",

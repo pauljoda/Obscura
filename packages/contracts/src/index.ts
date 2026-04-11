@@ -86,11 +86,20 @@ export {
   canUseInlineVideoPreview,
   formatDuration,
   formatFileSize,
+  getHlsRenditions,
   getResolutionLabel,
+  HLS_RENDITION_PRESETS,
+  HLS_RETRY_AFTER_SECONDS,
   isVideoImage,
   isVideoImageFormat,
   VIDEO_IMAGE_FORMATS,
   VIDEO_PREVIEW_MAX_FILE_SIZE_BYTES,
+} from "./media";
+
+export type {
+  HlsPackageState,
+  HlsRendition,
+  HlsStatus,
 } from "./media";
 
 export type {

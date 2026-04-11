@@ -26,7 +26,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { SubtitleAppearance } from "@obscura/contracts";
+import type { HlsRendition, HlsStatus, SubtitleAppearance } from "@obscura/contracts";
 import {
   enterMediaFullscreen,
   exitDocumentFullscreen,
@@ -93,11 +93,67 @@ function languageLabel(language: string): string {
   }
 }
 
-type QualityMode = "auto" | "direct" | number;
+type QualityMode = "auto" | "direct" | number | `seed:${string}`;
 
 interface QualityOption {
   value: QualityMode;
   label: string;
+}
+
+function hlsStatusUrlForSrc(src: string): string | null {
+  if (!src.endsWith("/master.m3u8")) return null;
+  return src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
+}
+
+async function fetchHlsStatus(statusUrl: string, signal?: AbortSignal): Promise<HlsStatus | null> {
+  try {
+    const res = await fetch(statusUrl, { signal, cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as HlsStatus;
+  } catch {
+    return null;
+  }
+}
+
+async function waitForHlsReady(
+  statusUrl: string,
+  signal: AbortSignal,
+  opts: { intervalMs?: number; maxAttempts?: number } = {}
+): Promise<HlsStatus> {
+  const interval = opts.intervalMs ?? 2000;
+  const max = opts.maxAttempts ?? 450; // 15 minutes at 2s
+  for (let i = 0; i < max; i += 1) {
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const status = await fetchHlsStatus(statusUrl, signal);
+    if (!status) {
+      await new Promise((r) => setTimeout(r, interval));
+      continue;
+    }
+    if (status.state === "ready") return status;
+    if (status.state === "error") {
+      throw new Error(status.error ?? "HLS generation failed");
+    }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  throw new Error("Timed out waiting for HLS package");
+}
+
+function renditionsToQualityOptions(
+  renditions: HlsRendition[],
+  directAvailable: boolean,
+): QualityOption[] {
+  return [
+    ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
+    { value: "auto" as const, label: "Auto" },
+    // Highest-first display ordering.
+    ...renditions
+      .slice()
+      .sort((a, b) => b.height - a.height)
+      .map<QualityOption>((r) => ({
+        value: `seed:${r.name}` as const,
+        label: r.label,
+      })),
+  ];
 }
 
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
@@ -170,6 +226,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // position and resume playing once the new mode is initialised.
   const pendingAutoPlayRef = useRef(false);
   const pendingSeekTimeRef = useRef<number | null>(null);
+  // When the user picks a pre-seeded rendition (from /hls/status) before
+  // hls.js has loaded the manifest, we stash the target rendition name here
+  // and reconcile it to the real level index once MANIFEST_PARSED fires.
+  const pendingSeedNameRef = useRef<string | null>(null);
+  const seededRenditionsRef = useRef<HlsRendition[]>([]);
+  const qualityModeRef = useRef<QualityMode>("direct");
 
   const [playing, setPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -303,6 +365,33 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     };
   }, []);
 
+  // Fetch the HLS status endpoint when the source changes so we can seed the
+  // quality menu with real rendition labels even before hls.js has parsed the
+  // manifest. This also kicks the backend into starting ffmpeg early.
+  useEffect(() => {
+    if (!src) {
+      seededRenditionsRef.current = [];
+      return;
+    }
+    const statusUrl = hlsStatusUrlForSrc(src);
+    if (!statusUrl) return;
+
+    const controller = new AbortController();
+    void (async () => {
+      const status = await fetchHlsStatus(statusUrl, controller.signal);
+      if (!status || controller.signal.aborted) return;
+      seededRenditionsRef.current = status.renditions;
+      // Only seed options if the real level list isn't already in place.
+      setQualityOptions((current) => {
+        const hasRealLevels = current.some((opt) => typeof opt.value === "number");
+        if (hasRealLevels) return current;
+        return renditionsToQualityOptions(status.renditions, Boolean(directSrc));
+      });
+    })();
+
+    return () => controller.abort();
+  }, [src, directSrc]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) {
@@ -310,6 +399,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     let cancelled = false;
+    const hlsLoadAbort = new AbortController();
 
     const srcKey = `${src ?? ""}|${directSrc ?? ""}`;
     const isNewSource = srcKey !== prevSrcKeyRef.current;
@@ -331,11 +421,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setDroppedFrames(null);
       setQualityMode(effectiveMode === "direct" ? "direct" : "auto");
       setStreamMode(effectiveMode);
-      setQualityOptions(
-        directSrc
-          ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
-          : [{ value: "auto" as const, label: "Auto" }],
-      );
+      pendingSeedNameRef.current = null;
+      // Seed from any renditions already fetched by the status effect.
+      const seeded = seededRenditionsRef.current;
+      if (seeded.length > 0) {
+        setQualityOptions(renditionsToQualityOptions(seeded, Boolean(directSrc)));
+      } else {
+        setQualityOptions(
+          directSrc
+            ? [{ value: "direct" as const, label: "Direct" }, { value: "auto" as const, label: "Auto" }]
+            : [{ value: "auto" as const, label: "Auto" }],
+        );
+      }
       setActiveQualityLabel(null);
       setPlayerNotice(null);
       setUsingAdaptiveStream(false);
@@ -400,12 +497,67 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           return;
         }
 
+        // Wait for the backend to report `ready` before handing the manifest
+        // URL to hls.js. Otherwise the master.m3u8 request would hit our 503
+        // retry path while ffmpeg is still transcoding and hls.js would trip
+        // its own timeouts before the package is available.
+        const statusUrl = hlsStatusUrlForSrc(src);
+        if (statusUrl) {
+          try {
+            const ready = await waitForHlsReady(statusUrl, hlsLoadAbort.signal);
+            if (!cancelled && ready.renditions.length > 0) {
+              seededRenditionsRef.current = ready.renditions;
+            }
+          } catch (err) {
+            if (cancelled || hlsLoadAbort.signal.aborted) return;
+            setHlsInitializing(false);
+            setUsingAdaptiveStream(false);
+            if (directSrc) {
+              setQualityMode("direct");
+              setPlayerNotice(
+                `Adaptive stream unavailable — switched to direct. (${
+                  err instanceof Error ? err.message : "unknown error"
+                })`,
+              );
+              video.src = directSrc;
+              video.load();
+              return;
+            }
+            setPlayerNotice(
+              `Adaptive playback unavailable: ${
+                err instanceof Error ? err.message : "unknown error"
+              }`,
+            );
+            return;
+          }
+        }
+
+        if (cancelled) return;
+
         if (Hls.isSupported()) {
           const hls = new Hls({
             startLevel: -1,
             capLevelToPlayerSize: true,
             maxBufferLength: 30,
             backBufferLength: 90,
+            // Be patient with transient 503s from the status-gated master
+            // route so an in-progress transcode doesn't instantly go fatal.
+            manifestLoadPolicy: {
+              default: {
+                maxTimeToFirstByteMs: 20_000,
+                maxLoadTimeMs: 60_000,
+                timeoutRetry: { maxNumRetry: 4, retryDelayMs: 1000, maxRetryDelayMs: 8000 },
+                errorRetry: { maxNumRetry: 8, retryDelayMs: 1000, maxRetryDelayMs: 4000 },
+              },
+            },
+            playlistLoadPolicy: {
+              default: {
+                maxTimeToFirstByteMs: 20_000,
+                maxLoadTimeMs: 60_000,
+                timeoutRetry: { maxNumRetry: 4, retryDelayMs: 1000, maxRetryDelayMs: 8000 },
+                errorRetry: { maxNumRetry: 8, retryDelayMs: 1000, maxRetryDelayMs: 4000 },
+              },
+            },
           });
 
           hlsRef.current = hls;
@@ -434,9 +586,41 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
             setQualityOptions(options);
             const highestLevel = Math.max(hls.levels.length - 1, 0);
-            hls.startLevel = highestLevel;
-            hls.nextAutoLevel = highestLevel;
-            setActiveQualityLabel(getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel));
+
+            // Reconcile a pre-seeded rendition pick now that we know real
+            // level indices. Otherwise, apply the current qualityMode to the
+            // freshly-created hls instance (closes the race where the
+            // qualityMode effect fired before hlsRef.current was set).
+            const seedName = pendingSeedNameRef.current;
+            pendingSeedNameRef.current = null;
+            if (seedName) {
+              const matchIdx = hls.levels.findIndex((lvl, idx) => {
+                const label = getLevelLabel(lvl, idx).toLowerCase();
+                return label === seedName.toLowerCase();
+              });
+              if (matchIdx >= 0) {
+                hls.currentLevel = matchIdx;
+                hls.nextLevel = matchIdx;
+                setQualityMode(matchIdx);
+                setActiveQualityLabel(getLevelLabel(hls.levels[matchIdx] ?? {}, matchIdx));
+              } else {
+                hls.currentLevel = -1;
+                hls.nextAutoLevel = highestLevel;
+                setQualityMode("auto");
+                setActiveQualityLabel(getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel));
+              }
+            } else if (typeof qualityModeRef.current === "number") {
+              const target = qualityModeRef.current as number;
+              hls.currentLevel = target;
+              hls.nextLevel = target;
+              setActiveQualityLabel(getLevelLabel(hls.levels[target] ?? {}, target));
+            } else {
+              hls.currentLevel = -1;
+              hls.startLevel = highestLevel;
+              hls.nextAutoLevel = highestLevel;
+              setActiveQualityLabel(getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel));
+            }
+
             setBandwidthEstimate(
               Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null,
             );
@@ -526,6 +710,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
       return () => {
         cancelled = true;
+        hlsLoadAbort.abort();
         destroyHls();
       };
     }
@@ -547,11 +732,19 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Sync streamMode from qualityMode — only triggers source re-init when
   // switching between direct and adaptive (not when changing HLS levels)
   useEffect(() => {
+    qualityModeRef.current = qualityMode;
     setStreamMode(qualityMode === "direct" ? "direct" : "hls");
   }, [qualityMode]);
 
   useEffect(() => {
     if (qualityMode === "direct") {
+      return;
+    }
+
+    // Seeded picks can't be applied yet — they'll be reconciled to a real
+    // level index inside MANIFEST_PARSED once hls.js has loaded the manifest.
+    if (typeof qualityMode === "string" && qualityMode.startsWith("seed:")) {
+      pendingSeedNameRef.current = qualityMode.slice(5);
       return;
     }
 
@@ -568,7 +761,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       return;
     }
 
-    hls.nextLevel = qualityMode;
+    if (typeof qualityMode === "number") {
+      hls.nextLevel = qualityMode;
+    }
   }, [qualityMode]);
 
   useEffect(() => {
@@ -907,7 +1102,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       ? "Direct"
       : qualityMode === "auto"
         ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
-        : activeQualityLabel;
+        : typeof qualityMode === "string" && qualityMode.startsWith("seed:")
+          ? qualityMode.slice(5)
+          : activeQualityLabel;
 
   const hasFilmStrip = Boolean(trickplaySprite && trickplayVtt && duration > 0);
 

@@ -2,7 +2,13 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getCacheRootDir } from "@obscura/media-core";
-import { getHlsRenditions, runProcess, type HlsRendition } from "./media";
+import {
+  getHlsRenditions,
+  type HlsPackageState,
+  type HlsRendition,
+  type HlsStatus,
+} from "@obscura/contracts/media";
+import { runProcess } from "./media";
 
 export interface HlsPackage {
   outputDir: string;
@@ -17,12 +23,21 @@ interface HlsCacheMetadata {
   renditions: HlsRendition[];
 }
 
-const HLS_CACHE_DIR = path.join(getCacheRootDir(), "hls");
+function getHlsCacheDir() {
+  return path.join(getCacheRootDir(), "hls");
+}
 
-const generationLocks = new Map<string, Promise<HlsPackage>>();
+export interface HlsTrackerEntry {
+  state: HlsPackageState;
+  renditions: HlsRendition[];
+  error?: string;
+  promise?: Promise<HlsPackage>;
+}
+
+const trackerState = new Map<string, HlsTrackerEntry>();
 
 function getSceneCacheDir(sceneId: string) {
-  return path.join(HLS_CACHE_DIR, sceneId);
+  return path.join(getHlsCacheDir(), sceneId);
 }
 
 async function readMetadata(cacheDir: string) {
@@ -57,22 +72,19 @@ async function isPackageFresh(
   );
 }
 
-async function buildHlsPackage(
+export type HlsBuilder = (
   sceneId: string,
   sourcePath: string,
-  sourceHeight: number | null
-): Promise<HlsPackage> {
-  const cacheDir = getSceneCacheDir(sceneId);
-  const renditions = getHlsRenditions(sourceHeight);
-  const masterManifestPath = path.join(cacheDir, "master.m3u8");
+  renditions: HlsRendition[],
+  cacheDir: string
+) => Promise<void>;
 
-  if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
-    return { outputDir: cacheDir, masterManifestPath, renditions };
-  }
-
-  await rm(cacheDir, { recursive: true, force: true });
-  await mkdir(cacheDir, { recursive: true });
-
+async function ffmpegHlsBuilder(
+  _sceneId: string,
+  sourcePath: string,
+  renditions: HlsRendition[],
+  cacheDir: string
+): Promise<void> {
   const variantCount = renditions.length;
   const splitTargets = Array.from({ length: variantCount }, (_, index) => `[v${index}]`).join("");
   const filterSegments = renditions.map((rendition, index) => {
@@ -155,6 +167,37 @@ async function buildHlsPackage(
   );
 
   await runProcess("ffmpeg", args);
+}
+
+let activeBuilder: HlsBuilder = ffmpegHlsBuilder;
+
+/** Swap the HLS builder implementation — for tests. */
+export function setHlsBuilder(builder: HlsBuilder) {
+  activeBuilder = builder;
+}
+
+/** Reset tracker state — for tests. */
+export function resetHlsTracker() {
+  trackerState.clear();
+}
+
+async function buildHlsPackage(
+  sceneId: string,
+  sourcePath: string,
+  sourceHeight: number | null
+): Promise<HlsPackage> {
+  const cacheDir = getSceneCacheDir(sceneId);
+  const renditions = getHlsRenditions(sourceHeight);
+  const masterManifestPath = path.join(cacheDir, "master.m3u8");
+
+  if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
+    return { outputDir: cacheDir, masterManifestPath, renditions };
+  }
+
+  await rm(cacheDir, { recursive: true, force: true });
+  await mkdir(cacheDir, { recursive: true });
+
+  await activeBuilder(sceneId, sourcePath, renditions, cacheDir);
 
   const sourceStats = await stat(sourcePath);
   const metadata: HlsCacheMetadata = {
@@ -173,20 +216,100 @@ async function buildHlsPackage(
   return { outputDir: cacheDir, masterManifestPath, renditions };
 }
 
+/**
+ * Non-blocking: reports current tracker + disk state and — if the package is
+ * neither ready nor in progress — kicks off generation in the background.
+ * Never awaits the build. Routes should call this and respond immediately.
+ */
+export async function getHlsStatus(
+  sceneId: string,
+  sourcePath: string,
+  sourceHeight: number | null
+): Promise<HlsStatus> {
+  const renditions = getHlsRenditions(sourceHeight);
+  const cacheDir = getSceneCacheDir(sceneId);
+
+  const existing = trackerState.get(sceneId);
+  if (existing && existing.state === "pending") {
+    return { state: "pending", renditions };
+  }
+
+  // Disk may have been populated by a previous process — probe cheaply.
+  if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
+    trackerState.set(sceneId, { state: "ready", renditions });
+    return { state: "ready", renditions };
+  }
+
+  if (existing && existing.state === "error") {
+    return { state: "error", renditions, error: existing.error };
+  }
+
+  // Nothing on disk and no active build — start one in the background.
+  startHlsGeneration(sceneId, sourcePath, sourceHeight);
+  return { state: "pending", renditions };
+}
+
+/**
+ * Fire-and-forget build. Multiple callers share a single promise via the
+ * tracker so concurrent requests coalesce to one ffmpeg invocation.
+ */
+export function startHlsGeneration(
+  sceneId: string,
+  sourcePath: string,
+  sourceHeight: number | null
+): Promise<HlsPackage> {
+  const existing = trackerState.get(sceneId);
+  if (existing?.promise && existing.state === "pending") {
+    return existing.promise;
+  }
+
+  const renditions = getHlsRenditions(sourceHeight);
+  const promise = buildHlsPackage(sceneId, sourcePath, sourceHeight)
+    .then((pkg) => {
+      trackerState.set(sceneId, { state: "ready", renditions: pkg.renditions });
+      return pkg;
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      trackerState.set(sceneId, { state: "error", renditions, error: message });
+      throw error;
+    });
+
+  trackerState.set(sceneId, { state: "pending", renditions, promise });
+  return promise;
+}
+
+/**
+ * Legacy blocking call: awaits until the package is ready. Kept for callers
+ * (e.g. direct consumers) that really do need to wait. HTTP routes should
+ * prefer getHlsStatus + 503 so clients can poll.
+ */
 export async function ensureHlsPackage(
   sceneId: string,
   sourcePath: string,
   sourceHeight: number | null
-) {
-  const existing = generationLocks.get(sceneId);
-  if (existing) {
-    return existing;
+): Promise<HlsPackage> {
+  const existing = trackerState.get(sceneId);
+  if (existing?.promise && existing.state === "pending") {
+    return existing.promise;
   }
 
-  const pending = buildHlsPackage(sceneId, sourcePath, sourceHeight).finally(() => {
-    generationLocks.delete(sceneId);
-  });
+  if (existing?.state === "ready") {
+    const cacheDir = getSceneCacheDir(sceneId);
+    const renditions = getHlsRenditions(sourceHeight);
+    if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
+      return {
+        outputDir: cacheDir,
+        masterManifestPath: path.join(cacheDir, "master.m3u8"),
+        renditions,
+      };
+    }
+  }
 
-  generationLocks.set(sceneId, pending);
-  return pending;
+  return startHlsGeneration(sceneId, sourcePath, sourceHeight);
+}
+
+/** Read tracker state without side effects — for tests and diagnostics. */
+export function peekHlsTracker(sceneId: string): HlsTrackerEntry | undefined {
+  return trackerState.get(sceneId);
 }

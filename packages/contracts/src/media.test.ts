@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   formatDuration,
   formatFileSize,
+  getHlsRenditions,
   getResolutionLabel,
+  HLS_RENDITION_PRESETS,
   isVideoImageFormat,
   isVideoImage,
   canUseInlineVideoPreview,
@@ -148,5 +150,65 @@ describe("canUseInlineVideoPreview", () => {
     expect(
       canUseInlineVideoPreview({ isVideo: true, previewPath: "/p", fileSize: null }),
     ).toBe(true);
+  });
+});
+
+describe("getHlsRenditions", () => {
+  it("returns all presets at or below 1080p for a 1080p source", () => {
+    const renditions = getHlsRenditions(1080);
+    expect(renditions.map((r) => r.name)).toEqual([
+      "1080p",
+      "720p",
+      "480p",
+      "360p",
+      "240p",
+      "180p",
+    ]);
+  });
+
+  it("drops presets above the source height", () => {
+    const renditions = getHlsRenditions(720);
+    expect(renditions.map((r) => r.name)).toEqual([
+      "720p",
+      "480p",
+      "360p",
+      "240p",
+      "180p",
+    ]);
+    expect(renditions.every((r) => r.height <= 720)).toBe(true);
+  });
+
+  it("handles 480p sources", () => {
+    const renditions = getHlsRenditions(480);
+    expect(renditions.map((r) => r.name)).toEqual(["480p", "360p", "240p", "180p"]);
+  });
+
+  it("falls back to a single custom rendition for very small sources", () => {
+    const renditions = getHlsRenditions(120);
+    expect(renditions).toHaveLength(1);
+    expect(renditions[0]).toMatchObject({ name: "120p", height: 120 });
+  });
+
+  it("defaults null/undefined sources to 720p filtering", () => {
+    expect(getHlsRenditions(null).map((r) => r.name)).toEqual([
+      "720p",
+      "480p",
+      "360p",
+      "240p",
+      "180p",
+    ]);
+    expect(getHlsRenditions(undefined).map((r) => r.name)).toEqual([
+      "720p",
+      "480p",
+      "360p",
+      "240p",
+      "180p",
+    ]);
+  });
+
+  it("returns cloned objects so callers cannot mutate the preset table", () => {
+    const renditions = getHlsRenditions(1080);
+    renditions[0].label = "mutated";
+    expect(HLS_RENDITION_PRESETS[0].label).toBe("1080p");
   });
 });
