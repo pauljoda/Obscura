@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { SceneEdit } from "./scene-edit";
 import { SceneTranscriptPanel } from "./scene-transcript-panel";
 import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
@@ -97,17 +103,18 @@ export function SceneDetail({
   );
 
   // Track the video wrapper's height with a ResizeObserver and mirror it
-  // onto the docked transcript sidecar. We run it unconditionally and the
-  // sidecar picks it up via a style prop — cheaper than mounting/tearing
-  // down the observer on dock toggles.
-  useEffect(() => {
+  // onto the docked transcript sidecar + resize handle. useLayoutEffect
+  // (+ an immediate getBoundingClientRect) runs before the first paint so
+  // the sidecar never flashes at its intrinsic (tall) height before the
+  // observer kicks in.
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const el = videoWrapperRef.current;
     if (!el) return;
-    if (typeof ResizeObserver === "undefined") {
-      setVideoWrapperHeight(el.getBoundingClientRect().height);
-      return;
-    }
+    // Synchronous initial measurement so state is correct on first paint.
+    const initialHeight = Math.round(el.getBoundingClientRect().height);
+    setVideoWrapperHeight((prev) => (prev === initialHeight ? prev : initialHeight));
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
@@ -116,7 +123,13 @@ export function SceneDetail({
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [userWantsDock]);
+    // Re-measure synchronously whenever the dock preference or viewport
+    // crosses the lg breakpoint — the video wrapper's flex-basis changes
+    // cause the aspect-video height to change before the ResizeObserver
+    // would fire asynchronously. Changes to `hasSubtitles` are handled
+    // by the observer and are rare enough that a single async frame is
+    // acceptable.
+  }, [userWantsDock, isDesktopViewport]);
 
   // Load dock preference + width on mount.
   useEffect(() => {
@@ -367,7 +380,13 @@ export function SceneDetail({
         <div
           ref={dockContainerRef}
           className={cn(
-            isTranscriptDocked && "lg:flex lg:items-stretch lg:gap-0",
+            // items-start is critical: items-stretch would let the
+            // transcript's intrinsic height inflate the video wrapper,
+            // the ResizeObserver would read the inflated value, and the
+            // transcript would lock at the wrong height. With items-start
+            // the video keeps its natural height and the handle +
+            // transcript side are explicitly pinned to match it.
+            isTranscriptDocked && "lg:flex lg:items-start lg:gap-0",
           )}
         >
           <div
@@ -416,7 +435,10 @@ export function SceneDetail({
                 onPointerUp={handleResizeEnd}
                 onPointerCancel={handleResizeEnd}
                 className="hidden lg:flex w-2 shrink-0 cursor-col-resize items-center justify-center bg-surface-3 hover:bg-accent-950 active:bg-accent-950 transition-colors group"
-                style={{ touchAction: "none" }}
+                style={{
+                  touchAction: "none",
+                  height: videoWrapperHeight ?? undefined,
+                }}
               >
                 <span className="h-8 w-[2px] bg-border-default group-hover:bg-border-accent group-active:bg-border-accent transition-colors" />
               </div>

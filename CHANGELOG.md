@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-04-10
+
+### Fixed
+
+- **Docked transcript now truly tracks the video's height in both directions.** The previous fix used `lg:items-stretch` on the flex row to get the resize handle to stretch, but that created a feedback loop: whenever the transcript's intrinsic content was taller than the video's natural `aspect-video` height, stretch inflated the video wrapper, the `ResizeObserver` reported the inflated height, and the transcript locked at the wrong (too-tall) value. Switched back to `lg:items-start` so the video keeps its natural height, and explicitly pinned both the resize handle and the transcript side to `videoWrapperHeight` via inline `style.height`. The transcript now shrinks and grows in lock-step with the video as the window is resized, the dock handle is dragged, or a smaller-native-resolution scene is opened — even if that means a short transcript panel on a cropped-aspect video.
+- **Dock toggle no longer flashes at the old height.** Moved the initial measurement from `useEffect` to `useLayoutEffect` and do a synchronous `getBoundingClientRect()` read before setting state, so the first paint of the docked layout already has the handle and transcript pinned. The effect also re-runs on `userWantsDock` / `isDesktopViewport` changes so toggling dock or crossing the `lg` breakpoint re-measures synchronously before paint, avoiding a frame where the old height leaks into the new layout.
+
 ## [0.12.0] - 2026-04-10
 
 ### Added
