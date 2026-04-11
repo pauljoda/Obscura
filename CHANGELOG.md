@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **`.ass` subtitles weren't actually going through libass — they fell back to the plain-text overlay.** The scene detail endpoint was hand-mapping `SceneSubtitleTrackDto` instead of delegating to the subtitles service, and when `source_format`/`source_url` were added alongside the JASSUB renderer it was never updated — so the client always received `sourceFormat: undefined` for tracks that came in from the initial scene fetch. The web player's JASSUB gate required `sourceFormat === "ass"/"ssa"`, silently never matched, and rendered the VTT fallback text in the generic caption box instead. Aligned the scene detail mapping with the subtitles service DTO, so `.ass`/`.ssa` tracks now actually reach the libass renderer.
+
+### Changed
+
+- **Subtitle track list shows the original format.** The transcript panel's track management row now renders a small format badge (VTT/SRT/ASS/SSA) next to the existing source badge, so at a glance you can tell which tracks will render through libass (ASS/SSA) vs the lightweight text overlay (VTT/SRT). The badge reflects the on-disk source file, not the normalized cue cache.
+
 ### Added
 
 - **Advanced SubStation (.ass/.ssa) subtitles now render with full libass fidelity.** Previously .ass files were converted to plain WebVTT during ingest — all override tags were stripped, so positioning, fonts, colors, gradients, karaoke, fades, and `\move`/`\t` animations were silently lost and each cue showed as centered plain text in the generic caption box. The server now preserves the original .ass/.ssa file alongside the VTT fallback for every ingest path (sidecar discovery during library maintenance, embedded extraction via ffmpeg `-c:s copy`, and manual upload), and exposes it at a new `GET /scenes/:id/subtitles/:trackId/source` route. The web player loads [JASSUB](https://github.com/ThaUnknown/jassub) (libass compiled to WebAssembly, running in a Web Worker) on demand and hands it the raw file, so .ass subtitles now render through the real libass renderer with a canvas overlay synced to the video element — positioning, font references, per-character styling, karaoke timing, fades, movements, and typesetting all work. The existing parsed-cue pipeline is untouched, so the transcript panel still shows plain text. Non-ASS tracks continue to use the lightweight text caption overlay. JASSUB's worker/wasm/font assets are copied into `apps/web/public/jassub/` by a new `predev`/`prebuild` step so Next.js serves them as static files; the unified Docker image picks them up automatically. Added `source_format` + `source_path` columns to `scene_subtitles` in migration `0001_wandering_blue_shield.sql`, a new `readSubtitleSource` service method, and `SubtitleSourceFormat` / `sourceUrl` fields on `SceneSubtitleTrackDto`.
