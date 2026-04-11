@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Loader2, Upload, Wand2, Trash2 } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2, Upload, Wand2, X } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type {
   SceneSubtitleTrackDto,
@@ -17,6 +17,7 @@ import {
   deleteSceneSubtitle,
   extractSceneSubtitles,
   fetchSceneSubtitleCues,
+  updateSceneSubtitle,
   uploadSceneSubtitle,
 } from "../lib/api";
 
@@ -66,9 +67,13 @@ export function SceneTranscriptPanel({
   const [uploading, setUploading] = useState(false);
   const [uploadLanguage, setUploadLanguage] = useState("en");
   const [extractState, setExtractState] = useState<"idle" | "queued">("idle");
+  const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
+  const [editDraftLabel, setEditDraftLabel] = useState("");
+  const [editDraftLanguage, setEditDraftLanguage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastUserScrollRef = useRef<number>(0);
+  const isAutoScrollingRef = useRef(false);
 
   // Default-select the first track when available.
   useEffect(() => {
@@ -116,8 +121,9 @@ export function SceneTranscriptPanel({
     return -1;
   }, [cues, currentTime]);
 
-  // Auto-scroll the active cue into view, but pause auto-scroll briefly
-  // after a manual scroll so we don't fight the user.
+  // Auto-scroll the active cue into view WITHIN the list container only —
+  // never the page viewport. We compute the desired scrollTop manually so
+  // there is zero chance of scrollIntoView bubbling up to the window.
   useEffect(() => {
     if (currentIndex < 0) return;
     const sinceLastUserScroll = Date.now() - lastUserScrollRef.current;
@@ -128,10 +134,28 @@ export function SceneTranscriptPanel({
       `[data-cue-index="${currentIndex}"]`,
     );
     if (!el) return;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+
+    // Target scrollTop that centers the cue inside the list's visible area.
+    const target =
+      el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
+    const clamped = Math.max(
+      0,
+      Math.min(target, container.scrollHeight - container.clientHeight),
+    );
+    if (Math.abs(container.scrollTop - clamped) < 2) return;
+
+    // Flag the next scroll event as programmatic so handleScroll doesn't
+    // treat it as a user action and trip the 3-second cooldown.
+    isAutoScrollingRef.current = true;
+    container.scrollTo({ top: clamped, behavior: "smooth" });
+    // Release the flag a tick later — smooth scroll fires multiple events.
+    window.setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 400);
   }, [currentIndex]);
 
   const handleScroll = useCallback(() => {
+    if (isAutoScrollingRef.current) return;
     lastUserScrollRef.current = Date.now();
   }, []);
 
@@ -176,55 +200,156 @@ export function SceneTranscriptPanel({
     }
   }
 
+  function startEditingTrack(track: SceneSubtitleTrackDto) {
+    setEditingTrackId(track.id);
+    setEditDraftLabel(track.label ?? "");
+    setEditDraftLanguage(track.language);
+  }
+
+  function cancelEditingTrack() {
+    setEditingTrackId(null);
+    setEditDraftLabel("");
+    setEditDraftLanguage("");
+  }
+
+  async function saveEditingTrack() {
+    if (!editingTrackId) return;
+    const trackId = editingTrackId;
+    const patch: { language?: string; label?: string | null } = {
+      label: editDraftLabel.trim() === "" ? null : editDraftLabel.trim(),
+    };
+    if (editDraftLanguage.trim()) patch.language = editDraftLanguage.trim();
+    try {
+      await updateSceneSubtitle(sceneId, trackId, patch);
+      cancelEditingTrack();
+      onTracksChanged();
+    } catch (err) {
+      setCuesError((err as Error).message);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Track management row */}
       <div className="surface-card-sharp p-3 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">
-            Tracks
-          </span>
-          {tracks.length === 0 ? (
-            <span className="text-[0.78rem] text-text-muted">
-              No subtitle tracks yet. Upload a .vtt/.srt file or extract from
-              the video.
-            </span>
-          ) : (
-            tracks.map((track) => {
+        <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">
+          Tracks
+        </span>
+        {tracks.length === 0 ? (
+          <div className="text-[0.78rem] text-text-muted">
+            No subtitle tracks yet. Upload a .vtt/.srt file or extract from
+            the video.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {tracks.map((track) => {
               const isActive = track.id === activeTrackId;
+              const isEditing = editingTrackId === track.id;
+              const lang = languageLabel(track.language);
               return (
                 <div
                   key={track.id}
                   className={cn(
-                    "flex items-center gap-2 px-2.5 py-1 border transition-colors duration-fast",
+                    "flex items-center gap-2 border px-2.5 py-1.5 transition-colors duration-fast",
                     isActive
-                      ? "bg-accent-950 border-border-accent text-text-accent"
-                      : "border-border-default text-text-secondary hover:border-border-accent",
+                      ? "bg-accent-950 border-border-accent"
+                      : "border-border-default hover:border-border-accent",
                   )}
                 >
-                  <button
-                    type="button"
-                    onClick={() => onActiveTrackIdChange(track.id)}
-                    className="flex items-center gap-1.5 text-[0.78rem]"
-                  >
-                    <span>{track.label ?? languageLabel(track.language)}</span>
-                    <span className="text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
-                      {track.source}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(track.id)}
-                    className="text-text-muted hover:text-error-text transition-colors"
-                    title="Remove track"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {isEditing ? (
+                    <div className="flex flex-1 items-center gap-2">
+                      <input
+                        type="text"
+                        value={editDraftLanguage}
+                        onChange={(e) => setEditDraftLanguage(e.target.value)}
+                        maxLength={8}
+                        placeholder="lang"
+                        className="w-16 border border-border-default bg-surface-1 px-2 py-0.5 text-[0.72rem] text-text-primary focus:border-border-accent focus:outline-none"
+                        aria-label="Track language"
+                      />
+                      <input
+                        type="text"
+                        value={editDraftLabel}
+                        onChange={(e) => setEditDraftLabel(e.target.value)}
+                        maxLength={80}
+                        placeholder="Display name (e.g. SDH, Forced)"
+                        className="flex-1 border border-border-default bg-surface-1 px-2 py-0.5 text-[0.75rem] text-text-primary focus:border-border-accent focus:outline-none"
+                        aria-label="Track display name"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void saveEditingTrack();
+                          if (e.key === "Escape") cancelEditingTrack();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void saveEditingTrack()}
+                        className="text-text-accent hover:text-text-accent-bright transition-colors"
+                        title="Save"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditingTrack}
+                        className="text-text-muted hover:text-text-primary transition-colors"
+                        title="Cancel"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onActiveTrackIdChange(track.id)}
+                        className="flex-1 flex items-center gap-2 text-left"
+                      >
+                        <span
+                          className={cn(
+                            "text-[0.78rem] font-medium",
+                            isActive ? "text-text-accent" : "text-text-primary",
+                          )}
+                        >
+                          {lang}
+                        </span>
+                        {track.label && (
+                          <span
+                            className={cn(
+                              "text-[0.7rem]",
+                              isActive ? "text-text-accent/80" : "text-text-muted",
+                            )}
+                          >
+                            — {track.label}
+                          </span>
+                        )}
+                        <span className="ml-auto text-[0.58rem] uppercase tracking-[0.14em] text-text-muted">
+                          {track.source}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEditingTrack(track)}
+                        className="text-text-muted hover:text-text-accent transition-colors"
+                        title="Rename track"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(track.id)}
+                        className="text-text-muted hover:text-error-text transition-colors"
+                        title="Remove track"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <input

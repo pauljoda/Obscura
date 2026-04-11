@@ -1,6 +1,10 @@
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { normalizeBackgroundWorkerConcurrency } from "@obscura/contracts";
+import {
+  normalizeBackgroundWorkerConcurrency,
+  subtitleDisplayStyles,
+  type SubtitleDisplayStyle,
+} from "@obscura/contracts";
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import { db, schema } from "../db";
 import {
@@ -16,6 +20,22 @@ const { libraryRoots, librarySettings } = schema;
 function labelForPath(targetPath: string) {
   const base = path.basename(targetPath);
   return base || targetPath;
+}
+
+function normalizeSubtitleStyle(value: unknown): SubtitleDisplayStyle {
+  if (
+    typeof value === "string" &&
+    (subtitleDisplayStyles as readonly string[]).includes(value)
+  ) {
+    return value as SubtitleDisplayStyle;
+  }
+  return "stylized";
+}
+
+function clampRange(value: unknown, min: number, max: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
 }
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -57,6 +77,25 @@ export async function settingsRoutes(app: FastifyInstance) {
         nsfwLanAutoEnable: payload.nsfwLanAutoEnable ?? settings.nsfwLanAutoEnable,
         metadataStorageDedicated:
           payload.metadataStorageDedicated ?? settings.metadataStorageDedicated,
+        subtitlesAutoEnable:
+          payload.subtitlesAutoEnable ?? settings.subtitlesAutoEnable,
+        subtitlesPreferredLanguages:
+          typeof payload.subtitlesPreferredLanguages === "string"
+            ? payload.subtitlesPreferredLanguages.trim()
+            : settings.subtitlesPreferredLanguages,
+        subtitleStyle: normalizeSubtitleStyle(
+          payload.subtitleStyle ?? settings.subtitleStyle,
+        ),
+        subtitleFontScale: clampRange(
+          payload.subtitleFontScale ?? settings.subtitleFontScale,
+          0.5,
+          3,
+        ),
+        subtitlePositionPercent: clampRange(
+          payload.subtitlePositionPercent ?? settings.subtitlePositionPercent,
+          0,
+          100,
+        ),
         updatedAt: new Date(),
       })
       .where(eq(librarySettings.id, settings.id))

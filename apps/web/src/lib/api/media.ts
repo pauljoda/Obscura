@@ -126,6 +126,17 @@ export async function deleteSceneSubtitle(
   return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}`, { method: "DELETE" });
 }
 
+export async function updateSceneSubtitle(
+  sceneId: string,
+  trackId: string,
+  patch: { language?: string; label?: string | null },
+): Promise<{ track: import("@obscura/contracts").SceneSubtitleTrackDto }> {
+  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
 export async function extractSceneSubtitles(
   sceneId: string,
 ): Promise<{ enqueued: boolean; jobId: string | null }> {

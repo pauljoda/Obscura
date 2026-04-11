@@ -174,6 +174,12 @@ export const librarySettings = pgTable("library_settings", {
   nsfwLanAutoEnable: boolean("nsfw_lan_auto_enable").default(false).notNull(),
   /** When true, scene thumbnails/previews/sprites/trickplay live under OBSCURA_CACHE_DIR; when false, beside the video file. */
   metadataStorageDedicated: boolean("metadata_storage_dedicated").default(true).notNull(),
+  /** Subtitle defaults — see SubtitleAppearance / LibrarySettingsDto in @obscura/contracts. */
+  subtitlesAutoEnable: boolean("subtitles_auto_enable").default(false).notNull(),
+  subtitlesPreferredLanguages: text("subtitles_preferred_languages").default("en,eng").notNull(),
+  subtitleStyle: text("subtitle_style").default("stylized").notNull(),
+  subtitleFontScale: real("subtitle_font_scale").default(1).notNull(),
+  subtitlePositionPercent: real("subtitle_position_percent").default(88).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

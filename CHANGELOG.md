@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-04-10
+
+### Added
+
+- **Library-level subtitle defaults and three display styles.** New Subtitles section in global settings lets you toggle auto-enable-on-load, set a preferred-language priority list (e.g. `en,eng,en-US` — first match wins, with ISO 639-1↔639-2 equivalence so `en` also matches `eng`), and pick between three visual styles for caption rendering: **Stylized** (Dark Room brass-edged plate — previous look), **Classic** (flat translucent-black box with plain white text), and **Outline** (white text with black stroke, no box). Text size and vertical position are controllable via sliders. The settings section includes a live dummy-frame preview that updates in realtime as you tweak the controls.
+- **In-player subtitle style panel.** The Captions dropdown in the video player now has a "Subtitle style…" item that opens a side panel over the video for editing style, text size, and vertical position inline — you see the change immediately on top of whatever is playing. Per-user overrides persist in `localStorage` and override the library defaults; a "Reset to library defaults" button clears them.
+- **Rename subtitle tracks.** Tracks in the Transcript tab now have a pencil icon next to the delete icon; clicking opens an inline editor for the language code and display label, saved via new `PATCH /scenes/:id/subtitles/:trackId`. Great for cleaning up ffmpeg-extracted tracks that only have generic titles.
+- **Language shown alongside label.** Both the in-player captions dropdown and the Transcript tab's track list now display the resolved language name (via `Intl.DisplayNames`) in addition to any custom label — e.g. `English — SDH` instead of just `SDH`.
+
+### Fixed
+
+- **Transcript auto-scroll no longer moves the page viewport.** Previously the active-cue `scrollIntoView` call would bubble up and scroll the whole page, pushing the video out of view while watching with the transcript tab open. Auto-scroll is now computed manually against the list container's `scrollTop` so only the transcript scrolls — the video stays put. Manual user scrolling still pauses auto-scroll for 3 seconds, and programmatic scrolls are flagged so they don't trip the user-scroll cooldown.
+
 ## [0.9.0] - 2026-04-10
 
 ### Added

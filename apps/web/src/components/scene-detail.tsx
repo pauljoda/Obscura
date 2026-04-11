@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
+  fetchLibraryConfig,
   fetchSceneDetail,
   fetchTags,
   updateScene,
@@ -26,9 +27,11 @@ import {
   trackPlay,
   trackOrgasm,
   toApiUrl,
+  type LibrarySettings,
   type SceneDetail as SceneDetailType,
   type TagItem,
 } from "../lib/api";
+import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contracts";
 import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
@@ -58,6 +61,36 @@ export function SceneDetail({
   const [allTags, setAllTags] = useState<TagItem[]>(initialTags);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null);
+  const [librarySettings, setLibrarySettings] = useState<LibrarySettings | null>(
+    null,
+  );
+
+  // Fetch library-level subtitle defaults once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    fetchLibraryConfig()
+      .then((config) => {
+        if (!cancelled) setLibrarySettings(config.settings);
+      })
+      .catch(() => {
+        // Non-fatal — the player falls back to built-in defaults.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const subtitleDefaults = librarySettings
+    ? {
+        autoEnable: librarySettings.subtitlesAutoEnable ?? false,
+        preferredLanguages: librarySettings.subtitlesPreferredLanguages ?? "en,eng",
+        appearance: {
+          style: (librarySettings.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
+          fontScale: librarySettings.subtitleFontScale ?? 1,
+          positionPercent: librarySettings.subtitlePositionPercent ?? 88,
+        } satisfies SubtitleAppearance,
+      }
+    : undefined;
 
   // Persist selected subtitle track per-scene in localStorage.
   useEffect(() => {
@@ -234,6 +267,7 @@ export function SceneDetail({
           subtitleAssetBase={
             process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
           }
+          subtitleDefaults={subtitleDefaults}
         />
       </NsfwBlur>
 

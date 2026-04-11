@@ -20,11 +20,13 @@ import {
   Settings2,
   RotateCcw,
   RotateCw,
+  Sliders,
   Volume2,
   VolumeX,
   Wifi,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
+import type { SubtitleAppearance } from "@obscura/contracts";
 import {
   enterMediaFullscreen,
   exitDocumentFullscreen,
@@ -32,6 +34,14 @@ import {
 } from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
 import type { SceneSubtitleTrackDto } from "../lib/api/types";
+import {
+  captionClassName,
+  pickPreferredSubtitleTrack,
+  readLocalSubtitleAppearance,
+  resolveSubtitleAppearance,
+  writeLocalSubtitleAppearance,
+} from "../lib/subtitle-appearance";
+import { SubtitleSettingsPanel } from "./subtitle-settings-panel";
 
 interface Marker {
   id: string;
@@ -65,6 +75,12 @@ interface VideoPlayerProps {
   onActiveSubtitleTrackIdChange?: (id: string | null) => void;
   onActiveCueChange?: (cue: ActiveCue | null) => void;
   subtitleAssetBase?: string;
+  /** Library-level defaults from /settings/library (auto-enable, lang prefs, style). */
+  subtitleDefaults?: {
+    autoEnable: boolean;
+    preferredLanguages: string;
+    appearance: SubtitleAppearance;
+  };
 }
 
 function languageLabel(language: string): string {
@@ -137,6 +153,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onActiveSubtitleTrackIdChange,
     onActiveCueChange,
     subtitleAssetBase,
+    subtitleDefaults,
   },
   ref,
 ) {
@@ -185,6 +202,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
   const [internalSubtitleId, setInternalSubtitleId] = useState<string | null>(null);
   const [activeCueText, setActiveCueText] = useState<string | null>(null);
+  const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false);
+  const [localAppearance, setLocalAppearance] = useState<
+    Partial<SubtitleAppearance> | null
+  >(null);
+  const autoSelectedRef = useRef(false);
+
+  // Read local appearance override on mount (client-only).
+  useEffect(() => {
+    setLocalAppearance(readLocalSubtitleAppearance());
+  }, []);
+
+  const appearance = resolveSubtitleAppearance(
+    subtitleDefaults?.appearance ?? null,
+    localAppearance,
+  );
 
   const activeSubtitleId =
     controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId;
@@ -195,6 +227,36 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
     onActiveSubtitleTrackIdChange?.(id);
     setSubtitleMenuOpen(false);
+  }
+
+  // Auto-enable a track on first load when the library says so and the
+  // controlled parent hasn't already picked one. Runs once per scene.
+  useEffect(() => {
+    if (autoSelectedRef.current) return;
+    if (controlledSubtitleId !== undefined && controlledSubtitleId !== null) {
+      autoSelectedRef.current = true;
+      return;
+    }
+    if (!subtitleDefaults?.autoEnable || subtitleTracks.length === 0) return;
+    const picked = pickPreferredSubtitleTrack(
+      subtitleTracks.map((t) => ({ id: t.id, language: t.language })),
+      subtitleDefaults.preferredLanguages,
+    );
+    if (picked) {
+      autoSelectedRef.current = true;
+      selectSubtitle(picked);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtitleTracks, subtitleDefaults?.autoEnable, subtitleDefaults?.preferredLanguages]);
+
+  function handleAppearanceChange(next: SubtitleAppearance) {
+    setLocalAppearance(next);
+    writeLocalSubtitleAppearance(next);
+  }
+
+  function handleAppearanceReset() {
+    setLocalAppearance(null);
+    writeLocalSubtitleAppearance(null);
   }
 
   useImperativeHandle(
@@ -906,15 +968,32 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
       {activeCueText && (
         <div
-          className={cn(
-            "pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4 transition-all duration-normal",
-            showControls ? "bottom-[110px] sm:bottom-[128px]" : "bottom-8 sm:bottom-10",
-          )}
+          className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4"
+          style={{
+            top: `${appearance.positionPercent}%`,
+            transform: "translateY(-100%)",
+          }}
         >
-          <div className="video-caption-overlay max-w-[86%] whitespace-pre-line text-center text-[0.95rem] sm:text-lg font-medium leading-snug text-white">
+          <div
+            className={cn(
+              captionClassName(appearance.style),
+              "max-w-[86%] whitespace-pre-line text-center font-medium leading-snug",
+            )}
+            style={{ fontSize: `${appearance.fontScale * 1.05}rem` }}
+          >
             {activeCueText}
           </div>
         </div>
+      )}
+
+      {subtitleSettingsOpen && (
+        <SubtitleSettingsPanel
+          appearance={appearance}
+          onChange={handleAppearanceChange}
+          onClose={() => setSubtitleSettingsOpen(false)}
+          onReset={handleAppearanceReset}
+          hasLocalOverride={localAppearance != null}
+        />
       )}
 
       <div className={cn(
@@ -1125,7 +1204,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
                 </button>
                 {subtitleMenuOpen && (
-                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[180px] player-dropdown p-1">
+                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[220px] player-dropdown p-1">
                     <button
                       type="button"
                       onClick={() => selectSubtitle(null)}
@@ -1143,8 +1222,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     </button>
                     {subtitleTracks.map((track) => {
                       const isActive = activeSubtitleId === track.id;
-                      const displayName =
-                        track.label ?? languageLabel(track.language);
+                      const lang = languageLabel(track.language);
+                      const displayName = track.label
+                        ? `${lang} — ${track.label}`
+                        : lang;
                       return (
                         <button
                           key={track.id}
@@ -1164,6 +1245,18 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                         </button>
                       );
                     })}
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubtitleSettingsOpen(true);
+                        setSubtitleMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-white/78 hover:bg-white/8 hover:text-white transition-colors"
+                    >
+                      <Sliders className="h-3.5 w-3.5" />
+                      <span>Subtitle style…</span>
+                    </button>
                   </div>
                 )}
               </div>

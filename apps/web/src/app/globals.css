@@ -394,9 +394,12 @@
       0 0 2px rgba(199, 155, 92, 0.45);
   }
 
-  /* Custom subtitle caption overlay — opaque plate, brass edge glow,
-     no border-radius per Dark Room rules. */
-  .video-caption-overlay {
+  /* ── Subtitle caption overlays ──
+     Three visual variants the user can switch between. All respect the
+     Dark Room sharp-corner rule — no border-radius anywhere. */
+
+  /* Stylized: Dark Room brass-accented plate. */
+  .video-caption-stylized {
     background: rgba(8, 9, 12, 0.82);
     padding: 0.4rem 0.9rem;
     border-left: 2px solid rgba(199, 155, 92, 0.6);
@@ -404,9 +407,34 @@
     box-shadow:
       0 0 20px rgba(0, 0, 0, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: #ffffff;
     text-shadow:
       0 1px 2px rgba(0, 0, 0, 0.85),
       0 0 10px rgba(199, 155, 92, 0.18);
+  }
+
+  /* Classic: flat translucent-black box with plain white text — the
+     look of most media players. */
+  .video-caption-classic {
+    background: rgba(0, 0, 0, 0.78);
+    padding: 0.3rem 0.75rem;
+    color: #f2f2f2;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  }
+
+  /* Outline: no background plate, white text with a strong black stroke. */
+  .video-caption-outline {
+    background: transparent;
+    padding: 0;
+    color: #ffffff;
+    text-shadow:
+      -1px -1px 0 rgba(0, 0, 0, 0.95),
+      1px -1px 0 rgba(0, 0, 0, 0.95),
+      -1px 1px 0 rgba(0, 0, 0, 0.95),
+      1px 1px 0 rgba(0, 0, 0, 0.95),
+      0 0 3px rgba(0, 0, 0, 0.95),
+      0 0 6px rgba(0, 0, 0, 0.75);
+    -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.4);
   }
 
   /* Gradient-fade separator */

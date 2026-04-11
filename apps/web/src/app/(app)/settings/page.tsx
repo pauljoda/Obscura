@@ -25,6 +25,11 @@ const defaultSettings: LibrarySettings = {
   backgroundWorkerConcurrency: 1,
   nsfwLanAutoEnable: false,
   metadataStorageDedicated: true,
+  subtitlesAutoEnable: false,
+  subtitlesPreferredLanguages: "en,eng",
+  subtitleStyle: "stylized",
+  subtitleFontScale: 1,
+  subtitlePositionPercent: 88,
   createdAt: "",
   updatedAt: "",
 };

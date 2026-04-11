@@ -350,9 +350,34 @@ export interface LibrarySettingsDto {
   nsfwLanAutoEnable: boolean;
   /** Scene video derivatives (thumb, preview, sprite, trickplay) in cache dir vs next to media. */
   metadataStorageDedicated: boolean;
+  /** When true, player auto-enables a subtitle track on load if a matching language is available. */
+  subtitlesAutoEnable: boolean;
+  /** Comma-separated BCP-47 / ISO 639 preference list (e.g. "en,eng,en-US"). First match wins. */
+  subtitlesPreferredLanguages: string;
+  /** Visual style applied to the caption overlay. */
+  subtitleStyle: SubtitleDisplayStyle;
+  /** Font scale multiplier (1.0 = default). Clamped to [0.5, 3.0]. */
+  subtitleFontScale: number;
+  /** Vertical position as a 0–100 percentage from the top of the video frame. */
+  subtitlePositionPercent: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export const subtitleDisplayStyles = ["stylized", "classic", "outline"] as const;
+export type SubtitleDisplayStyle = (typeof subtitleDisplayStyles)[number];
+
+export interface SubtitleAppearance {
+  style: SubtitleDisplayStyle;
+  fontScale: number;
+  positionPercent: number;
+}
+
+export const defaultSubtitleAppearance: SubtitleAppearance = {
+  style: "stylized",
+  fontScale: 1,
+  positionPercent: 88,
+};
 
 export interface StorageStatsDto {
   thumbnailsBytes: number;

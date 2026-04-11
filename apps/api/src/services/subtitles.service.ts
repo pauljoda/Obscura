@@ -71,6 +71,42 @@ export async function getSubtitleCues(
   return parseVttCues(vtt);
 }
 
+export interface UpdateSubtitleBody {
+  language?: string;
+  label?: string | null;
+}
+
+export async function updateSubtitleTrack(
+  sceneId: string,
+  trackId: string,
+  body: UpdateSubtitleBody,
+): Promise<SceneSubtitleTrackDto> {
+  const existing = await getSubtitleTrack(sceneId, trackId);
+  const patch: Record<string, unknown> = {};
+  if (typeof body.language === "string" && body.language.trim().length > 0) {
+    patch.language = body.language.trim().toLowerCase();
+  }
+  if (body.label !== undefined) {
+    patch.label =
+      typeof body.label === "string" && body.label.trim().length > 0
+        ? body.label.trim()
+        : null;
+  }
+  if (Object.keys(patch).length === 0) {
+    return trackToDto(existing);
+  }
+  await db
+    .update(sceneSubtitles)
+    .set(patch)
+    .where(eq(sceneSubtitles.id, trackId));
+  const [row] = await db
+    .select()
+    .from(sceneSubtitles)
+    .where(eq(sceneSubtitles.id, trackId))
+    .limit(1);
+  return trackToDto(row!);
+}
+
 export async function deleteSubtitleTrack(sceneId: string, trackId: string) {
   const row = await getSubtitleTrack(sceneId, trackId);
   await unlink(row.storagePath).catch(() => undefined);

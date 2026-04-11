@@ -85,6 +85,14 @@ export async function subtitlesRoutes(app: FastifyInstance) {
     return { cues };
   });
 
+  // ─── PATCH /scenes/:id/subtitles/:trackId ─────────────────────
+  app.patch("/scenes/:id/subtitles/:trackId", async (request) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    const body = (request.body ?? {}) as subtitlesService.UpdateSubtitleBody;
+    const track = await subtitlesService.updateSubtitleTrack(id, trackId, body);
+    return { track };
+  });
+
   // ─── DELETE /scenes/:id/subtitles/:trackId ────────────────────
   app.delete("/scenes/:id/subtitles/:trackId", async (request) => {
     const { id, trackId } = request.params as { id: string; trackId: string };
