@@ -64,6 +64,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         autoGenerateMetadata: payload.autoGenerateMetadata ?? settings.autoGenerateMetadata,
         autoGenerateFingerprints:
           payload.autoGenerateFingerprints ?? settings.autoGenerateFingerprints,
+        generatePhash: payload.generatePhash ?? settings.generatePhash,
         autoGeneratePreview: payload.autoGeneratePreview ?? settings.autoGeneratePreview,
         generateTrickplay: payload.generateTrickplay ?? settings.generateTrickplay,
         trickplayIntervalSeconds:

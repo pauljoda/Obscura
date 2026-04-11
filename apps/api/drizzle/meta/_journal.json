@@ -15,6 +15,13 @@
       "when": 1775922107630,
       "tag": "0001_wandering_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775936351947,
+      "tag": "0002_bored_piledriver",
+      "breakpoints": true
     }
   ]
 }

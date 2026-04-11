@@ -748,6 +748,53 @@ export async function jobsRoutes(app: FastifyInstance) {
   });
 
   // ─── Diagnostics: force-rebuild previews ──────────────────────
+  app.post("/jobs/phash-backfill", async (request) => {
+    const sfwOnly = readSfwOnly(request);
+
+    const sceneRows = await db
+      .select({ id: scenes.id, title: scenes.title })
+      .from(scenes)
+      .where(
+        andSceneSfw(
+          and(isNull(scenes.phash), not(isNull(scenes.duration)))!,
+          sfwOnly,
+        ),
+      );
+
+    const trigger: QueueTrigger = {
+      by: "manual",
+      kind: "standard",
+      label: "pHash backfill",
+    };
+
+    const createdJobIds: string[] = [];
+    let skipped = 0;
+
+    for (const scene of sceneRows) {
+      const job = await enqueueQueueJob({
+        queueName: "fingerprint",
+        jobName: "scene-fingerprint",
+        data: { sceneId: scene.id, phashOnly: true },
+        target: {
+          type: "scene",
+          id: scene.id,
+          label: scene.title,
+        },
+        trigger,
+      });
+
+      if (job) createdJobIds.push(String(job.id));
+      else skipped += 1;
+    }
+
+    return {
+      ok: true as const,
+      enqueued: createdJobIds.length,
+      skipped,
+      jobIds: createdJobIds,
+    };
+  });
+
   app.post("/jobs/rebuild-preview/:sceneId", async (request, reply) => {
     const { sceneId } = request.params as { sceneId: string };
     const sfwOnly = readSfwOnly(request);

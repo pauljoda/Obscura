@@ -164,6 +164,13 @@ export const librarySettings = pgTable("library_settings", {
   scanIntervalMinutes: integer("scan_interval_minutes").default(60).notNull(),
   autoGenerateMetadata: boolean("auto_generate_metadata").default(true).notNull(),
   autoGenerateFingerprints: boolean("auto_generate_fingerprints").default(true).notNull(),
+  /**
+   * When true, the worker computes a Stash-compatible perceptual hash for each
+   * scene as part of the fingerprint job. Default off because the phash pipeline
+   * spawns ffmpeg 25 times per scene and is CPU-heavy. Required for contributing
+   * fingerprints back to StashDB / ThePornDB.
+   */
+  generatePhash: boolean("generate_phash").default(false).notNull(),
   autoGeneratePreview: boolean("auto_generate_preview").default(true).notNull(),
   generateTrickplay: boolean("generate_trickplay").default(true).notNull(),
   trickplayIntervalSeconds: integer("trickplay_interval_seconds").default(10).notNull(),

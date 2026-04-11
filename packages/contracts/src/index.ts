@@ -361,6 +361,8 @@ export interface LibrarySettingsDto {
   scanIntervalMinutes: number;
   autoGenerateMetadata: boolean;
   autoGenerateFingerprints: boolean;
+  /** When true, the worker computes a Stash-compatible perceptual hash during fingerprint jobs. CPU-heavy; required for contributing fingerprints to StashDB/ThePornDB. */
+  generatePhash: boolean;
   autoGeneratePreview: boolean;
   generateTrickplay: boolean;
   trickplayIntervalSeconds: number;

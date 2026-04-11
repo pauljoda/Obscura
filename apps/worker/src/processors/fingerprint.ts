@@ -1,13 +1,20 @@
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { computeMd5, computeOsHash } from "@obscura/media-core";
-import { db, scenes } from "../lib/db.js";
+import { computeMd5, computeOsHash, computePhash } from "@obscura/media-core";
+import { db, librarySettings, scenes } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 
 export async function processFingerprint(job: Job) {
   const sceneId = String(job.data.sceneId);
+  const phashOnly = job.data.phashOnly === true;
+
   const [scene] = await db
-    .select({ id: scenes.id, title: scenes.title, filePath: scenes.filePath })
+    .select({
+      id: scenes.id,
+      title: scenes.title,
+      filePath: scenes.filePath,
+      duration: scenes.duration,
+    })
     .from(scenes)
     .where(eq(scenes.id, sceneId))
     .limit(1);
@@ -22,16 +29,28 @@ export async function processFingerprint(job: Job) {
     label: scene.title,
   });
 
-  const md5 = await computeMd5(scene.filePath);
-  await markJobProgress(job, "fingerprint", 50);
-  const oshash = await computeOsHash(scene.filePath);
+  const [settings] = await db
+    .select({ generatePhash: librarySettings.generatePhash })
+    .from(librarySettings)
+    .limit(1);
+  const phashEnabled = settings?.generatePhash === true;
 
-  await db
-    .update(scenes)
-    .set({
-      checksumMd5: md5,
-      oshash,
-      updatedAt: new Date(),
-    })
-    .where(eq(scenes.id, scene.id));
+  const update: Partial<typeof scenes.$inferInsert> = { updatedAt: new Date() };
+
+  if (!phashOnly) {
+    update.checksumMd5 = await computeMd5(scene.filePath);
+    await markJobProgress(job, "fingerprint", phashEnabled ? 33 : 50);
+    update.oshash = await computeOsHash(scene.filePath);
+    await markJobProgress(job, "fingerprint", phashEnabled ? 66 : 100);
+  }
+
+  if (phashEnabled || phashOnly) {
+    const phash = await computePhash(scene.filePath, scene.duration);
+    if (phash) {
+      update.phash = phash;
+    }
+    await markJobProgress(job, "fingerprint", 100);
+  }
+
+  await db.update(scenes).set(update).where(eq(scenes.id, scene.id));
 }
