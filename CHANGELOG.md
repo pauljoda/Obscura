@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - **iOS now prefers HLS playback for HEVC scenes that only worked on desktop.** iPhones and iPads would load the direct stream and silently fail on HEVC remuxes that play fine in desktop Chrome/Safari — the bitstream parameters iOS Safari accepts for HEVC-in-fMP4 are a narrow subset of what ffmpeg emits from `-c copy`. The scene player now detects iOS/iPadOS and starts in HLS mode whenever a manifest is available, regardless of the library's default playback mode. Users can still switch back to Direct via the quality menu when they want to.
-- **Video player dropdowns no longer overflow the screen on mobile.** The subtitle, quality, and speed menus in the scene player open upward from the control bar; on phones with many subtitle tracks or rendition levels the menus could render taller than the viewport with no way to scroll them. They now cap at 60% of viewport height and scroll internally.
+- **Video player dropdowns no longer overflow the screen on mobile.** The subtitle and quality menus in the scene player used to anchor inside the video's ~225px-tall container and open upward, so on phones they escaped both the top and sides of the viewport with no way to scroll or dismiss them. They now pop as viewport-anchored sheets on mobile (fixed position, horizontal insets, capped at 60vh with internal scrolling) and fall back to the original inline desktop layout at the `sm` breakpoint. Long subtitle track labels also truncate with an ellipsis instead of pushing the menu wider than the screen.
 
 ### Added
 

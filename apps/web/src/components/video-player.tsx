@@ -1545,7 +1545,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
                 </button>
                 {subtitleMenuOpen && (
-                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[220px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
+                  <div className="fixed inset-x-3 bottom-24 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-12 sm:min-w-[220px] sm:max-w-[360px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                     <button
                       type="button"
                       onClick={() => selectSubtitle(null)}
@@ -1579,8 +1579,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                               : "text-white/78 hover:bg-white/8 hover:text-white",
                           )}
                         >
-                          <span className="truncate">{displayName}</span>
-                          <span className="text-[0.55rem] sm:text-[0.6rem] uppercase tracking-[0.16em] text-white/50">
+                          <span className="min-w-0 flex-1 truncate">{displayName}</span>
+                          <span className="shrink-0 text-[0.55rem] sm:text-[0.6rem] uppercase tracking-[0.16em] text-white/50">
                             {track.source}
                           </span>
                         </button>
@@ -1616,7 +1616,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               </button>
               {qualityMenuOpen && (
-                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
+                <div className="fixed inset-x-3 bottom-24 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-12 sm:min-w-[140px] sm:max-w-[220px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                   {qualityOptions.map((option) => (
                     <button
                       key={String(option.value)}
