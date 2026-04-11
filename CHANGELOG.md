@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-04-11
 ### Changed
 
 - **Audio page now matches the Scenes layout and NSFW handling.** The Audio index header has been rebuilt around the same four-stat card strip used on Scenes (Libraries, Total Tracks, Total Duration, This Week), replacing the old inline "1 libraries · 5 tracks" summary line so the totals read consistently across sections. Every audio library card in the grid now renders the same `NsfwShowModeChip` flame badge in the bottom-right of its thumbnail whenever the library is marked NSFW and the app is in Show mode, mirroring scene cards. On the audio library detail page the cover art wears the same flame badge, a red `NsfwChip` now appears inline with the track count / duration row, and the sub-library grid at the bottom of the page pushes each child through `NsfwBlur` + flame chip like the root grid. Track count and total duration — both in the hero row and the Library Info side panel — now count only the tracks visible under the current NSFW mode, so filtered tracks stop showing up in the totals alongside a track list that hid them.
