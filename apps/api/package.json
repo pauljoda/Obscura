@@ -1,6 +1,6 @@
 {
   "name": "@obscura/api",
-  "version": "0.15.1-dev",
+  "version": "0.16.1-dev",
   "private": true,
   "type": "module",
   "scripts": {
