@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Save,
   ScanSearch,
+
   Settings,
   Trash2,
   ChevronRight,
@@ -91,20 +92,6 @@ function formatTimestamp(value: string | null) {
   return new Date(value).toLocaleString();
 }
 
-const settingsKeys = [
-  "autoScanEnabled",
-  "scanIntervalMinutes",
-  "autoGenerateMetadata",
-  "autoGenerateFingerprints",
-  "autoGeneratePreview",
-  "generateTrickplay",
-  "trickplayIntervalSeconds",
-  "previewClipDurationSeconds",
-  "thumbnailQuality",
-  "trickplayQuality",
-  "backgroundWorkerConcurrency",
-] as const;
-
 function normalizeSettings(s: LibrarySettings): LibrarySettings {
   return {
     ...s,
@@ -144,7 +131,6 @@ export function SettingsPageClient({
   const [browser, setBrowser] = useState<LibraryBrowse | null>(null);
   const [browserVisible, setBrowserVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [addingRoot, setAddingRoot] = useState(false);
   const [newRootPath, setNewRootPath] = useState("");
   const [newRootLabel, setNewRootLabel] = useState("");
@@ -177,7 +163,6 @@ export function SettingsPageClient({
   const [metadataStorageBusy, setMetadataStorageBusy] = useState(false);
 
   const savedSettings = useRef(normalizeSettings(initialSettings));
-  const isDirty = settingsKeys.some((key) => settings[key] !== savedSettings.current[key]);
 
   async function loadConfig() {
     setLoading(true);
@@ -224,38 +209,6 @@ export function SettingsPageClient({
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save setting");
-    }
-  }
-
-  async function handleSaveSettings() {
-    setSaving(true);
-    setError(null);
-
-    try {
-      const updated = await updateLibrarySettings({
-        autoScanEnabled: settings.autoScanEnabled,
-        scanIntervalMinutes: settings.scanIntervalMinutes,
-        autoGenerateMetadata: settings.autoGenerateMetadata,
-        autoGenerateFingerprints: settings.autoGenerateFingerprints,
-        autoGeneratePreview: settings.autoGeneratePreview,
-        generateTrickplay: settings.generateTrickplay,
-        trickplayIntervalSeconds: settings.trickplayIntervalSeconds,
-        previewClipDurationSeconds: settings.previewClipDurationSeconds,
-        thumbnailQuality: settings.thumbnailQuality,
-        trickplayQuality: settings.trickplayQuality,
-        backgroundWorkerConcurrency: settings.backgroundWorkerConcurrency,
-        metadataStorageDedicated: settings.metadataStorageDedicated,
-      });
-
-      const normalized = normalizeSettings(updated);
-      setSettings(normalized);
-      savedSettings.current = normalized;
-      setMessage("Library settings saved.");
-      await loadConfig();
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Failed to save settings");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -322,21 +275,6 @@ export function SettingsPageClient({
       await loadConfig();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to remove root");
-    }
-  }
-
-  async function handleRunScan() {
-    try {
-      const response = await runQueue("library-scan", nsfwMode);
-      if (response.enqueued === 0 && response.skipped === 0) {
-        setMessage("Stale library references cleared. Add a watched folder to scan new files.");
-      } else if (response.enqueued === 0 && response.skipped > 0) {
-        setMessage("Stale references cleared; every library scan is already queued or running.");
-      } else {
-        setMessage(`Queued ${response.enqueued} library scan job${response.enqueued === 1 ? "" : "s"}.`);
-      }
-    } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Failed to queue scan");
     }
   }
 
@@ -432,46 +370,14 @@ export function SettingsPageClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2.5">
-            <Settings className="h-5 w-5 text-text-accent" />
-            Settings
-          </h1>
-          <p className="mt-1 text-[0.78rem] text-text-muted">
-            Configure libraries, generation pipeline, and scrapers
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => void loadConfig()}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Reload</span>
-          </button>
-          <button
-            onClick={() => void handleRunScan()}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted transition-all duration-fast hover:bg-surface-3/60 hover:text-text-primary"
-          >
-            <ScanSearch className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Run Scan</span>
-          </button>
-          <button
-            onClick={() => void handleSaveSettings()}
-            disabled={saving || !isDirty}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-normal",
-              isDirty
-                ? "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)] hover:border-border-accent-strong hover:shadow-[var(--shadow-glow-accent-strong)]"
-                : "cursor-not-allowed border border-border-subtle bg-surface-3 text-text-disabled",
-              "disabled:opacity-60",
-            )}
-          >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
+      <div>
+        <h1 className="flex items-center gap-2.5">
+          <Settings className="h-5 w-5 text-text-accent" />
+          Settings
+        </h1>
+        <p className="mt-1 text-[0.78rem] text-text-muted">
+          Configure libraries, generation pipeline, and scrapers
+        </p>
       </div>
 
       {error ? (
@@ -763,6 +669,184 @@ export function SettingsPageClient({
           </div>
         )}
       </section>
+
+      <div className="border-t border-border-subtle" />
+
+      {/* ─── Content Visibility ──────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <Eye className="h-4 w-4 text-text-accent" />
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Content Visibility</h2>
+            <p className="text-[0.68rem] text-text-muted">
+              Control how adult content is displayed across the application
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
+            <div>
+              <label className="control-label">NSFW Content Mode</label>
+              <p className="text-[0.68rem] text-text-muted">
+                Stored per device. Does not affect stored data.
+              </p>
+            </div>
+
+            <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
+              <button
+                type="button"
+                onClick={() => setNsfwMode("off")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "off"
+                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Shield className={cn("h-4 w-4", nsfwMode === "off" && "text-info-text")} />
+                <span className="text-[0.75rem] font-medium">Off (SFW)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNsfwMode("blur")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "blur"
+                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Droplet className={cn("h-4 w-4", nsfwMode === "blur" && "text-warning-text")} />
+                <span className="text-[0.75rem] font-medium">Blur</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNsfwMode("show")}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                  nsfwMode === "show"
+                    ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
+                )}
+              >
+                <Flame className={cn("h-4 w-4", nsfwMode === "show" && "text-accent-500")} />
+                <span className="text-[0.75rem] font-medium">Show</span>
+              </button>
+            </div>
+
+            <div className="text-[0.7rem] text-text-muted bg-surface-2/50 p-2.5 border border-border-subtle">
+              {nsfwMode === "off" && "Adult content is completely hidden from the interface."}
+              {nsfwMode === "blur" && "Adult content is shown but thumbnails and text are obscured until hovered."}
+              {nsfwMode === "show" && "All content is displayed normally without any obscuring."}
+            </div>
+          </div>
+          <ToggleCard
+            label="Auto-enable on LAN"
+            description="Automatically switch to Show mode when accessing from a local network."
+            checked={settings.nsfwLanAutoEnable}
+            onChange={(checked) => {
+              setSettings((current) => ({ ...current, nsfwLanAutoEnable: checked }));
+              void autoSaveSetting({ nsfwLanAutoEnable: checked });
+            }}
+          />
+        </div>
+        <div className="surface-card no-lift p-3.5 bg-surface-1/50 border-l-2 border-l-border-accent">
+          <p className="text-[0.65rem] text-text-muted leading-relaxed">
+            <strong className="text-text-accent font-mono uppercase tracking-wider mr-2">Power-user tip:</strong>
+            Quick toggle between full SFW and full NSFW (skips blur) with no toolbar button:{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘⇧Z</kbd> on Mac or{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+Shift+Z</kbd>{" "}
+            elsewhere. Global search also opens with{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘K</kbd> /{" "}
+            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+K</kbd>.
+            On mobile, press and hold the bottom bar <strong className="text-text-primary">More</strong> button for five seconds for the same SFW ↔ full NSFW toggle.
+          </p>
+        </div>
+      </section>
+
+      <div className="border-t border-border-subtle" />
+      <section className="space-y-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <Film className="h-4 w-4 text-text-accent" />
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">
+              Playback
+            </h2>
+            <p className="text-[0.68rem] text-text-muted">
+              Defaults applied to the video player when a scene loads
+            </p>
+          </div>
+        </div>
+
+        <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
+          <div>
+            <label className="control-label">Default playback mode</label>
+            <p className="text-[0.68rem] text-text-muted">
+              Direct streams the source file (fastest seek, no transcode). Adaptive HLS
+              uses the on-demand ffmpeg pipeline (supports bitrate switching and renditions).
+              You can still override per-video in the quality menu.
+            </p>
+          </div>
+
+          <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
+            {playbackModes.map((mode) => {
+              const active = settings.defaultPlaybackMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setSettings((current) => ({ ...current, defaultPlaybackMode: mode }));
+                    void autoSaveSetting({ defaultPlaybackMode: mode });
+                  }}
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                    active
+                      ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400"
+                      : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent",
+                  )}
+                >
+                  <span className="text-[0.75rem] font-medium uppercase tracking-wider">
+                    {mode === "direct" ? "Direct" : "Adaptive HLS"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <div className="border-t border-border-subtle" />
+      <SubtitlesSection
+        settings={settings}
+        onToggleAutoEnable={(checked) => {
+          setSettings((current) => ({ ...current, subtitlesAutoEnable: checked }));
+          void autoSaveSetting({ subtitlesAutoEnable: checked });
+        }}
+        onLanguagesCommit={(value) => {
+          setSettings((current) => ({
+            ...current,
+            subtitlesPreferredLanguages: value,
+          }));
+          void autoSaveSetting({ subtitlesPreferredLanguages: value });
+        }}
+        onAppearanceCommit={(next) => {
+          setSettings((current) => ({
+            ...current,
+            subtitleStyle: next.style,
+            subtitleFontScale: next.fontScale,
+            subtitlePositionPercent: next.positionPercent,
+            subtitleOpacity: next.opacity,
+          }));
+          void autoSaveSetting({
+            subtitleStyle: next.style,
+            subtitleFontScale: next.fontScale,
+            subtitlePositionPercent: next.positionPercent,
+            subtitleOpacity: next.opacity,
+          });
+        }}
+      />
 
       <NsfwGate>
       <div className="border-t border-border-subtle" />
@@ -1085,7 +1169,10 @@ export function SettingsPageClient({
             min={5}
             max={1440}
             step={5}
-            onChange={(val) => setSettings((current) => ({ ...current, scanIntervalMinutes: val }))}
+            onChange={(val) => {
+              setSettings((current) => ({ ...current, scanIntervalMinutes: val }));
+              void autoSaveSetting({ scanIntervalMinutes: val });
+            }}
           />
         </div>
 
@@ -1145,9 +1232,10 @@ export function SettingsPageClient({
               min={BACKGROUND_WORKER_CONCURRENCY_MIN}
               max={BACKGROUND_WORKER_CONCURRENCY_MAX}
               step={1}
-              onChange={(val) =>
-                setSettings((current) => ({ ...current, backgroundWorkerConcurrency: val }))
-              }
+              onChange={(val) => {
+                setSettings((current) => ({ ...current, backgroundWorkerConcurrency: val }));
+                void autoSaveSetting({ backgroundWorkerConcurrency: val });
+              }}
             />
           </div>
           <NumberStepper
@@ -1157,7 +1245,10 @@ export function SettingsPageClient({
             min={1}
             max={60}
             step={1}
-            onChange={(val) => setSettings((current) => ({ ...current, trickplayIntervalSeconds: val }))}
+            onChange={(val) => {
+              setSettings((current) => ({ ...current, trickplayIntervalSeconds: val }));
+              void autoSaveSetting({ trickplayIntervalSeconds: val });
+            }}
           />
           <NumberStepper
             label="Preview Clip Length"
@@ -1166,7 +1257,10 @@ export function SettingsPageClient({
             min={2}
             max={60}
             step={1}
-            onChange={(val) => setSettings((current) => ({ ...current, previewClipDurationSeconds: val }))}
+            onChange={(val) => {
+              setSettings((current) => ({ ...current, previewClipDurationSeconds: val }));
+              void autoSaveSetting({ previewClipDurationSeconds: val });
+            }}
           />
         </div>
 
@@ -1174,195 +1268,19 @@ export function SettingsPageClient({
           <QualitySlider
             label="Thumbnail Quality"
             value={settings.thumbnailQuality}
-            onChange={(value) =>
-              setSettings((current) => ({ ...current, thumbnailQuality: value }))
-            }
+            onCommit={(value) => {
+              setSettings((current) => ({ ...current, thumbnailQuality: value }));
+              void autoSaveSetting({ thumbnailQuality: value });
+            }}
           />
           <QualitySlider
             label="Trickplay Quality"
             value={settings.trickplayQuality}
-            onChange={(value) =>
-              setSettings((current) => ({ ...current, trickplayQuality: value }))
-            }
-          />
-        </div>
-      </section>
-
-      <div className="border-t border-border-subtle" />
-
-      {/* ─── Content Visibility ──────────────────────────────────── */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2.5 px-1">
-          <Eye className="h-4 w-4 text-text-accent" />
-          <div>
-            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Content Visibility</h2>
-            <p className="text-[0.68rem] text-text-muted">
-              Control how adult content is displayed across the application
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
-            <div>
-              <label className="control-label">NSFW Content Mode</label>
-              <p className="text-[0.68rem] text-text-muted">
-                Stored per device. Does not affect stored data.
-              </p>
-            </div>
-            
-            <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
-              <button
-                type="button"
-                onClick={() => setNsfwMode("off")}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
-                  nsfwMode === "off" 
-                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary" 
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
-                )}
-              >
-                <Shield className={cn("h-4 w-4", nsfwMode === "off" && "text-info-text")} />
-                <span className="text-[0.75rem] font-medium">Off (SFW)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setNsfwMode("blur")}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
-                  nsfwMode === "blur" 
-                    ? "bg-surface-3 border border-border-subtle shadow-card text-text-primary" 
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
-                )}
-              >
-                <Droplet className={cn("h-4 w-4", nsfwMode === "blur" && "text-warning-text")} />
-                <span className="text-[0.75rem] font-medium">Blur</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setNsfwMode("show")}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
-                  nsfwMode === "show" 
-                    ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400" 
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent"
-                )}
-              >
-                <Flame className={cn("h-4 w-4", nsfwMode === "show" && "text-accent-500")} />
-                <span className="text-[0.75rem] font-medium">Show</span>
-              </button>
-            </div>
-            
-            <div className="text-[0.7rem] text-text-muted bg-surface-2/50 p-2.5 border border-border-subtle">
-              {nsfwMode === "off" && "Adult content is completely hidden from the interface."}
-              {nsfwMode === "blur" && "Adult content is shown but thumbnails and text are obscured until hovered."}
-              {nsfwMode === "show" && "All content is displayed normally without any obscuring."}
-            </div>
-          </div>
-          <ToggleCard
-            label="Auto-enable on LAN"
-            description="Automatically switch to Show mode when accessing from a local network."
-            checked={settings.nsfwLanAutoEnable}
-            onChange={(checked) => {
-              setSettings((current) => ({ ...current, nsfwLanAutoEnable: checked }));
-              void autoSaveSetting({ nsfwLanAutoEnable: checked });
+            onCommit={(value) => {
+              setSettings((current) => ({ ...current, trickplayQuality: value }));
+              void autoSaveSetting({ trickplayQuality: value });
             }}
           />
-        </div>
-        <div className="surface-card no-lift p-3.5 bg-surface-1/50 border-l-2 border-l-border-accent">
-          <p className="text-[0.65rem] text-text-muted leading-relaxed">
-            <strong className="text-text-accent font-mono uppercase tracking-wider mr-2">Power-user tip:</strong>
-            Quick toggle between full SFW and full NSFW (skips blur) with no toolbar button:{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘⇧Z</kbd> on Mac or{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+Shift+Z</kbd>{" "}
-            elsewhere. Global search also opens with{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘K</kbd> /{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+K</kbd>. 
-            On mobile, press and hold the bottom bar <strong className="text-text-primary">More</strong> button for five seconds for the same SFW ↔ full NSFW toggle.
-          </p>
-        </div>
-      </section>
-
-      <div className="border-t border-border-subtle" />
-      <SubtitlesSection
-        settings={settings}
-        onToggleAutoEnable={(checked) => {
-          setSettings((current) => ({ ...current, subtitlesAutoEnable: checked }));
-          void autoSaveSetting({ subtitlesAutoEnable: checked });
-        }}
-        onLanguagesCommit={(value) => {
-          setSettings((current) => ({
-            ...current,
-            subtitlesPreferredLanguages: value,
-          }));
-          void autoSaveSetting({ subtitlesPreferredLanguages: value });
-        }}
-        onAppearanceCommit={(next) => {
-          setSettings((current) => ({
-            ...current,
-            subtitleStyle: next.style,
-            subtitleFontScale: next.fontScale,
-            subtitlePositionPercent: next.positionPercent,
-            subtitleOpacity: next.opacity,
-          }));
-          void autoSaveSetting({
-            subtitleStyle: next.style,
-            subtitleFontScale: next.fontScale,
-            subtitlePositionPercent: next.positionPercent,
-            subtitleOpacity: next.opacity,
-          });
-        }}
-      />
-
-      <div className="border-t border-border-subtle" />
-      <section className="space-y-3">
-        <div className="flex items-center gap-2.5 px-1">
-          <Film className="h-4 w-4 text-text-accent" />
-          <div>
-            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">
-              Playback
-            </h2>
-            <p className="text-[0.68rem] text-text-muted">
-              Defaults applied to the video player when a scene loads
-            </p>
-          </div>
-        </div>
-
-        <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
-          <div>
-            <label className="control-label">Default playback mode</label>
-            <p className="text-[0.68rem] text-text-muted">
-              Direct streams the source file (fastest seek, no transcode). Adaptive HLS
-              uses the on-demand ffmpeg pipeline (supports bitrate switching and renditions).
-              You can still override per-video in the quality menu.
-            </p>
-          </div>
-
-          <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
-            {playbackModes.map((mode) => {
-              const active = settings.defaultPlaybackMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => {
-                    setSettings((current) => ({ ...current, defaultPlaybackMode: mode }));
-                    void autoSaveSetting({ defaultPlaybackMode: mode });
-                  }}
-                  className={cn(
-                    "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
-                    active
-                      ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400"
-                      : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent",
-                  )}
-                >
-                  <span className="text-[0.75rem] font-medium uppercase tracking-wider">
-                    {mode === "direct" ? "Direct" : "Adaptive HLS"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </section>
 
@@ -1559,12 +1477,19 @@ function qualityLabel(value: number): string {
 function QualitySlider({
   label,
   value,
-  onChange,
+  onCommit,
 }: {
   label: string;
   value: number;
-  onChange: (value: number) => void;
+  onCommit: (value: number) => void;
 }) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+  const commit = () => {
+    if (draft !== value) onCommit(draft);
+  };
   return (
     <div className="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
       <div className="flex items-start justify-between mb-4">
@@ -1573,19 +1498,22 @@ function QualitySlider({
           <p className="text-[0.65rem] text-text-muted mt-1">1 is native, 31 is smallest</p>
         </div>
         <span className="text-mono-sm px-2 py-0.5 bg-surface-1 border border-border-subtle text-text-accent shadow-well">
-          {qualityLabel(value)} ({value})
+          {qualityLabel(draft)} ({draft})
         </span>
       </div>
       <div className="relative pt-2 pb-1">
         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 bg-surface-4 border border-border-subtle shadow-well" />
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-accent-700 to-accent-500 shadow-[0_0_8px_rgba(199,155,92,0.3)]" style={{ width: `${((value - 1) / 30) * 100}%` }} />
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-gradient-to-r from-accent-700 to-accent-500 shadow-[0_0_8px_rgba(199,155,92,0.3)]" style={{ width: `${((draft - 1) / 30) * 100}%` }} />
         <input
           type="range"
           min={1}
           max={31}
           step={1}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
+          value={draft}
+          onChange={(event) => setDraft(Number(event.target.value))}
+          onMouseUp={commit}
+          onTouchEnd={commit}
+          onKeyUp={commit}
           className="relative w-full h-1.5 appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:bg-surface-2 [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-border-accent [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(0,0,0,0.8)] z-10"
         />
       </div>
