@@ -1520,7 +1520,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
                 </button>
                 {subtitleMenuOpen && (
-                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[220px] player-dropdown p-1">
+                  <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[220px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                     <button
                       type="button"
                       onClick={() => selectSubtitle(null)}
@@ -1591,7 +1591,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <ChevronDown className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
               </button>
               {qualityMenuOpen && (
-                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] player-dropdown p-1">
+                <div className="absolute bottom-10 sm:bottom-12 right-0 min-w-[120px] sm:min-w-[140px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                   {qualityOptions.map((option) => (
                     <button
                       key={String(option.value)}
@@ -1628,7 +1628,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {speedMenuOpen && (
-                <div className="absolute bottom-12 right-0 min-w-[112px] player-dropdown p-1">
+                <div className="absolute bottom-12 right-0 min-w-[112px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       key={rate}
