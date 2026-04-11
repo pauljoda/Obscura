@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- Bundled `obscura-phash` helper in the unified and worker Docker images. The binary computes perceptual hashes byte-compatible with Stash's `pkg/hash/videophash` pipeline (input-seek ffmpeg screenshots at 5% → 91.4% of duration, scaled to width 160, composed into a 5×5 NRGBA montage via `disintegration/imaging`, hashed via `goimagehash.PerceptionHash`). This is the foundation for contributing local fingerprints back to StashDB / ThePornDB — compatibility with the community phash index requires exact parity with Stash's sprite pipeline, which is why the helper lives outside Node.
+
 ## [0.17.0] - 2026-04-11
 ### Fixed
 

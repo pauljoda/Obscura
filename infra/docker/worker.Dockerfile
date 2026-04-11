@@ -28,6 +28,18 @@ COPY . .
 
 RUN pnpm turbo run build --filter=@obscura/worker
 
+# ── Stage 2b: Build obscura-phash (Stash-compatible video pHash) ──
+FROM golang:1.23-alpine AS phash-builder
+
+RUN apk add --no-cache git
+
+WORKDIR /src/phash
+COPY infra/phash/go.mod infra/phash/go.sum ./
+RUN go mod download
+
+COPY infra/phash/ ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/obscura-phash .
+
 # ── Stage 3: Production runner ────────────────────────────────────
 FROM node:22-alpine AS runner
 
@@ -38,6 +50,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=builder /app ./
+COPY --from=phash-builder /out/obscura-phash /usr/local/bin/obscura-phash
+ENV OBSCURA_PHASH_BIN=/usr/local/bin/obscura-phash
 
 RUN mkdir -p /data/cache
 

@@ -48,6 +48,18 @@ RUN mkdir -p /web-standalone && \
     cp -r apps/web/public /web-standalone/web/public && \
     cp CHANGELOG.md /web-standalone/web/CHANGELOG.md
 
+# ── Stage 3a: Build obscura-phash (Stash-compatible video pHash) ──
+FROM golang:1.23-alpine AS phash-builder
+
+RUN apk add --no-cache git
+
+WORKDIR /src/phash
+COPY infra/phash/go.mod infra/phash/go.sum ./
+RUN go mod download
+
+COPY infra/phash/ ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /out/obscura-phash .
+
 # ── Stage 3: Build audiowaveform from source ────────────────────
 FROM alpine:3.20 AS audiowaveform-builder
 
@@ -82,6 +94,10 @@ RUN apk add --no-cache \
 
 # Copy audiowaveform binary from builder
 COPY --from=audiowaveform-builder /usr/local/bin/audiowaveform /usr/local/bin/audiowaveform
+
+# Copy obscura-phash binary (Stash-compatible video perceptual hash)
+COPY --from=phash-builder /out/obscura-phash /usr/local/bin/obscura-phash
+ENV OBSCURA_PHASH_BIN=/usr/local/bin/obscura-phash
 
 WORKDIR /app
 
