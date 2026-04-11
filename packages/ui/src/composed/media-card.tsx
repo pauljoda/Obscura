@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "../lib/utils";
 import { loadTrickplayFrames, type TrickplayFrame } from "../lib/trickplay";
-import { Film, Clock, HardDrive, Eye, Star } from "lucide-react";
+import { Captions, Film, Clock, HardDrive, Eye, Star } from "lucide-react";
 
 function formatHoverTime(seconds: number) {
   const wholeSeconds = Math.max(0, Math.floor(seconds));
@@ -30,6 +30,8 @@ export interface MediaCardProps {
   duration?: string;
   resolution?: string;
   codec?: string;
+  /** Show a "CC" chip alongside resolution/codec when closed-caption / subtitle tracks exist. */
+  hasSubtitles?: boolean;
   fileSize?: string;
   studio?: string;
   performers?: (string | { name: string; imagePath?: string | null })[];
@@ -57,6 +59,7 @@ export function MediaCard({
   duration,
   resolution,
   codec,
+  hasSubtitles,
   fileSize,
   studio,
   performers,
@@ -282,6 +285,15 @@ export function MediaCard({
         )}
 
         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+          {hasSubtitles && (
+            <span
+              className="media-chip flex items-center gap-0.5 px-1.5 py-0.5 text-[0.58rem] font-mono text-accent-100 border-accent-500/40"
+              title="Closed captions available"
+            >
+              <Captions className="h-2.5 w-2.5" />
+              CC
+            </span>
+          )}
           {resolution && (
             <span className="pill-accent px-1.5 py-0.5 text-[0.58rem] font-semibold tracking-wide">
               {resolution}

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-04-10
+
+### Fixed
+
+- **CC chip now renders on the grid scene cards next to the resolution.** In 0.12.0 the chip was added to the `SceneGridCard` JSX inside `apps/web/src/components/scenes/scene-card.tsx`, but that code path is only used for the list variant — the primary grid layout uses the shared `MediaCard` component in `@obscura/ui/composed/media-card.tsx`, which has its own top-right chip row for resolution + codec. Added a `hasSubtitles` prop to `MediaCard` and render a brass-tinted "CC" media chip as the first item in that top-right group so it sits alongside `1080p` and `H264` on every card where subtitles exist. Threaded the flag through from `scene-card.tsx` → `MediaCard`. The list-variant chip on the smaller list thumbnail stays put — it's the right placement for that layout.
+
 ## [0.12.1] - 2026-04-10
 
 ### Fixed

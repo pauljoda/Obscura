@@ -71,6 +71,7 @@ function SceneGridCard({
           duration={scene.duration}
           resolution={scene.resolution}
           codec={scene.codec}
+          hasSubtitles={scene.hasSubtitles}
           fileSize={scene.fileSize}
           studio={scene.studio}
           performers={performersRow}
