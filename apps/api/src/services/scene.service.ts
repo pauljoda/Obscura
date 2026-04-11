@@ -636,18 +636,33 @@ export async function getSceneById(id: string) {
       seconds: m.seconds,
       endSeconds: m.endSeconds,
     })),
-    subtitleTracks: scene.subtitles.map((s) => ({
-      id: s.id,
-      sceneId: s.sceneId,
-      language: s.language,
-      label: s.label,
-      format: "vtt" as const,
-      source: s.source as "sidecar" | "upload" | "embedded",
-      isDefault: s.isDefault,
-      url: `/scenes/${s.sceneId}/subtitles/${s.id}`,
-      createdAt:
-        s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
-    })),
+    subtitleTracks: scene.subtitles.map((s) => {
+      const sourceFormat = (s.sourceFormat ?? "vtt") as
+        | "vtt"
+        | "srt"
+        | "ass"
+        | "ssa";
+      const hasRawSource =
+        (sourceFormat === "ass" || sourceFormat === "ssa") && !!s.sourcePath;
+      return {
+        id: s.id,
+        sceneId: s.sceneId,
+        language: s.language,
+        label: s.label,
+        format: "vtt" as const,
+        source: s.source as "sidecar" | "upload" | "embedded",
+        sourceFormat,
+        isDefault: s.isDefault,
+        url: `/scenes/${s.sceneId}/subtitles/${s.id}`,
+        sourceUrl: hasRawSource
+          ? `/scenes/${s.sceneId}/subtitles/${s.id}/source`
+          : null,
+        createdAt:
+          s.createdAt instanceof Date
+            ? s.createdAt.toISOString()
+            : String(s.createdAt),
+      };
+    }),
     createdAt: scene.createdAt,
     updatedAt: scene.updatedAt,
   };

@@ -387,8 +387,16 @@ export function SceneTranscriptPanel({
                             — {track.label}
                           </span>
                         )}
-                        <span className="ml-auto text-[0.58rem] uppercase tracking-[0.14em] text-text-muted">
-                          {track.source}
+                        <span className="ml-auto flex items-center gap-1.5">
+                          <span
+                            className="border border-border-default px-1.5 py-px text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-text-muted"
+                            title={`Original format: ${track.sourceFormat}`}
+                          >
+                            {track.sourceFormat}
+                          </span>
+                          <span className="text-[0.58rem] uppercase tracking-[0.14em] text-text-muted">
+                            {track.source}
+                          </span>
                         </span>
                       </button>
                       <button
