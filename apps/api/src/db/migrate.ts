@@ -68,6 +68,84 @@ async function hashMigration(tag: string): Promise<string> {
   return createHash("sha256").update(sql).digest("hex");
 }
 
+type SqlClient = ReturnType<typeof postgres>;
+
+/**
+ * Idempotently re-apply schema deltas that legacy-bridged installs may be
+ * missing. The bridge pre-seeds every journal entry as applied, so the
+ * drizzle migrator will never run these on an install that was bridged
+ * before the delta existed — they only ever arrive via this reconcile step.
+ *
+ * Rules for anything added here:
+ *   - Must be idempotent. Guard columns/tables/indexes with IF (NOT) EXISTS;
+ *     wrap constraints that lack IF NOT EXISTS in a DO block that swallows
+ *     `duplicate_object`.
+ *   - Must mirror what a corresponding `drizzle/NNNN_*.sql` file creates
+ *     for fresh installs. This function is the legacy-install twin of the
+ *     migrator, not a place to introduce new schema.
+ */
+async function reconcileSchema(client: SqlClient): Promise<void> {
+  // 0001_wandering_blue_shield: scene_subtitles source metadata.
+  await client`
+    ALTER TABLE scene_subtitles
+    ADD COLUMN IF NOT EXISTS source_format text NOT NULL DEFAULT 'vtt'
+  `;
+  await client`
+    ALTER TABLE scene_subtitles
+    ADD COLUMN IF NOT EXISTS source_path text
+  `;
+
+  // 0002_bored_piledriver: pHash generation toggle on library settings.
+  await client`
+    ALTER TABLE library_settings
+    ADD COLUMN IF NOT EXISTS generate_phash boolean NOT NULL DEFAULT false
+  `;
+
+  // 0003_colossal_donald_blake: fingerprint_submissions table + FKs + indexes.
+  await client`
+    CREATE TABLE IF NOT EXISTS fingerprint_submissions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      scene_id uuid NOT NULL,
+      stash_box_endpoint_id uuid NOT NULL,
+      algorithm text NOT NULL,
+      hash text NOT NULL,
+      status text NOT NULL,
+      error text,
+      submitted_at timestamp DEFAULT now() NOT NULL
+    )
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE fingerprint_submissions
+      ADD CONSTRAINT fingerprint_submissions_scene_id_scenes_id_fk
+      FOREIGN KEY (scene_id) REFERENCES public.scenes(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE fingerprint_submissions
+      ADD CONSTRAINT fingerprint_submissions_stash_box_endpoint_id_stash_box_endpoints_id_fk
+      FOREIGN KEY (stash_box_endpoint_id) REFERENCES public.stash_box_endpoints(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    CREATE UNIQUE INDEX IF NOT EXISTS fingerprint_submissions_unique
+    ON fingerprint_submissions (scene_id, stash_box_endpoint_id, algorithm, hash)
+  `;
+  await client`
+    CREATE INDEX IF NOT EXISTS fingerprint_submissions_scene_idx
+    ON fingerprint_submissions (scene_id)
+  `;
+  await client`
+    CREATE INDEX IF NOT EXISTS fingerprint_submissions_endpoint_idx
+    ON fingerprint_submissions (stash_box_endpoint_id)
+  `;
+}
+
 export async function runMigrations(databaseUrl: string): Promise<void> {
   const client = postgres(databaseUrl, { max: 1 });
 
@@ -141,6 +219,17 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
     const db = drizzle(client);
     await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
     console.log("[obscura migrate] Migrations up to date");
+
+    // ── Self-heal known legacy-bridge drift ────────────────────────
+    // The bridge above seeds every journal entry as "already applied",
+    // which means any schema a legacy push install was missing at the
+    // time of bridging never actually gets created — the migrator skips
+    // it because the hash is marked applied. We re-apply those deltas
+    // here idempotently on every boot so broken legacy installs
+    // self-heal the next time they redeploy. Every statement is guarded
+    // with IF (NOT) EXISTS / DO block so it's a no-op on healthy DBs.
+    await reconcileSchema(client);
+    console.log("[obscura migrate] Schema reconcile complete");
   } finally {
     await client.end();
   }
