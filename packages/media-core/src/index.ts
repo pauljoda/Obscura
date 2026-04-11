@@ -240,6 +240,50 @@ export async function computeMd5(filePath: string) {
   return hash.digest("hex");
 }
 
+/**
+ * Compute a Stash-compatible video perceptual hash by shelling out to the
+ * bundled `obscura-phash` Go helper.
+ *
+ * - Returns `null` when duration is unknown or <= 0 (phash is undefined for
+ *   zero-length sources and Stash skips submission in that case).
+ * - Returns `null` and logs a warning when the binary is not installed. This
+ *   lets dev machines without the helper still run the rest of the fingerprint
+ *   pipeline; production Docker images always bundle the binary.
+ * - Throws on any other non-zero exit so real failures surface in job_runs.
+ */
+export async function computePhash(
+  filePath: string,
+  duration: number | null | undefined,
+): Promise<string | null> {
+  if (!duration || duration <= 0) return null;
+
+  const bin = process.env.OBSCURA_PHASH_BIN ?? "obscura-phash";
+
+  try {
+    const { stdout } = await runProcess(bin, [
+      "-file",
+      filePath,
+      "-duration",
+      String(duration),
+    ]);
+    const hash = stdout.trim();
+    if (!/^[0-9a-f]{16}$/.test(hash)) {
+      throw new Error(`obscura-phash returned unexpected output: ${hash}`);
+    }
+    return hash;
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === "ENOENT") {
+      console.warn(
+        `[computePhash] ${bin} not found on PATH — skipping phash for ${filePath}. ` +
+          `Install the helper (see infra/phash) or build the unified Docker image to enable phash generation.`,
+      );
+      return null;
+    }
+    throw err;
+  }
+}
+
 function readUInt64LE(buffer: Buffer, offset: number) {
   return buffer.readBigUInt64LE(offset);
 }
