@@ -69,7 +69,36 @@ export function SceneDetail({
   const [userWantsDock, setUserWantsDock] = useState(false);
   const [dockVideoPercent, setDockVideoPercent] = useState(80);
   const dockContainerRef = useRef<HTMLDivElement>(null);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
+  /** Height of the video player's wrapper (video + controls + film strip).
+   *  When docked, the transcript sidecar is pinned to exactly this height
+   *  so the page layout never grows to accommodate a tall cue list. */
+  const [videoWrapperHeight, setVideoWrapperHeight] = useState<number | null>(
+    null,
+  );
+
+  // Track the video wrapper's height with a ResizeObserver and mirror it
+  // onto the docked transcript sidecar. We run it unconditionally and the
+  // sidecar picks it up via a style prop — cheaper than mounting/tearing
+  // down the observer on dock toggles.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const el = videoWrapperRef.current;
+    if (!el) return;
+    if (typeof ResizeObserver === "undefined") {
+      setVideoWrapperHeight(el.getBoundingClientRect().height);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const next = Math.round(entry.contentRect.height);
+      setVideoWrapperHeight((prev) => (prev === next ? prev : next));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [userWantsDock]);
 
   // Load dock preference + width on mount.
   useEffect(() => {
@@ -320,10 +349,11 @@ export function SceneDetail({
         <div
           ref={dockContainerRef}
           className={cn(
-            isTranscriptDocked && "lg:flex lg:items-stretch lg:gap-0",
+            isTranscriptDocked && "lg:flex lg:items-start lg:gap-0",
           )}
         >
           <div
+            ref={videoWrapperRef}
             className={cn(
               isTranscriptDocked && "lg:min-w-0",
             )}
@@ -370,7 +400,14 @@ export function SceneDetail({
                 className="hidden lg:block w-1.5 shrink-0 cursor-col-resize bg-border-default hover:bg-border-accent active:bg-border-accent transition-colors"
                 style={{ touchAction: "none" }}
               />
-              <div className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-w-0">
+              <div
+                className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-w-0 lg:overflow-hidden"
+                style={
+                  videoWrapperHeight != null
+                    ? { height: videoWrapperHeight }
+                    : undefined
+                }
+              >
                 <SceneTranscriptPanel
                   sceneId={scene.id}
                   tracks={scene.subtitleTracks ?? []}

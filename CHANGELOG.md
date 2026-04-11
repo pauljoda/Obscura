@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-04-10
+
+### Fixed
+
+- **Docked transcript sidecar is now pinned to the video's height.** Previously the flex row used `items-stretch` and the transcript's intrinsic height (tall cue list) would grow the whole row, pushing the video taller than its natural aspect-ratio height. A `ResizeObserver` on the video wrapper now mirrors its measured height onto the sidecar as an explicit `height` style, and the row uses `items-start` so nothing stretches. The transcript cue list scrolls internally within that bound, keeping the video locked at its natural size.
+
 ## [0.11.0] - 2026-04-10
 
 ### Added
