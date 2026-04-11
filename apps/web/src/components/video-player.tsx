@@ -1049,7 +1049,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       tracks.removeEventListener?.("addtrack", onAdd);
       cleanupFn?.();
     };
-  }, [activeSubtitleId, onActiveCueChange, src, directSrc]);
+  }, [activeSubtitleId, onActiveCueChange, src, directSrc, streamMode]);
 
   function togglePlay() {
     const video = videoRef.current;
@@ -1242,9 +1242,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             const href = subtitleAssetBase
               ? `${subtitleAssetBase}${track.url}`
               : track.url;
+            // Keying on the current source forces React to unmount and
+            // remount the <track> element whenever the player switches
+            // between direct and HLS — the browser then treats the cues
+            // as freshly-attached and refetches them, which is the only
+            // reliable way to get the text-track cue buffer repopulated
+            // after an MSE source swap in Chrome.
             return (
               <track
-                key={track.id}
+                key={`${track.id}|${streamMode}|${src ?? ""}|${directSrc ?? ""}`}
                 id={track.id}
                 kind="subtitles"
                 src={href}
