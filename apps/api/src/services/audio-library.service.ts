@@ -389,13 +389,19 @@ export async function getAudioLibraryById(
 // ─── Stats ────────────────────────────────────────────────────
 
 export async function getAudioLibraryStats(nsfw?: string) {
-  const nsfwFilter = nsfw === "off" ? eq(audioLibraries.isNsfw, false) : undefined;
-  const trackNsfwFilter = nsfw === "off" ? eq(audioTracks.isNsfw, false) : undefined;
+  const sfwOnly = nsfw === "off";
+  const libNsfwFilter = sfwOnly ? eq(audioLibraries.isNsfw, false) : undefined;
+  // Tracks are considered NSFW if either the track itself or its owning
+  // library is flagged — filter by both so SFW totals don't leak tracks
+  // that live inside an NSFW library.
+  const trackSfwCondition = sfwOnly
+    ? and(eq(audioTracks.isNsfw, false), eq(audioLibraries.isNsfw, false))
+    : undefined;
 
   const [libCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(audioLibraries)
-    .where(nsfwFilter);
+    .where(libNsfwFilter);
 
   const [trackStats] = await db
     .select({
@@ -403,17 +409,22 @@ export async function getAudioLibraryStats(nsfw?: string) {
       duration: sql<number>`COALESCE(SUM(${audioTracks.duration}), 0)`,
     })
     .from(audioTracks)
-    .where(trackNsfwFilter);
+    .leftJoin(audioLibraries, eq(audioTracks.libraryId, audioLibraries.id))
+    .where(trackSfwCondition);
+
+  const recentWhere = sfwOnly
+    ? and(
+        eq(audioTracks.isNsfw, false),
+        eq(audioLibraries.isNsfw, false),
+        sql`${audioTracks.createdAt} > NOW() - INTERVAL '7 days'`,
+      )
+    : sql`${audioTracks.createdAt} > NOW() - INTERVAL '7 days'`;
 
   const [recent] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(audioLibraries)
-    .where(
-      and(
-        nsfwFilter,
-        sql`${audioLibraries.createdAt} > NOW() - INTERVAL '7 days'`,
-      ),
-    );
+    .from(audioTracks)
+    .leftJoin(audioLibraries, eq(audioTracks.libraryId, audioLibraries.id))
+    .where(recentWhere);
 
   return {
     totalLibraries: libCount.count,
