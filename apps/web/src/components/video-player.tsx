@@ -75,6 +75,10 @@ interface VideoPlayerProps {
   onActiveSubtitleTrackIdChange?: (id: string | null) => void;
   onActiveCueChange?: (cue: ActiveCue | null) => void;
   subtitleAssetBase?: string;
+  /** When true, parent has already decided the subtitle state (including
+   *  an explicit "Off") — the player will not run its library-default
+   *  auto-enable pass. */
+  subtitleChoiceLocked?: boolean;
   /** Library-level defaults from /settings/library (auto-enable, lang prefs, style). */
   subtitleDefaults?: {
     autoEnable: boolean;
@@ -211,6 +215,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onActiveSubtitleTrackIdChange,
     onActiveCueChange,
     subtitleAssetBase,
+    subtitleChoiceLocked = false,
     subtitleDefaults,
     defaultPlaybackMode,
   },
@@ -299,9 +304,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   }
 
   // Auto-enable a track on first load when the library says so and the
-  // controlled parent hasn't already picked one. Runs once per scene.
+  // controlled parent hasn't already made a choice. Runs at most once per
+  // player instance — once a choice exists (including explicit "Off"),
+  // this never fires again.
   useEffect(() => {
     if (autoSelectedRef.current) return;
+    // Parent owns subtitle state and has already decided — respect it.
+    if (subtitleChoiceLocked) {
+      autoSelectedRef.current = true;
+      return;
+    }
+    // Parent explicitly picked a non-null track — lock in and stop.
     if (controlledSubtitleId !== undefined && controlledSubtitleId !== null) {
       autoSelectedRef.current = true;
       return;
@@ -316,7 +329,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       selectSubtitle(picked);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtitleTracks, subtitleDefaults?.autoEnable, subtitleDefaults?.preferredLanguages]);
+  }, [
+    subtitleTracks,
+    subtitleDefaults?.autoEnable,
+    subtitleDefaults?.preferredLanguages,
+    subtitleChoiceLocked,
+  ]);
 
   function handleAppearanceChange(next: SubtitleAppearance) {
     setLocalAppearance(next);
@@ -919,33 +937,55 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   // Keep all <track> elements in "hidden" mode for the selected one (so the
   // browser parses cues but doesn't draw them — we render our own overlay)
   // and "disabled" for every other track.
+  //
+  // Re-runs on source changes because hls.js's attachMedia replaces the
+  // media element's source via MSE, which resets text track cue buffers.
+  // Setting t.mode = "hidden" when it is already "hidden" is a no-op for
+  // the browser — so we first park every track at "disabled" and then
+  // flip the active one to "hidden" to force a fresh cue fetch.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const apply = () => {
       const tracks = video.textTracks;
+      // First pass: park everything.
       for (let i = 0; i < tracks.length; i++) {
         const t = tracks[i];
         if (!t) continue;
-        // Skip trickplay/metadata tracks — we only touch subtitles.
+        if (t.kind !== "subtitles" && t.kind !== "captions") continue;
+        t.mode = "disabled";
+      }
+      // Second pass: activate the matching one.
+      if (!activeSubtitleId) return;
+      for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i];
+        if (!t) continue;
         if (t.kind !== "subtitles" && t.kind !== "captions") continue;
         const matches =
           (t.id && t.id === activeSubtitleId) ||
           (!t.id && t.label && subtitleTracks.find((s) => s.id === activeSubtitleId)?.label === t.label);
-        t.mode = matches ? "hidden" : "disabled";
+        if (matches) {
+          t.mode = "hidden";
+          break;
+        }
       }
     };
 
     apply();
-    // textTracks can be populated async after the <track> element mounts —
-    // re-apply on addtrack as well.
+    // Text tracks can be attached late (e.g. after hls.js re-initialises
+    // the media element), so re-apply whenever a new track shows up.
     const tracks = video.textTracks;
     tracks.addEventListener?.("addtrack", apply);
+    // Also re-apply after the media element finishes (re)loading — some
+    // browsers drop cue buffers when the source swaps and only refetch
+    // once the element reaches HAVE_METADATA again.
+    video.addEventListener("loadedmetadata", apply);
     return () => {
       tracks.removeEventListener?.("addtrack", apply);
+      video.removeEventListener("loadedmetadata", apply);
     };
-  }, [activeSubtitleId, subtitleTracks]);
+  }, [activeSubtitleId, subtitleTracks, src, directSrc, streamMode]);
 
   // Subscribe to cuechange on the active (hidden) track and surface the cue
   // text for the overlay + transcript sync.

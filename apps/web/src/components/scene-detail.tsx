@@ -67,6 +67,10 @@ export function SceneDetail({
   const [allTags, setAllTags] = useState<TagItem[]>(initialTags);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null);
+  /** True once the user has made an explicit choice (including "Off"), or
+   *  a saved preference was hydrated. Prevents the player's library-level
+   *  auto-enable from clobbering an intentional "Off" selection. */
+  const [subtitleChoiceLocked, setSubtitleChoiceLocked] = useState(false);
   const [librarySettings, setLibrarySettings] = useState<LibrarySettings | null>(
     null,
   );
@@ -129,7 +133,7 @@ export function SceneDetail({
     // would fire asynchronously. Changes to `hasSubtitles` are handled
     // by the observer and are rare enough that a single async frame is
     // acceptable.
-  }, [userWantsDock, isDesktopViewport]);
+  }, [userWantsDock, isDesktopViewport, activeSubtitleId]);
 
   // Load dock preference + width on mount.
   useEffect(() => {
@@ -226,12 +230,19 @@ export function SceneDetail({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(`obscura:subtitle-lang:${id}`);
-    if (saved) setActiveSubtitleId(saved === "__off__" ? null : saved);
+    if (saved) {
+      setActiveSubtitleId(saved === "__off__" ? null : saved);
+      setSubtitleChoiceLocked(true);
+    } else {
+      setActiveSubtitleId(null);
+      setSubtitleChoiceLocked(false);
+    }
   }, [id]);
 
   const handleActiveSubtitleChange = useCallback(
     (next: string | null) => {
       setActiveSubtitleId(next);
+      setSubtitleChoiceLocked(true);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(
           `obscura:subtitle-lang:${id}`,
@@ -364,7 +375,12 @@ export function SceneDetail({
   const activeStars = ratingHover > 0 ? ratingHover : ratingStars;
 
   const hasSubtitles = (scene.subtitleTracks?.length ?? 0) > 0;
-  const isTranscriptDocked = userWantsDock && hasSubtitles && isDesktopViewport;
+  // The docked transcript is only meaningful while subtitles are actually
+  // enabled for playback — if the user turns captions off, collapse the
+  // sidecar and let the video take the full width again.
+  const subtitlesEnabled = activeSubtitleId != null;
+  const isTranscriptDocked =
+    userWantsDock && hasSubtitles && subtitlesEnabled && isDesktopViewport;
 
   return (
     <div className="space-y-5">
@@ -422,6 +438,7 @@ export function SceneDetail({
               subtitleTracks={scene.subtitleTracks ?? []}
               activeSubtitleTrackId={activeSubtitleId}
               onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
+              subtitleChoiceLocked={subtitleChoiceLocked}
               subtitleAssetBase={
                 process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
               }
