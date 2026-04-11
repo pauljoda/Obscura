@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-04-11
 ### Fixed
 
 - **Audio total tracks, duration, and "This Week" now exclude NSFW library tracks.** `getAudioLibraryStats` previously filtered tracks only by `audioTracks.isNsfw`, which missed tracks that live inside a library flagged as NSFW but aren't themselves individually flagged — so in SFW mode the library count dropped but the track / duration / recent-added cards still counted hidden libraries' tracks. Rewrote the query to left-join `audio_libraries` and filter on both `audioTracks.isNsfw = false` AND `audioLibraries.isNsfw = false`. Also switched the "This Week" card to count recent *tracks* (joined to the library for the NSFW filter) so it matches the rest of the strip instead of counting recent libraries.
