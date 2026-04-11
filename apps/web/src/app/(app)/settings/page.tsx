@@ -31,6 +31,7 @@ const defaultSettings: LibrarySettings = {
   subtitleFontScale: 1,
   subtitlePositionPercent: 88,
   subtitleOpacity: 1,
+  defaultPlaybackMode: "direct",
   createdAt: "",
   updatedAt: "",
 };

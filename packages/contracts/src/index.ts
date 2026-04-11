@@ -371,8 +371,19 @@ export interface LibrarySettingsDto {
   subtitlePositionPercent: number;
   /** Overall caption layer opacity (0.2–1.0). Applied to the full overlay including text, box, and shadows. */
   subtitleOpacity: number;
+  /** Default playback mode the video player boots into on each new source. */
+  defaultPlaybackMode: PlaybackMode;
   createdAt: string;
   updatedAt: string;
+}
+
+export const playbackModes = ["direct", "hls"] as const;
+export type PlaybackMode = (typeof playbackModes)[number];
+
+export function normalizePlaybackMode(value: unknown): PlaybackMode {
+  return typeof value === "string" && (playbackModes as readonly string[]).includes(value)
+    ? (value as PlaybackMode)
+    : "direct";
 }
 
 export const subtitleDisplayStyles = ["stylized", "classic", "outline"] as const;

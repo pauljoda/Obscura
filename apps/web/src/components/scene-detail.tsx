@@ -219,6 +219,9 @@ export function SceneDetail({
       }
     : undefined;
 
+  const defaultPlaybackMode: "direct" | "hls" =
+    librarySettings?.defaultPlaybackMode === "hls" ? "hls" : "direct";
+
   // Persist selected subtitle track per-scene in localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -423,6 +426,7 @@ export function SceneDetail({
                 process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
               }
               subtitleDefaults={subtitleDefaults}
+              defaultPlaybackMode={defaultPlaybackMode}
             />
           </div>
           {isTranscriptDocked && (

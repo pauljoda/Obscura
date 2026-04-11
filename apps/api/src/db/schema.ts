@@ -181,6 +181,8 @@ export const librarySettings = pgTable("library_settings", {
   subtitleFontScale: real("subtitle_font_scale").default(1).notNull(),
   subtitlePositionPercent: real("subtitle_position_percent").default(88).notNull(),
   subtitleOpacity: real("subtitle_opacity").default(1).notNull(),
+  /** Default playback mode for the video player. "direct" streams the source file; "hls" uses the adaptive HLS pipeline. */
+  defaultPlaybackMode: text("default_playback_mode").default("direct").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

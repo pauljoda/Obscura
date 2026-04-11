@@ -81,6 +81,8 @@ interface VideoPlayerProps {
     preferredLanguages: string;
     appearance: SubtitleAppearance;
   };
+  /** Default playback mode from library settings. User can still override. */
+  defaultPlaybackMode?: "direct" | "hls";
 }
 
 function languageLabel(language: string): string {
@@ -210,6 +212,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onActiveCueChange,
     subtitleAssetBase,
     subtitleDefaults,
+    defaultPlaybackMode,
   },
   ref,
 ) {
@@ -261,6 +264,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [usingAdaptiveStream, setUsingAdaptiveStream] = useState(false);
   const [playerNotice, setPlayerNotice] = useState<string | null>(null);
   const [hlsInitializing, setHlsInitializing] = useState(false);
+  /** When the user scrubs past the seekable range in progressive HLS, we
+   * remember the desired target here and re-seek once the playlist grows
+   * to cover it. */
+  const [deferredSeekTarget, setDeferredSeekTarget] = useState<number | null>(null);
   const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
   const [internalSubtitleId, setInternalSubtitleId] = useState<string | null>(null);
   const [activeCueText, setActiveCueText] = useState<string | null>(null);
@@ -405,12 +412,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     const isNewSource = srcKey !== prevSrcKeyRef.current;
     prevSrcKeyRef.current = srcKey;
 
-    // For a brand-new video always start in the default mode (direct when
-    // a directSrc is available) regardless of where the previous video left off.
-    // For a quality switch keep the mode the user selected.
-    const effectiveMode: "direct" | "hls" = isNewSource
-      ? (directSrc ? "direct" : "hls")
-      : streamMode;
+    // For a brand-new video pick the default mode from the library setting
+    // (falling back to `direct` when a direct source is available, otherwise
+    // `hls`). For a quality switch keep the mode the user selected.
+    const initialMode: "direct" | "hls" =
+      defaultPlaybackMode === "hls" && src
+        ? "hls"
+        : directSrc
+          ? "direct"
+          : "hls";
+    const effectiveMode: "direct" | "hls" = isNewSource ? initialMode : streamMode;
 
     if (isNewSource) {
       setDuration(propDuration ?? 0);
@@ -422,6 +433,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setQualityMode(effectiveMode === "direct" ? "direct" : "auto");
       setStreamMode(effectiveMode);
       pendingSeedNameRef.current = null;
+      setDeferredSeekTarget(null);
       // Seed from any renditions already fetched by the status effect.
       const seeded = seededRenditionsRef.current;
       if (seeded.length > 0) {
@@ -727,7 +739,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       cancelled = true;
       destroyHls();
     };
-  }, [src, directSrc, propDuration, streamMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, directSrc, propDuration, streamMode, defaultPlaybackMode]);
 
   // Sync streamMode from qualityMode — only triggers source re-init when
   // switching between direct and adaptive (not when changing HLS levels)
@@ -1026,8 +1039,52 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       return;
     }
 
-    video.currentTime = Math.max(0, Math.min(duration, time));
+    const target = Math.max(0, Math.min(duration || time, time));
+
+    // In progressive HLS the variant playlist only lists segments ffmpeg
+    // has already produced, so `video.seekable.end` grows over time. If the
+    // user scrubs past that boundary, we can't actually seek there yet —
+    // jump to the latest available position and remember the intended
+    // target. A watcher effect re-seeks once the playlist catches up.
+    if (streamMode === "hls" && video.seekable.length > 0) {
+      const seekableEnd = video.seekable.end(video.seekable.length - 1);
+      if (Number.isFinite(seekableEnd) && target > seekableEnd + 0.5) {
+        setDeferredSeekTarget(target);
+        video.currentTime = Math.max(0, seekableEnd - 0.5);
+        return;
+      }
+    }
+
+    setDeferredSeekTarget(null);
+    video.currentTime = target;
   }
+
+  // Re-seek once the HLS playlist grows to cover a scrub target that was
+  // beyond the seekable range when the user first asked for it.
+  useEffect(() => {
+    if (deferredSeekTarget == null) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const attemptReseek = () => {
+      if (video.seekable.length === 0) return false;
+      const end = video.seekable.end(video.seekable.length - 1);
+      if (!Number.isFinite(end)) return false;
+      if (end + 0.25 >= deferredSeekTarget) {
+        video.currentTime = Math.min(duration || deferredSeekTarget, deferredSeekTarget);
+        setDeferredSeekTarget(null);
+        return true;
+      }
+      return false;
+    };
+
+    if (attemptReseek()) return;
+
+    const interval = window.setInterval(() => {
+      attemptReseek();
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [deferredSeekTarget, duration]);
 
   function toggleMute() {
     const video = videoRef.current;
@@ -1221,6 +1278,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           {selectedQualityLabel && (
             <span className="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100">
               {selectedQualityLabel}
+            </span>
+          )}
+          {deferredSeekTarget != null && (
+            <span className="player-chip border-warning/30 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/85">
+              Seeking to {formatTime(deferredSeekTarget)} · still encoding
             </span>
           )}
           {playerNotice && (

@@ -2,6 +2,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import {
   normalizeBackgroundWorkerConcurrency,
+  normalizePlaybackMode,
   subtitleDisplayStyles,
   type SubtitleDisplayStyle,
 } from "@obscura/contracts";
@@ -100,6 +101,9 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.subtitleOpacity ?? settings.subtitleOpacity,
           0.2,
           1,
+        ),
+        defaultPlaybackMode: normalizePlaybackMode(
+          payload.defaultPlaybackMode ?? settings.defaultPlaybackMode,
         ),
         updatedAt: new Date(),
       })

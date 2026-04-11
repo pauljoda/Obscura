@@ -41,7 +41,9 @@ import {
   BACKGROUND_WORKER_CONCURRENCY_MAX,
   BACKGROUND_WORKER_CONCURRENCY_MIN,
   defaultSubtitleAppearance,
+  playbackModes,
   subtitleDisplayStyles,
+  type PlaybackMode,
   type SubtitleAppearance,
   type SubtitleDisplayStyle,
 } from "@obscura/contracts";
@@ -117,6 +119,7 @@ function normalizeSettings(s: LibrarySettings): LibrarySettings {
     subtitleFontScale: s.subtitleFontScale ?? 1,
     subtitlePositionPercent: s.subtitlePositionPercent ?? 88,
     subtitleOpacity: s.subtitleOpacity ?? 1,
+    defaultPlaybackMode: ((s.defaultPlaybackMode ?? "direct") as PlaybackMode),
   };
 }
 
@@ -1310,6 +1313,58 @@ export function SettingsPageClient({
           });
         }}
       />
+
+      <div className="border-t border-border-subtle" />
+      <section className="space-y-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <Film className="h-4 w-4 text-text-accent" />
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">
+              Playback
+            </h2>
+            <p className="text-[0.68rem] text-text-muted">
+              Defaults applied to the video player when a scene loads
+            </p>
+          </div>
+        </div>
+
+        <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
+          <div>
+            <label className="control-label">Default playback mode</label>
+            <p className="text-[0.68rem] text-text-muted">
+              Direct streams the source file (fastest seek, no transcode). Adaptive HLS
+              uses the on-demand ffmpeg pipeline (supports bitrate switching and renditions).
+              You can still override per-video in the quality menu.
+            </p>
+          </div>
+
+          <div className="flex bg-surface-1 p-1 border border-border-default shadow-[inset_0_2px_6px_rgba(0,0,0,0.5)]">
+            {playbackModes.map((mode) => {
+              const active = settings.defaultPlaybackMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setSettings((current) => ({ ...current, defaultPlaybackMode: mode }));
+                    void autoSaveSetting({ defaultPlaybackMode: mode });
+                  }}
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1.5 py-2.5 transition-all duration-fast",
+                    active
+                      ? "bg-surface-3 border border-border-accent shadow-[var(--shadow-glow-accent)] text-accent-400"
+                      : "text-text-muted hover:text-text-primary hover:bg-surface-2/50 border border-transparent",
+                  )}
+                >
+                  <span className="text-[0.75rem] font-medium uppercase tracking-wider">
+                    {mode === "direct" ? "Direct" : "Adaptive HLS"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       <div className="border-t border-border-subtle" />
       <section className="space-y-3">
