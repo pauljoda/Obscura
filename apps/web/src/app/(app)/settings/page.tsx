@@ -30,6 +30,7 @@ const defaultSettings: LibrarySettings = {
   subtitleStyle: "stylized",
   subtitleFontScale: 1,
   subtitlePositionPercent: 88,
+  subtitleOpacity: 1,
   createdAt: "",
   updatedAt: "",
 };

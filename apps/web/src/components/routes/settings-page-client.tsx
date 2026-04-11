@@ -116,6 +116,7 @@ function normalizeSettings(s: LibrarySettings): LibrarySettings {
     subtitleStyle: (s.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
     subtitleFontScale: s.subtitleFontScale ?? 1,
     subtitlePositionPercent: s.subtitlePositionPercent ?? 88,
+    subtitleOpacity: s.subtitleOpacity ?? 1,
   };
 }
 
@@ -1299,11 +1300,13 @@ export function SettingsPageClient({
             subtitleStyle: next.style,
             subtitleFontScale: next.fontScale,
             subtitlePositionPercent: next.positionPercent,
+            subtitleOpacity: next.opacity,
           }));
           void autoSaveSetting({
             subtitleStyle: next.style,
             subtitleFontScale: next.fontScale,
             subtitlePositionPercent: next.positionPercent,
+            subtitleOpacity: next.opacity,
           });
         }}
       />
@@ -1651,6 +1654,7 @@ function SubtitlesSection({
     fontScale: settings.subtitleFontScale ?? defaultSubtitleAppearance.fontScale,
     positionPercent:
       settings.subtitlePositionPercent ?? defaultSubtitleAppearance.positionPercent,
+    opacity: settings.subtitleOpacity ?? defaultSubtitleAppearance.opacity,
   };
 
   const [langDraft, setLangDraft] = useState(
@@ -1802,6 +1806,32 @@ function SubtitlesSection({
               }
               className="w-full accent-accent-500"
               aria-label="Subtitle vertical position"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.7rem] text-text-muted uppercase tracking-[0.14em]">
+                Transparency
+              </span>
+              <span className="text-mono-sm text-text-accent">
+                {Math.round(appearance.opacity * 100)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.05}
+              value={appearance.opacity}
+              onChange={(e) =>
+                onAppearanceCommit({
+                  ...appearance,
+                  opacity: Number(e.target.value),
+                })
+              }
+              className="w-full accent-accent-500"
+              aria-label="Subtitle transparency"
             />
           </div>
         </div>

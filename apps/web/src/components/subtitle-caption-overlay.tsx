@@ -30,7 +30,11 @@ export function SubtitleCaptionOverlay({
         "pointer-events-none absolute inset-x-0 z-10 flex justify-center px-4",
         className,
       )}
-      style={{ top: `${appearance.positionPercent}%`, transform: "translateY(-100%)" }}
+      style={{
+        top: `${appearance.positionPercent}%`,
+        transform: "translateY(-100%)",
+        opacity: appearance.opacity,
+      }}
     >
       <div
         className={cn(

@@ -974,6 +974,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           style={{
             top: `${appearance.positionPercent}%`,
             transform: "translateY(-100%)",
+            opacity: appearance.opacity,
           }}
         >
           <div

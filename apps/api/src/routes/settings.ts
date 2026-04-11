@@ -96,6 +96,11 @@ export async function settingsRoutes(app: FastifyInstance) {
           0,
           100,
         ),
+        subtitleOpacity: clampRange(
+          payload.subtitleOpacity ?? settings.subtitleOpacity,
+          0.2,
+          1,
+        ),
         updatedAt: new Date(),
       })
       .where(eq(librarySettings.id, settings.id))

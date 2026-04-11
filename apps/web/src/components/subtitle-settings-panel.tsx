@@ -146,6 +146,33 @@ export function SubtitleSettingsPanel({
           />
         </div>
 
+        {/* Transparency */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[0.62rem] uppercase tracking-[0.16em] text-white/50">
+              Transparency
+            </span>
+            <span className="text-mono-tabular text-[0.7rem] text-white/80">
+              {Math.round(appearance.opacity * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.2}
+            max={1}
+            step={0.05}
+            value={appearance.opacity}
+            onChange={(e) =>
+              onChange({
+                ...appearance,
+                opacity: Number(e.target.value),
+              })
+            }
+            className="w-full accent-accent-500"
+            aria-label="Subtitle transparency"
+          />
+        </div>
+
         <button
           type="button"
           onClick={onReset}

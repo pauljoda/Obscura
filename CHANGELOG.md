@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-04-10
+
+### Added
+
+- **Subtitle transparency slider.** A new Transparency control lives in both the in-player subtitle style side panel and the global settings Subtitles section, letting the user dial the entire caption layer (background plate, text, glow, and stroke) from 20% to 100% opacity. Applied via inline `opacity` on the overlay wrapper so it composes cleanly with the three existing display styles — at low values the Stylized and Classic plates fade against the video without the text becoming harder to read than the surrounding styling; at full opacity everything renders exactly as before. Persisted as `subtitle_opacity` on `library_settings` (clamped server-side to `[0.2, 1]`), mirrored in `SubtitleAppearance.opacity` on the contracts, saved into the per-user localStorage override, and reflected live in the settings page's dummy-frame preview.
+
 ## [0.12.2] - 2026-04-10
 
 ### Fixed

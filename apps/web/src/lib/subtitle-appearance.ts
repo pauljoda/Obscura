@@ -41,6 +41,13 @@ export function resolveSubtitleAppearance(
       0,
       100,
     ),
+    opacity: clamp(
+      localOverride?.opacity ??
+        libraryDefaults?.opacity ??
+        defaultSubtitleAppearance.opacity,
+      0.2,
+      1,
+    ),
   };
 }
 
@@ -56,6 +63,7 @@ export function readLocalSubtitleAppearance(): Partial<SubtitleAppearance> | nul
       positionPercent: Number.isFinite(parsed.positionPercent)
         ? parsed.positionPercent
         : undefined,
+      opacity: Number.isFinite(parsed.opacity) ? parsed.opacity : undefined,
     };
   } catch {
     return null;

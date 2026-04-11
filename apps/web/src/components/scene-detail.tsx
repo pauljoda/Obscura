@@ -214,6 +214,7 @@ export function SceneDetail({
           style: (librarySettings.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
           fontScale: librarySettings.subtitleFontScale ?? 1,
           positionPercent: librarySettings.subtitlePositionPercent ?? 88,
+          opacity: librarySettings.subtitleOpacity ?? 1,
         } satisfies SubtitleAppearance,
       }
     : undefined;

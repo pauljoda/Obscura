@@ -360,6 +360,8 @@ export interface LibrarySettingsDto {
   subtitleFontScale: number;
   /** Vertical position as a 0–100 percentage from the top of the video frame. */
   subtitlePositionPercent: number;
+  /** Overall caption layer opacity (0.2–1.0). Applied to the full overlay including text, box, and shadows. */
+  subtitleOpacity: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -371,12 +373,15 @@ export interface SubtitleAppearance {
   style: SubtitleDisplayStyle;
   fontScale: number;
   positionPercent: number;
+  /** Overall caption layer opacity (0.2–1.0). */
+  opacity: number;
 }
 
 export const defaultSubtitleAppearance: SubtitleAppearance = {
   style: "stylized",
   fontScale: 1,
   positionPercent: 88,
+  opacity: 1,
 };
 
 export interface StorageStatsDto {

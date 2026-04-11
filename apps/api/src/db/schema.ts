@@ -180,6 +180,7 @@ export const librarySettings = pgTable("library_settings", {
   subtitleStyle: text("subtitle_style").default("stylized").notNull(),
   subtitleFontScale: real("subtitle_font_scale").default(1).notNull(),
   subtitlePositionPercent: real("subtitle_position_percent").default(88).notNull(),
+  subtitleOpacity: real("subtitle_opacity").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
