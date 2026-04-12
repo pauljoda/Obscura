@@ -11,9 +11,10 @@ import { NsfwShowModeChip } from "../nsfw/nsfw-gate";
 interface SceneFolderCardProps {
   folder: SceneFolderListItemDto;
   href: string;
+  compact?: boolean;
 }
 
-export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
+export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps) {
   return (
     <Link
       href={href}
@@ -26,7 +27,7 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
         previewImages={folder.previewThumbnailPaths
           .map((path) => toApiUrl(path, folder.updatedAt))
           .filter(Boolean) as string[]}
-        className="aspect-[4/3]"
+        className={compact ? "aspect-video" : "aspect-[4/3]"}
       >
         <NsfwShowModeChip
           isNsfw={folder.isNsfw}
@@ -38,14 +39,14 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
         </div>
       </EntityPreviewMedia>
 
-      <div className="space-y-1.5 px-2.5 py-2.5">
+      <div className={cn("px-2.5", compact ? "space-y-0.5 py-1.5" : "space-y-1.5 py-2.5")}>
         <div className="flex items-center gap-2">
-          <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-text-accent" />
-          <h3 className="truncate text-[0.82rem] font-medium text-text-primary">
+          <FolderOpen className={cn("flex-shrink-0 text-text-accent", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
+          <h3 className={cn("truncate font-medium text-text-primary", compact ? "text-[0.75rem]" : "text-[0.82rem]")}>
             {folder.displayTitle}
           </h3>
         </div>
-        <div className="flex items-center gap-2 text-[0.68rem] text-text-muted">
+        <div className={cn("flex items-center gap-2 text-text-muted", compact ? "text-[0.62rem]" : "text-[0.68rem]")}>
           <span>
             {folder.visibleSfwSceneCount} scene
             {folder.visibleSfwSceneCount === 1 ? "" : "s"}
@@ -57,14 +58,14 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
             </span>
           ) : null}
         </div>
-        {folder.libraryRootLabel ? (
+        {!compact && folder.libraryRootLabel ? (
           <div className="flex items-center gap-1.5 text-[0.65rem] text-text-disabled">
             <HardDrive className="h-3 w-3" />
             <span className="truncate">{folder.libraryRootLabel}</span>
           </div>
         ) : null}
-        {folder.containsNsfwDescendants && !folder.isNsfw ? (
-          <div className={cn("text-[0.65rem] text-text-disabled")}>
+        {!compact && folder.containsNsfwDescendants && !folder.isNsfw ? (
+          <div className="text-[0.65rem] text-text-disabled">
             Mixed-content folder
           </div>
         ) : null}
