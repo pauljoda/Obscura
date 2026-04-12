@@ -450,8 +450,8 @@ export function BulkScrape() {
           <p className="text-text-muted text-sm">
             {tab === "scenes" ? `All ${entityTerms.scenes.toLowerCase()} are organized!` :
              tab === "performers" ? `All ${entityTerms.performers.toLowerCase()} have complete metadata.` :
-             tab === "studios" ? "All studios have complete metadata." :
-             "All tags loaded."}
+             tab === "studios" ? `All ${entityTerms.studios.toLowerCase()} have complete metadata.` :
+             `All ${entityTerms.tags.toLowerCase()} loaded.`}
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { createTag } from "../lib/api";
 import { TagForm, type TagFormValues } from "./tag-form";
+import { entityTerms } from "../lib/terminology";
 
 export function TagCreate() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export function TagCreate() {
             <ArrowLeft className="h-3 w-3" />
             Back
           </button>
-          <h1 className="text-lg font-heading font-semibold">New Tag</h1>
+          <h1 className="text-lg font-heading font-semibold">New {entityTerms.tag}</h1>
         </div>
         <button
           onClick={handleSave}

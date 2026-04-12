@@ -36,6 +36,7 @@ import {
 import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
 import { NsfwGate } from "./nsfw/nsfw-gate";
 import { StudioForm } from "./studio-form";
+import { entityTerms } from "../lib/terminology";
 
 interface StudioEditProps {
   id: string;
@@ -296,7 +297,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             <ArrowLeft className="h-3 w-3" />
             Back
           </button>
-          <h1 className="text-lg font-heading font-semibold">Edit Studio</h1>
+          <h1 className="text-lg font-heading font-semibold">Edit {entityTerms.studio}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={onCancel} className="px-3 py-1.5 text-xs text-text-muted hover:text-text-primary transition-colors duration-fast">

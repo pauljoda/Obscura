@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { createStudio, fetchStudios, type StudioItem } from "../lib/api";
 import { StudioForm, type StudioFormValues } from "./studio-form";
+import { entityTerms } from "../lib/terminology";
 
 export function StudioCreate() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export function StudioCreate() {
             <ArrowLeft className="h-3 w-3" />
             Back
           </button>
-          <h1 className="text-lg font-heading font-semibold">New Studio</h1>
+          <h1 className="text-lg font-heading font-semibold">New {entityTerms.studio}</h1>
         </div>
         <button
           onClick={handleSave}

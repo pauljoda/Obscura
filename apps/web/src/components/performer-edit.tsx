@@ -522,7 +522,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
           <NsfwGate>
             {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
               <div className="surface-well p-3 space-y-2">
-                <div className="text-kicker">Scrape Metadata</div>
+                <div className="text-kicker">Identify / Scrape</div>
                 <select
                   value={selectedProvider}
                   onChange={(e) => {
@@ -560,7 +560,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
                     )}
                   >
                     {scraping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-                    Scrape
+                    {selectedProvider.startsWith("stashbox:") ? "Identify" : "Scrape"}
                   </button>
                   <button
                     onClick={handleSeek}

@@ -13,6 +13,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import type { SearchResultItem, SearchResultGroup } from "@obscura/contracts";
 import { useSearchPalette } from "./search-context";
+import { entityTerms } from "../../lib/terminology";
 import { useSearch } from "../../hooks/use-search";
 import { useRecentSearches } from "../../hooks/use-recent-searches";
 import { SEARCH_KIND_CONFIG } from "./search-kind-config";
@@ -108,7 +109,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search videos, actors, studios, tags..."
+            placeholder={`Search ${entityTerms.scenes.toLowerCase()}, ${entityTerms.performers.toLowerCase()}, ${entityTerms.studios.toLowerCase()}, ${entityTerms.tags.toLowerCase()}...`}
             className={cn(
               "flex-1 bg-transparent text-sm text-text-primary",
               "placeholder:text-text-disabled",

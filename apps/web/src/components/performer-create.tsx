@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { createPerformer, fetchTags, type TagItem } from "../lib/api";
 import { PerformerForm, type PerformerFormValues } from "./performer-form";
+import { entityTerms } from "../lib/terminology";
 
 export function PerformerCreate() {
   const router = useRouter();
@@ -83,7 +84,7 @@ export function PerformerCreate() {
             <ArrowLeft className="h-3 w-3" />
             Back
           </button>
-          <h1 className="text-lg font-heading font-semibold">New Performer</h1>
+          <h1 className="text-lg font-heading font-semibold">New {entityTerms.performer}</h1>
         </div>
         <button
           onClick={handleSave}
