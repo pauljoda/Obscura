@@ -11,6 +11,7 @@ import {
   inArray,
   sql,
   count,
+  type SQL,
 } from "drizzle-orm";
 import {
   buildOrderBy,
@@ -143,7 +144,7 @@ export async function listCollections(query: CollectionListQuery) {
     200,
   );
 
-  const conditions: any[] = [];
+  const conditions: SQL[] = [];
 
   if (query.search) {
     conditions.push(ilike(collections.name, `%${query.search}%`));
@@ -215,7 +216,7 @@ export async function getCollectionItems(
     500,
   );
 
-  const conditions: any[] = [eq(collectionItems.collectionId, collectionId)];
+  const conditions: SQL[] = [eq(collectionItems.collectionId, collectionId)];
 
   if (query.entityType) {
     conditions.push(eq(collectionItems.entityType, query.entityType));

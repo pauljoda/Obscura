@@ -21,7 +21,7 @@ export const studios = pgTable(
     description: text("description"),
     aliases: text("aliases"),
     url: text("url"),
-    parentId: uuid("parent_id").references((): any => studios.id),
+    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => studios.id),
     imageUrl: text("image_url"),
     imagePath: text("image_path"),
     favorite: boolean("favorite").default(false).notNull(),
@@ -111,7 +111,7 @@ export const tags = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     aliases: text("aliases"),
-    parentId: uuid("parent_id").references((): any => tags.id),
+    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => tags.id),
     favorite: boolean("favorite").default(false).notNull(),
     ignoreAutoTag: boolean("ignore_auto_tag").default(false).notNull(),
     imageUrl: text("image_url"),
@@ -242,7 +242,7 @@ export const sceneFolders = pgTable(
     customName: text("custom_name"),
     folderPath: text("folder_path").notNull(),
     relativePath: text("relative_path").notNull(),
-    parentId: uuid("parent_id").references((): any => sceneFolders.id, {
+    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => sceneFolders.id, {
       onDelete: "cascade",
     }),
     depth: integer("depth").notNull(),
@@ -785,7 +785,7 @@ export const galleries = pgTable(
     zipFilePath: text("zip_file_path"),
 
     // Hierarchy (sub-galleries)
-    parentId: uuid("parent_id").references((): any => galleries.id),
+    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => galleries.id),
 
     // Explicit cover image (plain UUID — no FK to avoid circular dep with images)
     coverImageId: uuid("cover_image_id"),
@@ -1027,7 +1027,7 @@ export const audioLibraries = pgTable(
     folderPath: text("folder_path"),
 
     // Hierarchy
-    parentId: uuid("parent_id").references((): any => audioLibraries.id),
+    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => audioLibraries.id),
 
     // User-uploaded media (cache dir paths)
     coverImagePath: text("cover_image_path"),
