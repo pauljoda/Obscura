@@ -25,8 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **`/design-language`** page (not linked in nav, `noindex`) — single-page gallery of Dark Room tokens: typography, buttons, badges, surfaces, accent/status palettes, LEDs, meters, loading patterns, motion, form controls, caption styles, and gradient placeholders. Includes a live preview of **`AppRouteLoading`** (the `(app)/loading.tsx` pulsing LED loader).
-- **`AppRouteLoading`** component — shared implementation for the app shell route loading state so the design-language page can render the exact system loader; loader is now a **pulsing brass LED** with ambient bloom instead of a thin border spinner.
+- **`/design-language`** page (not linked in nav, `noindex`) — single-page gallery of Dark Room tokens: typography, buttons, badges, surfaces, accent/status palettes, LEDs, meters, loading patterns, motion, form controls, caption styles, and gradient placeholders. Includes a live preview of **`AppRouteLoading`** (the `(app)/loading.tsx` ripple-glow route loader).
+- **`AppRouteLoading`** component — shared implementation for the app shell route loading state so the design-language page can render the exact system loader; loader now uses **concentric square ripples** and a **pulsing core glow field** around the brass LED instead of a static framed square.
 - Global CSS utilities `.kbd` (sharp, recessed key caps), `.empty-rack-slot` (dashed empty hardware slot), and `.pill-muted` (muted uppercase label chip).
 
 ### Fixed

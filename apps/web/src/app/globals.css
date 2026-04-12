@@ -534,6 +534,92 @@
     animation: glow-pulse 2.4s ease-in-out infinite;
   }
 
+  /* App route loader: brass energy radiates from center (sharp squares). */
+  @keyframes route-loader-ripple-square {
+    0% {
+      transform: scale(0.28);
+      opacity: 0;
+      box-shadow:
+        0 0 0 0 rgba(199, 155, 92, 0.55),
+        inset 0 0 0 0 rgba(199, 155, 92, 0);
+    }
+    12% {
+      opacity: 0.7;
+    }
+    55% {
+      opacity: 0.22;
+    }
+    100% {
+      transform: scale(2.35);
+      opacity: 0;
+      box-shadow:
+        0 0 52px 14px rgba(199, 155, 92, 0.06),
+        inset 0 0 24px rgba(199, 155, 92, 0.04);
+    }
+  }
+
+  @keyframes route-loader-core-field {
+    0%,
+    100% {
+      transform: scale(0.92);
+      opacity: 0.35;
+      box-shadow:
+        0 0 18px rgba(199, 155, 92, 0.12),
+        inset 0 0 20px rgba(199, 155, 92, 0.06);
+    }
+    50% {
+      transform: scale(1);
+      opacity: 0.85;
+      box-shadow:
+        0 0 36px rgba(199, 155, 92, 0.22),
+        inset 0 0 28px rgba(199, 155, 92, 0.1);
+    }
+  }
+
+  .route-loader-ripples {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .route-loader-ripple-ring {
+    position: absolute;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid rgba(199, 155, 92, 0.42);
+    border-radius: 0;
+    animation: route-loader-ripple-square 2.4s var(--ease-mechanical) infinite;
+    will-change: transform, opacity, box-shadow;
+  }
+
+  .route-loader-ripple-ring:nth-child(2) {
+    animation-delay: 0.8s;
+  }
+
+  .route-loader-ripple-ring:nth-child(3) {
+    animation-delay: 1.6s;
+  }
+
+  .route-loader-core-field {
+    position: absolute;
+    z-index: 1;
+    width: 3.25rem;
+    height: 3.25rem;
+    border: 1px solid rgba(199, 155, 92, 0.28);
+    border-radius: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(199, 155, 92, 0.12) 0%,
+      rgba(8, 9, 12, 0.2) 100%
+    );
+    animation: route-loader-core-field 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
   /* ── Typography Utilities ── */
   .text-heading {
     font-family: var(--font-heading);
