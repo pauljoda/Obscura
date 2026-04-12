@@ -136,9 +136,9 @@ export function FilterBar({
   return (
     <div className="space-y-0">
       {/* Main toolbar */}
-      <div className="surface-well flex items-center gap-2 px-3 py-2">
-        {/* Search */}
-        <div className="relative flex-1 min-w-0">
+      <div className="surface-well px-3 py-2 space-y-2 sm:space-y-0">
+        {/* Search — own row on mobile */}
+        <div className="relative sm:hidden">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           <input
             type="text"
@@ -146,30 +146,49 @@ export function FilterBar({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className={cn(
-              "w-full bg-transparent pl-7 pr-3 py-1.5 text-[0.78rem] text-text-primary",
+              "w-full bg-surface-2 border border-border-subtle pl-7 pr-3 py-1.5 text-[0.78rem] text-text-primary",
               "placeholder:text-text-disabled",
-              "focus:outline-none",
+              "focus:outline-none focus:border-accent-500",
               "transition-colors duration-fast",
             )}
           />
         </div>
 
-        {/* Active filter chips */}
-        {activeFilters.length > 0 && (
-          <div className="hidden sm:flex items-center gap-1.5 border-l border-border-subtle pl-2">
-            {activeFilters.map((filter, i) => (
-              <FilterChip
-                key={i}
-                label={filter.label}
-                value={filter.value}
-                onRemove={() => onRemoveFilter(i)}
-              />
-            ))}
+        {/* Controls row */}
+        <div className="flex items-center gap-2">
+          {/* Search — inline on desktop */}
+          <div className="relative flex-1 min-w-0 hidden sm:block">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search scenes..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className={cn(
+                "w-full bg-transparent pl-7 pr-3 py-1.5 text-[0.78rem] text-text-primary",
+                "placeholder:text-text-disabled",
+                "focus:outline-none",
+                "transition-colors duration-fast",
+              )}
+            />
           </div>
-        )}
 
-        {/* Divider */}
-        <div className="h-5 w-px bg-border-subtle" />
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="hidden sm:flex items-center gap-1.5 border-l border-border-subtle pl-2">
+              {activeFilters.map((filter, i) => (
+                <FilterChip
+                  key={i}
+                  label={filter.label}
+                  value={filter.value}
+                  onRemove={() => onRemoveFilter(i)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="hidden sm:block h-5 w-px bg-border-subtle" />
 
         {/* Sort dropdown + direction toggle */}
         <div className="flex items-center">
@@ -324,6 +343,7 @@ export function FilterBar({
             <span className="hidden sm:inline">Clear</span>
           </button>
         )}
+        </div>
       </div>
 
       {/* Expandable filter panel */}
