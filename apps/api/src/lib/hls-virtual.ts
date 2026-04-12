@@ -9,9 +9,10 @@
 // Adding this alongside the existing path keeps the blast radius small.
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { getCacheRootDir } from "@obscura/media-core";
 
 /** Segment duration in seconds. Matches the ffmpeg `-force_key_frames`
@@ -147,24 +148,32 @@ async function ensureCacheDir(
  *  `${sceneId}/${segIndex}`. */
 const inflight = new Map<string, Promise<string>>();
 
-function encodeSegment(
+async function encodeSegment(
   sceneId: string,
   sourcePath: string,
   segIndex: number,
 ): Promise<string> {
   const outputPath = getSegmentPath(sceneId, segIndex);
+  const tmpPath = `${outputPath}.${randomUUID()}.tmp`;
   const segStart = segIndex * SEGMENT_DURATION;
 
   // Fast input-side `-ss`: ffmpeg jumps to the nearest preceding keyframe
   // before decoding starts. Orders of magnitude faster than accurate seek
-  // (`-ss` after `-i`) on long files — the small A/V alignment cost at the
-  // cut is negligible for scrubbing UX.
+  // (`-ss` after `-i`) on long files.
   //
-  // Each segment is a completely fresh libx264 encode, which guarantees an
-  // IDR frame at output frame 0 without any `-force_key_frames` wrangling.
-  // We deliberately do NOT use `-copyts`: each segment's PTS starts at 0
-  // and hls.js's built-in per-segment PTS rebasing lines it up against the
-  // playlist's EXTINF timeline when it appends to MSE.
+  // Each segment is a fresh libx264 encode so frame 0 is naturally an IDR.
+  //
+  // `-output_ts_offset segStart` (without `-copyts`) shifts the output's
+  // zero-based PTS to the segment's absolute position in the scene, so
+  // adjacent segments carry continuous global PTS and MSE can stitch them
+  // without needing EXT-X-DISCONTINUITY markers. We deliberately do NOT
+  // use `-copyts` here: combined with an MKV/HEVC source and input-side
+  // `-ss`, `-copyts` can make ffmpeg's `-t` filter drop every frame and
+  // write a 0-byte output file. `-output_ts_offset` alone is the
+  // well-supported path.
+  //
+  // Write to a tmp file and rename into place on success so a failed
+  // encode can never leave a broken 0-byte segment in the cache.
   const args = [
     "-y",
     "-hide_banner",
@@ -205,37 +214,56 @@ function encodeSegment(
     "2",
     "-ar",
     "48000",
+    "-output_ts_offset",
+    segStart.toFixed(3),
     "-muxdelay",
     "0",
     "-muxpreload",
     "0",
     "-f",
     "mpegts",
-    outputPath,
+    tmpPath,
   ];
 
-  return new Promise<string>((resolve, reject) => {
-    const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
-    let stderr = "";
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-      if (stderr.length > 8192) stderr = stderr.slice(-8192);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
+      let stderr = "";
+      child.stderr?.on("data", (chunk) => {
+        stderr += chunk.toString();
+        if (stderr.length > 8192) stderr = stderr.slice(-8192);
+      });
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(
+          new Error(
+            `ffmpeg seg ${segIndex} exited with code ${code ?? "unknown"}${
+              stderr ? `: ${stderr.trim()}` : ""
+            }`,
+          ),
+        );
+      });
     });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(outputPath);
-        return;
-      }
-      reject(
-        new Error(
-          `ffmpeg seg ${segIndex} exited with code ${code ?? "unknown"}${
-            stderr ? `: ${stderr.trim()}` : ""
-          }`,
-        ),
-      );
-    });
-  });
+
+    // Defensive: some ffmpeg failure modes exit 0 but leave an empty file
+    // (see the `-copyts` pitfall above). Treat a zero-byte output as an
+    // encode failure so the cache stays clean.
+    const stats = await stat(tmpPath);
+    if (stats.size === 0) {
+      await unlink(tmpPath).catch(() => {});
+      throw new Error(`ffmpeg seg ${segIndex} produced an empty file`);
+    }
+
+    await rename(tmpPath, outputPath);
+    return outputPath;
+  } catch (err) {
+    await unlink(tmpPath).catch(() => {});
+    throw err;
+  }
 }
 
 /** Return the on-disk path for the given segment, transcoding it first if
