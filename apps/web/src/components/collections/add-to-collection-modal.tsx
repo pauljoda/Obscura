@@ -11,6 +11,7 @@ import {
   Zap,
   Shuffle,
 } from "lucide-react";
+import { Button } from "@obscura/ui/primitives/button";
 import type {
   CollectionListItemDto,
   CollectionEntityType,
@@ -226,18 +227,18 @@ export function AddToCollectionModal({
             <span className="text-[0.75rem] text-text-muted">
               {selectedIds.size} selected
             </span>
-            <button
+            <Button
               onClick={handleAdd}
               disabled={addingToIds.size > 0}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-accent-brass/10 text-text-accent border border-accent-brass/20 hover:bg-accent-brass/20 transition-colors disabled:opacity-50"
+              size="sm"
             >
               {addingToIds.size > 0 ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Plus className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5" />
               )}
-              Add
-            </button>
+              Confirm
+            </Button>
           </div>
         )}
       </div>
