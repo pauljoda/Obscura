@@ -650,8 +650,8 @@ export function ScenesPageClient({
             )
           }
         >
-          <HierarchySection title={folderSectionTitle}>
-            {folderCards.length > 0 ? (
+          {folderCards.length > 0 && (
+            <HierarchySection title={folderSectionTitle}>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {folderCards.map((folder) => (
                   <SceneFolderCard
@@ -661,12 +661,8 @@ export function ScenesPageClient({
                   />
                 ))}
               </div>
-            ) : (
-              <div className="surface-well px-4 py-10 text-center text-[0.78rem] text-text-muted">
-                No folders match the current view.
-              </div>
-            )}
-          </HierarchySection>
+            </HierarchySection>
+          )}
 
           <HierarchySection title={sceneSectionTitle}>
             <SceneGrid
