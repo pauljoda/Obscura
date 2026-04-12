@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Shared `StatusMessage` component replaces repeated inline error/success banner markup across all create and edit pages.
 - New `.btn-accent` CSS class consolidates the accent button style pattern previously copy-pasted across 6+ components.
 - Backward-compatibility re-exports removed: `bulk-scrape.tsx` wrapper deleted (consumers now import directly from `scrape/bulk-scrape`), unused `ChipInput`/`StarRatingPicker`/`MetadataRow` re-exports removed from `scene-edit.tsx`.
+- Job dashboard broken up into focused sub-components: helpers, stat cards, queue cards, and job cards extracted to `components/jobs/` (958 → 460 lines).
+- Settings page broken up: reusable controls (ToggleCard, QualitySlider, NumberStepper, StorageStat), subtitles section with live preview, and diagnostics section extracted to `components/settings/` (1,919 → 1,389 lines).
 
 ### Fixed
 
