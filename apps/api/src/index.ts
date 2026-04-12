@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { apiRoutes } from "@obscura/contracts";
+import { runMigrations } from "./db/migrate";
 import errorHandler from "./plugins/error-handler";
 import { scenesRoutes } from "./routes/scenes";
 import { subtitlesRoutes } from "./routes/subtitles";
@@ -24,6 +25,12 @@ import { audioStreamRoutes } from "./routes/audio-stream";
 import { sceneFoldersRoutes } from "./routes/scene-folders";
 import { initQueues, stopQueues } from "./lib/queues";
 import pkg from "../../../package.json";
+
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  "postgres://obscura:obscura@localhost:5432/obscura";
+
+await runMigrations(databaseUrl);
 
 const app = Fastify({
   logger: true,

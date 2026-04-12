@@ -101,6 +101,12 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
     ADD COLUMN IF NOT EXISTS generate_phash boolean NOT NULL DEFAULT false
   `;
 
+  // 0007_slow_marvel_apes: optional library label as top folder in scans.
+  await client`
+    ALTER TABLE library_settings
+    ADD COLUMN IF NOT EXISTS use_library_root_as_folder boolean NOT NULL DEFAULT false
+  `;
+
   // 0003_colossal_donald_blake: fingerprint_submissions table + FKs + indexes.
   await client`
     CREATE TABLE IF NOT EXISTS fingerprint_submissions (
@@ -237,6 +243,11 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
   `;
 }
 
+/**
+ * Applies versioned SQL migrations and legacy reconcile deltas. Safe to call
+ * on every process start (unified image entrypoint, API boot, worker boot);
+ * drizzle tracks applied files and reconcile uses IF NOT EXISTS.
+ */
 export async function runMigrations(databaseUrl: string): Promise<void> {
   const client = postgres(databaseUrl, { max: 1 });
 

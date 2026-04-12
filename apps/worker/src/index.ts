@@ -4,6 +4,7 @@ import {
   type QueueName,
 } from "@obscura/contracts";
 
+import { runMigrations } from "../../api/src/db/migrate.js";
 import { queryClient } from "./lib/db.js";
 import {
   initQueues,
@@ -77,6 +78,11 @@ function wrapProcessor(
 
 // ─── Bootstrap ──────────────────────────────────────────────────────
 
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  "postgres://obscura:obscura@localhost:5432/obscura";
+
+await runMigrations(databaseUrl);
 await initQueues();
 const libraryRowForWorkers = await ensureLibrarySettingsRow();
 
