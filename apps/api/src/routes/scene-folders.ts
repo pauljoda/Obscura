@@ -22,7 +22,7 @@ export async function sceneFoldersRoutes(app: FastifyInstance) {
 
   app.patch("/scene-folders/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const body = request.body as { isNsfw?: boolean };
+    const body = request.body as { isNsfw?: boolean; customName?: string | null };
     return sceneFolderService.updateSceneFolder(id, body);
   });
 

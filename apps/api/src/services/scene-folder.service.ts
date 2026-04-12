@@ -15,7 +15,7 @@ import {
   requireSceneFolderSchema,
 } from "../lib/scene-folder-schema";
 
-const { sceneFolders, scenes } = schema;
+const { sceneFolders, scenes, libraryRoots } = schema;
 
 const SCENE_FOLDER_COVER_FILE = "cover-custom.jpg";
 
@@ -80,14 +80,27 @@ async function fetchFolderPreviewPaths(folderId: string, nsfwMode?: string) {
   ).get(folderId) ?? [];
 }
 
+async function fetchLibraryRootLabels(rootIds: string[]): Promise<Map<string, string>> {
+  if (rootIds.length === 0) return new Map();
+  const unique = [...new Set(rootIds)];
+  const rows = await db
+    .select({ id: libraryRoots.id, label: libraryRoots.label })
+    .from(libraryRoots)
+    .where(inArray(libraryRoots.id, unique));
+  return new Map(rows.map((r) => [r.id, r.label]));
+}
+
 function toSceneFolderListItem(
   folder: typeof sceneFolders.$inferSelect,
   childFolderCount: number,
   previewThumbnailPaths: string[],
+  libraryRootLabel: string,
 ) {
   return {
     id: folder.id,
     title: folder.title,
+    customName: folder.customName,
+    displayTitle: folder.customName ?? folder.title,
     folderPath: folder.folderPath,
     relativePath: folder.relativePath,
     parentId: folder.parentId,
@@ -100,6 +113,8 @@ function toSceneFolderListItem(
     containsNsfwDescendants: folder.containsNsfwDescendants,
     childFolderCount,
     previewThumbnailPaths,
+    libraryRootId: folder.libraryRootId,
+    libraryRootLabel,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
   };
@@ -156,6 +171,7 @@ export async function listSceneFolders(query: {
     .offset(offset);
 
   const childCounts = await fetchFolderChildCounts(folders.map((folder) => folder.id));
+  const rootLabels = await fetchLibraryRootLabels(folders.map((f) => f.libraryRootId));
   const items = await Promise.all(
     folders.map(async (folder) => {
       const previewThumbnailPaths = await fetchFolderPreviewPaths(folder.id, query.nsfw);
@@ -163,6 +179,7 @@ export async function listSceneFolders(query: {
         folder,
         childCounts.get(folder.id) ?? 0,
         previewThumbnailPaths,
+        rootLabels.get(folder.libraryRootId) ?? "",
       );
     }),
   );
@@ -205,6 +222,10 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
     .orderBy(asc(sceneFolders.title));
 
   const childCounts = await fetchFolderChildCounts(children.map((child) => child.id));
+  const allRootIds = [folder.libraryRootId, ...children.map((c) => c.libraryRootId)];
+  const rootLabels = await fetchLibraryRootLabels(allRootIds);
+  const folderRootLabel = rootLabels.get(folder.libraryRootId) ?? "";
+
   const childItems = await Promise.all(
     children
       .filter((child) =>
@@ -215,6 +236,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
           child,
           childCounts.get(child.id) ?? 0,
           await fetchFolderPreviewPaths(child.id, nsfwMode),
+          rootLabels.get(child.libraryRootId) ?? "",
         )),
   );
 
@@ -225,6 +247,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
         .select({
           id: sceneFolders.id,
           title: sceneFolders.title,
+          customName: sceneFolders.customName,
           parentId: sceneFolders.parentId,
         })
         .from(sceneFolders)
@@ -239,10 +262,12 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
       folder,
       childItems.length,
       await fetchFolderPreviewPaths(folder.id, nsfwMode),
+      folderRootLabel,
     ),
     breadcrumbs: breadcrumbs.map((crumb) => ({
       id: crumb.id,
       title: crumb.title,
+      displayTitle: ("customName" in crumb && crumb.customName) ? crumb.customName as string : crumb.title,
     })),
     children: childItems,
   };
@@ -250,7 +275,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
 
 export async function updateSceneFolder(
   id: string,
-  patch: { isNsfw?: boolean },
+  patch: { isNsfw?: boolean; customName?: string | null },
 ) {
   await requireSceneFolderSchema();
 
@@ -268,6 +293,9 @@ export async function updateSceneFolder(
     updatedAt: new Date(),
   };
   if (patch.isNsfw !== undefined) updatePatch.isNsfw = patch.isNsfw;
+  if (patch.customName !== undefined) {
+    updatePatch.customName = patch.customName || null;
+  }
 
   await db.update(sceneFolders).set(updatePatch).where(eq(sceneFolders.id, id));
   return { ok: true as const, id };

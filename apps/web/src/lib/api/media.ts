@@ -291,7 +291,7 @@ export async function fetchSceneFolderDetail(
 
 export async function updateSceneFolder(
   id: string,
-  data: { isNsfw?: boolean },
+  data: { isNsfw?: boolean; customName?: string | null },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/scene-folders/${id}`, {
     method: "PATCH",

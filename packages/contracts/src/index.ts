@@ -443,6 +443,8 @@ export interface TagEmbedDto {
 export interface SceneFolderListItemDto {
   id: string;
   title: string;
+  customName: string | null;
+  displayTitle: string;
   folderPath: string;
   relativePath: string;
   parentId: string | null;
@@ -455,6 +457,8 @@ export interface SceneFolderListItemDto {
   containsNsfwDescendants: boolean;
   childFolderCount: number;
   previewThumbnailPaths: string[];
+  libraryRootId: string;
+  libraryRootLabel: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -462,6 +466,7 @@ export interface SceneFolderListItemDto {
 export interface SceneFolderBreadcrumbDto {
   id: string;
   title: string;
+  displayTitle: string;
 }
 
 export interface SceneFolderDetailDto extends SceneFolderListItemDto {
@@ -471,6 +476,7 @@ export interface SceneFolderDetailDto extends SceneFolderListItemDto {
 
 export interface SceneFolderPatchDto {
   isNsfw?: boolean;
+  customName?: string | null;
 }
 
 // ─── Gallery DTOs ────────────────────────────────────────────────
