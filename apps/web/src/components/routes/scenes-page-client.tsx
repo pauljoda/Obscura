@@ -843,6 +843,38 @@ export function ScenesPageClient({
 
               {/* Content overlay: poster + metadata */}
               <div className="relative flex min-h-[280px] items-end gap-6 p-6">
+                {/* Folder edit / save — top-right of hero so it stays out of the bottom-aligned title block */}
+                <div className="absolute right-6 top-6 z-10 flex items-center gap-1">
+                  {folderEditMode ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={cancelFolderEdit}
+                        disabled={folderSaving}
+                        className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void saveFolderEdit()}
+                        disabled={folderSaving}
+                        className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-white/10 transition-colors disabled:opacity-50"
+                      >
+                        {folderSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={beginFolderEdit}
+                      className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Poster */}
                 {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
                   <div className="hidden sm:block flex-shrink-0 w-[160px]">
@@ -866,9 +898,9 @@ export function ScenesPageClient({
                     Scene folder
                   </div>
 
-                  <div className="flex items-start justify-between gap-3 mt-1.5">
+                  <div className="mt-1.5">
                     {folderEditMode ? (
-                      <div className="flex-1 min-w-0 space-y-2.5">
+                      <div className="min-w-0 space-y-2.5">
                         {/* Hidden file inputs for image uploads */}
                         <input
                           ref={coverInputRef}
@@ -1039,40 +1071,10 @@ export function ScenesPageClient({
                         </div>
                       </div>
                     ) : (
-                      <h1 className="flex-1 min-w-0 text-3xl font-heading font-semibold text-white leading-tight">
+                      <h1 className="min-w-0 text-3xl font-heading font-semibold text-white leading-tight">
                         {activeFolder.displayTitle}
                       </h1>
                     )}
-                    <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
-                      {folderEditMode ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={cancelFolderEdit}
-                            disabled={folderSaving}
-                            className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void saveFolderEdit()}
-                            disabled={folderSaving}
-                            className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-white/10 transition-colors disabled:opacity-50"
-                          >
-                            {folderSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={beginFolderEdit}
-                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
                   </div>
 
                   {!folderEditMode && (
