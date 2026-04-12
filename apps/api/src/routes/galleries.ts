@@ -48,12 +48,13 @@ export async function galleriesRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /galleries (create virtual gallery) ────────────────────
-  app.post("/galleries", async (request) => {
+  app.post("/galleries", async (request, reply) => {
     const body = request.body as {
       title: string;
       details?: string | null;
       date?: string | null;
     };
+    reply.code(201);
     return galleryService.createGallery(body);
   });
 

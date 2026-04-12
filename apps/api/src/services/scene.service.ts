@@ -41,7 +41,7 @@ import type { MultipartFile } from "@fastify/multipart";
 import type { UploadSceneResponseDto } from "@obscura/contracts";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
-import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
+import { MAX_ENTITY_LIST_LIMIT, parsePagination, toArray, RESOLUTION_MAP, buildResolutionConditions, type SortConfig } from "../lib/query-helpers";
 import {
   hasSceneFolderSchema,
   SCENE_FOLDER_SCHEMA_MISSING_MESSAGE,
@@ -148,13 +148,6 @@ const ALLOWED_CODECS = new Set([
   "vp8",
 ]);
 
-const RESOLUTION_MAP: Record<string, [number, number]> = {
-  "4K": [2160, 99999],
-  "1080p": [1080, 2159],
-  "720p": [720, 1079],
-  "480p": [0, 719],
-};
-
 const baseSceneListSelection = {
   id: scenes.id,
   title: scenes.title,
@@ -234,11 +227,6 @@ type TagJoinRow = {
   tagName: string;
   tagIsNsfw: boolean;
 };
-
-function toArray(value: string | string[] | undefined): string[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
 
 function toSceneListItem(
   scene: SceneListProjection,
@@ -369,21 +357,8 @@ export async function listScenes(query: ListScenesQuery) {
   // Resolution filter
   const resValues = toArray(query.resolution);
   if (resValues.length > 0) {
-    const resConditions = resValues
-      .map((r) => RESOLUTION_MAP[r])
-      .filter(Boolean)
-      .map(
-        (range) =>
-          and(
-            sql`${scenes.height} >= ${range[0]}`,
-            sql`${scenes.height} <= ${range[1]}`,
-          )!,
-      );
-    if (resConditions.length === 1) {
-      conditions.push(resConditions[0]);
-    } else if (resConditions.length > 1) {
-      conditions.push(or(...resConditions)!);
-    }
+    const resCond = buildResolutionConditions(scenes.height, resValues);
+    if (resCond) conditions.push(resCond);
   }
 
   // Studio filter

@@ -8,6 +8,7 @@ import {
 } from "@obscura/contracts";
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import { db, schema } from "../db";
+import { AppError } from "../plugins/error-handler";
 import {
   browseDirectories,
   ensureLibrarySettingsRow,
@@ -147,14 +148,13 @@ export async function settingsRoutes(app: FastifyInstance) {
     return { roots };
   });
 
-  app.get("/libraries/browse", async (request, reply) => {
+  app.get("/libraries/browse", async (request) => {
     const query = request.query as { path?: string };
 
     try {
       return await browseDirectories(query.path);
     } catch (error) {
-      reply.code(400);
-      return { error: error instanceof Error ? error.message : "Unable to browse directory" };
+      throw new AppError(400, error instanceof Error ? error.message : "Unable to browse directory");
     }
   });
 
@@ -186,10 +186,10 @@ export async function settingsRoutes(app: FastifyInstance) {
         })
         .returning();
 
+      reply.code(201);
       return created;
     } catch (error) {
-      reply.code(400);
-      return { error: error instanceof Error ? error.message : "Unable to add library root" };
+      throw new AppError(400, error instanceof Error ? error.message : "Unable to add library root");
     }
   });
 
@@ -207,10 +207,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     };
 
     const [existing] = await db.select().from(libraryRoots).where(eq(libraryRoots.id, id));
-    if (!existing) {
-      reply.code(404);
-      return { error: "Library root not found" };
-    }
+    if (!existing) throw new AppError(404, "Library root not found");
 
     try {
       const nextPath = body.path ? path.resolve(body.path) : existing.path;
@@ -244,8 +241,8 @@ export async function settingsRoutes(app: FastifyInstance) {
 
       return updated;
     } catch (error) {
-      reply.code(400);
-      return { error: error instanceof Error ? error.message : "Unable to update library root" };
+      if (error instanceof AppError) throw error;
+      throw new AppError(400, error instanceof Error ? error.message : "Unable to update library root");
     }
   });
 
@@ -253,10 +250,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const [deleted] = await db.delete(libraryRoots).where(eq(libraryRoots.id, id)).returning();
 
-    if (!deleted) {
-      reply.code(404);
-      return { error: "Library root not found" };
-    }
+    if (!deleted) throw new AppError(404, "Library root not found");
 
     return { ok: true };
   });
