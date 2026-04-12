@@ -437,12 +437,13 @@ export async function fetchCollections(params: {
   const qs = buildQueryString(params);
   return serverFetch<PaginatedResponse<CollectionListItemDto>>(
     `/collections${qs}`,
-    { tags: ["collections"] },
+    { revalidate: 0, tags: ["collections"] },
   );
 }
 
 export async function fetchCollectionDetail(id: string) {
   return serverFetch<CollectionDetailDto>(`/collections/${id}`, {
+    revalidate: 0,
     tags: ["collections", `collection-${id}`],
   });
 }
@@ -458,6 +459,6 @@ export async function fetchCollectionItems(
   const qs = buildQueryString(params);
   return serverFetch<PaginatedResponse<CollectionItemDto>>(
     `/collections/${id}/items${qs}`,
-    { tags: ["collections", `collection-${id}`] },
+    { revalidate: 0, tags: ["collections", `collection-${id}`] },
   );
 }

@@ -35,6 +35,7 @@ import {
   removeCollectionItems,
 } from "../../lib/api/media";
 import { CollectionItemCard } from "../collections/collection-item-card";
+import { revalidateCollectionCache } from "../../app/actions/revalidate-collection";
 import { usePlaylistContext } from "../collections/playlist-context";
 
 type ViewMode = "mixed" | "by-type";
@@ -93,13 +94,17 @@ export function CollectionDetailClient({
     setIsRefreshing(true);
     try {
       await refreshCollection(collection.id);
-      router.refresh();
+      await revalidateCollectionCache([collection.id]);
+      // Re-fetch items client-side for instant update
+      const { fetchCollectionItems: fetchItems } = await import("../../lib/api/media");
+      const fresh = await fetchItems(collection.id, { limit: 200 });
+      setItems(fresh.items);
     } catch (err) {
       console.error("Failed to refresh:", err);
     } finally {
       setIsRefreshing(false);
     }
-  }, [collection.id, router]);
+  }, [collection.id]);
 
   const handleDelete = useCallback(async () => {
     if (!confirm("Delete this collection? This cannot be undone.")) return;
@@ -135,23 +140,28 @@ export function CollectionDetailClient({
 
   const handleRemoveSelected = useCallback(async () => {
     if (selectedItemIds.size === 0) return;
+    const idsToRemove = new Set(selectedItemIds);
     setIsRemoving(true);
+
+    // Optimistic: remove from UI immediately
+    setItems((prev) => prev.filter((i) => !idsToRemove.has(i.id)));
+    setSelectedItemIds(new Set());
+    setSelectMode(false);
+
     try {
       await removeCollectionItems(collection.id, {
-        itemIds: Array.from(selectedItemIds),
+        itemIds: Array.from(idsToRemove),
       });
-      // Remove from local state immediately
-      setItems((prev) =>
-        prev.filter((i) => !selectedItemIds.has(i.id)),
-      );
-      setSelectedItemIds(new Set());
-      setSelectMode(false);
+      // Invalidate server cache so refreshes show correct data
+      await revalidateCollectionCache([collection.id]);
     } catch (err) {
       console.error("Failed to remove items:", err);
+      // Rollback: restore items on failure
+      setItems(initialItems);
     } finally {
       setIsRemoving(false);
     }
-  }, [selectedItemIds, collection.id]);
+  }, [selectedItemIds, collection.id, initialItems]);
 
   const exitSelectMode = useCallback(() => {
     setSelectMode(false);

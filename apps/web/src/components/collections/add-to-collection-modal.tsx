@@ -21,6 +21,7 @@ import {
   addCollectionItems,
   createCollection,
 } from "../../lib/api/media";
+import { revalidateCollectionCache } from "../../app/actions/revalidate-collection";
 
 const modeIcons = {
   manual: Hand,
@@ -63,21 +64,27 @@ export function AddToCollectionModal({
 
   const handleAdd = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    setAddingToIds(new Set(selectedIds));
+    const ids = Array.from(selectedIds);
+    setAddingToIds(new Set(ids));
 
-    for (const collId of selectedIds) {
-      try {
-        await addCollectionItems(collId, {
-          items: [{ entityType, entityId }],
-        });
-        setAddedIds((prev) => new Set([...prev, collId]));
-      } catch (err) {
-        console.error(`Failed to add to ${collId}:`, err);
-      }
-    }
+    // Fire all adds in parallel for speed
+    await Promise.allSettled(
+      ids.map(async (collId) => {
+        try {
+          await addCollectionItems(collId, {
+            items: [{ entityType, entityId }],
+          });
+          setAddedIds((prev) => new Set([...prev, collId]));
+        } catch (err) {
+          console.error(`Failed to add to ${collId}:`, err);
+        }
+      }),
+    );
 
+    // Invalidate server cache so collection pages show fresh data
+    await revalidateCollectionCache(ids);
     setAddingToIds(new Set());
-    setTimeout(onClose, 600);
+    setTimeout(onClose, 400);
   }, [selectedIds, entityType, entityId, onClose]);
 
   const handleCreateAndAdd = useCallback(async () => {
@@ -110,6 +117,8 @@ export function AddToCollectionModal({
         ...prev,
       ]);
       setAddedIds((prev) => new Set([...prev, coll.id]));
+      // Invalidate server cache
+      await revalidateCollectionCache([coll.id]);
     } catch (err) {
       console.error("Failed to create collection:", err);
     } finally {
