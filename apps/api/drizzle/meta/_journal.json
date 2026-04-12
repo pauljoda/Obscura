@@ -36,6 +36,13 @@
       "when": 1776002881055,
       "tag": "0004_mysterious_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776005979360,
+      "tag": "0005_romantic_thundra",
+      "breakpoints": true
     }
   ]
 }

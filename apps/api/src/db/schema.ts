@@ -231,6 +231,7 @@ export const sceneFolders = pgTable(
       .notNull()
       .references(() => libraryRoots.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
+    customName: text("custom_name"),
     folderPath: text("folder_path").notNull(),
     relativePath: text("relative_path").notNull(),
     parentId: uuid("parent_id").references((): any => sceneFolders.id, {

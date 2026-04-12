@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Scene folders now support custom display names.** Users can set a custom name for any scene folder that takes precedence over the on-disk directory name. Custom names survive library rescans and can be cleared to revert to the filesystem basename.
 - **Scene libraries now maintain a filesystem-backed folder hierarchy in the API and worker pipeline.** Library scans derive `scene_folders` directly from on-disk video directories, assign each scene to its containing folder, preserve explicit folder NSFW flags and custom folder cover paths across rescans, and expose new `/scene-folders` list/detail/cover routes plus `/assets/scene-folders/:id/cover` for folder browsing and cover rendering.
 - **Scenes now have a dedicated folder browsing mode with folder metadata pages.** The scenes index adds a `folders` view that reads the URL `?folder=` state, shows child folders above the scene grid, falls back to uncategorized scenes at the root, and links into a new `/scene-folders/:id` detail page where the user can toggle the folder NSFW flag, upload a custom cover, or clear it back to the auto-preview fallback.
 

@@ -186,6 +186,10 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
         ALTER TABLE scene_markers
         DROP COLUMN IF EXISTS primary_tag_id
       `;
+      await client`
+        ALTER TABLE scene_folders
+        ADD COLUMN IF NOT EXISTS custom_name text
+      `;
 
       // ── Seed __drizzle_migrations with every journal entry so the
       // migrator treats the existing schema as the baseline.
