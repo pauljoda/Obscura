@@ -7,6 +7,7 @@ export interface HierarchyScopeQuery {
 export interface HierarchyBreadcrumbRow {
   id: string;
   title: string;
+  customName?: string | null;
   parentId: string | null;
 }
 

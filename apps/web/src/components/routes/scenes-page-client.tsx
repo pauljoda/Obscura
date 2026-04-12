@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   Film,
   Clock,
   Edit2,
@@ -21,8 +23,10 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  User,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SceneGrid } from "../scene-grid";
 import { ImportButton, UploadDropZone } from "../upload";
@@ -1132,6 +1136,11 @@ export function ScenesPageClient({
               </div>
             )}
 
+            {/* ── Cast & Crew ─────────────────────────────────── */}
+            {activeFolder.performers && activeFolder.performers.length > 0 && (
+              <FolderCastStrip performers={activeFolder.performers} />
+            )}
+
             {/* ── Subfolders ───────────────────────────────────── */}
             {folderCards.length > 0 && (
               <HierarchySection title="Subfolders">
@@ -1277,6 +1286,87 @@ function StatCard({
         )}
       >
         {value}
+      </div>
+    </div>
+  );
+}
+
+/* ── Cast & Crew horizontal scroll strip ──────────────────── */
+
+function FolderCastStrip({
+  performers,
+}: {
+  performers: {
+    id: string;
+    name: string;
+    gender: string | null;
+    imagePath: string | null;
+    isNsfw: boolean;
+  }[];
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({
+      left: direction === "left" ? -el.clientWidth * 0.6 : el.clientWidth * 0.6,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-kicker">Cast & Crew</h4>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => scroll("left")}
+            className="p-1.5 text-text-muted hover:text-text-primary transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => scroll("right")}
+            className="p-1.5 text-text-muted hover:text-text-primary transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto scrollbar-hide pb-2"
+      >
+        {performers.map((performer) => {
+          const imgUrl = toApiUrl(performer.imagePath);
+          return (
+            <Link
+              key={performer.id}
+              href={`/performers/${performer.id}`}
+              className="flex-shrink-0 w-[110px] group"
+            >
+              <div className="aspect-[3/4] w-full overflow-hidden border border-border-subtle bg-surface-2">
+                {imgUrl ? (
+                  <img
+                    src={imgUrl}
+                    alt={performer.name}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-text-disabled">
+                    <User className="h-8 w-8" />
+                  </div>
+                )}
+              </div>
+              <div className="mt-1.5 text-center">
+                <div className="text-[0.72rem] text-text-primary truncate group-hover:text-text-accent transition-colors">
+                  {performer.name}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
