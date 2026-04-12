@@ -269,6 +269,8 @@ export async function fetchSceneFolders(params?: {
   limit?: number;
   offset?: number;
   nsfw?: string;
+  studio?: string;
+  tag?: string;
 }): Promise<{ items: SceneFolderListItemDto[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     parent: params?.parent,
@@ -277,6 +279,8 @@ export async function fetchSceneFolders(params?: {
     limit: params?.limit,
     offset: params?.offset,
     nsfw: params?.nsfw,
+    studio: params?.studio,
+    tag: params?.tag,
   });
   return fetchApi(`/scene-folders${qs}`);
 }
@@ -291,7 +295,16 @@ export async function fetchSceneFolderDetail(
 
 export async function updateSceneFolder(
   id: string,
-  data: { isNsfw?: boolean; customName?: string | null },
+  data: {
+    isNsfw?: boolean;
+    customName?: string | null;
+    details?: string | null;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+    rating?: number | null;
+    date?: string | null;
+  },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/scene-folders/${id}`, {
     method: "PATCH",
@@ -310,6 +323,19 @@ export async function deleteSceneFolderCover(
   id: string,
 ): Promise<{ ok: true }> {
   return fetchApi(`/scene-folders/${id}/cover`, { method: "DELETE" });
+}
+
+export async function uploadSceneFolderBackdrop(
+  id: string,
+  file: File,
+): Promise<{ ok: true; backdropImagePath: string }> {
+  return uploadFile(`/scene-folders/${id}/backdrop`, file);
+}
+
+export async function deleteSceneFolderBackdrop(
+  id: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/scene-folders/${id}/backdrop`, { method: "DELETE" });
 }
 
 export async function fetchGalleries(params?: {
