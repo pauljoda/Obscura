@@ -666,6 +666,76 @@ export async function listScenes(query: ListScenesQuery) {
 }
 
 /**
+ * Fetch multiple scenes by IDs, returning list-item projections.
+ * Used by the collections service for polymorphic entity loading.
+ */
+export async function getScenesByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const sceneFolderSchemaAvailable = await hasSceneFolderSchema();
+
+  const sceneRows = sceneFolderSchemaAvailable
+    ? await db
+        .select({
+          scene: scenes,
+          sceneFolderTitle: sceneFolders.title,
+        })
+        .from(scenes)
+        .leftJoin(sceneFolders, eq(scenes.sceneFolderId, sceneFolders.id))
+        .where(inArray(scenes.id, ids))
+    : (
+        await db
+          .select(baseSceneListSelection)
+          .from(scenes)
+          .where(inArray(scenes.id, ids))
+      ).map((scene) => ({
+        scene: { ...scene, sceneFolderId: null },
+        sceneFolderTitle: null,
+      }));
+
+  const sceneIds = sceneRows.map((row) => row.scene.id);
+
+  const [perfJoins, tagJoins, subtitledIds] = await Promise.all([
+    sceneIds.length > 0
+      ? db
+          .select({
+            sceneId: scenePerformers.sceneId,
+            performerId: performers.id,
+            performerName: performers.name,
+            performerImagePath: performers.imagePath,
+            performerIsNsfw: performers.isNsfw,
+          })
+          .from(scenePerformers)
+          .innerJoin(performers, eq(scenePerformers.performerId, performers.id))
+          .where(inArray(scenePerformers.sceneId, sceneIds))
+      : [],
+    sceneIds.length > 0
+      ? db
+          .select({
+            sceneId: sceneTags.sceneId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(sceneTags)
+          .innerJoin(tags, eq(sceneTags.tagId, tags.id))
+          .where(inArray(sceneTags.sceneId, sceneIds))
+      : [],
+    fetchSubtitledSceneIds(sceneIds),
+  ]);
+
+  return sceneRows.map(({ scene, sceneFolderTitle }) =>
+    toSceneListItem(
+      scene as SceneListProjection,
+      sceneFolderTitle ?? null,
+      subtitledIds,
+      perfJoins,
+      tagJoins,
+    ),
+  );
+}
+
+/**
  * Aggregate statistics across all scenes (optionally SFW-only).
  */
 export async function getSceneStats(sfwOnly: boolean) {

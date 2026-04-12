@@ -309,6 +309,92 @@ export async function listGalleries(query: ListGalleriesQuery) {
   };
 }
 
+// ─── getGalleriesByIds ─────────────────────────────────────────
+
+/**
+ * Fetch multiple galleries by IDs, returning list-item projections.
+ * Used by the collections service for polymorphic entity loading.
+ */
+export async function getGalleriesByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const galleryRows = await db
+    .select()
+    .from(galleries)
+    .where(inArray(galleries.id, ids));
+
+  const galleryIds = galleryRows.map((g) => g.id);
+
+  const [perfJoins, tagJoins, studioRows] = await Promise.all([
+    galleryIds.length > 0
+      ? db
+          .select({
+            galleryId: galleryPerformers.galleryId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(galleryPerformers)
+          .innerJoin(
+            performers,
+            eq(galleryPerformers.performerId, performers.id),
+          )
+          .where(inArray(galleryPerformers.galleryId, galleryIds))
+      : [],
+    galleryIds.length > 0
+      ? db
+          .select({
+            galleryId: galleryTags.galleryId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(galleryTags)
+          .innerJoin(tags, eq(galleryTags.tagId, tags.id))
+          .where(inArray(galleryTags.galleryId, galleryIds))
+      : [],
+    (() => {
+      const studioIds = [
+        ...new Set(
+          galleryRows.filter((g) => g.studioId).map((g) => g.studioId!),
+        ),
+      ];
+      return studioIds.length > 0
+        ? db
+            .select({ id: studios.id, name: studios.name })
+            .from(studios)
+            .where(inArray(studios.id, studioIds))
+        : Promise.resolve([]);
+    })(),
+  ]);
+
+  const studioMap = new Map(studioRows.map((s) => [s.id, s.name]));
+
+  return galleryRows.map((gallery) => ({
+    id: gallery.id,
+    title: gallery.title,
+    galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
+    coverImagePath: `/assets/galleries/${gallery.id}/cover`,
+    previewImagePaths: [] as string[],
+    imageCount: gallery.imageCount,
+    rating: gallery.rating,
+    organized: gallery.organized,
+    isNsfw: gallery.isNsfw,
+    date: gallery.date,
+    studioId: gallery.studioId,
+    studioName: gallery.studioId
+      ? studioMap.get(gallery.studioId) ?? null
+      : null,
+    performers: perfJoins
+      .filter((p) => p.galleryId === gallery.id)
+      .map((p) => ({ id: p.performerId, name: p.performerName })),
+    tags: tagJoins
+      .filter((t) => t.galleryId === gallery.id)
+      .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
+    parentId: gallery.parentId,
+    createdAt: gallery.createdAt,
+  }));
+}
+
 // ─── getGalleryById ────────────────────────────────────────────
 
 export async function getGalleryById(

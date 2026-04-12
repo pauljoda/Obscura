@@ -218,6 +218,87 @@ export async function listAudioTracks(query: {
   return { items, total: countResult.count };
 }
 
+// ─── getTracksByIds ───────────────────────────────────────────
+
+/**
+ * Fetch multiple audio tracks by IDs, returning list-item projections.
+ * Used by the collections service for polymorphic entity loading.
+ */
+export async function getTracksByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const rows = await db
+    .select()
+    .from(audioTracks)
+    .where(inArray(audioTracks.id, ids));
+
+  const trackIds = rows.map((r) => r.id);
+
+  const [perfLinks, tagLinks] = await Promise.all([
+    trackIds.length > 0
+      ? db
+          .select({
+            trackId: audioTrackPerformers.trackId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(audioTrackPerformers)
+          .innerJoin(
+            performers,
+            eq(audioTrackPerformers.performerId, performers.id),
+          )
+          .where(inArray(audioTrackPerformers.trackId, trackIds))
+      : [],
+    trackIds.length > 0
+      ? db
+          .select({
+            trackId: audioTrackTags.trackId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(audioTrackTags)
+          .innerJoin(tags, eq(audioTrackTags.tagId, tags.id))
+          .where(inArray(audioTrackTags.trackId, trackIds))
+      : [],
+  ]);
+
+  return rows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    date: t.date,
+    rating: t.rating,
+    organized: t.organized,
+    isNsfw: t.isNsfw,
+    duration: t.duration,
+    bitRate: t.bitRate,
+    sampleRate: t.sampleRate,
+    channels: t.channels,
+    codec: t.codec,
+    fileSize: t.fileSize,
+    embeddedArtist: t.embeddedArtist,
+    embeddedAlbum: t.embeddedAlbum,
+    trackNumber: t.trackNumber,
+    waveformPath: t.waveformPath,
+    libraryId: t.libraryId,
+    sortOrder: t.sortOrder,
+    studioId: t.studioId,
+    performers: perfLinks
+      .filter((p) => p.trackId === t.id)
+      .map((p) => ({ id: p.performerId, name: p.performerName })),
+    tags: tagLinks
+      .filter((tl) => tl.trackId === t.id)
+      .map((tl) => ({
+        id: tl.tagId,
+        name: tl.tagName,
+        isNsfw: tl.tagIsNsfw,
+      })),
+    playCount: t.playCount,
+    lastPlayedAt: t.lastPlayedAt?.toISOString() ?? null,
+    createdAt: t.createdAt.toISOString(),
+  }));
+}
+
 // ─── Detail ────────────────────────────────────────────────────
 
 export async function getAudioTrackById(id: string) {

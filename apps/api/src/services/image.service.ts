@@ -260,6 +260,79 @@ export async function listImages(query: ListImagesQuery) {
   };
 }
 
+// ─── getImagesByIds ────────────────────────────────────────────
+
+/**
+ * Fetch multiple images by IDs, returning list-item projections.
+ * Used by the collections service for polymorphic entity loading.
+ */
+export async function getImagesByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const imageRows = await db
+    .select()
+    .from(images)
+    .where(inArray(images.id, ids));
+
+  const imageIds = imageRows.map((img) => img.id);
+
+  const [perfJoins, tagJoins] = await Promise.all([
+    imageIds.length > 0
+      ? db
+          .select({
+            imageId: imagePerformers.imageId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(imagePerformers)
+          .innerJoin(
+            performers,
+            eq(imagePerformers.performerId, performers.id),
+          )
+          .where(inArray(imagePerformers.imageId, imageIds))
+      : [],
+    imageIds.length > 0
+      ? db
+          .select({
+            imageId: imageTags.imageId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(imageTags)
+          .innerJoin(tags, eq(imageTags.tagId, tags.id))
+          .where(inArray(imageTags.imageId, imageIds))
+      : [],
+  ]);
+
+  return imageRows.map((img) => ({
+    id: img.id,
+    title: img.title,
+    date: img.date,
+    rating: img.rating,
+    organized: img.organized,
+    isNsfw: img.isNsfw,
+    width: img.width,
+    height: img.height,
+    format: img.format,
+    isVideo: isVideoImageFormat(img.format),
+    fileSize: img.fileSize,
+    thumbnailPath: img.thumbnailPath,
+    previewPath: getImagePreviewPath(img.id, img.format),
+    fullPath: `/assets/images/${img.id}/full`,
+    galleryId: img.galleryId,
+    sortOrder: img.sortOrder,
+    studioId: img.studioId,
+    performers: perfJoins
+      .filter((p) => p.imageId === img.id)
+      .map((p) => ({ id: p.performerId, name: p.performerName })),
+    tags: tagJoins
+      .filter((t) => t.imageId === img.id)
+      .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
+    createdAt: img.createdAt,
+  }));
+}
+
 // ─── getImageById ──────────────────────────────────────────────
 
 export async function getImageById(id: string) {

@@ -23,6 +23,7 @@ import { audioLibrariesRoutes } from "./routes/audio-libraries";
 import { audioTracksRoutes } from "./routes/audio-tracks";
 import { audioStreamRoutes } from "./routes/audio-stream";
 import { sceneFoldersRoutes } from "./routes/scene-folders";
+import { collectionsRoutes } from "./routes/collections";
 import { initQueues, stopQueues } from "./lib/queues";
 import pkg from "../../../package.json";
 
@@ -82,6 +83,7 @@ await app.register(searchRoutes);
 await app.register(audioLibrariesRoutes);
 await app.register(audioTracksRoutes);
 await app.register(audioStreamRoutes);
+await app.register(collectionsRoutes);
 
 // ─── Start ────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 4000);
