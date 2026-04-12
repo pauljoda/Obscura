@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/worker/package.json apps/worker/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-COPY packages/config/package.json packages/config/package.json
+COPY packages/db/package.json packages/db/package.json
 COPY packages/media-core/package.json packages/media-core/package.json
 
 RUN pnpm install --frozen-lockfile

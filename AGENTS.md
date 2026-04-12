@@ -64,7 +64,7 @@ apps/worker/       — pg-boss background worker
 
 packages/ui/       — Design tokens, shared components (shadcn/ui base)
 packages/contracts/ — Typed DTOs, route constants, job identifiers
-packages/config/   — Shared TypeScript and lint configuration
+packages/db/       — Shared Drizzle schema and database utilities
 packages/media-core/ — File discovery, fingerprint, scan primitives
 packages/stash-import/ — Stash migration adapter
 
