@@ -697,8 +697,8 @@ export function SettingsPageClient({
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
-          <div className="surface-card no-lift p-3.5 flex flex-col gap-3">
+        <div className="grid gap-2 md:grid-cols-2 md:items-stretch">
+          <div className="surface-card no-lift flex h-full flex-col gap-3 p-3.5">
             <div>
               <label className="control-label">NSFW Content Mode</label>
               <p className="text-[0.68rem] text-text-muted">
@@ -755,6 +755,7 @@ export function SettingsPageClient({
             </div>
           </div>
           <ToggleCard
+            className="h-full"
             label="Auto-enable on LAN"
             description="Automatically switch to Show mode when accessing from a local network."
             checked={settings.nsfwLanAutoEnable}
@@ -1184,7 +1185,8 @@ export function SettingsPageClient({
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
+        {/* One 2-column rhythm on md+: equal cells, full-width rows only when content is policy-wide */}
+        <div className="grid gap-2 md:grid-cols-2 md:items-stretch">
           <ToggleCard
             label="Automatic library scans"
             description="Queue scans on a recurring interval."
@@ -1206,19 +1208,19 @@ export function SettingsPageClient({
               void autoSaveSetting({ scanIntervalMinutes: val });
             }}
           />
-        </div>
 
-        <ToggleCard
-          label="Library name as top folder"
-          description="When enabled, scans place each library’s display name above its subfolders (e.g. Shows → Series → Season). When disabled, the tree starts at the first folder inside the library path. Run a library scan after changing this."
-          checked={settings.useLibraryRootAsFolder}
-          onChange={(checked) => {
-            setSettings((current) => ({ ...current, useLibraryRootAsFolder: checked }));
-            void autoSaveSetting({ useLibraryRootAsFolder: checked });
-          }}
-        />
+          <div className="md:col-span-2">
+            <ToggleCard
+              label="Library name as top folder"
+              description="When enabled, scans place each library’s display name above its subfolders (e.g. Shows → Series → Season). When disabled, the tree starts at the first folder inside the library path. Run a library scan after changing this."
+              checked={settings.useLibraryRootAsFolder}
+              onChange={(checked) => {
+                setSettings((current) => ({ ...current, useLibraryRootAsFolder: checked }));
+                void autoSaveSetting({ useLibraryRootAsFolder: checked });
+              }}
+            />
+          </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
           <ToggleCard
             label="Technical metadata"
             description="ffprobe: runtime, resolution, codec, bitrate."
@@ -1264,17 +1266,13 @@ export function SettingsPageClient({
               void autoSaveSetting({ generateTrickplay: checked });
             }}
           />
-          <div className="md:col-span-2">
-            <ToggleCard
-              label="Store video previews in dedicated cache directory"
-              description="When on, thumbnails, preview clips, sprites, and trickplay data live under the app data volume (OBSCURA_CACHE_DIR, e.g. /data/cache). When off, those files are written next to each video. Scene .nfo files always stay beside the media file."
-              checked={settings.metadataStorageDedicated}
-              onChange={handleMetadataStorageToggle}
-            />
-          </div>
-        </div>
+          <ToggleCard
+            label="Store video previews in dedicated cache directory"
+            description="When on, thumbnails, preview clips, sprites, and trickplay data live under the app data volume (OBSCURA_CACHE_DIR, e.g. /data/cache). When off, those files are written next to each video. Scene .nfo files always stay beside the media file."
+            checked={settings.metadataStorageDedicated}
+            onChange={handleMetadataStorageToggle}
+          />
 
-        <div className="grid gap-2 md:grid-cols-2">
           <div className="md:col-span-2">
             <NumberStepper
               label="Background job concurrency"
@@ -1313,9 +1311,7 @@ export function SettingsPageClient({
               void autoSaveSetting({ previewClipDurationSeconds: val });
             }}
           />
-        </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
           <QualitySlider
             label="Thumbnail Quality"
             value={settings.thumbnailQuality}

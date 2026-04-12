@@ -6,11 +6,13 @@ import { Minus, Plus } from "lucide-react";
 
 export function ToggleCard({
   checked,
+  className,
   description,
   label,
   onChange,
 }: {
   checked: boolean;
+  className?: string;
   description: string;
   label: string;
   onChange: (checked: boolean) => void;
@@ -20,8 +22,9 @@ export function ToggleCard({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "surface-card no-lift p-3.5 text-left transition-all duration-normal group flex flex-col justify-between min-h-[100px]",
+        "surface-card no-lift flex h-full min-h-[104px] flex-col justify-between p-3.5 text-left transition-all duration-normal group",
         checked ? "border-border-accent/40 bg-surface-2/30" : "opacity-85 hover:opacity-100",
+        className,
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-2 w-full">
@@ -48,10 +51,12 @@ function qualityLabel(value: number): string {
 }
 
 export function QualitySlider({
+  className,
   label,
   value,
   onCommit,
 }: {
+  className?: string;
   label: string;
   value: number;
   onCommit: (value: number) => void;
@@ -64,8 +69,13 @@ export function QualitySlider({
     if (draft !== value) onCommit(draft);
   };
   return (
-    <div className="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
-      <div className="flex items-start justify-between mb-4">
+    <div
+      className={cn(
+        "surface-card no-lift flex h-full min-h-[104px] flex-col justify-between p-3.5",
+        className,
+      )}
+    >
+      <div className="mb-4 flex items-start justify-between">
         <div>
           <label className="control-label">{label}</label>
           <p className="text-[0.65rem] text-text-muted mt-1">1 is native, 31 is smallest</p>
@@ -95,6 +105,7 @@ export function QualitySlider({
 }
 
 export function NumberStepper({
+  className,
   label,
   description,
   value,
@@ -103,6 +114,7 @@ export function NumberStepper({
   step,
   onChange,
 }: {
+  className?: string;
   label: string;
   description: string;
   value: number;
@@ -112,7 +124,12 @@ export function NumberStepper({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="surface-card no-lift p-3.5 flex flex-col justify-between min-h-[100px]">
+    <div
+      className={cn(
+        "surface-card no-lift flex h-full min-h-[104px] flex-col justify-between p-3.5",
+        className,
+      )}
+    >
       <div className="mb-3">
         <label className="control-label mb-1">{label}</label>
         <p className="text-[0.68rem] text-text-muted">{description}</p>

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Settings → Generation Pipeline uses one consistent two-column grid on desktop: scan schedule as a matched pair, long “library name as top folder” and “background job concurrency” span full width, enrichment toggles fill six cells (including trickplay beside dedicated cache storage so the grid no longer has a hole), and quality sliders share the same grid as numeric steppers for aligned card heights.
 - Shared `Button` primary variant now matches the brass control-plate treatment (horizontal accent gradient, border, glow) used for primary actions in Settings, instead of a brighter flat brass fill.
 - Settings: library folder browser nests paths in `surface-well`, empty states use dashed `empty-rack-slot` panels, and the Stash-Box add/edit form sits in a recessed well so it reads clearly against endpoint cards. Loading states pair a pulsing brass `StatusLed` with a brass-tinted spinner; Stash-Box test results use `Badge` success/error variants (LED palette) instead of raw emerald/red.
 - Command palette ESC hint uses the shared `.kbd` keyboard style.
