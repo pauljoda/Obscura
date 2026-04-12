@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- Scene folders now have rich detail pages with poster art, backdrop banners, descriptions, star ratings, and a Cast & Crew section — inspired by Jellyfin's series view.
+- Scene folders now have rich detail pages with poster art, backdrop banners, descriptions, star ratings, and a Cast & Crew section — inspired by Jellyfin's series view. You will need to run a library scan post update to generate folder associations. 
 - Folders are searchable from the command palette and full search page.
 - Uploading files while viewing a folder places them directly into that folder on disk.
 - Studio and tag detail pages show linked folders above the scene grid.
