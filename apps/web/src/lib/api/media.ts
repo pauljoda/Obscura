@@ -14,6 +14,17 @@ import type {
   SceneFolderDetailDto,
   SceneFolderListItemDto,
   SearchResponseDto,
+  CollectionListItemDto,
+  CollectionDetailDto,
+  CollectionItemDto,
+  CollectionCreateDto,
+  CollectionPatchDto,
+  CollectionAddItemsDto,
+  CollectionRemoveItemsDto,
+  CollectionReorderDto,
+  CollectionRuleGroup,
+  CollectionRulePreviewDto,
+  PaginatedResponse,
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi, uploadFile } from "./core";
 import type {
@@ -677,5 +688,106 @@ export async function generateThumbnailFromFrame(
   return fetchApi(`/scenes/${sceneId}/thumbnail/from-frame`, {
     method: "POST",
     body: JSON.stringify({ seconds }),
+  });
+}
+
+// ─── Collections ──────────────────────────────────────────────────
+
+export async function fetchCollections(params: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  mode?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const qs = buildQueryString(params);
+  return fetchApi<PaginatedResponse<CollectionListItemDto>>(
+    `/collections${qs}`,
+  );
+}
+
+export async function fetchCollectionDetail(id: string) {
+  return fetchApi<CollectionDetailDto>(`/collections/${id}`);
+}
+
+export async function fetchCollectionItems(
+  id: string,
+  params: {
+    limit?: number;
+    offset?: number;
+    entityType?: string;
+  } = {},
+) {
+  const qs = buildQueryString(params);
+  return fetchApi<PaginatedResponse<CollectionItemDto>>(
+    `/collections/${id}/items${qs}`,
+  );
+}
+
+export async function createCollection(dto: CollectionCreateDto) {
+  return fetchApi<CollectionDetailDto>("/collections", {
+    method: "POST",
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function updateCollection(id: string, dto: CollectionPatchDto) {
+  return fetchApi<CollectionDetailDto>(`/collections/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function deleteCollection(id: string) {
+  return fetchApi<{ id: string }>(`/collections/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function addCollectionItems(
+  id: string,
+  dto: CollectionAddItemsDto,
+) {
+  return fetchApi<{ added: number }>(`/collections/${id}/items`, {
+    method: "POST",
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function removeCollectionItems(
+  id: string,
+  dto: CollectionRemoveItemsDto,
+) {
+  return fetchApi<{ removed: number }>(`/collections/${id}/items`, {
+    method: "DELETE",
+    body: JSON.stringify(dto),
+  });
+}
+
+export async function reorderCollectionItems(
+  id: string,
+  dto: CollectionReorderDto,
+) {
+  return fetchApi<{ reordered: number }>(
+    `/collections/${id}/items/reorder`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(dto),
+    },
+  );
+}
+
+export async function refreshCollection(id: string) {
+  return fetchApi<{ refreshed: boolean; itemCount?: number }>(
+    `/collections/${id}/refresh`,
+    { method: "POST" },
+  );
+}
+
+export async function previewCollectionRules(ruleTree: CollectionRuleGroup) {
+  return fetchApi<CollectionRulePreviewDto>("/collections/preview-rules", {
+    method: "POST",
+    body: JSON.stringify({ ruleTree }),
   });
 }

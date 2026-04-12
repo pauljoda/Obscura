@@ -9,6 +9,12 @@ import type {
   AudioLibraryStatsDto,
   SceneFolderDetailDto,
   SceneFolderListItemDto,
+  CollectionListItemDto,
+  CollectionDetailDto,
+  CollectionItemDto,
+  CollectionRulePreviewDto,
+  CollectionRuleGroup,
+  PaginatedResponse,
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
 import type {
@@ -416,4 +422,42 @@ export async function fetchAudioLibraryStats(nsfw?: string) {
   return serverFetch<AudioLibraryStatsDto>(`/audio-libraries/stats${qs}`, {
     tags: ["audio-libraries"],
   });
+}
+
+// ─── Collections ──────────────────────────────────────────────────
+
+export async function fetchCollections(params: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  mode?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const qs = buildQueryString(params);
+  return serverFetch<PaginatedResponse<CollectionListItemDto>>(
+    `/collections${qs}`,
+    { tags: ["collections"] },
+  );
+}
+
+export async function fetchCollectionDetail(id: string) {
+  return serverFetch<CollectionDetailDto>(`/collections/${id}`, {
+    tags: ["collections", `collection-${id}`],
+  });
+}
+
+export async function fetchCollectionItems(
+  id: string,
+  params: {
+    limit?: number;
+    offset?: number;
+    entityType?: string;
+  } = {},
+) {
+  const qs = buildQueryString(params);
+  return serverFetch<PaginatedResponse<CollectionItemDto>>(
+    `/collections/${id}/items${qs}`,
+    { tags: ["collections", `collection-${id}`] },
+  );
 }
