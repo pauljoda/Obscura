@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Badge, Button, Checkbox, Meter, Panel, StatusLed } from "@obscura/ui";
 import { cn } from "@obscura/ui/lib/utils";
 import { Loader2, Palette, Save } from "lucide-react";
+import { AppRouteLoading } from "../app-route-loading";
 
 function Section({
   description,
@@ -292,7 +293,19 @@ export function DesignLanguageShowcase() {
         </div>
       </Section>
 
-      <Section title="Loading states" description="Brass-tinted spinner, LED + spinner pairing, centered panel.">
+      <Section
+        title="Loading states"
+        description="Route-level system loading (Next.js app segment), then inline spinners and panel patterns."
+      >
+        <div className="space-y-2">
+          <p className="text-label text-text-muted">System — AppRouteLoading (identical to (app)/loading.tsx)</p>
+          <p className="text-[0.65rem] text-text-disabled">
+            Shown while a server component route suspends; centered brass spinning square + mono label.
+          </p>
+          <div className="flex min-h-[220px] flex-col overflow-hidden border border-border-default bg-bg">
+            <AppRouteLoading />
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-8">
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-text-disabled" />
