@@ -163,6 +163,12 @@ export function ScenesPageClient({
   const [folderEditMode, setFolderEditMode] = useState(false);
   const [editCustomName, setEditCustomName] = useState("");
   const [editIsNsfw, setEditIsNsfw] = useState(false);
+  const [editDetails, setEditDetails] = useState("");
+  const [editStudioName, setEditStudioName] = useState("");
+  const [editPerformerNames, setEditPerformerNames] = useState("");
+  const [editTagNames, setEditTagNames] = useState("");
+  const [editRating, setEditRating] = useState("");
+  const [editDate, setEditDate] = useState("");
   const [folderSaving, setFolderSaving] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -430,6 +436,16 @@ export function ScenesPageClient({
     if (!activeFolder) return;
     setEditCustomName(activeFolder.customName ?? "");
     setEditIsNsfw(activeFolder.isNsfw);
+    setEditDetails(activeFolder.details ?? "");
+    setEditStudioName(activeFolder.studio?.name ?? activeFolder.studioName ?? "");
+    setEditPerformerNames(
+      activeFolder.performers ? activeFolder.performers.map((p) => p.name).join(", ") : "",
+    );
+    setEditTagNames(
+      activeFolder.tags ? activeFolder.tags.map((t) => t.name).join(", ") : "",
+    );
+    setEditRating(activeFolder.rating != null ? String(activeFolder.rating) : "");
+    setEditDate(activeFolder.date ?? "");
     setFolderEditMode(true);
   }, [activeFolder]);
 
@@ -442,9 +458,22 @@ export function ScenesPageClient({
     setFolderSaving(true);
     setFolderError(null);
     try {
+      const ratingNum = editRating.trim() ? Number(editRating.trim()) : null;
       await updateSceneFolder(activeFolder.id, {
         customName: editCustomName.trim() || null,
         isNsfw: editIsNsfw,
+        details: editDetails.trim() || null,
+        studioName: editStudioName.trim() || null,
+        performerNames: editPerformerNames
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean),
+        tagNames: editTagNames
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean),
+        rating: ratingNum != null && !isNaN(ratingNum) ? ratingNum : null,
+        date: editDate.trim() || null,
       });
       await revalidateSceneFolderCache(activeFolder.id);
       await reloadFolder();
@@ -454,7 +483,7 @@ export function ScenesPageClient({
     } finally {
       setFolderSaving(false);
     }
-  }, [activeFolder, editCustomName, editIsNsfw, reloadFolder]);
+  }, [activeFolder, editCustomName, editIsNsfw, editDetails, editStudioName, editPerformerNames, editTagNames, editRating, editDate, reloadFolder]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -779,19 +808,65 @@ export function ScenesPageClient({
 
                   <div className="flex items-start justify-between gap-3 mt-1.5">
                     {folderEditMode ? (
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <input
-                          value={editCustomName}
-                          onChange={(e) => setEditCustomName(e.target.value)}
-                          placeholder={activeFolder.title}
-                          className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-2xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                      <div className="flex-1 min-w-0 space-y-2.5">
+                        <div>
+                          <input
+                            value={editCustomName}
+                            onChange={(e) => setEditCustomName(e.target.value)}
+                            placeholder={activeFolder.title}
+                            className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                          />
+                          <p className="text-[0.65rem] text-text-disabled mt-0.5">
+                            Leave empty to use directory name
+                          </p>
+                        </div>
+                        <textarea
+                          value={editDetails}
+                          onChange={(e) => setEditDetails(e.target.value)}
+                          rows={2}
+                          placeholder="Description..."
+                          className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled resize-y"
                         />
-                        <p className="text-[0.65rem] text-text-disabled">
-                          Leave empty to use directory name
-                        </p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
-                          {editIsNsfw && <span className="text-[0.68rem] text-text-muted">Hidden in SFW mode</span>}
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            value={editStudioName}
+                            onChange={(e) => setEditStudioName(e.target.value)}
+                            placeholder="Studio"
+                            className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                          />
+                          <input
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                            placeholder="Date (e.g. 2020 - Present)"
+                            className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                          />
+                        </div>
+                        <input
+                          value={editPerformerNames}
+                          onChange={(e) => setEditPerformerNames(e.target.value)}
+                          placeholder="Performers (comma-separated)"
+                          className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                        />
+                        <input
+                          value={editTagNames}
+                          onChange={(e) => setEditTagNames(e.target.value)}
+                          placeholder="Tags (comma-separated)"
+                          className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={editRating}
+                            onChange={(e) => setEditRating(e.target.value)}
+                            placeholder="Rating (1-100)"
+                            className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                          />
+                          <div className="flex items-center gap-3">
+                            <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
+                            {editIsNsfw && <span className="text-[0.68rem] text-text-muted">NSFW</span>}
+                          </div>
                         </div>
                       </div>
                     ) : (
