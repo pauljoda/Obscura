@@ -159,19 +159,13 @@ export function CollectionItemCard({
           {item.source}
         </div>
 
-        {/* Selection checkbox overlay — shown when selectable */}
+        {/* Selection checkbox indicator — shown when selectable */}
         {selectable && isManual && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelect?.(item.id);
-            }}
-            className={`absolute top-1.5 left-1.5 h-5 w-5 flex items-center justify-center border transition-colors ${
+          <div
+            className={`absolute top-1.5 left-1.5 h-5 w-5 flex items-center justify-center border pointer-events-none transition-colors ${
               selected
                 ? "border-accent-brass/50 bg-accent-brass/30"
-                : "border-border-default bg-surface-1/60 hover:bg-surface-1/80"
+                : "border-border-default bg-surface-1/60"
             }`}
           >
             {selected && (
@@ -185,7 +179,7 @@ export function CollectionItemCard({
                 <path d="M2 6l3 3 5-5" />
               </svg>
             )}
-          </button>
+          </div>
         )}
 
         {/* Meta overlay */}
@@ -206,7 +200,17 @@ export function CollectionItemCard({
   );
 
   if (selectable) {
-    return <div className="h-full">{card}</div>;
+    return (
+      <button
+        type="button"
+        onClick={() => isManual && onSelect?.(item.id)}
+        className={`h-full w-full text-left transition-shadow ${
+          isManual ? "cursor-pointer" : "cursor-default opacity-60"
+        } ${selected ? "ring-2 ring-accent-brass/40" : ""}`}
+      >
+        {card}
+      </button>
+    );
   }
 
   return (
