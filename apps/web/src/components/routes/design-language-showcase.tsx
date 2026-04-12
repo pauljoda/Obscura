@@ -300,7 +300,8 @@ export function DesignLanguageShowcase() {
         <div className="space-y-2">
           <p className="text-label text-text-muted">System — AppRouteLoading (identical to (app)/loading.tsx)</p>
           <p className="text-[0.65rem] text-text-disabled">
-            Shown while a server component route suspends; centered brass spinning square + mono label.
+            Shown while a server component route suspends; pulsing brass LED with bloom + mono label (same markup as
+            production).
           </p>
           <div className="flex min-h-[220px] flex-col overflow-hidden border border-border-default bg-bg">
             <AppRouteLoading />
