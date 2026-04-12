@@ -120,12 +120,20 @@ interface QualityOption {
   label: string;
 }
 
+function isVirtualHlsSrc(src: string): boolean {
+  return /\/hls2\/master\.m3u8$/.test(src);
+}
+
+function usesProgressiveHlsSeekWindow(src: string | undefined): boolean {
+  return Boolean(src?.endsWith("/master.m3u8")) && !Boolean(src && isVirtualHlsSrc(src));
+}
+
 function hlsStatusUrlForSrc(src: string): string | null {
   if (!src.endsWith("/master.m3u8")) return null;
   // Virtual HLS (per-segment on-demand) has no /status endpoint — the
   // playlist is static and covers the full scene from the first request,
   // so there's nothing to wait on before handing the URL to hls.js.
-  if (/\/hls2\/master\.m3u8$/.test(src)) return null;
+  if (isVirtualHlsSrc(src)) return null;
   return src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
 }
 
@@ -216,6 +224,22 @@ function getLevelLabel(level: { height?: number; name?: string }, index: number)
   return `Level ${index + 1}`;
 }
 
+function describeMediaError(error: MediaError | null): string {
+  if (!error) return "media error";
+  switch (error.code) {
+    case error.MEDIA_ERR_ABORTED:
+      return "request aborted";
+    case error.MEDIA_ERR_NETWORK:
+      return "network error";
+    case error.MEDIA_ERR_DECODE:
+      return "decode error";
+    case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      return "format not supported";
+    default:
+      return "media error";
+  }
+}
+
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
   {
     src,
@@ -257,6 +281,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const pendingSeedNameRef = useRef<string | null>(null);
   const seededRenditionsRef = useRef<HlsRendition[]>([]);
   const qualityModeRef = useRef<QualityMode>("direct");
+  const directFallbackTriedRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -311,6 +336,44 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
   const activeSubtitleId =
     controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId;
+
+  function handleDirectPlaybackFailure(reason: string, shouldResumePlayback = false) {
+    if (streamMode !== "direct") {
+      setPlayerNotice(`Playback failed: ${reason}.`);
+      return;
+    }
+
+    if (!src) {
+      setPlayerNotice(`Direct playback failed: ${reason}.`);
+      return;
+    }
+
+    if (directFallbackTriedRef.current) {
+      setPlayerNotice(`Direct playback failed: ${reason}.`);
+      return;
+    }
+
+    directFallbackTriedRef.current = true;
+    pendingAutoPlayRef.current = shouldResumePlayback;
+    pendingSeekTimeRef.current = videoRef.current?.currentTime ?? 0;
+    setPlayerNotice(`Direct playback failed on this device — switched to adaptive HLS (${reason}).`);
+    setQualityMode("auto");
+  }
+
+  function requestPlay(video: HTMLVideoElement) {
+    const playPromise = video.play();
+    if (!playPromise || typeof playPromise.catch !== "function") {
+      return;
+    }
+
+    void playPromise.catch((error: unknown) => {
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "playback could not start";
+      handleDirectPlaybackFailure(message, true);
+    });
+  }
 
   function selectSubtitle(id: string | null) {
     if (controlledSubtitleId === undefined) {
@@ -367,13 +430,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     ref,
     () => ({
       seekTo(time: number) {
-        const video = videoRef.current;
-        if (!video) return;
-        const dur = duration || video.duration || 0;
-        video.currentTime = Math.max(0, Math.min(dur || time, time));
+        handleSeekTo(time);
       },
     }),
-    [duration],
+    [duration, streamMode, src],
   );
 
   function clearControlsTimer() {
@@ -486,11 +546,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setHlsInitializing(false);
       pendingAutoPlayRef.current = false;
       pendingSeekTimeRef.current = null;
+      directFallbackTriedRef.current = false;
     } else {
       // Quality switch — capture position and play state so we can restore
       // them seamlessly once the new mode has initialised.
       pendingSeekTimeRef.current = video.currentTime > 0.5 ? video.currentTime : null;
-      pendingAutoPlayRef.current = !video.paused;
+      pendingAutoPlayRef.current = pendingAutoPlayRef.current || !video.paused;
     }
 
     const destroyHls = () => {
@@ -526,7 +587,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           // Wait for metadata before seeking; then resume playing if needed.
           const onReady = () => {
             if (seekTime !== null) video.currentTime = seekTime;
-            if (shouldPlay) void video.play();
+            if (shouldPlay) requestPlay(video);
           };
           video.addEventListener("loadedmetadata", onReady, { once: true });
         }
@@ -681,7 +742,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
               video.currentTime = seekTime;
             }
             if (shouldPlay) {
-              void video.play();
+              requestPlay(video);
             }
           });
 
@@ -739,7 +800,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             pendingAutoPlayRef.current = false;
             const onReady = () => {
               if (seekTime !== null) video.currentTime = seekTime;
-              if (shouldPlay) void video.play();
+              if (shouldPlay) requestPlay(video);
             };
             video.addEventListener("loadedmetadata", onReady, { once: true });
           }
@@ -888,6 +949,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setMuted(video.muted || video.volume === 0);
       setVolume(video.volume);
     };
+    const onError = () => {
+      handleDirectPlaybackFailure(describeMediaError(video.error));
+    };
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -898,6 +962,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     video.addEventListener("pause", onPause);
     video.addEventListener("ended", onEnded);
     video.addEventListener("volumechange", onVolumeChange);
+    video.addEventListener("error", onError);
 
     // Fire initial time in case metadata is already loaded
     onTimeUpdate?.(video.currentTime);
@@ -924,9 +989,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       video.removeEventListener("pause", onPause);
       video.removeEventListener("ended", onEnded);
       video.removeEventListener("volumechange", onVolumeChange);
+      video.removeEventListener("error", onError);
       window.clearInterval(metricsInterval);
     };
-  }, [duration, propDuration, playing]);
+  }, [duration, propDuration, playing, streamMode, src]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -1076,7 +1142,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     if (video.paused) {
-      void video.play();
+      requestPlay(video);
     } else {
       video.pause();
     }
@@ -1091,7 +1157,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     video.currentTime = Math.max(0, Math.min(duration, video.currentTime + delta));
   }
 
-  function seekTo(time: number) {
+  function handleSeekTo(time: number) {
     const video = videoRef.current;
     if (!video) {
       return;
@@ -1104,7 +1170,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     // user scrubs past that boundary, we can't actually seek there yet —
     // jump to the latest available position and remember the intended
     // target. A watcher effect re-seeks once the playlist catches up.
-    if (streamMode === "hls" && video.seekable.length > 0) {
+    if (streamMode === "hls" && usesProgressiveHlsSeekWindow(src) && video.seekable.length > 0) {
       const seekableEnd = video.seekable.end(video.seekable.length - 1);
       if (Number.isFinite(seekableEnd) && target > seekableEnd + 0.5) {
         setDeferredSeekTarget(target);
@@ -1388,14 +1454,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
               const rect = event.currentTarget.getBoundingClientRect();
               updateTimelineHover(event.clientX, rect);
               const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-              seekTo(nextPercent * duration);
+              handleSeekTo(nextPercent * duration);
             }}
             onPointerMove={(event) => {
               const rect = event.currentTarget.getBoundingClientRect();
               updateTimelineHover(event.clientX, rect);
               if (!isDraggingRef.current) return;
               const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-              seekTo(nextPercent * duration);
+              handleSeekTo(nextPercent * duration);
             }}
             onPointerUp={(event) => {
               event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1439,7 +1505,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   style={{ left: `${markerPercent}%` }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    seekTo(marker.time);
+                    handleSeekTo(marker.time);
                     onMarkerClick?.(marker);
                   }}
                   title={marker.title}
@@ -1455,7 +1521,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   key={marker.id}
                   type="button"
                   onClick={() => {
-                    seekTo(marker.time);
+                    handleSeekTo(marker.time);
                     onMarkerClick?.(marker);
                   }}
                   className="player-chip px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
@@ -1689,7 +1755,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           vttUrl={trickplayVtt!}
           videoRef={videoRef}
           duration={duration}
-          onSeek={seekTo}
+          onSeek={handleSeekTo}
           markers={markers}
           onStripInteractionChange={handleFilmStripInteraction}
         />

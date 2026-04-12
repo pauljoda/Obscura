@@ -14,6 +14,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { getCacheRootDir } from "@obscura/media-core";
+import { getHlsRenditions, type HlsRendition } from "@obscura/contracts/media";
 
 /** Segment duration in seconds. Matches the ffmpeg `-force_key_frames`
  *  expression so each segment starts on a forced IDR frame. */
@@ -24,14 +25,22 @@ interface VirtualHlsCacheMeta {
   sourceSize: number;
   sourceMtimeMs: number;
   duration: number;
+  renditions: HlsRendition[];
 }
 
 function getCacheDir(sceneId: string) {
   return path.join(getCacheRootDir(), "hls2", sceneId);
 }
 
-function getSegmentPath(sceneId: string, segIndex: number) {
-  return path.join(getCacheDir(sceneId), `seg_${String(segIndex).padStart(5, "0")}.ts`);
+function getVariantDir(sceneId: string, renditionName: string) {
+  return path.join(getCacheDir(sceneId), renditionName);
+}
+
+function getSegmentPath(sceneId: string, renditionName: string, segIndex: number) {
+  return path.join(
+    getVariantDir(sceneId, renditionName),
+    `seg_${String(segIndex).padStart(5, "0")}.ts`,
+  );
 }
 
 function getMetaPath(sceneId: string) {
@@ -59,24 +68,49 @@ export function segmentDuration(duration: number, index: number): number {
   return lastDuration > 0 ? lastDuration : SEGMENT_DURATION;
 }
 
-/** Build a master playlist pointing at the single variant. One rendition
- *  for now — the focus is correct scrubbing, not adaptive bitrate. */
+function toBitsPerSecond(rate: string): number {
+  const match = /^(\d+)([kKmM])$/.exec(rate.trim());
+  if (!match) return Number.parseInt(rate, 10) || 0;
+  const value = Number.parseInt(match[1] ?? "0", 10);
+  const unit = (match[2] ?? "k").toLowerCase();
+  return unit === "m" ? value * 1_000_000 : value * 1_000;
+}
+
+function scaledWidth(
+  sourceWidth: number | null,
+  sourceHeight: number | null,
+  targetHeight: number,
+): number | null {
+  if (!sourceWidth || !sourceHeight || targetHeight <= 0) return null;
+  const raw = Math.round((sourceWidth / sourceHeight) * targetHeight);
+  return raw % 2 === 0 ? raw : raw - 1;
+}
+
+export function getVirtualHlsRenditions(sourceHeight: number | null | undefined): HlsRendition[] {
+  return getHlsRenditions(sourceHeight);
+}
+
+/** Build a master playlist pointing at every supported rendition so hls.js
+ *  can expose a quality list even though the segments are still generated on
+ *  demand. */
 export function buildMasterPlaylist(opts: {
   width: number | null;
   height: number | null;
+  renditions: readonly HlsRendition[];
 }): string {
-  const resolution =
-    opts.width && opts.height ? `,RESOLUTION=${opts.width}x${opts.height}` : "";
-  // Rough single-variant bandwidth. hls.js only uses this for ABR decisions;
-  // since we expose one variant there's no switching to do.
-  const bandwidth = 4_000_000;
-  return [
-    "#EXTM3U",
-    "#EXT-X-VERSION:6",
-    `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth}${resolution}`,
-    "v/index.m3u8",
-    "",
-  ].join("\n");
+  const lines = ["#EXTM3U", "#EXT-X-VERSION:6"];
+  for (const rendition of opts.renditions) {
+    const width = scaledWidth(opts.width, opts.height, rendition.height);
+    const resolution = width ? `,RESOLUTION=${width}x${rendition.height}` : "";
+    const bandwidth = toBitsPerSecond(rendition.maxRate);
+    const averageBandwidth = toBitsPerSecond(rendition.videoBitrate);
+    lines.push(
+      `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},AVERAGE-BANDWIDTH=${averageBandwidth}${resolution},CODECS="avc1.4d401f,mp4a.40.2"`,
+      `v/${rendition.name}/index.m3u8`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
 }
 
 /** Build the variant playlist listing every segment of the scene upfront.
@@ -123,6 +157,7 @@ async function ensureCacheDir(
   sceneId: string,
   sourcePath: string,
   duration: number,
+  renditions: readonly HlsRendition[],
 ): Promise<void> {
   const cacheDir = getCacheDir(sceneId);
   const metaPath = getMetaPath(sceneId);
@@ -138,6 +173,7 @@ async function ensureCacheDir(
       sourceSize: stats.size,
       sourceMtimeMs: stats.mtimeMs,
       duration,
+      renditions: renditions.map((rendition) => ({ ...rendition })),
     };
     await writeFile(metaPath, JSON.stringify(meta, null, 2), "utf8");
   }
@@ -151,11 +187,13 @@ const inflight = new Map<string, Promise<string>>();
 async function encodeSegment(
   sceneId: string,
   sourcePath: string,
+  rendition: HlsRendition,
   segIndex: number,
 ): Promise<string> {
-  const outputPath = getSegmentPath(sceneId, segIndex);
+  const outputPath = getSegmentPath(sceneId, rendition.name, segIndex);
   const tmpPath = `${outputPath}.${randomUUID()}.tmp`;
   const segStart = segIndex * SEGMENT_DURATION;
+  await mkdir(path.dirname(outputPath), { recursive: true });
 
   // Fast input-side `-ss`: ffmpeg jumps to the nearest preceding keyframe
   // before decoding starts. Orders of magnitude faster than accurate seek
@@ -186,6 +224,8 @@ async function encodeSegment(
     sourcePath,
     "-t",
     String(SEGMENT_DURATION),
+    "-vf",
+    `scale=w=-2:h=${rendition.height}:force_original_aspect_ratio=decrease:force_divisible_by=2,format=yuv420p`,
     "-map",
     "0:v:0",
     "-map",
@@ -195,7 +235,7 @@ async function encodeSegment(
     "-preset",
     "veryfast",
     "-crf",
-    "23",
+    String(rendition.crf),
     "-profile:v",
     "main",
     "-pix_fmt",
@@ -206,10 +246,16 @@ async function encodeSegment(
     "144",
     "-sc_threshold",
     "0",
+    "-b:v",
+    rendition.videoBitrate,
+    "-maxrate",
+    rendition.maxRate,
+    "-bufsize",
+    rendition.bufferSize,
     "-c:a",
     "aac",
     "-b:a",
-    "128k",
+    rendition.audioBitrate,
     "-ac",
     "2",
     "-ar",
@@ -273,6 +319,7 @@ export async function getSegment(
   sceneId: string,
   sourcePath: string,
   duration: number,
+  rendition: HlsRendition,
   segIndex: number,
 ): Promise<string> {
   const total = segmentCount(duration);
@@ -280,17 +327,17 @@ export async function getSegment(
     throw new Error(`segment index ${segIndex} out of range (0..${total - 1})`);
   }
 
-  await ensureCacheDir(sceneId, sourcePath, duration);
+  await ensureCacheDir(sceneId, sourcePath, duration, [rendition]);
 
-  const outputPath = getSegmentPath(sceneId, segIndex);
+  const outputPath = getSegmentPath(sceneId, rendition.name, segIndex);
   if (existsSync(outputPath)) return outputPath;
 
-  const key = `${sceneId}/${segIndex}`;
+  const key = `${sceneId}/${rendition.name}/${segIndex}`;
   const existing = inflight.get(key);
   if (existing) return existing;
 
-  log(sceneId, `encode segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
-  const promise = encodeSegment(sceneId, sourcePath, segIndex).finally(() => {
+  log(sceneId, `encode ${rendition.name} segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
+  const promise = encodeSegment(sceneId, sourcePath, rendition, segIndex).finally(() => {
     inflight.delete(key);
   });
   inflight.set(key, promise);

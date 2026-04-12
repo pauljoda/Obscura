@@ -35,12 +35,18 @@ describe("hls-virtual playlist fabrication", () => {
   });
 
   it("buildMasterPlaylist emits one STREAM-INF pointing at the variant", async () => {
-    const { buildMasterPlaylist } = await virtualModulePromise;
-    const body = buildMasterPlaylist({ width: 1920, height: 1080 });
+    const { buildMasterPlaylist, getVirtualHlsRenditions } = await virtualModulePromise;
+    const body = buildMasterPlaylist({
+      width: 1920,
+      height: 1080,
+      renditions: getVirtualHlsRenditions(1080),
+    });
     expect(body).toContain("#EXTM3U");
-    expect(body).toContain("#EXT-X-STREAM-INF:");
+    expect(body.match(/#EXT-X-STREAM-INF:/g)?.length).toBe(6);
     expect(body).toContain("RESOLUTION=1920x1080");
-    expect(body).toContain("v/index.m3u8");
+    expect(body).toContain("v/1080p/index.m3u8");
+    expect(body).toContain("v/720p/index.m3u8");
+    expect(body).toContain("v/180p/index.m3u8");
   });
 
   it("buildVariantPlaylist lists every segment and terminates with ENDLIST", async () => {
@@ -65,9 +71,23 @@ describe("hls-virtual playlist fabrication", () => {
   it("getSegment rejects out-of-range indices", async () => {
     const { getSegment } = await virtualModulePromise;
     const fakeSource = path.join(tempSourceDir, "never-called.mkv");
-    await expect(getSegment("scene-x", fakeSource, 20, -1)).rejects.toThrow(/out of range/);
+    const fakeRendition = {
+      name: "720p",
+      label: "720p",
+      height: 720,
+      videoBitrate: "2800k",
+      maxRate: "3200k",
+      bufferSize: "5600k",
+      audioBitrate: "160k",
+      crf: 19,
+    };
+    await expect(getSegment("scene-x", fakeSource, 20, fakeRendition, -1)).rejects.toThrow(
+      /out of range/,
+    );
     // 20s → 4 segments (0..3) → index 4 is past the end
-    await expect(getSegment("scene-x", fakeSource, 20, 4)).rejects.toThrow(/out of range/);
+    await expect(getSegment("scene-x", fakeSource, 20, fakeRendition, 4)).rejects.toThrow(
+      /out of range/,
+    );
   });
 
   it("cleans up", async () => {

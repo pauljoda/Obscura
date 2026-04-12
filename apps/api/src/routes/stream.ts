@@ -10,6 +10,7 @@ import {
   buildMasterPlaylist as buildVirtualMaster,
   buildVariantPlaylist as buildVirtualVariant,
   getSegment as getVirtualSegment,
+  getVirtualHlsRenditions,
   segmentCount as virtualSegmentCount,
 } from "../lib/hls-virtual";
 import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
@@ -458,14 +459,22 @@ export async function streamRoutes(app: FastifyInstance) {
       reply.code(409);
       return { error: "Scene has no probed duration yet" };
     }
-    const body = buildVirtualMaster({ width: scene.width, height: scene.height });
+    const body = buildVirtualMaster({
+      width: scene.width,
+      height: scene.height,
+      renditions: getVirtualHlsRenditions(scene.height),
+    });
     reply.header("Content-Type", mimeForExt(".m3u8"));
     reply.header("Cache-Control", "public, max-age=300");
     return reply.send(body);
   });
 
-  app.get("/stream/:id/hls2/v/:file", async (request, reply) => {
-    const { id, file } = request.params as { id: string; file: string };
+  app.get("/stream/:id/hls2/v/:rendition/:file", async (request, reply) => {
+    const { id, rendition, file } = request.params as {
+      id: string;
+      rendition: string;
+      file: string;
+    };
     const scene = await getSceneSource(id);
     if (!scene?.filePath) {
       reply.code(404);
@@ -474,6 +483,13 @@ export async function streamRoutes(app: FastifyInstance) {
     if (!scene.duration || scene.duration <= 0) {
       reply.code(409);
       return { error: "Scene has no probed duration yet" };
+    }
+
+    const renditions = getVirtualHlsRenditions(scene.height);
+    const selectedRendition = renditions.find((entry) => entry.name === rendition);
+    if (!selectedRendition) {
+      reply.code(404);
+      return { error: "Unknown rendition" };
     }
 
     if (file === "index.m3u8") {
@@ -504,6 +520,7 @@ export async function streamRoutes(app: FastifyInstance) {
         scene.id,
         scene.filePath,
         scene.duration,
+        selectedRendition,
         segIndex,
       );
       reply.header("Content-Type", "video/mp2t");
