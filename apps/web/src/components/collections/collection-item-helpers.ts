@@ -9,7 +9,7 @@ export function getEntityHref(item: CollectionItemDto): string {
     case "image":
       return `/images/${item.entityId}`;
     case "audio-track":
-      return `/audio/${item.entityId}`;
+      return `/audio/tracks/${item.entityId}`;
     default:
       return "#";
   }

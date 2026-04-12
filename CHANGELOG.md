@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - Individual image detail page at `/images/{id}` with full-size viewer, zoom controls, metadata editing, rating, tags, performers, and collection support. Images are now viewable as standalone pages, enabling them as playlist-navigable entities.
+- Individual audio track detail page at `/audio/tracks/{id}` with embedded audio player, waveform display, technical metadata (codec, bitrate, sample rate, channels), rating, tags, performers, and library back-link. Audio tracks are now playlist-navigable.
+- Playlist controller bar title is now a clickable link to the currently playing item's detail page.
 
 ### Changed
 

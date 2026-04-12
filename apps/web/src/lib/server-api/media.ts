@@ -8,6 +8,7 @@ import type {
   AudioLibraryListItemDto,
   AudioLibraryDetailDto,
   AudioLibraryStatsDto,
+  AudioTrackDetailDto,
   SceneFolderDetailDto,
   SceneFolderListItemDto,
   CollectionListItemDto,
@@ -422,6 +423,13 @@ export async function fetchAudioLibraryDetail(id: string) {
   return serverFetch<AudioLibraryDetailDto>(`/audio-libraries/${id}`, {
     revalidate: 0,
     tags: ["audio-libraries", `audio-library-${id}`],
+  });
+}
+
+export async function fetchAudioTrackDetail(id: string) {
+  return serverFetch<AudioTrackDetailDto>(`/audio-tracks/${id}`, {
+    revalidate: 0,
+    tags: ["audio-tracks", `audio-track-${id}`],
   });
 }
 

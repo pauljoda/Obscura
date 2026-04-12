@@ -18,6 +18,7 @@ import {
 import type { CollectionEntityType } from "@obscura/contracts";
 import { usePlaylistContext } from "./playlist-context";
 import { PlaylistQueueSheet } from "./playlist-queue-sheet";
+import { getEntityHref } from "./collection-item-helpers";
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
   scene: Film,
@@ -56,9 +57,12 @@ export function PlaylistController() {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <CurrentTypeIcon className="h-4 w-4 text-text-accent flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-[0.78rem] text-text-primary truncate font-medium leading-tight">
+            <Link
+              href={playlist.currentItem ? getEntityHref(playlist.currentItem) : "#"}
+              className="text-[0.78rem] text-text-primary truncate font-medium leading-tight block hover:text-text-accent transition-colors"
+            >
               {currentTitle}
-            </p>
+            </Link>
             <Link
               href={`/collections/${playlist.collectionId}`}
               className="text-[0.65rem] text-text-muted truncate leading-tight block hover:text-text-accent transition-colors"

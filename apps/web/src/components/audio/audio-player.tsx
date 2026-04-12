@@ -33,6 +33,8 @@ interface AudioPlayerProps {
    * pick a random track from `tracks`, and start playback.
    */
   shufflePlayKey?: number;
+  /** Called when playback reaches the end with no more tracks to play. */
+  onPlaybackComplete?: () => void;
 }
 
 const API_BASE =
@@ -53,6 +55,7 @@ export function AudioPlayer({
   className,
   libraryCoverUrl,
   shufflePlayKey = 0,
+  onPlaybackComplete,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -237,8 +240,9 @@ export function AudioPlayer({
       onTrackChange(tracks[0].id);
     } else {
       setPlaying(false);
+      onPlaybackComplete?.();
     }
-  }, [repeat, shuffle, activeTrackId, activeIndex, tracks, onTrackChange]);
+  }, [repeat, shuffle, activeTrackId, activeIndex, tracks, onTrackChange, onPlaybackComplete]);
 
   // Keep ref fresh for event listeners
   handleTrackEndRef.current = handleTrackEnd;
