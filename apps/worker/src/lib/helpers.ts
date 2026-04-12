@@ -3,7 +3,7 @@ import {
   pruneUntrackedLibraryReferences as pruneUntrackedLibraryReferencesWithDb,
   removeGeneratedImageDirs as removeGeneratedImageDirsImpl,
   removeGeneratedSceneDirs as removeGeneratedSceneDirsImpl,
-} from "../../../api/src/lib/library-prune.js";
+} from "@obscura/db/src/lib/library-prune";
 
 export function sceneAssetUrl(sceneId: string, fileName: string) {
   return `/assets/scenes/${sceneId}/${fileName}`;

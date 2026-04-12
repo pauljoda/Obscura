@@ -2,7 +2,7 @@ import { eq, and, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import { db, collections, collectionItems } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
-import { evaluateRuleTree } from "../../../api/src/services/collection-rule-engine.js";
+import { evaluateRuleTree } from "@obscura/db/src/lib/collection-rule-engine";
 import type { CollectionRuleGroup } from "@obscura/contracts";
 
 export async function processCollectionRefresh(job: Job) {
@@ -35,7 +35,7 @@ export async function processCollectionRefresh(job: Job) {
 
   // Evaluate rules
   const ruleTree = coll.ruleTree as CollectionRuleGroup;
-  const resolvedItems = await evaluateRuleTree(ruleTree);
+  const resolvedItems = await evaluateRuleTree(db, ruleTree);
 
   await markJobProgress(job, "collection-refresh", 50);
 

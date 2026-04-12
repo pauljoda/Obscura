@@ -1,26 +1,27 @@
 {
-  "name": "@obscura/worker",
+  "name": "@obscura/db",
   "version": "0.19.1-dev",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./src/schema": "./src/schema.ts",
+    "./src/lib/*": "./src/lib/*.ts"
+  },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@obscura/contracts": "workspace:*",
-    "@obscura/db": "workspace:*",
-    "@obscura/media-core": "workspace:*",
-    "drizzle-orm": "^0.45.2",
-    "pg-boss": "^10.3.2",
-    "postgres": "^3.4.8",
-    "sharp": "^0.34.5"
+    "@obscura/media-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
-    "tsx": "^4.19.2",
+    "drizzle-orm": "^0.45.2",
     "typescript": "^5.7.2"
   }
 }

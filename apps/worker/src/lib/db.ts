@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import * as schema from "../../../api/src/db/schema";
+import { schema } from "@obscura/db";
 
 export const databaseUrl =
   process.env.DATABASE_URL ?? "postgres://obscura:obscura@localhost:5432/obscura";

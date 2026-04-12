@@ -13,6 +13,8 @@
     "baseUrl": ".",
     "paths": {
       "@obscura/contracts": ["packages/contracts/src/index.ts"],
+      "@obscura/db": ["packages/db/src/index.ts"],
+      "@obscura/db/*": ["packages/db/*"],
       "@obscura/media-core": ["packages/media-core/src/index.ts"],
       "@obscura/stash-import": ["packages/stash-import/src/index.ts"],
       "@obscura/ui": ["packages/ui/src/index.ts"]

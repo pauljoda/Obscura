@@ -29,6 +29,9 @@ importers:
       '@obscura/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@obscura/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@obscura/media-core':
         specifier: workspace:*
         version: link:../../packages/media-core
@@ -61,7 +64,7 @@ importers:
         specifier: ^4.0.9
         version: 4.0.9
       '@types/node':
-        specifier: ^22.10.2
+        specifier: ^22.19.17
         version: 22.19.17
       drizzle-kit:
         specifier: ^0.31.10
@@ -94,10 +97,10 @@ importers:
         specifier: ^15.0.0
         version: 15.5.14(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
-        specifier: ^19.0.0
+        specifier: ^19.2.4
         version: 19.2.4
       react-dom:
-        specifier: ^19.0.0
+        specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
       server-only:
         specifier: ^0.0.1
@@ -107,7 +110,7 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2
       '@types/node':
-        specifier: ^22.10.2
+        specifier: ^22.19.17
         version: 22.19.17
       '@types/react':
         specifier: ^19.0.2
@@ -136,6 +139,9 @@ importers:
       '@obscura/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@obscura/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@obscura/media-core':
         specifier: workspace:*
         version: link:../../packages/media-core
@@ -153,7 +159,7 @@ importers:
         version: 0.34.5
     devDependencies:
       '@types/node':
-        specifier: ^22.10.2
+        specifier: ^22.19.17
         version: 22.19.17
       tsx:
         specifier: ^4.19.2
@@ -162,13 +168,30 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  packages/config: {}
-
   packages/contracts:
     devDependencies:
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.17
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/db:
+    dependencies:
+      '@obscura/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@obscura/media-core':
+        specifier: workspace:*
+        version: link:../media-core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

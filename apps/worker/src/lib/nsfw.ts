@@ -1,4 +1,4 @@
-import { propagateSceneNsfw as propagateSceneNsfwImpl } from "../../../api/src/lib/nsfw-scene-propagation.js";
+import { propagateSceneNsfw as propagateSceneNsfwImpl } from "@obscura/db/src/lib/nsfw-scene-propagation";
 import { db } from "./db.js";
 
 /**

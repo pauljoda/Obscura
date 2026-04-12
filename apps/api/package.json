@@ -20,6 +20,7 @@
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
     "@obscura/contracts": "workspace:*",
+    "@obscura/db": "workspace:*",
     "@obscura/media-core": "workspace:*",
     "@obscura/stash-import": "workspace:*",
     "drizzle-orm": "^0.45.2",
