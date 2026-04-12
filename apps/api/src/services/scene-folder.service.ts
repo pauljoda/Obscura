@@ -191,6 +191,20 @@ async function fetchLibraryRootLabels(rootIds: string[]): Promise<Map<string, st
   return new Map(rows.map((r) => [r.id, r.label]));
 }
 
+function sceneFolderDisplayTitle(
+  folder: {
+    title: string;
+    customName?: string | null;
+    relativePath: string;
+  },
+  libraryRootLabel: string,
+) {
+  if (folder.relativePath === "." && libraryRootLabel.trim()) {
+    return libraryRootLabel;
+  }
+  return folder.customName ?? folder.title;
+}
+
 function toSceneFolderListItem(
   folder: typeof sceneFolders.$inferSelect,
   childFolderCount: number,
@@ -203,7 +217,7 @@ function toSceneFolderListItem(
     id: folder.id,
     title: folder.title,
     customName: folder.customName,
-    displayTitle: folder.customName ?? folder.title,
+    displayTitle: sceneFolderDisplayTitle(folder, libraryRootLabel),
     folderPath: folder.folderPath,
     relativePath: folder.relativePath,
     parentId: folder.parentId,
@@ -402,6 +416,8 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
           id: sceneFolders.id,
           title: sceneFolders.title,
           customName: sceneFolders.customName,
+          relativePath: sceneFolders.relativePath,
+          libraryRootId: sceneFolders.libraryRootId,
           parentId: sceneFolders.parentId,
         })
         .from(sceneFolders)
@@ -461,6 +477,9 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
     nsfwMode === "off"
       ? folderTags.filter((t) => !t.isNsfw)
       : folderTags;
+  const breadcrumbRootLabels = await fetchLibraryRootLabels(
+    breadcrumbs.map((crumb) => ("libraryRootId" in crumb ? crumb.libraryRootId : "")).filter(Boolean),
+  );
 
   return {
     ...toSceneFolderListItem(
@@ -478,7 +497,16 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
     breadcrumbs: breadcrumbs.map((crumb) => ({
       id: crumb.id,
       title: crumb.title,
-      displayTitle: ("customName" in crumb && crumb.customName) ? crumb.customName as string : crumb.title,
+      displayTitle: sceneFolderDisplayTitle(
+        {
+          title: crumb.title,
+          customName: "customName" in crumb ? crumb.customName : null,
+          relativePath: "relativePath" in crumb ? crumb.relativePath : "",
+        },
+        "libraryRootId" in crumb
+          ? (breadcrumbRootLabels.get(crumb.libraryRootId) ?? "")
+          : "",
+      ),
     })),
     children: childItems,
   };

@@ -1,11 +1,11 @@
 import type { HierarchyBreadcrumbRow } from "./types";
 
-export async function buildHierarchyBreadcrumbs(
+export async function buildHierarchyBreadcrumbs<Row extends HierarchyBreadcrumbRow>(
   startId: string,
-  loadById: (id: string) => Promise<HierarchyBreadcrumbRow | null>,
+  loadById: (id: string) => Promise<Row | null>,
   maxDepth = 32,
-): Promise<Array<{ id: string; title: string; customName?: string | null }>> {
-  const breadcrumbs: Array<{ id: string; title: string; customName?: string | null }> = [];
+): Promise<Array<Omit<Row, "parentId">>> {
+  const breadcrumbs: Array<Omit<Row, "parentId">> = [];
   let currentId: string | null = startId;
   let remaining = maxDepth;
 
@@ -13,7 +13,8 @@ export async function buildHierarchyBreadcrumbs(
     const current = await loadById(currentId);
     if (!current) break;
 
-    breadcrumbs.push({ id: current.id, title: current.title, customName: current.customName });
+    const { parentId: _parentId, ...crumb } = current;
+    breadcrumbs.push(crumb);
     currentId = current.parentId;
     remaining -= 1;
   }
