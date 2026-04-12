@@ -5,7 +5,7 @@ import type {
 
 /** Describes where an upload should land. */
 export type UploadTarget =
-  | { kind: "scene"; libraryRootId?: string }
+  | { kind: "scene"; libraryRootId?: string; sceneFolderId?: string }
   | { kind: "image"; galleryId: string }
   | { kind: "audio"; audioLibraryId?: string };
 

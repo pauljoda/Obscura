@@ -708,7 +708,7 @@ export function ScenesPageClient({
 
   return (
     <UploadDropZone
-      target={{ kind: "scene" }}
+      target={activeFolder ? { kind: "scene", sceneFolderId: activeFolder.id } : { kind: "scene" }}
       onUploaded={() => router.refresh()}
       className="relative space-y-4"
     >
@@ -730,7 +730,7 @@ export function ScenesPageClient({
               : terms.scenes.toLowerCase()}
           </span>
           <ImportButton
-            target={{ kind: "scene" }}
+            target={activeFolder ? { kind: "scene", sceneFolderId: activeFolder.id } : { kind: "scene" }}
             onUploaded={() => router.refresh()}
           />
         </div>

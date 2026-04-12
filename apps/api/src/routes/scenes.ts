@@ -80,6 +80,7 @@ export async function scenesRoutes(app: FastifyInstance) {
     const parts = request.parts();
     let file: import("@fastify/multipart").MultipartFile | null = null;
     let libraryRootId: string | null = null;
+    let sceneFolderId: string | null = null;
     for await (const part of parts) {
       if (part.type === "file") {
         if (file) {
@@ -94,14 +95,15 @@ export async function scenesRoutes(app: FastifyInstance) {
       if (part.type === "field" && part.fieldname === "libraryRootId") {
         libraryRootId = typeof part.value === "string" ? part.value : null;
       }
+      if (part.type === "field" && part.fieldname === "sceneFolderId") {
+        sceneFolderId = typeof part.value === "string" ? part.value : null;
+      }
     }
     if (!file) {
       reply.code(400);
       return { error: "No file uploaded" };
     }
-    // Late-binding: libraryRootId may arrive as a multipart field after
-    // the file header (browsers order form data by user intent, not spec),
-    // so read it off file.fields when the pre-file loop didn't find it.
+    // Late-binding: fields may arrive after the file header.
     if (!libraryRootId) {
       const raw = (file.fields as Record<string, unknown> | undefined)?.[
         "libraryRootId"
@@ -111,9 +113,22 @@ export async function scenesRoutes(app: FastifyInstance) {
         if (typeof value === "string") libraryRootId = value;
       }
     }
+    if (!sceneFolderId) {
+      const raw = (file.fields as Record<string, unknown> | undefined)?.[
+        "sceneFolderId"
+      ];
+      if (raw && typeof raw === "object" && "value" in raw) {
+        const value = (raw as { value?: unknown }).value;
+        if (typeof value === "string") sceneFolderId = value;
+      }
+    }
+    // sceneFolderId takes precedence — the folder knows its library root.
+    if (sceneFolderId) {
+      return sceneService.uploadSceneToFolder(sceneFolderId, file);
+    }
     if (!libraryRootId) {
       reply.code(400);
-      return { error: "libraryRootId field is required" };
+      return { error: "libraryRootId or sceneFolderId field is required" };
     }
     return sceneService.uploadScene(libraryRootId, file);
   });

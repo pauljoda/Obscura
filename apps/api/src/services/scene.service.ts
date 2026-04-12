@@ -1252,6 +1252,102 @@ export async function uploadScene(
 }
 
 /**
+ * Upload a scene directly into a folder's directory on disk.
+ * Resolves the library root from the folder, placing the file in the
+ * folder's path rather than the root directory.
+ */
+export async function uploadSceneToFolder(
+  sceneFolderId: string,
+  file: MultipartFile,
+): Promise<UploadSceneResponseDto> {
+  const [folder] = await db
+    .select()
+    .from(schema.sceneFolders)
+    .where(eq(schema.sceneFolders.id, sceneFolderId))
+    .limit(1);
+  if (!folder) {
+    throw new AppError(404, "Scene folder not found");
+  }
+
+  const [root] = await db
+    .select()
+    .from(schema.libraryRoots)
+    .where(eq(schema.libraryRoots.id, folder.libraryRootId))
+    .limit(1);
+  if (!root) {
+    throw new AppError(500, "Library root for folder not found");
+  }
+  if (!root.scanVideos) {
+    throw new AppError(
+      400,
+      "Library root is not configured to receive video uploads",
+    );
+  }
+  if (!root.enabled) {
+    throw new AppError(400, "Library root is disabled");
+  }
+
+  await assertDirExists(folder.folderPath);
+  const { safeName } = validateUpload(file, { category: "video" });
+  const dest = await resolveCollisionSafePath(folder.folderPath, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  const [created] = await db
+    .insert(scenes)
+    .values({
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      organized: false,
+      isNsfw: folder.isNsfw || (root.isNsfw ?? false),
+      sceneFolderId: folder.id,
+    })
+    .returning({ id: scenes.id, title: scenes.title, filePath: scenes.filePath });
+
+  if (!created) {
+    throw new AppError(500, "Failed to create scene row after upload");
+  }
+
+  const target = {
+    type: "scene" as const,
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to folder ${folder.title}`,
+  };
+  await enqueueQueueJob({
+    queueName: "media-probe",
+    jobName: "scene-media-probe",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "fingerprint",
+    jobName: "scene-fingerprint",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "preview",
+    jobName: "scene-preview",
+    data: { sceneId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath ?? dest,
+    libraryRootId: root.id,
+  };
+}
+
+/**
  * Delete a scene and its generated assets. Optionally delete the source file.
  */
 export async function deleteScene(id: string, deleteFile: boolean) {

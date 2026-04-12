@@ -67,16 +67,23 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
         );
         try {
           if (target.kind === "scene") {
-            const libraryRootId =
-              explicitIds?.rootId ??
-              target.libraryRootId ??
-              resolvedRootIdRef.current;
-            if (!libraryRootId) {
-              throw new Error("No library root selected for scene upload");
+            // Folder-targeted upload: send sceneFolderId instead of libraryRootId
+            if (target.sceneFolderId) {
+              await uploadFile("/scenes/upload", file, {
+                sceneFolderId: target.sceneFolderId,
+              });
+            } else {
+              const libraryRootId =
+                explicitIds?.rootId ??
+                target.libraryRootId ??
+                resolvedRootIdRef.current;
+              if (!libraryRootId) {
+                throw new Error("No library root selected for scene upload");
+              }
+              await uploadFile("/scenes/upload", file, {
+                libraryRootId,
+              });
             }
-            await uploadFile("/scenes/upload", file, {
-              libraryRootId,
-            });
           } else if (target.kind === "image") {
             await uploadFile(
               `/galleries/${target.galleryId}/images/upload`,
@@ -132,6 +139,13 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
     async (fileList: FileList | File[]) => {
       const asArray = Array.from(fileList);
       if (asArray.length === 0) return;
+
+      if (target.kind === "scene" && target.sceneFolderId) {
+        // Folder-scoped upload — skip library picker entirely, the server
+        // resolves the library root from the folder.
+        await runUploads(asArray);
+        return;
+      }
 
       if (target.kind === "scene" && !target.libraryRootId) {
         // Fetch eligible library roots. If exactly one — use it. If more
