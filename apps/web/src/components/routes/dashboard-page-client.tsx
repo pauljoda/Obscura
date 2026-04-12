@@ -33,7 +33,7 @@ export function DashboardPageClient({ scenes, galleries, images }: DashboardPage
       setCurrentIndex((prev) => (prev + 1) % featuredScenes.length);
     }, 8000);
     return () => clearInterval(interval);
-  }, [featuredScenes.length]);
+  }, [featuredScenes.length, currentIndex]);
 
   return (
     <div className="min-h-screen bg-bg text-text-primary pb-24">
@@ -122,19 +122,23 @@ export function DashboardPageClient({ scenes, galleries, images }: DashboardPage
 
             {/* Hero Indicators */}
             {featuredScenes.length > 1 && (
-              <div className="absolute bottom-8 right-8 md:bottom-16 md:right-16 flex items-center gap-2">
+              <div className="absolute bottom-8 right-8 md:bottom-16 md:right-16 flex items-center gap-1">
                 {featuredScenes.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}
-                    className={cn(
-                      "h-1 transition-all duration-normal rounded-none",
-                      index === currentIndex
-                        ? "w-8 bg-accent-500 shadow-[0_0_8px_rgba(196,154,90,0.6)]"
-                        : "w-4 bg-white/30 hover:bg-white/50"
-                    )}
+                    className="p-2 group"
                     aria-label={`Go to slide ${index + 1}`}
-                  />
+                  >
+                    <div
+                      className={cn(
+                        "h-1 transition-all duration-normal rounded-none",
+                        index === currentIndex
+                          ? "w-8 bg-accent-500 shadow-[0_0_8px_rgba(196,154,90,0.6)]"
+                          : "w-4 bg-white/30 group-hover:bg-white/50"
+                      )}
+                    />
+                  </button>
                 ))}
               </div>
             )}
