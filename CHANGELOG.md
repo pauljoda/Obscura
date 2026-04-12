@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Playlist returns to the collection detail page when the last entry finishes instead of silently clearing.
 - Collection name and currently-playing info in the playlist bar are now clickable links back to the collection detail page.
 
+### Added
+
+- Individual image detail page at `/images/{id}` with full-size viewer, zoom controls, metadata editing, rating, tags, performers, and collection support. Images are now viewable as standalone pages, enabling them as playlist-navigable entities.
+
 ### Changed
 
 - Playlist queue panel replaced with a rich sheet: slide-up panel with thumbnails, visual current/played/upcoming states, and glass surface styling. Mobile-full-width, desktop sidecar layout.

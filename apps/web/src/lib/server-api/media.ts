@@ -2,6 +2,7 @@ import type {
   GalleryDetailDto,
   GalleryListItemDto,
   GalleryStatsDto,
+  ImageDetailDto,
   ImageListItemDto,
   ScrapeResultDto,
   AudioLibraryListItemDto,
@@ -195,6 +196,13 @@ export async function fetchGalleryDetail(id: string) {
   return serverFetch<GalleryDetailDto>(`/galleries/${id}`, {
     revalidate: 0,
     tags: ["galleries", `gallery-${id}`],
+  });
+}
+
+export async function fetchImageDetail(id: string) {
+  return serverFetch<ImageDetailDto>(`/images/${id}`, {
+    revalidate: 0,
+    tags: ["images", `image-${id}`],
   });
 }
 
