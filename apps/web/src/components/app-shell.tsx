@@ -37,8 +37,9 @@ function AppShellMain({
     <main
       className={cn(
         "flex flex-1 flex-col transition-[margin-left] duration-moderate",
-        // Extra bottom padding on mobile when playlist is active (MobileNav + controller)
-        playlist.isActive ? "pb-28 md:pb-0" : "pb-14 md:pb-0",
+        // Bottom padding: mobile has MobileNav (h-14) + optional controller (h-14)
+        // Desktop has no MobileNav but optional controller (h-14)
+        playlist.isActive ? "pb-28 md:pb-14" : "pb-14 md:pb-0",
         "h-dvh overflow-y-auto",
         collapsed ? "md:ml-14" : "md:ml-60",
       )}

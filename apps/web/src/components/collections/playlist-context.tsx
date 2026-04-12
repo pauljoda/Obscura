@@ -6,7 +6,7 @@ import {
   useState,
   useCallback,
   useRef,
-  useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -25,13 +25,22 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
   return result;
 }
 
+export interface PlaylistStartOptions {
+  /** Start with shuffle enabled. */
+  shuffle?: boolean;
+  /** Slideshow auto-advance duration for images (seconds). 0 = no auto-advance. */
+  slideshowDurationSeconds?: number;
+}
+
 export interface PlaylistContextValue {
   /** Whether a playlist is currently active. */
   isActive: boolean;
-  /** The items in the current playlist queue. */
+  /** The items in the current playlist queue (original order). */
   items: CollectionItemDto[];
-  /** Current position in the queue. */
-  currentIndex: number;
+  /** Items in current play order (shuffled when shuffle is on). */
+  orderedItems: CollectionItemDto[];
+  /** Current position within orderedItems. */
+  currentPosition: number;
   /** The currently playing item. */
   currentItem: CollectionItemDto | null;
   /** Collection name for display. */
@@ -42,6 +51,8 @@ export interface PlaylistContextValue {
   shuffle: boolean;
   /** Loop state. */
   loop: boolean;
+  /** Slideshow auto-advance duration for images (seconds). 0 = no auto-advance. */
+  slideshowDurationSeconds: number;
   /** Whether auto-advance is paused (user is browsing away from the current item page). */
   isOnCurrentPage: boolean;
 
@@ -50,23 +61,23 @@ export interface PlaylistContextValue {
     items: CollectionItemDto[],
     collectionName: string,
     startIndex?: number,
+    options?: PlaylistStartOptions,
   ) => void;
   /** Clear/dismiss the playlist. */
   clearPlaylist: () => void;
-  /** Advance to the next item. Called by entity pages when content ends. */
+  /** Advance to the next item. */
   next: () => void;
   /** Go to the previous item. */
   previous: () => void;
-  /** Jump to a specific index in the queue. */
-  jumpTo: (index: number) => void;
+  /** Jump to a specific position in the ordered queue. */
+  jumpTo: (position: number) => void;
   /** Toggle shuffle. */
   toggleShuffle: () => void;
   /** Toggle loop. */
   toggleLoop: () => void;
   /**
    * Report that content has finished playing. Only advances the playlist
-   * if the reported entity matches the current playlist item — prevents
-   * rogue advances when the user navigated away and played something else.
+   * if the reported entity matches the current playlist item.
    */
   reportContentEnded: (
     entityType: CollectionEntityType,
@@ -86,16 +97,23 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const [items, setItems] = useState<CollectionItemDto[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [playOrder, setPlayOrder] = useState<number[]>([]);
+  const [orderPosition, setOrderPosition] = useState(0);
   const [collectionName, setCollectionName] = useState("");
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [shuffle, setShuffle] = useState(false);
   const [loop, setLoop] = useState(false);
-  const [playOrder, setPlayOrder] = useState<number[]>([]);
-  const [orderPosition, setOrderPosition] = useState(0);
+  const [slideshowDurationSeconds, setSlideshowDurationSeconds] = useState(0);
 
   const isActive = items.length > 0;
+  const currentIndex = playOrder[orderPosition] ?? 0;
   const currentItem = items[currentIndex] ?? null;
+
+  // Items in play order for display in the queue sheet
+  const orderedItems = useMemo(
+    () => playOrder.map((i) => items[i]).filter(Boolean),
+    [items, playOrder],
+  );
 
   // Check if user is currently viewing the page for the current item
   const isOnCurrentPage = currentItem
@@ -118,19 +136,42 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       newItems: CollectionItemDto[],
       name: string,
       startIndex = 0,
+      options?: PlaylistStartOptions,
     ) => {
       setItems(newItems);
       setCollectionName(name);
       setCollectionId(newItems[0]?.collectionId ?? null);
-      setCurrentIndex(startIndex);
-      const order = newItems.map((_, i) => i);
-      setPlayOrder(order);
-      setOrderPosition(startIndex);
-      setShuffle(false);
       setLoop(false);
+      setSlideshowDurationSeconds(options?.slideshowDurationSeconds ?? 0);
 
-      if (newItems[startIndex]) {
-        navigateToItem(newItems[startIndex]);
+      let order: number[];
+      let pos: number;
+
+      if (options?.shuffle) {
+        // Pre-calculate shuffled order, put the start item first
+        const shuffled = fisherYatesShuffle(newItems.map((_, i) => i));
+        const currentPos = shuffled.indexOf(startIndex);
+        if (currentPos > 0) {
+          [shuffled[0], shuffled[currentPos]] = [
+            shuffled[currentPos],
+            shuffled[0],
+          ];
+        }
+        order = shuffled;
+        pos = 0;
+        setShuffle(true);
+      } else {
+        order = newItems.map((_, i) => i);
+        pos = startIndex;
+        setShuffle(false);
+      }
+
+      setPlayOrder(order);
+      setOrderPosition(pos);
+
+      const firstItem = newItems[order[pos]];
+      if (firstItem) {
+        navigateToItem(firstItem);
       }
     },
     [navigateToItem],
@@ -138,11 +179,11 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
   const clearPlaylist = useCallback(() => {
     setItems([]);
-    setCurrentIndex(0);
-    setCollectionName("");
-    setCollectionId(null);
     setPlayOrder([]);
     setOrderPosition(0);
+    setCollectionName("");
+    setCollectionId(null);
+    setSlideshowDurationSeconds(0);
   }, []);
 
   const next = useCallback(() => {
@@ -153,7 +194,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       if (loop) {
         newPos = 0;
       } else {
-        // Playlist ended — navigate back to collection detail
         const returnTo = collectionIdRef.current;
         clearPlaylist();
         if (returnTo) router.push(`/collections/${returnTo}`);
@@ -163,7 +203,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
     const newIndex = playOrder[newPos];
     setOrderPosition(newPos);
-    setCurrentIndex(newIndex);
     navigateToItem(items[newIndex]);
   }, [items, orderPosition, playOrder, loop, clearPlaylist, navigateToItem, router]);
 
@@ -181,17 +220,15 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
     const newIndex = playOrder[newPos];
     setOrderPosition(newPos);
-    setCurrentIndex(newIndex);
     navigateToItem(items[newIndex]);
   }, [items, orderPosition, playOrder, loop, navigateToItem]);
 
   const jumpTo = useCallback(
-    (index: number) => {
-      if (index < 0 || index >= items.length) return;
-      setCurrentIndex(index);
-      const pos = playOrder.indexOf(index);
-      if (pos >= 0) setOrderPosition(pos);
-      navigateToItem(items[index]);
+    (position: number) => {
+      if (position < 0 || position >= playOrder.length) return;
+      setOrderPosition(position);
+      const itemIndex = playOrder[position];
+      navigateToItem(items[itemIndex]);
     },
     [items, playOrder, navigateToItem],
   );
@@ -201,6 +238,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       const newShuffle = !prev;
       if (newShuffle) {
         const shuffled = fisherYatesShuffle(items.map((_, i) => i));
+        // Put current item first in the new shuffled order
         const currentPos = shuffled.indexOf(currentIndex);
         if (currentPos > 0) {
           [shuffled[0], shuffled[currentPos]] = [
@@ -225,7 +263,6 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     (entityType: CollectionEntityType, entityId: string) => {
       const cur = items[currentIndex];
       if (!cur) return;
-      // Only advance if the entity that ended matches the current playlist item
       if (cur.entityType === entityType && cur.entityId === entityId) {
         next();
       }
@@ -249,12 +286,14 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       value={{
         isActive,
         items,
-        currentIndex,
+        orderedItems,
+        currentPosition: orderPosition,
         currentItem,
         collectionName,
         collectionId,
         shuffle,
         loop,
+        slideshowDurationSeconds,
         isOnCurrentPage,
         startPlaylist,
         clearPlaylist,

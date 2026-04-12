@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Star,
@@ -69,6 +69,15 @@ export function ImageDetailClient({
   const imageTagsVisible = tagsVisibleInNsfwMode(image.tags, nsfwMode);
   const isCurrentPlaylistItem = playlist.isActive && playlist.isPlaylistItem("image", image.id);
 
+  // Auto-advance timer for playlist slideshow
+  useEffect(() => {
+    if (!isCurrentPlaylistItem || playlist.slideshowDurationSeconds <= 0) return;
+    const timer = window.setTimeout(() => {
+      playlist.reportContentEnded("image", image.id);
+    }, playlist.slideshowDurationSeconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [isCurrentPlaylistItem, playlist.slideshowDurationSeconds, image.id, playlist]);
+
   const clampZoom = useCallback((z: number) => Math.max(1, Math.min(8, z)), []);
 
   const startEdit = useCallback(() => {
@@ -112,9 +121,6 @@ export function ImageDetailClient({
   );
 
   const displayRating = editing ? editRating : image.rating;
-
-  // Report content ended for playlist auto-advance after a brief viewing period
-  // Images don't have a natural "end" so we don't auto-advance — user uses playlist controls
 
   return (
     <div className="space-y-4">

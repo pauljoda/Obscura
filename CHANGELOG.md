@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Videos auto-advance to the next playlist entry when playback finishes. Only the expected current entry triggers advancement, preventing rogue advances when the user navigates away and plays something else.
 - Playlist returns to the collection detail page when the last entry finishes instead of silently clearing.
 - Collection name and currently-playing info in the playlist bar are now clickable links back to the collection detail page.
+- Queue sheet no longer cuts off the last item behind the controller bar.
+- Desktop queue sheet now fits its content instead of stretching to a fixed height.
+- All pages now have correct bottom padding when the playlist controller is active, on both mobile and desktop.
+- Images auto-advance in the playlist after the collection's configured slideshow duration.
 
 ### Added
 
@@ -28,9 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- Playlist queue panel replaced with a rich sheet: slide-up panel with thumbnails, visual current/played/upcoming states, and glass surface styling. Mobile-full-width, desktop sidecar layout.
+- Playlist queue panel replaced with a rich sheet: slide-up panel with thumbnails, visual current/played/upcoming states, and glass surface styling. Mobile-full-width, desktop sidecar layout. Queue now displays items in play order so shuffled playlists show the shuffled sequence.
 - Playlist controller bar now sits above the mobile navigation bar instead of overlapping it, with dynamic bottom padding when a playlist is active.
 - Adding a gallery to a collection now expands it into individual image entries instead of adding the gallery as a single container item. Same for audio libraries — individual tracks are added.
+- Collection detail page "Play" button renamed to "Play All" and a new "Shuffle All" button starts playback with shuffle pre-calculated.
 
 ### Added
 

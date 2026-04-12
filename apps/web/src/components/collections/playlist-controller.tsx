@@ -64,7 +64,7 @@ export function PlaylistController() {
               className="text-[0.65rem] text-text-muted truncate leading-tight block hover:text-text-accent transition-colors"
             >
               {playlist.collectionName} —{" "}
-              {playlist.currentIndex + 1}/{playlist.items.length}
+              {playlist.currentPosition + 1}/{playlist.items.length}
             </Link>
           </div>
         </div>

@@ -41,19 +41,16 @@ export function PlaylistQueueSheet({ open, onClose }: PlaylistQueueSheetProps) {
     if (open && currentRef.current) {
       currentRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
     }
-  }, [open, playlist.currentIndex]);
+  }, [open, playlist.currentPosition]);
 
   return (
     <div
       className={`fixed z-[55] transition-transform duration-300 ease-[var(--ease-mechanical)]
-        inset-x-0 bottom-14 md:bottom-0 md:left-auto md:right-0 md:w-[420px]
-        ${open ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
-      style={{
-        height: "calc(100dvh - 7rem)",
-        maxHeight: "calc(100dvh - 7rem)",
-      }}
+        inset-x-0 bottom-14 md:bottom-14 md:left-auto md:right-0 md:w-[420px]
+        h-[calc(100dvh-7rem)] md:h-auto md:max-h-[70vh]
+        ${open ? "translate-y-0" : "translate-y-[calc(100%+3.5rem)] pointer-events-none"}`}
     >
-      <div className="h-full flex flex-col bg-surface-1/95 backdrop-blur-xl border border-border-subtle shadow-2xl md:max-h-[70vh] md:h-auto md:mt-auto">
+      <div className="h-full md:h-auto flex flex-col bg-surface-1/95 backdrop-blur-xl border border-border-subtle shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -68,7 +65,7 @@ export function PlaylistQueueSheet({ open, onClose }: PlaylistQueueSheetProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[0.65rem] font-mono text-text-disabled">
-              {playlist.currentIndex + 1}/{playlist.items.length}
+              {playlist.currentPosition + 1}/{playlist.orderedItems.length}
             </span>
             <button
               onClick={onClose}
@@ -79,23 +76,23 @@ export function PlaylistQueueSheet({ open, onClose }: PlaylistQueueSheetProps) {
           </div>
         </div>
 
-        {/* Items */}
+        {/* Items — displayed in play order (respects shuffle) */}
         <div ref={scrollRef} className="overflow-y-auto flex-1 py-1">
-          {playlist.items.map((item, index) => {
+          {playlist.orderedItems.map((item, position) => {
             const Icon = typeIcons[item.entityType];
             const title = getEntityTitle(item);
             const meta = getEntityMeta(item);
             const thumbnailPath = getEntityThumbnail(item);
             const thumbnailUrl = toApiUrl(thumbnailPath);
-            const isCurrent = index === playlist.currentIndex;
-            const isPlayed = index < playlist.currentIndex;
+            const isCurrent = position === playlist.currentPosition;
+            const isPlayed = position < playlist.currentPosition;
 
             return (
               <button
                 key={item.id}
                 ref={isCurrent ? currentRef : undefined}
                 onClick={() => {
-                  playlist.jumpTo(index);
+                  playlist.jumpTo(position);
                   onClose();
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
@@ -147,7 +144,7 @@ export function PlaylistQueueSheet({ open, onClose }: PlaylistQueueSheetProps) {
 
                 {/* Position number */}
                 <span className="text-[0.6rem] font-mono text-text-disabled shrink-0">
-                  {index + 1}
+                  {position + 1}
                 </span>
               </button>
             );

@@ -119,12 +119,22 @@ export function CollectionDetailClient({
     }
   }, [collection.id, router]);
 
-  const handleStartPlaylist = useCallback(
-    (startIndex = 0) => {
-      playlist.startPlaylist(items, collection.name, startIndex);
-    },
-    [items, collection.name, playlist],
-  );
+  const handlePlayAll = useCallback(() => {
+    playlist.startPlaylist(items, collection.name, 0, {
+      slideshowDurationSeconds: collection.slideshowAutoAdvance
+        ? collection.slideshowDurationSeconds
+        : 0,
+    });
+  }, [items, collection.name, collection.slideshowDurationSeconds, collection.slideshowAutoAdvance, playlist]);
+
+  const handleShuffleAll = useCallback(() => {
+    playlist.startPlaylist(items, collection.name, 0, {
+      shuffle: true,
+      slideshowDurationSeconds: collection.slideshowAutoAdvance
+        ? collection.slideshowDurationSeconds
+        : 0,
+    });
+  }, [items, collection.name, collection.slideshowDurationSeconds, collection.slideshowAutoAdvance, playlist]);
 
   const toggleSelectItem = useCallback((itemId: string) => {
     setSelectedItemIds((prev) => {
@@ -221,13 +231,23 @@ export function CollectionDetailClient({
         {/* Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {items.length > 0 && (
-            <Button
-              onClick={() => handleStartPlaylist(0)}
-              size="sm"
-            >
-              <Play className="h-3.5 w-3.5" />
-              Play
-            </Button>
+            <>
+              <Button
+                onClick={handlePlayAll}
+                size="sm"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Play All
+              </Button>
+              <Button
+                onClick={handleShuffleAll}
+                size="sm"
+                variant="secondary"
+              >
+                <Shuffle className="h-3.5 w-3.5" />
+                Shuffle All
+              </Button>
+            </>
           )}
           {collection.mode !== "manual" && (
             <button
