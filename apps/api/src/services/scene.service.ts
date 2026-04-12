@@ -466,7 +466,7 @@ export async function listScenes(query: ListScenesQuery) {
     hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
     streamUrl:
       scene.filePath && existsSync(scene.filePath)
-        ? `/stream/${scene.id}/hls/master.m3u8`
+        ? `/stream/${scene.id}/hls2/master.m3u8`
         : null,
     directStreamUrl:
       scene.filePath && existsSync(scene.filePath)
@@ -597,7 +597,7 @@ export async function getSceneById(id: string) {
     hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
     streamUrl:
       scene.filePath && existsSync(scene.filePath)
-        ? `/stream/${scene.id}/hls/master.m3u8`
+        ? `/stream/${scene.id}/hls2/master.m3u8`
         : null,
     directStreamUrl:
       scene.filePath && existsSync(scene.filePath)

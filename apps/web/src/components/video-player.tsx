@@ -122,6 +122,10 @@ interface QualityOption {
 
 function hlsStatusUrlForSrc(src: string): string | null {
   if (!src.endsWith("/master.m3u8")) return null;
+  // Virtual HLS (per-segment on-demand) has no /status endpoint — the
+  // playlist is static and covers the full scene from the first request,
+  // so there's nothing to wait on before handing the URL to hls.js.
+  if (/\/hls2\/master\.m3u8$/.test(src)) return null;
   return src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
 }
 

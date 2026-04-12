@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- **HLS playback is now on-demand per-segment instead of a single linear ffmpeg encoder.** The old path ran one long-running ffmpeg that wrote segments sequentially, so scrubbing anywhere past the encode head either snapped back or stalled for minutes waiting for the linear encoder to catch up. The new path mirrors what Jellyfin / Plex / Emby do: a full-length VOD playlist is fabricated upfront from the scene's probed duration (every segment listed with `#EXT-X-ENDLIST` from the first request), and each segment is transcoded on demand by a short ffmpeg invocation the first time the player requests it, then cached to disk at `<cache>/hls2/<id>/seg_NNNNN.ts`. `video.seekable` covers the full scene from frame one, so scrubbing is effectively instant — dropping the scrubber anywhere triggers a single ~1s segment encode and playback resumes exactly where dropped. Concurrent requests for the same segment share one ffmpeg via an in-memory inflight map so the player's lookahead pre-fetch doesn't fork duplicate encoders. Scene `streamUrl` now points at `/stream/:id/hls2/master.m3u8`; the legacy `/stream/:id/hls/*` routes are left in place but no longer referenced from the UI.
+
 ### Fixed
 
 - **Film strip scrubbing no longer gets stuck in HLS mode.** Since the backend started serving the HLS variant playlist progressively while ffmpeg is still encoding, `video.duration` on first load reports only the portion of the playlist already written — sometimes as little as a minute. The player was writing that partial value into its duration state on `loadedmetadata`, which sized the film strip and scrub bar to the encoded portion instead of the full video, so scrubbing anywhere past the encode head was impossible. The player now prefers the scene's stored duration over `video.duration` (the DB value is always the true total) and also subscribes to the `durationchange` event so any later growth still flows through. Scrubbing past the encode head still defers the seek with the existing "still encoding" chip.

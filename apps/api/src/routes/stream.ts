@@ -6,6 +6,12 @@ import { mkdir, stat, writeFile, readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { getHlsStatus, peekHlsTracker, startHlsGeneration } from "../lib/hls";
+import {
+  buildMasterPlaylist as buildVirtualMaster,
+  buildVariantPlaylist as buildVirtualVariant,
+  getSegment as getVirtualSegment,
+  segmentCount as virtualSegmentCount,
+} from "../lib/hls-virtual";
 import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
 import { getCacheRootDir, runProcess } from "@obscura/media-core";
 
@@ -45,6 +51,8 @@ async function getSceneSource(id: string) {
     columns: {
       id: true,
       filePath: true,
+      duration: true,
+      width: true,
       height: true,
       codec: true,
     },
@@ -430,5 +438,86 @@ export async function streamRoutes(app: FastifyInstance) {
     }
     reply.header("Content-Type", mimeForExt(ext));
     return reply.send(createReadStream(resolvedAsset));
+  });
+
+  // ─── Virtual HLS (on-demand per-segment transcoding) ──────────────
+  // A full-length VOD playlist is fabricated upfront and each segment is
+  // transcoded the first time the player requests it (then cached). Unlike
+  // the linear progressive `/hls/*` path, seeking is free from the first
+  // frame — hls.js sees a complete `video.seekable` range and any segment
+  // is synthesized in ~1s when requested.
+
+  app.get("/stream/:id/hls2/master.m3u8", async (_request, reply) => {
+    const { id } = _request.params as { id: string };
+    const scene = await getSceneSource(id);
+    if (!scene?.filePath) {
+      reply.code(404);
+      return { error: "Video file not found on disk" };
+    }
+    if (!scene.duration || scene.duration <= 0) {
+      reply.code(409);
+      return { error: "Scene has no probed duration yet" };
+    }
+    const body = buildVirtualMaster({ width: scene.width, height: scene.height });
+    reply.header("Content-Type", mimeForExt(".m3u8"));
+    reply.header("Cache-Control", "public, max-age=300");
+    return reply.send(body);
+  });
+
+  app.get("/stream/:id/hls2/v/index.m3u8", async (_request, reply) => {
+    const { id } = _request.params as { id: string };
+    const scene = await getSceneSource(id);
+    if (!scene?.filePath) {
+      reply.code(404);
+      return { error: "Video file not found on disk" };
+    }
+    if (!scene.duration || scene.duration <= 0) {
+      reply.code(409);
+      return { error: "Scene has no probed duration yet" };
+    }
+    const body = buildVirtualVariant(scene.duration);
+    reply.header("Content-Type", mimeForExt(".m3u8"));
+    reply.header("Cache-Control", "public, max-age=300");
+    return reply.send(body);
+  });
+
+  app.get("/stream/:id/hls2/v/seg_:n.ts", async (request, reply) => {
+    const { id, n } = request.params as { id: string; n: string };
+    const scene = await getSceneSource(id);
+    if (!scene?.filePath) {
+      reply.code(404);
+      return { error: "Video file not found on disk" };
+    }
+    if (!scene.duration || scene.duration <= 0) {
+      reply.code(409);
+      return { error: "Scene has no probed duration yet" };
+    }
+
+    const segIndex = Number.parseInt(n, 10);
+    if (!Number.isFinite(segIndex) || segIndex < 0) {
+      reply.code(400);
+      return { error: "Invalid segment index" };
+    }
+    const total = virtualSegmentCount(scene.duration);
+    if (segIndex >= total) {
+      reply.code(404);
+      return { error: `segment index ${segIndex} out of range (0..${total - 1})` };
+    }
+
+    try {
+      const segmentPath = await getVirtualSegment(
+        scene.id,
+        scene.filePath,
+        scene.duration,
+        segIndex,
+      );
+      reply.header("Content-Type", "video/mp2t");
+      reply.header("Cache-Control", "public, max-age=31536000, immutable");
+      return reply.send(createReadStream(segmentPath));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      reply.code(500);
+      return { error: message };
+    }
   });
 }
