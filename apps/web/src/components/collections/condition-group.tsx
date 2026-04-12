@@ -8,12 +8,16 @@ import type {
 } from "@obscura/contracts";
 import { COLLECTION_RULE_FIELDS } from "@obscura/contracts";
 import { ConditionRow } from "./condition-row";
+import type { SuggestionItem } from "../routes/collection-editor-client";
 
 interface ConditionGroupProps {
   group: CollectionRuleGroup;
   onChange: (group: CollectionRuleGroup) => void;
   onDelete?: () => void;
   depth?: number;
+  availableTags?: SuggestionItem[];
+  availablePerformers?: SuggestionItem[];
+  availableStudios?: SuggestionItem[];
 }
 
 function newCondition(): CollectionRuleCondition {
@@ -40,6 +44,9 @@ export function ConditionGroup({
   onChange,
   onDelete,
   depth = 0,
+  availableTags = [],
+  availablePerformers = [],
+  availableStudios = [],
 }: ConditionGroupProps) {
   const borderColor =
     depth === 0
@@ -126,6 +133,9 @@ export function ConditionGroup({
               condition={child}
               onChange={(updated) => handleChildChange(index, updated)}
               onDelete={() => handleChildDelete(index)}
+              availableTags={availableTags}
+              availablePerformers={availablePerformers}
+              availableStudios={availableStudios}
             />
           ) : (
             <ConditionGroup
@@ -133,6 +143,9 @@ export function ConditionGroup({
               onChange={(updated) => handleChildChange(index, updated)}
               onDelete={() => handleChildDelete(index)}
               depth={depth + 1}
+              availableTags={availableTags}
+              availablePerformers={availablePerformers}
+              availableStudios={availableStudios}
             />
           )}
         </div>

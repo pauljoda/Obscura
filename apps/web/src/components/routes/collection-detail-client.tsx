@@ -25,14 +25,15 @@ import type {
   CollectionItemDto,
   CollectionEntityType,
 } from "@obscura/contracts";
+import { Button } from "@obscura/ui/primitives/button";
 import {
   deleteCollection,
   refreshCollection,
 } from "../../lib/api/media";
 import { CollectionItemCard } from "../collections/collection-item-card";
-import { CollectionPlaylist } from "../collections/collection-playlist";
+import { usePlaylistContext } from "../collections/playlist-context";
 
-type ViewMode = "mixed" | "by-type" | "playlist";
+type ViewMode = "mixed" | "by-type";
 
 interface CollectionDetailClientProps {
   collection: CollectionDetailDto;
@@ -72,6 +73,7 @@ export function CollectionDetailClient({
   initialTotal,
 }: CollectionDetailClientProps) {
   const router = useRouter();
+  const playlist = usePlaylistContext();
   const [items] = useState(initialItems);
   const [viewMode, setViewMode] = useState<ViewMode>("mixed");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -103,6 +105,13 @@ export function CollectionDetailClient({
       setIsDeleting(false);
     }
   }, [collection.id, router]);
+
+  const handleStartPlaylist = useCallback(
+    (startIndex = 0) => {
+      playlist.startPlaylist(items, collection.name, startIndex);
+    },
+    [items, collection.name, playlist],
+  );
 
   // Group items by type
   const itemsByType = items.reduce(
@@ -156,6 +165,15 @@ export function CollectionDetailClient({
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {items.length > 0 && (
+            <Button
+              onClick={() => handleStartPlaylist(0)}
+              size="sm"
+            >
+              <Play className="h-3.5 w-3.5" />
+              Play
+            </Button>
+          )}
           {collection.mode !== "manual" && (
             <button
               onClick={handleRefresh}
@@ -233,17 +251,6 @@ export function CollectionDetailClient({
           <LayoutList className="inline h-3.5 w-3.5 mr-1" />
           By Type
         </button>
-        <button
-          onClick={() => setViewMode("playlist")}
-          className={`px-3 py-1.5 text-[0.78rem] font-medium transition-colors ${
-            viewMode === "playlist"
-              ? "text-text-accent border-b-2 border-accent-brass"
-              : "text-text-muted hover:text-text-secondary"
-          }`}
-        >
-          <Play className="inline h-3.5 w-3.5 mr-1" />
-          Playlist
-        </button>
       </div>
 
       {/* Content */}
@@ -258,12 +265,12 @@ export function CollectionDetailClient({
           </p>
         </div>
       ) : viewMode === "mixed" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[2.5px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {items.map((item) => (
-            <CollectionItemCard key={item.id} item={item} />
+            <CollectionItemCard key={item.id} item={item} showSource />
           ))}
         </div>
-      ) : viewMode === "by-type" ? (
+      ) : (
         <div className="space-y-6">
           {(
             ["scene", "gallery", "image", "audio-track"] as CollectionEntityType[]
@@ -280,22 +287,19 @@ export function CollectionDetailClient({
                       {itemsByType[type].length}
                     </span>
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[2.5px]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                     {itemsByType[type].map((item) => (
-                      <CollectionItemCard key={item.id} item={item} />
+                      <CollectionItemCard
+                        key={item.id}
+                        item={item}
+                        showSource
+                      />
                     ))}
                   </div>
                 </div>
               );
             })}
         </div>
-      ) : (
-        <CollectionPlaylist
-          items={items}
-          slideshowDurationSeconds={collection.slideshowDurationSeconds}
-          slideshowAutoAdvance={collection.slideshowAutoAdvance}
-          onClose={() => setViewMode("mixed")}
-        />
       )}
     </div>
   );

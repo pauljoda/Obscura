@@ -4,6 +4,7 @@ import { useState, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FolderOpen, Plus, Grid3x3, List, Search } from "lucide-react";
 import type { CollectionListItemDto } from "@obscura/contracts";
+import { Button } from "@obscura/ui/primitives/button";
 import { CollectionCard } from "../collections/collection-card";
 import { createCollection } from "../../lib/api/media";
 
@@ -49,14 +50,10 @@ export function CollectionsPageClient({
             {total} collection{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          disabled={isCreating}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-accent-brass/10 text-text-accent border border-accent-brass/20 hover:bg-accent-brass/20 transition-colors duration-fast disabled:opacity-50"
-        >
+        <Button onClick={handleCreate} disabled={isCreating}>
           <Plus className="h-4 w-4" />
           New Collection
-        </button>
+        </Button>
       </div>
 
       {/* Toolbar */}
@@ -103,17 +100,13 @@ export function CollectionsPageClient({
             Collections let you group videos, galleries, images, and audio into
             curated playlists and smart sets.
           </p>
-          <button
-            onClick={handleCreate}
-            disabled={isCreating}
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-accent-brass/10 text-text-accent border border-accent-brass/20 hover:bg-accent-brass/20 transition-colors duration-fast disabled:opacity-50"
-          >
+          <Button onClick={handleCreate} disabled={isCreating} size="lg" className="mt-4">
             <Plus className="h-4 w-4" />
             Create your first collection
-          </button>
+          </Button>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[2.5px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {collections
             .filter(
               (c) =>

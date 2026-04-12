@@ -9,11 +9,16 @@ import type {
   CollectionRuleFieldDef,
 } from "@obscura/contracts";
 import { COLLECTION_RULE_FIELDS } from "@obscura/contracts";
+import { ChipInput } from "../shared/chip-input";
+import type { SuggestionItem } from "../routes/collection-editor-client";
 
 interface ConditionRowProps {
   condition: CollectionRuleCondition;
   onChange: (condition: CollectionRuleCondition) => void;
   onDelete: () => void;
+  availableTags?: SuggestionItem[];
+  availablePerformers?: SuggestionItem[];
+  availableStudios?: SuggestionItem[];
 }
 
 const operatorLabels: Record<CollectionOperator, string> = {
@@ -57,6 +62,9 @@ export function ConditionRow({
   condition,
   onChange,
   onDelete,
+  availableTags = [],
+  availablePerformers = [],
+  availableStudios = [],
 }: ConditionRowProps) {
   const fieldDef = getFieldDef(condition.field);
   const availableFields = getAvailableFields(condition.entityTypes);
@@ -64,9 +72,9 @@ export function ConditionRow({
   const showValue = needsValueInput(condition.operator);
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-start gap-1.5 flex-wrap">
       {/* Entity type filter chips */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5 pt-1">
         {(
           ["scene", "gallery", "image", "audio-track"] as CollectionEntityType[]
         ).map((type) => {
@@ -141,18 +149,23 @@ export function ConditionRow({
 
       {/* Value input */}
       {showValue && (
-        <ValueInput
-          fieldDef={fieldDef}
-          operator={condition.operator}
-          value={condition.value}
-          onChange={(value) => onChange({ ...condition, value })}
-        />
+        <div className="flex-1 min-w-[180px]">
+          <ValueInput
+            fieldDef={fieldDef}
+            operator={condition.operator}
+            value={condition.value}
+            onChange={(value) => onChange({ ...condition, value })}
+            availableTags={availableTags}
+            availablePerformers={availablePerformers}
+            availableStudios={availableStudios}
+          />
+        </div>
       )}
 
       {/* Delete */}
       <button
         onClick={onDelete}
-        className="p-1 text-text-disabled hover:text-error-text transition-colors"
+        className="p-1 pt-1.5 text-text-disabled hover:text-error-text transition-colors"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -165,17 +178,23 @@ function ValueInput({
   operator,
   value,
   onChange,
+  availableTags,
+  availablePerformers,
+  availableStudios,
 }: {
   fieldDef?: CollectionRuleFieldDef;
   operator: CollectionOperator;
   value: CollectionConditionValue;
   onChange: (value: CollectionConditionValue) => void;
+  availableTags: SuggestionItem[];
+  availablePerformers: SuggestionItem[];
+  availableStudios: SuggestionItem[];
 }) {
   if (!fieldDef) return null;
 
   const fieldType = fieldDef.fieldType;
 
-  // Enum fields use a multi-select style
+  // Enum fields use chip-style multi-select
   if (fieldType === "enum" && fieldDef.enumValues) {
     const selected = Array.isArray(value) ? (value as string[]) : [];
     return (
@@ -205,22 +224,47 @@ function ValueInput({
     );
   }
 
-  // Relation fields (tags, performers, studios)
+  // Relation fields use ChipInput autocomplete (no "Add new" — only existing values)
   if (fieldType === "relation") {
     const currentValues = Array.isArray(value) ? (value as string[]) : [];
+    let suggestions: SuggestionItem[];
+
+    switch (fieldDef.field) {
+      case "tags":
+        suggestions = availableTags;
+        break;
+      case "performers":
+        suggestions = availablePerformers;
+        break;
+      case "studio":
+        suggestions = availableStudios;
+        break;
+      case "sceneFolderId":
+        suggestions = []; // Scene folders use IDs, handled differently
+        break;
+      default:
+        suggestions = [];
+    }
+
+    if (fieldDef.field === "sceneFolderId") {
+      // Scene folder uses plain text ID input for now
+      return (
+        <input
+          type="text"
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="folder ID..."
+          className="w-full px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-brass/30"
+        />
+      );
+    }
+
     return (
-      <input
-        type="text"
-        value={currentValues.join(", ")}
-        onChange={(e) => {
-          const names = e.target.value
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          onChange(names);
-        }}
-        placeholder="comma-separated names..."
-        className="px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-brass/30 min-w-[180px]"
+      <ChipInput
+        values={currentValues}
+        onChange={(newValues) => onChange(newValues)}
+        suggestions={suggestions}
+        placeholder={`Search ${fieldDef.label.toLowerCase()}...`}
       />
     );
   }
@@ -256,7 +300,7 @@ function ValueInput({
         type="number"
         value={typeof value === "number" ? value : ""}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary w-24 focus:outline-none focus:border-accent-brass/30"
+        className="w-full px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
       />
     );
   }
@@ -268,7 +312,7 @@ function ValueInput({
         type="date"
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value)}
-        className="px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
+        className="w-full px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
       />
     );
   }
@@ -280,7 +324,7 @@ function ValueInput({
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder="value..."
-      className="px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-brass/30 min-w-[140px]"
+      className="w-full px-2 py-1 text-[0.75rem] bg-surface-1 border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-brass/30"
     />
   );
 }

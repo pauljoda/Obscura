@@ -19,15 +19,24 @@ import type {
   CollectionPatchDto,
   CollectionCreateDto,
 } from "@obscura/contracts";
+import { Button } from "@obscura/ui/primitives/button";
 import {
   createCollection,
   updateCollection,
 } from "../../lib/api/media";
 import { ConditionBuilder } from "../collections/condition-builder";
 
+export interface SuggestionItem {
+  name: string;
+  count?: number;
+}
+
 interface CollectionEditorClientProps {
   collection?: CollectionDetailDto;
   isNew?: boolean;
+  availableTags?: SuggestionItem[];
+  availablePerformers?: SuggestionItem[];
+  availableStudios?: SuggestionItem[];
 }
 
 const modeOptions: {
@@ -39,19 +48,19 @@ const modeOptions: {
   {
     value: "manual",
     label: "Manual",
-    description: "Manually curated items only",
+    description: "Manually curated items only. Add content from any entity page.",
     icon: Hand,
   },
   {
     value: "dynamic",
     label: "Dynamic",
-    description: "Auto-populate based on rules, plus manual additions",
+    description: "Auto-populate based on rules. Manual additions are always preserved.",
     icon: Zap,
   },
   {
     value: "hybrid",
     label: "Hybrid",
-    description: "Combines dynamic rules with manual curation",
+    description: "Dynamic rules combined with manual curation for full control.",
     icon: Shuffle,
   },
 ];
@@ -59,6 +68,9 @@ const modeOptions: {
 export function CollectionEditorClient({
   collection,
   isNew = false,
+  availableTags = [],
+  availablePerformers = [],
+  availableStudios = [],
 }: CollectionEditorClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
@@ -124,7 +136,7 @@ export function CollectionEditorClient({
   ]);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       {/* Back link */}
       <Link
         href={
@@ -144,10 +156,9 @@ export function CollectionEditorClient({
           <FolderOpen className="h-5 w-5 text-text-accent" />
           {isNew ? "New Collection" : "Edit Collection"}
         </h1>
-        <button
+        <Button
           onClick={handleSave}
           disabled={isSaving || !name.trim()}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-accent-brass/10 text-text-accent border border-accent-brass/20 hover:bg-accent-brass/20 transition-colors duration-fast disabled:opacity-50"
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -155,128 +166,179 @@ export function CollectionEditorClient({
             <Save className="h-4 w-4" />
           )}
           {isNew ? "Create" : "Save"}
-        </button>
+        </Button>
       </div>
 
-      {/* Metadata */}
-      <section className="surface-well p-4 space-y-4">
-        <h2 className="text-sm font-heading font-medium text-text-secondary">
-          Details
-        </h2>
+      {/* Two-column layout on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        {/* Left column: main content */}
+        <div className="space-y-6">
+          {/* Metadata */}
+          <section className="surface-well p-4 space-y-4">
+            <h2 className="text-sm font-heading font-medium text-text-secondary">
+              Details
+            </h2>
 
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[0.75rem] font-medium text-text-muted mb-1">
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
-            />
-          </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[0.75rem] font-medium text-text-muted mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
+                />
+              </div>
 
-          <div>
-            <label className="block text-[0.75rem] font-medium text-text-muted mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30 resize-none"
-            />
-          </div>
-        </div>
-      </section>
+              <div>
+                <label className="block text-[0.75rem] font-medium text-text-muted mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30 resize-none"
+                />
+              </div>
+            </div>
+          </section>
 
-      {/* Mode */}
-      <section className="surface-well p-4 space-y-3">
-        <h2 className="text-sm font-heading font-medium text-text-secondary">
-          Collection Mode
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {modeOptions.map((opt) => {
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setMode(opt.value)}
-                className={`p-3 text-left border transition-colors ${
-                  mode === opt.value
-                    ? "border-accent-brass/30 bg-accent-brass/5"
-                    : "border-border-default hover:border-border-accent"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon
-                    className={`h-4 w-4 ${
+          {/* Mode */}
+          <section className="surface-well p-4 space-y-3">
+            <h2 className="text-sm font-heading font-medium text-text-secondary">
+              Collection Mode
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {modeOptions.map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setMode(opt.value)}
+                    className={`p-3 text-left border transition-colors ${
                       mode === opt.value
-                        ? "text-text-accent"
-                        : "text-text-muted"
-                    }`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      mode === opt.value
-                        ? "text-text-accent"
-                        : "text-text-primary"
+                        ? "border-accent-brass/30 bg-accent-brass/5"
+                        : "border-border-default hover:border-border-accent"
                     }`}
                   >
-                    {opt.label}
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon
+                        className={`h-4 w-4 ${
+                          mode === opt.value
+                            ? "text-text-accent"
+                            : "text-text-muted"
+                        }`}
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          mode === opt.value
+                            ? "text-text-accent"
+                            : "text-text-primary"
+                        }`}
+                      >
+                        {opt.label}
+                      </span>
+                    </div>
+                    <p className="text-[0.7rem] text-text-muted leading-relaxed">
+                      {opt.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Dynamic Rules */}
+          {mode !== "manual" && (
+            <ConditionBuilder
+              ruleTree={ruleTree}
+              onChange={setRuleTree}
+              availableTags={availableTags}
+              availablePerformers={availablePerformers}
+              availableStudios={availableStudios}
+            />
+          )}
+        </div>
+
+        {/* Right column: settings sidebar */}
+        <div className="space-y-6">
+          {/* Slideshow Settings */}
+          <section className="surface-well p-4 space-y-3">
+            <h2 className="text-sm font-heading font-medium text-text-secondary">
+              Slideshow
+            </h2>
+            <p className="text-[0.7rem] text-text-muted leading-relaxed">
+              Controls how images display during playlist playback.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[0.7rem] font-medium text-text-muted mb-1">
+                  Image Duration (seconds)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={slideshowDuration}
+                  onChange={(e) =>
+                    setSlideshowDuration(
+                      Math.max(1, Math.min(120, Number(e.target.value))),
+                    )
+                  }
+                  className="w-full px-2 py-1.5 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={slideshowAutoAdvance}
+                  onChange={(e) => setSlideshowAutoAdvance(e.target.checked)}
+                  className="accent-[#c49a5a]"
+                />
+                <span className="text-[0.78rem] text-text-secondary">
+                  Auto-advance
+                </span>
+              </label>
+            </div>
+          </section>
+
+          {/* Quick stats for existing collections */}
+          {collection && (
+            <section className="surface-well p-4 space-y-2">
+              <h2 className="text-sm font-heading font-medium text-text-secondary">
+                Collection Info
+              </h2>
+              <div className="space-y-1 text-[0.75rem]">
+                <div className="flex justify-between text-text-muted">
+                  <span>Items</span>
+                  <span className="font-mono text-text-secondary">
+                    {collection.itemCount}
                   </span>
                 </div>
-                <p className="text-[0.7rem] text-text-muted">
-                  {opt.description}
-                </p>
-              </button>
-            );
-          })}
+                <div className="flex justify-between text-text-muted">
+                  <span>Created</span>
+                  <span className="font-mono text-text-secondary">
+                    {new Date(collection.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                {collection.lastRefreshedAt && (
+                  <div className="flex justify-between text-text-muted">
+                    <span>Last Refresh</span>
+                    <span className="font-mono text-text-secondary">
+                      {new Date(
+                        collection.lastRefreshedAt,
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
-      </section>
-
-      {/* Dynamic Rules */}
-      {mode !== "manual" && (
-        <ConditionBuilder ruleTree={ruleTree} onChange={setRuleTree} />
-      )}
-
-      {/* Slideshow Settings */}
-      <section className="surface-well p-4 space-y-3">
-        <h2 className="text-sm font-heading font-medium text-text-secondary">
-          Slideshow Settings
-        </h2>
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label className="block text-[0.7rem] font-medium text-text-muted mb-1">
-              Image Duration (seconds)
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={slideshowDuration}
-              onChange={(e) =>
-                setSlideshowDuration(
-                  Math.max(1, Math.min(120, Number(e.target.value))),
-                )
-              }
-              className="w-20 px-2 py-1.5 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30"
-            />
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={slideshowAutoAdvance}
-              onChange={(e) => setSlideshowAutoAdvance(e.target.checked)}
-              className="accent-[#c49a5a]"
-            />
-            <span className="text-[0.78rem] text-text-secondary">
-              Auto-advance
-            </span>
-          </label>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
