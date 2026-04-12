@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Edit2,
@@ -14,8 +14,19 @@ import {
 } from "lucide-react";
 import type { SceneFolderDetailDto } from "@obscura/contracts";
 import { cn } from "@obscura/ui/lib/utils";
-import { toApiUrl } from "../../lib/api";
-import { NsfwChip, NsfwEditToggle } from "../nsfw/nsfw-gate";
+import {
+  toApiUrl,
+  fetchStudios,
+  fetchPerformers,
+  fetchTags,
+  type StudioItem,
+  type PerformerItem,
+  type TagItem,
+} from "../../lib/api";
+import { NsfwChip, NsfwEditToggle, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { useNsfw } from "../nsfw/nsfw-context";
+import { ChipInput } from "../shared/chip-input";
+import { StarRatingPicker } from "../shared/star-rating-picker";
 
 interface SceneFolderMetadataPanelProps {
   folder: SceneFolderDetailDto;
@@ -47,6 +58,7 @@ export function SceneFolderMetadataPanel({
   onUploadBackdrop,
   onDeleteBackdrop,
 }: SceneFolderMetadataPanelProps) {
+  const { mode: nsfwMode } = useNsfw();
   const coverUrl = toApiUrl(folder.coverImagePath, folder.updatedAt);
   const backdropUrl = toApiUrl(folder.backdropImagePath, folder.updatedAt);
 
@@ -54,31 +66,43 @@ export function SceneFolderMetadataPanel({
   const [editCustomName, setEditCustomName] = useState(folder.customName ?? "");
   const [editIsNsfw, setEditIsNsfw] = useState(folder.isNsfw);
   const [editDetails, setEditDetails] = useState(folder.details ?? "");
-  const [editStudioName, setEditStudioName] = useState(
-    folder.studio?.name ?? "",
+  const [editStudioName, setEditStudioName] = useState(folder.studio?.name ?? "");
+  const [editStudioFocused, setEditStudioFocused] = useState(false);
+  const [editPerformerNames, setEditPerformerNames] = useState<string[]>(
+    folder.performers.map((p) => p.name),
   );
-  const [editPerformerNames, setEditPerformerNames] = useState(
-    folder.performers.map((p) => p.name).join(", "),
+  const [editTagNames, setEditTagNames] = useState<string[]>(
+    folder.tags.map((t) => t.name),
   );
-  const [editTagNames, setEditTagNames] = useState(
-    folder.tags.map((t) => t.name).join(", "),
-  );
-  const [editRating, setEditRating] = useState(
-    folder.rating != null ? String(folder.rating) : "",
-  );
+  const [editRating, setEditRating] = useState<number | null>(folder.rating);
   const [editDate, setEditDate] = useState(folder.date ?? "");
   const [saving, setSaving] = useState(false);
+
+  // Suggestion data for chip inputs
+  const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
+  const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
+  const [allTags, setAllTags] = useState<TagItem[]>([]);
 
   const beginEdit = () => {
     setEditCustomName(folder.customName ?? "");
     setEditIsNsfw(folder.isNsfw);
     setEditDetails(folder.details ?? "");
     setEditStudioName(folder.studio?.name ?? "");
-    setEditPerformerNames(folder.performers.map((p) => p.name).join(", "));
-    setEditTagNames(folder.tags.map((t) => t.name).join(", "));
-    setEditRating(folder.rating != null ? String(folder.rating) : "");
+    setEditPerformerNames(folder.performers.map((p) => p.name));
+    setEditTagNames(folder.tags.map((t) => t.name));
+    setEditRating(folder.rating);
     setEditDate(folder.date ?? "");
     setEditMode(true);
+    // Fetch suggestions
+    void Promise.all([
+      fetchStudios({ nsfw: nsfwMode }),
+      fetchPerformers({ nsfw: nsfwMode, sort: "scenes", order: "desc", limit: 400 }),
+      fetchTags({ nsfw: nsfwMode }),
+    ]).then(([s, p, t]) => {
+      setAllStudios(s.studios);
+      setAllPerformers(p.performers);
+      setAllTags(t.tags);
+    }).catch(() => {});
   };
 
   const handleCancel = () => {
@@ -88,23 +112,14 @@ export function SceneFolderMetadataPanel({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const ratingNum = editRating.trim()
-        ? Number(editRating.trim())
-        : null;
       await onSave({
         customName: editCustomName.trim() || null,
         isNsfw: editIsNsfw,
         details: editDetails.trim() || null,
         studioName: editStudioName.trim() || null,
-        performerNames: editPerformerNames
-          .split(",")
-          .map((n) => n.trim())
-          .filter(Boolean),
-        tagNames: editTagNames
-          .split(",")
-          .map((n) => n.trim())
-          .filter(Boolean),
-        rating: ratingNum != null && !isNaN(ratingNum) ? ratingNum : null,
+        performerNames: editPerformerNames,
+        tagNames: editTagNames,
+        rating: editRating,
         date: editDate.trim() || null,
       });
       setEditMode(false);
@@ -112,6 +127,16 @@ export function SceneFolderMetadataPanel({
       setSaving(false);
     }
   };
+
+  const filteredStudios = editStudioFocused
+    ? (editStudioName.trim()
+        ? allStudios.filter(
+            (s) =>
+              s.name.toLowerCase().includes(editStudioName.toLowerCase()) &&
+              s.name.toLowerCase() !== editStudioName.toLowerCase()
+          )
+        : allStudios)
+    : [];
 
   return (
     <div className="surface-panel space-y-4 p-4">
@@ -195,43 +220,72 @@ export function SceneFolderMetadataPanel({
             />
           </div>
 
-          {/* Studio */}
+          {/* Studio with autocomplete */}
           <div>
             <div className="text-kicker mb-1.5">Studio</div>
-            <input
-              value={editStudioName}
-              onChange={(e) => setEditStudioName(e.target.value)}
-              placeholder="Studio name"
-              className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
-            />
+            <div className="relative">
+              <input
+                value={editStudioName}
+                onChange={(e) => setEditStudioName(e.target.value)}
+                onFocus={() => setEditStudioFocused(true)}
+                onBlur={() => setTimeout(() => setEditStudioFocused(false), 150)}
+                placeholder="Studio name"
+                className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+              />
+              {filteredStudios.length > 0 && (
+                <div className="autocomplete-dropdown">
+                  {filteredStudios.slice(0, 8).map((s) => (
+                    <div
+                      key={s.name}
+                      className="autocomplete-item"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setEditStudioName(s.name);
+                        setEditStudioFocused(false);
+                      }}
+                    >
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {editStudioName.trim() &&
+              !allStudios.some(
+                (s) => s.name.toLowerCase() === editStudioName.trim().toLowerCase()
+              ) && (
+                <span className="text-[0.6rem] text-info-text mt-0.5 block">
+                  New studio will be created
+                </span>
+              )}
           </div>
 
-          {/* Performers */}
+          {/* Performers chip input */}
           <div>
             <div className="text-kicker mb-1.5">Performers</div>
-            <input
-              value={editPerformerNames}
-              onChange={(e) => setEditPerformerNames(e.target.value)}
-              placeholder="Name 1, Name 2, ..."
-              className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+            <ChipInput
+              values={editPerformerNames}
+              onChange={setEditPerformerNames}
+              suggestions={tagsVisibleInNsfwMode(allPerformers, nsfwMode).map((p) => ({
+                name: p.name,
+                count: p.sceneCount,
+              }))}
+              placeholder="Type to add performers..."
             />
-            <p className="text-[0.65rem] text-text-disabled mt-0.5">
-              Comma-separated names
-            </p>
           </div>
 
-          {/* Tags */}
+          {/* Tags chip input */}
           <div>
             <div className="text-kicker mb-1.5">Tags</div>
-            <input
-              value={editTagNames}
-              onChange={(e) => setEditTagNames(e.target.value)}
-              placeholder="tag1, tag2, ..."
-              className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+            <ChipInput
+              values={editTagNames}
+              onChange={setEditTagNames}
+              suggestions={tagsVisibleInNsfwMode(allTags, nsfwMode).map((t) => ({
+                name: t.name,
+                count: t.sceneCount,
+              }))}
+              placeholder="Type to add tags..."
             />
-            <p className="text-[0.65rem] text-text-disabled mt-0.5">
-              Comma-separated tag names
-            </p>
           </div>
 
           {/* Date and Rating row */}
@@ -247,15 +301,7 @@ export function SceneFolderMetadataPanel({
             </div>
             <div>
               <div className="text-kicker mb-1.5">Rating</div>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={editRating}
-                onChange={(e) => setEditRating(e.target.value)}
-                placeholder="1-100"
-                className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
-              />
+              <StarRatingPicker value={editRating} onChange={setEditRating} />
             </div>
           </div>
 
