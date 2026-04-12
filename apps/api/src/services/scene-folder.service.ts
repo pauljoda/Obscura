@@ -199,10 +199,13 @@ function sceneFolderDisplayTitle(
   },
   libraryRootLabel: string,
 ) {
+  if (folder.customName?.trim()) {
+    return folder.customName;
+  }
   if (folder.relativePath === "." && libraryRootLabel.trim()) {
     return libraryRootLabel;
   }
-  return folder.customName ?? folder.title;
+  return folder.title;
 }
 
 function toSceneFolderListItem(
