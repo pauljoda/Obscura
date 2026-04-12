@@ -19,6 +19,8 @@ export const apiRoutes = {
   sceneFolders: "/scene-folders",
   sceneFolderDetail: "/scene-folders/:id",
   sceneFolderCover: "/scene-folders/:id/cover",
+  sceneFolderBackdrop: "/scene-folders/:id/backdrop",
+  sceneFolderBackdropAsset: "/assets/scene-folders/:id/backdrop",
   sceneSubtitles: "/scenes/:id/subtitles",
   sceneSubtitleDetail: "/scenes/:id/subtitles/:trackId",
   sceneSubtitleSource: "/scenes/:id/subtitles/:trackId/source",
@@ -451,6 +453,11 @@ export interface SceneFolderListItemDto {
   depth: number;
   isNsfw: boolean;
   coverImagePath: string | null;
+  backdropImagePath: string | null;
+  studioId: string | null;
+  studioName: string | null;
+  rating: number | null;
+  date: string | null;
   directSceneCount: number;
   totalSceneCount: number;
   visibleSfwSceneCount: number;
@@ -470,6 +477,16 @@ export interface SceneFolderBreadcrumbDto {
 }
 
 export interface SceneFolderDetailDto extends SceneFolderListItemDto {
+  details: string | null;
+  studio: { id: string; name: string } | null;
+  performers: {
+    id: string;
+    name: string;
+    gender: string | null;
+    imagePath: string | null;
+    isNsfw: boolean;
+  }[];
+  tags: TagEmbedDto[];
   breadcrumbs: SceneFolderBreadcrumbDto[];
   children: SceneFolderListItemDto[];
 }
@@ -477,6 +494,12 @@ export interface SceneFolderDetailDto extends SceneFolderListItemDto {
 export interface SceneFolderPatchDto {
   isNsfw?: boolean;
   customName?: string | null;
+  details?: string | null;
+  studioName?: string | null;
+  performerNames?: string[];
+  tagNames?: string[];
+  rating?: number | null;
+  date?: string | null;
 }
 
 // ─── Gallery DTOs ────────────────────────────────────────────────
@@ -822,7 +845,7 @@ export interface NormalizedPerformerResult {
 
 // ─── Search DTOs ────────────────────────────────────────────────
 
-export type EntityKind = "scene" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
+export type EntityKind = "scene" | "scene-folder" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
 
 export interface SearchResultItem {
   id: string;
