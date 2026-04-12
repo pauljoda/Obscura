@@ -151,6 +151,8 @@ export async function listSceneFolders(query: {
     );
   }
 
+  conditions.push(sql`${sceneFolders.totalSceneCount} > 0`);
+
   if (query.nsfw === "off") {
     conditions.push(eq(sceneFolders.isNsfw, false));
     conditions.push(sql`${sceneFolders.visibleSfwSceneCount} > 0`);
@@ -210,6 +212,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
       nsfwMode,
       folder.isNsfw,
       folder.visibleSfwSceneCount,
+      folder.totalSceneCount,
     )
   ) {
     throw new AppError(404, "Scene folder not found");
@@ -229,7 +232,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
   const childItems = await Promise.all(
     children
       .filter((child) =>
-        isHierarchyNodeVisible(nsfwMode, child.isNsfw, child.visibleSfwSceneCount),
+        isHierarchyNodeVisible(nsfwMode, child.isNsfw, child.visibleSfwSceneCount, child.totalSceneCount),
       )
       .map(async (child) =>
         toSceneFolderListItem(
