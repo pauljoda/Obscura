@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Scene detail toolbar consolidates actions into a "More Actions" flyout.** The "Reset Metadata" and "Rebuild Preview" buttons are now inside a triple-dot menu alongside the new "Add to Collection" option, reducing toolbar clutter. Gallery and audio library detail pages also gained the same More Actions flyout with "Add to Collection".
 - **Scenes, Galleries, and Audio index footers now host the stat cards.** The four-up totals strip (videos duration / gallery counts / audio libraries, and so on) sits below the main grid or browser with a top border instead of directly under the page title; the redundant scene count beside Import on the scenes page was removed, and the galleries subtitle no longer repeats the gallery count.
 - **Scene folder hero tags link to tag pages.** Folder tags in the scenes browse hero use the same clickable `tag-chip` links as the scene detail editor, including NSFW visibility filtering.
 - **Scene folder hero shows one on-disk library path line.** The hero replaces the separate library label, “Scene folder” caption, and directory-name subtitle with a single path such as `Main Library > scenes > …` built from the library root label and each folder’s on-disk title.
