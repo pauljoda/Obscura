@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Dependency versions aligned: `@types/node` synced to `^22.19.17` and `react`/`react-dom` synced to `^19.2.4` across all workspaces.
 
+## [0.19.0] - 2026-04-12
 ### What's New
 
 - Scene folders now have rich detail pages with poster art, backdrop banners, descriptions, star ratings, and a Cast & Crew section — inspired by Jellyfin's series view. You will need to run a library scan post update to generate folder associations. 

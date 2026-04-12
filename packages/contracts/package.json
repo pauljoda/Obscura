@@ -1,6 +1,6 @@
 {
   "name": "@obscura/contracts",
-  "version": "0.18.1-dev",
+  "version": "0.19.1-dev",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

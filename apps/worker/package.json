@@ -1,6 +1,6 @@
 {
   "name": "@obscura/worker",
-  "version": "0.18.1-dev",
+  "version": "0.19.1-dev",
   "private": true,
   "type": "module",
   "scripts": {
