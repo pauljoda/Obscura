@@ -200,36 +200,34 @@ export function CollectionDetailClient({
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <h1 className="flex items-center gap-2.5">
-            <FolderOpen className="h-5 w-5 text-text-accent" />
-            {collection.name}
-          </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="inline-flex items-center gap-1 text-[0.75rem] font-mono text-text-muted">
-              <ModeIcon className="h-3 w-3" />
-              {modeLabels[collection.mode]}
+      <div>
+        <h1 className="flex items-center gap-2.5">
+          <FolderOpen className="h-5 w-5 text-text-accent" />
+          {collection.name}
+        </h1>
+        <div className="flex items-center gap-3 mt-1">
+          <span className="inline-flex items-center gap-1 text-[0.75rem] font-mono text-text-muted">
+            <ModeIcon className="h-3 w-3" />
+            {modeLabels[collection.mode]}
+          </span>
+          <span className="text-[0.75rem] text-text-muted">
+            {collection.itemCount} items
+          </span>
+          {collection.lastRefreshedAt && (
+            <span className="text-[0.7rem] text-text-disabled">
+              Last refreshed{" "}
+              {new Date(collection.lastRefreshedAt).toLocaleDateString()}
             </span>
-            <span className="text-[0.75rem] text-text-muted">
-              {collection.itemCount} items
-            </span>
-            {collection.lastRefreshedAt && (
-              <span className="text-[0.7rem] text-text-disabled">
-                Last refreshed{" "}
-                {new Date(collection.lastRefreshedAt).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-          {collection.description && (
-            <p className="text-text-muted text-[0.78rem] mt-2 max-w-2xl">
-              {collection.description}
-            </p>
           )}
         </div>
+        {collection.description && (
+          <p className="text-text-muted text-[0.78rem] mt-2 max-w-2xl">
+            {collection.description}
+          </p>
+        )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Actions — own row on mobile, inline on desktop */}
+        <div className="flex items-center gap-1.5 mt-3">
           {items.length > 0 && (
             <>
               <Button
@@ -249,6 +247,9 @@ export function CollectionDetailClient({
               </Button>
             </>
           )}
+
+          <div className="flex-1" />
+
           {collection.mode !== "manual" && (
             <button
               onClick={handleRefresh}
