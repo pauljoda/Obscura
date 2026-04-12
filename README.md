@@ -134,6 +134,10 @@ A responsive grid of scene cards with thumbnails, duration, resolution badges, a
 
 The video library supports two browsing modes. **Grid/List** shows every scene in your library as a flat feed you can sort, filter, and search. **Folders** mirrors the directory structure on disk, letting you navigate into subfolders, see scene counts per folder, and drill down to scenes inside a specific directory.
 
+<p align="center">
+  <img src="docs/screenshots/folder-detail.png" alt="Folder detail view with poster, backdrop, cast, and subfolders" width="100%" />
+</p>
+
 Clicking into a folder opens a detail view inspired by media servers like Jellyfin. Each folder can carry its own metadata: a poster and backdrop image, description, studio, date, star rating, linked performers (shown as a scrollable Cast & Crew strip), and tags. The edit panel uses the same chip pickers and autocomplete as scene editing, so adding performers, tags, and studios is fast. Uploading or dragging files while viewing a folder places them directly into that folder's directory on disk — no library root picker needed.
 
 Folders are also searchable from the command palette and the full search page, and appear on studio and tag detail pages when associated.
