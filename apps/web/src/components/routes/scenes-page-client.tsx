@@ -11,7 +11,6 @@ import {
   type ReactNode,
 } from "react";
 import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SceneGrid } from "../scene-grid";
 import { ImportButton, UploadDropZone } from "../upload";
@@ -27,6 +26,9 @@ import {
   fetchTags,
   updateScene,
   deleteScene,
+  updateSceneFolder,
+  uploadSceneFolderCover,
+  deleteSceneFolderCover,
   type PerformerItem,
   type SceneFolderDetail,
   type SceneFolderListItem,
@@ -35,6 +37,8 @@ import {
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
+import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
+import { SceneFolderMetadataPanel } from "../scene-folders/scene-folder-metadata-panel";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useTerms } from "../../lib/terminology";
 import { cn } from "@obscura/ui/lib/utils";
@@ -138,6 +142,8 @@ export function ScenesPageClient({
   const [activeFolder, setActiveFolder] = useState<SceneFolderDetail | null>(initialActiveFolder);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [folderError, setFolderError] = useState<string | null>(null);
 
   const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(
@@ -343,6 +349,61 @@ export function ScenesPageClient({
       setRootFolders([]);
     }
   }, [activeFolder?.id, folderSearch, nsfwMode, viewMode]);
+
+  const reloadFolder = useCallback(async () => {
+    if (!activeFolder?.id) return;
+    const detail = await fetchSceneFolderDetail(activeFolder.id, { nsfw: nsfwMode });
+    setActiveFolder(detail);
+  }, [activeFolder?.id, nsfwMode]);
+
+  const handleFolderSave = useCallback(
+    async (patch: { customName?: string | null; isNsfw?: boolean }) => {
+      if (!activeFolder) return;
+      setFolderError(null);
+      try {
+        await updateSceneFolder(activeFolder.id, patch);
+        await revalidateSceneFolderCache(activeFolder.id);
+        await reloadFolder();
+      } catch (err) {
+        setFolderError(err instanceof Error ? err.message : "Failed to update folder");
+        throw err;
+      }
+    },
+    [activeFolder, reloadFolder],
+  );
+
+  const handleFolderUploadCover = useCallback(
+    async (file: File | undefined) => {
+      if (!file || !activeFolder) return;
+      setFolderError(null);
+      setCoverBusy(true);
+      try {
+        await uploadSceneFolderCover(activeFolder.id, file);
+        await revalidateSceneFolderCache(activeFolder.id);
+        await reloadFolder();
+      } catch (err) {
+        setFolderError(err instanceof Error ? err.message : "Failed to upload cover");
+      } finally {
+        setCoverBusy(false);
+      }
+    },
+    [activeFolder, reloadFolder],
+  );
+
+  const handleFolderDeleteCover = useCallback(async () => {
+    if (!activeFolder) return;
+    setFolderError(null);
+    setCoverBusy(true);
+    try {
+      await deleteSceneFolderCover(activeFolder.id);
+      await revalidateSceneFolderCache(activeFolder.id);
+      await reloadFolder();
+    } catch (err) {
+      setFolderError(err instanceof Error ? err.message : "Failed to delete cover");
+    } finally {
+      setCoverBusy(false);
+    }
+  }, [activeFolder, reloadFolder]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -622,24 +683,9 @@ export function ScenesPageClient({
           }
           title={
             activeFolder ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-semibold text-text-primary">
-                    {activeFolder.displayTitle}
-                  </h2>
-                  {activeFolder.libraryRootLabel && (
-                    <p className="mt-1 text-[0.72rem] text-text-disabled">
-                      {activeFolder.libraryRootLabel}
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href={`/scene-folders/${activeFolder.id}`}
-                  className="border border-border-subtle px-3 py-2 text-[0.72rem] uppercase tracking-[0.14em] text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-primary"
-                >
-                  Folder metadata
-                </Link>
-              </div>
+              <h2 className="text-2xl font-semibold text-text-primary">
+                {activeFolder.displayTitle}
+              </h2>
             ) : (
               <div>
                 <h2 className="text-2xl font-semibold text-text-primary">Scene folders</h2>
@@ -650,30 +696,63 @@ export function ScenesPageClient({
             )
           }
         >
-          {folderCards.length > 0 && (
-            <HierarchySection title={folderSectionTitle}>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {folderCards.map((folder) => (
-                  <SceneFolderCard
-                    key={folder.id}
-                    folder={folder}
-                    href={`/scenes?folder=${folder.id}`}
-                  />
-                ))}
-              </div>
-            </HierarchySection>
-          )}
+          {folderError ? (
+            <div className="surface-well border border-red-500/30 px-3 py-2 text-[0.78rem] text-red-200">
+              {folderError}
+            </div>
+          ) : null}
 
-          <HierarchySection title={sceneSectionTitle}>
-            <SceneGrid
-              scenes={scenes}
-              viewMode="grid"
-              loading={loading}
-              hasMore={scenes.length < total}
-              loadingMore={loadingMore}
-              onLoadMore={loadMore}
-            />
-          </HierarchySection>
+          <div className={cn(
+            "grid gap-5",
+            activeFolder ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "",
+          )}>
+            <div className="space-y-5">
+              {folderCards.length > 0 && (
+                <HierarchySection
+                  title={activeFolder ? "Subfolders" : folderSectionTitle}
+                >
+                  <div className={cn(
+                    "grid gap-2",
+                    activeFolder
+                      ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"
+                      : "grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3",
+                  )}>
+                    {folderCards.map((folder) => (
+                      <SceneFolderCard
+                        key={folder.id}
+                        folder={folder}
+                        href={`/scenes?folder=${folder.id}`}
+                        compact={!!activeFolder}
+                      />
+                    ))}
+                  </div>
+                </HierarchySection>
+              )}
+
+              <HierarchySection title={sceneSectionTitle}>
+                <SceneGrid
+                  scenes={scenes}
+                  viewMode="grid"
+                  loading={loading}
+                  hasMore={scenes.length < total}
+                  loadingMore={loadingMore}
+                  onLoadMore={loadMore}
+                />
+              </HierarchySection>
+            </div>
+
+            {activeFolder && (
+              <div className="lg:sticky lg:top-4 lg:self-start">
+                <SceneFolderMetadataPanel
+                  folder={activeFolder}
+                  coverBusy={coverBusy}
+                  onSave={handleFolderSave}
+                  onUploadCover={handleFolderUploadCover}
+                  onDeleteCover={handleFolderDeleteCover}
+                />
+              </div>
+            )}
+          </div>
         </HierarchyShell>
       ) : (
         <>
