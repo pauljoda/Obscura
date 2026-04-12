@@ -1265,3 +1265,74 @@ export const audioTrackTagsRelations = relations(audioTrackTags, ({ one }) => ({
     references: [tags.id],
   }),
 }));
+
+// ─── Collections ───────────────────────────────────────────────────
+export const collections = pgTable(
+  "collections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    mode: text("mode").notNull().default("manual"), // "manual" | "dynamic" | "hybrid"
+    ruleTree: jsonb("rule_tree"),
+    itemCount: integer("item_count").default(0).notNull(),
+    coverMode: text("cover_mode").notNull().default("mosaic"), // "mosaic" | "custom" | "item"
+    coverImagePath: text("cover_image_path"),
+    coverItemId: uuid("cover_item_id"),
+    coverItemType: text("cover_item_type"),
+    slideshowDurationSeconds: integer("slideshow_duration_seconds")
+      .default(5)
+      .notNull(),
+    slideshowAutoAdvance: boolean("slideshow_auto_advance")
+      .default(true)
+      .notNull(),
+    lastRefreshedAt: timestamp("last_refreshed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("collections_name_idx").on(table.name),
+    index("collections_mode_idx").on(table.mode),
+    index("collections_created_at_idx").on(table.createdAt),
+  ]
+);
+
+export const collectionsRelations = relations(collections, ({ many }) => ({
+  items: many(collectionItems),
+}));
+
+// ─── Collection Items ──────────────────────────────────────────────
+export const collectionItems = pgTable(
+  "collection_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    entityType: text("entity_type").notNull(), // "scene" | "gallery" | "image" | "audio-track"
+    entityId: uuid("entity_id").notNull(),
+    source: text("source").notNull().default("manual"), // "manual" | "dynamic"
+    sortOrder: integer("sort_order").default(0).notNull(),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("collection_items_unique").on(
+      table.collectionId,
+      table.entityType,
+      table.entityId
+    ),
+    index("collection_items_collection_idx").on(table.collectionId),
+    index("collection_items_entity_idx").on(table.entityType, table.entityId),
+    index("collection_items_sort_idx").on(table.collectionId, table.sortOrder),
+  ]
+);
+
+export const collectionItemsRelations = relations(
+  collectionItems,
+  ({ one }) => ({
+    collection: one(collections, {
+      fields: [collectionItems.collectionId],
+      references: [collections.id],
+    }),
+  })
+);

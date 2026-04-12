@@ -137,6 +137,16 @@ export interface AudioTrackListQuery extends ListQuery {
   organized?: boolean;
 }
 
+// ─── Collection Queries ────────────────────────────────────────
+
+export interface CollectionListQuery extends ListQuery {
+  mode?: "manual" | "dynamic" | "hybrid";
+}
+
+export interface CollectionItemListQuery extends ListQuery {
+  entityType?: "scene" | "gallery" | "image" | "audio-track";
+}
+
 // ─── Bulk Operations ────────────────────────────────────────────
 
 export interface BulkUpdateResult {

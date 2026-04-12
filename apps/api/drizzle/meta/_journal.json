@@ -57,6 +57,13 @@
       "when": 1776018476900,
       "tag": "0007_slow_marvel_apes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776019493717,
+      "tag": "0008_loud_loa",
+      "breakpoints": true
     }
   ]
 }
