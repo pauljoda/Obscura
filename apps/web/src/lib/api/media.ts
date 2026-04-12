@@ -759,8 +759,8 @@ export async function removeCollectionItems(
   id: string,
   dto: CollectionRemoveItemsDto,
 ) {
-  return fetchApi<{ removed: number }>(`/collections/${id}/items`, {
-    method: "DELETE",
+  return fetchApi<{ removed: number }>(`/collections/${id}/items/remove`, {
+    method: "POST",
     body: JSON.stringify(dto),
   });
 }

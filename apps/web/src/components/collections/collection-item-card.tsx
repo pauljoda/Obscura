@@ -145,16 +145,16 @@ export function CollectionItemCard({
 
         {/* Source badge — top right, always visible */}
         <div
-          className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.55rem] font-mono backdrop-blur-sm ${
+          className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[0.6rem] font-mono uppercase tracking-wider backdrop-blur-md ${
             isManual
-              ? "bg-accent-brass/20 text-accent-400 border border-accent-brass/20"
-              : "bg-surface-1/80 text-text-disabled"
+              ? "bg-surface-1/90 text-accent-400 border border-accent-brass/30"
+              : "bg-surface-1/90 text-text-secondary border border-border-default"
           }`}
         >
           {isManual ? (
-            <Hand className="h-2 w-2" />
+            <Hand className="h-2.5 w-2.5" />
           ) : (
-            <Zap className="h-2 w-2" />
+            <Zap className="h-2.5 w-2.5" />
           )}
           {item.source}
         </div>

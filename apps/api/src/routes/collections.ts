@@ -84,6 +84,15 @@ export async function collectionsRoutes(app: FastifyInstance) {
     return collectionService.removeItems(id, body);
   });
 
+  // ─── POST /collections/:id/items/remove ─────────────────────────
+  // POST variant for item removal — DELETE with JSON body is unreliable
+  // across some fetch implementations and proxies.
+  app.post("/collections/:id/items/remove", async (request) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as CollectionRemoveItemsDto;
+    return collectionService.removeItems(id, body);
+  });
+
   // ─── PATCH /collections/:id/items/reorder ───────────────────────
   app.patch("/collections/:id/items/reorder", async (request) => {
     const { id } = request.params as { id: string };
