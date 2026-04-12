@@ -734,73 +734,50 @@ export function ScenesPageClient({
               ]}
             />
 
-            {/* ── Hero header (audio-style) ────────────────────── */}
-            <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
-              {/* Cover image */}
-              <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0">
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    void handleFolderUploadCover(e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
+            {/* ── Jellyfin-style Hero Header ─────────────────── */}
+            <div className="relative min-h-[280px] overflow-hidden border border-border-subtle">
+              {/* Backdrop image or blurred poster fallback */}
+              {toApiUrl(activeFolder.backdropImagePath, activeFolder.updatedAt) ? (
+                <img
+                  src={toApiUrl(activeFolder.backdropImagePath, activeFolder.updatedAt)!}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
-                <div className="w-full h-full overflow-hidden surface-card-sharp">
-                  <div className="relative w-full h-full">
-                    <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
-                      <FolderOpen className="h-12 w-12 text-white/20" />
-                    </div>
-                    {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
-                      <img
-                        src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
-                        alt={activeFolder.displayTitle}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                    )}
-                    {activeFolder.previewThumbnailPaths.length > 0 && !activeFolder.coverImagePath && (
-                      <img
-                        src={toApiUrl(activeFolder.previewThumbnailPaths[0], activeFolder.updatedAt)!}
-                        alt={activeFolder.displayTitle}
-                        className="absolute inset-0 w-full h-full object-cover opacity-80"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                    )}
-                  </div>
-                </div>
-                {folderEditMode && (
-                  <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1 border-t border-border-subtle bg-black/75 p-1">
-                    <button
-                      type="button"
-                      disabled={coverBusy}
-                      onClick={() => coverInputRef.current?.click()}
-                      className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-primary hover:bg-surface-3/80 disabled:opacity-50"
-                    >
-                      {coverBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                      Art
-                    </button>
-                    {activeFolder.coverImagePath && (
-                      <button
-                        type="button"
-                        disabled={coverBusy}
-                        onClick={() => void handleFolderDeleteCover()}
-                        className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-muted hover:text-red-300 hover:bg-surface-3/80 disabled:opacity-50"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Clear
-                      </button>
-                    )}
+              ) : toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) ? (
+                <img
+                  src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover blur-2xl scale-110 opacity-40"
+                />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-black/60 to-black/30" />
+
+              {/* Content overlay: poster + metadata */}
+              <div className="relative flex min-h-[280px] items-end gap-6 p-6">
+                {/* Poster */}
+                {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
+                  <div className="hidden sm:block flex-shrink-0 w-[160px]">
+                    <img
+                      src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
+                      alt={activeFolder.displayTitle}
+                      className="aspect-[2/3] w-full object-cover border border-white/10 shadow-lg"
+                    />
                   </div>
                 )}
-              </div>
 
-              {/* Title + metadata */}
-              <div className="flex gap-6 items-start flex-1 min-w-0">
-                <div className="flex-1 min-w-0 py-1">
-                  <div className="flex items-start justify-between gap-3">
+                {/* Metadata */}
+                <div className="flex-1 min-w-0">
+                  {activeFolder.libraryRootLabel && (
+                    <div className="flex items-center gap-1.5 text-[0.68rem] text-white/50 mb-1">
+                      <HardDrive className="h-3 w-3" />
+                      {activeFolder.libraryRootLabel}
+                    </div>
+                  )}
+                  <div className="text-[0.72rem] uppercase tracking-[0.16em] text-white/60">
+                    Scene folder
+                  </div>
+
+                  <div className="flex items-start justify-between gap-3 mt-1.5">
                     {folderEditMode ? (
                       <div className="flex-1 min-w-0 space-y-1">
                         <input
@@ -812,9 +789,13 @@ export function ScenesPageClient({
                         <p className="text-[0.65rem] text-text-disabled">
                           Leave empty to use directory name
                         </p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
+                          {editIsNsfw && <span className="text-[0.68rem] text-text-muted">Hidden in SFW mode</span>}
+                        </div>
                       </div>
                     ) : (
-                      <h1 className="flex-1 min-w-0 text-2xl font-heading font-semibold leading-tight">
+                      <h1 className="flex-1 min-w-0 text-3xl font-heading font-semibold text-white leading-tight">
                         {activeFolder.displayTitle}
                       </h1>
                     )}
@@ -825,7 +806,7 @@ export function ScenesPageClient({
                             type="button"
                             onClick={cancelFolderEdit}
                             disabled={folderSaving}
-                            className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+                            className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
                           >
                             <XCircle className="h-4 w-4" />
                           </button>
@@ -833,7 +814,7 @@ export function ScenesPageClient({
                             type="button"
                             onClick={() => void saveFolderEdit()}
                             disabled={folderSaving}
-                            className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-surface-2 transition-colors disabled:opacity-50"
+                            className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-white/10 transition-colors disabled:opacity-50"
                           >
                             {folderSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                           </button>
@@ -842,7 +823,7 @@ export function ScenesPageClient({
                         <button
                           type="button"
                           onClick={beginFolderEdit}
-                          className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                          className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
@@ -850,50 +831,58 @@ export function ScenesPageClient({
                     </div>
                   </div>
 
-                  {folderEditMode ? (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
-                        {editIsNsfw && <span className="text-[0.68rem] text-text-muted">Hidden in SFW mode</span>}
-                      </div>
-                    </div>
-                  ) : (
+                  {!folderEditMode && (
                     <>
                       {activeFolder.customName && (
-                        <p className="text-sm text-text-muted mt-1">{activeFolder.title}</p>
+                        <p className="mt-0.5 text-[0.78rem] text-white/40">{activeFolder.title}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
-                        <span>
+                      {/* Metadata row: studio, date, rating, scene count */}
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.82rem] text-white/70">
+                        {activeFolder.studioName && (
+                          <span>{activeFolder.studioName}</span>
+                        )}
+                        {activeFolder.date && (
+                          <span>{activeFolder.date}</span>
+                        )}
+                        {activeFolder.rating != null && (
+                          <span className="inline-flex items-center gap-1">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            {activeFolder.rating}
+                          </span>
+                        )}
+                        <span className="text-white/40">
                           {activeFolder.totalSceneCount} scene{activeFolder.totalSceneCount !== 1 ? "s" : ""}
                         </span>
                         {activeFolder.childFolderCount > 0 && (
-                          <>
-                            <span className="text-text-disabled">&middot;</span>
-                            <span>
-                              {activeFolder.childFolderCount} subfolder{activeFolder.childFolderCount !== 1 ? "s" : ""}
-                            </span>
-                          </>
+                          <span className="text-white/40">
+                            {activeFolder.childFolderCount} subfolder{activeFolder.childFolderCount !== 1 ? "s" : ""}
+                          </span>
                         )}
                         {activeFolder.isNsfw && <NsfwChip />}
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
 
-              {/* Info panel */}
-              <div className="surface-panel p-4 space-y-3 w-full lg:w-64 lg:flex-shrink-0 lg:self-stretch">
-                <h4 className="text-kicker">Folder Info</h4>
-                <div className="space-y-2.5">
-                  <InfoRow icon={Film} label="Direct" value={String(activeFolder.directSceneCount)} />
-                  <InfoRow icon={Film} label="Total" value={String(activeFolder.totalSceneCount)} />
-                  {activeFolder.libraryRootLabel && (
-                    <InfoRow icon={HardDrive} label="Library" value={activeFolder.libraryRootLabel} />
-                  )}
-                  {activeFolder.folderPath && (
-                    <div className="text-xs text-text-disabled break-all pt-1 border-t border-border-subtle">
-                      {activeFolder.folderPath}
-                    </div>
+                      {/* Description */}
+                      {activeFolder.details && (
+                        <p className="mt-3 max-w-[700px] text-[0.82rem] leading-relaxed text-white/60 line-clamp-3">
+                          {activeFolder.details}
+                        </p>
+                      )}
+
+                      {/* Tags */}
+                      {activeFolder.tags && activeFolder.tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          <span className="text-[0.72rem] text-white/40 mr-1 self-center">Tags:</span>
+                          {activeFolder.tags.map((tag) => (
+                            <span
+                              key={tag.id}
+                              className="text-[0.72rem] text-white/60"
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
