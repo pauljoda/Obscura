@@ -10,6 +10,8 @@ export async function sceneFoldersRoutes(app: FastifyInstance) {
       limit?: string;
       offset?: string;
       nsfw?: string;
+      studio?: string;
+      tag?: string;
     };
     return sceneFolderService.listSceneFolders(query);
   });
@@ -22,7 +24,16 @@ export async function sceneFoldersRoutes(app: FastifyInstance) {
 
   app.patch("/scene-folders/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const body = request.body as { isNsfw?: boolean; customName?: string | null };
+    const body = request.body as {
+      isNsfw?: boolean;
+      customName?: string | null;
+      details?: string | null;
+      studioName?: string | null;
+      performerNames?: string[];
+      tagNames?: string[];
+      rating?: number | null;
+      date?: string | null;
+    };
     return sceneFolderService.updateSceneFolder(id, body);
   });
 
@@ -40,5 +51,21 @@ export async function sceneFoldersRoutes(app: FastifyInstance) {
   app.delete("/scene-folders/:id/cover", async (request) => {
     const { id } = request.params as { id: string };
     return sceneFolderService.clearSceneFolderCover(id);
+  });
+
+  app.post("/scene-folders/:id/backdrop", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const file = await request.file();
+    if (!file) {
+      reply.code(400);
+      return { error: "No file uploaded" };
+    }
+    const buffer = await file.toBuffer();
+    return sceneFolderService.setSceneFolderBackdrop(id, buffer);
+  });
+
+  app.delete("/scene-folders/:id/backdrop", async (request) => {
+    const { id } = request.params as { id: string };
+    return sceneFolderService.clearSceneFolderBackdrop(id);
   });
 }

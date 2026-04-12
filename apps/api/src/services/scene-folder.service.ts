@@ -15,12 +15,26 @@ import {
   requireSceneFolderSchema,
 } from "../lib/scene-folder-schema";
 
-const { sceneFolders, scenes, libraryRoots } = schema;
+const {
+  sceneFolders,
+  scenes,
+  libraryRoots,
+  studios,
+  performers,
+  tags,
+  sceneFolderPerformers,
+  sceneFolderTags,
+} = schema;
 
 const SCENE_FOLDER_COVER_FILE = "cover-custom.jpg";
+const SCENE_FOLDER_BACKDROP_FILE = "backdrop-custom.jpg";
 
 function sceneFolderCoverAssetPath(id: string) {
   return `/assets/scene-folders/${id}/cover`;
+}
+
+function sceneFolderBackdropAssetPath(id: string) {
+  return `/assets/scene-folders/${id}/backdrop`;
 }
 
 async function fetchFolderChildCounts(folderIds: string[]) {
@@ -157,6 +171,16 @@ async function fetchLiveFolderCounts(
   return result;
 }
 
+async function fetchStudioNames(studioIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(studioIds.filter(Boolean))];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({ id: studios.id, name: studios.name })
+    .from(studios)
+    .where(inArray(studios.id, unique));
+  return new Map(rows.map((r) => [r.id, r.name]));
+}
+
 async function fetchLibraryRootLabels(rootIds: string[]): Promise<Map<string, string>> {
   if (rootIds.length === 0) return new Map();
   const unique = [...new Set(rootIds)];
@@ -173,6 +197,7 @@ function toSceneFolderListItem(
   previewThumbnailPaths: string[],
   libraryRootLabel: string,
   liveCounts?: LiveFolderCounts,
+  studioName?: string | null,
 ) {
   return {
     id: folder.id,
@@ -185,6 +210,11 @@ function toSceneFolderListItem(
     depth: folder.depth,
     isNsfw: folder.isNsfw,
     coverImagePath: folder.coverImagePath,
+    backdropImagePath: folder.backdropImagePath,
+    studioId: folder.studioId,
+    studioName: studioName ?? null,
+    rating: folder.rating,
+    date: folder.date,
     directSceneCount: liveCounts?.directSceneCount ?? folder.directSceneCount,
     totalSceneCount: liveCounts?.totalSceneCount ?? folder.totalSceneCount,
     visibleSfwSceneCount: liveCounts?.visibleSceneCount ?? folder.visibleSfwSceneCount,
@@ -205,6 +235,8 @@ export async function listSceneFolders(query: {
   limit?: string;
   offset?: string;
   nsfw?: string;
+  studio?: string;
+  tag?: string;
 }) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 60, 200);
   if (!(await hasSceneFolderSchema())) {
@@ -233,6 +265,25 @@ export async function listSceneFolders(query: {
     conditions.push(eq(sceneFolders.isNsfw, false));
   }
 
+  if (query.studio) {
+    conditions.push(eq(sceneFolders.studioId, query.studio));
+  }
+
+  // Tag filter: subquery for folders linked via sceneFolderTags
+  let tagFilterIds: string[] | undefined;
+  if (query.tag) {
+    const tagRows = await db
+      .select({ sceneFolderId: sceneFolderTags.sceneFolderId })
+      .from(sceneFolderTags)
+      .innerJoin(tags, eq(sceneFolderTags.tagId, tags.id))
+      .where(ilike(tags.name, query.tag));
+    tagFilterIds = tagRows.map((r) => r.sceneFolderId);
+    if (tagFilterIds.length === 0) {
+      return { items: [], total: 0, limit, offset };
+    }
+    conditions.push(inArray(sceneFolders.id, tagFilterIds));
+  }
+
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const folders = await db
@@ -247,17 +298,22 @@ export async function listSceneFolders(query: {
     query.nsfw,
   );
 
-  // Filter out folders with zero visible scenes
-  const visibleFolders = folders.filter((f) => {
-    const counts = liveCounts.get(f.id);
-    return counts && counts.visibleSceneCount > 0;
-  });
+  // Filter out folders with zero visible scenes (skip when filtering by studio/tag)
+  const visibleFolders = (query.studio || query.tag)
+    ? folders
+    : folders.filter((f) => {
+        const counts = liveCounts.get(f.id);
+        return counts && counts.visibleSceneCount > 0;
+      });
 
   const total = visibleFolders.length;
   const paged = visibleFolders.slice(offset, offset + limit);
 
   const childCounts = await fetchFolderChildCounts(paged.map((folder) => folder.id));
   const rootLabels = await fetchLibraryRootLabels(paged.map((f) => f.libraryRootId));
+  const studioNames = await fetchStudioNames(
+    paged.map((f) => f.studioId).filter(Boolean) as string[],
+  );
   const items = await Promise.all(
     paged.map(async (folder) => {
       const previewThumbnailPaths = await fetchFolderPreviewPaths(folder.id, query.nsfw);
@@ -267,6 +323,7 @@ export async function listSceneFolders(query: {
         previewThumbnailPaths,
         rootLabels.get(folder.libraryRootId) ?? "",
         liveCounts.get(folder.id),
+        folder.studioId ? studioNames.get(folder.studioId) : null,
       );
     }),
   );
@@ -354,6 +411,57 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
     },
   );
 
+  // Fetch performers linked to this folder
+  const folderPerformers = await db
+    .select({
+      id: performers.id,
+      name: performers.name,
+      gender: performers.gender,
+      imagePath: performers.imagePath,
+      isNsfw: performers.isNsfw,
+    })
+    .from(sceneFolderPerformers)
+    .innerJoin(performers, eq(sceneFolderPerformers.performerId, performers.id))
+    .where(eq(sceneFolderPerformers.sceneFolderId, id))
+    .orderBy(asc(performers.name));
+
+  // Fetch tags linked to this folder
+  const folderTags = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+      isNsfw: tags.isNsfw,
+    })
+    .from(sceneFolderTags)
+    .innerJoin(tags, eq(sceneFolderTags.tagId, tags.id))
+    .where(eq(sceneFolderTags.sceneFolderId, id))
+    .orderBy(asc(tags.name));
+
+  // Fetch studio if set
+  let studioEmbed: { id: string; name: string } | null = null;
+  let studioName: string | null = null;
+  if (folder.studioId) {
+    const [studioRow] = await db
+      .select({ id: studios.id, name: studios.name })
+      .from(studios)
+      .where(eq(studios.id, folder.studioId))
+      .limit(1);
+    if (studioRow) {
+      studioEmbed = studioRow;
+      studioName = studioRow.name;
+    }
+  }
+
+  // NSFW filter performers and tags when in SFW mode
+  const filteredPerformers =
+    nsfwMode === "off"
+      ? folderPerformers.filter((p) => !p.isNsfw)
+      : folderPerformers;
+  const filteredTags =
+    nsfwMode === "off"
+      ? folderTags.filter((t) => !t.isNsfw)
+      : folderTags;
+
   return {
     ...toSceneFolderListItem(
       folder,
@@ -361,7 +469,12 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
       await fetchFolderPreviewPaths(folder.id, nsfwMode),
       folderRootLabel,
       folderLive,
+      studioName,
     ),
+    details: folder.details,
+    studio: studioEmbed,
+    performers: filteredPerformers,
+    tags: filteredTags,
     breadcrumbs: breadcrumbs.map((crumb) => ({
       id: crumb.id,
       title: crumb.title,
@@ -373,7 +486,16 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
 
 export async function updateSceneFolder(
   id: string,
-  patch: { isNsfw?: boolean; customName?: string | null },
+  patch: {
+    isNsfw?: boolean;
+    customName?: string | null;
+    details?: string | null;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+    rating?: number | null;
+    date?: string | null;
+  },
 ) {
   await requireSceneFolderSchema();
 
@@ -387,15 +509,106 @@ export async function updateSceneFolder(
     throw new AppError(404, "Scene folder not found");
   }
 
-  const updatePatch: Record<string, unknown> = {
-    updatedAt: new Date(),
-  };
-  if (patch.isNsfw !== undefined) updatePatch.isNsfw = patch.isNsfw;
-  if (patch.customName !== undefined) {
-    updatePatch.customName = patch.customName || null;
-  }
+  await db.transaction(async (tx) => {
+    const updatePatch: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    if (patch.isNsfw !== undefined) updatePatch.isNsfw = patch.isNsfw;
+    if (patch.customName !== undefined) {
+      updatePatch.customName = patch.customName || null;
+    }
+    if (patch.details !== undefined) updatePatch.details = patch.details;
+    if (patch.rating !== undefined) updatePatch.rating = patch.rating;
+    if (patch.date !== undefined) updatePatch.date = patch.date;
 
-  await db.update(sceneFolders).set(updatePatch).where(eq(sceneFolders.id, id));
+    // Studio: find or create by name
+    if (patch.studioName !== undefined) {
+      if (patch.studioName === null || patch.studioName === "") {
+        updatePatch.studioId = null;
+      } else {
+        const [existingStudio] = await tx
+          .select({ id: studios.id })
+          .from(studios)
+          .where(ilike(studios.name, patch.studioName))
+          .limit(1);
+
+        if (existingStudio) {
+          updatePatch.studioId = existingStudio.id;
+        } else {
+          const [created] = await tx
+            .insert(studios)
+            .values({ name: patch.studioName })
+            .returning({ id: studios.id });
+          updatePatch.studioId = created.id;
+        }
+      }
+    }
+
+    await tx.update(sceneFolders).set(updatePatch).where(eq(sceneFolders.id, id));
+
+    // Performers: replace all
+    if (patch.performerNames !== undefined) {
+      await tx
+        .delete(sceneFolderPerformers)
+        .where(eq(sceneFolderPerformers.sceneFolderId, id));
+
+      for (const name of patch.performerNames) {
+        if (!name.trim()) continue;
+
+        const [existingPerf] = await tx
+          .select({ id: performers.id })
+          .from(performers)
+          .where(ilike(performers.name, name.trim()))
+          .limit(1);
+
+        const performerId =
+          existingPerf?.id ??
+          (
+            await tx
+              .insert(performers)
+              .values({ name: name.trim() })
+              .returning({ id: performers.id })
+          )[0].id;
+
+        await tx
+          .insert(sceneFolderPerformers)
+          .values({ sceneFolderId: id, performerId })
+          .onConflictDoNothing();
+      }
+    }
+
+    // Tags: replace all
+    if (patch.tagNames !== undefined) {
+      await tx
+        .delete(sceneFolderTags)
+        .where(eq(sceneFolderTags.sceneFolderId, id));
+
+      for (const name of patch.tagNames) {
+        if (!name.trim()) continue;
+
+        const [existingTag] = await tx
+          .select({ id: tags.id })
+          .from(tags)
+          .where(ilike(tags.name, name.trim()))
+          .limit(1);
+
+        const tagId =
+          existingTag?.id ??
+          (
+            await tx
+              .insert(tags)
+              .values({ name: name.trim() })
+              .returning({ id: tags.id })
+          )[0].id;
+
+        await tx
+          .insert(sceneFolderTags)
+          .values({ sceneFolderId: id, tagId })
+          .onConflictDoNothing();
+      }
+    }
+  });
+
   return { ok: true as const, id };
 }
 
@@ -448,6 +661,60 @@ export async function clearSceneFolderCover(id: string) {
   await db
     .update(sceneFolders)
     .set({ coverImagePath: null, updatedAt: new Date() })
+    .where(eq(sceneFolders.id, id));
+
+  return { ok: true as const };
+}
+
+export async function setSceneFolderBackdrop(id: string, buffer: Buffer) {
+  await requireSceneFolderSchema();
+
+  if (!buffer.length) {
+    throw new AppError(400, "Empty file");
+  }
+
+  const [folder] = await db
+    .select({ id: sceneFolders.id })
+    .from(sceneFolders)
+    .where(eq(sceneFolders.id, id))
+    .limit(1);
+  if (!folder) {
+    throw new AppError(404, "Scene folder not found");
+  }
+
+  const dir = getGeneratedSceneFolderDir(id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, SCENE_FOLDER_BACKDROP_FILE), buffer);
+
+  const backdropImagePath = sceneFolderBackdropAssetPath(id);
+  await db
+    .update(sceneFolders)
+    .set({ backdropImagePath, updatedAt: new Date() })
+    .where(eq(sceneFolders.id, id));
+
+  return { ok: true as const, backdropImagePath };
+}
+
+export async function clearSceneFolderBackdrop(id: string) {
+  await requireSceneFolderSchema();
+
+  const [folder] = await db
+    .select({ id: sceneFolders.id })
+    .from(sceneFolders)
+    .where(eq(sceneFolders.id, id))
+    .limit(1);
+  if (!folder) {
+    throw new AppError(404, "Scene folder not found");
+  }
+
+  const filePath = path.join(getGeneratedSceneFolderDir(id), SCENE_FOLDER_BACKDROP_FILE);
+  if (existsSync(filePath)) {
+    await unlink(filePath);
+  }
+
+  await db
+    .update(sceneFolders)
+    .set({ backdropImagePath: null, updatedAt: new Date() })
     .where(eq(sceneFolders.id, id));
 
   return { ok: true as const };

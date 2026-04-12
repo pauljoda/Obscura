@@ -346,6 +346,19 @@ export async function assetsRoutes(app: FastifyInstance) {
     return { error: "Cover not found" };
   });
 
+  // ─── Scene folder backdrop: /assets/scene-folders/:id/backdrop ─
+  app.get("/assets/scene-folders/:id/backdrop", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const backdropPath = path.join(getGeneratedSceneFolderDir(id), "backdrop-custom.jpg");
+    if (existsSync(backdropPath)) {
+      reply.header("Cache-Control", "no-cache");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(backdropPath));
+    }
+    reply.code(404);
+    return { error: "Backdrop not found" };
+  });
+
   // ─── Audio track waveform: /assets/audio-tracks/:id/waveform.json ─
   app.get("/assets/audio-tracks/:id/waveform.json", async (request, reply) => {
     const { id } = request.params as { id: string };
