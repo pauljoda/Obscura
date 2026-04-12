@@ -724,11 +724,14 @@ export function ScenesPageClient({
           <div className="space-y-5">
             {/* ── Breadcrumbs ──────────────────────────────────── */}
             <HierarchyBreadcrumbs
-              items={activeFolder.breadcrumbs.map((crumb) => ({
-                id: crumb.id,
-                title: crumb.displayTitle,
-                href: `/scenes?folder=${crumb.id}`,
-              }))}
+              items={[
+                { id: "root", title: terms.scenes, href: "/scenes" },
+                ...activeFolder.breadcrumbs.map((crumb) => ({
+                  id: crumb.id,
+                  title: crumb.displayTitle,
+                  href: `/scenes?folder=${crumb.id}`,
+                })),
+              ]}
             />
 
             {/* ── Hero header (audio-style) ────────────────────── */}
