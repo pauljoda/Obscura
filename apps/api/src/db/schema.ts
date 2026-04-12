@@ -182,6 +182,11 @@ export const librarySettings = pgTable("library_settings", {
   trickplayQuality: integer("trickplay_quality").default(2).notNull(),
   backgroundWorkerConcurrency: integer("background_worker_concurrency").default(1).notNull(),
   nsfwLanAutoEnable: boolean("nsfw_lan_auto_enable").default(false).notNull(),
+  /**
+   * When true, scans create a top-level folder row for each library root path using the library label,
+   * so hierarchy is Label → subfolders. When false, the first folder is the first path segment under the root.
+   */
+  useLibraryRootAsFolder: boolean("use_library_root_as_folder").default(false).notNull(),
   /** When true, scene thumbnails/previews/sprites/trickplay live under OBSCURA_CACHE_DIR; when false, beside the video file. */
   metadataStorageDedicated: boolean("metadata_storage_dedicated").default(true).notNull(),
   /** Subtitle defaults — see SubtitleAppearance / LibrarySettingsDto in @obscura/contracts. */

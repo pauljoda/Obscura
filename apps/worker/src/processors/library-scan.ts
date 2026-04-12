@@ -64,7 +64,7 @@ export async function processLibraryScan(job: Job) {
   const gallerySfwOpts = Boolean(job.data.sfwOnly) ? { sfwOnly: true as const } : undefined;
 
   if (files.length === 0) {
-    await syncSceneFoldersForRoot(root, []);
+    await syncSceneFoldersForRoot(root, [], settings.useLibraryRootAsFolder);
     await db
       .update(libraryRoots)
       .set({ lastScannedAt: new Date(), updatedAt: new Date() })
@@ -233,7 +233,7 @@ export async function processLibraryScan(job: Job) {
     );
   }
 
-  await syncSceneFoldersForRoot(root, files);
+  await syncSceneFoldersForRoot(root, files, settings.useLibraryRootAsFolder);
 
   await db
     .update(libraryRoots)

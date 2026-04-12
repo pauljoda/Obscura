@@ -4,15 +4,18 @@ import { db, sceneFolders, scenes } from "./db.js";
 import { hasSceneFolderSchema } from "./scene-folder-schema.js";
 import {
   groupFilesByDirectory,
+  hierarchyFolderDepth,
+  libraryContainerTitle,
+  mergeLibraryRootIntoDiscoveredDirs,
   pickStaleContainerIds,
   resolveParentPathId,
-  sortPathsParentFirst,
   toRelativeHierarchyPath,
 } from "./hierarchy-sync/hierarchy-sync.js";
 
 interface LibraryRootLike {
   id: string;
   path: string;
+  label: string;
 }
 
 interface FolderAggregate {
@@ -34,6 +37,7 @@ let hasWarnedMissingSceneFolderSchema = false;
 export async function syncSceneFoldersForRoot(
   root: LibraryRootLike,
   filePaths: string[],
+  useLibraryRootAsFolder: boolean,
 ): Promise<void> {
   if (!(await hasSceneFolderSchema())) {
     if (!hasWarnedMissingSceneFolderSchema) {
@@ -48,7 +52,14 @@ export async function syncSceneFoldersForRoot(
   hasWarnedMissingSceneFolderSchema = false;
 
   const filesByDir = groupFilesByDirectory(filePaths);
-  const discoveredDirs = sortPathsParentFirst([...filesByDir.keys()]);
+  const dirsWithFiles = [...filesByDir.keys()];
+  const discoveredDirs = mergeLibraryRootIntoDiscoveredDirs(
+    dirsWithFiles,
+    root.path,
+    useLibraryRootAsFolder,
+  );
+  const includeRootInParentMap =
+    useLibraryRootAsFolder || dirsWithFiles.includes(root.path);
 
   const existingFolders = await db
     .select({
@@ -61,14 +72,21 @@ export async function syncSceneFoldersForRoot(
     .where(eq(sceneFolders.libraryRootId, root.id));
 
   const folderIdByPath = new Map(
-    existingFolders.map((folder) => [folder.folderPath, folder.id]),
+    existingFolders
+      .filter((folder) => includeRootInParentMap || folder.folderPath !== root.path)
+      .map((folder) => [folder.folderPath, folder.id]),
   );
 
   for (const dirPath of discoveredDirs) {
     const parentId = resolveParentPathId(dirPath, root.path, folderIdByPath);
-    const title = path.basename(dirPath);
+    const title = libraryContainerTitle(
+      dirPath,
+      root.path,
+      root.label,
+      useLibraryRootAsFolder,
+    );
     const relativePath = toRelativeHierarchyPath(root.path, dirPath);
-    const depth = relativePath ? relativePath.split("/").length - 1 : 0;
+    const depth = hierarchyFolderDepth(root.path, dirPath, useLibraryRootAsFolder);
     const [existingFolder] = existingFolders.filter(
       (folder) => folder.folderPath === dirPath,
     );

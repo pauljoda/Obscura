@@ -15,9 +15,10 @@ import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
 import {
   groupFilesByDirectory,
+  libraryContainerTitle,
+  mergeLibraryRootIntoDiscoveredDirs,
   pickStaleContainerIds,
   resolveParentPathId,
-  sortPathsParentFirst,
 } from "../lib/hierarchy-sync/hierarchy-sync.js";
 
 async function shouldSkipGalleryDerivedJobs(
@@ -76,10 +77,11 @@ export async function processGalleryScan(job: Job) {
       )
     );
 
-  const staleFolderIds = pickStaleContainerIds(
-    knownFolderGalleries,
-    new Set(discovery.dirs),
-  );
+  const useLibraryRootAsFolder = settings.useLibraryRootAsFolder;
+  const dirsForStaleCheck = new Set(discovery.dirs);
+  if (useLibraryRootAsFolder) dirsForStaleCheck.add(root.path);
+
+  const staleFolderIds = pickStaleContainerIds(knownFolderGalleries, dirsForStaleCheck);
 
   if (staleFolderIds.length > 0) {
     await db.delete(galleries).where(inArray(galleries.id, staleFolderIds));
@@ -135,16 +137,25 @@ export async function processGalleryScan(job: Job) {
   // -- Process folder-based galleries --
   // Group image files by directory
   const imagesByDir = groupFilesByDirectory(discovery.imageFiles);
+  const dirsWithImages = [...imagesByDir.keys()];
+  const includeRootInParentMap =
+    useLibraryRootAsFolder || dirsWithImages.includes(root.path);
 
   // Sort directories by path depth (parent before child) to ensure parentId resolution works
-  const sortedDirs = sortPathsParentFirst(discovery.dirs);
+  const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
+    discovery.dirs,
+    root.path,
+    useLibraryRootAsFolder,
+  );
   const galleryIdByPath = new Map(
-    knownFolderGalleries.map((gallery) => [gallery.folderPath, gallery.id]),
+    knownFolderGalleries
+      .filter((g) => includeRootInParentMap || g.folderPath !== root.path)
+      .map((gallery) => [gallery.folderPath, gallery.id]),
   );
 
   for (const dirPath of sortedDirs) {
     const dirImages = imagesByDir.get(dirPath) ?? [];
-    if (dirImages.length === 0) continue;
+    if (dirImages.length === 0 && !(useLibraryRootAsFolder && dirPath === root.path)) continue;
 
     // Upsert gallery
     const [existingGallery] = await db
@@ -164,7 +175,16 @@ export async function processGalleryScan(job: Job) {
       galleryId = existingGallery.id;
       await db
         .update(galleries)
-        .set({ isNsfw: root.isNsfw, updatedAt: new Date() })
+        .set({
+          isNsfw: root.isNsfw,
+          title: libraryContainerTitle(
+            dirPath,
+            root.path,
+            root.label,
+            useLibraryRootAsFolder,
+          ),
+          updatedAt: new Date(),
+        })
         .where(eq(galleries.id, galleryId));
     } else {
       // Find parent gallery
@@ -177,7 +197,12 @@ export async function processGalleryScan(job: Job) {
       const [created] = await db
         .insert(galleries)
         .values({
-          title: path.basename(dirPath),
+          title: libraryContainerTitle(
+            dirPath,
+            root.path,
+            root.label,
+            useLibraryRootAsFolder,
+          ),
           galleryType: "folder",
           folderPath: dirPath,
           parentId,

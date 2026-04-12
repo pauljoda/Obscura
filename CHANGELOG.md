@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Library setting: use the library’s display name as the top folder in scans.** A new toggle under Settings → Generation Pipeline controls whether video scene folders, folder-based galleries, and nested audio libraries insert a synthetic top-level row for each library root path using that root’s label (for example Shows → Series → Season). When the option is off, the hierarchy starts at the first directory under the configured path (Series → Season). Changing it requires a library rescan to rebuild parent links.
 - **Scene folders now support rich metadata.** Folders can store a description, backdrop image, studio association, rating, date, and linked performers and tags — enabling Jellyfin-style detail pages with cover art, cast sections, and full metadata editing.
 - **Folder detail page redesigned with Jellyfin-style layout.** The folder view now features a full-width backdrop banner, poster image overlay, metadata row (studio, date, rating, tags), and a horizontally-scrolling Cast & Crew section with performer portrait cards.
 - **Folders appear in search results.** Quick search shows up to 2 folder results above scenes. The full search page includes a Folders kind toggle. Folders are searchable by title, custom name, and description.

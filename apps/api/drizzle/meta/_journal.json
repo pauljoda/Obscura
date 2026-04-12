@@ -50,6 +50,13 @@
       "when": 1776010954987,
       "tag": "0006_steady_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776018476900,
+      "tag": "0007_slow_marvel_apes",
+      "breakpoints": true
     }
   ]
 }
