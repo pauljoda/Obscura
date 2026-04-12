@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Checkbox } from "@obscura/ui/primitives/checkbox";
+import { Badge, Button, StatusLed } from "@obscura/ui";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Database,
   Eye,
-  EyeOff,
   Film,
   FolderOpen,
   HardDrive,
@@ -400,30 +399,32 @@ export function SettingsPageClient({
               </p>
             </div>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
             onClick={() => void openBrowser(browser?.path)}
-            className={cn(
-              "surface-card no-lift flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted transition-all duration-fast hover:border-border-accent hover:text-text-accent",
-            )}
+            className="no-lift gap-1.5 px-3 py-1.5 text-xs"
           >
             <Plus className="h-3.5 w-3.5" />
             Browse Folder
-          </button>
+          </Button>
         </div>
 
         {browserVisible ? (
           <div className="surface-card no-lift space-y-4 border-border-accent/30 p-4">
-            <div className="bg-black/20 p-3 rounded-sm border border-border-subtle">
+            <div className="surface-well p-3 border border-border-subtle">
               <div className="mb-3 flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => void openBrowser(browser?.parentPath ?? browser?.path)}
                   disabled={!browser?.parentPath}
-                  className="flex items-center gap-1 flex-shrink-0 px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-3 hover:text-text-primary disabled:opacity-40 rounded-sm border border-border-subtle"
+                  className="flex items-center gap-1 flex-shrink-0 border border-border-subtle px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-3 hover:text-text-primary disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   Up
                 </button>
-                <div className="flex-1 overflow-x-auto scrollbar-hidden bg-surface-1 border border-border-subtle px-3 py-1.5 rounded-sm">
+                <div className="flex-1 overflow-x-auto scrollbar-hidden border border-border-subtle bg-surface-1 px-3 py-1.5 shadow-well">
                   <span className="whitespace-nowrap text-mono-sm text-text-accent">
                     {browser?.path ?? "Loading..."}
                   </span>
@@ -444,7 +445,7 @@ export function SettingsPageClient({
                   </button>
                 ))}
                 {browser && browser.directories.length === 0 ? (
-                  <p className="col-span-full py-6 text-center text-xs text-text-disabled bg-surface-1/50 rounded-sm border border-border-subtle border-dashed">
+                  <p className="empty-rack-slot col-span-full py-6 text-center text-xs text-text-disabled">
                     No child directories found.
                   </p>
                 ) : null}
@@ -499,46 +500,59 @@ export function SettingsPageClient({
               </div>
 
               <div className="flex items-center gap-3 pt-2">
-                <button
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
                   onClick={() => void handleAddRoot()}
                   disabled={addingRoot || !newRootPath}
-                  className={cn(
-                    "flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all duration-normal",
-                    "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 text-accent-200 shadow-[var(--shadow-glow-accent)]",
-                    "hover:shadow-[var(--shadow-glow-accent-strong)] disabled:opacity-50 rounded-sm",
-                  )}
+                  className="gap-1.5 px-4 py-2 text-xs"
                 >
-                  {addingRoot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  {addingRoot ? (
+                    <>
+                      <StatusLed status="accent" size="sm" pulse className="shrink-0" />
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-accent-300 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
+                    </>
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
                   {addingRoot ? "Adding..." : "Add Library"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setBrowserVisible(false);
                     setNewRootPath("");
                     setNewRootLabel("");
                   }}
-                  className="px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-primary hover:bg-surface-2 rounded-sm"
+                  className="px-3 py-2 text-xs"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         ) : null}
 
         {loading ? (
-          <div className="surface-card no-lift flex items-center justify-center p-8">
-            <Loader2 className="h-5 w-5 animate-spin text-text-disabled" />
+          <div className="surface-card no-lift flex flex-col items-center justify-center gap-3 p-8">
+            <div className="flex items-center gap-2">
+              <StatusLed status="accent" pulse />
+              <Loader2 className="h-5 w-5 animate-spin text-accent-400 drop-shadow-[0_0_8px_rgba(199,155,92,0.3)]" />
+            </div>
+            <span className="text-mono-sm text-text-muted">Loading library configuration…</span>
           </div>
         ) : roots.length === 0 ? (
-          <div className="surface-card no-lift p-8 text-center">
+          <div className="empty-rack-slot flex flex-col items-center p-8 text-center">
             <FolderOpen className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
             <p className="text-sm text-text-muted">
               No library roots configured. Browse to a mounted folder to begin.
             </p>
           </div>
         ) : rootsVisibleInSettings.length === 0 ? (
-          <div className="surface-card no-lift p-8 text-center">
+          <div className="empty-rack-slot flex flex-col items-center p-8 text-center">
             <FolderOpen className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
             <p className="text-sm text-text-muted">No library roots to display.</p>
           </div>
@@ -576,8 +590,9 @@ export function SettingsPageClient({
                       )}
                     </button>
                     <button
+                      type="button"
                       onClick={() => void handleDeleteRoot(root)}
-                      className="p-1.5 text-text-muted hover:text-status-error hover:bg-status-error/10 transition-colors"
+                      className="p-1.5 text-text-muted transition-colors hover:bg-error-muted/30 hover:text-error-text"
                       title="Remove Library"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -753,11 +768,8 @@ export function SettingsPageClient({
           <p className="text-[0.65rem] text-text-muted leading-relaxed">
             <strong className="text-text-accent font-mono uppercase tracking-wider mr-2">Power-user tip:</strong>
             Quick toggle between full SFW and full NSFW (skips blur) with no toolbar button:{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘⇧Z</kbd> on Mac or{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+Shift+Z</kbd>{" "}
-            elsewhere. Global search also opens with{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">⌘K</kbd> /{" "}
-            <kbd className="bg-surface-2 border border-border-subtle shadow-well px-1.5 py-0.5 rounded-sm font-mono text-[0.6rem] text-text-secondary mx-0.5">Ctrl+K</kbd>.
+            <kbd className="kbd mx-0.5">⌘⇧Z</kbd> on Mac or <kbd className="kbd mx-0.5">Ctrl+Shift+Z</kbd> elsewhere.
+            Global search also opens with <kbd className="kbd mx-0.5">⌘K</kbd> / <kbd className="kbd mx-0.5">Ctrl+K</kbd>.
             On mobile, press and hold the bottom bar <strong className="text-text-primary">More</strong> button for five seconds for the same SFW ↔ full NSFW toggle.
           </p>
         </div>
@@ -865,7 +877,10 @@ export function SettingsPageClient({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-[0.78rem] font-medium text-text-secondary">Stash-Box Endpoints</h3>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setEditingStashBox(null);
                 setSbName("");
@@ -874,15 +889,15 @@ export function SettingsPageClient({
                 setSbTestResult(null);
                 setShowStashBoxForm(true);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-[0.68rem] text-text-accent hover:bg-accent-950 rounded transition-colors"
+              className="h-auto gap-1 px-2 py-1 text-[0.68rem] text-text-accent hover:bg-accent-950/60"
             >
               <Plus className="h-3 w-3" />
               Add
-            </button>
+            </Button>
           </div>
 
           {stashBoxEndpoints.length === 0 && !showStashBoxForm && (
-            <div className="surface-card no-lift p-4 text-center">
+            <div className="empty-rack-slot p-4 text-center">
               <p className="text-[0.75rem] text-text-disabled">
                 No Stash-Box endpoints configured. Add one to enable fingerprint-based video identification.
               </p>
@@ -896,18 +911,18 @@ export function SettingsPageClient({
                   <div className="flex items-center gap-2">
                     <span className="text-[0.82rem] font-medium truncate">{ep.name}</span>
                     {!ep.enabled && (
-                      <span className="pill-muted px-1.5 py-0.5 text-[0.55rem]">Disabled</span>
+                      <Badge variant="default" className="text-[0.55rem] font-semibold uppercase tracking-wider">
+                        Disabled
+                      </Badge>
                     )}
                     {sbTestResult?.id === ep.id && (
-                      <span className={cn(
-                        "flex items-center gap-1 px-1.5 py-0.5 text-[0.55rem] rounded",
-                        sbTestResult.valid
-                          ? "bg-emerald-950 text-emerald-400"
-                          : "bg-red-950 text-red-400",
-                      )}>
+                      <Badge
+                        variant={sbTestResult.valid ? "success" : "error"}
+                        className="items-center gap-1 text-[0.55rem] font-medium normal-case tracking-normal"
+                      >
                         {sbTestResult.valid ? <Check className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
                         {sbTestResult.valid ? "Connected" : sbTestResult.error ?? "Failed"}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <p className="text-[0.65rem] text-text-disabled truncate mt-0.5">
@@ -916,6 +931,7 @@ export function SettingsPageClient({
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    type="button"
                     onClick={async () => {
                       setSbTesting(ep.id);
                       setSbTestResult(null);
@@ -929,12 +945,17 @@ export function SettingsPageClient({
                       }
                     }}
                     disabled={sbTesting === ep.id}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
+                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                     title="Test connection"
                   >
-                    {sbTesting === ep.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {sbTesting === ep.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-400 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setEditingStashBox(ep);
                       setSbName(ep.name);
@@ -943,12 +964,13 @@ export function SettingsPageClient({
                       setSbTestResult(null);
                       setShowStashBoxForm(true);
                     }}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
+                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                     title="Edit"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
+                    type="button"
                     onClick={async () => {
                       await updateStashBoxEndpoint(ep.id, { enabled: !ep.enabled });
                       setStashBoxEndpoints((prev) =>
@@ -957,17 +979,18 @@ export function SettingsPageClient({
                       setMessage(`${ep.name} ${ep.enabled ? "disabled" : "enabled"}.`);
                       setTimeout(() => setMessage(null), 2000);
                     }}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors"
+                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                     title={ep.enabled ? "Disable" : "Enable"}
                   >
                     {ep.enabled ? <ToggleRight className="h-3.5 w-3.5 text-text-accent" /> : <ToggleLeft className="h-3.5 w-3.5" />}
                   </button>
                   <button
+                    type="button"
                     onClick={async () => {
                       await deleteStashBoxEndpoint(ep.id);
                       setStashBoxEndpoints((prev) => prev.filter((e) => e.id !== ep.id));
                     }}
-                    className="p-1.5 text-text-muted hover:text-red-400 hover:bg-surface-2 rounded transition-colors"
+                    className="p-1.5 text-text-muted transition-colors hover:bg-error-muted/25 hover:text-error-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/30"
                     title="Remove"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -977,16 +1000,17 @@ export function SettingsPageClient({
             </div>
           ))}
 
-          {/* Add/Edit form */}
+          {/* Add/Edit form — recessed well reads as an active edit slot vs list cards */}
           {showStashBoxForm && (
-            <div className="surface-card no-lift p-4 space-y-3">
+            <div className="surface-well space-y-3 border border-border-accent/30 p-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-[0.78rem] font-medium">
                   {editingStashBox ? "Edit Endpoint" : "Add Stash-Box Endpoint"}
                 </h4>
                 <button
+                  type="button"
                   onClick={() => setShowStashBoxForm(false)}
-                  className="p-1 text-text-disabled hover:text-text-muted transition-colors"
+                  className="p-1 text-text-disabled transition-colors hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -1025,7 +1049,7 @@ export function SettingsPageClient({
                           setSbEndpoint(preset.url);
                           if (!sbName) setSbName(preset.label);
                         }}
-                        className="px-1.5 py-0.5 text-[0.6rem] text-text-disabled border border-border-subtle hover:text-text-muted hover:border-border-default rounded transition-colors"
+                        className="border border-border-subtle px-1.5 py-0.5 text-[0.6rem] text-text-disabled transition-colors hover:border-border-default hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
                       >
                         {preset.label}
                       </button>
@@ -1047,20 +1071,27 @@ export function SettingsPageClient({
               </div>
 
               {error && (
-                <p className="text-[0.68rem] text-red-400 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
+                <p className="flex items-center gap-1 text-[0.68rem] text-error-text">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
                   {error}
                 </p>
               )}
 
               <div className="flex items-center justify-end gap-2 pt-1">
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowStashBoxForm(false)}
-                  className="px-3 py-1.5 text-[0.72rem] text-text-muted hover:text-text-primary transition-colors"
+                  className="h-auto px-3 py-1.5 text-[0.72rem]"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={sbSaving || !sbName || !sbEndpoint}
                   onClick={async () => {
                     setSbSaving(true);
                     setError(null);
@@ -1094,15 +1125,18 @@ export function SettingsPageClient({
                       setSbSaving(false);
                     }
                   }}
-                  disabled={sbSaving || !sbName || !sbEndpoint}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium rounded transition-colors",
-                    "bg-accent-600 text-white hover:bg-accent-500 disabled:opacity-50",
-                  )}
+                  className="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
                 >
-                  {sbSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                  {sbSaving ? (
+                    <>
+                      <StatusLed status="accent" size="sm" pulse className="shrink-0" />
+                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-accent-300 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
+                    </>
+                  ) : (
+                    <Save className="h-3 w-3" />
+                  )}
                   {editingStashBox ? "Update" : "Save & Test"}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1350,31 +1384,39 @@ export function SettingsPageClient({
               from either place until you rebuild previews or move later from Jobs.
             </p>
             <div className="flex flex-col gap-2">
-              <button
+              <Button
                 type="button"
+                variant="primary"
                 disabled={metadataStorageBusy}
                 onClick={() => void confirmMetadataStorageMoveFiles()}
-                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 text-[0.8rem] font-medium border border-border-accent/40 bg-accent-950/40 text-text-primary hover:bg-accent-950/55 transition-colors disabled:opacity-50"
+                className="w-full gap-2 px-3.5 py-2.5 text-[0.8rem]"
               >
-                {metadataStorageBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {metadataStorageBusy ? (
+                  <>
+                    <StatusLed status="accent" size="sm" pulse />
+                    <Loader2 className="h-4 w-4 animate-spin text-accent-300 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
+                  </>
+                ) : null}
                 Move existing files
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="secondary"
                 disabled={metadataStorageBusy}
                 onClick={() => void confirmMetadataStorageLeaveInPlace()}
-                className="w-full px-3.5 py-2.5 text-[0.8rem] font-medium border border-border-subtle bg-surface-2/40 text-text-secondary hover:border-border-accent/25 transition-colors disabled:opacity-50"
+                className="no-lift w-full border-border-subtle bg-surface-2/40 px-3.5 py-2.5 text-[0.8rem] text-text-secondary hover:border-border-accent/25"
               >
                 Leave files in place
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 disabled={metadataStorageBusy}
                 onClick={closeMetadataStorageDialogCancel}
-                className="w-full px-3.5 py-2 text-[0.75rem] text-text-muted hover:text-text-primary transition-colors disabled:opacity-50"
+                className="h-auto w-full px-3.5 py-2 text-[0.75rem]"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

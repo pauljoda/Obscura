@@ -124,9 +124,7 @@ export function CommandPalette() {
               <X className="h-3.5 w-3.5" />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border-subtle px-1.5 text-[0.6rem] text-text-disabled shrink-0">
-            ESC
-          </kbd>
+          <kbd className="kbd hidden shrink-0 text-text-disabled sm:inline-flex">ESC</kbd>
         </div>
 
         {/* Results body */}

@@ -12,10 +12,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /** Brass control-plate primary — matches Dark Room hardware actions (not flat SaaS fill). */
         primary: [
-          "bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_12px_rgba(199,155,92,0.12)]",
-          "hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_18px_rgba(199,155,92,0.18)]",
-          "active:from-accent-500 active:to-accent-600 active:shadow-none",
+          "border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900",
+          "text-accent-200 font-medium shadow-[var(--shadow-glow-accent)]",
+          "hover:from-accent-800 hover:via-accent-700 hover:to-accent-800 hover:shadow-[var(--shadow-glow-accent-strong)]",
+          "active:from-accent-950 active:via-accent-900 active:to-accent-950 active:shadow-[inset_0_2px_8px_rgba(0,0,0,0.45)]",
         ].join(" "),
         secondary: [
           "surface-card text-text-secondary",
@@ -27,7 +29,7 @@ const buttonVariants = cva(
         ].join(" "),
         danger: [
           "bg-error-muted text-error-text border border-error/20",
-          "hover:bg-error/20 hover:text-error-text",
+          "hover:bg-error/10 hover:text-error-text",
         ].join(" "),
       },
       size: {

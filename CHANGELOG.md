@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Shared `Button` primary variant now matches the brass control-plate treatment (horizontal accent gradient, border, glow) used for primary actions in Settings, instead of a brighter flat brass fill.
+- Settings: library folder browser nests paths in `surface-well`, empty states use dashed `empty-rack-slot` panels, and the Stash-Box add/edit form sits in a recessed well so it reads clearly against endpoint cards. Loading states pair a pulsing brass `StatusLed` with a brass-tinted spinner; Stash-Box test results use `Badge` success/error variants (LED palette) instead of raw emerald/red.
+- Command palette ESC hint uses the shared `.kbd` keyboard style.
 - Database schema and shared DB utilities (NSFW propagation, library pruning, collection rule engine) extracted into `@obscura/db` package. Worker no longer reaches into API internals via relative paths — both apps import from the shared package.
 - All shared DTOs (scenes, studios, tags, performers, scrape results, stash-box types) moved from frontend `types.ts` to `@obscura/contracts`. Frontend re-exports under original aliases for backward compatibility.
 - Entity labels (create/edit page headings, search placeholder, bulk scrape messages) now use the centralized terminology module instead of hardcoded strings, ensuring consistent "Actor"/"Video"/"Studio"/"Tag" naming everywhere.
@@ -18,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Backward-compatibility re-exports removed: `bulk-scrape.tsx` wrapper deleted (consumers now import directly from `scrape/bulk-scrape`), unused `ChipInput`/`StarRatingPicker`/`MetadataRow` re-exports removed from `scene-edit.tsx`.
 - Job dashboard broken up into focused sub-components: helpers, stat cards, queue cards, and job cards extracted to `components/jobs/` (958 → 460 lines).
 - Settings page broken up: reusable controls (ToggleCard, QualitySlider, NumberStepper, StorageStat), subtitles section with live preview, and diagnostics section extracted to `components/settings/` (1,919 → 1,389 lines).
+
+### Added
+
+- Global CSS utilities `.kbd` (sharp, recessed key caps), `.empty-rack-slot` (dashed empty hardware slot), and `.pill-muted` (muted uppercase label chip).
 
 ### Fixed
 
