@@ -35,6 +35,11 @@ interface AddToCollectionModalProps {
   entityType: CollectionEntityType;
   entityId: string;
   entityTitle?: string;
+  /**
+   * When provided, these items are added instead of the single entityType/entityId.
+   * Used to expand galleries (→ individual images) and audio libraries (→ individual tracks).
+   */
+  items?: { entityType: CollectionEntityType; entityId: string }[];
 }
 
 export function AddToCollectionModal({
@@ -43,6 +48,7 @@ export function AddToCollectionModal({
   entityType,
   entityId,
   entityTitle,
+  items: expandedItems,
 }: AddToCollectionModalProps) {
   const [collections, setCollections] = useState<CollectionListItemDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +68,8 @@ export function AddToCollectionModal({
       .finally(() => setIsLoading(false));
   }, [open]);
 
+  const itemsToAdd = expandedItems ?? [{ entityType, entityId }];
+
   const handleAdd = useCallback(async () => {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
@@ -71,9 +79,7 @@ export function AddToCollectionModal({
     await Promise.allSettled(
       ids.map(async (collId) => {
         try {
-          await addCollectionItems(collId, {
-            items: [{ entityType, entityId }],
-          });
+          await addCollectionItems(collId, { items: itemsToAdd });
           setAddedIds((prev) => new Set([...prev, collId]));
         } catch (err) {
           console.error(`Failed to add to ${collId}:`, err);
@@ -85,7 +91,7 @@ export function AddToCollectionModal({
     await revalidateCollectionCache(ids);
     setAddingToIds(new Set());
     setTimeout(onClose, 400);
-  }, [selectedIds, entityType, entityId, onClose]);
+  }, [selectedIds, itemsToAdd, onClose]);
 
   const handleCreateAndAdd = useCallback(async () => {
     setIsCreating(true);
@@ -96,23 +102,22 @@ export function AddToCollectionModal({
           : "New Collection",
       });
 
-      // Add the item to the new collection
-      await addCollectionItems(coll.id, {
-        items: [{ entityType, entityId }],
-      });
+      // Add items to the new collection
+      await addCollectionItems(coll.id, { items: itemsToAdd });
+
+      // Build type counts from the items being added
+      const counts = { scene: 0, gallery: 0, image: 0, "audio-track": 0 };
+      for (const item of itemsToAdd) {
+        counts[item.entityType] = (counts[item.entityType] ?? 0) + 1;
+      }
 
       // Immediately insert the new collection into the list so the user
       // sees it appear with a success checkmark — no delay.
       setCollections((prev) => [
         {
           ...coll,
-          itemCount: 1,
-          typeCounts: {
-            scene: entityType === "scene" ? 1 : 0,
-            gallery: entityType === "gallery" ? 1 : 0,
-            image: entityType === "image" ? 1 : 0,
-            "audio-track": entityType === "audio-track" ? 1 : 0,
-          },
+          itemCount: itemsToAdd.length,
+          typeCounts: counts,
         } as CollectionListItemDto,
         ...prev,
       ]);
@@ -124,7 +129,7 @@ export function AddToCollectionModal({
     } finally {
       setIsCreating(false);
     }
-  }, [entityType, entityId, entityTitle]);
+  }, [itemsToAdd, entityTitle]);
 
   if (!open) return null;
 

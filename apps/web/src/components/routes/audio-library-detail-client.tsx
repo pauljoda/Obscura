@@ -866,6 +866,7 @@ export function AudioLibraryDetailClient({
         entityType="audio-track"
         entityId={library.id}
         entityTitle={library.title}
+        items={library.tracks.map((t) => ({ entityType: "audio-track" as const, entityId: t.id }))}
       />
     </>
   );

@@ -15,6 +15,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The folder edit panel uses the same chip pickers, studio autocomplete, and star rating as scene editing.
 - Mobile layout improvements: compact poster in folder headers, search bar on its own row in the filter toolbar.
 
+### Fixed
+
+- Playlist now auto-plays videos when navigating to a scene from the queue.
+- Videos auto-advance to the next playlist entry when playback finishes. Only the expected current entry triggers advancement, preventing rogue advances when the user navigates away and plays something else.
+- Playlist returns to the collection detail page when the last entry finishes instead of silently clearing.
+- Collection name and currently-playing info in the playlist bar are now clickable links back to the collection detail page.
+
+### Changed
+
+- Playlist queue panel replaced with a rich sheet: slide-up panel with thumbnails, visual current/played/upcoming states, and glass surface styling. Mobile-full-width, desktop sidecar layout.
+- Playlist controller bar now sits above the mobile navigation bar instead of overlapping it, with dynamic bottom padding when a playlist is active.
+- Adding a gallery to a collection now expands it into individual image entries instead of adding the gallery as a single container item. Same for audio libraries — individual tracks are added.
+
 ### Added
 
 - **Collections: cross-type content groups with dynamic rules and global playlist.** Collections group scenes, galleries, images, and audio tracks into curated sets. Three modes: manual (hand-picked items), dynamic (auto-populated by a condition builder with AND/OR/NOT logic trees), and hybrid (both). The condition builder supports filters on all entity fields — tags, performers, studios, rating, date, duration, resolution, codec, and more — with autocomplete chip pickers for relation fields and a live-updating preview panel showing matching items as rules are edited. Dynamic collections refresh automatically during library scans. The collection detail page offers mixed gallery and grouped-by-type view modes. A global floating playlist controller navigates to each entity's actual detail page (with full video player, subtitles, markers, etc.) and auto-advances when content ends — with shuffle, loop, queue panel, and dismiss controls. An "Add to Collection" modal can be triggered from any entity page to manually assign items — manual assignments persist even when dynamic rules wouldn't match them.

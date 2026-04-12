@@ -46,6 +46,7 @@ import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 import { AddToCollectionModal } from "./collections/add-to-collection-modal";
+import { usePlaylistContext } from "./collections/playlist-context";
 import { SceneMetadataPanel } from "./scenes/scene-metadata-panel";
 import { SceneMarkerEditor } from "./scenes/scene-marker-editor";
 import { SceneFileInfo } from "./scenes/scene-file-info";
@@ -62,6 +63,7 @@ export function SceneDetail({
   initialScene?: SceneDetailType | null;
   initialTags?: TagItem[];
 }) {
+  const playlist = usePlaylistContext();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
   const [scene, setScene] = useState<SceneDetailType | null>(initialScene);
   const [loading, setLoading] = useState(initialScene == null);
@@ -482,6 +484,8 @@ export function SceneDetail({
               subtitleChoiceLocked={subtitleChoiceLocked}
               subtitleDefaults={subtitleDefaults}
               defaultPlaybackMode={defaultPlaybackMode}
+              autoPlay={playlist.isActive && playlist.isPlaylistItem("scene", scene.id)}
+              onEnded={() => playlist.reportContentEnded("scene", scene.id)}
             />
           </div>
           {isTranscriptDocked && (

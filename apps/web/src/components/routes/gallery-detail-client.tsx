@@ -386,6 +386,7 @@ export function GalleryDetailClient({
       entityType="gallery"
       entityId={gallery.id}
       entityTitle={gallery.title}
+      items={images.map((img) => ({ entityType: "image" as const, entityId: img.id }))}
     />
   );
 

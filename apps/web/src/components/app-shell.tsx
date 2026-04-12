@@ -9,7 +9,7 @@ import { SearchProvider } from "./search/search-context";
 import { CommandPalette } from "./search/command-palette";
 import { NsfwProvider } from "./nsfw/nsfw-context";
 import { AppChromeProvider } from "./app-chrome-context";
-import { PlaylistProvider } from "./collections/playlist-context";
+import { PlaylistProvider, usePlaylistContext } from "./collections/playlist-context";
 import { PlaylistController } from "./collections/playlist-controller";
 
 function setSidebarCookie(collapsed: boolean) {
@@ -21,6 +21,33 @@ interface AppShellProps {
   initialCollapsed?: boolean;
   lanAutoEnable?: boolean;
   initialNsfwMode?: "off" | "blur" | "show";
+}
+
+/** Inner wrapper that reads playlist context to adjust padding. */
+function AppShellMain({
+  children,
+  collapsed,
+}: {
+  children: React.ReactNode;
+  collapsed: boolean;
+}) {
+  const playlist = usePlaylistContext();
+
+  return (
+    <main
+      className={cn(
+        "flex flex-1 flex-col transition-[margin-left] duration-moderate",
+        // Extra bottom padding on mobile when playlist is active (MobileNav + controller)
+        playlist.isActive ? "pb-28 md:pb-0" : "pb-14 md:pb-0",
+        "h-dvh overflow-y-auto",
+        collapsed ? "md:ml-14" : "md:ml-60",
+      )}
+      style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
+    >
+      <CanvasHeader />
+      <div className="flex-1 p-5">{children}</div>
+    </main>
+  );
 }
 
 export function AppShell({ children, initialCollapsed = false, lanAutoEnable = false, initialNsfwMode = "off" }: AppShellProps) {
@@ -43,18 +70,9 @@ export function AppShell({ children, initialCollapsed = false, lanAutoEnable = f
                 <Sidebar collapsed={collapsed} onToggle={toggle} />
               </div>
 
-              {/* Main canvas */}
-              <main
-                className={cn(
-                  "flex flex-1 flex-col transition-[margin-left] duration-moderate pb-14 md:pb-0",
-                  "h-dvh overflow-y-auto",
-                  collapsed ? "md:ml-14" : "md:ml-60",
-                )}
-                style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
-              >
-                <CanvasHeader />
-                <div className="flex-1 p-5">{children}</div>
-              </main>
+              <AppShellMain collapsed={collapsed}>
+                {children}
+              </AppShellMain>
 
               {/* Mobile bottom nav */}
               <MobileNav />

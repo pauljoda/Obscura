@@ -101,6 +101,10 @@ interface VideoPlayerProps {
   };
   /** Default playback mode from library settings. User can still override. */
   defaultPlaybackMode?: "direct" | "hls";
+  /** Called when the video reaches the end. */
+  onEnded?: () => void;
+  /** When true, begin playback automatically once metadata loads. */
+  autoPlay?: boolean;
 }
 
 function languageLabel(language: string): string {
@@ -259,6 +263,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     subtitleChoiceLocked = false,
     subtitleDefaults,
     defaultPlaybackMode,
+    onEnded: onEndedProp,
+    autoPlay = false,
   },
   ref,
 ) {
@@ -268,6 +274,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const controlsTimeoutRef = useRef<number | null>(null);
   const playTrackedRef = useRef(false);
   const isDraggingRef = useRef(false);
+  const autoPlayPropRef = useRef(autoPlay);
+  autoPlayPropRef.current = autoPlay;
+  const onEndedPropRef = useRef(onEndedProp);
+  onEndedPropRef.current = onEndedProp;
   // Track last-seen src/directSrc to distinguish "new video loaded" from
   // "user changed quality mode" when the source effect re-runs.
   const prevSrcKeyRef = useRef<string>("");
@@ -915,6 +925,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       applyDuration();
       updateBuffered();
       onTimeUpdate?.(video.currentTime);
+      // Auto-play when the playlist navigated to this page
+      if (autoPlayPropRef.current && video.paused) {
+        requestPlay(video);
+      }
     };
 
     const onDurationChange = () => {
@@ -944,6 +958,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       setPlaying(false);
       setShowControls(true);
       clearControlsTimer();
+      onEndedPropRef.current?.();
     };
     const onVolumeChange = () => {
       setMuted(video.muted || video.volume === 0);

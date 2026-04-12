@@ -14,6 +14,7 @@ import type {
   CollectionItemDto,
   CollectionEntityType,
 } from "@obscura/contracts";
+import { getEntityHref } from "./collection-item-helpers";
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -22,21 +23,6 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
-}
-
-function getEntityHref(item: CollectionItemDto): string {
-  switch (item.entityType) {
-    case "scene":
-      return `/scenes/${item.entityId}`;
-    case "gallery":
-      return `/galleries/${item.entityId}`;
-    case "image":
-      return `/images/${item.entityId}`;
-    case "audio-track":
-      return `/audio/${item.entityId}`;
-    default:
-      return "#";
-  }
 }
 
 export interface PlaylistContextValue {
@@ -50,6 +36,8 @@ export interface PlaylistContextValue {
   currentItem: CollectionItemDto | null;
   /** Collection name for display. */
   collectionName: string;
+  /** Collection ID for linking back. */
+  collectionId: string | null;
   /** Shuffle state. */
   shuffle: boolean;
   /** Loop state. */
@@ -75,8 +63,20 @@ export interface PlaylistContextValue {
   toggleShuffle: () => void;
   /** Toggle loop. */
   toggleLoop: () => void;
-  /** Report that the current content has finished playing (video ended, image timer, etc.). */
-  reportContentEnded: () => void;
+  /**
+   * Report that content has finished playing. Only advances the playlist
+   * if the reported entity matches the current playlist item — prevents
+   * rogue advances when the user navigated away and played something else.
+   */
+  reportContentEnded: (
+    entityType: CollectionEntityType,
+    entityId: string,
+  ) => void;
+  /** Check whether the given entity is the current playlist item. */
+  isPlaylistItem: (
+    entityType: CollectionEntityType,
+    entityId: string,
+  ) => boolean;
 }
 
 const PlaylistContext = createContext<PlaylistContextValue | null>(null);
@@ -88,6 +88,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CollectionItemDto[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [collectionName, setCollectionName] = useState("");
+  const [collectionId, setCollectionId] = useState<string | null>(null);
   const [shuffle, setShuffle] = useState(false);
   const [loop, setLoop] = useState(false);
   const [playOrder, setPlayOrder] = useState<number[]>([]);
@@ -100,6 +101,10 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
   const isOnCurrentPage = currentItem
     ? pathname === getEntityHref(currentItem)
     : false;
+
+  // Keep refs for values needed in callbacks to avoid stale closures
+  const collectionIdRef = useRef(collectionId);
+  collectionIdRef.current = collectionId;
 
   const navigateToItem = useCallback(
     (item: CollectionItemDto) => {
@@ -116,6 +121,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     ) => {
       setItems(newItems);
       setCollectionName(name);
+      setCollectionId(newItems[0]?.collectionId ?? null);
       setCurrentIndex(startIndex);
       const order = newItems.map((_, i) => i);
       setPlayOrder(order);
@@ -134,6 +140,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     setItems([]);
     setCurrentIndex(0);
     setCollectionName("");
+    setCollectionId(null);
     setPlayOrder([]);
     setOrderPosition(0);
   }, []);
@@ -146,7 +153,10 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
       if (loop) {
         newPos = 0;
       } else {
+        // Playlist ended — navigate back to collection detail
+        const returnTo = collectionIdRef.current;
         clearPlaylist();
+        if (returnTo) router.push(`/collections/${returnTo}`);
         return;
       }
     }
@@ -155,7 +165,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
     setOrderPosition(newPos);
     setCurrentIndex(newIndex);
     navigateToItem(items[newIndex]);
-  }, [items, orderPosition, playOrder, loop, clearPlaylist, navigateToItem]);
+  }, [items, orderPosition, playOrder, loop, clearPlaylist, navigateToItem, router]);
 
   const previous = useCallback(() => {
     if (items.length === 0) return;
@@ -211,10 +221,28 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
   const toggleLoop = useCallback(() => setLoop((l) => !l), []);
 
-  const reportContentEnded = useCallback(() => {
-    // Auto-advance to next when content ends
-    next();
-  }, [next]);
+  const reportContentEnded = useCallback(
+    (entityType: CollectionEntityType, entityId: string) => {
+      const cur = items[currentIndex];
+      if (!cur) return;
+      // Only advance if the entity that ended matches the current playlist item
+      if (cur.entityType === entityType && cur.entityId === entityId) {
+        next();
+      }
+    },
+    [items, currentIndex, next],
+  );
+
+  const isPlaylistItem = useCallback(
+    (entityType: CollectionEntityType, entityId: string): boolean => {
+      if (!isActive || !currentItem) return false;
+      return (
+        currentItem.entityType === entityType &&
+        currentItem.entityId === entityId
+      );
+    },
+    [isActive, currentItem],
+  );
 
   return (
     <PlaylistContext.Provider
@@ -224,6 +252,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
         currentIndex,
         currentItem,
         collectionName,
+        collectionId,
         shuffle,
         loop,
         isOnCurrentPage,
@@ -235,6 +264,7 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
         toggleShuffle,
         toggleLoop,
         reportContentEnded,
+        isPlaylistItem,
       }}
     >
       {children}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   SkipForward,
   SkipBack,
@@ -13,10 +14,10 @@ import {
   Images,
   Layers,
   Music,
-  ListMusic,
 } from "lucide-react";
 import type { CollectionEntityType } from "@obscura/contracts";
 import { usePlaylistContext } from "./playlist-context";
+import { PlaylistQueueSheet } from "./playlist-queue-sheet";
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
   scene: Film,
@@ -28,7 +29,7 @@ const typeIcons: Record<CollectionEntityType, typeof Film> = {
 /**
  * Global floating playlist controller bar.
  * Renders at the bottom of the viewport when a playlist is active.
- * Shows current item, transport controls, and an expandable queue.
+ * Shows current item, transport controls, and an expandable queue sheet.
  */
 export function PlaylistController() {
   const playlist = usePlaylistContext();
@@ -44,62 +45,13 @@ export function PlaylistController() {
 
   return (
     <>
-      {/* Queue panel (above the bar) */}
-      {showQueue && (
-        <div className="fixed bottom-14 right-4 left-4 md:left-auto md:w-96 max-h-[50vh] z-50 bg-surface-1 border border-border-default shadow-xl overflow-hidden flex flex-col">
-          <div className="px-3 py-2 border-b border-border-subtle flex items-center justify-between">
-            <span className="text-[0.7rem] font-heading font-medium text-text-muted uppercase tracking-wider">
-              <ListMusic className="inline h-3 w-3 mr-1" />
-              Queue — {playlist.collectionName}
-            </span>
-            <span className="text-[0.65rem] font-mono text-text-disabled">
-              {playlist.currentIndex + 1}/{playlist.items.length}
-            </span>
-          </div>
-          <div className="overflow-y-auto flex-1">
-            {playlist.items.map((item, index) => {
-              const Icon = typeIcons[item.entityType];
-              const title =
-                (item.entity?.title as string) ?? "Untitled";
-              const isCurrent = index === playlist.currentIndex;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => playlist.jumpTo(index)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
-                    isCurrent
-                      ? "bg-accent-brass/10 border-l-2 border-accent-brass"
-                      : "hover:bg-surface-2 border-l-2 border-transparent"
-                  }`}
-                >
-                  <Icon
-                    className={`h-3 w-3 flex-shrink-0 ${
-                      isCurrent
-                        ? "text-text-accent"
-                        : "text-text-muted"
-                    }`}
-                  />
-                  <span
-                    className={`text-[0.75rem] truncate ${
-                      isCurrent
-                        ? "text-text-accent font-medium"
-                        : "text-text-secondary"
-                    }`}
-                  >
-                    {title}
-                  </span>
-                  <span className="text-[0.6rem] font-mono text-text-disabled ml-auto flex-shrink-0">
-                    {index + 1}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <PlaylistQueueSheet
+        open={showQueue}
+        onClose={() => setShowQueue(false)}
+      />
 
-      {/* Controller bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-surface-1 border-t border-border-subtle h-14 flex items-center px-4 gap-3 md:bottom-0">
+      {/* Controller bar — sits above MobileNav on mobile */}
+      <div className="fixed bottom-14 md:bottom-0 left-0 right-0 z-[55] bg-surface-1/95 backdrop-blur-xl border-t border-border-subtle h-14 flex items-center px-4 gap-3">
         {/* Current item info */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <CurrentTypeIcon className="h-4 w-4 text-text-accent flex-shrink-0" />
@@ -107,10 +59,13 @@ export function PlaylistController() {
             <p className="text-[0.78rem] text-text-primary truncate font-medium leading-tight">
               {currentTitle}
             </p>
-            <p className="text-[0.65rem] text-text-muted truncate leading-tight">
+            <Link
+              href={`/collections/${playlist.collectionId}`}
+              className="text-[0.65rem] text-text-muted truncate leading-tight block hover:text-text-accent transition-colors"
+            >
               {playlist.collectionName} —{" "}
               {playlist.currentIndex + 1}/{playlist.items.length}
-            </p>
+            </Link>
           </div>
         </div>
 
