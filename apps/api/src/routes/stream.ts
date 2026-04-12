@@ -464,25 +464,8 @@ export async function streamRoutes(app: FastifyInstance) {
     return reply.send(body);
   });
 
-  app.get("/stream/:id/hls2/v/index.m3u8", async (_request, reply) => {
-    const { id } = _request.params as { id: string };
-    const scene = await getSceneSource(id);
-    if (!scene?.filePath) {
-      reply.code(404);
-      return { error: "Video file not found on disk" };
-    }
-    if (!scene.duration || scene.duration <= 0) {
-      reply.code(409);
-      return { error: "Scene has no probed duration yet" };
-    }
-    const body = buildVirtualVariant(scene.duration);
-    reply.header("Content-Type", mimeForExt(".m3u8"));
-    reply.header("Cache-Control", "public, max-age=300");
-    return reply.send(body);
-  });
-
-  app.get("/stream/:id/hls2/v/seg_:n.ts", async (request, reply) => {
-    const { id, n } = request.params as { id: string; n: string };
+  app.get("/stream/:id/hls2/v/:file", async (request, reply) => {
+    const { id, file } = request.params as { id: string; file: string };
     const scene = await getSceneSource(id);
     if (!scene?.filePath) {
       reply.code(404);
@@ -493,7 +476,19 @@ export async function streamRoutes(app: FastifyInstance) {
       return { error: "Scene has no probed duration yet" };
     }
 
-    const segIndex = Number.parseInt(n, 10);
+    if (file === "index.m3u8") {
+      const body = buildVirtualVariant(scene.duration);
+      reply.header("Content-Type", mimeForExt(".m3u8"));
+      reply.header("Cache-Control", "public, max-age=300");
+      return reply.send(body);
+    }
+
+    const match = /^seg_(\d+)\.ts$/.exec(file);
+    if (!match) {
+      reply.code(404);
+      return { error: "Unknown segment file" };
+    }
+    const segIndex = Number.parseInt(match[1], 10);
     if (!Number.isFinite(segIndex) || segIndex < 0) {
       reply.code(400);
       return { error: "Invalid segment index" };
