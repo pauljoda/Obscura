@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Database schema and shared DB utilities (NSFW propagation, library pruning, collection rule engine) extracted into `@obscura/db` package. Worker no longer reaches into API internals via relative paths — both apps import from the shared package.
+- All shared DTOs (scenes, studios, tags, performers, scrape results, stash-box types) moved from frontend `types.ts` to `@obscura/contracts`. Frontend re-exports under original aliases for backward compatibility.
 - Entity labels (create/edit page headings, search placeholder, bulk scrape messages) now use the centralized terminology module instead of hardcoded strings, ensuring consistent "Actor"/"Video"/"Studio"/"Tag" naming everywhere.
 - Performer identify/scrape section now shows "Identify" when a StashBox endpoint is selected and "Scrape" for community scrapers, matching the label convention used on studio and tag edit pages.
 - Shared `ScrapeField` component extracted from studio and tag edit pages to eliminate duplication.
