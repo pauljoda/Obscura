@@ -786,6 +786,9 @@ export interface PerformerListItemDto {
   rating: number | null;
   isNsfw: boolean;
   sceneCount: number;
+  /** Linked galleries plus standalone images (SFW mode excludes NSFW entities). */
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
   country: string | null;
   createdAt: string;
 }
@@ -1225,5 +1228,216 @@ export interface CollectionRulePreviewDto {
   total: number;
   byType: Record<CollectionEntityType, number>;
   sample: CollectionItemDto[];
+}
+
+// ─── Scene DTOs ─────────────────────────────────────────────────
+
+export interface SceneListItemDto {
+  id: string;
+  title: string;
+  details: string | null;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  duration: number | null;
+  durationFormatted: string | null;
+  resolution: string | null;
+  width: number | null;
+  height: number | null;
+  codec: string | null;
+  container: string | null;
+  fileSize: number | null;
+  fileSizeFormatted: string | null;
+  filePath: string | null;
+  hasVideo: boolean;
+  streamUrl: string | null;
+  directStreamUrl: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
+  playCount: number;
+  orgasmCount: number;
+  studioId: string | null;
+  sceneFolderId: string | null;
+  sceneFolderTitle: string | null;
+  hasSubtitles: boolean;
+  performers: {
+    id: string;
+    name: string;
+    gender?: string | null;
+    imagePath?: string | null;
+    favorite?: boolean;
+    isNsfw?: boolean;
+  }[];
+  tags: TagEmbedDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SceneDetailDto extends SceneListItemDto {
+  interactive: boolean;
+  frameRate: number | null;
+  bitRate: number | null;
+  previewPath: string | null;
+  playDuration: number | null;
+  resumeTime: number | null;
+  lastPlayedAt: string | null;
+  url: string | null;
+  studio: { id: string; name: string; url: string | null } | null;
+  markers: SceneMarkerDto[];
+  subtitleTracks: SceneSubtitleTrackDto[];
+}
+
+export interface SceneMarkerDto {
+  id: string;
+  title: string;
+  seconds: number;
+  endSeconds: number | null;
+}
+
+export interface SceneStatsDto {
+  totalScenes: number;
+  totalDuration: number;
+  totalDurationFormatted: string;
+  totalSize: number;
+  totalSizeFormatted: string;
+  totalPlays: number;
+  recentCount: number;
+}
+
+// ─── Studio DTOs ────────────────────────────────────────────────
+
+export interface StudioListItemDto {
+  id: string;
+  name: string;
+  url: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  sceneCount: number;
+  /** Galleries + images with this studio (SFW mode excludes NSFW entities). */
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
+}
+
+export interface StudioParentRefDto {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+}
+
+export interface StudioChildRefDto {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+  sceneCount: number;
+}
+
+export interface StudioDetailDto {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string | null;
+  url: string | null;
+  parentId: string | null;
+  parent: StudioParentRefDto | null;
+  childStudios: StudioChildRefDto[];
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  sceneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Tag DTOs ───────────────────────────────────────────────────
+
+export interface TagListItemDto {
+  id: string;
+  name: string;
+  sceneCount: number;
+  imageCount: number;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+}
+
+export interface TagDetailDto {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string | null;
+  parentId: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  ignoreAutoTag: boolean;
+  sceneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Scrape / StashBox Result DTOs ──────────────────────────────
+
+export interface NormalizedSceneScrapeResultDto {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  url: string | null;
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+}
+
+export interface NormalizedStudioScrapeResultDto {
+  name: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  parentName: string | null;
+}
+
+export interface NormalizedTagScrapeResultDto {
+  name: string | null;
+  description: string | null;
+  aliases: string | null;
+}
+
+export interface StashIdEntryDto {
+  id: string;
+  entityType: string;
+  entityId: string;
+  endpointId: string;
+  endpointName: string;
+  stashId: string;
+  createdAt: string;
+}
+
+export interface StashBoxStudioResultDto {
+  id: string;
+  name: string;
+  aliases: string[];
+  urls: { url: string; type: string }[];
+  parent: { id: string; name: string } | null;
+  images: { id: string; url: string; width: number; height: number }[];
+}
+
+export interface StashBoxTagResultDto {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string[];
+  category: { id: string; name: string; description: string | null } | null;
 }
 
