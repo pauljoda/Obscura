@@ -2,6 +2,7 @@ import type { EntityKind } from "@obscura/contracts";
 import {
   Building2,
   Film,
+  FolderOpen,
   Image,
   Images,
   Music,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export const ALL_SEARCH_KINDS: EntityKind[] = [
+  "scene-folder",
   "scene",
   "performer",
   "studio",
@@ -28,6 +30,7 @@ interface SearchKindConfig {
 }
 
 export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
+  "scene-folder": { label: "Folders", icon: FolderOpen, href: "/scenes" },
   scene: { label: "Videos", icon: Film, href: "/scenes" },
   performer: { label: "Actors", icon: Users, href: "/performers" },
   studio: { label: "Studios", icon: Building2, href: "/studios" },
