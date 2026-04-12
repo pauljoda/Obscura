@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Entity labels (create/edit page headings, search placeholder, bulk scrape messages) now use the centralized terminology module instead of hardcoded strings, ensuring consistent "Actor"/"Video"/"Studio"/"Tag" naming everywhere.
+- Performer identify/scrape section now shows "Identify" when a StashBox endpoint is selected and "Scrape" for community scrapers, matching the label convention used on studio and tag edit pages.
+- Shared `ScrapeField` component extracted from studio and tag edit pages to eliminate duplication.
+- Shared `StatusMessage` component replaces repeated inline error/success banner markup across all create and edit pages.
+- New `.btn-accent` CSS class consolidates the accent button style pattern previously copy-pasted across 6+ components.
+- Backward-compatibility re-exports removed: `bulk-scrape.tsx` wrapper deleted (consumers now import directly from `scrape/bulk-scrape`), unused `ChipInput`/`StarRatingPicker`/`MetadataRow` re-exports removed from `scene-edit.tsx`.
+
+### Fixed
+
+- API scene resolution filtering now uses the shared `buildResolutionConditions` helper instead of a duplicated local implementation.
+- Settings library routes now throw `AppError` for consistent error handling instead of manually setting status codes.
+- Gallery POST endpoint now correctly returns HTTP 201 on creation, matching other create endpoints.
+- Library POST endpoint now correctly returns HTTP 201 on creation.
+- Collection service query condition arrays typed as `SQL[]` instead of `any[]`.
+- Self-referential foreign key casts in the database schema now have explanatory comments for the Drizzle ORM limitation.
+
+### Removed
+
+- Empty `packages/config/` package deleted (contained only a package.json with no source code).
+
+### Docs
+
+- Dependency versions aligned: `@types/node` synced to `^22.19.17` and `react`/`react-dom` synced to `^19.2.4` across all workspaces.
+
 ### What's New
 
 - Scene folders now have rich detail pages with poster art, backdrop banners, descriptions, star ratings, and a Cast & Crew section — inspired by Jellyfin's series view. You will need to run a library scan post update to generate folder associations. 
