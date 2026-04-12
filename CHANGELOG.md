@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Scene folder hero tags link to tag pages.** Folder tags in the scenes browse hero use the same clickable `tag-chip` links as the scene detail editor, including NSFW visibility filtering.
 - **Scene folder hero shows one on-disk library path line.** The hero replaces the separate library label, “Scene folder” caption, and directory-name subtitle with a single path such as `Main Library > scenes > …` built from the library root label and each folder’s on-disk title.
 - **Scene folder hero edit control moved to the top-right.** The edit (and save/cancel) actions for folder metadata now sit in the top corner of the backdrop header instead of beside the title at the bottom of the hero, where the bottom-aligned layout made them feel misplaced.
 - **Scene folder metadata is now inline in the folder browse view.** The separate `/scene-folders/:id` detail page has been replaced by an inline sticky metadata panel that appears alongside the folder content in the main scenes browse view. The old URL now redirects.

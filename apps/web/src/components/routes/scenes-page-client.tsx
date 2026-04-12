@@ -58,7 +58,7 @@ import {
 } from "../../lib/api";
 import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
 import { InfoRow } from "../shared/metadata-panel";
-import { NsfwChip, NsfwEditToggle, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
+import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { ChipInput } from "../shared/chip-input";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
@@ -1116,19 +1116,27 @@ export function ScenesPageClient({
                       )}
 
                       {/* Tags */}
-                      {activeFolder.tags && activeFolder.tags.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          <span className="text-[0.72rem] text-white/40 mr-1 self-center">Tags:</span>
-                          {activeFolder.tags.map((tag) => (
-                            <span
-                              key={tag.id}
-                              className="text-[0.72rem] text-white/60"
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const folderTagsVisible = tagsVisibleInNsfwMode(
+                          activeFolder.tags ?? [],
+                          nsfwMode,
+                        );
+                        if (folderTagsVisible.length === 0) return null;
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                            <span className="mr-1 self-center text-[0.72rem] text-white/40">Tags:</span>
+                            {folderTagsVisible.map((tag) => (
+                              <Link
+                                key={tag.id}
+                                href={`/tags/${encodeURIComponent(tag.name)}`}
+                                className="tag-chip tag-chip-default hover:tag-chip-accent cursor-pointer transition-colors"
+                              >
+                                <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
+                              </Link>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
