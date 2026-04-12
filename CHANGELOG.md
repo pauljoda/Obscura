@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **`/design-language`** page (not linked in nav, `noindex`) — single-page gallery of Dark Room tokens: typography, buttons, badges, surfaces, accent/status palettes, LEDs, meters, loading patterns, motion, form controls, caption styles, and gradient placeholders.
 - Global CSS utilities `.kbd` (sharp, recessed key caps), `.empty-rack-slot` (dashed empty hardware slot), and `.pill-muted` (muted uppercase label chip).
 
 ### Fixed
