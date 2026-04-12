@@ -814,6 +814,20 @@
     height: 0.95rem;
   }
 
+  /* ── Accent action button ── */
+  .btn-accent {
+    background: var(--color-accent-950);
+    color: var(--color-text-accent);
+    border: 1px solid var(--color-border-accent);
+  }
+  .btn-accent:hover:not(:disabled) {
+    background: var(--color-accent-900);
+  }
+  .btn-accent:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* ── Gradient thumbnail placeholders ── */
   .gradient-thumb-1 { background: linear-gradient(135deg, #1a1028 0%, #2d1b4e 40%, #4a2040 100%); }
   .gradient-thumb-2 { background: linear-gradient(135deg, #0f1a2e 0%, #1b3a5c 40%, #0d2847 100%); }

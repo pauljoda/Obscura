@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BulkScrape } from "../../../components/bulk-scrape";
+import { BulkScrape } from "../../../components/scrape/bulk-scrape";
 import { useNsfw } from "../../../components/nsfw/nsfw-context";
 
 export default function IdentifyPage() {

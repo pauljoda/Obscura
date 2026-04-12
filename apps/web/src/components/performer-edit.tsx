@@ -38,6 +38,7 @@ import { NsfwGate } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 import { PerformerForm } from "./performer-form";
+import { StatusMessage } from "./shared/status-message";
 
 interface PerformerEditProps {
   id: string;
@@ -449,11 +450,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
-              "bg-accent-950 text-text-accent border border-border-accent",
-              "hover:bg-accent-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast btn-accent"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
             Save
@@ -462,16 +459,8 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
       </div>
 
       {/* Messages */}
-      {error && (
-        <div className="surface-well border-l-2 border-status-error px-3 py-2 text-sm text-status-error">
-          {error}
-        </div>
-      )}
-      {message && (
-        <div className="surface-well border-l-2 border-status-success px-3 py-2 text-sm text-status-success">
-          {message}
-        </div>
-      )}
+      <StatusMessage type="error" message={error} />
+      <StatusMessage type="success" message={message} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image */}

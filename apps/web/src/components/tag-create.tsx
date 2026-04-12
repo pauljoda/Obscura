@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { cn } from "@obscura/ui/lib/utils";
 import { createTag } from "../lib/api";
 import { TagForm, type TagFormValues } from "./tag-form";
 import { entityTerms } from "../lib/terminology";
+import { StatusMessage } from "./shared/status-message";
 
 export function TagCreate() {
   const router = useRouter();
@@ -53,20 +53,14 @@ export function TagCreate() {
         <button
           onClick={handleSave}
           disabled={saving || !values.name.trim()}
-          className={cn(
-            "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
-            "bg-accent-950 text-text-accent border border-border-accent",
-            "hover:bg-accent-900 disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast btn-accent"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           Create
         </button>
       </div>
 
-      {error && (
-        <div className="surface-well border-l-2 border-status-error px-3 py-2 text-sm text-status-error">{error}</div>
-      )}
+      <StatusMessage type="error" message={error} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 min-w-0 space-y-4">

@@ -59,6 +59,9 @@ import {
 } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
+import { ChipInput } from "./shared/chip-input";
+import { StarRatingPicker } from "./shared/star-rating-picker";
+import { MetadataRow } from "./shared/metadata-row";
 
 interface SceneEditProps {
   id: string;
@@ -66,16 +69,6 @@ interface SceneEditProps {
   onSaved?: () => void;
   currentPlaybackTime?: number;
 }
-
-// ─── ChipInput (shared) ───────────────────────────────────────
-// Re-exported for backward compatibility; prefer importing from shared/chip-input directly.
-import { ChipInput } from "./shared/chip-input";
-export { ChipInput };
-
-// ─── StarRatingPicker & MetadataRow (shared) ──────────────────
-import { StarRatingPicker } from "./shared/star-rating-picker";
-import { MetadataRow } from "./shared/metadata-row";
-export { StarRatingPicker, MetadataRow };
 
 // ─── Main Component ────────────────────────────────────────────
 

@@ -14,7 +14,6 @@ import {
   X,
   Image as ImageIcon,
 } from "lucide-react";
-import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   fetchStudioDetail,
@@ -37,6 +36,8 @@ import { StashIdChips, autoSaveStashId } from "./stash-id-chips";
 import { NsfwGate } from "./nsfw/nsfw-gate";
 import { StudioForm } from "./studio-form";
 import { entityTerms } from "../lib/terminology";
+import { ScrapeField } from "./shared/scrape-field";
+import { StatusMessage } from "./shared/status-message";
 
 interface StudioEditProps {
   id: string;
@@ -306,11 +307,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
-              "bg-accent-950 text-text-accent border border-border-accent",
-              "hover:bg-accent-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast btn-accent"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
             Save
@@ -319,12 +316,8 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
       </div>
 
       {/* Messages */}
-      {error && (
-        <div className="surface-well border-l-2 border-status-error px-3 py-2 text-sm text-status-error">{error}</div>
-      )}
-      {message && (
-        <div className="surface-well border-l-2 border-status-success px-3 py-2 text-sm text-status-success">{message}</div>
-      )}
+      <StatusMessage type="error" message={error} />
+      <StatusMessage type="success" message={message} />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image + scraper */}
@@ -490,34 +483,3 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
   );
 }
 
-function ScrapeField({
-  field,
-  label,
-  value,
-  enabled,
-  onToggle,
-}: {
-  field: string;
-  label: string;
-  value: string;
-  enabled: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div
-      className={cn("flex items-start gap-2 cursor-pointer transition-opacity", !enabled && "opacity-40")}
-      onClick={(e) => { e.stopPropagation(); onToggle(); }}
-    >
-      <Checkbox
-        checked={enabled}
-        onChange={() => onToggle()}
-        onClick={(e) => e.stopPropagation()}
-        className="mt-0.5 flex-shrink-0"
-      />
-      <div className="min-w-0">
-        <span className="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">{label}</span>
-        <p className={cn("truncate text-[0.78rem]", enabled ? "text-text-primary" : "text-text-disabled line-through")}>{value}</p>
-      </div>
-    </div>
-  );
-}
