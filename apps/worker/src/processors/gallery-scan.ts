@@ -13,6 +13,12 @@ import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingImageJob } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
+import {
+  groupFilesByDirectory,
+  pickStaleContainerIds,
+  resolveParentPathId,
+  sortPathsParentFirst,
+} from "../lib/hierarchy-sync/hierarchy-sync.js";
 
 async function shouldSkipGalleryDerivedJobs(
   sfwOnly: boolean,
@@ -70,10 +76,10 @@ export async function processGalleryScan(job: Job) {
       )
     );
 
-  const discoveredDirSet = new Set(discovery.dirs);
-  const staleFolderIds = knownFolderGalleries
-    .filter((g) => g.folderPath && !discoveredDirSet.has(g.folderPath))
-    .map((g) => g.id);
+  const staleFolderIds = pickStaleContainerIds(
+    knownFolderGalleries,
+    new Set(discovery.dirs),
+  );
 
   if (staleFolderIds.length > 0) {
     await db.delete(galleries).where(inArray(galleries.id, staleFolderIds));
@@ -128,19 +134,13 @@ export async function processGalleryScan(job: Job) {
 
   // -- Process folder-based galleries --
   // Group image files by directory
-  const imagesByDir = new Map<string, string[]>();
-  for (const file of discovery.imageFiles) {
-    const dir = path.dirname(file);
-    const existing = imagesByDir.get(dir);
-    if (existing) {
-      existing.push(file);
-    } else {
-      imagesByDir.set(dir, [file]);
-    }
-  }
+  const imagesByDir = groupFilesByDirectory(discovery.imageFiles);
 
   // Sort directories by path depth (parent before child) to ensure parentId resolution works
-  const sortedDirs = [...discovery.dirs].sort((a, b) => a.split(path.sep).length - b.split(path.sep).length);
+  const sortedDirs = sortPathsParentFirst(discovery.dirs);
+  const galleryIdByPath = new Map(
+    knownFolderGalleries.map((gallery) => [gallery.folderPath, gallery.id]),
+  );
 
   for (const dirPath of sortedDirs) {
     const dirImages = imagesByDir.get(dirPath) ?? [];
@@ -168,21 +168,11 @@ export async function processGalleryScan(job: Job) {
         .where(eq(galleries.id, galleryId));
     } else {
       // Find parent gallery
-      const parentDir = path.dirname(dirPath);
-      let parentId: string | null = null;
-      if (parentDir !== dirPath && parentDir.startsWith(root.path)) {
-        const [parentGallery] = await db
-          .select({ id: galleries.id })
-          .from(galleries)
-          .where(
-            and(
-              eq(galleries.galleryType, "folder"),
-              eq(galleries.folderPath, parentDir)
-            )
-          )
-          .limit(1);
-        parentId = parentGallery?.id ?? null;
-      }
+      const parentId = resolveParentPathId(
+        dirPath,
+        root.path,
+        galleryIdByPath as Map<string, string>,
+      );
 
       const [created] = await db
         .insert(galleries)
@@ -196,6 +186,7 @@ export async function processGalleryScan(job: Job) {
         })
         .returning({ id: galleries.id });
       galleryId = created.id;
+      galleryIdByPath.set(dirPath, galleryId);
     }
 
     // Upsert images

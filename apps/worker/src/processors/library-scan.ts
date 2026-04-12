@@ -17,6 +17,7 @@ import {
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedSceneDirs } from "../lib/helpers.js";
 import { ingestSidecarSubtitlesForScene } from "../lib/sidecar-subtitles.js";
+import { syncSceneFoldersForRoot } from "../lib/scene-folder-sync.js";
 
 export async function processLibraryScan(job: Job) {
   const libraryRootId = String(job.data.libraryRootId);
@@ -63,6 +64,7 @@ export async function processLibraryScan(job: Job) {
   const gallerySfwOpts = Boolean(job.data.sfwOnly) ? { sfwOnly: true as const } : undefined;
 
   if (files.length === 0) {
+    await syncSceneFoldersForRoot(root, []);
     await db
       .update(libraryRoots)
       .set({ lastScannedAt: new Date(), updatedAt: new Date() })
@@ -230,6 +232,8 @@ export async function processLibraryScan(job: Job) {
       Math.max(1, Math.round(((index + 1) / files.length) * 100))
     );
   }
+
+  await syncSceneFoldersForRoot(root, files);
 
   await db
     .update(libraryRoots)

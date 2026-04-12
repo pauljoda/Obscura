@@ -21,6 +21,7 @@ import { changelogRoutes } from "./routes/changelog";
 import { audioLibrariesRoutes } from "./routes/audio-libraries";
 import { audioTracksRoutes } from "./routes/audio-tracks";
 import { audioStreamRoutes } from "./routes/audio-stream";
+import { sceneFoldersRoutes } from "./routes/scene-folders";
 import { initQueues, stopQueues } from "./lib/queues";
 import pkg from "../../../package.json";
 
@@ -60,6 +61,7 @@ await app.register(settingsRoutes);
 await app.register(jobsRoutes);
 await app.register(assetsRoutes);
 await app.register(scenesRoutes);
+await app.register(sceneFoldersRoutes);
 await app.register(subtitlesRoutes);
 await app.register(studiosRoutes);
 await app.register(tagsRoutes);

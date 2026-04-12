@@ -222,6 +222,56 @@ export const jobRuns = pgTable(
   ]
 );
 
+// ─── Scene Folders ────────────────────────────────────────────────
+export const sceneFolders = pgTable(
+  "scene_folders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    libraryRootId: uuid("library_root_id")
+      .notNull()
+      .references(() => libraryRoots.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    folderPath: text("folder_path").notNull(),
+    relativePath: text("relative_path").notNull(),
+    parentId: uuid("parent_id").references((): any => sceneFolders.id, {
+      onDelete: "cascade",
+    }),
+    depth: integer("depth").notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    coverImagePath: text("cover_image_path"),
+    directSceneCount: integer("direct_scene_count").default(0).notNull(),
+    totalSceneCount: integer("total_scene_count").default(0).notNull(),
+    visibleSfwSceneCount: integer("visible_sfw_scene_count")
+      .default(0)
+      .notNull(),
+    containsNsfwDescendants: boolean("contains_nsfw_descendants")
+      .default(false)
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("scene_folders_folder_path_idx").on(table.folderPath),
+    index("scene_folders_library_root_idx").on(table.libraryRootId),
+    index("scene_folders_parent_idx").on(table.parentId),
+    index("scene_folders_depth_idx").on(table.depth),
+    index("scene_folders_nsfw_idx").on(table.isNsfw),
+  ]
+);
+
+export const sceneFoldersRelations = relations(sceneFolders, ({ one, many }) => ({
+  libraryRoot: one(libraryRoots, {
+    fields: [sceneFolders.libraryRootId],
+    references: [libraryRoots.id],
+  }),
+  parent: one(sceneFolders, {
+    fields: [sceneFolders.parentId],
+    references: [sceneFolders.id],
+  }),
+  children: many(sceneFolders),
+  scenes: many(scenes),
+}));
+
 // ─── Scenes ─────────────────────────────────────────────────────────
 export const scenes = pgTable(
   "scenes",
@@ -268,12 +318,16 @@ export const scenes = pgTable(
 
     // Relations
     studioId: uuid("studio_id").references(() => studios.id),
+    sceneFolderId: uuid("scene_folder_id").references(() => sceneFolders.id, {
+      onDelete: "set null",
+    }),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("scenes_studio_idx").on(table.studioId),
+    index("scenes_scene_folder_idx").on(table.sceneFolderId),
     index("scenes_date_idx").on(table.date),
     index("scenes_rating_idx").on(table.rating),
     index("scenes_created_at_idx").on(table.createdAt),
@@ -284,6 +338,10 @@ export const scenesRelations = relations(scenes, ({ one, many }) => ({
   studio: one(studios, {
     fields: [scenes.studioId],
     references: [studios.id],
+  }),
+  sceneFolder: one(sceneFolders, {
+    fields: [scenes.sceneFolderId],
+    references: [sceneFolders.id],
   }),
   scenePerformers: many(scenePerformers),
   sceneTags: many(sceneTags),

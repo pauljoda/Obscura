@@ -384,6 +384,10 @@ export function getGeneratedTagDir(tagId: string) {
   return path.join(getCacheRootDir(), "tags", tagId);
 }
 
+export function getGeneratedSceneFolderDir(sceneFolderId: string) {
+  return path.join(getCacheRootDir(), "scene-folders", sceneFolderId);
+}
+
 /**
  * Get sidecar file paths for a video file.
  * E.g. `/media/video.mp4` → `/media/video-thumb.jpg`

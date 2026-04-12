@@ -52,6 +52,7 @@ import { enqueueQueueJob } from "../lib/job-enqueue";
 
 const {
   scenes,
+  sceneFolders,
   scenePerformers,
   sceneTags,
   sceneMarkers,
@@ -98,6 +99,9 @@ export interface ListScenesQuery {
   hasFile?: string;
   played?: string;
   codec?: string | string[];
+  sceneFolderId?: string;
+  folderScope?: "direct" | "subtree";
+  uncategorized?: string;
 }
 
 export interface UpdateSceneBody {
@@ -187,6 +191,10 @@ export async function listScenes(query: ListScenesQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 50, MAX_ENTITY_LIST_LIMIT);
 
   const conditions = [];
+
+  if (query.sceneFolderId && query.uncategorized === "true") {
+    throw new AppError(400, "sceneFolderId and uncategorized cannot both be set");
+  }
 
   // SFW filter
   if (query.nsfw === "off") {
@@ -340,6 +348,29 @@ export async function listScenes(query: ListScenesQuery) {
   if (query.hasFile === "false") {
     conditions.push(isNull(scenes.filePath));
   }
+  if (query.uncategorized === "true") {
+    conditions.push(isNull(scenes.sceneFolderId));
+  }
+  if (query.sceneFolderId) {
+    if (query.folderScope === "subtree") {
+      conditions.push(sql`
+        ${scenes.sceneFolderId} IN (
+          WITH RECURSIVE folder_tree AS (
+            SELECT id
+            FROM scene_folders
+            WHERE id = ${query.sceneFolderId}
+            UNION ALL
+            SELECT child.id
+            FROM scene_folders child
+            INNER JOIN folder_tree ON child.parent_id = folder_tree.id
+          )
+          SELECT id FROM folder_tree
+        )
+      `);
+    } else {
+      conditions.push(eq(scenes.sceneFolderId, query.sceneFolderId));
+    }
+  }
   if (query.played === "true") {
     conditions.push(
       or(gt(scenes.playCount, 0), isNotNull(scenes.lastPlayedAt))!,
@@ -400,15 +431,19 @@ export async function listScenes(query: ListScenesQuery) {
 
   // Fetch scenes
   const sceneRows = await db
-    .select()
+    .select({
+      scene: scenes,
+      sceneFolderTitle: sceneFolders.title,
+    })
     .from(scenes)
+    .leftJoin(sceneFolders, eq(scenes.sceneFolderId, sceneFolders.id))
     .where(where)
     .orderBy(orderBy)
     .limit(limit)
     .offset(offset);
 
   // Fetch relations for each scene
-  const sceneIds = sceneRows.map((s) => s.id);
+  const sceneIds = sceneRows.map((row) => row.scene.id);
 
   const perfJoins =
     sceneIds.length > 0
@@ -445,7 +480,7 @@ export async function listScenes(query: ListScenesQuery) {
   const subtitledIds = await fetchSubtitledSceneIds(sceneIds);
 
   // Assemble response
-  const result = sceneRows.map((scene) => ({
+  const result = sceneRows.map(({ scene, sceneFolderTitle }) => ({
     id: scene.id,
     title: scene.title,
     details: scene.details,
@@ -479,6 +514,8 @@ export async function listScenes(query: ListScenesQuery) {
     playCount: scene.playCount,
     orgasmCount: scene.orgasmCount,
     studioId: scene.studioId,
+    sceneFolderId: scene.sceneFolderId,
+    sceneFolderTitle: sceneFolderTitle ?? null,
     hasSubtitles: subtitledIds.has(scene.id),
     performers: perfJoins
       .filter((p) => p.sceneId === scene.id)
@@ -552,6 +589,7 @@ export async function getSceneById(id: string) {
   const scene = await db.query.scenes.findFirst({
     where: eq(scenes.id, id),
     with: {
+      sceneFolder: true,
       studio: true,
       scenePerformers: {
         with: { performer: true },
@@ -611,6 +649,8 @@ export async function getSceneById(id: string) {
     playCount: scene.playCount,
     orgasmCount: scene.orgasmCount,
     hasSubtitles: (scene.subtitles?.length ?? 0) > 0,
+    sceneFolderId: scene.sceneFolderId,
+    sceneFolderTitle: scene.sceneFolder?.title ?? null,
     playDuration: scene.playDuration,
     resumeTime: scene.resumeTime,
     lastPlayedAt: scene.lastPlayedAt,

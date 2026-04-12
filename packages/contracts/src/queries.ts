@@ -36,6 +36,9 @@ export interface SceneListQuery extends ListQuery {
   tag?: string | string[];
   performer?: string | string[];
   studio?: string | string[];
+  sceneFolderId?: string;
+  folderScope?: "direct" | "subtree";
+  uncategorized?: boolean;
   resolution?: string | string[];
   codec?: string | string[];
   ratingMin?: number;
@@ -63,6 +66,11 @@ export interface GalleryListQuery extends ListQuery {
   dateTo?: string;
   imageCountMin?: number;
   organized?: boolean;
+}
+
+export interface SceneFolderListQuery extends ListQuery {
+  parent?: string;
+  root?: string;
 }
 
 export interface PerformerListQuery extends ListQuery {

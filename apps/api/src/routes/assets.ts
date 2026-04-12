@@ -11,6 +11,7 @@ import {
   getGeneratedImageDir,
   getGeneratedAudioTrackDir,
   getGeneratedAudioLibraryDir,
+  getGeneratedSceneFolderDir,
   extractZipMember,
   getSceneVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
@@ -323,6 +324,19 @@ export async function assetsRoutes(app: FastifyInstance) {
   app.get("/assets/audio-libraries/:id/cover", async (request, reply) => {
     const { id } = request.params as { id: string };
     const coverPath = path.join(getGeneratedAudioLibraryDir(id), "cover-custom.jpg");
+    if (existsSync(coverPath)) {
+      reply.header("Cache-Control", "no-cache");
+      reply.header("Content-Type", "image/jpeg");
+      return reply.send(createReadStream(coverPath));
+    }
+    reply.code(404);
+    return { error: "Cover not found" };
+  });
+
+  // ─── Scene folder cover: /assets/scene-folders/:id/cover ───────
+  app.get("/assets/scene-folders/:id/cover", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const coverPath = path.join(getGeneratedSceneFolderDir(id), "cover-custom.jpg");
     if (existsSync(coverPath)) {
       reply.header("Cache-Control", "no-cache");
       reply.header("Content-Type", "image/jpeg");

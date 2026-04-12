@@ -22,6 +22,7 @@ import {
   parsePagination,
   type SortConfig,
 } from "../lib/query-helpers";
+import { buildHierarchyScopeConditions } from "../lib/hierarchy-service/list";
 
 const {
   galleries,
@@ -125,11 +126,7 @@ export async function listGalleries(query: ListGalleriesQuery) {
   const conditions = [];
 
   // Hierarchy: root vs parent vs all
-  if (query.parent) {
-    conditions.push(eq(galleries.parentId, query.parent));
-  } else if (query.root !== "all" && !query.search) {
-    conditions.push(sql`${galleries.parentId} IS NULL`);
-  }
+  conditions.push(...buildHierarchyScopeConditions(galleries.parentId, query));
 
   if (query.nsfw === "off") {
     conditions.push(eq(galleries.isNsfw, false));

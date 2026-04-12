@@ -7,6 +7,7 @@ export const apiRoutes = {
   jobRunCancel: "/jobs/:jobRunId/cancel",
   jobAcknowledgeFailed: "/jobs/acknowledge-failed",
   sceneAssets: "/assets/scenes/:id/*",
+  sceneFolderCoverAsset: "/assets/scene-folders/:id/cover",
   libraries: "/libraries",
   libraryDetail: "/libraries/:id",
   libraryBrowse: "/libraries/browse",
@@ -15,6 +16,9 @@ export const apiRoutes = {
   sceneDetail: "/scenes/:id",
   sceneStats: "/scenes/stats",
   sceneUpload: "/scenes/upload",
+  sceneFolders: "/scene-folders",
+  sceneFolderDetail: "/scene-folders/:id",
+  sceneFolderCover: "/scene-folders/:id/cover",
   sceneSubtitles: "/scenes/:id/subtitles",
   sceneSubtitleDetail: "/scenes/:id/subtitles/:trackId",
   sceneSubtitleSource: "/scenes/:id/subtitles/:trackId/source",
@@ -108,6 +112,7 @@ export type {
   ErrorResponse,
   ListQuery,
   SceneListQuery,
+  SceneFolderListQuery,
   GalleryListQuery,
   PerformerListQuery,
   ImageListQuery,
@@ -431,6 +436,41 @@ export interface TagEmbedDto {
   id: string;
   name: string;
   isNsfw: boolean;
+}
+
+// ─── Scene Folder DTOs ───────────────────────────────────────────
+
+export interface SceneFolderListItemDto {
+  id: string;
+  title: string;
+  folderPath: string;
+  relativePath: string;
+  parentId: string | null;
+  depth: number;
+  isNsfw: boolean;
+  coverImagePath: string | null;
+  directSceneCount: number;
+  totalSceneCount: number;
+  visibleSfwSceneCount: number;
+  containsNsfwDescendants: boolean;
+  childFolderCount: number;
+  previewThumbnailPaths: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SceneFolderBreadcrumbDto {
+  id: string;
+  title: string;
+}
+
+export interface SceneFolderDetailDto extends SceneFolderListItemDto {
+  breadcrumbs: SceneFolderBreadcrumbDto[];
+  children: SceneFolderListItemDto[];
+}
+
+export interface SceneFolderPatchDto {
+  isNsfw?: boolean;
 }
 
 // ─── Gallery DTOs ────────────────────────────────────────────────

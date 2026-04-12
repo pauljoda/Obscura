@@ -23,6 +23,7 @@ import {
   parsePagination,
   type SortConfig,
 } from "../lib/query-helpers";
+import { buildHierarchyScopeConditions } from "../lib/hierarchy-service/list";
 
 const {
   audioLibraries,
@@ -79,11 +80,7 @@ export async function listAudioLibraries(query: {
   const conditions: ReturnType<typeof eq>[] = [];
 
   // Hierarchy filtering
-  if (query.parent) {
-    conditions.push(eq(audioLibraries.parentId, query.parent));
-  } else if (query.root !== "all" && !query.search) {
-    conditions.push(sql`${audioLibraries.parentId} IS NULL`);
-  }
+  conditions.push(...buildHierarchyScopeConditions(audioLibraries.parentId, query));
 
   // Text search
   if (query.search) {

@@ -9,11 +9,16 @@ import { db, libraryRoots, schema } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingAudioTrackJob } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
+import {
+  groupFilesByDirectory,
+  pickStaleContainerIds,
+  resolveParentPathId,
+  sortPathsParentFirst,
+} from "../lib/hierarchy-sync/hierarchy-sync.js";
 
 const { audioLibraries, audioTracks } = schema;
 
 export async function processAudioScan(job: Job) {
-  const sfwOnly = Boolean(job.data.sfwOnly);
   const libraryRootId = String(job.data.libraryRootId);
   const [root] = await db
     .select()
@@ -44,10 +49,7 @@ export async function processAudioScan(job: Job) {
     .from(audioLibraries)
     .where(like(audioLibraries.folderPath, `${root.path}%`));
 
-  const discoveredDirSet = new Set(discovery.dirs);
-  const staleLibraryIds = knownLibraries
-    .filter((l) => l.folderPath && !discoveredDirSet.has(l.folderPath))
-    .map((l) => l.id);
+  const staleLibraryIds = pickStaleContainerIds(knownLibraries, new Set(discovery.dirs));
 
   if (staleLibraryIds.length > 0) {
     await db.delete(audioLibraries).where(inArray(audioLibraries.id, staleLibraryIds));
@@ -69,20 +71,12 @@ export async function processAudioScan(job: Job) {
   }
 
   // -- Group audio files by directory --
-  const filesByDir = new Map<string, string[]>();
-  for (const file of discovery.audioFiles) {
-    const dir = path.dirname(file);
-    const existing = filesByDir.get(dir);
-    if (existing) {
-      existing.push(file);
-    } else {
-      filesByDir.set(dir, [file]);
-    }
-  }
+  const filesByDir = groupFilesByDirectory(discovery.audioFiles);
 
   // Sort directories by depth (parent before child) for parentId resolution
-  const sortedDirs = [...discovery.dirs].sort(
-    (a, b) => a.split(path.sep).length - b.split(path.sep).length,
+  const sortedDirs = sortPathsParentFirst(discovery.dirs);
+  const libraryIdByPath = new Map(
+    knownLibraries.map((library) => [library.folderPath, library.id]),
   );
 
   const totalWork = sortedDirs.length;
@@ -109,16 +103,11 @@ export async function processAudioScan(job: Job) {
         .where(eq(audioLibraries.id, libraryId));
     } else {
       // Find parent library
-      const parentDir = path.dirname(dirPath);
-      let parentId: string | null = null;
-      if (parentDir !== dirPath && parentDir.startsWith(root.path)) {
-        const [parentLib] = await db
-          .select({ id: audioLibraries.id })
-          .from(audioLibraries)
-          .where(eq(audioLibraries.folderPath, parentDir))
-          .limit(1);
-        parentId = parentLib?.id ?? null;
-      }
+      const parentId = resolveParentPathId(
+        dirPath,
+        root.path,
+        libraryIdByPath as Map<string, string>,
+      );
 
       const [created] = await db
         .insert(audioLibraries)
@@ -131,6 +120,7 @@ export async function processAudioScan(job: Job) {
         })
         .returning({ id: audioLibraries.id });
       libraryId = created.id;
+      libraryIdByPath.set(dirPath, libraryId);
     }
 
     // Upsert tracks
