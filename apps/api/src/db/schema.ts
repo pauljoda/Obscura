@@ -44,6 +44,7 @@ export const studiosRelations = relations(studios, ({ many, one }) => ({
   images: many(images),
   audioLibraries: many(audioLibraries),
   audioTracks: many(audioTracks),
+  sceneFolders: many(sceneFolders),
   parent: one(studios, {
     fields: [studios.parentId],
     references: [studios.id],
@@ -99,6 +100,7 @@ export const performersRelations = relations(performers, ({ many }) => ({
   imagePerformers: many(imagePerformers),
   audioLibraryPerformers: many(audioLibraryPerformers),
   audioTrackPerformers: many(audioTrackPerformers),
+  sceneFolderPerformers: many(sceneFolderPerformers),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -134,6 +136,7 @@ export const tagsRelations = relations(tags, ({ many, one }) => ({
   imageTags: many(imageTags),
   audioLibraryTags: many(audioLibraryTags),
   audioTrackTags: many(audioTrackTags),
+  sceneFolderTags: many(sceneFolderTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -240,6 +243,13 @@ export const sceneFolders = pgTable(
     depth: integer("depth").notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
     coverImagePath: text("cover_image_path"),
+    backdropImagePath: text("backdrop_image_path"),
+    details: text("details"),
+    studioId: uuid("studio_id").references(() => studios.id, {
+      onDelete: "set null",
+    }),
+    rating: integer("rating"),
+    date: text("date"),
     directSceneCount: integer("direct_scene_count").default(0).notNull(),
     totalSceneCount: integer("total_scene_count").default(0).notNull(),
     visibleSfwSceneCount: integer("visible_sfw_scene_count")
@@ -269,8 +279,14 @@ export const sceneFoldersRelations = relations(sceneFolders, ({ one, many }) => 
     fields: [sceneFolders.parentId],
     references: [sceneFolders.id],
   }),
+  studio: one(studios, {
+    fields: [sceneFolders.studioId],
+    references: [studios.id],
+  }),
   children: many(sceneFolders),
   scenes: many(scenes),
+  sceneFolderPerformers: many(sceneFolderPerformers),
+  sceneFolderTags: many(sceneFolderTags),
 }));
 
 // ─── Scenes ─────────────────────────────────────────────────────────
@@ -436,6 +452,71 @@ export const sceneTagsRelations = relations(sceneTags, ({ one }) => ({
     references: [tags.id],
   }),
 }));
+
+// ─── Scene Folder ↔ Performer join ─────────────────────────────────
+export const sceneFolderPerformers = pgTable(
+  "scene_folder_performers",
+  {
+    sceneFolderId: uuid("scene_folder_id")
+      .notNull()
+      .references(() => sceneFolders.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("scene_folder_performers_pk").on(
+      table.sceneFolderId,
+      table.performerId
+    ),
+    index("scene_folder_performers_performer_idx").on(table.performerId),
+  ]
+);
+
+export const sceneFolderPerformersRelations = relations(
+  sceneFolderPerformers,
+  ({ one }) => ({
+    sceneFolder: one(sceneFolders, {
+      fields: [sceneFolderPerformers.sceneFolderId],
+      references: [sceneFolders.id],
+    }),
+    performer: one(performers, {
+      fields: [sceneFolderPerformers.performerId],
+      references: [performers.id],
+    }),
+  })
+);
+
+// ─── Scene Folder ↔ Tag join ───────────────────────────────────────
+export const sceneFolderTags = pgTable(
+  "scene_folder_tags",
+  {
+    sceneFolderId: uuid("scene_folder_id")
+      .notNull()
+      .references(() => sceneFolders.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("scene_folder_tags_pk").on(table.sceneFolderId, table.tagId),
+    index("scene_folder_tags_tag_idx").on(table.tagId),
+  ]
+);
+
+export const sceneFolderTagsRelations = relations(
+  sceneFolderTags,
+  ({ one }) => ({
+    sceneFolder: one(sceneFolders, {
+      fields: [sceneFolderTags.sceneFolderId],
+      references: [sceneFolders.id],
+    }),
+    tag: one(tags, {
+      fields: [sceneFolderTags.tagId],
+      references: [tags.id],
+    }),
+  })
+);
 
 // ─── Scene Markers ──────────────────────────────────────────────────
 export const sceneMarkers = pgTable(

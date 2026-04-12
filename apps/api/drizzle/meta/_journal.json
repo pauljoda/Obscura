@@ -43,6 +43,13 @@
       "when": 1776005979360,
       "tag": "0005_romantic_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776010954987,
+      "tag": "0006_steady_old_lace",
+      "breakpoints": true
     }
   ]
 }

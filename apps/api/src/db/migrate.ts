@@ -144,6 +144,97 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
     CREATE INDEX IF NOT EXISTS fingerprint_submissions_endpoint_idx
     ON fingerprint_submissions (stash_box_endpoint_id)
   `;
+
+  // 0006_steady_old_lace: scene_folder enrichment (backdrop, details, studio, rating, date)
+  // + scene_folder_performers / scene_folder_tags join tables.
+  await client`
+    ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS backdrop_image_path text
+  `;
+  await client`
+    ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS details text
+  `;
+  await client`
+    ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS studio_id uuid
+  `;
+  await client`
+    ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS rating integer
+  `;
+  await client`
+    ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS date text
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE scene_folders
+      ADD CONSTRAINT scene_folders_studio_id_studios_id_fk
+      FOREIGN KEY (studio_id) REFERENCES public.studios(id) ON DELETE SET NULL;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    CREATE TABLE IF NOT EXISTS scene_folder_performers (
+      scene_folder_id uuid NOT NULL,
+      performer_id uuid NOT NULL
+    )
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE scene_folder_performers
+      ADD CONSTRAINT scene_folder_performers_scene_folder_id_scene_folders_id_fk
+      FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE scene_folder_performers
+      ADD CONSTRAINT scene_folder_performers_performer_id_performers_id_fk
+      FOREIGN KEY (performer_id) REFERENCES public.performers(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_performers_pk
+    ON scene_folder_performers (scene_folder_id, performer_id)
+  `;
+  await client`
+    CREATE INDEX IF NOT EXISTS scene_folder_performers_performer_idx
+    ON scene_folder_performers (performer_id)
+  `;
+  await client`
+    CREATE TABLE IF NOT EXISTS scene_folder_tags (
+      scene_folder_id uuid NOT NULL,
+      tag_id uuid NOT NULL
+    )
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE scene_folder_tags
+      ADD CONSTRAINT scene_folder_tags_scene_folder_id_scene_folders_id_fk
+      FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    DO $$ BEGIN
+      ALTER TABLE scene_folder_tags
+      ADD CONSTRAINT scene_folder_tags_tag_id_tags_id_fk
+      FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
+  `;
+  await client`
+    CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_tags_pk
+    ON scene_folder_tags (scene_folder_id, tag_id)
+  `;
+  await client`
+    CREATE INDEX IF NOT EXISTS scene_folder_tags_tag_idx
+    ON scene_folder_tags (tag_id)
+  `;
 }
 
 export async function runMigrations(databaseUrl: string): Promise<void> {
