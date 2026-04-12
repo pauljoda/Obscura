@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Images, Layers, Music, Hand, Zap } from "lucide-react";
+import { Film, Images, Layers, Music, Hand, Zap, Trash2 } from "lucide-react";
 import type {
   CollectionItemDto,
   CollectionEntityType,
@@ -57,7 +57,7 @@ function getEntityThumbnail(item: CollectionItemDto): string | null {
     case "image":
       return entity.thumbnailPath as string | null;
     case "audio-track":
-      return null; // Audio tracks don't have thumbnails in the same way
+      return null;
     default:
       return null;
   }
@@ -96,12 +96,19 @@ function getEntityMeta(item: CollectionItemDto): string | null {
 
 interface CollectionItemCardProps {
   item: CollectionItemDto;
-  showSource?: boolean;
+  /** Whether the card is in a selectable/removable context. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (itemId: string) => void;
+  onRemove?: (itemId: string) => void;
 }
 
 export function CollectionItemCard({
   item,
-  showSource = false,
+  selectable = false,
+  selected = false,
+  onSelect,
+  onRemove,
 }: CollectionItemCardProps) {
   const Icon = typeIcons[item.entityType];
   const colorClass = typeColors[item.entityType];
@@ -110,59 +117,101 @@ export function CollectionItemCard({
   const meta = getEntityMeta(item);
   const href = getEntityHref(item);
   const thumbnailUrl = toApiUrl(thumbnailPath);
+  const isManual = item.source === "manual";
+
+  const card = (
+    <div className="surface-card media-card-shell group relative h-full overflow-hidden">
+      {/* Thumbnail */}
+      <div className="relative aspect-video overflow-hidden bg-surface-2">
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Icon className="h-8 w-8 text-text-disabled" />
+          </div>
+        )}
+
+        {/* Type badge — bottom left */}
+        <div
+          className={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.6rem] font-mono uppercase ${colorClass}`}
+        >
+          <Icon className="h-2.5 w-2.5" />
+          {item.entityType === "audio-track" ? "audio" : item.entityType}
+        </div>
+
+        {/* Source badge — top right, always visible */}
+        <div
+          className={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.55rem] font-mono backdrop-blur-sm ${
+            isManual
+              ? "bg-accent-brass/20 text-accent-400 border border-accent-brass/20"
+              : "bg-surface-1/80 text-text-disabled"
+          }`}
+        >
+          {isManual ? (
+            <Hand className="h-2 w-2" />
+          ) : (
+            <Zap className="h-2 w-2" />
+          )}
+          {item.source}
+        </div>
+
+        {/* Selection checkbox overlay — shown when selectable */}
+        {selectable && isManual && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect?.(item.id);
+            }}
+            className={`absolute top-1.5 left-1.5 h-5 w-5 flex items-center justify-center border transition-colors ${
+              selected
+                ? "border-accent-brass/50 bg-accent-brass/30"
+                : "border-border-default bg-surface-1/60 hover:bg-surface-1/80"
+            }`}
+          >
+            {selected && (
+              <svg
+                className="h-3 w-3 text-text-accent"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path d="M2 6l3 3 5-5" />
+              </svg>
+            )}
+          </button>
+        )}
+
+        {/* Meta overlay */}
+        {meta && (
+          <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 text-[0.6rem] font-mono bg-surface-1/80 backdrop-blur-sm text-text-secondary">
+            {meta}
+          </div>
+        )}
+      </div>
+
+      {/* Title */}
+      <div className="p-2">
+        <h3 className="font-heading text-[0.78rem] font-medium text-text-primary truncate leading-tight">
+          {title}
+        </h3>
+      </div>
+    </div>
+  );
+
+  if (selectable) {
+    return <div className="h-full">{card}</div>;
+  }
 
   return (
     <Link href={href} className="block h-full">
-      <div className="surface-card media-card-shell group relative h-full overflow-hidden">
-        {/* Thumbnail */}
-        <div className="relative aspect-video overflow-hidden bg-surface-2">
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Icon className="h-8 w-8 text-text-disabled" />
-            </div>
-          )}
-
-          {/* Type badge */}
-          <div
-            className={`absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.6rem] font-mono uppercase ${colorClass}`}
-          >
-            <Icon className="h-2.5 w-2.5" />
-            {item.entityType === "audio-track" ? "audio" : item.entityType}
-          </div>
-
-          {/* Source badge */}
-          {showSource && (
-            <div className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.55rem] font-mono bg-surface-1/80 backdrop-blur-sm text-text-disabled">
-              {item.source === "manual" ? (
-                <Hand className="h-2 w-2" />
-              ) : (
-                <Zap className="h-2 w-2" />
-              )}
-              {item.source}
-            </div>
-          )}
-
-          {/* Meta overlay */}
-          {meta && (
-            <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 text-[0.6rem] font-mono bg-surface-1/80 backdrop-blur-sm text-text-secondary">
-              {meta}
-            </div>
-          )}
-        </div>
-
-        {/* Title */}
-        <div className="p-2">
-          <h3 className="font-heading text-[0.78rem] font-medium text-text-primary truncate leading-tight">
-            {title}
-          </h3>
-        </div>
-      </div>
+      {card}
     </Link>
   );
 }

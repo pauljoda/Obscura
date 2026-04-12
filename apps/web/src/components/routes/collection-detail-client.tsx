@@ -19,6 +19,9 @@ import {
   Zap,
   Hand,
   ChevronLeft,
+  CheckSquare,
+  X,
+  Loader2,
 } from "lucide-react";
 import type {
   CollectionDetailDto,
@@ -29,6 +32,7 @@ import { Button } from "@obscura/ui/primitives/button";
 import {
   deleteCollection,
   refreshCollection,
+  removeCollectionItems,
 } from "../../lib/api/media";
 import { CollectionItemCard } from "../collections/collection-item-card";
 import { usePlaylistContext } from "../collections/playlist-context";
@@ -74,12 +78,16 @@ export function CollectionDetailClient({
 }: CollectionDetailClientProps) {
   const router = useRouter();
   const playlist = usePlaylistContext();
-  const [items] = useState(initialItems);
+  const [items, setItems] = useState(initialItems);
   const [viewMode, setViewMode] = useState<ViewMode>("mixed");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const ModeIcon = modeIcons[collection.mode];
+  const hasManualItems = items.some((i) => i.source === "manual");
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -112,6 +120,43 @@ export function CollectionDetailClient({
     },
     [items, collection.name, playlist],
   );
+
+  const toggleSelectItem = useCallback((itemId: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRemoveSelected = useCallback(async () => {
+    if (selectedItemIds.size === 0) return;
+    setIsRemoving(true);
+    try {
+      await removeCollectionItems(collection.id, {
+        itemIds: Array.from(selectedItemIds),
+      });
+      // Remove from local state immediately
+      setItems((prev) =>
+        prev.filter((i) => !selectedItemIds.has(i.id)),
+      );
+      setSelectedItemIds(new Set());
+      setSelectMode(false);
+    } catch (err) {
+      console.error("Failed to remove items:", err);
+    } finally {
+      setIsRemoving(false);
+    }
+  }, [selectedItemIds, collection.id]);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedItemIds(new Set());
+  }, []);
 
   // Group items by type
   const itemsByType = items.reduce(
@@ -251,7 +296,53 @@ export function CollectionDetailClient({
           <LayoutList className="inline h-3.5 w-3.5 mr-1" />
           By Type
         </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Select mode toggle */}
+        {hasManualItems && !selectMode && (
+          <button
+            onClick={() => setSelectMode(true)}
+            className="px-2 py-1 text-[0.72rem] text-text-muted hover:text-text-secondary transition-colors"
+          >
+            <CheckSquare className="inline h-3.5 w-3.5 mr-1" />
+            Select
+          </button>
+        )}
       </div>
+
+      {/* Selection action bar */}
+      {selectMode && (
+        <div className="flex items-center justify-between px-3 py-2 bg-surface-2 border border-border-subtle">
+          <div className="flex items-center gap-3">
+            <span className="text-[0.75rem] text-text-secondary">
+              {selectedItemIds.size} selected
+            </span>
+            {selectedItemIds.size > 0 && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleRemoveSelected}
+                disabled={isRemoving}
+              >
+                {isRemoving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                Remove from Collection
+              </Button>
+            )}
+          </div>
+          <button
+            onClick={exitSelectMode}
+            className="p-1 text-text-muted hover:text-text-secondary transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       {items.length === 0 ? (
@@ -267,7 +358,13 @@ export function CollectionDetailClient({
       ) : viewMode === "mixed" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {items.map((item) => (
-            <CollectionItemCard key={item.id} item={item} showSource />
+            <CollectionItemCard
+              key={item.id}
+              item={item}
+              selectable={selectMode}
+              selected={selectedItemIds.has(item.id)}
+              onSelect={toggleSelectItem}
+            />
           ))}
         </div>
       ) : (
@@ -292,7 +389,9 @@ export function CollectionDetailClient({
                       <CollectionItemCard
                         key={item.id}
                         item={item}
-                        showSource
+                        selectable={selectMode}
+                        selected={selectedItemIds.has(item.id)}
+                        onSelect={toggleSelectItem}
                       />
                     ))}
                   </div>

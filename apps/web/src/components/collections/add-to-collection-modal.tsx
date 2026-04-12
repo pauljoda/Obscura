@@ -77,7 +77,6 @@ export function AddToCollectionModal({
     }
 
     setAddingToIds(new Set());
-    // Close after short delay to show success state
     setTimeout(onClose, 600);
   }, [selectedIds, entityType, entityId, onClose]);
 
@@ -89,17 +88,34 @@ export function AddToCollectionModal({
           ? `${entityTitle} collection`
           : "New Collection",
       });
+
+      // Add the item to the new collection
       await addCollectionItems(coll.id, {
         items: [{ entityType, entityId }],
       });
+
+      // Immediately insert the new collection into the list so the user
+      // sees it appear with a success checkmark — no delay.
+      setCollections((prev) => [
+        {
+          ...coll,
+          itemCount: 1,
+          typeCounts: {
+            scene: entityType === "scene" ? 1 : 0,
+            gallery: entityType === "gallery" ? 1 : 0,
+            image: entityType === "image" ? 1 : 0,
+            "audio-track": entityType === "audio-track" ? 1 : 0,
+          },
+        } as CollectionListItemDto,
+        ...prev,
+      ]);
       setAddedIds((prev) => new Set([...prev, coll.id]));
-      setTimeout(onClose, 600);
     } catch (err) {
       console.error("Failed to create collection:", err);
     } finally {
       setIsCreating(false);
     }
-  }, [entityType, entityId, entityTitle, onClose]);
+  }, [entityType, entityId, entityTitle]);
 
   if (!open) return null;
 
@@ -140,7 +156,7 @@ export function AddToCollectionModal({
               <Plus className="h-4 w-4 text-text-accent" />
             )}
             <span className="text-[0.78rem] text-text-accent font-medium">
-              Create new collection
+              {isCreating ? "Creating..." : "Create new collection"}
             </span>
           </button>
 
@@ -210,6 +226,11 @@ export function AddToCollectionModal({
                         {coll.name}
                       </span>
                     </div>
+                    {isAdded && (
+                      <span className="text-[0.6rem] font-mono text-green-400 flex-shrink-0">
+                        Added
+                      </span>
+                    )}
                     <span className="text-[0.65rem] font-mono text-text-disabled flex-shrink-0 inline-flex items-center gap-0.5">
                       <ModeIcon className="h-2.5 w-2.5" />
                       {coll.itemCount}
