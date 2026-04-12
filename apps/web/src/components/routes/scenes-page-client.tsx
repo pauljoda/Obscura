@@ -685,6 +685,16 @@ export function ScenesPageClient({
     );
   }, [activeFolder, folderSearch, rootFolders]);
 
+  /** Library label + on-disk folder titles (breadcrumb `title` values), for the folder hero. */
+  const folderHeroDiskPath = useMemo(() => {
+    if (!activeFolder) return null;
+    const root = activeFolder.libraryRootLabel?.trim();
+    const crumbs = activeFolder.breadcrumbs.map((c) => c.title.trim()).filter(Boolean);
+    const parts = [root, ...crumbs].filter((s): s is string => Boolean(s));
+    if (parts.length === 0) return null;
+    return parts.join(" > ");
+  }, [activeFolder]);
+
   const folderSectionTitle = activeFolder
     ? "Child folders"
     : folderSearch
@@ -888,15 +898,12 @@ export function ScenesPageClient({
 
                 {/* Metadata */}
                 <div className="flex-1 min-w-0">
-                  {activeFolder.libraryRootLabel && (
-                    <div className="flex items-center gap-1.5 text-[0.68rem] text-white/50 mb-1">
-                      <HardDrive className="h-3 w-3" />
-                      {activeFolder.libraryRootLabel}
+                  {folderHeroDiskPath ? (
+                    <div className="mb-1 flex min-w-0 items-start gap-1.5 text-[0.68rem] text-white/50">
+                      <HardDrive className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                      <span className="min-w-0 break-words">{folderHeroDiskPath}</span>
                     </div>
-                  )}
-                  <div className="text-[0.72rem] uppercase tracking-[0.16em] text-white/60">
-                    Scene folder
-                  </div>
+                  ) : null}
 
                   <div className="mt-1.5">
                     {folderEditMode ? (
@@ -1079,9 +1086,6 @@ export function ScenesPageClient({
 
                   {!folderEditMode && (
                     <>
-                      {activeFolder.customName && (
-                        <p className="mt-0.5 text-[0.78rem] text-white/40">{activeFolder.title}</p>
-                      )}
                       {/* Metadata row: studio, date, rating, scene count */}
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.82rem] text-white/70">
                         {activeFolder.studioName && (
