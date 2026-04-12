@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { QueueName } from "@obscura/contracts";
-import { db, scenes, images, audioTracks } from "./db.js";
+import { db, scenes, images, audioTracks, collections } from "./db.js";
 import { sendJob } from "./queues.js";
 import {
   type QueueTarget,
@@ -207,4 +207,33 @@ export async function enqueueAudioRootJob(
     },
     trigger,
   });
+}
+
+/**
+ * Enqueue refresh jobs for all dynamic/hybrid collections.
+ * Called at the end of library scans to keep collections up-to-date.
+ */
+export async function enqueueCollectionRefreshAll(
+  trigger: QueueTrigger = {},
+) {
+  const dynamicCollections = await db
+    .select({ id: collections.id, name: collections.name })
+    .from(collections)
+    .where(
+      sql`${collections.mode} IN ('dynamic', 'hybrid') AND ${collections.ruleTree} IS NOT NULL`,
+    );
+
+  for (const coll of dynamicCollections) {
+    await enqueueJobIfNeeded({
+      queueName: "collection-refresh",
+      jobName: `collection-refresh-${coll.id}`,
+      data: { collectionId: coll.id },
+      target: {
+        type: "collection",
+        id: coll.id,
+        label: coll.name,
+      },
+      trigger,
+    });
+  }
 }

@@ -7,7 +7,7 @@ import {
 } from "@obscura/media-core";
 import { db, libraryRoots, schema } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
-import { enqueuePendingAudioTrackJob } from "../lib/enqueue.js";
+import { enqueuePendingAudioTrackJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import {
   groupFilesByDirectory,
@@ -215,4 +215,10 @@ export async function processAudioScan(job: Job) {
       await markJobProgress(job, "audio-scan", Math.round((processed / totalWork) * 100));
     }
   }
+
+  // Refresh dynamic collections after audio scan
+  await enqueueCollectionRefreshAll({
+    by: "audio-scan",
+    label: "Queued after audio scan",
+  });
 }

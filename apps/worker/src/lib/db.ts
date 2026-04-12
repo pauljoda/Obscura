@@ -36,4 +36,6 @@ export const {
   audioLibraryTags,
   audioTrackPerformers,
   audioTrackTags,
+  collections,
+  collectionItems,
 } = schema;

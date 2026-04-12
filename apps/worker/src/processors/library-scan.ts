@@ -13,6 +13,7 @@ import {
   enqueuePendingSceneJob,
   enqueueGalleryRootJob,
   enqueueAudioRootJob,
+  enqueueCollectionRefreshAll,
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedSceneDirs } from "../lib/helpers.js";
@@ -265,4 +266,10 @@ export async function processLibraryScan(job: Job) {
       gallerySfwOpts
     );
   }
+
+  // Refresh dynamic collections after library scan
+  await enqueueCollectionRefreshAll({
+    by: "library-scan",
+    label: `Queued during ${root.label} scan`,
+  });
 }

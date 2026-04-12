@@ -37,6 +37,7 @@ import { processAudioFingerprint } from "./processors/audio-fingerprint.js";
 import { processAudioWaveform } from "./processors/audio-waveform.js";
 import { processLibraryMaintenance } from "./processors/library-maintenance.js";
 import { processExtractSubtitles } from "./processors/extract-subtitles.js";
+import { processCollectionRefresh } from "./processors/collection-refresh.js";
 
 // ─── Processor Map ──────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ const processorByQueue: Record<QueueName, (job: JobLike) => Promise<void>> = {
   "audio-waveform": processAudioWaveform,
   "library-maintenance": processLibraryMaintenance,
   "extract-subtitles": processExtractSubtitles,
+  "collection-refresh": processCollectionRefresh,
 };
 
 // ─── Worker Handler Factory ─────────────────────────────────────────

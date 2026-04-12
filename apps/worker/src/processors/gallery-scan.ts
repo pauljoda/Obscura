@@ -10,7 +10,7 @@ import {
 } from "@obscura/media-core";
 import { db, scenes, images, galleries, libraryRoots } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
-import { enqueuePendingImageJob } from "../lib/enqueue.js";
+import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
 import {
@@ -406,4 +406,10 @@ export async function processGalleryScan(job: Job) {
       await markJobProgress(job, "gallery-scan", Math.round((processed / totalWork) * 100));
     }
   }
+
+  // Refresh dynamic collections after gallery scan
+  await enqueueCollectionRefreshAll({
+    by: "gallery-scan",
+    label: "Queued after gallery scan",
+  });
 }
