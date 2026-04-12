@@ -1,18 +1,25 @@
 import type { CollectionItemDto } from "@obscura/contracts";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
-export function getEntityHref(item: CollectionItemDto): string {
+export function getEntityHref(item: CollectionItemDto, from?: string): string {
+  let base: string;
   switch (item.entityType) {
     case "scene":
-      return `/scenes/${item.entityId}`;
+      base = `/scenes/${item.entityId}`;
+      break;
     case "gallery":
-      return `/galleries/${item.entityId}`;
+      base = `/galleries/${item.entityId}`;
+      break;
     case "image":
-      return `/images/${item.entityId}`;
+      base = `/images/${item.entityId}`;
+      break;
     case "audio-track":
-      return `/audio/tracks/${item.entityId}`;
+      base = `/audio/tracks/${item.entityId}`;
+      break;
     default:
       return "#";
   }
+  return from ? buildHrefWithFrom(base, from) : base;
 }
 
 export function getEntityTitle(item: CollectionItemDto): string {

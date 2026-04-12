@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Star,
-  ChevronLeft,
   Pencil,
   Save,
   XCircle,
@@ -30,6 +29,7 @@ import { AddToCollectionModal } from "../collections/add-to-collection-modal";
 import { ChipInput } from "../shared/chip-input";
 import { AudioPlayer } from "../audio/audio-player";
 import { usePlaylistContext } from "../collections/playlist-context";
+import { BackLink } from "../shared/back-link";
 
 interface AudioTrackDetailClientProps {
   track: AudioTrackDetailDto;
@@ -147,23 +147,11 @@ export function AudioTrackDetailClient({
   return (
     <div className="space-y-4">
       {/* Back link */}
-      {track.libraryId ? (
-        <Link
-          href={`/audio/${track.libraryId}`}
-          className="inline-flex items-center gap-1 text-[0.78rem] text-text-muted hover:text-text-secondary transition-colors duration-fast"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          Library
-        </Link>
-      ) : (
-        <Link
-          href="/audio"
-          className="inline-flex items-center gap-1 text-[0.78rem] text-text-muted hover:text-text-secondary transition-colors duration-fast"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          Audio
-        </Link>
-      )}
+      <BackLink
+        fallback={track.libraryId ? `/audio/${track.libraryId}` : "/audio"}
+        label={track.libraryId ? "Library" : "Audio"}
+        variant="text"
+      />
 
       {/* Player */}
       <div className="surface-card overflow-hidden">

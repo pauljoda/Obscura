@@ -20,6 +20,7 @@ import { fetchStudios, type StudioItem, updateStudio, deleteStudio } from "../..
 import { useNsfw } from "../nsfw/nsfw-context";
 import { StudioEntityCard } from "../studios/studio-entity-card";
 import { studioItemToCardData } from "../studios/studio-card-data";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
@@ -44,6 +45,7 @@ interface StudiosPageClientProps {
 
 export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const [studios, setStudios] = useState(initialStudios);
   const skipFirstStudioRefetch = useRef(true);
 
@@ -415,7 +417,7 @@ export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosP
             {filtered.map((studio) => (
               <StudioEntityCard
                 key={studio.id}
-                studio={studioItemToCardData(studio)}
+                studio={studioItemToCardData(studio, currentPath)}
                 variant="list"
                 selected={selection.isSelected(studio.id)}
                 onToggleSelect={selection.toggle}
@@ -426,7 +428,7 @@ export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosP
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((studio) => (
-            <StudioEntityCard key={studio.id} studio={studioItemToCardData(studio)} />
+            <StudioEntityCard key={studio.id} studio={studioItemToCardData(studio, currentPath)} />
           ))}
         </div>
       )}

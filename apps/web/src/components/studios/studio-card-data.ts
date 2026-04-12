@@ -2,6 +2,7 @@
 
 import type { SearchResultItem } from "@obscura/contracts";
 import { toApiUrl, type StudioItem } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface StudioCardData {
   id: string;
@@ -21,10 +22,11 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function studioItemToCardData(studio: StudioItem): StudioCardData {
+export function studioItemToCardData(studio: StudioItem, from?: string): StudioCardData {
+  const base = `/studios/${studio.id}`;
   return {
     id: studio.id,
-    href: `/studios/${studio.id}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     name: studio.name,
     sceneCount: studio.sceneCount,
     imageAppearanceCount: studio.imageAppearanceCount,
@@ -36,12 +38,12 @@ export function studioItemToCardData(studio: StudioItem): StudioCardData {
   };
 }
 
-export function searchStudioItemToCardData(item: SearchResultItem): StudioCardData | null {
+export function searchStudioItemToCardData(item: SearchResultItem, from?: string): StudioCardData | null {
   if (item.kind !== "studio") return null;
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
     sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
     imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,

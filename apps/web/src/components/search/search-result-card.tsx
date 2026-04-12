@@ -23,15 +23,17 @@ interface SearchResultCardProps {
   item: SearchResultItem;
   variant?: "default" | "compact";
   onSelect?: (href: string) => void;
+  from?: string;
 }
 
 export function SearchResultCard({
   item,
   variant = "default",
   onSelect,
+  from,
 }: SearchResultCardProps) {
   if (item.kind === "scene") {
-    const scene = searchSceneItemToCardData(item);
+    const scene = searchSceneItemToCardData(item, from);
 
     if (scene) {
       return (
@@ -45,7 +47,7 @@ export function SearchResultCard({
   }
 
   if (item.kind === "gallery") {
-    const gallery = searchGalleryItemToCardData(item);
+    const gallery = searchGalleryItemToCardData(item, from);
 
     if (gallery) {
       return (
@@ -59,7 +61,7 @@ export function SearchResultCard({
   }
 
   if (item.kind === "image") {
-    const image = searchImageItemToCardData(item);
+    const image = searchImageItemToCardData(item, from);
 
     if (image) {
       return (
@@ -73,7 +75,7 @@ export function SearchResultCard({
   }
 
   if (item.kind === "performer") {
-    const performer = searchPerformerItemToCardData(item);
+    const performer = searchPerformerItemToCardData(item, from);
 
     if (performer) {
       return (
@@ -87,7 +89,7 @@ export function SearchResultCard({
   }
 
   if (item.kind === "studio") {
-    const studio = searchStudioItemToCardData(item);
+    const studio = searchStudioItemToCardData(item, from);
 
     if (studio) {
       return (
@@ -101,7 +103,7 @@ export function SearchResultCard({
   }
 
   if (item.kind === "tag") {
-    const tag = searchTagItemToCardData(item);
+    const tag = searchTagItemToCardData(item, from);
 
     if (tag) {
       return (

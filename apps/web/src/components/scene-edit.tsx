@@ -30,6 +30,8 @@ import {
   SkipForward,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { buildHrefWithFrom } from "../lib/back-navigation";
 import {
   fetchSceneDetail,
   updateScene,
@@ -80,6 +82,9 @@ export function SceneEdit({
 }: SceneEditProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const searchParams = useSearchParams();
+  const fromParam = searchParams.get("from");
+  const backToScene = fromParam ? buildHrefWithFrom(`/scenes/${id}`, fromParam) : `/scenes/${id}`;
   const explicitCounterLabels = nsfwMode === "show";
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -543,7 +548,7 @@ export function SceneEdit({
       <div className={cn("space-y-4", inline ? "" : "max-w-4xl")}>
         {!inline && (
           <Link
-            href={`/scenes/${id}`}
+            href={backToScene}
             className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -727,7 +732,7 @@ export function SceneEdit({
     <div className={cn("space-y-4", inline ? "" : "max-w-4xl")}>
       {!inline && (
         <Link
-          href={`/scenes/${id}`}
+          href={backToScene}
           className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

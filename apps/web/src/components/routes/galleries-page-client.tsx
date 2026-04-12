@@ -13,6 +13,7 @@ import {
 import { BarChart3, Images, LayoutGrid, TrendingUp } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { GalleryGrid } from "../gallery-grid";
+import { useCurrentPath } from "../../hooks/use-current-path";
 import { GalleryFilterBar } from "../gallery-filter-bar";
 import type { GalleryViewMode, GallerySortOption, SortDir } from "../gallery-filter-bar";
 import {
@@ -56,6 +57,7 @@ export function GalleriesPageClient({
   initialListPrefs,
   initialStats,
 }: GalleriesPageClientProps) {
+  const currentPath = useCurrentPath();
   const [viewMode, setViewMode] = useState<GalleryViewMode>(initialListPrefs.viewMode);
   const [sortBy, setSortBy] = useState<GallerySortOption>(initialListPrefs.sortBy);
   const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
@@ -249,6 +251,7 @@ export function GalleriesPageClient({
         hasMore={galleries.length < total}
         loadingMore={loadingMore}
         onLoadMore={loadMore}
+        from={currentPath}
       />
 
       <footer className="mt-8 border-t border-border-subtle pt-6">

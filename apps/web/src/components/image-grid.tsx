@@ -12,6 +12,7 @@ interface ImageGridProps {
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  from?: string;
 }
 
 export function ImageGrid({
@@ -20,6 +21,7 @@ export function ImageGrid({
   hasMore = false,
   onLoadMore,
   loadingMore = false,
+  from,
 }: ImageGridProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +59,7 @@ export function ImageGrid({
         {images.map((image, index) => (
           <ImageEntityCard
             key={image.id}
-            image={imageItemToCardData(image)}
+            image={imageItemToCardData(image, from)}
             onSelect={() => onImageClick?.(index)}
           />
         ))}

@@ -19,10 +19,13 @@ import { useRecentSearches } from "../../hooks/use-recent-searches";
 import { SEARCH_KIND_CONFIG } from "./search-kind-config";
 import { SearchResultCard } from "./search-result-card";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { useCurrentPath } from "../../hooks/use-current-path";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export function CommandPalette() {
   const { open, closePalette } = useSearchPalette();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -55,9 +58,9 @@ export function CommandPalette() {
     (href: string) => {
       if (query.trim()) recentSearches.add(query.trim());
       closePalette();
-      router.push(href);
+      router.push(buildHrefWithFrom(href, currentPath));
     },
-    [query, recentSearches, closePalette, router]
+    [query, recentSearches, closePalette, router, currentPath]
   );
 
   const handleSubmit = useCallback(() => {

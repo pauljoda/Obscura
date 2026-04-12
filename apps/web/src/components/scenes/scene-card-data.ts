@@ -3,6 +3,7 @@
 import type { SearchResultItem } from "@obscura/contracts";
 import { formatDuration } from "@obscura/contracts";
 import { toApiUrl, type SceneListItem } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface SceneCardPerformer {
   name: string;
@@ -42,10 +43,11 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
+export function sceneListItemToCardData(scene: SceneListItem, from?: string): SceneCardData {
+  const base = `/scenes/${scene.id}`;
   return {
     id: scene.id,
-    href: `/scenes/${scene.id}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     title: scene.title,
     thumbnail: toApiUrl(scene.thumbnailPath, scene.updatedAt),
     cardThumbnail: scene.thumbnailPath?.includes("thumb-custom")
@@ -71,7 +73,7 @@ export function sceneListItemToCardData(scene: SceneListItem): SceneCardData {
   };
 }
 
-export function searchSceneItemToCardData(item: SearchResultItem): SceneCardData | null {
+export function searchSceneItemToCardData(item: SearchResultItem, from?: string): SceneCardData | null {
   if (item.kind !== "scene") return null;
 
   const thumbnailPath = toApiUrl(item.imagePath);
@@ -79,7 +81,7 @@ export function searchSceneItemToCardData(item: SearchResultItem): SceneCardData
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     title: item.title,
     thumbnail: thumbnailPath,
     cardThumbnail:

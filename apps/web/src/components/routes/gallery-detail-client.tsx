@@ -13,6 +13,7 @@ import { GalleryMetadataPanel } from "../gallery-metadata-panel";
 import { GalleryCard } from "../gallery-card";
 import { GalleryListItem } from "../gallery-list-item";
 import { fetchGalleryImages, toApiUrl, type PerformerItem, type TagItem } from "../../lib/api";
+import { getBackHref } from "../../lib/back-navigation";
 import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { AddToCollectionModal } from "../collections/add-to-collection-modal";
@@ -51,7 +52,8 @@ export function GalleryDetailClient({
     setImages(initialGallery.images);
   }, [initialGallery]);
 
-  const backHref = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
+  const defaultBack = gallery.parentId ? `/galleries/${gallery.parentId}` : "/galleries";
+  const backHref = getBackHref(searchParams, defaultBack);
 
   const handleGalleryUpdate = useCallback((patch: Partial<GalleryDetailDto>) => {
     setGallery((prev) => {

@@ -18,6 +18,7 @@ interface GalleryGridProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  from?: string;
 }
 
 export function GalleryGrid({
@@ -27,6 +28,7 @@ export function GalleryGrid({
   hasMore = false,
   loadingMore = false,
   onLoadMore,
+  from,
 }: GalleryGridProps) {
   const { mode: nsfwMode } = useNsfw();
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -140,7 +142,7 @@ export function GalleryGrid({
       <>
         <div className="space-y-1">
           {listGalleries.map((gallery) => (
-            <GalleryListItem key={gallery.id} gallery={gallery} />
+            <GalleryListItem key={gallery.id} gallery={gallery} from={from} />
           ))}
         </div>
         {loadMoreSentinel}
@@ -167,7 +169,7 @@ export function GalleryGrid({
             style={{ animationDelay: `${Math.min(index, 20) * 20}ms` }}
             className="animate-vault-enter"
           >
-            <GalleryCard gallery={gallery} />
+            <GalleryCard gallery={gallery} from={from} />
           </div>
         ))}
       </div>

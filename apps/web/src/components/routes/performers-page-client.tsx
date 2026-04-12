@@ -31,6 +31,7 @@ import { fetchPerformers, updatePerformer, deletePerformer, type PerformerItem }
 import { useNsfw } from "../nsfw/nsfw-context";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { performerItemToCardData } from "../performers/performer-card-data";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
@@ -93,6 +94,7 @@ export function PerformersPageClient({
 }: PerformersPageClientProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const [viewMode, setViewMode] = useState<PerformersViewMode>(initialListPrefs.viewMode);
   const [performers, setPerformers] = useState(initialPerformers);
   const [total, setTotal] = useState(initialTotal);
@@ -675,7 +677,7 @@ export function PerformersPageClient({
             {performers.map((performer) => (
               <PerformerEntityCard
                 key={performer.id}
-                performer={performerItemToCardData(performer)}
+                performer={performerItemToCardData(performer, currentPath)}
                 variant="list"
                 selected={selection.isSelected(performer.id)}
                 onToggleSelect={selection.toggle}
@@ -688,7 +690,7 @@ export function PerformersPageClient({
           {performers.map((performer) => (
             <PerformerEntityCard
               key={performer.id}
-              performer={performerItemToCardData(performer)}
+              performer={performerItemToCardData(performer, currentPath)}
             />
           ))}
         </div>

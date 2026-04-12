@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Star,
-  ChevronLeft,
   Pencil,
   Save,
   XCircle,
@@ -22,6 +21,7 @@ import {
   type TagItem,
   type PerformerItem,
 } from "../../lib/api";
+import { BackLink } from "../shared/back-link";
 import { NsfwBlur, NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useTerms } from "../../lib/terminology";
@@ -125,13 +125,7 @@ export function ImageDetailClient({
   return (
     <div className="space-y-4">
       {/* Back link */}
-      <Link
-        href="/images"
-        className="inline-flex items-center gap-1 text-[0.78rem] text-text-muted hover:text-text-secondary transition-colors duration-fast"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Images
-      </Link>
+      <BackLink fallback="/images" label="Images" variant="text" />
 
       {/* Image viewer */}
       <div className="relative bg-black overflow-hidden" style={{ minHeight: "40vh" }}>

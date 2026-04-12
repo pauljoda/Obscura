@@ -35,6 +35,7 @@ interface CollectionItemCardProps {
   selected?: boolean;
   onSelect?: (itemId: string) => void;
   onRemove?: (itemId: string) => void;
+  from?: string;
 }
 
 export function CollectionItemCard({
@@ -43,13 +44,14 @@ export function CollectionItemCard({
   selected = false,
   onSelect,
   onRemove,
+  from,
 }: CollectionItemCardProps) {
   const Icon = typeIcons[item.entityType];
   const colorClass = typeColors[item.entityType];
   const title = getEntityTitle(item);
   const thumbnailPath = getEntityThumbnail(item);
   const meta = getEntityMeta(item);
-  const href = getEntityHref(item);
+  const href = getEntityHref(item, from);
   const thumbnailUrl = toApiUrl(thumbnailPath);
   const isManual = item.source === "manual";
 

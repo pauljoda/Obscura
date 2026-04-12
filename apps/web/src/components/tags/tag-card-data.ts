@@ -2,6 +2,7 @@
 
 import type { SearchResultItem } from "@obscura/contracts";
 import { toApiUrl, type TagItem } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface TagCardData {
   id: string;
@@ -18,10 +19,11 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function tagItemToCardData(tag: TagItem): TagCardData {
+export function tagItemToCardData(tag: TagItem, from?: string): TagCardData {
+  const base = `/tags/${encodeURIComponent(tag.name)}`;
   return {
     id: tag.id,
-    href: `/tags/${encodeURIComponent(tag.name)}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     name: tag.name,
     sceneCount: tag.sceneCount,
     imageCount: tag.imageCount ?? 0,
@@ -30,12 +32,12 @@ export function tagItemToCardData(tag: TagItem): TagCardData {
   };
 }
 
-export function searchTagItemToCardData(item: SearchResultItem): TagCardData | null {
+export function searchTagItemToCardData(item: SearchResultItem, from?: string): TagCardData | null {
   if (item.kind !== "tag") return null;
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
     sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
     imageCount: readMetaNumber(item.meta, "imageCount") ?? 0,

@@ -13,6 +13,7 @@ interface ImageFeedProps {
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  from?: string;
 }
 
 export function ImageFeed({
@@ -21,6 +22,7 @@ export function ImageFeed({
   hasMore = false,
   onLoadMore,
   loadingMore = false,
+  from,
 }: ImageFeedProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,7 @@ export function ImageFeed({
       {images.map((image, index) => (
         <ImageEntityCard
           key={image.id}
-          image={imageItemToCardData(image)}
+          image={imageItemToCardData(image, from)}
           variant="feed"
           onSelect={() => onImageClick?.(index)}
         />

@@ -22,6 +22,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { fetchTags, type TagItem, updateTag, deleteTag } from "../../lib/api";
 import { TagEntityCard } from "../tags/tag-entity-card";
 import { tagItemToCardData } from "../tags/tag-card-data";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 import { DashboardStatTile } from "../dashboard/dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
@@ -60,6 +61,7 @@ interface TagsPageClientProps {
 export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClientProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const [tags, setTags] = useState(initialTags);
   const [search, setSearch] = useState(initialListPrefs.search);
   const [sortKey, setSortKey] = useState<TagsSortKey>(initialListPrefs.sortKey);
@@ -531,7 +533,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
             {displayedTags.map((tag) => (
               <TagEntityCard
                 key={tag.id}
-                tag={tagItemToCardData(tag)}
+                tag={tagItemToCardData(tag, currentPath)}
                 selected={selection.isSelected(tag.id)}
                 onToggleSelect={selection.toggle}
               />
@@ -545,7 +547,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
               return (
                 <TagEntityCard
                   key={tag.id}
-                  tag={tagItemToCardData(tag)}
+                  tag={tagItemToCardData(tag, currentPath)}
                   variant="cloud"
                   maxCount={maxCount}
                 />

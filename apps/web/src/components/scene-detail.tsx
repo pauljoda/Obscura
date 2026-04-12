@@ -16,7 +16,6 @@ import {
   Clock,
   Calendar,
   Eye,
-  ArrowLeft,
   Loader2,
   Droplets,
   Heart,
@@ -50,6 +49,7 @@ import { usePlaylistContext } from "./collections/playlist-context";
 import { SceneMetadataPanel } from "./scenes/scene-metadata-panel";
 import { SceneMarkerEditor } from "./scenes/scene-marker-editor";
 import { SceneFileInfo } from "./scenes/scene-file-info";
+import { BackLink } from "./shared/back-link";
 
 const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
 type Tab = (typeof tabs)[number];
@@ -404,12 +404,7 @@ export function SceneDetail({
         <p className="text-text-muted text-sm">
           {error ?? `${terms.scene} not found`}
         </p>
-        <Link
-          href="/scenes"
-          className="text-text-accent text-sm mt-2 hover:text-text-accent-bright"
-        >
-          Back to {terms.scenes}
-        </Link>
+        <BackLink fallback="/scenes" label={`Back to ${terms.scenes}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
       </div>
     );
   }
@@ -428,13 +423,7 @@ export function SceneDetail({
   return (
     <div className="space-y-5">
       {/* Back link */}
-      <Link
-        href="/scenes"
-        className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1.5 text-text-muted text-[0.72rem] font-medium hover:text-text-accent hover:border-border-accent transition-colors duration-fast w-fit"
-      >
-        <ArrowLeft className="h-3 w-3" />
-        {terms.scenes}
-      </Link>
+      <BackLink fallback="/scenes" label={terms.scenes} className="py-1.5 font-medium hover:border-border-accent w-fit" />
 
       {/* Video Player — optionally side-by-side with a docked transcript
           on desktop widths (>= lg). On smaller viewports the player stays

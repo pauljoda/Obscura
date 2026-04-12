@@ -9,7 +9,6 @@ import {
   Music,
   Play,
   Shuffle,
-  ChevronLeft,
   Edit2,
   Save,
   XCircle,
@@ -46,6 +45,7 @@ import {
   type StudioItem,
 } from "../../lib/api";
 import { AudioPlayer } from "../audio/audio-player";
+import { BackLink } from "../shared/back-link";
 import { ChipInput } from "../shared/chip-input";
 import { AddToCollectionModal } from "../collections/add-to-collection-modal";
 import { AudioLibraryStudioField } from "../audio/audio-library-studio-field";
@@ -331,13 +331,7 @@ export function AudioLibraryDetailClient({
 
   const content = (
     <div className="flex flex-col gap-6 pb-64 md:pb-60">
-      <Link
-        href="/audio"
-        className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-accent transition-colors w-fit"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Audio
-      </Link>
+      <BackLink fallback="/audio" label="Audio" variant="text" />
 
       <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
         <div className="flex gap-6 items-start flex-1 min-w-0">

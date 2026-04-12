@@ -3,7 +3,6 @@
 import { useCallback, useState, useRef } from "react";
 import {
   Building2,
-  ArrowLeft,
   Loader2,
   Globe,
   Pencil,
@@ -46,6 +45,8 @@ import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-l
 import { SceneFolderCard } from "../../../../components/scene-folders/scene-folder-card";
 import { use, useEffect } from "react";
 import { useTerms, formatVideoCount } from "../../../../lib/terminology";
+import { BackLink } from "../../../../components/shared/back-link";
+import { useCurrentPath } from "../../../../hooks/use-current-path";
 
 interface StudioPageProps {
   params: Promise<{ id: string }>;
@@ -54,6 +55,7 @@ interface StudioPageProps {
 export default function StudioPage({ params }: StudioPageProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const { id } = use(params);
   const router = useRouter();
 
@@ -157,9 +159,7 @@ export default function StudioPage({ params }: StudioPageProps) {
   if (notFound || !studio) {
     return (
       <div className="space-y-4">
-        <Link href="/studios" className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast">
-          <ArrowLeft className="h-3 w-3" /> Studios
-        </Link>
+        <BackLink fallback="/studios" label="Studios" />
         <div className="surface-well p-12 text-center">
           <Building2 className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">Studio not found.</p>
@@ -182,9 +182,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
   return (
     <div className="space-y-5">
-      <Link href="/studios" className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast">
-        <ArrowLeft className="h-3 w-3" /> Studios
-      </Link>
+      <BackLink fallback="/studios" label="Studios" />
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden group">
@@ -341,7 +339,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       <section>
         <h4 className="text-kicker mb-3">{terms.scenes}</h4>
-        <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
+        <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
       </section>
 
       <div className="separator" />
@@ -349,7 +347,7 @@ export default function StudioPage({ params }: StudioPageProps) {
       <section>
         <h4 className="text-kicker mb-3">Galleries</h4>
         {totalGalleries > 0 ? (
-          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} from={currentPath} />
         ) : (
           <div className="surface-well p-8 text-center">
             <Images className="mx-auto mb-2 h-8 w-8 text-text-disabled" />

@@ -27,6 +27,7 @@ import {
 import { cn } from "@obscura/ui/lib/utils";
 import { ImageGrid } from "../image-grid";
 import { ImageFeed } from "../image-feed";
+import { useCurrentPath } from "../../hooks/use-current-path";
 import { ImageLightbox } from "../image-lightbox";
 import {
   fetchImages,
@@ -91,6 +92,7 @@ export function ImagesPageClient({
   initialListPrefs,
 }: ImagesPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const [filterTags, setFilterTags] = useState(initialTags);
   const [filterStudios, setFilterStudios] = useState(initialStudios);
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
@@ -700,6 +702,7 @@ export function ImagesPageClient({
           hasMore={images.length < total}
           onLoadMore={handleLoadMore}
           loadingMore={loadingMore}
+          from={currentPath}
         />
       ) : (
         <ImageGrid
@@ -711,6 +714,7 @@ export function ImagesPageClient({
           hasMore={images.length < total}
           onLoadMore={handleLoadMore}
           loadingMore={loadingMore}
+          from={currentPath}
         />
       )}
 

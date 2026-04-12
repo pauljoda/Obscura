@@ -5,7 +5,6 @@ import {
   Users,
   Star,
   Film,
-  ArrowLeft,
   Loader2,
   Globe,
   Calendar,
@@ -50,6 +49,8 @@ import {
   tagsVisibleInNsfwMode,
 } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { BackLink } from "../shared/back-link";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 interface PerformerPageClientProps {
   id: string;
@@ -75,6 +76,7 @@ export function PerformerPageClient({
   const router = useRouter();
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
 
   const [performer, setPerformer] = useState(initialPerformer);
   const [scenes, setScenes] = useState(initialScenes);
@@ -213,13 +215,7 @@ export function PerformerPageClient({
   if (notFound || !performer) {
     return (
       <div className="space-y-4">
-        <Link
-          href="/performers"
-          className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted transition-colors duration-fast hover:text-text-accent"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          {terms.performers}
-        </Link>
+        <BackLink fallback="/performers" label={terms.performers} />
         <div className="surface-well p-12 text-center">
           <Users className="mx-auto mb-3 h-10 w-10 text-text-disabled" />
           <p className="text-sm text-text-muted">{terms.performer} not found.</p>
@@ -342,13 +338,7 @@ export function PerformerPageClient({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/performers"
-        className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted transition-colors duration-fast hover:text-text-accent"
-      >
-        <ArrowLeft className="h-3 w-3" />
-        {terms.performers}
-      </Link>
+      <BackLink fallback="/performers" label={terms.performers} />
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="w-full max-w-xs self-center flex-shrink-0 sm:max-w-sm lg:w-72 lg:max-w-none lg:self-auto">
@@ -508,7 +498,7 @@ export function PerformerPageClient({
           <section>
             <h4 className="mb-3 text-kicker">{terms.scenes}</h4>
             {totalScenes > 0 ? (
-              <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
+              <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
@@ -524,7 +514,7 @@ export function PerformerPageClient({
           <section>
             <h4 className="mb-3 text-kicker">Galleries</h4>
             {totalGalleries > 0 ? (
-              <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+              <GalleryGrid galleries={galleries} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Images className="mx-auto mb-2 h-8 w-8 text-text-disabled" />

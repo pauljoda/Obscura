@@ -17,9 +17,11 @@ interface SceneGridProps {
   onLoadMore?: () => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  /** Current page path — when provided, scene cards include a `from` query param so the detail back button returns here. */
+  from?: string;
 }
 
-export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect }: SceneGridProps) {
+export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: SceneGridProps) {
   const terms = useTerms();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +83,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
           {scenes.map((scene, i) => (
             <SceneCard
               key={scene.id}
-              scene={sceneListItemToCardData(scene)}
+              scene={sceneListItemToCardData(scene, from)}
               variant="list"
               index={i}
               selected={selectedIds?.has(scene.id)}
@@ -100,7 +102,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
       {scenes.map((scene, i) => (
         <SceneCard
           key={scene.id}
-          scene={sceneListItemToCardData(scene)}
+          scene={sceneListItemToCardData(scene, from)}
           index={i}
           imageLoading={i < 8 ? "eager" : "lazy"}
         />

@@ -2,6 +2,7 @@
 
 import type { ImageListItemDto, SearchResultItem } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface ImageCardData {
   id: string;
@@ -27,10 +28,11 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function imageItemToCardData(image: ImageListItemDto): ImageCardData {
+export function imageItemToCardData(image: ImageListItemDto, from?: string): ImageCardData {
+  const base = image.galleryId ? `/galleries/${image.galleryId}` : `/images/${image.id}`;
   return {
     id: image.id,
-    href: image.galleryId ? `/galleries/${image.galleryId}` : `/images/${image.id}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     title: image.title,
     date: image.date ?? undefined,
     rating: image.rating ?? undefined,
@@ -47,12 +49,12 @@ export function imageItemToCardData(image: ImageListItemDto): ImageCardData {
   };
 }
 
-export function searchImageItemToCardData(item: SearchResultItem): ImageCardData | null {
+export function searchImageItemToCardData(item: SearchResultItem, from?: string): ImageCardData | null {
   if (item.kind !== "image") return null;
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     title: item.title,
     rating: item.rating ?? undefined,
     width: readMetaNumber(item.meta, "width"),

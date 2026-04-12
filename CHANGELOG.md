@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation now include the `from` context. Shared `BackLink` component and `useCurrentPath` hook provide the plumbing.
 - **`/design-language`** page (not linked in nav, `noindex`) — single-page gallery of Dark Room tokens: typography, buttons, badges, surfaces, accent/status palettes, LEDs, meters, loading patterns, motion, form controls, caption styles, and gradient placeholders. Includes a live preview of **`AppRouteLoading`** (the `(app)/loading.tsx` ripple-glow route loader).
 - **`AppRouteLoading`** component — shared implementation for the app shell route loading state so the design-language page can render the exact system loader; loader now uses **concentric square ripples** and a **pulsing core glow field** around the brass LED instead of a static framed square.
 - Global CSS utilities `.kbd` (sharp, recessed key caps), `.empty-rack-slot` (dashed empty hardware slot), and `.pill-muted` (muted uppercase label chip).

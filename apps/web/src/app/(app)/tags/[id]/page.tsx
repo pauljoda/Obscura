@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Tag,
-  ArrowLeft,
   Loader2,
   Film,
   Clock,
@@ -46,6 +45,8 @@ import {
 } from "../../../../lib/api";
 import { use } from "react";
 import { useTerms, formatVideoCount } from "../../../../lib/terminology";
+import { BackLink } from "../../../../components/shared/back-link";
+import { useCurrentPath } from "../../../../hooks/use-current-path";
 
 interface TagPageProps {
   params: Promise<{ id: string }>;
@@ -54,6 +55,7 @@ interface TagPageProps {
 export default function TagPage({ params }: TagPageProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
+  const currentPath = useCurrentPath();
   const { id } = use(params);
   const tagName = decodeURIComponent(id);
   const router = useRouter();
@@ -182,9 +184,7 @@ export default function TagPage({ params }: TagPageProps) {
 
   return (
     <div className="space-y-5">
-      <Link href="/tags" className="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast">
-        <ArrowLeft className="h-3 w-3" /> Tags
-      </Link>
+      <BackLink fallback="/tags" label="Tags" />
 
       {/* Hero banner image */}
       <div className="relative rounded-lg overflow-hidden group">
@@ -328,7 +328,7 @@ export default function TagPage({ params }: TagPageProps) {
             <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} with this tag.</p>
           </div>
         ) : (
-          <SceneGrid scenes={scenes} viewMode="grid" loading={false} />
+          <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
         )}
       </section>
 
@@ -346,7 +346,7 @@ export default function TagPage({ params }: TagPageProps) {
             <p className="text-text-muted text-sm">No galleries with this tag.</p>
           </div>
         ) : (
-          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} />
+          <GalleryGrid galleries={galleries} viewMode="grid" loading={false} from={currentPath} />
         )}
       </section>
 

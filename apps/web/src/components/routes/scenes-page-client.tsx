@@ -88,6 +88,7 @@ import { SceneFolderCard } from "../scene-folders/scene-folder-card";
 import { HierarchyBreadcrumbs } from "../shared/hierarchy-breadcrumbs";
 import { HierarchySection } from "../shared/hierarchy-section";
 import { HierarchyShell } from "../shared/hierarchy-shell";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 interface ScenesPageClientProps {
   initialScenes: SceneListItem[];
@@ -114,6 +115,7 @@ export function ScenesPageClient({
 }: ScenesPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
+  const currentPath = useCurrentPath();
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
@@ -1148,6 +1150,7 @@ export function ScenesPageClient({
                 hasMore={scenes.length < total}
                 loadingMore={loadingMore}
                 onLoadMore={loadMore}
+                from={currentPath}
               />
             </HierarchySection>
           </div>
@@ -1185,6 +1188,7 @@ export function ScenesPageClient({
                 hasMore={scenes.length < total}
                 loadingMore={loadingMore}
                 onLoadMore={loadMore}
+                from={currentPath}
               />
             </HierarchySection>
           </HierarchyShell>
@@ -1200,6 +1204,7 @@ export function ScenesPageClient({
             onLoadMore={loadMore}
             selectedIds={viewMode === "list" ? selection.selectedIds : undefined}
             onToggleSelect={viewMode === "list" ? selection.toggle : undefined}
+            from={currentPath}
           />
 
           <BulkActionToolbar

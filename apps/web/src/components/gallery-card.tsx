@@ -4,8 +4,9 @@ import { galleryListItemToCardData } from "./galleries/gallery-card-data";
 
 interface GalleryCardProps {
   gallery: GalleryListItemDto;
+  from?: string;
 }
 
-export function GalleryCard({ gallery }: GalleryCardProps) {
-  return <GalleryEntityCard gallery={galleryListItemToCardData(gallery)} />;
+export function GalleryCard({ gallery, from }: GalleryCardProps) {
+  return <GalleryEntityCard gallery={galleryListItemToCardData(gallery, from)} />;
 }

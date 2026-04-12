@@ -28,6 +28,7 @@ import { SceneFolderMetadataPanel } from "../scene-folders/scene-folder-metadata
 import { SceneFolderCard } from "../scene-folders/scene-folder-card";
 import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
 import { SceneGrid } from "../scene-grid";
+import { BackLink } from "../shared/back-link";
 
 interface SceneFolderDetailClientProps {
   initialFolder: SceneFolderDetailDto;
@@ -154,13 +155,11 @@ export function SceneFolderDetailClient({
   return (
     <div className="space-y-4">
       {/* ── Back link ────────────────────────────────────────── */}
-      <Link
-        href={`/scenes?folder=${folder.parentId ?? ""}`}
-        className="inline-flex items-center gap-2 text-[0.78rem] text-text-muted transition-colors duration-fast hover:text-text-accent"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to folder view
-      </Link>
+      <BackLink
+        fallback={`/scenes?folder=${folder.parentId ?? ""}`}
+        label="Back to folder view"
+        variant="text"
+      />
 
       {/* ── Jellyfin-style Hero Header ──────────────────────── */}
       <div className="relative min-h-[320px] overflow-hidden border border-border-subtle">

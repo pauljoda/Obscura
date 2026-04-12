@@ -2,6 +2,7 @@
 
 import type { SearchResultItem } from "@obscura/contracts";
 import { toApiUrl, type PerformerItem } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface PerformerCardData {
   id: string;
@@ -27,10 +28,11 @@ function readMetaString(meta: SearchResultItem["meta"], key: string): string | u
   return typeof value === "string" ? value : undefined;
 }
 
-export function performerItemToCardData(performer: PerformerItem): PerformerCardData {
+export function performerItemToCardData(performer: PerformerItem, from?: string): PerformerCardData {
+  const base = `/performers/${performer.id}`;
   return {
     id: performer.id,
-    href: `/performers/${performer.id}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     name: performer.name,
     sceneCount: performer.sceneCount,
     imageAppearanceCount: performer.imageAppearanceCount,
@@ -43,12 +45,12 @@ export function performerItemToCardData(performer: PerformerItem): PerformerCard
   };
 }
 
-export function searchPerformerItemToCardData(item: SearchResultItem): PerformerCardData | null {
+export function searchPerformerItemToCardData(item: SearchResultItem, from?: string): PerformerCardData | null {
   if (item.kind !== "performer") return null;
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
     sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
     imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,

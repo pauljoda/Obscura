@@ -18,7 +18,6 @@ import {
   Shuffle,
   Zap,
   Hand,
-  ChevronLeft,
   CheckSquare,
   X,
   Loader2,
@@ -35,6 +34,8 @@ import {
   removeCollectionItems,
 } from "../../lib/api/media";
 import { CollectionItemCard } from "../collections/collection-item-card";
+import { BackLink } from "../shared/back-link";
+import { useCurrentPath } from "../../hooks/use-current-path";
 import { revalidateCollectionCache } from "../../app/actions/revalidate-collection";
 import { usePlaylistContext } from "../collections/playlist-context";
 
@@ -79,6 +80,7 @@ export function CollectionDetailClient({
 }: CollectionDetailClientProps) {
   const router = useRouter();
   const playlist = usePlaylistContext();
+  const currentPath = useCurrentPath();
   const [items, setItems] = useState(initialItems);
   const [viewMode, setViewMode] = useState<ViewMode>("mixed");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -191,13 +193,7 @@ export function CollectionDetailClient({
   return (
     <div className="space-y-4">
       {/* Back link */}
-      <Link
-        href="/collections"
-        className="inline-flex items-center gap-1 text-[0.78rem] text-text-muted hover:text-text-secondary transition-colors duration-fast"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Collections
-      </Link>
+      <BackLink fallback="/collections" label="Collections" variant="text" />
 
       {/* Header */}
       <div>
@@ -395,6 +391,7 @@ export function CollectionDetailClient({
               selectable={selectMode}
               selected={selectedItemIds.has(item.id)}
               onSelect={toggleSelectItem}
+              from={currentPath}
             />
           ))}
         </div>
@@ -423,6 +420,7 @@ export function CollectionDetailClient({
                         selectable={selectMode}
                         selected={selectedItemIds.has(item.id)}
                         onSelect={toggleSelectItem}
+                        from={currentPath}
                       />
                     ))}
                   </div>

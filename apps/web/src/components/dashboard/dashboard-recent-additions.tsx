@@ -45,15 +45,17 @@ function mergeIngest(
 function SceneIngestTile({
   scene,
   index,
+  from,
 }: {
   scene: SceneListItem;
   index: number;
+  from?: string;
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
       <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
         <SceneCard
-          scene={sceneListItemToCardData(scene)}
+          scene={sceneListItemToCardData(scene, from)}
           index={index}
           imageLoading="lazy"
         />
@@ -67,15 +69,17 @@ function SceneIngestTile({
 
 function GalleryIngestTile({
   gallery,
+  from,
 }: {
   gallery: GalleryListItem;
+  from?: string;
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
       <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
-        <GalleryEntityCard 
-          gallery={galleryListItemToCardData(gallery)} 
-          aspectRatio="video" 
+        <GalleryEntityCard
+          gallery={galleryListItemToCardData(gallery, from)}
+          aspectRatio="video"
         />
       </div>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
@@ -187,6 +191,7 @@ export function DashboardRecentAdditions({
                     key={`s-${row.scene.id}`}
                     scene={row.scene}
                     index={i}
+                    from="/"
                   />
                 );
               }
@@ -194,6 +199,7 @@ export function DashboardRecentAdditions({
                 <GalleryIngestTile
                   key={`g-${row.gallery.id}`}
                   gallery={row.gallery}
+                  from="/"
                 />
               );
             })}

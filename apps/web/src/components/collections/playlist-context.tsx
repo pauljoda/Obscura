@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 import type {
   CollectionItemDto,
   CollectionEntityType,
@@ -126,7 +127,11 @@ export function PlaylistProvider({ children }: { children: ReactNode }) {
 
   const navigateToItem = useCallback(
     (item: CollectionItemDto) => {
-      router.push(getEntityHref(item));
+      const href = getEntityHref(item);
+      const from = collectionIdRef.current
+        ? `/collections/${collectionIdRef.current}`
+        : undefined;
+      router.push(from ? buildHrefWithFrom(href, from) : href);
     },
     [router],
   );

@@ -2,6 +2,7 @@
 
 import type { SearchResultItem, GalleryType, GalleryListItemDto } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
+import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface GalleryCardData {
   id: string;
@@ -32,10 +33,11 @@ function readMetaString(meta: SearchResultItem["meta"], key: string): string | u
   return typeof value === "string" ? value : undefined;
 }
 
-export function galleryListItemToCardData(gallery: GalleryListItemDto): GalleryCardData {
+export function galleryListItemToCardData(gallery: GalleryListItemDto, from?: string): GalleryCardData {
+  const base = `/galleries/${gallery.id}`;
   return {
     id: gallery.id,
-    href: `/galleries/${gallery.id}`,
+    href: from ? buildHrefWithFrom(base, from) : base,
     title: gallery.title,
     galleryType: gallery.galleryType,
     imageCount: gallery.imageCount,
@@ -48,12 +50,12 @@ export function galleryListItemToCardData(gallery: GalleryListItemDto): GalleryC
   };
 }
 
-export function searchGalleryItemToCardData(item: SearchResultItem): GalleryCardData | null {
+export function searchGalleryItemToCardData(item: SearchResultItem, from?: string): GalleryCardData | null {
   if (item.kind !== "gallery") return null;
 
   return {
     id: item.id,
-    href: item.href,
+    href: from ? buildHrefWithFrom(item.href, from) : item.href,
     title: item.title,
     galleryType: readMetaGalleryType(item.meta),
     imageCount: readMetaNumber(item.meta, "imageCount") ?? 0,
