@@ -80,6 +80,83 @@ async function fetchFolderPreviewPaths(folderId: string, nsfwMode?: string) {
   ).get(folderId) ?? [];
 }
 
+interface LiveFolderCounts {
+  directSceneCount: number;
+  totalSceneCount: number;
+  visibleSceneCount: number;
+  containsNsfwDescendants: boolean;
+}
+
+async function fetchLiveFolderCounts(
+  folderIds: string[],
+  nsfwMode?: string,
+): Promise<Map<string, LiveFolderCounts>> {
+  if (folderIds.length === 0) return new Map();
+  const idList = sql.join(folderIds.map((id) => sql`${id}::uuid`), sql`, `);
+  const rows = await db.execute<{
+    folder_id: string;
+    direct_total: number;
+    subtree_total: number;
+    subtree_visible: number;
+    has_nsfw: boolean;
+  }>(sql`
+    WITH RECURSIVE folder_tree AS (
+      SELECT id AS root_id, id, 0 AS rel_depth
+      FROM scene_folders
+      WHERE id IN (${idList})
+      UNION ALL
+      SELECT ft.root_id, child.id, ft.rel_depth + 1
+      FROM scene_folders child
+      INNER JOIN folder_tree ft ON child.parent_id = ft.id
+    ),
+    counts AS (
+      SELECT
+        ft.root_id AS folder_id,
+        COUNT(*) FILTER (WHERE ft.rel_depth = 0) AS direct_total,
+        COUNT(*) AS subtree_total,
+        COUNT(*) FILTER (WHERE scenes.is_nsfw IS NOT TRUE) AS subtree_visible,
+        BOOL_OR(scenes.is_nsfw IS TRUE) AS has_nsfw
+      FROM folder_tree ft
+      INNER JOIN scenes ON scenes.scene_folder_id = ft.id
+      GROUP BY ft.root_id
+    )
+    SELECT
+      folder_id,
+      COALESCE(direct_total, 0)::int AS direct_total,
+      COALESCE(subtree_total, 0)::int AS subtree_total,
+      COALESCE(subtree_visible, 0)::int AS subtree_visible,
+      COALESCE(has_nsfw, false) AS has_nsfw
+    FROM counts
+  `);
+  const result = new Map<string, LiveFolderCounts>();
+  for (const row of rows as unknown as Array<{
+    folder_id: string;
+    direct_total: number;
+    subtree_total: number;
+    subtree_visible: number;
+    has_nsfw: boolean;
+  }>) {
+    result.set(row.folder_id, {
+      directSceneCount: row.direct_total,
+      totalSceneCount: row.subtree_total,
+      visibleSceneCount: nsfwMode === "off" ? row.subtree_visible : row.subtree_total,
+      containsNsfwDescendants: row.has_nsfw,
+    });
+  }
+  // Folders with no scenes get zero counts
+  for (const id of folderIds) {
+    if (!result.has(id)) {
+      result.set(id, {
+        directSceneCount: 0,
+        totalSceneCount: 0,
+        visibleSceneCount: 0,
+        containsNsfwDescendants: false,
+      });
+    }
+  }
+  return result;
+}
+
 async function fetchLibraryRootLabels(rootIds: string[]): Promise<Map<string, string>> {
   if (rootIds.length === 0) return new Map();
   const unique = [...new Set(rootIds)];
@@ -95,6 +172,7 @@ function toSceneFolderListItem(
   childFolderCount: number,
   previewThumbnailPaths: string[],
   libraryRootLabel: string,
+  liveCounts?: LiveFolderCounts,
 ) {
   return {
     id: folder.id,
@@ -107,10 +185,10 @@ function toSceneFolderListItem(
     depth: folder.depth,
     isNsfw: folder.isNsfw,
     coverImagePath: folder.coverImagePath,
-    directSceneCount: folder.directSceneCount,
-    totalSceneCount: folder.totalSceneCount,
-    visibleSfwSceneCount: folder.visibleSfwSceneCount,
-    containsNsfwDescendants: folder.containsNsfwDescendants,
+    directSceneCount: liveCounts?.directSceneCount ?? folder.directSceneCount,
+    totalSceneCount: liveCounts?.totalSceneCount ?? folder.totalSceneCount,
+    visibleSfwSceneCount: liveCounts?.visibleSceneCount ?? folder.visibleSfwSceneCount,
+    containsNsfwDescendants: liveCounts?.containsNsfwDescendants ?? folder.containsNsfwDescendants,
     childFolderCount,
     previewThumbnailPaths,
     libraryRootId: folder.libraryRootId,
@@ -151,44 +229,51 @@ export async function listSceneFolders(query: {
     );
   }
 
-  conditions.push(sql`${sceneFolders.totalSceneCount} > 0`);
-
   if (query.nsfw === "off") {
     conditions.push(eq(sceneFolders.isNsfw, false));
-    conditions.push(sql`${sceneFolders.visibleSfwSceneCount} > 0`);
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(sceneFolders)
-    .where(where);
 
   const folders = await db
     .select()
     .from(sceneFolders)
     .where(where)
-    .orderBy(asc(sceneFolders.title))
-    .limit(limit)
-    .offset(offset);
+    .orderBy(asc(sceneFolders.title));
 
-  const childCounts = await fetchFolderChildCounts(folders.map((folder) => folder.id));
-  const rootLabels = await fetchLibraryRootLabels(folders.map((f) => f.libraryRootId));
+  // Compute live scene counts for all matching folders
+  const liveCounts = await fetchLiveFolderCounts(
+    folders.map((f) => f.id),
+    query.nsfw,
+  );
+
+  // Filter out folders with zero visible scenes
+  const visibleFolders = folders.filter((f) => {
+    const counts = liveCounts.get(f.id);
+    return counts && counts.visibleSceneCount > 0;
+  });
+
+  const total = visibleFolders.length;
+  const paged = visibleFolders.slice(offset, offset + limit);
+
+  const childCounts = await fetchFolderChildCounts(paged.map((folder) => folder.id));
+  const rootLabels = await fetchLibraryRootLabels(paged.map((f) => f.libraryRootId));
   const items = await Promise.all(
-    folders.map(async (folder) => {
+    paged.map(async (folder) => {
       const previewThumbnailPaths = await fetchFolderPreviewPaths(folder.id, query.nsfw);
       return toSceneFolderListItem(
         folder,
         childCounts.get(folder.id) ?? 0,
         previewThumbnailPaths,
         rootLabels.get(folder.libraryRootId) ?? "",
+        liveCounts.get(folder.id),
       );
     }),
   );
 
   return {
     items,
-    total: countResult.count,
+    total,
     limit,
     offset,
   };
@@ -207,22 +292,28 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
     throw new AppError(404, "Scene folder not found");
   }
 
-  if (
-    !isHierarchyNodeVisible(
-      nsfwMode,
-      folder.isNsfw,
-      folder.visibleSfwSceneCount,
-      folder.totalSceneCount,
-    )
-  ) {
-    throw new AppError(404, "Scene folder not found");
-  }
-
+  // Compute live counts for the folder and all its children
   const children = await db
     .select()
     .from(sceneFolders)
     .where(eq(sceneFolders.parentId, id))
     .orderBy(asc(sceneFolders.title));
+
+  const allFolderIds = [folder.id, ...children.map((c) => c.id)];
+  const liveCounts = await fetchLiveFolderCounts(allFolderIds, nsfwMode);
+  const folderLive = liveCounts.get(folder.id);
+
+  // Check visibility with live counts
+  if (
+    !isHierarchyNodeVisible(
+      nsfwMode,
+      folder.isNsfw,
+      folderLive?.visibleSceneCount ?? 0,
+      folderLive?.totalSceneCount ?? 0,
+    )
+  ) {
+    throw new AppError(404, "Scene folder not found");
+  }
 
   const childCounts = await fetchFolderChildCounts(children.map((child) => child.id));
   const allRootIds = [folder.libraryRootId, ...children.map((c) => c.libraryRootId)];
@@ -231,15 +322,18 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
 
   const childItems = await Promise.all(
     children
-      .filter((child) =>
-        isHierarchyNodeVisible(nsfwMode, child.isNsfw, child.visibleSfwSceneCount, child.totalSceneCount),
-      )
+      .filter((child) => {
+        const childLive = liveCounts.get(child.id);
+        return childLive && childLive.visibleSceneCount > 0
+          && isHierarchyNodeVisible(nsfwMode, child.isNsfw, childLive.visibleSceneCount, childLive.totalSceneCount);
+      })
       .map(async (child) =>
         toSceneFolderListItem(
           child,
           childCounts.get(child.id) ?? 0,
           await fetchFolderPreviewPaths(child.id, nsfwMode),
           rootLabels.get(child.libraryRootId) ?? "",
+          liveCounts.get(child.id),
         )),
   );
 
@@ -266,6 +360,7 @@ export async function getSceneFolderById(id: string, nsfwMode?: string) {
       childItems.length,
       await fetchFolderPreviewPaths(folder.id, nsfwMode),
       folderRootLabel,
+      folderLive,
     ),
     breadcrumbs: breadcrumbs.map((crumb) => ({
       id: crumb.id,
