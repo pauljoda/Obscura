@@ -10,7 +10,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
+import {
+  Film,
+  Clock,
+  Edit2,
+  FolderOpen,
+  HardDrive,
+  Loader2,
+  Save,
+  Trash2,
+  TrendingUp,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SceneGrid } from "../scene-grid";
 import { ImportButton, UploadDropZone } from "../upload";
@@ -26,6 +38,7 @@ import {
   fetchTags,
   updateScene,
   deleteScene,
+  toApiUrl,
   updateSceneFolder,
   uploadSceneFolderCover,
   deleteSceneFolderCover,
@@ -38,7 +51,10 @@ import {
   type TagItem,
 } from "../../lib/api";
 import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
-import { SceneFolderMetadataPanel } from "../scene-folders/scene-folder-metadata-panel";
+import { InfoRow } from "../shared/metadata-panel";
+import { NsfwChip, NsfwEditToggle } from "../nsfw/nsfw-gate";
+import { EntityPreviewMedia } from "../shared/entity-preview-media";
+import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useTerms } from "../../lib/terminology";
 import { cn } from "@obscura/ui/lib/utils";
@@ -144,6 +160,11 @@ export function ScenesPageClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
   const [folderError, setFolderError] = useState<string | null>(null);
+  const [folderEditMode, setFolderEditMode] = useState(false);
+  const [editCustomName, setEditCustomName] = useState("");
+  const [editIsNsfw, setEditIsNsfw] = useState(false);
+  const [folderSaving, setFolderSaving] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [presets, setPresets] = useState<FilterPreset[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(
@@ -404,6 +425,36 @@ export function ScenesPageClient({
       setCoverBusy(false);
     }
   }, [activeFolder, reloadFolder]);
+
+  const beginFolderEdit = useCallback(() => {
+    if (!activeFolder) return;
+    setEditCustomName(activeFolder.customName ?? "");
+    setEditIsNsfw(activeFolder.isNsfw);
+    setFolderEditMode(true);
+  }, [activeFolder]);
+
+  const cancelFolderEdit = useCallback(() => {
+    setFolderEditMode(false);
+  }, []);
+
+  const saveFolderEdit = useCallback(async () => {
+    if (!activeFolder) return;
+    setFolderSaving(true);
+    setFolderError(null);
+    try {
+      await updateSceneFolder(activeFolder.id, {
+        customName: editCustomName.trim() || null,
+        isNsfw: editIsNsfw,
+      });
+      await revalidateSceneFolderCache(activeFolder.id);
+      await reloadFolder();
+      setFolderEditMode(false);
+    } catch (err) {
+      setFolderError(err instanceof Error ? err.message : "Failed to update folder");
+    } finally {
+      setFolderSaving(false);
+    }
+  }, [activeFolder, editCustomName, editIsNsfw, reloadFolder]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -669,91 +720,254 @@ export function ScenesPageClient({
         />
       )}
       {viewMode === "folders" ? (
-        <HierarchyShell
-          breadcrumbs={
-            activeFolder ? (
-              <HierarchyBreadcrumbs
-                items={activeFolder.breadcrumbs.map((crumb) => ({
-                  id: crumb.id,
-                  title: crumb.displayTitle,
-                  href: `/scenes?folder=${crumb.id}`,
-                }))}
+        activeFolder ? (
+          <div className="space-y-5">
+            {/* ── Breadcrumbs ──────────────────────────────────── */}
+            <HierarchyBreadcrumbs
+              items={activeFolder.breadcrumbs.map((crumb) => ({
+                id: crumb.id,
+                title: crumb.displayTitle,
+                href: `/scenes?folder=${crumb.id}`,
+              }))}
+            />
+
+            {/* ── Hero header (audio-style) ────────────────────── */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:items-start lg:gap-8">
+              {/* Cover image */}
+              <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex-shrink-0">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    void handleFolderUploadCover(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                <div className="w-full h-full overflow-hidden surface-card-sharp">
+                  <div className="relative w-full h-full">
+                    <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
+                      <FolderOpen className="h-12 w-12 text-white/20" />
+                    </div>
+                    {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
+                      <img
+                        src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
+                        alt={activeFolder.displayTitle}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
+                    {activeFolder.previewThumbnailPaths.length > 0 && !activeFolder.coverImagePath && (
+                      <img
+                        src={toApiUrl(activeFolder.previewThumbnailPaths[0], activeFolder.updatedAt)!}
+                        alt={activeFolder.displayTitle}
+                        className="absolute inset-0 w-full h-full object-cover opacity-80"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
+                  </div>
+                </div>
+                {folderEditMode && (
+                  <div className="absolute inset-x-0 bottom-0 z-10 flex gap-1 border-t border-border-subtle bg-black/75 p-1">
+                    <button
+                      type="button"
+                      disabled={coverBusy}
+                      onClick={() => coverInputRef.current?.click()}
+                      className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-primary hover:bg-surface-3/80 disabled:opacity-50"
+                    >
+                      {coverBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      Art
+                    </button>
+                    {activeFolder.coverImagePath && (
+                      <button
+                        type="button"
+                        disabled={coverBusy}
+                        onClick={() => void handleFolderDeleteCover()}
+                        className="flex flex-1 items-center justify-center gap-1 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-text-muted hover:text-red-300 hover:bg-surface-3/80 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Title + metadata */}
+              <div className="flex gap-6 items-start flex-1 min-w-0">
+                <div className="flex-1 min-w-0 py-1">
+                  <div className="flex items-start justify-between gap-3">
+                    {folderEditMode ? (
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <input
+                          value={editCustomName}
+                          onChange={(e) => setEditCustomName(e.target.value)}
+                          placeholder={activeFolder.title}
+                          className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-2xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
+                        />
+                        <p className="text-[0.65rem] text-text-disabled">
+                          Leave empty to use directory name
+                        </p>
+                      </div>
+                    ) : (
+                      <h1 className="flex-1 min-w-0 text-2xl font-heading font-semibold leading-tight">
+                        {activeFolder.displayTitle}
+                      </h1>
+                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                      {folderEditMode ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={cancelFolderEdit}
+                            disabled={folderSaving}
+                            className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void saveFolderEdit()}
+                            disabled={folderSaving}
+                            className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-surface-2 transition-colors disabled:opacity-50"
+                          >
+                            {folderSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={beginFolderEdit}
+                          className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {folderEditMode ? (
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <NsfwEditToggle value={editIsNsfw} onChange={setEditIsNsfw} />
+                        {editIsNsfw && <span className="text-[0.68rem] text-text-muted">Hidden in SFW mode</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {activeFolder.customName && (
+                        <p className="text-sm text-text-muted mt-1">{activeFolder.title}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-sm text-text-muted">
+                        <span>
+                          {activeFolder.totalSceneCount} scene{activeFolder.totalSceneCount !== 1 ? "s" : ""}
+                        </span>
+                        {activeFolder.childFolderCount > 0 && (
+                          <>
+                            <span className="text-text-disabled">&middot;</span>
+                            <span>
+                              {activeFolder.childFolderCount} subfolder{activeFolder.childFolderCount !== 1 ? "s" : ""}
+                            </span>
+                          </>
+                        )}
+                        {activeFolder.isNsfw && <NsfwChip />}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Info panel */}
+              <div className="surface-panel p-4 space-y-3 w-full lg:w-64 lg:flex-shrink-0 lg:self-stretch">
+                <h4 className="text-kicker">Folder Info</h4>
+                <div className="space-y-2.5">
+                  <InfoRow icon={Film} label="Direct" value={String(activeFolder.directSceneCount)} />
+                  <InfoRow icon={Film} label="Total" value={String(activeFolder.totalSceneCount)} />
+                  {activeFolder.libraryRootLabel && (
+                    <InfoRow icon={HardDrive} label="Library" value={activeFolder.libraryRootLabel} />
+                  )}
+                  {activeFolder.folderPath && (
+                    <div className="text-xs text-text-disabled break-all pt-1 border-t border-border-subtle">
+                      {activeFolder.folderPath}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Error banner ─────────────────────────────────── */}
+            {folderError && (
+              <div className="surface-well border border-red-500/30 px-3 py-2 text-[0.78rem] text-red-200">
+                {folderError}
+              </div>
+            )}
+
+            {/* ── Subfolders ───────────────────────────────────── */}
+            {folderCards.length > 0 && (
+              <HierarchySection title="Subfolders">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {folderCards.map((folder) => (
+                    <SceneFolderCard
+                      key={folder.id}
+                      folder={folder}
+                      href={`/scenes?folder=${folder.id}`}
+                      compact
+                    />
+                  ))}
+                </div>
+              </HierarchySection>
+            )}
+
+            {/* ── Scenes ───────────────────────────────────────── */}
+            <HierarchySection title={sceneSectionTitle}>
+              <SceneGrid
+                scenes={scenes}
+                viewMode="grid"
+                loading={loading}
+                hasMore={scenes.length < total}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
               />
-            ) : undefined
-          }
-          title={
-            activeFolder ? (
-              <h2 className="text-2xl font-semibold text-text-primary">
-                {activeFolder.displayTitle}
-              </h2>
-            ) : (
+            </HierarchySection>
+          </div>
+        ) : (
+          <HierarchyShell
+            title={
               <div>
                 <h2 className="text-2xl font-semibold text-text-primary">Scene folders</h2>
                 <p className="mt-1 text-[0.78rem] text-text-muted">
                   Browse folders from disk, then drill down into scenes.
                 </p>
               </div>
-            )
-          }
-        >
-          {folderError ? (
-            <div className="surface-well border border-red-500/30 px-3 py-2 text-[0.78rem] text-red-200">
-              {folderError}
-            </div>
-          ) : null}
-
-          <div className={cn(
-            "grid gap-5",
-            activeFolder ? "lg:grid-cols-[minmax(0,1fr)_320px]" : "",
-          )}>
-            <div className="space-y-5">
-              {folderCards.length > 0 && (
-                <HierarchySection
-                  title={activeFolder ? "Subfolders" : folderSectionTitle}
-                >
-                  <div className={cn(
-                    "grid gap-2",
-                    activeFolder
-                      ? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"
-                      : "grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3",
-                  )}>
-                    {folderCards.map((folder) => (
-                      <SceneFolderCard
-                        key={folder.id}
-                        folder={folder}
-                        href={`/scenes?folder=${folder.id}`}
-                        compact={!!activeFolder}
-                      />
-                    ))}
-                  </div>
-                </HierarchySection>
-              )}
-
-              <HierarchySection title={sceneSectionTitle}>
-                <SceneGrid
-                  scenes={scenes}
-                  viewMode="grid"
-                  loading={loading}
-                  hasMore={scenes.length < total}
-                  loadingMore={loadingMore}
-                  onLoadMore={loadMore}
-                />
+            }
+          >
+            {folderCards.length > 0 && (
+              <HierarchySection title={folderSectionTitle}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {folderCards.map((folder) => (
+                    <SceneFolderCard
+                      key={folder.id}
+                      folder={folder}
+                      href={`/scenes?folder=${folder.id}`}
+                    />
+                  ))}
+                </div>
               </HierarchySection>
-            </div>
-
-            {activeFolder && (
-              <div className="lg:sticky lg:top-4 lg:self-start">
-                <SceneFolderMetadataPanel
-                  folder={activeFolder}
-                  coverBusy={coverBusy}
-                  onSave={handleFolderSave}
-                  onUploadCover={handleFolderUploadCover}
-                  onDeleteCover={handleFolderDeleteCover}
-                />
-              </div>
             )}
-          </div>
-        </HierarchyShell>
+
+            <HierarchySection title={sceneSectionTitle}>
+              <SceneGrid
+                scenes={scenes}
+                viewMode="grid"
+                loading={loading}
+                hasMore={scenes.length < total}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
+              />
+            </HierarchySection>
+          </HierarchyShell>
+        )
       ) : (
         <>
           <SceneGrid
