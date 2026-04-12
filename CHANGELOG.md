@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- Scene folders now have rich detail pages with poster art, backdrop banners, descriptions, star ratings, and a Cast & Crew section — inspired by Jellyfin's series view.
+- Folders are searchable from the command palette and full search page.
+- Uploading files while viewing a folder places them directly into that folder on disk.
+- Studio and tag detail pages show linked folders above the scene grid.
+- The folder edit panel uses the same chip pickers, studio autocomplete, and star rating as scene editing.
+- Mobile layout improvements: compact poster in folder headers, search bar on its own row in the filter toolbar.
+
 ### Added
 
 - **Scene folders now support rich metadata.** Folders can store a description, backdrop image, studio association, rating, date, and linked performers and tags — enabling Jellyfin-style detail pages with cover art, cast sections, and full metadata editing.
@@ -41,6 +50,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **New "Reset metadata" button on the scene details page.** Clears the title (reverts it to the filename stem), details, date, rating, URL, studio, performers, and tags, deletes the `.nfo` sidecar so a follow-up scan cannot re-import the same stale data, and re-enqueues the probe and fingerprint jobs so the scene goes back through the standard pipeline. Markers, playback stats, generated previews, fingerprints, and the file on disk are all preserved — use this when a wrong scraper match has been accepted and you want to identify the scene from scratch without touching the media file. Exposed as `POST /scenes/:id/reset-metadata` on the API.
 
 ## [0.18.0] - 2026-04-11
+
+### What's New
+
+- Perceptual hash (pHash) generation and StashDB fingerprint contribution are now built in.
+- A new pHashes tab on the Identify page lets you submit fingerprints to StashDB in bulk.
+- Animated images (GIF, APNG, animated WebP) no longer break gallery scans.
+- Legacy installs that were managed by drizzle-kit push now self-heal on upgrade.
+
 ### Fixed
 
 - **Image thumbnail generation no longer fails on animated images during gallery scans.** ffmpeg's image2 muxer was rejecting multi-frame inputs (animated GIF/APNG, multi-frame WebP/TIFF) with `Cannot write more than one file with the same name. Are you missing the -update option or a sequence pattern?`. The worker now always passes `-frames:v 1 -update 1` when writing the JPEG thumbnail, so the first frame is extracted regardless of source format.

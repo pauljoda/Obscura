@@ -130,6 +130,14 @@ A responsive grid of scene cards with thumbnails, duration, resolution badges, a
   <img src="docs/screenshots/scenes.png" alt="Video library" width="100%" />
 </p>
 
+### Folder Browse & Detail
+
+The video library supports two browsing modes. **Grid/List** shows every scene in your library as a flat feed you can sort, filter, and search. **Folders** mirrors the directory structure on disk, letting you navigate into subfolders, see scene counts per folder, and drill down to scenes inside a specific directory.
+
+Clicking into a folder opens a detail view inspired by media servers like Jellyfin. Each folder can carry its own metadata: a poster and backdrop image, description, studio, date, star rating, linked performers (shown as a scrollable Cast & Crew strip), and tags. The edit panel uses the same chip pickers and autocomplete as scene editing, so adding performers, tags, and studios is fast. Uploading or dragging files while viewing a folder places them directly into that folder's directory on disk — no library root picker needed.
+
+Folders are also searchable from the command palette and the full search page, and appear on studio and tag detail pages when associated.
+
 ### Rich Video Playback
 
 Direct playback of common formats plus on-demand HLS transcoding for anything the browser won't play natively. The scrollable frame strip under the player lets you scrub by thumbnail — and turn any frame into a marker or a custom preview image with a single click.
@@ -378,7 +386,7 @@ docker run -p 8008:8008 -v obscura-data:/data -v /your/media:/media obscura
 
 Obscura follows [Semantic Versioning](https://semver.org/) and [Keep a Changelog](https://keepachangelog.com/).
 
-- Every commit to `main` rebuilds the `:dev` image and appends entries to `## [Unreleased]` in `CHANGELOG.md`. The root `package.json` carries a `X.Y.Z-dev` marker between releases.
+- Every commit to `main` rebuilds the `:dev` image and appends entries to `## [Unreleased]` in `CHANGELOG.md`. Each unreleased section leads with a **What's New** TL;DR of the most impactful user-facing changes, followed by detailed entries grouped by Added / Changed / Fixed. The root `package.json` carries a `X.Y.Z-dev` marker between releases.
 - Releases are cut server-side by the **Release** GitHub Action. Maintainers trigger it from the Actions tab with a `patch` / `minor` / `major` bump (or an explicit `X.Y.Z`). The workflow:
   1. Runs `scripts/release/cut.mjs --phase release`: bumps every `package.json`, promotes `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, and writes `RELEASE_NOTES.md` from the new section.
   2. Creates commit `chore(release): vX.Y.Z` and tag `vX.Y.Z`.
