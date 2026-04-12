@@ -1,9 +1,6 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { Meter } from "@obscura/ui/composed/meter";
-import { StatusLed, type LedStatus } from "@obscura/ui/composed/status-led";
-import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Activity,
@@ -11,16 +8,9 @@ import {
   Ban,
   Clock,
   Cpu,
-  DatabaseZap,
-  FileSearch,
-  Fingerprint,
-  FolderSearch,
-  Image,
   ListChecks,
-  Play,
   RefreshCw,
   Square,
-  Wrench,
 } from "lucide-react";
 import {
   acknowledgeJobFailures,
@@ -36,154 +26,10 @@ import {
 } from "../lib/api";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { groupQueuesForJobDashboard } from "./job-dashboard-queue-sections";
-
-const queueIcons: Record<string, typeof FolderSearch> = {
-  "library-scan": FolderSearch,
-  "media-probe": FileSearch,
-  fingerprint: Fingerprint,
-  preview: Image,
-  "metadata-import": DatabaseZap,
-  "gallery-scan": FolderSearch,
-  "image-thumbnail": Image,
-  "image-fingerprint": Fingerprint,
-};
-
-function formatStamp(value: string | null) {
-  if (!value) return "Never";
-  return new Date(value).toLocaleString();
-}
-
-function formatRelativeTime(value: string | null) {
-  if (!value) return "Never";
-
-  const diffMs = Date.now() - new Date(value).getTime();
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000));
-
-  if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
-function formatElapsed(job: JobRun) {
-  const anchor = job.startedAt ?? job.createdAt;
-  const deltaSeconds = Math.max(0, Math.round((Date.now() - new Date(anchor).getTime()) / 1000));
-  const minutes = Math.floor(deltaSeconds / 60);
-  const seconds = deltaSeconds % 60;
-
-  if (job.status === "waiting" || job.status === "delayed") {
-    return `queued ${minutes}m ${String(seconds).padStart(2, "0")}s`;
-  }
-
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
-
-function ledForQueue(status: QueueSummary["status"]): LedStatus {
-  if (status === "active") return "phosphor";
-  if (status === "warning") return "warning";
-  return "idle";
-}
-
-function isForceRebuildJob(job: JobRun) {
-  return job.jobKind === "force-rebuild";
-}
-
-function toneForJob(job: JobRun) {
-  if (job.status === "failed") return "error";
-  if (isForceRebuildJob(job)) return "error";
-  if (job.status === "waiting" || job.status === "delayed") return "warning";
-  return "phosphor";
-}
-
-function describeTrigger(job: JobRun) {
-  if (job.triggerLabel) return job.triggerLabel;
-
-  switch (job.triggeredBy) {
-    case "manual":
-      return "Started manually";
-    case "schedule":
-      return "Started by recurring scan schedule";
-    case "library-scan":
-      return "Queued during library scan";
-    case "gallery-scan":
-      return "Queued during gallery scan";
-    case "system":
-      return "Queued by the system";
-    default:
-      return "Trigger not recorded";
-  }
-}
-
-function statusLabel(status: JobRun["status"]) {
-  if (status === "waiting") return "queued";
-  if (status === "delayed") return "delayed";
-  if (status === "dismissed") return "cleared";
-  return status;
-}
-
-function jobHeading(job: JobRun) {
-  return job.targetLabel ?? `${job.queueLabel} task`;
-}
-
-function maintenanceJobLogRedacted(job: JobRun, nsfwMode: string) {
-  return nsfwMode === "off" && job.queueName === "library-maintenance";
-}
-
-function displayJobHeading(job: JobRun, nsfwMode: string) {
-  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Relocate scene generated files";
-  return jobHeading(job);
-}
-
-function displayDescribeTrigger(job: JobRun, nsfwMode: string) {
-  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Background file layout task";
-  return describeTrigger(job);
-}
-
-function jobBadgeVariant(job: JobRun) {
-  return isForceRebuildJob(job) ? "error" : "accent";
-}
-
-function ForceRebuildBadge({ job }: { job: JobRun }) {
-  if (!isForceRebuildJob(job)) {
-    return null;
-  }
-
-  return (
-    <Badge variant="error" className="text-[0.56rem]">
-      Force rebuild
-    </Badge>
-  );
-}
-
-function describeRunResult(queueName: string, enqueued: number, skipped: number) {
-  if (queueName === "library-maintenance" && enqueued === 1) {
-    return "Cleaning up files.";
-  }
-  if (queueName === "library-maintenance" && enqueued === 0 && skipped > 0) {
-    return "File cleanup is already in progress.";
-  }
-
-  if (queueName === "library-scan" && enqueued === 0 && skipped === 0) {
-    return "Stale library references cleared. Add a watched folder to scan new files.";
-  }
-  if (queueName === "library-scan" && enqueued === 0 && skipped > 0) {
-    return "Stale references cleared; every library scan is already queued or running.";
-  }
-
-  const parts = [
-    `Queued ${enqueued} ${queueName} job${enqueued === 1 ? "" : "s"}`,
-  ];
-
-  if (skipped > 0) {
-    parts.push(`skipped ${skipped} already pending`);
-  }
-
-  return `${parts.join(", ")}.`;
-}
+import { describeRunResult, displayJobHeading } from "./jobs/job-helpers";
+import { OverviewStat } from "./jobs/overview-stat";
+import { QueueCard } from "./jobs/queue-card";
+import { ActiveJobCard, CompletedJobRow, EmptyPanel, FailedJobCard } from "./jobs/job-cards";
 
 export function JobDashboard() {
   const [dashboard, setDashboard] = useState<JobsDashboard | null>(null);
@@ -411,6 +257,7 @@ export function JobDashboard() {
         </div>
       )}
 
+      {/* Overview stats */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <OverviewStat
           icon={Cpu}
@@ -448,6 +295,7 @@ export function JobDashboard() {
 
       <div className="border-t border-border-subtle" />
 
+      {/* Queues */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
@@ -496,6 +344,7 @@ export function JobDashboard() {
 
       <div className="border-t border-border-subtle" />
 
+      {/* Live Work */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
@@ -541,6 +390,7 @@ export function JobDashboard() {
 
       <div className="border-t border-border-subtle" />
 
+      {/* Failures */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
@@ -580,6 +430,7 @@ export function JobDashboard() {
 
       <div className="border-t border-border-subtle" />
 
+      {/* Recently Finished */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2.5">
@@ -604,355 +455,6 @@ export function JobDashboard() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function OverviewStat({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  accent = false,
-  danger = false,
-}: {
-  icon: typeof Cpu;
-  label: string;
-  value: number;
-  detail: string;
-  accent?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "surface-panel relative overflow-hidden px-3 py-2.5 flex flex-col justify-between min-h-[72px]",
-        accent && !danger && "border-border-accent shadow-[var(--shadow-glow-accent)]",
-        danger && "border-status-error/30 shadow-[0_0_12px_rgba(179,79,86,0.15)]"
-      )}
-    >
-      <div
-        className={cn(
-          "absolute left-0 top-0 bottom-0 w-[3px] opacity-90",
-          danger ? "bg-status-error" : accent ? "bg-accent-500" : "bg-surface-4"
-        )}
-      />
-      <div className="flex items-center justify-between ml-1.5">
-        <span className={cn("text-[0.6rem] font-semibold tracking-[0.15em] uppercase", danger ? "text-status-error-text" : "text-text-muted")}>
-          {label}
-        </span>
-        <div className={cn("opacity-70", danger ? "text-status-error-text" : accent ? "text-text-accent" : "text-text-disabled")}>
-          <Icon className="h-3.5 w-3.5" />
-        </div>
-      </div>
-      <div className="flex items-end justify-between ml-1.5 mt-1">
-        <div
-          className={cn(
-            "text-lg font-mono tracking-tight",
-            danger
-              ? "text-status-error-text"
-              : accent
-                ? "text-glow-accent"
-                : "text-text-primary"
-          )}
-        >
-          {value}
-        </div>
-        <div className="text-[0.6rem] text-text-disabled mb-0.5 truncate max-w-[60%] text-right" title={detail}>
-          {detail}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function QueueCard({
-  queue,
-  runningQueue,
-  cancellingQueue,
-  acknowledging,
-  onRun,
-  onCancel,
-  onClearFailures,
-}: {
-  queue: QueueSummary;
-  runningQueue: string | null;
-  cancellingQueue: string | null;
-  acknowledging: "all" | string | null;
-  onRun: (queueName: string) => Promise<void>;
-  onCancel: (queueName: string) => Promise<void>;
-  onClearFailures: (scope: "all" | string) => Promise<void>;
-}) {
-  const Icon = queueIcons[queue.name] ?? Cpu;
-  const hasPressure = queue.active > 0 || queue.backlog > 0;
-
-  return (
-    <div
-      className={cn(
-        "surface-card no-lift space-y-4 p-4 transition-all duration-normal",
-        queue.failed > 0
-          ? "border-status-error/25"
-          : hasPressure
-            ? "border-border-accent/30"
-            : ""
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <StatusLed status={ledForQueue(queue.status)} pulse={queue.active > 0} />
-            <Icon className="h-4 w-4 text-text-muted" />
-            <h3 className="truncate text-[0.92rem] font-heading font-semibold">{queue.label}</h3>
-          </div>
-          <p className="mt-1 text-[0.72rem] text-text-muted">{queue.description}</p>
-          <p className="mt-1 text-[0.68rem] text-text-disabled">
-            Throttle: {queue.concurrency} worker{queue.concurrency === 1 ? "" : "s"} at a time
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {queue.failed > 0 && (
-            <button
-              type="button"
-              onClick={() => void onClearFailures(queue.name)}
-              disabled={acknowledging !== null}
-              className="px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
-            >
-              {acknowledging === queue.name ? "Clearing..." : "Clear failures"}
-            </button>
-          )}
-          {(queue.active > 0 || queue.backlog > 0) && (
-            <button
-              type="button"
-              onClick={() => void onCancel(queue.name)}
-              disabled={cancellingQueue === queue.name}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
-            >
-              <Square className="h-3 w-3" />
-              {cancellingQueue === queue.name ? "Stopping..." : "Stop"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void onRun(queue.name)}
-            disabled={runningQueue === queue.name}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-accent disabled:opacity-40"
-          >
-            <Play className="h-3 w-3" />
-            {runningQueue === queue.name ? "Queueing..." : "Run"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-2">
-        <QueueMetric label="Running" value={queue.active} highlight={queue.active > 0} />
-        <QueueMetric label="Queued" value={queue.waiting} highlight={queue.waiting > 0} />
-        <QueueMetric label="Delayed" value={queue.delayed} highlight={queue.delayed > 0} />
-        <QueueMetric label="Errors" value={queue.failed} highlight={queue.failed > 0} danger />
-      </div>
-    </div>
-  );
-}
-
-function QueueMetric({
-  label,
-  value,
-  highlight,
-  danger = false,
-}: {
-  label: string;
-  value: number;
-  highlight: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <div className="bg-black/15 px-2 py-2 text-center">
-      <p className="mb-0.5 text-[0.55rem] uppercase tracking-wider text-text-disabled">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "text-mono text-[0.84rem] font-semibold",
-          danger && highlight
-            ? "text-status-error-text"
-            : highlight
-              ? "text-text-accent"
-              : "text-text-muted"
-        )}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function ActiveJobCard({
-  job,
-  nsfwMode,
-  cancellingJobRunId,
-  onCancelJob,
-}: {
-  job: JobRun;
-  nsfwMode: string;
-  cancellingJobRunId: string | null;
-  onCancelJob: (job: JobRun) => Promise<void>;
-}) {
-  const isRunning = job.status === "active";
-  const isCancelling = cancellingJobRunId === job.id;
-
-  return (
-    <div
-      className={cn(
-        "surface-card no-lift space-y-3 p-4",
-        isForceRebuildJob(job)
-          ? "border-status-error/30 bg-status-error/[0.04]"
-          : isRunning
-            ? "border-border-accent/30"
-            : "border-status-warning/20"
-      )}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusLed status={toneForJob(job)} pulse={isRunning} />
-            <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
-              {job.queueLabel}
-            </Badge>
-            <ForceRebuildBadge job={job} />
-            <span
-              className={cn(
-                "text-[0.62rem] font-semibold uppercase tracking-[0.12em]",
-                isForceRebuildJob(job)
-                  ? "text-status-error-text"
-                  : isRunning
-                    ? "text-text-accent"
-                    : "text-status-warning-text"
-              )}
-            >
-              {statusLabel(job.status)}
-            </span>
-          </div>
-          <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</h3>
-          <p className="mt-1 text-[0.74rem] text-text-muted">{displayDescribeTrigger(job, nsfwMode)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-ephemeral">{formatElapsed(job)}</p>
-          <p className="mt-1 text-mono-sm text-text-disabled">
-            attempt {Math.max(1, job.attempts + 1)}
-          </p>
-          <button
-            type="button"
-            onClick={() => void onCancelJob(job)}
-            disabled={isCancelling}
-            className="mt-2 inline-flex items-center gap-1 px-2 py-1 text-xs text-text-muted transition-colors hover:text-status-error-text disabled:opacity-40"
-          >
-            <Square className="h-3 w-3" />
-            {isCancelling ? "Stopping..." : "Kill task"}
-          </button>
-        </div>
-      </div>
-
-      <Meter
-        value={job.progress}
-        showValue
-        variant={isRunning && !isForceRebuildJob(job) ? "phosphor" : "accent"}
-      />
-
-      <div className="grid gap-2 text-[0.7rem] text-text-disabled md:grid-cols-3">
-        <div>
-          <span className="text-text-muted">Queued:</span> {formatStamp(job.createdAt)}
-        </div>
-        <div>
-          <span className="text-text-muted">Started:</span> {formatStamp(job.startedAt)}
-        </div>
-        <div>
-          <span className="text-text-muted">Trigger:</span> {job.triggeredBy ?? "unknown"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FailedJobCard({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
-  return (
-    <details className="surface-card no-lift border-status-error/25 p-4" open>
-      <summary className="cursor-pointer list-none">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusLed status="error" pulse={false} />
-              <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
-                {job.queueLabel}
-              </Badge>
-              <ForceRebuildBadge job={job} />
-              <span className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-status-error-text">
-                failed
-              </span>
-            </div>
-            <h3 className="mt-2 text-[0.95rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</h3>
-            <p className="mt-1 text-[0.74rem] text-text-muted">{displayDescribeTrigger(job, nsfwMode)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-ephemeral">{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</p>
-            <p className="mt-1 text-mono-sm text-text-disabled">
-              attempt {Math.max(1, job.attempts + 1)}
-            </p>
-          </div>
-        </div>
-      </summary>
-
-      <div className="mt-4 border-t border-border-subtle pt-4">
-        <div className="grid gap-2 text-[0.7rem] text-text-disabled md:grid-cols-3">
-          <div>
-            <span className="text-text-muted">Queued:</span> {formatStamp(job.createdAt)}
-          </div>
-          <div>
-            <span className="text-text-muted">Finished:</span> {formatStamp(job.finishedAt)}
-          </div>
-          <div>
-            <span className="text-text-muted">Trigger:</span> {job.triggeredBy ?? "unknown"}
-          </div>
-        </div>
-        <div className="mt-3 border border-status-error/20 bg-status-error/[0.05] p-3">
-          <p className="mb-1 text-[0.68rem] uppercase tracking-[0.12em] text-status-error-text">
-            Error output
-          </p>
-          <pre className="whitespace-pre-wrap break-words font-mono text-[0.75rem] leading-5 text-status-error-text">
-            {maintenanceJobLogRedacted(job, nsfwMode) && job.error
-              ? "Error details are hidden."
-              : job.error ?? "No error message recorded."}
-          </pre>
-        </div>
-      </div>
-    </details>
-  );
-}
-
-function CompletedJobRow({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
-  return (
-    <div className="grid gap-3 px-4 py-3 md:grid-cols-[1.1fr_0.8fr_0.8fr]">
-      <div className="min-w-0">
-        <p className="truncate text-[0.84rem] font-medium text-text-primary">{displayJobHeading(job, nsfwMode)}</p>
-        <p className="mt-1 truncate text-mono-sm text-text-disabled">{displayDescribeTrigger(job, nsfwMode)}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge variant={jobBadgeVariant(job)} className="text-[0.56rem]">
-          {job.queueLabel}
-        </Badge>
-        <ForceRebuildBadge job={job} />
-      </div>
-      <div className="text-right text-[0.72rem] text-text-muted">
-        <div>{formatRelativeTime(job.finishedAt ?? job.updatedAt)}</div>
-        <div className="mt-1 text-text-disabled">{formatStamp(job.finishedAt)}</div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyPanel({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="surface-card no-lift px-4 py-6 text-center">
-      <p className="text-sm font-medium text-text-primary">{title}</p>
-      <p className="mt-1 text-[0.78rem] text-text-muted">{detail}</p>
     </div>
   );
 }
