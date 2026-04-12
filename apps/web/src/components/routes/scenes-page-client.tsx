@@ -706,12 +706,12 @@ export function ScenesPageClient({
       : "Scenes in this folder"
     : "Uncategorized scenes";
 
+  const uploadTarget = activeFolder
+    ? { kind: "scene" as const, sceneFolderId: activeFolder.id }
+    : { kind: "scene" as const };
+
   return (
-    <UploadDropZone
-      target={activeFolder ? { kind: "scene", sceneFolderId: activeFolder.id } : { kind: "scene" }}
-      onUploaded={() => router.refresh()}
-      className="relative space-y-4"
-    >
+    <div className="relative space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2.5">
@@ -730,7 +730,7 @@ export function ScenesPageClient({
               : terms.scenes.toLowerCase()}
           </span>
           <ImportButton
-            target={activeFolder ? { kind: "scene", sceneFolderId: activeFolder.id } : { kind: "scene" }}
+            target={uploadTarget}
             onUploaded={() => router.refresh()}
           />
         </div>
@@ -818,6 +818,10 @@ export function ScenesPageClient({
           totalVisible={scenes.length}
         />
       )}
+      <UploadDropZone
+        target={uploadTarget}
+        onUploaded={() => router.refresh()}
+      >
       {viewMode === "folders" ? (
         activeFolder ? (
           <div className="space-y-5">
@@ -1255,7 +1259,8 @@ export function ScenesPageClient({
           />
         </>
       )}
-    </UploadDropZone>
+      </UploadDropZone>
+    </div>
   );
 }
 
