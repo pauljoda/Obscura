@@ -944,12 +944,13 @@ export function ScenesPageClient({
           >
             {folderCards.length > 0 && (
               <HierarchySection title={folderSectionTitle}>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {folderCards.map((folder) => (
                     <SceneFolderCard
                       key={folder.id}
                       folder={folder}
                       href={`/scenes?folder=${folder.id}`}
+                      compact
                     />
                   ))}
                 </div>

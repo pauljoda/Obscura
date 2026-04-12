@@ -58,9 +58,9 @@ export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps)
             </span>
           ) : null}
         </div>
-        {!compact && folder.libraryRootLabel ? (
-          <div className="flex items-center gap-1.5 text-[0.65rem] text-text-disabled">
-            <HardDrive className="h-3 w-3" />
+        {folder.libraryRootLabel ? (
+          <div className={cn("flex items-center gap-1.5 text-text-disabled", compact ? "text-[0.6rem]" : "text-[0.65rem]")}>
+            <HardDrive className="h-3 w-3 flex-shrink-0" />
             <span className="truncate">{folder.libraryRootLabel}</span>
           </div>
         ) : null}
