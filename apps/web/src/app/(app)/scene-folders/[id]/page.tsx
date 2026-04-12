@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
-import { fetchSceneFolderDetail } from "../../../../lib/server-api";
+import { fetchSceneFolderDetail, fetchScenes } from "../../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../../lib/nsfw-cookie";
 import { SceneFolderDetailClient } from "../../../../components/routes/scene-folder-detail-client";
 
@@ -15,7 +15,21 @@ export default async function SceneFolderDetailPage({
   const { id } = await params;
   const cookieStore = await cookies();
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
-  const folder = await fetchSceneFolderDetail(id, { nsfw: nsfwMode });
+  const [folder, scenesResponse] = await Promise.all([
+    fetchSceneFolderDetail(id, { nsfw: nsfwMode }),
+    fetchScenes({
+      sceneFolderId: id,
+      folderScope: "direct",
+      limit: 100,
+      nsfw: nsfwMode,
+    }).catch(() => ({ scenes: [], total: 0, limit: 100, offset: 0 })),
+  ]);
 
-  return <SceneFolderDetailClient initialFolder={folder} nsfwMode={nsfwMode} />;
+  return (
+    <SceneFolderDetailClient
+      initialFolder={folder}
+      initialScenes={scenesResponse.scenes}
+      nsfwMode={nsfwMode}
+    />
+  );
 }

@@ -7,9 +7,11 @@ import type { SceneFolderDetailDto } from "@obscura/contracts";
 import {
   deleteSceneFolderCover,
   fetchSceneFolderDetail,
+  fetchScenes,
   toApiUrl,
   updateSceneFolder,
   uploadSceneFolderCover,
+  type SceneListItem,
 } from "../../lib/api";
 import { HierarchyBreadcrumbs } from "../shared/hierarchy-breadcrumbs";
 import { HierarchyShell } from "../shared/hierarchy-shell";
@@ -17,24 +19,37 @@ import { HierarchySection } from "../shared/hierarchy-section";
 import { SceneFolderMetadataPanel } from "../scene-folders/scene-folder-metadata-panel";
 import { SceneFolderCard } from "../scene-folders/scene-folder-card";
 import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
+import { SceneGrid } from "../scene-grid";
 
 interface SceneFolderDetailClientProps {
   initialFolder: SceneFolderDetailDto;
+  initialScenes: SceneListItem[];
   nsfwMode: string;
 }
 
 export function SceneFolderDetailClient({
   initialFolder,
+  initialScenes,
   nsfwMode,
 }: SceneFolderDetailClientProps) {
   const [folder, setFolder] = useState(initialFolder);
+  const [scenes, setScenes] = useState(initialScenes);
   const [coverBusy, setCoverBusy] = useState(false);
   const [nsfwBusy, setNsfwBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const next = await fetchSceneFolderDetail(folder.id, { nsfw: nsfwMode });
-    setFolder(next);
+    const [nextFolder, nextScenes] = await Promise.all([
+      fetchSceneFolderDetail(folder.id, { nsfw: nsfwMode }),
+      fetchScenes({
+        sceneFolderId: folder.id,
+        folderScope: "direct",
+        limit: 100,
+        nsfw: nsfwMode,
+      }),
+    ]);
+    setFolder(nextFolder);
+    setScenes(nextScenes.scenes);
   }, [folder.id, nsfwMode]);
 
   const handleUploadCover = useCallback(
@@ -160,6 +175,10 @@ export function SceneFolderDetailClient({
                   No child folders in this directory.
                 </div>
               )}
+            </HierarchySection>
+
+            <HierarchySection title="Scenes in this folder">
+              <SceneGrid scenes={scenes} viewMode="grid" />
             </HierarchySection>
           </div>
 

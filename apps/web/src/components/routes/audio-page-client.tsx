@@ -19,6 +19,7 @@ import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import type { TagItem, StudioItem } from "../../lib/api";
 import { toApiUrl, fetchAudioLibraryStats } from "../../lib/api";
+import { EntityPreviewMedia } from "../shared/entity-preview-media";
 
 interface AudioPageClientProps {
   initialLibraries: AudioLibraryListItemDto[];
@@ -205,22 +206,22 @@ function AudioLibraryCard({
       href={`/audio/${library.id}`}
       className="group surface-card-sharp overflow-hidden hover:border-border-accent transition-colors"
     >
-      <NsfwBlur isNsfw={library.isNsfw} className="aspect-square overflow-hidden relative">
-        <div className={cn("w-full h-full flex items-center justify-center", gradientClass)}>
-          <Music className="h-10 w-10 text-white/20" />
-        </div>
-        {coverUrl && (
-          <img
-            src={coverUrl}
-            alt={library.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-        )}
-        <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
-          <NsfwShowModeChip isNsfw={library.isNsfw} />
-        </div>
+      <NsfwBlur isNsfw={library.isNsfw} className="overflow-hidden relative">
+        <EntityPreviewMedia
+          title={library.title}
+          mode="cover-only"
+          coverImage={coverUrl}
+          className="aspect-square"
+          fallback={
+            <div className={cn("w-full h-full flex items-center justify-center", gradientClass)}>
+              <Music className="h-10 w-10 text-white/20" />
+            </div>
+          }
+        >
+          <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+            <NsfwShowModeChip isNsfw={library.isNsfw} />
+          </div>
+        </EntityPreviewMedia>
       </NsfwBlur>
       <div className="p-2.5">
         <h3 className="text-sm font-medium truncate">{library.title}</h3>
