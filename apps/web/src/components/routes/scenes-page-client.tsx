@@ -802,7 +802,7 @@ export function ScenesPageClient({
             />
 
             {/* ── Jellyfin-style Hero Header ─────────────────── */}
-            <div className="relative min-h-[280px] overflow-hidden border border-border-subtle">
+            <div className="relative min-h-[200px] sm:min-h-[280px] overflow-hidden border border-border-subtle">
               {/* Backdrop image or blurred poster fallback */}
               {toApiUrl(activeFolder.backdropImagePath, activeFolder.updatedAt) ? (
                 <img
@@ -820,7 +820,7 @@ export function ScenesPageClient({
               <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-black/60 to-black/30" />
 
               {/* Content overlay: poster + metadata */}
-              <div className="relative flex min-h-[280px] items-end gap-6 p-6">
+              <div className="relative flex min-h-[200px] sm:min-h-[280px] items-end gap-4 p-4 sm:gap-6 sm:p-6">
                 {/* Folder edit / save — top-right of hero so it stays out of the bottom-aligned title block */}
                 <div className="absolute right-6 top-6 z-10 flex items-center gap-1">
                   {folderEditMode ? (
@@ -853,9 +853,9 @@ export function ScenesPageClient({
                   )}
                 </div>
 
-                {/* Poster */}
+                {/* Poster — compact on mobile, full on desktop */}
                 {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
-                  <div className="hidden sm:block flex-shrink-0 w-[160px]">
+                  <div className="flex-shrink-0 w-[72px] sm:w-[160px]">
                     <img
                       src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
                       alt={activeFolder.displayTitle}
@@ -1046,7 +1046,7 @@ export function ScenesPageClient({
                         </div>
                       </div>
                     ) : (
-                      <h1 className="min-w-0 text-3xl font-heading font-semibold text-white leading-tight">
+                      <h1 className="min-w-0 text-xl sm:text-3xl font-heading font-semibold text-white leading-tight">
                         {activeFolder.displayTitle}
                       </h1>
                     )}
