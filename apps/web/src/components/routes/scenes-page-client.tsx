@@ -478,6 +478,7 @@ export function ScenesPageClient({
     const lowered = folderSearch.toLowerCase();
     return activeFolder.children.filter(
       (folder) =>
+        folder.displayTitle.toLowerCase().includes(lowered) ||
         folder.title.toLowerCase().includes(lowered) ||
         folder.relativePath.toLowerCase().includes(lowered),
     );
@@ -613,7 +614,7 @@ export function ScenesPageClient({
               <HierarchyBreadcrumbs
                 items={activeFolder.breadcrumbs.map((crumb) => ({
                   id: crumb.id,
-                  title: crumb.title,
+                  title: crumb.displayTitle,
                   href: `/scenes?folder=${crumb.id}`,
                 }))}
               />
@@ -624,11 +625,13 @@ export function ScenesPageClient({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-2xl font-semibold text-text-primary">
-                    {activeFolder.title}
+                    {activeFolder.displayTitle}
                   </h2>
-                  <p className="mt-1 text-[0.78rem] text-text-muted">
-                    Filesystem-backed folder view for scenes in this subtree.
-                  </p>
+                  {activeFolder.libraryRootLabel && (
+                    <p className="mt-1 text-[0.72rem] text-text-disabled">
+                      {activeFolder.libraryRootLabel}
+                    </p>
+                  )}
                 </div>
                 <Link
                   href={`/scene-folders/${activeFolder.id}`}

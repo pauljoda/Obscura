@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FolderOpen, Images } from "lucide-react";
+import { FolderOpen, HardDrive, Images } from "lucide-react";
 import type { SceneFolderListItemDto } from "@obscura/contracts";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../../lib/api";
@@ -20,7 +20,7 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
       className="group surface-card overflow-hidden transition-colors duration-fast hover:border-border-accent"
     >
       <EntityPreviewMedia
-        title={folder.title}
+        title={folder.displayTitle}
         mode="cover-or-cycle"
         coverImage={toApiUrl(folder.coverImagePath, folder.updatedAt)}
         previewImages={folder.previewThumbnailPaths
@@ -40,9 +40,9 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
 
       <div className="space-y-1.5 px-2.5 py-2.5">
         <div className="flex items-center gap-2">
-          <FolderOpen className="h-3.5 w-3.5 text-text-accent" />
+          <FolderOpen className="h-3.5 w-3.5 flex-shrink-0 text-text-accent" />
           <h3 className="truncate text-[0.82rem] font-medium text-text-primary">
-            {folder.title}
+            {folder.displayTitle}
           </h3>
         </div>
         <div className="flex items-center gap-2 text-[0.68rem] text-text-muted">
@@ -57,6 +57,12 @@ export function SceneFolderCard({ folder, href }: SceneFolderCardProps) {
             </span>
           ) : null}
         </div>
+        {folder.libraryRootLabel ? (
+          <div className="flex items-center gap-1.5 text-[0.65rem] text-text-disabled">
+            <HardDrive className="h-3 w-3" />
+            <span className="truncate">{folder.libraryRootLabel}</span>
+          </div>
+        ) : null}
         {folder.containsNsfwDescendants && !folder.isNsfw ? (
           <div className={cn("text-[0.65rem] text-text-disabled")}>
             Mixed-content folder
