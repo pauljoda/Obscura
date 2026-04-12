@@ -25,10 +25,11 @@ import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
 import { useNsfw } from "../../../../components/nsfw/nsfw-context";
-import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
+import type { AudioLibraryListItemDto, GalleryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
 import {
   fetchAudioLibraries,
   fetchGalleries,
+  fetchSceneFolders,
   fetchScenes,
   fetchStudioDetail,
   deleteStudio,
@@ -42,6 +43,7 @@ import {
 } from "../../../../lib/api";
 import { GalleryGrid } from "../../../../components/gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
+import { SceneFolderCard } from "../../../../components/scene-folders/scene-folder-card";
 import { use, useEffect } from "react";
 import { useTerms, formatVideoCount } from "../../../../lib/terminology";
 
@@ -62,6 +64,7 @@ export default function StudioPage({ params }: StudioPageProps) {
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
+  const [folders, setFolders] = useState<SceneFolderListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -74,10 +77,11 @@ export default function StudioPage({ params }: StudioPageProps) {
     try {
       const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
-      const [scenesData, galleriesData, audioData] = await Promise.all([
+      const [scenesData, galleriesData, audioData, foldersData] = await Promise.all([
         fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({ studio: id, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
+        fetchSceneFolders({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
       setScenes(scenesData.scenes);
       setTotal(scenesData.total);
@@ -85,6 +89,7 @@ export default function StudioPage({ params }: StudioPageProps) {
       setTotalGalleries(galleriesData.total);
       setAudioLibraries(audioData.items);
       setTotalAudioLibraries(audioData.total);
+      setFolders(foldersData.items);
       setNotFound(false);
     } catch {
       setNotFound(true);
@@ -316,6 +321,23 @@ export default function StudioPage({ params }: StudioPageProps) {
       )}
 
       <div className="separator" />
+
+      {/* Folders associated with this studio */}
+      {folders.length > 0 && (
+        <section>
+          <h4 className="text-kicker mb-3">Folders</h4>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
+            {folders.map((f) => (
+              <SceneFolderCard
+                key={f.id}
+                folder={f}
+                href={`/scenes?folder=${f.id}`}
+                compact
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h4 className="text-kicker mb-3">{terms.scenes}</h4>

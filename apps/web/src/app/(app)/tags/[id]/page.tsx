@@ -19,10 +19,11 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
-import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
+import type { AudioLibraryListItemDto, GalleryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
 import { SceneGrid } from "../../../../components/scene-grid";
 import { GalleryGrid } from "../../../../components/gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
+import { SceneFolderCard } from "../../../../components/scene-folders/scene-folder-card";
 import { TagEdit } from "../../../../components/tag-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip, NsfwTagLabel } from "../../../../components/nsfw/nsfw-gate";
@@ -31,6 +32,7 @@ import {
   fetchScenes,
   fetchGalleries,
   fetchAudioLibraries,
+  fetchSceneFolders,
   fetchTags,
   fetchTagDetail,
   deleteTag,
@@ -63,6 +65,7 @@ export default function TagPage({ params }: TagPageProps) {
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
+  const [folders, setFolders] = useState<SceneFolderListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -72,7 +75,7 @@ export default function TagPage({ params }: TagPageProps) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, galleriesRes, audioRes, tagsRes] = await Promise.all([
+      const [scenesRes, galleriesRes, audioRes, tagsRes, foldersRes] = await Promise.all([
         fetchScenes({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({
           tag: [tagName],
@@ -87,6 +90,7 @@ export default function TagPage({ params }: TagPageProps) {
           nsfw: nsfwMode,
         }),
         fetchTags({ nsfw: nsfwMode }),
+        fetchSceneFolders({ tag: tagName, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
       setScenes(scenesRes.scenes);
       setTotalScenes(scenesRes.total);
@@ -94,6 +98,7 @@ export default function TagPage({ params }: TagPageProps) {
       setTotalGalleries(galleriesRes.total);
       setAudioLibraries(audioRes.items);
       setTotalAudioLibraries(audioRes.total);
+      setFolders(foldersRes.items);
 
       const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
       if (match) {
@@ -293,6 +298,23 @@ export default function TagPage({ params }: TagPageProps) {
       {tagDetail && <StashIdChips entityType="tag" entityId={tagDetail.id} compact />}
 
       <div className="separator" />
+
+      {/* Folders associated with this tag */}
+      {folders.length > 0 && (
+        <section>
+          <h4 className="text-kicker mb-3">Folders</h4>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
+            {folders.map((f) => (
+              <SceneFolderCard
+                key={f.id}
+                folder={f}
+                href={`/scenes?folder=${f.id}`}
+                compact
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section>
         <h4 className="text-kicker mb-3">Tagged {terms.scenes}</h4>
