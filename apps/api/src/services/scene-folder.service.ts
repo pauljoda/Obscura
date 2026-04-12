@@ -10,6 +10,10 @@ import { buildHierarchyBreadcrumbs } from "../lib/hierarchy-service/breadcrumbs"
 import { buildHierarchyScopeConditions } from "../lib/hierarchy-service/list";
 import { buildPreviewPathMap } from "../lib/hierarchy-service/previews";
 import { isHierarchyNodeVisible } from "../lib/hierarchy-service/visibility";
+import {
+  hasSceneFolderSchema,
+  requireSceneFolderSchema,
+} from "../lib/scene-folder-schema";
 
 const { sceneFolders, scenes } = schema;
 
@@ -110,6 +114,15 @@ export async function listSceneFolders(query: {
   nsfw?: string;
 }) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 60, 200);
+  if (!(await hasSceneFolderSchema())) {
+    return {
+      items: [],
+      total: 0,
+      limit,
+      offset,
+    };
+  }
+
   const conditions = [...buildHierarchyScopeConditions(sceneFolders.parentId, query)];
 
   if (query.search) {
@@ -163,6 +176,8 @@ export async function listSceneFolders(query: {
 }
 
 export async function getSceneFolderById(id: string, nsfwMode?: string) {
+  await requireSceneFolderSchema();
+
   const [folder] = await db
     .select()
     .from(sceneFolders)
@@ -237,6 +252,8 @@ export async function updateSceneFolder(
   id: string,
   patch: { isNsfw?: boolean },
 ) {
+  await requireSceneFolderSchema();
+
   const [folder] = await db
     .select({ id: sceneFolders.id })
     .from(sceneFolders)
@@ -257,6 +274,8 @@ export async function updateSceneFolder(
 }
 
 export async function setSceneFolderCover(id: string, buffer: Buffer) {
+  await requireSceneFolderSchema();
+
   if (!buffer.length) {
     throw new AppError(400, "Empty file");
   }
@@ -284,6 +303,8 @@ export async function setSceneFolderCover(id: string, buffer: Buffer) {
 }
 
 export async function clearSceneFolderCover(id: string) {
+  await requireSceneFolderSchema();
+
   const [folder] = await db
     .select({ id: sceneFolders.id })
     .from(sceneFolders)

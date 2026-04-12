@@ -1,6 +1,7 @@
 import path from "node:path";
 import { eq, inArray, like } from "drizzle-orm";
 import { db, sceneFolders, scenes } from "./db.js";
+import { hasSceneFolderSchema } from "./scene-folder-schema.js";
 import {
   groupFilesByDirectory,
   pickStaleContainerIds,
@@ -28,10 +29,24 @@ const EMPTY_AGGREGATE: FolderAggregate = {
   containsNsfw: false,
 };
 
+let hasWarnedMissingSceneFolderSchema = false;
+
 export async function syncSceneFoldersForRoot(
   root: LibraryRootLike,
   filePaths: string[],
 ): Promise<void> {
+  if (!(await hasSceneFolderSchema())) {
+    if (!hasWarnedMissingSceneFolderSchema) {
+      console.warn(
+        "[obscura worker] Scene folder sync skipped because the database migration has not been applied yet.",
+      );
+      hasWarnedMissingSceneFolderSchema = true;
+    }
+    return;
+  }
+
+  hasWarnedMissingSceneFolderSchema = false;
+
   const filesByDir = groupFilesByDirectory(filePaths);
   const discoveredDirs = sortPathsParentFirst([...filesByDir.keys()]);
 

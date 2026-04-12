@@ -43,6 +43,10 @@ import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
 import {
+  hasSceneFolderSchema,
+  SCENE_FOLDER_SCHEMA_MISSING_MESSAGE,
+} from "../lib/scene-folder-schema";
+import {
   assertDirExists,
   resolveCollisionSafePath,
   streamToFile,
@@ -151,9 +155,149 @@ const RESOLUTION_MAP: Record<string, [number, number]> = {
   "480p": [0, 719],
 };
 
+const baseSceneListSelection = {
+  id: scenes.id,
+  title: scenes.title,
+  details: scenes.details,
+  date: scenes.date,
+  rating: scenes.rating,
+  organized: scenes.organized,
+  isNsfw: scenes.isNsfw,
+  duration: scenes.duration,
+  width: scenes.width,
+  height: scenes.height,
+  codec: scenes.codec,
+  container: scenes.container,
+  fileSize: scenes.fileSize,
+  filePath: scenes.filePath,
+  thumbnailPath: scenes.thumbnailPath,
+  cardThumbnailPath: scenes.cardThumbnailPath,
+  spritePath: scenes.spritePath,
+  trickplayVttPath: scenes.trickplayVttPath,
+  playCount: scenes.playCount,
+  orgasmCount: scenes.orgasmCount,
+  studioId: scenes.studioId,
+  createdAt: scenes.createdAt,
+  updatedAt: scenes.updatedAt,
+};
+
+const baseSceneDetailSelection = {
+  ...baseSceneListSelection,
+  url: scenes.url,
+  interactive: scenes.interactive,
+  frameRate: scenes.frameRate,
+  bitRate: scenes.bitRate,
+  previewPath: scenes.previewPath,
+  playDuration: scenes.playDuration,
+  resumeTime: scenes.resumeTime,
+  lastPlayedAt: scenes.lastPlayedAt,
+};
+
+type SceneListProjection = {
+  id: string;
+  title: string;
+  details: string | null;
+  date: string | null;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  codec: string | null;
+  container: string | null;
+  fileSize: number | null;
+  filePath: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
+  playCount: number;
+  orgasmCount: number;
+  studioId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  sceneFolderId?: string | null;
+};
+
+type PerformerJoinRow = {
+  sceneId: string;
+  performerId: string;
+  performerName: string;
+  performerImagePath: string | null;
+  performerIsNsfw: boolean;
+};
+
+type TagJoinRow = {
+  sceneId: string;
+  tagId: string;
+  tagName: string;
+  tagIsNsfw: boolean;
+};
+
 function toArray(value: string | string[] | undefined): string[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
+}
+
+function toSceneListItem(
+  scene: SceneListProjection,
+  sceneFolderTitle: string | null,
+  subtitledIds: Set<string>,
+  perfJoins: PerformerJoinRow[],
+  tagJoins: TagJoinRow[],
+) {
+  return {
+    id: scene.id,
+    title: scene.title,
+    details: scene.details,
+    date: scene.date,
+    rating: scene.rating,
+    organized: scene.organized,
+    isNsfw: scene.isNsfw,
+    duration: scene.duration,
+    durationFormatted: formatDuration(scene.duration),
+    resolution: getResolutionLabel(scene.height),
+    width: scene.width,
+    height: scene.height,
+    codec: scene.codec?.toUpperCase() ?? null,
+    container: scene.container,
+    fileSize: scene.fileSize,
+    fileSizeFormatted: formatFileSize(scene.fileSize),
+    filePath: scene.filePath,
+    hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
+    streamUrl:
+      scene.filePath && existsSync(scene.filePath)
+        ? `/stream/${scene.id}/hls2/master.m3u8`
+        : null,
+    directStreamUrl:
+      scene.filePath && existsSync(scene.filePath)
+        ? `/stream/${scene.id}/source`
+        : null,
+    thumbnailPath: scene.thumbnailPath,
+    cardThumbnailPath: scene.cardThumbnailPath,
+    spritePath: scene.spritePath,
+    trickplayVttPath: scene.trickplayVttPath,
+    playCount: scene.playCount,
+    orgasmCount: scene.orgasmCount,
+    studioId: scene.studioId,
+    sceneFolderId: scene.sceneFolderId ?? null,
+    sceneFolderTitle,
+    hasSubtitles: subtitledIds.has(scene.id),
+    performers: perfJoins
+      .filter((p) => p.sceneId === scene.id)
+      .map((p) => ({
+        id: p.performerId,
+        name: p.performerName,
+        imagePath: p.performerImagePath,
+        isNsfw: p.performerIsNsfw,
+      })),
+    tags: tagJoins
+      .filter((t) => t.sceneId === scene.id)
+      .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
+    createdAt: scene.createdAt,
+    updatedAt: scene.updatedAt,
+  };
 }
 
 /**
@@ -189,11 +333,20 @@ async function saveCustomThumbnail(
  */
 export async function listScenes(query: ListScenesQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 50, MAX_ENTITY_LIST_LIMIT);
+  const sceneFolderSchemaAvailable = await hasSceneFolderSchema();
 
   const conditions = [];
 
   if (query.sceneFolderId && query.uncategorized === "true") {
     throw new AppError(400, "sceneFolderId and uncategorized cannot both be set");
+  }
+
+  if (!sceneFolderSchemaAvailable && query.sceneFolderId) {
+    throw new AppError(
+      503,
+      SCENE_FOLDER_SCHEMA_MISSING_MESSAGE,
+      "SCENE_FOLDER_SCHEMA_MISSING",
+    );
   }
 
   // SFW filter
@@ -348,10 +501,10 @@ export async function listScenes(query: ListScenesQuery) {
   if (query.hasFile === "false") {
     conditions.push(isNull(scenes.filePath));
   }
-  if (query.uncategorized === "true") {
+  if (sceneFolderSchemaAvailable && query.uncategorized === "true") {
     conditions.push(isNull(scenes.sceneFolderId));
   }
-  if (query.sceneFolderId) {
+  if (sceneFolderSchemaAvailable && query.sceneFolderId) {
     if (query.folderScope === "subtree") {
       conditions.push(sql`
         ${scenes.sceneFolderId} IN (
@@ -429,18 +582,33 @@ export async function listScenes(query: ListScenesQuery) {
     .from(scenes)
     .where(where);
 
-  // Fetch scenes
-  const sceneRows = await db
-    .select({
-      scene: scenes,
-      sceneFolderTitle: sceneFolders.title,
-    })
-    .from(scenes)
-    .leftJoin(sceneFolders, eq(scenes.sceneFolderId, sceneFolders.id))
-    .where(where)
-    .orderBy(orderBy)
-    .limit(limit)
-    .offset(offset);
+  const sceneRows = sceneFolderSchemaAvailable
+    ? await db
+        .select({
+          scene: scenes,
+          sceneFolderTitle: sceneFolders.title,
+        })
+        .from(scenes)
+        .leftJoin(sceneFolders, eq(scenes.sceneFolderId, sceneFolders.id))
+        .where(where)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset)
+    : (
+        await db
+          .select(baseSceneListSelection)
+          .from(scenes)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset)
+      ).map((scene) => ({
+        scene: {
+          ...scene,
+          sceneFolderId: null,
+        },
+        sceneFolderTitle: null,
+      }));
 
   // Fetch relations for each scene
   const sceneIds = sceneRows.map((row) => row.scene.id);
@@ -480,57 +648,14 @@ export async function listScenes(query: ListScenesQuery) {
   const subtitledIds = await fetchSubtitledSceneIds(sceneIds);
 
   // Assemble response
-  const result = sceneRows.map(({ scene, sceneFolderTitle }) => ({
-    id: scene.id,
-    title: scene.title,
-    details: scene.details,
-    date: scene.date,
-    rating: scene.rating,
-    organized: scene.organized,
-    isNsfw: scene.isNsfw,
-    duration: scene.duration,
-    durationFormatted: formatDuration(scene.duration),
-    resolution: getResolutionLabel(scene.height),
-    width: scene.width,
-    height: scene.height,
-    codec: scene.codec?.toUpperCase() ?? null,
-    container: scene.container,
-    fileSize: scene.fileSize,
-    fileSizeFormatted: formatFileSize(scene.fileSize),
-    filePath: scene.filePath,
-    hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
-    streamUrl:
-      scene.filePath && existsSync(scene.filePath)
-        ? `/stream/${scene.id}/hls2/master.m3u8`
-        : null,
-    directStreamUrl:
-      scene.filePath && existsSync(scene.filePath)
-        ? `/stream/${scene.id}/source`
-        : null,
-    thumbnailPath: scene.thumbnailPath,
-    cardThumbnailPath: scene.cardThumbnailPath,
-    spritePath: scene.spritePath,
-    trickplayVttPath: scene.trickplayVttPath,
-    playCount: scene.playCount,
-    orgasmCount: scene.orgasmCount,
-    studioId: scene.studioId,
-    sceneFolderId: scene.sceneFolderId,
-    sceneFolderTitle: sceneFolderTitle ?? null,
-    hasSubtitles: subtitledIds.has(scene.id),
-    performers: perfJoins
-      .filter((p) => p.sceneId === scene.id)
-      .map((p) => ({
-        id: p.performerId,
-        name: p.performerName,
-        imagePath: p.performerImagePath,
-        isNsfw: p.performerIsNsfw,
-      })),
-    tags: tagJoins
-      .filter((t) => t.sceneId === scene.id)
-      .map((t) => ({ id: t.tagId, name: t.tagName, isNsfw: t.tagIsNsfw })),
-    createdAt: scene.createdAt,
-    updatedAt: scene.updatedAt,
-  }));
+  const result = sceneRows.map(({ scene, sceneFolderTitle }) =>
+    toSceneListItem(
+      scene as SceneListProjection,
+      sceneFolderTitle ?? null,
+      subtitledIds,
+      perfJoins,
+      tagJoins,
+    ));
 
   return {
     scenes: result,
@@ -586,6 +711,150 @@ export async function getSceneStats(sfwOnly: boolean) {
  * Fetch a single scene by ID with all relations.
  */
 export async function getSceneById(id: string) {
+  if (!(await hasSceneFolderSchema())) {
+    const [scene] = await db
+      .select(baseSceneDetailSelection)
+      .from(scenes)
+      .where(eq(scenes.id, id))
+      .limit(1);
+
+    if (!scene) {
+      throw new AppError(404, "Video not found");
+    }
+
+    const [studio] = scene.studioId
+      ? await db
+          .select({
+            id: studios.id,
+            name: studios.name,
+            url: studios.url,
+          })
+          .from(studios)
+          .where(eq(studios.id, scene.studioId))
+          .limit(1)
+      : [null];
+
+    const scenePerformerRows = await db
+      .select({
+        id: performers.id,
+        name: performers.name,
+        gender: performers.gender,
+        imageUrl: performers.imageUrl,
+        imagePath: performers.imagePath,
+        favorite: performers.favorite,
+        isNsfw: performers.isNsfw,
+      })
+      .from(scenePerformers)
+      .innerJoin(performers, eq(scenePerformers.performerId, performers.id))
+      .where(eq(scenePerformers.sceneId, id));
+
+    const sceneTagRows = await db
+      .select({
+        id: tags.id,
+        name: tags.name,
+        isNsfw: tags.isNsfw,
+      })
+      .from(sceneTags)
+      .innerJoin(tags, eq(sceneTags.tagId, tags.id))
+      .where(eq(sceneTags.sceneId, id));
+
+    const markers = await db.query.sceneMarkers.findMany({
+      where: eq(sceneMarkers.sceneId, id),
+      orderBy: asc(sceneMarkers.seconds),
+    });
+
+    const subtitles = await db.query.sceneSubtitles.findMany({
+      where: eq(sceneSubtitles.sceneId, id),
+      orderBy: asc(sceneSubtitles.createdAt),
+    });
+
+    return {
+      id: scene.id,
+      title: scene.title,
+      details: scene.details,
+      date: scene.date,
+      rating: scene.rating,
+      url: scene.url,
+      organized: scene.organized,
+      isNsfw: scene.isNsfw,
+      interactive: scene.interactive,
+      duration: scene.duration,
+      durationFormatted: formatDuration(scene.duration),
+      resolution: getResolutionLabel(scene.height),
+      width: scene.width,
+      height: scene.height,
+      frameRate: scene.frameRate,
+      bitRate: scene.bitRate,
+      codec: scene.codec?.toUpperCase() ?? null,
+      container: scene.container,
+      fileSize: scene.fileSize,
+      fileSizeFormatted: formatFileSize(scene.fileSize),
+      filePath: scene.filePath,
+      hasVideo: !!(scene.filePath && existsSync(scene.filePath)),
+      streamUrl:
+        scene.filePath && existsSync(scene.filePath)
+          ? `/stream/${scene.id}/hls2/master.m3u8`
+          : null,
+      directStreamUrl:
+        scene.filePath && existsSync(scene.filePath)
+          ? `/stream/${scene.id}/source`
+          : null,
+      thumbnailPath: scene.thumbnailPath,
+      cardThumbnailPath: scene.cardThumbnailPath,
+      previewPath: scene.previewPath,
+      spritePath: scene.spritePath,
+      trickplayVttPath: scene.trickplayVttPath,
+      playCount: scene.playCount,
+      orgasmCount: scene.orgasmCount,
+      hasSubtitles: subtitles.length > 0,
+      sceneFolderId: null,
+      sceneFolderTitle: null,
+      playDuration: scene.playDuration,
+      resumeTime: scene.resumeTime,
+      lastPlayedAt: scene.lastPlayedAt,
+      studio: studio
+        ? { id: studio.id, name: studio.name, url: studio.url }
+        : null,
+      performers: scenePerformerRows,
+      tags: sceneTagRows,
+      markers: markers.map((m) => ({
+        id: m.id,
+        title: m.title,
+        seconds: m.seconds,
+        endSeconds: m.endSeconds,
+      })),
+      subtitleTracks: subtitles.map((s) => {
+        const sourceFormat = (s.sourceFormat ?? "vtt") as
+          | "vtt"
+          | "srt"
+          | "ass"
+          | "ssa";
+        const hasRawSource =
+          (sourceFormat === "ass" || sourceFormat === "ssa") && !!s.sourcePath;
+        return {
+          id: s.id,
+          sceneId: s.sceneId,
+          language: s.language,
+          label: s.label,
+          format: "vtt" as const,
+          source: s.source as "sidecar" | "upload" | "embedded",
+          sourceFormat,
+          isDefault: s.isDefault,
+          url: `/scenes/${s.sceneId}/subtitles/${s.id}`,
+          sourceUrl: hasRawSource
+            ? `/scenes/${s.sceneId}/subtitles/${s.id}/source`
+            : null,
+          createdAt:
+            s.createdAt instanceof Date
+              ? s.createdAt.toISOString()
+              : String(s.createdAt),
+        };
+      }),
+      createdAt: scene.createdAt,
+      updatedAt: scene.updatedAt,
+    };
+  }
+
   const scene = await db.query.scenes.findFirst({
     where: eq(scenes.id, id),
     with: {
@@ -839,22 +1108,41 @@ export async function updateScene(id: string, body: UpdateSceneBody) {
   // Write NFO sidecar if the scene has a file
   if (existing.filePath) {
     try {
-      const updated = await db.query.scenes.findFirst({
-        where: eq(scenes.id, id),
-        with: {
-          studio: true,
-          sceneTags: { with: { tag: true } },
-        },
-      });
+      const [updated] = await db
+        .select({
+          title: scenes.title,
+          details: scenes.details,
+          date: scenes.date,
+          rating: scenes.rating,
+          duration: scenes.duration,
+          url: scenes.url,
+          studioId: scenes.studioId,
+        })
+        .from(scenes)
+        .where(eq(scenes.id, id))
+        .limit(1);
 
       if (updated) {
+        const [updatedStudio] = updated.studioId
+          ? await db
+              .select({ name: studios.name })
+              .from(studios)
+              .where(eq(studios.id, updated.studioId))
+              .limit(1)
+          : [null];
+        const updatedTags = await db
+          .select({ name: tags.name })
+          .from(sceneTags)
+          .innerJoin(tags, eq(sceneTags.tagId, tags.id))
+          .where(eq(sceneTags.sceneId, id));
+
         await writeNfo(existing.filePath, {
           title: updated.title,
           plot: updated.details,
           date: updated.date,
-          studio: updated.studio?.name,
+          studio: updatedStudio?.name,
           rating: updated.rating,
-          tags: updated.sceneTags.map((st) => st.tag.name),
+          tags: updatedTags.map((tag) => tag.name),
           duration: updated.duration,
           url: updated.url,
         });
