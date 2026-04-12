@@ -723,48 +723,12 @@ export function ScenesPageClient({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="mt-1 text-mono-sm text-text-disabled">
-            {total}{" "}
-            {total === 1
-              ? terms.scene.toLowerCase()
-              : terms.scenes.toLowerCase()}
-          </span>
           <ImportButton
             target={uploadTarget}
             onUploaded={() => router.refresh()}
           />
         </div>
       </div>
-
-      {stats ? (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <StatCard
-            icon={<Film className="h-4 w-4" />}
-            label={`Total ${terms.scenes}`}
-            value={String(stats.totalScenes)}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
-          />
-          <StatCard
-            icon={<Clock className="h-4 w-4" />}
-            label="Total Duration"
-            value={stats.totalDurationFormatted}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
-          />
-          <StatCard
-            icon={<HardDrive className="h-4 w-4" />}
-            label="Storage"
-            value={stats.totalSizeFormatted ?? "—"}
-            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
-          />
-          <StatCard
-            icon={<TrendingUp className="h-4 w-4" />}
-            label="This Week"
-            value={`+${stats.recentCount}`}
-            accent
-            gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
-          />
-        </div>
-      ) : null}
 
       <FilterBar
         viewMode={viewMode}
@@ -1260,6 +1224,38 @@ export function ScenesPageClient({
         </>
       )}
       </UploadDropZone>
+
+      {stats ? (
+        <footer className="mt-8 border-t border-border-subtle pt-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <StatCard
+              icon={<Film className="h-4 w-4" />}
+              label={`Total ${terms.scenes}`}
+              value={String(stats.totalScenes)}
+              gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+            />
+            <StatCard
+              icon={<Clock className="h-4 w-4" />}
+              label="Total Duration"
+              value={stats.totalDurationFormatted}
+              gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+            />
+            <StatCard
+              icon={<HardDrive className="h-4 w-4" />}
+              label="Storage"
+              value={stats.totalSizeFormatted ?? "—"}
+              gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+            />
+            <StatCard
+              icon={<TrendingUp className="h-4 w-4" />}
+              label="This Week"
+              value={`+${stats.recentCount}`}
+              accent
+              gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
+            />
+          </div>
+        </footer>
+      ) : null}
     </div>
   );
 }

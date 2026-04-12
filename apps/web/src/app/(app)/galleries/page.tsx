@@ -1,7 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
-import { fetchGalleries, fetchStudios, fetchTags } from "../../../lib/server-api";
+import {
+  fetchGalleries,
+  fetchGalleryStats,
+  fetchStudios,
+  fetchTags,
+} from "../../../lib/server-api";
 import { GalleriesPageClient } from "../../../components/routes/galleries-page-client";
 import {
   defaultGalleriesListPrefs,
@@ -17,10 +22,15 @@ export default async function GalleriesPage() {
     defaultGalleriesListPrefs();
   const galleryFetchParams = galleriesListPrefsToFetchParams(listPrefs);
 
-  const [galleriesData, studiosData, tagsData] = await Promise.all([
+  const [galleriesData, studiosData, tagsData, galleryStats] = await Promise.all([
     fetchGalleries(galleryFetchParams),
     fetchStudios(),
     fetchTags(),
+    fetchGalleryStats().catch(() => ({
+      totalGalleries: 0,
+      totalImages: 0,
+      recentCount: 0,
+    })),
   ]);
 
   return (
@@ -30,6 +40,7 @@ export default async function GalleriesPage() {
       initialTags={tagsData.tags}
       initialTotal={galleriesData.total}
       initialListPrefs={listPrefs}
+      initialStats={galleryStats}
     />
   );
 }

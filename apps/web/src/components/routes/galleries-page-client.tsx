@@ -8,8 +8,10 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
-import { Images } from "lucide-react";
+import { BarChart3, Images, LayoutGrid, TrendingUp } from "lucide-react";
+import { cn } from "@obscura/ui/lib/utils";
 import { GalleryGrid } from "../gallery-grid";
 import { GalleryFilterBar } from "../gallery-filter-bar";
 import type { GalleryViewMode, GallerySortOption, SortDir } from "../gallery-filter-bar";
@@ -18,7 +20,8 @@ import {
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
-import type { GalleryListItemDto } from "@obscura/contracts";
+import type { GalleryListItemDto, GalleryStatsDto } from "@obscura/contracts";
+import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import type { GalleriesListPrefs } from "../../lib/galleries-list-prefs";
 import {
   defaultGalleriesListPrefs,
@@ -42,6 +45,7 @@ interface GalleriesPageClientProps {
   initialTags: TagItem[];
   initialTotal: number;
   initialListPrefs: GalleriesListPrefs;
+  initialStats: GalleryStatsDto;
 }
 
 export function GalleriesPageClient({
@@ -50,6 +54,7 @@ export function GalleriesPageClient({
   initialTags,
   initialTotal,
   initialListPrefs,
+  initialStats,
 }: GalleriesPageClientProps) {
   const [viewMode, setViewMode] = useState<GalleryViewMode>(initialListPrefs.viewMode);
   const [sortBy, setSortBy] = useState<GallerySortOption>(initialListPrefs.sortBy);
@@ -58,8 +63,13 @@ export function GalleriesPageClient({
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(initialListPrefs.activeFilters);
   const [galleries, setGalleries] = useState(initialGalleries);
   const [total, setTotal] = useState(initialTotal);
+  const [stats, setStats] = useState(initialStats);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setStats(initialStats);
+  }, [initialStats]);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
@@ -202,10 +212,8 @@ export function GalleriesPageClient({
           <Images className="h-5 w-5 text-text-accent" />
           Galleries
         </h1>
-        <p className="text-text-muted text-[0.78rem] mt-1">
-          {total > 0
-            ? `${total} ${total === 1 ? "gallery" : "galleries"} in your library`
-            : "Browse image galleries from your library"}
+        <p className="mt-1 text-[0.78rem] text-text-muted">
+          Browse image galleries from your library
         </p>
       </div>
 
@@ -242,6 +250,86 @@ export function GalleriesPageClient({
         loadingMore={loadingMore}
         onLoadMore={loadMore}
       />
+
+      <footer className="mt-8 border-t border-border-subtle pt-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <StatCard
+            icon={<Images className="h-4 w-4" />}
+            label="Total Galleries"
+            value={String(stats.totalGalleries)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <StatCard
+            icon={<LayoutGrid className="h-4 w-4" />}
+            label="Total Images"
+            value={String(stats.totalImages)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+          <StatCard
+            icon={<BarChart3 className="h-4 w-4" />}
+            label="Avg / Gallery"
+            value={
+              stats.totalGalleries > 0
+                ? String(Math.round(stats.totalImages / stats.totalGalleries))
+                : "—"
+            }
+            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+          />
+          <StatCard
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="This Week"
+            value={`+${stats.recentCount}`}
+            accent
+            gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
+          />
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function StatCard({
+  accent,
+  icon,
+  label,
+  value,
+  gradientClass,
+}: {
+  accent?: boolean;
+  icon: ReactNode;
+  label: string;
+  value: string;
+  gradientClass: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "surface-panel relative flex min-h-[72px] flex-col justify-between overflow-hidden px-3 py-2.5",
+        accent && "border-border-accent shadow-[var(--shadow-glow-accent)]",
+      )}
+    >
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 top-0 w-[3px] opacity-90",
+          gradientClass,
+        )}
+      />
+      <div className="ml-1.5 flex items-center justify-between">
+        <span className="text-[0.6rem] font-semibold uppercase tracking-[0.15em] text-text-muted">
+          {label}
+        </span>
+        <div className={cn("opacity-70", accent ? "text-text-accent" : "text-text-disabled")}>
+          {icon}
+        </div>
+      </div>
+      <div
+        className={cn(
+          "ml-1.5 mt-1 font-mono text-lg tracking-tight",
+          accent ? "text-glow-accent" : "text-text-primary",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }

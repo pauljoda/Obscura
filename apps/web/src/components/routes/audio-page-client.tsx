@@ -110,38 +110,6 @@ export function AudioPageClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        <StatCard
-          icon={<Library className="h-4 w-4" />}
-          label="Libraries"
-          value={String(stats.totalLibraries)}
-          gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
-        />
-        <StatCard
-          icon={<Music className="h-4 w-4" />}
-          label="Total Tracks"
-          value={String(stats.totalTracks)}
-          gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
-        />
-        <StatCard
-          icon={<Clock className="h-4 w-4" />}
-          label="Total Duration"
-          value={
-            stats.totalDuration > 0
-              ? (formatDuration(stats.totalDuration) ?? "—")
-              : "—"
-          }
-          gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
-        />
-        <StatCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="This Week"
-          value={`+${stats.recentCount}`}
-          accent
-          gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
-        />
-      </div>
-
       {/* Content */}
       {viewMode === "browser" ? (
         <HierarchyBrowser<AudioLibraryListItemDto>
@@ -187,6 +155,40 @@ export function AudioPageClient({
           )}
         </div>
       )}
+
+      <footer className="mt-8 border-t border-border-subtle pt-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <StatCard
+            icon={<Library className="h-4 w-4" />}
+            label="Libraries"
+            value={String(stats.totalLibraries)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
+          />
+          <StatCard
+            icon={<Music className="h-4 w-4" />}
+            label="Total Tracks"
+            value={String(stats.totalTracks)}
+            gradientClass={DASHBOARD_STAT_GRADIENTS[1]}
+          />
+          <StatCard
+            icon={<Clock className="h-4 w-4" />}
+            label="Total Duration"
+            value={
+              stats.totalDuration > 0
+                ? (formatDuration(stats.totalDuration) ?? "—")
+                : "—"
+            }
+            gradientClass={DASHBOARD_STAT_GRADIENTS[2]}
+          />
+          <StatCard
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="This Week"
+            value={`+${stats.recentCount}`}
+            accent
+            gradientClass={DASHBOARD_STAT_GRADIENTS[3]}
+          />
+        </div>
+      </footer>
     </UploadDropZone>
   );
 }
