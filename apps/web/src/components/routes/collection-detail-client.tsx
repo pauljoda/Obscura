@@ -30,6 +30,7 @@ import {
   refreshCollection,
 } from "../../lib/api/media";
 import { CollectionItemCard } from "../collections/collection-item-card";
+import { CollectionPlaylist } from "../collections/collection-playlist";
 
 type ViewMode = "mixed" | "by-type" | "playlist";
 
@@ -289,13 +290,12 @@ export function CollectionDetailClient({
             })}
         </div>
       ) : (
-        /* Playlist mode - placeholder for Phase 6 */
-        <div className="surface-well flex flex-col items-center justify-center py-16 text-center">
-          <Play className="h-10 w-10 text-text-disabled mb-3" />
-          <p className="text-text-muted text-sm">
-            Playlist mode coming soon. Use mixed or by-type view for now.
-          </p>
-        </div>
+        <CollectionPlaylist
+          items={items}
+          slideshowDurationSeconds={collection.slideshowDurationSeconds}
+          slideshowAutoAdvance={collection.slideshowAutoAdvance}
+          onClose={() => setViewMode("mixed")}
+        />
       )}
     </div>
   );
