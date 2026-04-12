@@ -7,6 +7,8 @@ import type {
   AudioLibraryListItemDto,
   AudioLibraryDetailDto,
   AudioLibraryStatsDto,
+  SceneFolderDetailDto,
+  SceneFolderListItemDto,
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
 import type {
@@ -42,6 +44,9 @@ export async function fetchScenes(params: {
   offset?: number;
   /** Pass current mode; API excludes NSFW when `off`. */
   nsfw?: string;
+  sceneFolderId?: string;
+  folderScope?: "direct" | "subtree";
+  uncategorized?: boolean;
 }) {
   const qs = buildQueryString(
     {
@@ -61,6 +66,9 @@ export async function fetchScenes(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
+      sceneFolderId: params.sceneFolderId,
+      folderScope: params.folderScope,
+      uncategorized: params.uncategorized ? "true" : undefined,
     },
     {
       tag: params.tag,
@@ -88,6 +96,41 @@ export async function fetchSceneStats(nsfw?: string) {
   const qs = buildQueryString({ nsfw });
   return serverFetch<SceneStats>(`/scenes/stats${qs}`, {
     tags: ["scenes"],
+  });
+}
+
+export async function fetchSceneFolders(params?: {
+  parent?: string;
+  root?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  nsfw?: string;
+}) {
+  const qs = buildQueryString({
+    parent: params?.parent,
+    root: params?.root,
+    search: params?.search,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
+  return serverFetch<{
+    items: SceneFolderListItemDto[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/scene-folders${qs}`, {
+    revalidate: 0,
+    tags: ["scene-folders"],
+  });
+}
+
+export async function fetchSceneFolderDetail(id: string, params?: { nsfw?: string }) {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return serverFetch<SceneFolderDetailDto>(`/scene-folders/${id}${qs}`, {
+    revalidate: 0,
+    tags: ["scene-folders", `scene-folder-${id}`],
   });
 }
 

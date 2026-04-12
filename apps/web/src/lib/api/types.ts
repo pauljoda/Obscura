@@ -9,6 +9,8 @@ import type {
   LibraryBrowseDto,
   LibraryRootDto,
   LibrarySettingsDto,
+  SceneFolderDetailDto,
+  SceneFolderListItemDto,
   SceneSubtitleTrackDto,
   ScrapeResultDto,
   ScraperPackageDto,
@@ -45,6 +47,8 @@ export interface SceneListItem {
   playCount: number;
   orgasmCount: number;
   studioId: string | null;
+  sceneFolderId: string | null;
+  sceneFolderTitle: string | null;
   /** True if at least one subtitle track is attached to this scene. */
   hasSubtitles: boolean;
   performers: {
@@ -81,6 +85,8 @@ export interface SceneDetail extends SceneListItem {
 }
 
 export type { SceneSubtitleTrackDto, SubtitleCueDto };
+export type SceneFolderListItem = SceneFolderListItemDto;
+export type SceneFolderDetail = SceneFolderDetailDto;
 
 export type GalleryListItem = GalleryListItemDto;
 

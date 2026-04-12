@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { Archive, FolderOpen, Images, Sparkles, Star } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import { useElementInView } from "../../hooks/use-element-in-view";
 import type { GalleryCardData } from "./gallery-card-data";
 import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { EntityPreviewMedia } from "../shared/entity-preview-media";
 
 const typeIcons = {
   folder: FolderOpen,
@@ -48,42 +47,9 @@ function GalleryGridCard({
 }) {
   const { mode: nsfwMode } = useNsfw();
   const visibleGalleryTags = tagsVisibleInNsfwMode(gallery.tags, nsfwMode);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [hovering, setHovering] = useState(false);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
-  const [videoFailed, setVideoFailed] = useState(false);
-  const isInView = useElementInView(cardRef, { rootMargin: "240px" });
-
   const previews = gallery.previewImages;
   const previewVideoUrl = previews[0] ? previews[0].replace(/\/thumb$/, "/preview") : null;
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startHover = useCallback(() => {
-    setHovering(true);
-    if (previews.length > 1) {
-      let idx = 0;
-      setCurrentPreviewIndex(0);
-      intervalRef.current = setInterval(() => {
-        idx = (idx + 1) % previews.length;
-        setCurrentPreviewIndex(idx);
-      }, 800);
-    }
-  }, [previews.length]);
-
-  const stopHover = useCallback(() => {
-    setHovering(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setCurrentPreviewIndex(0);
-  }, []);
-
-  const staticDisplayUrl =
-    previews.length > 0 ? (previews[currentPreviewIndex] ?? previews[0]) : gallery.coverImage;
   const TypeIcon = typeIcons[gallery.galleryType] ?? FolderOpen;
-  const showVideo =
-    hovering && isInView && previewVideoUrl && !videoFailed && previews.length <= 1;
 
   const aspectClass = 
     aspectRatio === "video" ? "aspect-video" : 
@@ -93,38 +59,22 @@ function GalleryGridCard({
   return (
     <NsfwBlur isNsfw={gallery.isNsfw ?? false} className="h-full">
       <Link href={gallery.href} className="block h-full">
-        <div
-          ref={cardRef}
-          className="surface-card media-card-shell group relative h-full overflow-hidden"
-          onPointerEnter={startHover}
-          onPointerLeave={stopHover}
-        >
-          <div className={cn("relative bg-surface-2 overflow-hidden", aspectClass)}>
-            {showVideo ? (
-              <video
-                src={previewVideoUrl}
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="none"
-                onError={() => setVideoFailed(true)}
-                className="h-full w-full object-contain"
-              />
-            ) : staticDisplayUrl ? (
-              <img
-                src={staticDisplayUrl}
-                alt={gallery.title}
-                className="h-full w-full object-contain transition-opacity duration-fast"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
+        <div className="surface-card media-card-shell group relative h-full overflow-hidden">
+          <EntityPreviewMedia
+            title={gallery.title}
+            mode="cover-or-cycle"
+            coverImage={gallery.coverImage}
+            previewImages={gallery.previewImages}
+            previewVideoUrl={previewVideoUrl}
+            showVideoOnHover
+            className={cn("relative overflow-hidden", aspectClass)}
+            imageClassName="object-contain"
+            fallback={
               <div className="flex h-full w-full items-center justify-center">
                 <Images className="h-10 w-10 text-text-disabled" />
               </div>
-            )}
-
+            }
+          >
             <NsfwShowModeChip
               isNsfw={gallery.isNsfw}
               className="absolute bottom-2 right-2 z-10 pointer-events-none"
@@ -138,21 +88,7 @@ function GalleryGridCard({
             <div className="absolute top-1.5 right-1.5 bg-black/60 p-1 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
               <TypeIcon className="h-3 w-3 text-white/80" />
             </div>
-
-            {hovering && !showVideo && previews.length > 1 && (
-              <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 px-1 pb-0.5">
-                {previews.map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "h-0.5 flex-1 transition-colors duration-fast",
-                      i === currentPreviewIndex ? "bg-accent-500" : "bg-white/30",
-                    )}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          </EntityPreviewMedia>
 
           <div className="px-2.5 py-2">
             <h3 className="text-[0.78rem] font-medium text-text-primary truncate">

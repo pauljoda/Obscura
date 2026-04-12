@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SceneGrid } from "../scene-grid";
 import { ImportButton, UploadDropZone } from "../upload";
@@ -19,12 +20,16 @@ import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
   fetchSceneStats,
+  fetchSceneFolders,
+  fetchSceneFolderDetail,
   fetchPerformers,
   fetchStudios,
   fetchTags,
   updateScene,
   deleteScene,
   type PerformerItem,
+  type SceneFolderDetail,
+  type SceneFolderListItem,
   type SceneListItem,
   type SceneStats,
   type StudioItem,
@@ -51,6 +56,10 @@ import {
   loadPresets,
   savePresets,
 } from "../../lib/filter-presets";
+import { SceneFolderCard } from "../scene-folders/scene-folder-card";
+import { HierarchyBreadcrumbs } from "../shared/hierarchy-breadcrumbs";
+import { HierarchySection } from "../shared/hierarchy-section";
+import { HierarchyShell } from "../shared/hierarchy-shell";
 
 interface ScenesPageClientProps {
   initialScenes: SceneListItem[];
@@ -60,6 +69,8 @@ interface ScenesPageClientProps {
   initialPerformers: PerformerItem[];
   initialTotal: number;
   initialListPrefs: ScenesListPrefs;
+  initialRootFolders: SceneFolderListItem[];
+  initialActiveFolder: SceneFolderDetail | null;
 }
 
 export function ScenesPageClient({
@@ -70,6 +81,8 @@ export function ScenesPageClient({
   initialPerformers,
   initialTotal,
   initialListPrefs,
+  initialRootFolders,
+  initialActiveFolder,
 }: ScenesPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
@@ -121,6 +134,8 @@ export function ScenesPageClient({
   const [filterStudios, setFilterStudios] = useState(initialStudios);
   const [filterTags, setFilterTags] = useState(initialTags);
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
+  const [rootFolders, setRootFolders] = useState(initialRootFolders);
+  const [activeFolder, setActiveFolder] = useState<SceneFolderDetail | null>(initialActiveFolder);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -139,6 +154,11 @@ export function ScenesPageClient({
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    setRootFolders(initialRootFolders);
+    setActiveFolder(initialActiveFolder);
+  }, [initialRootFolders, initialActiveFolder]);
 
   useEffect(() => {
     const prefs: ScenesListPrefs = {
@@ -177,6 +197,10 @@ export function ScenesPageClient({
       nsfwMode,
     );
   }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode, viewMode]);
+
+  const folderSearch = deferredSearchQuery.trim() || undefined;
+  const hasFolderScopedSceneQuery =
+    Boolean(folderSearch) || activeFilters.length > 0;
 
   const filterBarDisplayFilters = useMemo(() => {
     const durationLabels: Record<string, string> = {
@@ -222,10 +246,21 @@ export function ScenesPageClient({
     setLoading(true);
 
     try {
-      const result = await fetchScenes({
-        ...buildParams(),
-        limit: 50,
-      });
+      const result = await fetchScenes(
+        viewMode === "folders"
+          ? {
+              ...buildParams(),
+              limit: 50,
+              sceneFolderId: activeFolder?.id ?? undefined,
+              folderScope:
+                activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+              uncategorized: !activeFolder?.id,
+            }
+          : {
+              ...buildParams(),
+              limit: 50,
+            },
+      );
 
       setScenes(result.scenes);
       setTotal(result.total);
@@ -234,18 +269,30 @@ export function ScenesPageClient({
     } finally {
       setLoading(false);
     }
-  }, [buildParams]);
+  }, [activeFolder?.id, buildParams, hasFolderScopedSceneQuery, viewMode]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || scenes.length >= total) return;
     setLoadingMore(true);
 
     try {
-      const result = await fetchScenes({
-        ...buildParams(),
-        limit: 50,
-        offset: scenes.length,
-      });
+      const result = await fetchScenes(
+        viewMode === "folders"
+          ? {
+              ...buildParams(),
+              limit: 50,
+              offset: scenes.length,
+              sceneFolderId: activeFolder?.id ?? undefined,
+              folderScope:
+                activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+              uncategorized: !activeFolder?.id,
+            }
+          : {
+              ...buildParams(),
+              limit: 50,
+              offset: scenes.length,
+            },
+      );
 
       setScenes((prev) => {
         const existingIds = new Set(prev.map((s) => s.id));
@@ -257,7 +304,45 @@ export function ScenesPageClient({
     } finally {
       setLoadingMore(false);
     }
-  }, [buildParams, scenes.length, total, loadingMore]);
+  }, [
+    activeFolder?.id,
+    buildParams,
+    hasFolderScopedSceneQuery,
+    loadingMore,
+    scenes.length,
+    total,
+    viewMode,
+  ]);
+
+  const loadFolderContext = useCallback(async () => {
+    if (viewMode !== "folders") return;
+
+    if (activeFolder?.id) {
+      try {
+        const detail = await fetchSceneFolderDetail(activeFolder.id, {
+          nsfw: nsfwMode,
+        });
+        setActiveFolder(detail);
+      } catch (error) {
+        console.error("Failed to load scene folder detail:", error);
+        setActiveFolder(null);
+      }
+      return;
+    }
+
+    try {
+      const result = await fetchSceneFolders({
+        search: folderSearch,
+        root: folderSearch ? "all" : undefined,
+        limit: 200,
+        nsfw: nsfwMode,
+      });
+      setRootFolders(result.items);
+    } catch (error) {
+      console.error("Failed to load scene folders:", error);
+      setRootFolders([]);
+    }
+  }, [activeFolder?.id, folderSearch, nsfwMode, viewMode]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -265,9 +350,11 @@ export function ScenesPageClient({
       return;
     }
 
-    const timer = window.setTimeout(loadScenes, deferredSearchQuery ? 300 : 0);
+    const timer = window.setTimeout(() => {
+      void Promise.all([loadScenes(), loadFolderContext()]);
+    }, deferredSearchQuery ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [deferredSearchQuery, loadScenes]);
+  }, [deferredSearchQuery, loadFolderContext, loadScenes]);
 
   function removeFilter(index: number) {
     startTransition(() => {
@@ -385,6 +472,27 @@ export function ScenesPageClient({
 
   const visibleIds = scenes.map((s) => s.id);
   const router = useRouter();
+  const folderCards = useMemo(() => {
+    if (!activeFolder) return rootFolders;
+    if (!folderSearch) return activeFolder.children;
+    const lowered = folderSearch.toLowerCase();
+    return activeFolder.children.filter(
+      (folder) =>
+        folder.title.toLowerCase().includes(lowered) ||
+        folder.relativePath.toLowerCase().includes(lowered),
+    );
+  }, [activeFolder, folderSearch, rootFolders]);
+
+  const folderSectionTitle = activeFolder
+    ? "Child folders"
+    : folderSearch
+      ? "Matching folders"
+      : "Folders";
+  const sceneSectionTitle = activeFolder
+    ? hasFolderScopedSceneQuery
+      ? "Matching scenes in this folder tree"
+      : "Scenes in this folder"
+    : "Uncategorized scenes";
 
   return (
     <UploadDropZone
@@ -498,37 +606,110 @@ export function ScenesPageClient({
           totalVisible={scenes.length}
         />
       )}
+      {viewMode === "folders" ? (
+        <HierarchyShell
+          breadcrumbs={
+            activeFolder ? (
+              <HierarchyBreadcrumbs
+                items={activeFolder.breadcrumbs.map((crumb) => ({
+                  id: crumb.id,
+                  title: crumb.title,
+                  href: `/scenes?folder=${crumb.id}`,
+                }))}
+              />
+            ) : undefined
+          }
+          title={
+            activeFolder ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-semibold text-text-primary">
+                    {activeFolder.title}
+                  </h2>
+                  <p className="mt-1 text-[0.78rem] text-text-muted">
+                    Filesystem-backed folder view for scenes in this subtree.
+                  </p>
+                </div>
+                <Link
+                  href={`/scene-folders/${activeFolder.id}`}
+                  className="border border-border-subtle px-3 py-2 text-[0.72rem] uppercase tracking-[0.14em] text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-primary"
+                >
+                  Folder metadata
+                </Link>
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-2xl font-semibold text-text-primary">Scene folders</h2>
+                <p className="mt-1 text-[0.78rem] text-text-muted">
+                  Browse folders from disk, then drill down into scenes.
+                </p>
+              </div>
+            )
+          }
+        >
+          <HierarchySection title={folderSectionTitle}>
+            {folderCards.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {folderCards.map((folder) => (
+                  <SceneFolderCard
+                    key={folder.id}
+                    folder={folder}
+                    href={`/scenes?folder=${folder.id}`}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="surface-well px-4 py-10 text-center text-[0.78rem] text-text-muted">
+                No folders match the current view.
+              </div>
+            )}
+          </HierarchySection>
 
-      <SceneGrid
-        scenes={scenes}
-        viewMode={viewMode}
-        loading={loading}
-        hasMore={scenes.length < total}
-        loadingMore={loadingMore}
-        onLoadMore={loadMore}
-        selectedIds={viewMode === "list" ? selection.selectedIds : undefined}
-        onToggleSelect={viewMode === "list" ? selection.toggle : undefined}
-      />
+          <HierarchySection title={sceneSectionTitle}>
+            <SceneGrid
+              scenes={scenes}
+              viewMode="grid"
+              loading={loading}
+              hasMore={scenes.length < total}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
+            />
+          </HierarchySection>
+        </HierarchyShell>
+      ) : (
+        <>
+          <SceneGrid
+            scenes={scenes}
+            viewMode={viewMode}
+            loading={loading}
+            hasMore={scenes.length < total}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
+            selectedIds={viewMode === "list" ? selection.selectedIds : undefined}
+            onToggleSelect={viewMode === "list" ? selection.toggle : undefined}
+          />
 
-      <BulkActionToolbar
-        selectedCount={selection.count}
-        onDeselectAll={selection.deselectAll}
-        onMarkNsfw={() => void handleBulkNsfw(true)}
-        onUnmarkNsfw={() => void handleBulkNsfw(false)}
-        onDelete={() => setDeleteDialogOpen(true)}
-        loading={bulkLoading}
-      />
+          <BulkActionToolbar
+            selectedCount={selection.count}
+            onDeselectAll={selection.deselectAll}
+            onMarkNsfw={() => void handleBulkNsfw(true)}
+            onUnmarkNsfw={() => void handleBulkNsfw(false)}
+            onDelete={() => setDeleteDialogOpen(true)}
+            loading={bulkLoading}
+          />
 
-      <ConfirmDeleteDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        entityType="scene"
-        count={selection.count}
-        allowDeleteFromDisk
-        onDeleteFromLibrary={() => void handleBulkDelete(false)}
-        onDeleteFromDisk={() => void handleBulkDelete(true)}
-        loading={bulkLoading}
-      />
+          <ConfirmDeleteDialog
+            open={deleteDialogOpen}
+            onClose={() => setDeleteDialogOpen(false)}
+            entityType="scene"
+            count={selection.count}
+            allowDeleteFromDisk
+            onDeleteFromLibrary={() => void handleBulkDelete(false)}
+            onDeleteFromDisk={() => void handleBulkDelete(true)}
+            loading={bulkLoading}
+          />
+        </>
+      )}
     </UploadDropZone>
   );
 }

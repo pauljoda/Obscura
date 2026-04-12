@@ -6,6 +6,7 @@ import {
   ArrowUpDown,
   LayoutGrid,
   LayoutList,
+  FolderOpen,
   Search,
   ChevronDown,
   Check,
@@ -262,6 +263,17 @@ export function FilterBar({
             )}
           >
             <LayoutList className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => onViewModeChange("folders")}
+            className={cn(
+              "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+              viewMode === "folders"
+                ? "text-text-accent bg-accent-950"
+                : "text-text-muted hover:text-text-primary hover:bg-surface-2",
+            )}
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
           </button>
         </div>
 

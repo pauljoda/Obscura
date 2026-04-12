@@ -11,10 +11,17 @@ import type {
   GalleryStatsDto,
   ImageDetailDto,
   ImageListItemDto,
+  SceneFolderDetailDto,
+  SceneFolderListItemDto,
   SearchResponseDto,
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi, uploadFile } from "./core";
-import type { MarkerDto, SceneDetail, SceneListItem, SceneStats } from "./types";
+import type {
+  MarkerDto,
+  SceneDetail,
+  SceneListItem,
+  SceneStats,
+} from "./types";
 
 export async function fetchScenes(params: {
   search?: string;
@@ -38,6 +45,9 @@ export async function fetchScenes(params: {
   limit?: number;
   offset?: number;
   nsfw?: string;
+  sceneFolderId?: string;
+  folderScope?: "direct" | "subtree";
+  uncategorized?: boolean;
 }): Promise<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
@@ -57,6 +67,9 @@ export async function fetchScenes(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
+      sceneFolderId: params.sceneFolderId,
+      folderScope: params.folderScope,
+      uncategorized: params.uncategorized ? "true" : undefined,
     },
     {
       tag: params.tag,
@@ -247,6 +260,56 @@ export async function trackOrgasm(sceneId: string): Promise<{ ok: true; orgasmCo
 export async function fetchSceneStats(nsfw?: string): Promise<SceneStats> {
   const qs = buildQueryString({ nsfw });
   return fetchApi(`/scenes/stats${qs}`);
+}
+
+export async function fetchSceneFolders(params?: {
+  parent?: string;
+  root?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  nsfw?: string;
+}): Promise<{ items: SceneFolderListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildQueryString({
+    parent: params?.parent,
+    root: params?.root,
+    search: params?.search,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
+  return fetchApi(`/scene-folders${qs}`);
+}
+
+export async function fetchSceneFolderDetail(
+  id: string,
+  params?: { nsfw?: string },
+): Promise<SceneFolderDetailDto> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/scene-folders/${id}${qs}`);
+}
+
+export async function updateSceneFolder(
+  id: string,
+  data: { isNsfw?: boolean },
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/scene-folders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function uploadSceneFolderCover(
+  id: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/scene-folders/${id}/cover`, file);
+}
+
+export async function deleteSceneFolderCover(
+  id: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/scene-folders/${id}/cover`, { method: "DELETE" });
 }
 
 export async function fetchGalleries(params?: {
