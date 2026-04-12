@@ -65,6 +65,13 @@ export async function processGalleryScan(job: Job) {
 
   const settings = await ensureLibrarySettingsRow();
   const discovery = await discoverImageFilesAndDirs(root.path, root.recursive);
+  const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
+    discovery.dirs,
+    root.path,
+    settings.useLibraryRootAsFolder,
+  );
+  const discoveredDirSet = new Set(sortedDirs);
+  const includeRootInParentMap = discoveredDirSet.has(root.path);
 
   // -- Cleanup stale folder-based galleries --
   const knownFolderGalleries = await db
@@ -78,10 +85,7 @@ export async function processGalleryScan(job: Job) {
     );
 
   const useLibraryRootAsFolder = settings.useLibraryRootAsFolder;
-  const dirsForStaleCheck = new Set(discovery.dirs);
-  if (useLibraryRootAsFolder) dirsForStaleCheck.add(root.path);
-
-  const staleFolderIds = pickStaleContainerIds(knownFolderGalleries, dirsForStaleCheck);
+  const staleFolderIds = pickStaleContainerIds(knownFolderGalleries, discoveredDirSet);
 
   if (staleFolderIds.length > 0) {
     await db.delete(galleries).where(inArray(galleries.id, staleFolderIds));
@@ -131,22 +135,12 @@ export async function processGalleryScan(job: Job) {
     await db.delete(images).where(inArray(images.id, staleImageIds));
   }
 
-  const totalWork = discovery.dirs.length + discovery.zipFiles.length;
+  const totalWork = sortedDirs.length + discovery.zipFiles.length;
   let processed = 0;
 
   // -- Process folder-based galleries --
   // Group image files by directory
   const imagesByDir = groupFilesByDirectory(discovery.imageFiles);
-  const dirsWithImages = [...imagesByDir.keys()];
-  const includeRootInParentMap =
-    useLibraryRootAsFolder || dirsWithImages.includes(root.path);
-
-  // Sort directories by path depth (parent before child) to ensure parentId resolution works
-  const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
-    discovery.dirs,
-    root.path,
-    useLibraryRootAsFolder,
-  );
   const galleryIdByPath = new Map(
     knownFolderGalleries
       .filter((g) => includeRootInParentMap || g.folderPath !== root.path)
@@ -155,7 +149,6 @@ export async function processGalleryScan(job: Job) {
 
   for (const dirPath of sortedDirs) {
     const dirImages = imagesByDir.get(dirPath) ?? [];
-    if (dirImages.length === 0 && !(useLibraryRootAsFolder && dirPath === root.path)) continue;
 
     // Upsert gallery
     const [existingGallery] = await db

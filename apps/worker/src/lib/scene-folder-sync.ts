@@ -58,8 +58,7 @@ export async function syncSceneFoldersForRoot(
     root.path,
     useLibraryRootAsFolder,
   );
-  const includeRootInParentMap =
-    useLibraryRootAsFolder || dirsWithFiles.includes(root.path);
+  const includeRootInParentMap = discoveredDirs.includes(root.path);
 
   const existingFolders = await db
     .select({

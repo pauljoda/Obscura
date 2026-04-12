@@ -44,6 +44,13 @@ export async function processAudioScan(job: Job) {
   const settings = await ensureLibrarySettingsRow();
   const useLibraryRootAsFolder = settings.useLibraryRootAsFolder;
   const discovery = await discoverAudioFilesAndDirs(root.path, root.recursive);
+  const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
+    discovery.dirs,
+    root.path,
+    useLibraryRootAsFolder,
+  );
+  const discoveredDirSet = new Set(sortedDirs);
+  const includeRootInParentMap = discoveredDirSet.has(root.path);
 
   // -- Cleanup stale audio libraries --
   const knownLibraries = await db
@@ -51,10 +58,7 @@ export async function processAudioScan(job: Job) {
     .from(audioLibraries)
     .where(like(audioLibraries.folderPath, `${root.path}%`));
 
-  const dirsForStaleCheck = new Set(discovery.dirs);
-  if (useLibraryRootAsFolder) dirsForStaleCheck.add(root.path);
-
-  const staleLibraryIds = pickStaleContainerIds(knownLibraries, dirsForStaleCheck);
+  const staleLibraryIds = pickStaleContainerIds(knownLibraries, discoveredDirSet);
 
   if (staleLibraryIds.length > 0) {
     await db.delete(audioLibraries).where(inArray(audioLibraries.id, staleLibraryIds));
@@ -77,16 +81,6 @@ export async function processAudioScan(job: Job) {
 
   // -- Group audio files by directory --
   const filesByDir = groupFilesByDirectory(discovery.audioFiles);
-  const dirsWithAudio = [...filesByDir.keys()];
-  const includeRootInParentMap =
-    useLibraryRootAsFolder || dirsWithAudio.includes(root.path);
-
-  // Sort directories by depth (parent before child) for parentId resolution
-  const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
-    discovery.dirs,
-    root.path,
-    useLibraryRootAsFolder,
-  );
   const libraryIdByPath = new Map(
     knownLibraries
       .filter((lib) => includeRootInParentMap || lib.folderPath !== root.path)
@@ -98,7 +92,6 @@ export async function processAudioScan(job: Job) {
 
   for (const dirPath of sortedDirs) {
     const dirFiles = filesByDir.get(dirPath) ?? [];
-    if (dirFiles.length === 0 && !(useLibraryRootAsFolder && dirPath === root.path)) continue;
 
     // Upsert audio library
     const [existingLib] = await db

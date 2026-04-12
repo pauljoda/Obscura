@@ -23,14 +23,52 @@ export function toRelativeHierarchyPath(rootPath: string, targetPath: string): s
   return relative === "" ? "." : relative;
 }
 
-/** Dirs that contain media, optionally forcing the library root path first for parent resolution. */
+function isWithinRoot(rootPath: string, targetPath: string): boolean {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+/**
+ * Expand discovered media directories into a full hierarchy chain.
+ *
+ * Example:
+ * - root `/media/Shows`
+ * - media in `/media/Shows/Series/Season`
+ *
+ * Returns:
+ * - off: `/media/Shows/Series`, `/media/Shows/Series/Season`
+ * - on: `/media/Shows`, `/media/Shows/Series`, `/media/Shows/Series/Season`
+ */
 export function mergeLibraryRootIntoDiscoveredDirs(
   dirPaths: Iterable<string>,
   rootPath: string,
   includeRootAsFolder: boolean,
 ): string[] {
-  const set = new Set(dirPaths);
-  if (includeRootAsFolder) set.add(rootPath);
+  const set = new Set<string>();
+
+  for (const dirPath of dirPaths) {
+    let current = dirPath;
+
+    while (isWithinRoot(rootPath, current)) {
+      if (current === rootPath) {
+        if (includeRootAsFolder || dirPath === rootPath) {
+          set.add(current);
+        }
+        break;
+      }
+
+      set.add(current);
+
+      const parentDir = path.dirname(current);
+      if (parentDir === current) break;
+      current = parentDir;
+    }
+  }
+
+  if (includeRootAsFolder) {
+    set.add(rootPath);
+  }
+
   return sortPathsParentFirst(set);
 }
 
