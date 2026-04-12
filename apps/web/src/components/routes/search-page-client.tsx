@@ -19,6 +19,7 @@ import { SEARCH_KIND_CONFIG, ALL_SEARCH_KINDS } from "../search/search-kind-conf
 import { SearchResultCard } from "../search/search-result-card";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useTerms } from "../../lib/terminology";
+import { useCurrentPath } from "../../hooks/use-current-path";
 
 const PAGE_SIZE = 20;
 
@@ -31,6 +32,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
   const router = useRouter();
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
+  const currentPath = useCurrentPath();
 
   const [query, setQuery] = useState(initialQuery);
   const [activeKinds, setActiveKinds] = useState<Set<EntityKind>>(() => {
@@ -347,6 +349,7 @@ function SearchSection({
   loadingMore: boolean;
   onLoadMore: () => void;
 }) {
+  const currentPath = useCurrentPath();
   const config = SEARCH_KIND_CONFIG[kind];
   const Icon = config.icon;
 
@@ -387,7 +390,7 @@ function SearchSection({
         )}
       >
         {items.map((item) => (
-          <SearchResultCard key={item.id} item={item} />
+          <SearchResultCard key={item.id} item={item} from={currentPath} />
         ))}
       </div>
 
