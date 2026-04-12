@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   RefreshCw,
   Eraser,
+  MoreVertical,
+  FolderPlus,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -43,6 +45,7 @@ import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contract
 import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
+import { AddToCollectionModal } from "./collections/add-to-collection-modal";
 import { SceneMetadataPanel } from "./scenes/scene-metadata-panel";
 import { SceneMarkerEditor } from "./scenes/scene-marker-editor";
 import { SceneFileInfo } from "./scenes/scene-file-info";
@@ -382,6 +385,9 @@ export function SceneDetail({
     setTimeout(() => setResetMetadataState("idle"), 4000);
   }
 
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -629,73 +635,102 @@ export function SceneDetail({
               <CheckCircle2 className="h-4 w-4" />
             </button>
 
-            {/* Reset metadata — revert to fresh-off-disk state */}
-            <button
-              type="button"
-              onClick={() => void handleResetMetadata()}
-              disabled={resetMetadataState !== "idle"}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
-                resetMetadataState === "done"
-                  ? "text-success-text"
-                  : resetMetadataState === "running"
-                    ? "text-text-accent"
-                    : "text-text-disabled hover:text-danger-text hover:bg-surface-2",
-                resetMetadataState !== "idle" && "cursor-default",
-              )}
-              title={
-                resetMetadataState === "done"
-                  ? "Metadata reset"
-                  : resetMetadataState === "running"
-                    ? "Resetting..."
-                    : "Reset all metadata to fresh-off-disk state (clears title, tags, performers, studio, etc.)"
-              }
-            >
-              {resetMetadataState === "done" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <Eraser
-                  className={cn(
-                    "h-4 w-4",
-                    resetMetadataState === "running" && "animate-pulse",
-                  )}
-                />
-              )}
-            </button>
+            {/* More Actions flyout */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreActionsOpen((o) => !o)}
+                className="flex items-center justify-center h-8 w-8 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors duration-fast"
+                title="More actions"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
 
-            {/* Rebuild preview */}
-            <button
-              type="button"
-              onClick={() => void handleRebuildPreview()}
-              disabled={rebuildPreviewState !== "idle"}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
-                rebuildPreviewState === "done"
-                  ? "text-success-text"
-                  : rebuildPreviewState === "queued"
-                    ? "text-text-accent"
-                    : "text-text-disabled hover:text-text-muted hover:bg-surface-2",
-                rebuildPreviewState !== "idle" && "cursor-default",
+              {moreActionsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMoreActionsOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-50 w-56 surface-elevated py-1">
+                    {/* Add to Collection */}
+                    <button
+                      type="button"
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+                      onClick={() => {
+                        setMoreActionsOpen(false);
+                        setCollectionModalOpen(true);
+                      }}
+                    >
+                      <FolderPlus className="h-3.5 w-3.5" />
+                      Add to Collection
+                    </button>
+
+                    <div className="h-px bg-border-subtle my-1" />
+
+                    {/* Rebuild preview */}
+                    <button
+                      type="button"
+                      disabled={rebuildPreviewState !== "idle"}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] transition-colors",
+                        rebuildPreviewState === "done"
+                          ? "text-success-text"
+                          : rebuildPreviewState === "queued"
+                            ? "text-text-accent"
+                            : "text-text-muted hover:text-text-primary hover:bg-surface-3",
+                      )}
+                      onClick={() => {
+                        setMoreActionsOpen(false);
+                        void handleRebuildPreview();
+                      }}
+                    >
+                      {rebuildPreviewState === "done" ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <RefreshCw
+                          className={cn(
+                            "h-3.5 w-3.5",
+                            rebuildPreviewState === "queued" && "animate-spin",
+                          )}
+                        />
+                      )}
+                      Rebuild Preview
+                    </button>
+
+                    {/* Reset metadata */}
+                    <button
+                      type="button"
+                      disabled={resetMetadataState !== "idle"}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] transition-colors",
+                        resetMetadataState === "done"
+                          ? "text-success-text"
+                          : resetMetadataState === "running"
+                            ? "text-text-accent"
+                            : "text-text-muted hover:text-danger-text hover:bg-surface-3",
+                      )}
+                      onClick={() => {
+                        setMoreActionsOpen(false);
+                        void handleResetMetadata();
+                      }}
+                    >
+                      {resetMetadataState === "done" ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eraser
+                          className={cn(
+                            "h-3.5 w-3.5",
+                            resetMetadataState === "running" && "animate-pulse",
+                          )}
+                        />
+                      )}
+                      Reset Metadata
+                    </button>
+                  </div>
+                </>
               )}
-              title={
-                rebuildPreviewState === "done"
-                  ? "Rebuild queued"
-                  : rebuildPreviewState === "queued"
-                    ? "Queuing..."
-                    : "Re-probe file metadata and rebuild thumbnails and trickplay"
-              }
-            >
-              {rebuildPreviewState === "done" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <RefreshCw
-                  className={cn(
-                    "h-4 w-4",
-                    rebuildPreviewState === "queued" && "animate-spin",
-                  )}
-                />
-              )}
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -799,6 +834,14 @@ export function SceneDetail({
       )}
 
       {activeTab === "Files" && <SceneFileInfo scene={scene} />}
+
+      <AddToCollectionModal
+        open={collectionModalOpen}
+        onClose={() => setCollectionModalOpen(false)}
+        entityType="scene"
+        entityId={id}
+        entityTitle={scene.title}
+      />
     </div>
   );
 }

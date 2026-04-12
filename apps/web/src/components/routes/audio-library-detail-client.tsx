@@ -19,6 +19,8 @@ import {
   Building2,
   Upload,
   Trash2,
+  MoreVertical,
+  FolderPlus,
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import { formatDuration } from "@obscura/contracts";
@@ -45,6 +47,7 @@ import {
 } from "../../lib/api";
 import { AudioPlayer } from "../audio/audio-player";
 import { ChipInput } from "../shared/chip-input";
+import { AddToCollectionModal } from "../collections/add-to-collection-modal";
 import { AudioLibraryStudioField } from "../audio/audio-library-studio-field";
 import { revalidateAudioLibraryCache } from "../../app/actions/revalidate-audio-library";
 import { useAppChrome } from "../app-chrome-context";
@@ -113,6 +116,8 @@ export function AudioLibraryDetailClient({
 
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [allTags, setAllTags] = useState<TagItem[]>(initialTagSuggestions);
@@ -434,14 +439,45 @@ export function AudioLibraryDetailClient({
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={beginEdit}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
-                    aria-label="Edit library"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={beginEdit}
+                      className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                      aria-label="Edit library"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    {/* More Actions */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setMoreActionsOpen((o) => !o)}
+                        className="p-1.5 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
+                        title="More actions"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                      {moreActionsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setMoreActionsOpen(false)} />
+                          <div className="absolute right-0 top-full mt-1 z-50 w-56 surface-elevated py-1">
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+                              onClick={() => {
+                                setMoreActionsOpen(false);
+                                setCollectionModalOpen(true);
+                              }}
+                            >
+                              <FolderPlus className="h-3.5 w-3.5" />
+                              Add Library to Collection
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -823,6 +859,14 @@ export function AudioLibraryDetailClient({
           />
         </div>
       </div>
+
+      <AddToCollectionModal
+        open={collectionModalOpen}
+        onClose={() => setCollectionModalOpen(false)}
+        entityType="audio-track"
+        entityId={library.id}
+        entityTitle={library.title}
+      />
     </>
   );
 }

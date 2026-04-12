@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, Images, LayoutGrid, LayoutList, Newspaper } from "lucide-react";
+import { ArrowLeft, Images, LayoutGrid, LayoutList, Newspaper, MoreVertical, FolderPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
@@ -15,6 +15,7 @@ import { GalleryListItem } from "../gallery-list-item";
 import { fetchGalleryImages, toApiUrl, type PerformerItem, type TagItem } from "../../lib/api";
 import type { GalleryDetailDto, GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
 import { useNsfw } from "../nsfw/nsfw-context";
+import { AddToCollectionModal } from "../collections/add-to-collection-modal";
 
 interface GalleryDetailClientProps {
   initialGallery: GalleryDetailDto;
@@ -42,6 +43,8 @@ export function GalleryDetailClient({
   // Only folder-backed galleries have an on-disk location we can import
   // new images into. Zip and virtual galleries disable the affordance.
   const canImport = gallery.galleryType === "folder";
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
   useEffect(() => {
     setGallery(initialGallery);
@@ -186,6 +189,35 @@ export function GalleryDetailClient({
           onUploaded={() => router.refresh()}
         />
       ) : null}
+      {/* More Actions */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setMoreActionsOpen((o) => !o)}
+          className="flex items-center justify-center h-8 w-8 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors duration-fast"
+          title="More actions"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+        {moreActionsOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMoreActionsOpen(false)} />
+            <div className="absolute right-0 top-full mt-1 z-50 w-56 surface-elevated py-1">
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+                onClick={() => {
+                  setMoreActionsOpen(false);
+                  setCollectionModalOpen(true);
+                }}
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                Add Gallery to Collection
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 
@@ -347,7 +379,17 @@ export function GalleryDetailClient({
     </div>
   );
 
-  if (!canImport) return body;
+  const modal = (
+    <AddToCollectionModal
+      open={collectionModalOpen}
+      onClose={() => setCollectionModalOpen(false)}
+      entityType="gallery"
+      entityId={gallery.id}
+      entityTitle={gallery.title}
+    />
+  );
+
+  if (!canImport) return <>{body}{modal}</>;
 
   return (
     <UploadDropZone
@@ -356,6 +398,7 @@ export function GalleryDetailClient({
       className="relative"
     >
       {body}
+      {modal}
     </UploadDropZone>
   );
 }
