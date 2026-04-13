@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Universal Identification System** — the identify engine is being expanded from NSFW-only scene scraping to a full metadata identification suite covering videos, video folders (TV series), galleries, images, audio libraries, and audio tracks. First-party plugin support for TVDB, MovieDB, YouTube, and MusicBrainz is coming.
 - The homepage is now a cinematic dashboard with a full-width hero carousel showcasing your top-rated scenes, quick-nav tiles for every media type, and a “New Additions” strip of recent scenes and galleries.
 - Back buttons on detail pages now return you to where you came from — folder views, search results, performer pages, and more — instead of always going to the top-level list.
 - The Settings page and Generation Pipeline section received a visual overhaul to match the Dark Room design language.
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Plugin system database foundations** — new `plugin_packages`, `plugin_auth`, and `external_ids` tables for the Obscura-native plugin engine. Scrape results expanded to support all entity types (not just scenes). `urls` array added to scenes, scene folders, galleries, images, audio libraries, and audio tracks. `episode_number` added to scenes for series identification. Scraper packages gain `is_nsfw` classification and `plugin_type` discriminator.
 - **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation include the `from` context.
 - Internal `/design-language` reference page — gallery of Dark Room design tokens (not linked in nav).
 - Multi-layer validation coverage now includes disposable-Postgres integration tests for the API and worker, jsdom coverage for web interaction helpers and components, and a new Validate workflow with Playwright smoke scaffolding for the running stack.

@@ -250,6 +250,8 @@ export const sceneFolders = pgTable(
     coverImagePath: text("cover_image_path"),
     backdropImagePath: text("backdrop_image_path"),
     details: text("details"),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
+    externalSeriesId: text("external_series_id"),
     studioId: uuid("studio_id").references(() => studios.id, {
       onDelete: "set null",
     }),
@@ -302,11 +304,13 @@ export const scenes = pgTable(
     title: text("title").notNull(),
     details: text("details"),
     url: text("url"),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
     date: text("date"),
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
     interactive: boolean("interactive").default(false).notNull(),
+    episodeNumber: integer("episode_number"),
 
     // File info
     filePath: text("file_path"),
@@ -599,6 +603,8 @@ export const scraperPackages = pgTable(
     sha256: text("sha256"),
     capabilities: jsonb("capabilities").$type<Record<string, boolean>>(),
     enabled: boolean("enabled").default(true).notNull(),
+    isNsfw: boolean("is_nsfw").default(true).notNull(),
+    pluginType: text("plugin_type").default("stash-compat").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -665,6 +671,82 @@ export const stashIdsRelations = relations(stashIds, ({ one }) => ({
   }),
 }));
 
+// ─── Plugin Packages (Obscura-native plugins) ────────────────────────
+export const pluginPackages = pgTable(
+  "plugin_packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    pluginId: text("plugin_id").notNull(),
+    name: text("name").notNull(),
+    version: text("version").notNull(),
+    runtime: text("runtime").notNull(), // "python" | "typescript" | "stash-compat"
+    installPath: text("install_path").notNull(),
+    sha256: text("sha256"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    capabilities: jsonb("capabilities").$type<Record<string, boolean>>(),
+    manifestRaw: jsonb("manifest_raw"),
+    enabled: boolean("enabled").default(true).notNull(),
+    sourceIndex: text("source_index"), // "obscura-community" | "stash-community" | "local"
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("plugin_packages_plugin_id_idx").on(table.pluginId),
+  ]
+);
+
+export const pluginPackagesRelations = relations(pluginPackages, ({ many }) => ({
+  scrapeResults: many(scrapeResults),
+  pluginAuth: many(pluginAuth),
+}));
+
+// ─── Plugin Auth (per-plugin credential storage) ──────────────────────
+export const pluginAuth = pgTable(
+  "plugin_auth",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    pluginId: text("plugin_id").notNull(),
+    authKey: text("auth_key").notNull(),
+    encryptedValue: text("encrypted_value").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("plugin_auth_plugin_key_idx").on(table.pluginId, table.authKey),
+    index("plugin_auth_plugin_idx").on(table.pluginId),
+  ]
+);
+
+export const pluginAuthRelations = relations(pluginAuth, ({ one }) => ({
+  pluginPackage: one(pluginPackages, {
+    fields: [pluginAuth.pluginId],
+    references: [pluginPackages.pluginId],
+  }),
+}));
+
+// ─── External IDs (non-StashBox remote entity links) ──────────────────
+export const externalIds = pgTable(
+  "external_ids",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entityType: text("entity_type").notNull(), // "scene" | "folder" | "gallery" | "audio_library" | "audio_track" | "image"
+    entityId: uuid("entity_id").notNull(),
+    provider: text("provider").notNull(), // "tvdb" | "tmdb" | "youtube" | "musicbrainz"
+    externalId: text("external_id").notNull(),
+    externalUrl: text("external_url"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("external_ids_entity_provider_idx").on(
+      table.entityType,
+      table.entityId,
+      table.provider,
+    ),
+    index("external_ids_entity_idx").on(table.entityType, table.entityId),
+    index("external_ids_provider_idx").on(table.provider),
+  ]
+);
+
 // ─── Fingerprint Submissions (contribution history) ──────────────────
 // One row per (scene, endpoint, algorithm, hash) that we have attempted to
 // submit to a StashBox-protocol server via the `submitFingerprint` mutation.
@@ -717,31 +799,46 @@ export const scrapeResults = pgTable(
   "scrape_results",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    // Legacy scene reference — nullable for multi-entity support
     sceneId: uuid("scene_id")
-      .notNull()
       .references(() => scenes.id, { onDelete: "cascade" }),
+    // Generic entity reference
+    entityType: text("entity_type").notNull().default("scene"),
+    entityId: uuid("entity_id"),
+    // Source: one of scraper, stashbox, or plugin
     scraperPackageId: uuid("scraper_package_id")
       .references(() => scraperPackages.id, { onDelete: "set null" }),
     stashBoxEndpointId: uuid("stash_box_endpoint_id")
       .references(() => stashBoxEndpoints.id, { onDelete: "set null" }),
+    pluginPackageId: uuid("plugin_package_id")
+      .references(() => pluginPackages.id, { onDelete: "set null" }),
     action: text("action").notNull(),
     matchType: text("match_type"),
     status: text("status").notNull().default("pending"),
     rawResult: jsonb("raw_result"),
+    // Common proposed fields (scene-compatible)
     proposedTitle: text("proposed_title"),
     proposedDate: text("proposed_date"),
     proposedDetails: text("proposed_details"),
     proposedUrl: text("proposed_url"),
+    proposedUrls: jsonb("proposed_urls").$type<string[]>(),
     proposedStudioName: text("proposed_studio_name"),
     proposedPerformerNames: jsonb("proposed_performer_names").$type<string[]>(),
     proposedTagNames: jsonb("proposed_tag_names").$type<string[]>(),
     proposedImageUrl: text("proposed_image_url"),
+    // Video-specific
+    proposedEpisodeNumber: integer("proposed_episode_number"),
+    // Folder-specific (full result blob for series data)
+    proposedFolderResult: jsonb("proposed_folder_result"),
+    // Audio-specific (artist, album, track info)
+    proposedAudioResult: jsonb("proposed_audio_result"),
     appliedAt: timestamp("applied_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("scrape_results_scene_idx").on(table.sceneId),
+    index("scrape_results_entity_idx").on(table.entityType, table.entityId),
     index("scrape_results_status_idx").on(table.status),
     index("scrape_results_created_at_idx").on(table.createdAt),
   ]
@@ -760,6 +857,10 @@ export const scrapeResultsRelations = relations(scrapeResults, ({ one }) => ({
     fields: [scrapeResults.stashBoxEndpointId],
     references: [stashBoxEndpoints.id],
   }),
+  pluginPackage: one(pluginPackages, {
+    fields: [scrapeResults.pluginPackageId],
+    references: [pluginPackages.id],
+  }),
 }));
 
 // ─── Galleries ─────────────────────────────────────────────────────
@@ -773,6 +874,7 @@ export const galleries = pgTable(
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
     photographer: text("photographer"),
 
     // Gallery type discriminator: "folder" | "zip" | "virtual"
@@ -832,6 +934,7 @@ export const images = pgTable(
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
 
     // File info — for zip members: "/path/archive.cbz::member/file.jpg"
     filePath: text("file_path").notNull(),
@@ -1022,6 +1125,7 @@ export const audioLibraries = pgTable(
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
 
     // Folder on disk
     folderPath: text("folder_path"),
@@ -1071,6 +1175,7 @@ export const audioTracks = pgTable(
     rating: integer("rating"),
     organized: boolean("organized").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
 
     // File info
     filePath: text("file_path").notNull(),
