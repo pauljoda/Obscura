@@ -30,6 +30,8 @@ Obscura is a **modern alternative for anyone who wants a Stash-style private med
 
 If you like the Stash model but want a faster, cleaner interface that feels native on phones and desktops alike, Obscura is built for you.
 
+Discussions can be conducted here, or via the subreddit https://www.reddit.com/r/ObscuraMediaApp/, where I will post updates on the app.
+
 ---
 
 ## Highlights
