@@ -3,6 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
+      target: builder
     command: pnpm --filter @obscura/web dev
     env_file:
       - ../../.env.example
@@ -15,6 +16,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/api.Dockerfile
+      target: builder
     command: pnpm --filter @obscura/api dev
     env_file:
       - ../../.env.example
@@ -32,6 +34,7 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/worker.Dockerfile
+      target: builder
     command: pnpm --filter @obscura/worker dev
     env_file:
       - ../../.env.example

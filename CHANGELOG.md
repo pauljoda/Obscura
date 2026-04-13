@@ -45,6 +45,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - API scene resolution filtering now uses the shared `buildResolutionConditions` helper instead of a duplicated local implementation.
 - Gallery and library POST endpoints now correctly return HTTP 201 on creation.
+- Unified Docker image build no longer fails with `sh: tsc: not found` when building `@obscura/plugins` — the `deps` stage now copies `packages/plugins/package.json` so pnpm installs the plugins workspace's dev dependencies (including TypeScript). The per-service `api.Dockerfile` gets the same fix since `@obscura/api` depends on `@obscura/plugins`.
+- Validate workflow smoke-e2e dev stack no longer crashes on startup with `Error: Cannot find module '/app/pnpm'`. The `docker-compose.yml` dev services now target the `builder` stage (which has `pnpm`/`corepack` and the full workspace source) instead of the production `runner` stage (which strips them).
 
 ### Removed
 
