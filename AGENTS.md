@@ -47,8 +47,10 @@ Releases are cut server-side by the GitHub Actions `Release` workflow. Do not ha
 
 ### Release notes discipline
 
-- Entries under `## [Unreleased]` should be written for users of the app, not for the diff reader. Explain user-visible behavior and why it changed.
-- Group by `### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Docs`.
+- **Every release section (including `## [Unreleased]`) MUST begin with a `### What's New` block** before the standard Keep a Changelog groups. This is a plain-language summary of user-visible highlights — written so a non-technical user can scan it and know what changed. Keep each bullet to 1–2 sentences. Only include features, major fixes, or behavioral changes a user would notice; skip internal refactors, code cleanup, and dependency bumps.
+- When adding a changelog entry during development: if the change is a new feature, a significant UI change, or a notable bug fix, **also add or update a bullet in `### What's New`**. Minor internal changes (refactors, code splits, dev tooling) only go in the standard sections below.
+- The standard Keep a Changelog sections (`### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Docs`) follow after `### What's New` and contain the full detailed entries as before.
+- Entries should be written for users of the app, not for the diff reader. Explain user-visible behavior and why it changed.
 - Use past tense and lead with the user-visible change (`"Subtitles now…"`), not the implementation detail.
 
 ## Product

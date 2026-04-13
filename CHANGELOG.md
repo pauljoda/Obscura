@@ -6,46 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- The homepage is now a cinematic dashboard with a full-width hero carousel showcasing your top-rated scenes, quick-nav tiles for every media type, and a “New Additions” strip of recent scenes and galleries.
+- Back buttons on detail pages now return you to where you came from — folder views, search results, performer pages, and more — instead of always going to the top-level list.
+- The Settings page and Generation Pipeline section received a visual overhaul to match the Dark Room design language.
+
 ### Changed
 
-- Settings → Generation Pipeline uses one consistent two-column grid on desktop: scan schedule as a matched pair, long “library name as top folder” and “background job concurrency” span full width, enrichment toggles fill six cells (including trickplay beside dedicated cache storage so the grid no longer has a hole), and quality sliders share the same grid as numeric steppers for aligned card heights.
-- Shared `Button` primary variant now matches the brass control-plate treatment (horizontal accent gradient, border, glow) used for primary actions in Settings, instead of a brighter flat brass fill.
-- Settings: library folder browser nests paths in `surface-well`, empty states use dashed `empty-rack-slot` panels, and the Stash-Box add/edit form sits in a recessed well so it reads clearly against endpoint cards. Loading states pair a pulsing brass `StatusLed` with a brass-tinted spinner; Stash-Box test results use `Badge` success/error variants (LED palette) instead of raw emerald/red.
+- Dashboard homepage replaced with a cinematic hero design featuring an auto-rotating carousel of featured scenes, quick-navigation tiles (scenes, performers, studios, tags, galleries, images, audio, folders), and a “New Additions” recent-ingest strip. Empty states display when no media has been scanned yet.
+- Hero carousel uses weighted random selection favoring top-rated and recently-played scenes, with NSFW content filtered client-side based on the current mode.
+- Settings → Generation Pipeline uses one consistent two-column grid on desktop: scan schedule as a matched pair, long “library name as top folder” and “background job concurrency” span full width, enrichment toggles fill six cells, and quality sliders share the same grid as numeric steppers for aligned card heights.
+- Settings page visual refresh: library folder browser nests paths in `surface-well`, empty states use dashed `empty-rack-slot` panels, Stash-Box forms sit in recessed wells, and loading states pair a pulsing brass `StatusLed` with a brass-tinted spinner.
+- Shared `Button` primary variant now matches the brass control-plate treatment (horizontal accent gradient, border, glow) used for primary actions in Settings.
 - Command palette ESC hint uses the shared `.kbd` keyboard style.
-- Database schema and shared DB utilities (NSFW propagation, library pruning, collection rule engine) extracted into `@obscura/db` package. Worker no longer reaches into API internals via relative paths — both apps import from the shared package.
-- All shared DTOs (scenes, studios, tags, performers, scrape results, stash-box types) moved from frontend `types.ts` to `@obscura/contracts`. Frontend re-exports under original aliases for backward compatibility.
-- Entity labels (create/edit page headings, search placeholder, bulk scrape messages) now use the centralized terminology module instead of hardcoded strings, ensuring consistent "Actor"/"Video"/"Studio"/"Tag" naming everywhere.
-- Performer identify/scrape section now shows "Identify" when a StashBox endpoint is selected and "Scrape" for community scrapers, matching the label convention used on studio and tag edit pages.
-- Shared `ScrapeField` component extracted from studio and tag edit pages to eliminate duplication.
-- Shared `StatusMessage` component replaces repeated inline error/success banner markup across all create and edit pages.
-- New `.btn-accent` CSS class consolidates the accent button style pattern previously copy-pasted across 6+ components.
-- Backward-compatibility re-exports removed: `bulk-scrape.tsx` wrapper deleted (consumers now import directly from `scrape/bulk-scrape`), unused `ChipInput`/`StarRatingPicker`/`MetadataRow` re-exports removed from `scene-edit.tsx`.
-- Job dashboard broken up into focused sub-components: helpers, stat cards, queue cards, and job cards extracted to `components/jobs/` (958 → 460 lines).
-- Settings page broken up: reusable controls (ToggleCard, QualitySlider, NumberStepper, StorageStat), subtitles section with live preview, and diagnostics section extracted to `components/settings/` (1,919 → 1,389 lines).
+- Entity labels now use a centralized terminology module, ensuring consistent “Actor”/”Video”/”Studio”/”Tag” naming across all pages.
+- Route loading animation updated to concentric square ripples with a pulsing core glow field around the brass LED.
 
 ### Added
 
-- **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation now include the `from` context. Shared `BackLink` component and `useCurrentPath` hook provide the plumbing.
-- **`/design-language`** page (not linked in nav, `noindex`) — single-page gallery of Dark Room tokens: typography, buttons, badges, surfaces, accent/status palettes, LEDs, meters, loading patterns, motion, form controls, caption styles, and gradient placeholders. Includes a live preview of **`AppRouteLoading`** (the `(app)/loading.tsx` ripple-glow route loader).
-- **`AppRouteLoading`** component — shared implementation for the app shell route loading state so the design-language page can render the exact system loader; loader now uses **concentric square ripples** and a **pulsing core glow field** around the brass LED instead of a static framed square.
-- Global CSS utilities `.kbd` (sharp, recessed key caps), `.empty-rack-slot` (dashed empty hardware slot), and `.pill-muted` (muted uppercase label chip).
+- **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation include the `from` context.
+- Internal `/design-language` reference page — gallery of Dark Room design tokens (not linked in nav).
 
 ### Fixed
 
 - API scene resolution filtering now uses the shared `buildResolutionConditions` helper instead of a duplicated local implementation.
-- Settings library routes now throw `AppError` for consistent error handling instead of manually setting status codes.
-- Gallery POST endpoint now correctly returns HTTP 201 on creation, matching other create endpoints.
-- Library POST endpoint now correctly returns HTTP 201 on creation.
-- Collection service query condition arrays typed as `SQL[]` instead of `any[]`.
-- Self-referential foreign key casts in the database schema now have explanatory comments for the Drizzle ORM limitation.
+- Gallery and library POST endpoints now correctly return HTTP 201 on creation.
 
 ### Removed
 
 - Empty `packages/config/` package deleted (contained only a package.json with no source code).
-
-### Docs
-
-- Dependency versions aligned: `@types/node` synced to `^22.19.17` and `react`/`react-dom` synced to `^19.2.4` across all workspaces.
 
 ## [0.19.0] - 2026-04-12
 ### What's New
