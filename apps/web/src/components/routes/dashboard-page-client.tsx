@@ -114,6 +114,37 @@ export function DashboardPageClient({
     return () => clearInterval(interval);
   }, [featuredScenes.length, currentIndex]);
 
+  const hasAnyContent = 
+    featuredScenes.length > 0 || 
+    recentScenes.length > 0 || 
+    galleries.length > 0 || 
+    images.length > 0 || 
+    audioLibraries.length > 0 || 
+    sceneFolders.length > 0 || 
+    performers.length > 0 || 
+    studios.length > 0;
+
+  if (!hasAnyContent) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center text-center p-8">
+        <div className="w-24 h-24 mb-8 text-accent-500/20 flex items-center justify-center rounded-full bg-surface-2 border border-border-subtle">
+          <Film className="w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-bold text-text-primary mb-4">Your Library is Empty</h1>
+        <p className="text-text-muted max-w-md mb-8">
+          It looks like you haven't added any media yet, or your current filters are hiding everything. 
+          Head over to the settings to configure your library roots and start scanning.
+        </p>
+        <Link
+          href="/settings/library"
+          className="bg-accent-500 hover:bg-accent-400 text-accent-950 px-6 py-2.5 font-semibold transition-all duration-normal hover:shadow-[0_0_16px_rgba(196,154,90,0.3)]"
+        >
+          Configure Library
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-bg text-text-primary pb-24">
       {/* Hero Section */}
