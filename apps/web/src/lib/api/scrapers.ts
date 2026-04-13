@@ -313,3 +313,49 @@ export async function executePlugin(
     body: JSON.stringify({ action, input }),
   });
 }
+
+/* ─── Plugin management ─────────────────────────────────────── */
+
+export interface InstalledPlugin {
+  id: string;
+  pluginId: string;
+  name: string;
+  version: string;
+  runtime: string;
+  installPath: string;
+  sha256: string | null;
+  isNsfw: boolean;
+  capabilities: Record<string, boolean> | null;
+  enabled: boolean;
+  sourceIndex: string | null;
+  authStatus: "ok" | "missing" | null;
+  authFields?: Array<{ key: string; label: string; required: boolean; url?: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchInstalledPlugins(): Promise<InstalledPlugin[]> {
+  return fetchApi("/plugins/packages");
+}
+
+export async function togglePlugin(id: string, enabled: boolean): Promise<{ ok: boolean }> {
+  return fetchApi(`/plugins/packages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function uninstallPlugin(id: string): Promise<{ ok: boolean }> {
+  return fetchApi(`/plugins/packages/${id}`, { method: "DELETE" });
+}
+
+export async function savePluginAuthKey(
+  pluginDbId: string,
+  authKey: string,
+  value: string,
+): Promise<{ ok: boolean }> {
+  return fetchApi(`/plugins/packages/${pluginDbId}/auth/${authKey}`, {
+    method: "PUT",
+    body: JSON.stringify({ value }),
+  });
+}

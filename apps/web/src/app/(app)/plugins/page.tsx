@@ -10,6 +10,7 @@ import {
   Download,
   Film,
   Globe,
+  KeyRound,
   Loader2,
   Package,
   Pencil,
@@ -31,10 +32,14 @@ import {
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
   fetchObscuraPluginIndex,
+  fetchInstalledPlugins,
   installObscuraPlugin,
   installScraper,
   uninstallScraper,
+  uninstallPlugin,
   toggleScraper,
+  togglePlugin,
+  savePluginAuthKey,
   createStashBoxEndpoint,
   updateStashBoxEndpoint,
   deleteStashBoxEndpoint,
@@ -43,6 +48,7 @@ import {
   type ScraperPackage,
   type StashBoxEndpoint,
   type ObscuraPluginIndexEntry,
+  type InstalledPlugin,
 } from "../../../lib/api";
 import { entityTerms } from "../../../lib/terminology";
 import { useNsfw } from "../../../components/nsfw/nsfw-context";
@@ -81,8 +87,9 @@ export default function PluginsPage() {
   // Default tab: in SFW mode, default to installed (stash tabs hidden)
   const [tab, setTab] = useState<PluginsTab>("installed");
 
-  // Installed scrapers state
+  // Installed state (stash scrapers + obscura plugins)
   const [installed, setInstalled] = useState<ScraperPackage[]>([]);
+  const [installedPlugins, setInstalledPlugins] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(true);
   const [capFilter, setCapFilter] = useState<CapFilter>("all");
   const [installedSearch, setInstalledSearch] = useState("");
@@ -134,12 +141,14 @@ export default function PluginsPage() {
 
   const loadInstalled = useCallback(async () => {
     try {
-      const [scrapersRes, endpointsRes] = await Promise.all([
+      const [scrapersRes, endpointsRes, pluginsRes] = await Promise.all([
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
+        fetchInstalledPlugins().catch(() => [] as InstalledPlugin[]),
       ]);
       setInstalled(scrapersRes.packages);
       setStashBoxEndpoints(endpointsRes.endpoints);
+      setInstalledPlugins(pluginsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load plugins");
     } finally {
@@ -328,6 +337,7 @@ export default function PluginsPage() {
 
   // In SFW mode, hide all NSFW (stash) scrapers from the installed list
   const visibleInstalled = isSfw ? installed.filter((p) => !p.isNsfw) : installed;
+  const visiblePlugins = isSfw ? installedPlugins.filter((p) => !p.isNsfw) : installedPlugins;
 
   const filteredInstalled = visibleInstalled.filter((pkg) => {
     if (installedSearch) {
@@ -407,7 +417,7 @@ export default function PluginsPage() {
       <div className={cn("grid gap-2", isSfw ? "grid-cols-2" : "grid-cols-4")}>
         <div className="surface-stat px-3 py-2">
           <span className="text-kicker !text-text-disabled">Installed</span>
-          <div className="text-lg font-semibold text-text-primary leading-tight">{visibleInstalled.length}</div>
+          <div className="text-lg font-semibold text-text-primary leading-tight">{visibleInstalled.length + visiblePlugins.length}</div>
         </div>
         {!isSfw && (
           <>
@@ -505,11 +515,11 @@ export default function PluginsPage() {
             <span className="text-mono-sm text-text-disabled">{filteredInstalled.length} shown</span>
           </div>
 
-          {filteredInstalled.length === 0 ? (
+          {filteredInstalled.length === 0 && visiblePlugins.length === 0 ? (
             <div className="surface-card no-lift p-8 text-center">
               <Package className="h-8 w-8 text-text-disabled mx-auto mb-3" />
               <p className="text-text-muted text-sm">
-                {visibleInstalled.length === 0
+                {visibleInstalled.length === 0 && installedPlugins.length === 0
                   ? isSfw
                     ? "No SFW plugins installed. Browse the Obscura Community tab to find plugins."
                     : "No plugins installed. Browse the community tabs to get started."
@@ -518,6 +528,29 @@ export default function PluginsPage() {
             </div>
           ) : (
             <div className="space-y-1">
+              {visiblePlugins.map((plugin) => (
+                <InstalledPluginCard
+                  key={plugin.id}
+                  plugin={plugin}
+                  onToggle={async () => {
+                    try {
+                      await togglePlugin(plugin.id, !plugin.enabled);
+                      setInstalledPlugins((prev) => prev.map((p) => (p.id === plugin.id ? { ...p, enabled: !p.enabled } : p)));
+                    } catch (err) { setError(err instanceof Error ? err.message : "Failed to toggle"); }
+                  }}
+                  onRemove={async () => {
+                    try {
+                      await uninstallPlugin(plugin.id);
+                      flashMessage(`Removed ${plugin.name}`);
+                      setInstalledPlugins((prev) => prev.filter((p) => p.id !== plugin.id));
+                      setObscuraEntries((prev) => prev.map((e) => (e.id === plugin.pluginId ? { ...e, installed: false } : e)));
+                    } catch (err) { setError(err instanceof Error ? err.message : "Failed to remove"); }
+                  }}
+                  onAuthSaved={() => void loadInstalled()}
+                  flashMessage={flashMessage}
+                  setError={setError}
+                />
+              ))}
               {filteredInstalled.map((pkg) => (
                 <InstalledScraperCard key={pkg.id} pkg={pkg} onToggle={() => void handleToggle(pkg)} onRemove={() => void handleUninstall(pkg)} />
               ))}
@@ -825,7 +858,150 @@ export default function PluginsPage() {
   );
 }
 
-/* ─── Installed Scraper Card ─────────────────────────────────── */
+/* ─── Installed Plugin Card (Obscura-native with auth) ───────── */
+
+function InstalledPluginCard({
+  plugin,
+  onToggle,
+  onRemove,
+  onAuthSaved,
+  flashMessage: flash,
+  setError: setErr,
+}: {
+  plugin: InstalledPlugin;
+  onToggle: () => void;
+  onRemove: () => void;
+  onAuthSaved: () => void;
+  flashMessage: (msg: string) => void;
+  setError: (err: string | null) => void;
+}) {
+  const [authExpanded, setAuthExpanded] = useState(false);
+  const [authValues, setAuthValues] = useState<Record<string, string>>({});
+  const [authSaving, setAuthSaving] = useState(false);
+
+  const caps = plugin.capabilities ?? {};
+  const enabledCaps = Object.entries(caps).filter(([, v]) => v).map(([k]) => k);
+  const hasAuth = plugin.authFields && plugin.authFields.length > 0;
+
+  async function handleSaveAuth() {
+    if (!plugin.authFields) return;
+    setAuthSaving(true);
+    setErr(null);
+    try {
+      for (const field of plugin.authFields) {
+        const val = authValues[field.key];
+        if (val && val.trim()) {
+          await savePluginAuthKey(plugin.id, field.key, val.trim());
+        }
+      }
+      flash("Credentials saved.");
+      setAuthValues({});
+      setAuthExpanded(false);
+      onAuthSaved();
+    } catch (err) {
+      setErr(err instanceof Error ? err.message : "Failed to save credentials");
+    } finally {
+      setAuthSaving(false);
+    }
+  }
+
+  return (
+    <div className={cn("surface-card no-lift transition-opacity duration-fast", !plugin.enabled && "opacity-60")}>
+      <div className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5">
+              <p className="text-sm font-semibold">{plugin.name}</p>
+              <span className="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
+              {plugin.isNsfw && <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>}
+              <Badge variant={plugin.enabled ? "accent" : "default"} className="text-[0.55rem]">{plugin.enabled ? "Enabled" : "Disabled"}</Badge>
+              {hasAuth && (
+                <span className={cn(
+                  "inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5",
+                  plugin.authStatus === "ok"
+                    ? "bg-status-success/10 text-status-success-text border border-status-success/20"
+                    : "bg-status-warning/10 text-status-warning-text border border-status-warning/20",
+                )}>
+                  {plugin.authStatus === "ok" ? <Check className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
+                  {plugin.authStatus === "ok" ? "Auth OK" : "Auth Required"}
+                </span>
+              )}
+            </div>
+            <p className="text-mono-sm text-text-disabled mt-0.5">{plugin.pluginId} · v{plugin.version} · {plugin.runtime}</p>
+            {enabledCaps.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                {enabledCaps.map((key) => {
+                  const meta = CAPABILITY_META[key];
+                  return (<span key={key} className="tag-chip-default text-[0.6rem] px-1.5 py-0.5">{meta?.label ?? key}</span>);
+                })}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {hasAuth && (
+              <button onClick={() => setAuthExpanded((v) => !v)}
+                className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast",
+                  plugin.authStatus === "missing" ? "text-status-warning-text" : "text-text-muted hover:text-text-primary")}>
+                <KeyRound className="h-3.5 w-3.5" />
+                {authExpanded ? "Close" : "Configure"}
+              </button>
+            )}
+            <button onClick={onToggle} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast text-text-muted hover:text-text-primary">
+              {plugin.enabled ? <ToggleRight className="h-4 w-4 text-text-accent" /> : <ToggleLeft className="h-4 w-4" />}
+              {plugin.enabled ? "Disable" : "Enable"}
+            </button>
+            <button onClick={onRemove} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-status-error-text transition-colors duration-fast">
+              <Trash2 className="h-3.5 w-3.5" />Remove
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Auth configuration panel */}
+      {authExpanded && plugin.authFields && (
+        <div className="border-t border-border-subtle px-4 py-3 space-y-3 bg-surface-1/50">
+          <h4 className="text-[0.72rem] font-medium text-text-secondary">Authentication</h4>
+          {plugin.authFields.map((field) => (
+            <div key={field.key}>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[0.65rem] text-text-disabled">
+                  {field.label}
+                  {field.required && <span className="text-status-error-text ml-0.5">*</span>}
+                </label>
+                {field.url && (
+                  <a href={field.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[0.6rem] text-text-accent hover:underline">
+                    Get key →
+                  </a>
+                )}
+              </div>
+              <input
+                type="password"
+                value={authValues[field.key] ?? ""}
+                onChange={(e) => setAuthValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                placeholder={plugin.authStatus === "ok" ? "••••••••  (configured — enter new value to replace)" : "Paste your API key"}
+                className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
+              />
+            </div>
+          ))}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setAuthExpanded(false); setAuthValues({}); }}
+              className="h-auto px-3 py-1.5 text-[0.72rem]">Cancel</Button>
+            <Button type="button" variant="primary" size="sm"
+              disabled={authSaving || !plugin.authFields.some((f) => authValues[f.key]?.trim())}
+              onClick={() => void handleSaveAuth()}
+              className="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]">
+              {authSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Save Credentials
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Installed Scraper Card (Stash-compat) ──────────────────── */
 
 function InstalledScraperCard({ pkg, onToggle, onRemove }: { pkg: ScraperPackage; onToggle: () => void; onRemove: () => void }) {
   const caps = pkg.capabilities as Record<string, boolean> | null;
