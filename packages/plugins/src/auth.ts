@@ -14,15 +14,21 @@ const IV_LENGTH = 12;
 const KEY_LENGTH = 32;
 const PBKDF2_ITERATIONS = 100_000;
 
+const DEV_FALLBACK_SECRET = "obscura-dev-secret-do-not-use-in-production-32ch";
+
 function getSecret(): string {
   const secret = process.env.OBSCURA_SECRET;
-  if (!secret) {
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
     throw new Error(
       "OBSCURA_SECRET environment variable is required for plugin credential encryption. " +
         "Set it to a random string of at least 32 characters.",
     );
   }
-  return secret;
+
+  // Dev fallback — credentials are still encrypted at rest but with a known key
+  return DEV_FALLBACK_SECRET;
 }
 
 function deriveKey(salt: Buffer): Buffer {
