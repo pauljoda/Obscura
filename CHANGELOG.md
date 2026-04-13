@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Legacy installs now upgrade cleanly.** The startup migrator no longer crashes on older push-managed databases that pre-date recent tables (e.g. `scene_folders`). It now probes the live schema to figure out how far an install has actually progressed and lets the normal migrator apply any missing migrations on top — no database reset required.
 - Scene folder cards now use the same **poster-shaped** preview frame (2:3) as scene posters and folder headers, so thumbnails read as vertical artwork instead of widescreen crops.
 - **Universal Identification System** — the identify engine is being expanded from NSFW-only scene scraping to a full metadata identification suite covering videos, video folders (TV series), galleries, images, audio libraries, and audio tracks. First-party plugin support for TVDB, MovieDB, YouTube, and MusicBrainz is coming.
 - The homepage is now a cinematic dashboard with a full-width hero carousel showcasing your top-rated scenes, quick-nav tiles for every media type, and a “New Additions” strip of recent scenes and galleries.
@@ -43,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Legacy push-managed installs that predate recent migrations (e.g. `scene_folders` from migration 0004) no longer crash at boot with `relation "scene_folders" does not exist`. The bridge in `apps/api/src/db/migrate.ts` now probes per-migration sentinels to detect how far the install has actually progressed, seeds only that prefix of the drizzle journal as already-applied, and lets the normal migrator run any remaining migrations on top. The stray `scene_folders.custom_name` pre-baseline delta (which belonged to migration 0005, not the 0000 baseline) has been removed, and `reconcileSchema` now guards its `scene_folders` ALTERs against the table not existing. A new `LEGACY_SCHEMA_SENTINELS` map must be kept in sync whenever a new migration file is added.
 - API scene resolution filtering now uses the shared `buildResolutionConditions` helper instead of a duplicated local implementation.
 - Gallery and library POST endpoints now correctly return HTTP 201 on creation.
 - Unified Docker image build no longer fails with `sh: tsc: not found` when building `@obscura/plugins` — the `deps` stage now copies `packages/plugins/package.json` so pnpm installs the plugins workspace's dev dependencies (including TypeScript). The per-service `api.Dockerfile` gets the same fix since `@obscura/api` depends on `@obscura/plugins`.
