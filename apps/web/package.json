@@ -9,7 +9,9 @@
     "build": "next build",
     "start": "next start --port 8008",
     "lint": "tsc --project tsconfig.json --noEmit",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@obscura/contracts": "workspace:*",

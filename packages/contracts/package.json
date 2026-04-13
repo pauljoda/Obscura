@@ -14,7 +14,8 @@
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
     "typecheck": "tsc --project tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",

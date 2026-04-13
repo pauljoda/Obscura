@@ -7,7 +7,10 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --project tsconfig.json --noEmit",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "pnpm test:unit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config ../../vitest.integration.config.ts ../../tests/worker.integration.test.ts"
   },
   "dependencies": {
     "@obscura/contracts": "workspace:*",

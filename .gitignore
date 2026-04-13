@@ -8,6 +8,8 @@ dist
 coverage
 .turbo
 *.tsbuildinfo
+playwright-report
+test-results
 
 # Environment
 .env

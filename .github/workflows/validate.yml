@@ -1,0 +1,103 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and typecheck
+        run: pnpm turbo run lint typecheck
+
+      - name: Run test suite
+        run: pnpm test:ci
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
+
+  smoke-e2e:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start stack
+        run: docker compose -f infra/docker/docker-compose.yml up -d --build
+
+      - name: Wait for web
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8008 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f infra/docker/docker-compose.yml logs
+          exit 1
+
+      - name: Run Playwright smoke
+        env:
+          OBSCURA_E2E_WEB_URL: http://127.0.0.1:8008
+          OBSCURA_E2E_API_URL: http://127.0.0.1:4000
+          OBSCURA_E2E_LIBRARY_ROOT: /app/apps/web/public/media/scenes
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+
+      - name: Stop stack
+        if: always()
+        run: docker compose -f infra/docker/docker-compose.yml down -v

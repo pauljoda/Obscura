@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation include the `from` context.
 - Internal `/design-language` reference page — gallery of Dark Room design tokens (not linked in nav).
+- Multi-layer validation coverage now includes disposable-Postgres integration tests for the API and worker, jsdom coverage for web interaction helpers and components, and a new Validate workflow with Playwright smoke scaffolding for the running stack.
 
 ### Fixed
 

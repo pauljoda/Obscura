@@ -124,12 +124,7 @@ export async function sendJob(
   queueName: QueueName,
   data: Record<string, unknown>
 ): Promise<string> {
-  const boss = await getBoss();
-  const id = await boss.send(queueName, data);
-  if (!id) {
-    throw new Error(`pg-boss refused to enqueue job on queue ${queueName}`);
-  }
-  return id;
+  return queueAdapter.sendJob(queueName, data);
 }
 
 // ─── Worker registration ──────────────────────────────────────────
