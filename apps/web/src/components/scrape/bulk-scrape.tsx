@@ -27,11 +27,13 @@ import {
   fetchStudios,
   fetchTags,
   fetchInstalledScrapers,
+  fetchInstalledPlugins,
   fetchStashBoxEndpoints,
   fetchSceneFolders,
   fetchGalleries,
   fetchImages,
   fetchAudioLibraries,
+  type InstalledPlugin,
 } from "../../lib/api";
 import { entityTerms } from "../../lib/terminology";
 import type {
@@ -78,6 +80,9 @@ export function BulkScrape() {
   // Performer state
   const [perfRows, setPerfRows] = useState<PerformerRow[]>([]);
   const [perfScrapers, setPerfScrapers] = useState<ScraperPackage[]>([]);
+
+  // Obscura plugins
+  const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
 
   // Studio state
   const [studioRows, setStudioRows] = useState<StudioRow[]>([]);
@@ -134,17 +139,18 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes] = await Promise.all([
+      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
         fetchAllScenes({ sort: "created_at" }),
         fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
         fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
-        fetchSceneFolders({}).catch(() => ({ items: [], total: 0, limit: 100, offset: 0 })),
+        fetchSceneFolders({ root: "all", limit: 500 }).catch(() => ({ items: [], total: 0, limit: 500, offset: 0 })),
         fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 })),
         fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 })),
         fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 })),
+        fetchInstalledPlugins().catch(() => [] as InstalledPlugin[]),
       ]);
 
       setStashBoxEndpoints(stashBoxRes.endpoints.filter((e) => e.enabled));
@@ -183,6 +189,9 @@ export function BulkScrape() {
         return caps && (caps.performerByURL || caps.performerByName || caps.performerByFragment);
       });
       setPerfScrapers(perfCapable);
+
+      // Store installed Obscura plugins (only enabled ones with auth OK)
+      setPlugins(pluginsRes.filter((p) => p.enabled));
 
       // Initialize new entity rows
       setFolderRows(foldersRes.items.map((folder) => ({
@@ -262,9 +271,25 @@ export function BulkScrape() {
   // Studios/tags only use stashbox; scenes/performers also use community scrapers
   const scrapersForTab = tab === "scenes" ? sceneScrapers : tab === "performers" ? perfScrapers : [];
 
-  // Build unified provider list: StashBox first (fingerprint-capable), then scrapers
+  // Filter Obscura plugins by capabilities relevant to the current tab
+  const pluginsForTab = plugins.filter((p) => {
+    const caps = p.capabilities ?? {};
+    switch (tab) {
+      case "scenes": return caps.videoByURL || caps.videoByName || caps.videoByFragment;
+      case "video-folders": return caps.folderByName || caps.folderByFragment || caps.folderCascade;
+      case "galleries": return caps.galleryByURL || caps.galleryByFragment;
+      case "images": return caps.imageByURL;
+      case "audio-libraries": return caps.audioLibraryByName;
+      case "audio-tracks": return caps.audioByURL || caps.audioByFragment;
+      case "performers": return caps.performerByURL || caps.performerByName || caps.performerByFragment;
+      default: return false;
+    }
+  });
+
+  // Build unified provider list: StashBox first, then Obscura plugins, then stash scrapers
   const providersForTab: Provider[] = [
     ...stashBoxEndpoints.map((ep) => ({ id: `stashbox:${ep.id}`, name: ep.name, type: "stashbox" as const })),
+    ...pluginsForTab.map((p) => ({ id: `plugin:${p.id}`, name: p.name, type: "scraper" as const })),
     ...scrapersForTab.map((s) => ({ id: `scraper:${s.id}`, name: s.name, type: "scraper" as const })),
   ];
   const totalProviderCount = providersForTab.length;
@@ -412,6 +437,13 @@ export function BulkScrape() {
               disabled={running}
             >
               <option value="">Seek all ({totalProviderCount} sources)</option>
+              {pluginsForTab.length > 0 && (
+                <optgroup label="Obscura Plugins">
+                  {pluginsForTab.map((p) => (
+                    <option key={`plugin:${p.id}`} value={`plugin:${p.id}`}>{p.name}</option>
+                  ))}
+                </optgroup>
+              )}
               {stashBoxEndpoints.length > 0 && (
                 <optgroup label="Stash-Box">
                   {stashBoxEndpoints.map((ep) => (
@@ -419,7 +451,7 @@ export function BulkScrape() {
                   ))}
                 </optgroup>
               )}
-              {totalProviderCount > 0 && (
+              {scrapersForTab.length > 0 && (
                 <optgroup label="Community Scrapers">
                   {scrapersForTab.map((s) => (
                     <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
