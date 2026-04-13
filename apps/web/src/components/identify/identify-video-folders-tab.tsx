@@ -2,7 +2,7 @@
 
 import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
-import { Check, ChevronDown, X, FolderOpen } from "lucide-react";
+import { Check, ChevronDown, Loader2, ScanSearch, X, FolderOpen } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
 import { executePlugin, acceptScrapeResult, rejectScrapeResult } from "../../lib/api";
 import type { ScrapeResult, NormalizedScrapeResult } from "../scrape/types";
@@ -19,6 +19,7 @@ export interface VideoFoldersTabProps {
   setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>;
   expandedIds: Set<string>;
   toggleExpanded: (id: string) => void;
+  onSeekSingle?: (idx: number) => void;
 }
 
 export interface VideoFolderRunProps {
@@ -161,6 +162,43 @@ export async function runVideoFolderIdentify({
   setRunning(false);
 }
 
+/* ─── Single-row seek ─────────────────────────────────────────── */
+
+export async function seekFolderSingle(
+  idx: number,
+  rows: VideoFolderRow[],
+  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
+  pluginList: PluginInfo[],
+) {
+  const row = rows[idx];
+  if (!row || row.status === "accepted" || row.status === "scraping") return;
+
+  setRows((prev) =>
+    prev.map((r, i) => (i === idx ? { ...r, status: "scraping" as const } : r)),
+  );
+
+  try {
+    const { folderResult, matchedProvider } = await seekFolderViaPlugin(row, pluginList);
+    if (folderResult) {
+      setRows((prev) =>
+        prev.map((r, i) =>
+          i === idx ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+        ),
+      );
+    } else {
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "no-result" as const } : r)),
+      );
+    }
+  } catch (err) {
+    setRows((prev) =>
+      prev.map((r, i) =>
+        i === idx ? { ...r, status: "error" as const, error: err instanceof Error ? err.message : "Failed" } : r,
+      ),
+    );
+  }
+}
+
 /* ─── Accept all ──────────────────────────────────────────────── */
 
 export async function acceptAllVideoFolders(
@@ -178,6 +216,7 @@ export function IdentifyVideoFolderRows({
   setRows,
   expandedIds,
   toggleExpanded,
+  onSeekSingle,
 }: VideoFoldersTabProps) {
   function toggleField(idx: number, field: VideoFolderField) {
     setRows((prev) =>
@@ -198,6 +237,12 @@ export function IdentifyVideoFolderRows({
       expanded={expandedIds.has(row.folder.id)}
       onToggleExpand={() => toggleExpanded(row.folder.id)}
       onToggleField={(field) => toggleField(idx, field)}
+      onDismiss={() => {
+        setRows((prev) =>
+          prev.map((r, i) => (i === idx ? { ...r, status: "pending" as const, result: undefined, matchedProvider: undefined, error: undefined } : r))
+        );
+      }}
+      onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
     />
   ));
 }
@@ -209,11 +254,15 @@ function VideoFolderRowCard({
   expanded,
   onToggleExpand,
   onToggleField,
+  onDismiss,
+  onSeekSingle,
 }: {
   row: VideoFolderRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleField: (field: VideoFolderField) => void;
+  onDismiss: () => void;
+  onSeekSingle?: () => void;
 }) {
   return (
     <div>
@@ -256,11 +305,33 @@ function VideoFolderRowCard({
           </div>
         </div>
 
-        {row.status === "accepted" && (
-          <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">
-            Applied
-          </Badge>
-        )}
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {(row.status === "pending" || row.status === "no-result" || row.status === "error") && onSeekSingle && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSeekSingle(); }}
+              className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
+              title="Identify this folder"
+            >
+              <ScanSearch className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {row.status === "scraping" && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-accent" />
+          )}
+          {row.status === "found" && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+              className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+              title="Dismiss result"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {row.status === "accepted" && (
+            <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>
+          )}
+        </div>
 
         <ChevronDown
           className={cn(

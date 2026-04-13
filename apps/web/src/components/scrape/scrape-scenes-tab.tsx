@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@obscura/ui/primitives/badge";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
-import { Check, X, ChevronDown } from "lucide-react";
+import { Check, X, ChevronDown, ScanSearch, Loader2 } from "lucide-react";
 import {
   scrapeScene,
   identifyViaStashBox,
@@ -144,7 +144,10 @@ export function ScrapeSceneRows({
   setSceneRows,
   expandedIds,
   toggleExpanded,
-}: Pick<ScenesTabProps, "sceneRows" | "setSceneRows" | "expandedIds" | "toggleExpanded">) {
+  onSeekSingle,
+}: Pick<ScenesTabProps, "sceneRows" | "setSceneRows" | "expandedIds" | "toggleExpanded"> & {
+  onSeekSingle?: (idx: number) => void;
+}) {
   function toggleSceneField(idx: number, field: SceneField) {
     setSceneRows((prev) =>
       prev.map((r, i) => {
@@ -189,6 +192,12 @@ export function ScrapeSceneRows({
       onToggleExpand={() => toggleExpanded(row.scene.id)}
       onAccept={() => void acceptSceneRow(sceneRows, idx, setSceneRows)}
       onReject={() => void rejectSceneRow(sceneRows, idx, setSceneRows)}
+      onDismiss={() => {
+        setSceneRows((prev) =>
+          prev.map((r, i) => (i === idx ? { ...r, status: "pending", result: undefined, normalized: undefined, matchedScraper: undefined, error: undefined } : r))
+        );
+      }}
+      onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
       onToggleField={(field) => toggleSceneField(idx, field)}
       onTogglePerformer={(name) => toggleSceneExcludePerformer(idx, name)}
       onToggleTag={(name) => toggleSceneExcludeTag(idx, name)}
@@ -283,6 +292,45 @@ export async function runSceneScrape({
   setRunning(false);
 }
 
+/* ─── Single-row seek ─────────────────────────────────────────── */
+
+export async function seekSceneSingle(
+  idx: number,
+  sceneRows: SceneRow[],
+  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>,
+  scraperList: ScraperPackage[],
+  sbEndpoints: StashBoxEndpoint[],
+  pluginList: PluginInfo[] = [],
+) {
+  const row = sceneRows[idx];
+  if (!row || row.status === "accepted" || row.status === "scraping") return;
+
+  setSceneRows((prev) =>
+    prev.map((r, i) => (i === idx ? { ...r, status: "scraping" } : r))
+  );
+
+  try {
+    const { result, normalized, matchedScraper } = await seekScene(row, scraperList, sbEndpoints, pluginList);
+    if (result && normalized) {
+      setSceneRows((prev) =>
+        prev.map((r, i) =>
+          i === idx ? { ...r, status: "found", result, normalized, matchedScraper } : r
+        )
+      );
+    } else {
+      setSceneRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "no-result" } : r))
+      );
+    }
+  } catch (err) {
+    setSceneRows((prev) =>
+      prev.map((r, i) =>
+        i === idx ? { ...r, status: "error", error: err instanceof Error ? err.message : "Failed" } : r
+      )
+    );
+  }
+}
+
 /* ─── Accept / Reject helpers ─────────────────────────────────── */
 
 async function acceptSceneRow(
@@ -341,6 +389,8 @@ function SceneRowCard({
   onToggleExpand,
   onAccept,
   onReject,
+  onDismiss,
+  onSeekSingle,
   onToggleField,
   onTogglePerformer,
   onToggleTag,
@@ -350,6 +400,8 @@ function SceneRowCard({
   onToggleExpand: () => void;
   onAccept: () => void;
   onReject: () => void;
+  onDismiss: () => void;
+  onSeekSingle?: () => void;
   onToggleField: (field: SceneField) => void;
   onTogglePerformer: (name: string) => void;
   onToggleTag: (name: string) => void;
@@ -398,29 +450,43 @@ function SceneRowCard({
           </div>
         </div>
 
-        {/* Actions for found */}
-        {row.status === "found" && (
-          <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Identify single row */}
+          {(row.status === "pending" || row.status === "no-result" || row.status === "error") && onSeekSingle && (
             <button
-              onClick={(e) => { e.stopPropagation(); onAccept(); }}
-              className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
-              title="Accept"
+              onClick={(e) => { e.stopPropagation(); onSeekSingle(); }}
+              className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
+              title="Identify this item"
             >
-              <Check className="h-3.5 w-3.5" />
+              <ScanSearch className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onReject(); }}
-              className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
-              title="Reject"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-
-        {row.status === "accepted" && (
-          <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">Applied</Badge>
-        )}
+          )}
+          {row.status === "scraping" && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-accent" />
+          )}
+          {row.status === "found" && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
+                title="Accept"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+                title="Dismiss result"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+          {row.status === "accepted" && (
+            <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>
+          )}
+        </div>
 
         <ChevronDown
           className={cn(

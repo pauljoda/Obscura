@@ -52,7 +52,7 @@ import type {
 } from "./types";
 import { SCENE_FIELDS, tabEntityLabel } from "./types";
 
-import { ScrapeSceneRows, runSceneScrape, acceptAllScenes } from "./scrape-scenes-tab";
+import { ScrapeSceneRows, runSceneScrape, acceptAllScenes, seekSceneSingle } from "./scrape-scenes-tab";
 import { ScrapePerformerRows, runPerformerScrape, acceptAllPerformers } from "./scrape-performers-tab";
 import { ScrapeStudioRows, runStudioScrape, acceptAllStudios } from "./scrape-studios-tab";
 import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
@@ -60,7 +60,7 @@ import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
 import type { VideoFolderRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
 import { VIDEO_FOLDER_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
-import { IdentifyVideoFolderRows, runVideoFolderIdentify, acceptAllVideoFolders } from "../identify/identify-video-folders-tab";
+import { IdentifyVideoFolderRows, runVideoFolderIdentify, seekFolderSingle, acceptAllVideoFolders } from "../identify/identify-video-folders-tab";
 import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
@@ -193,8 +193,9 @@ export function BulkScrape() {
       // Store installed Obscura plugins (only enabled ones with auth OK)
       setPlugins(pluginsRes.filter((p) => p.enabled));
 
-      // Initialize new entity rows
-      setFolderRows(foldersRes.items.map((folder) => ({
+      // Initialize new entity rows — only top-level folders (not sub-folders like "Season 1")
+      const topLevelFolders = foldersRes.items.filter((f) => !f.parentId);
+      setFolderRows(topLevelFolders.map((folder) => ({
         folder,
         status: "pending" as const,
         selectedFields: new Set(VIDEO_FOLDER_FIELDS),
@@ -581,6 +582,16 @@ export function BulkScrape() {
               setSceneRows={setSceneRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) => {
+                const isPlugin = selectedScraperId.startsWith("plugin:");
+                const isScraper = selectedScraperId.startsWith("scraper:");
+                const isStashBox = selectedScraperId.startsWith("stashbox:");
+                const realId = selectedScraperId.replace(/^(stashbox|scraper|plugin):/, "");
+                const sl = isScraper ? sceneScrapers.filter((s) => s.id === realId) : selectedScraperId === "" ? sceneScrapers : [];
+                const sb = isStashBox ? stashBoxEndpoints.filter((e) => e.id === realId) : selectedScraperId === "" ? stashBoxEndpoints : [];
+                const pl = isPlugin ? pluginsForTab.filter((p) => p.id === realId) : selectedScraperId === "" ? pluginsForTab : [];
+                void seekSceneSingle(idx, sceneRows, setSceneRows, sl, sb, pl);
+              }}
             />
           )}
           {tab === "video-folders" && (
@@ -589,6 +600,12 @@ export function BulkScrape() {
               setRows={setFolderRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) => {
+                const isPlugin = selectedScraperId.startsWith("plugin:");
+                const realId = selectedScraperId.replace(/^plugin:/, "");
+                const pl = isPlugin ? pluginsForTab.filter((p) => p.id === realId) : pluginsForTab;
+                void seekFolderSingle(idx, folderRows, setFolderRows, pl);
+              }}
             />
           )}
           {tab === "galleries" && (
