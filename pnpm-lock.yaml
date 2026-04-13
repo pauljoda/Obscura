@@ -242,6 +242,34 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/plugins:
+    dependencies:
+      '@obscura/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@obscura/db':
+        specifier: workspace:*
+        version: link:../db
+      '@obscura/media-core':
+        specifier: workspace:*
+        version: link:../media-core
+      '@obscura/stash-import':
+        specifier: workspace:*
+        version: link:../stash-import
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
+    devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/stash-import:
     dependencies:
       '@obscura/media-core':

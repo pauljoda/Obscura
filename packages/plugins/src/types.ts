@@ -1,0 +1,312 @@
+/**
+ * Obscura Plugin System — Type definitions.
+ *
+ * Defines the Obscura-native plugin manifest, capabilities,
+ * execution protocol, and normalized result types for all entity types.
+ */
+
+// ─── Plugin Manifest ───────────────────────────────────────────────
+
+export type PluginRuntime = "python" | "typescript" | "stash-compat";
+
+export interface PluginAuthField {
+  key: string;
+  label: string;
+  required: boolean;
+  url?: string;
+}
+
+export interface OscuraPluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  author?: string;
+  description?: string;
+  homepage?: string;
+  isNsfw: boolean;
+  tags?: string[];
+  runtime: PluginRuntime;
+
+  // Runtime-specific fields
+  /** TypeScript: relative path to compiled entry (e.g. "dist/index.js") */
+  entry?: string;
+  /** Python: command + args (e.g. ["python3", "tvdb.py"]) */
+  script?: string[];
+  /** stash-compat: relative path to the stash .yml definition file */
+  stashDefinition?: string;
+  /** Python: sibling packages required (e.g. ["py_common"]) */
+  requires?: string[];
+
+  auth?: PluginAuthField[];
+  capabilities: PluginCapabilities;
+}
+
+// ─── Plugin Capabilities ───────────────────────────────────────────
+
+export interface PluginCapabilities {
+  // Video (scene) identification
+  videoByURL?: boolean;
+  videoByFragment?: boolean;
+  videoByName?: boolean;
+
+  // Folder (series/season) identification
+  folderByName?: boolean;
+  folderByFragment?: boolean;
+  /** Can map a resolved series/season to individual episode ↔ scene mappings */
+  folderCascade?: boolean;
+
+  // Gallery identification
+  galleryByURL?: boolean;
+  galleryByFragment?: boolean;
+
+  // Image identification
+  imageByURL?: boolean;
+
+  // Audio identification
+  audioByURL?: boolean;
+  audioByFragment?: boolean;
+  audioLibraryByName?: boolean;
+
+  // Performer identification
+  performerByURL?: boolean;
+  performerByFragment?: boolean;
+  performerByName?: boolean;
+
+  // Batch support
+  supportsBatch?: boolean;
+}
+
+export const pluginCapabilityKeys: (keyof PluginCapabilities)[] = [
+  "videoByURL",
+  "videoByFragment",
+  "videoByName",
+  "folderByName",
+  "folderByFragment",
+  "folderCascade",
+  "galleryByURL",
+  "galleryByFragment",
+  "imageByURL",
+  "audioByURL",
+  "audioByFragment",
+  "audioLibraryByName",
+  "performerByURL",
+  "performerByFragment",
+  "performerByName",
+  "supportsBatch",
+];
+
+/** Map Obscura action names to Stash action names for the adapter. */
+export const obscuraToStashActionMap: Record<string, string> = {
+  videoByURL: "sceneByURL",
+  videoByFragment: "sceneByFragment",
+  videoByName: "sceneByName",
+  galleryByURL: "galleryByURL",
+  galleryByFragment: "galleryByFragment",
+  performerByURL: "performerByURL",
+  performerByFragment: "performerByFragment",
+  performerByName: "performerByName",
+};
+
+// ─── Plugin Execution Protocol ─────────────────────────────────────
+
+/** Envelope sent to native Python/TS plugins via stdin. */
+export interface PluginExecutionInput {
+  obscura_version: 1;
+  action: string;
+  auth: Record<string, string>;
+  input?: PluginInput;
+  batch?: BatchItem[];
+}
+
+export interface PluginInput {
+  url?: string;
+  title?: string;
+  name?: string;
+  date?: string;
+  details?: string;
+  oshash?: string;
+  checksumMd5?: string;
+  phash?: string;
+  duration?: number;
+  filePath?: string;
+  /** For folder cascade: the external series ID to resolve episodes for. */
+  externalId?: string;
+  seasonNumber?: number;
+}
+
+export interface BatchItem {
+  id: string;
+  input: PluginInput;
+}
+
+/** Envelope returned by native plugins via stdout. */
+export interface PluginExecutionOutput<T = unknown> {
+  ok: boolean;
+  result?: T;
+  results?: Array<{ id: string; result: T | null }>;
+  error?: string;
+}
+
+// ─── OscuraPlugin Interface (for TypeScript plugins) ───────────────
+
+export interface OscuraPlugin {
+  capabilities: PluginCapabilities;
+  execute(
+    action: string,
+    input: PluginInput,
+    auth: Record<string, string>,
+  ): Promise<unknown>;
+  executeBatch?(
+    action: string,
+    items: BatchItem[],
+    auth: Record<string, string>,
+  ): Promise<Array<{ id: string; result: unknown | null }>>;
+}
+
+// ─── Normalized Result Types ───────────────────────────────────────
+
+export interface NormalizedVideoResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  urls: string[];
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+  episodeNumber: number | null;
+  series: NormalizedSeriesRef | null;
+  code: string | null;
+  director: string | null;
+}
+
+export interface NormalizedSeriesRef {
+  name: string;
+  externalId?: string;
+  season?: number;
+  episode?: number;
+}
+
+export interface NormalizedFolderResult {
+  name: string | null;
+  details: string | null;
+  date: string | null;
+  imageUrl: string | null;
+  backdropUrl: string | null;
+  studioName: string | null;
+  tagNames: string[];
+  urls: string[];
+  seriesExternalId?: string;
+  seasonNumber?: number;
+  totalEpisodes?: number;
+  episodeMap?: Record<string, EpisodeMapping>;
+}
+
+export interface EpisodeMapping {
+  episodeNumber: number;
+  seasonNumber: number;
+  title: string | null;
+  date: string | null;
+  details: string | null;
+}
+
+export interface NormalizedGalleryResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  urls: string[];
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+  photographer: string | null;
+}
+
+export interface NormalizedImageResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  urls: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+}
+
+export interface NormalizedAudioTrackResult {
+  title: string | null;
+  artist: string | null;
+  album: string | null;
+  trackNumber: number | null;
+  date: string | null;
+  details: string | null;
+  imageUrl: string | null;
+  urls: string[];
+  tagNames: string[];
+}
+
+export interface NormalizedAudioLibraryResult {
+  name: string | null;
+  artist: string | null;
+  details: string | null;
+  date: string | null;
+  imageUrl: string | null;
+  urls: string[];
+  tagNames: string[];
+  trackCount?: number;
+}
+
+/** Union of all possible plugin result types. */
+export type PluginResult =
+  | NormalizedVideoResult
+  | NormalizedFolderResult
+  | NormalizedGalleryResult
+  | NormalizedImageResult
+  | NormalizedAudioTrackResult
+  | NormalizedAudioLibraryResult;
+
+// ─── Series Search (folder identification stage 1) ─────────────────
+
+export interface SeriesCandidate {
+  externalId: string;
+  title: string;
+  year?: string;
+  network?: string;
+  overview?: string;
+  posterUrl?: string;
+  seasonCount?: number;
+  episodeCount?: number;
+}
+
+// ─── Unified Installed Plugin DTO ──────────────────────────────────
+
+export interface InstalledPluginDto {
+  id: string;
+  pluginId: string;
+  name: string;
+  version: string;
+  runtime: PluginRuntime;
+  isNsfw: boolean;
+  enabled: boolean;
+  capabilities: Record<string, boolean>;
+  sourceIndex: string | null;
+  /** "ok" if all required auth keys are configured, "missing" if not, null if no auth required. */
+  authStatus: "ok" | "missing" | null;
+  authFields?: PluginAuthField[];
+}
+
+// ─── Community Index Entry ─────────────────────────────────────────
+
+export interface PluginIndexEntry {
+  id: string;
+  name: string;
+  version: string;
+  date: string;
+  path: string;
+  sha256: string;
+  runtime: PluginRuntime;
+  isNsfw: boolean;
+  capabilities: Record<string, boolean>;
+  description?: string;
+  author?: string;
+  requires?: string[];
+  installed?: boolean;
+}

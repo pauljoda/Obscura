@@ -1,0 +1,25 @@
+{
+  "name": "@obscura/plugins",
+  "version": "0.19.1-dev",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "tsc --project tsconfig.json --noEmit",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@obscura/contracts": "workspace:*",
+    "@obscura/db": "workspace:*",
+    "@obscura/stash-import": "workspace:*",
+    "@obscura/media-core": "workspace:*",
+    "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.19.17",
+    "typescript": "^5.7.2"
+  }
+}
