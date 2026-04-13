@@ -4,16 +4,171 @@ import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
 import { Check, ChevronDown, X, FolderOpen } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
-import type { VideoFolderRow, VideoFolderField } from "./types";
+import { executePlugin, acceptScrapeResult, rejectScrapeResult } from "../../lib/api";
+import type { ScrapeResult, NormalizedScrapeResult } from "../scrape/types";
+import type { VideoFolderRow, VideoFolderField, NormalizedFolderIdentifyResult } from "./types";
 import { VIDEO_FOLDER_FIELDS } from "./types";
+import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
 
 /* ─── Props ───────────────────────────────────────────────────── */
+
+interface PluginInfo { id: string; name: string }
 
 export interface VideoFoldersTabProps {
   rows: VideoFolderRow[];
   setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>;
   expandedIds: Set<string>;
   toggleExpanded: (id: string) => void;
+}
+
+export interface VideoFolderRunProps {
+  rows: VideoFolderRow[];
+  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>;
+  plugins: PluginInfo[];
+  selectedProviderId: string;
+  autoAccept: boolean;
+  abortRef: React.RefObject<boolean>;
+  setRunning: (running: boolean) => void;
+}
+
+/* ─── Seek via plugin ─────────────────────────────────────────── */
+
+async function seekFolderViaPlugin(
+  row: VideoFolderRow,
+  pluginList: PluginInfo[],
+): Promise<{
+  result?: ScrapeResult;
+  normalized?: NormalizedScrapeResult;
+  folderResult?: NormalizedFolderIdentifyResult;
+  matchedProvider?: string;
+}> {
+  for (const plugin of pluginList) {
+    try {
+      const res = await withTimeout(
+        executePlugin(plugin.id, "folderByName", {
+          name: row.folder.displayTitle || row.folder.title,
+          title: row.folder.displayTitle || row.folder.title,
+        }, {
+          saveResult: true,
+          entityId: row.folder.id,
+        }),
+        SEEK_TIMEOUT_MS * 2, // Give folder lookups a bit more time
+      );
+      if (res.ok && res.result && res.normalized) {
+        // Also extract the full folder result from the raw plugin output
+        const rawResult = (res.result as Record<string, unknown>).rawResult as Record<string, unknown> | undefined;
+        const folderResult: NormalizedFolderIdentifyResult = {
+          name: res.normalized.title,
+          details: res.normalized.details,
+          date: res.normalized.date,
+          imageUrl: res.normalized.imageUrl,
+          backdropUrl: (rawResult?.backdropUrl as string) ?? null,
+          studioName: res.normalized.studioName,
+          tagNames: res.normalized.tagNames ?? [],
+          urls: rawResult?.urls as string[] ?? (res.normalized.url ? [res.normalized.url] : []),
+          seriesExternalId: rawResult?.seriesExternalId as string | undefined,
+          seasonNumber: rawResult?.seasonNumber as number | undefined,
+          totalEpisodes: rawResult?.totalEpisodes as number | undefined,
+        };
+        return {
+          result: res.result as ScrapeResult,
+          normalized: res.normalized,
+          folderResult,
+          matchedProvider: plugin.name,
+        };
+      }
+    } catch {
+      // Timeout or error -- try next
+    }
+  }
+  return {};
+}
+
+/* ─── Run identify ────────────────────────────────────────────── */
+
+export async function runVideoFolderIdentify({
+  rows,
+  setRows,
+  plugins,
+  selectedProviderId,
+  autoAccept,
+  abortRef,
+  setRunning,
+}: VideoFolderRunProps): Promise<void> {
+  setRunning(true);
+  abortRef.current = false;
+
+  const isPlugin = selectedProviderId.startsWith("plugin:");
+  const realId = selectedProviderId.replace(/^plugin:/, "");
+
+  const pluginList = isPlugin
+    ? plugins.filter((p) => p.id === realId)
+    : selectedProviderId === "" ? plugins : [];
+
+  // Reset non-accepted rows
+  setRows((prev) =>
+    prev.map((r) =>
+      r.status === "accepted" ? r : { ...r, status: "pending" as const, result: undefined, error: undefined, matchedProvider: undefined },
+    ),
+  );
+
+  for (let i = 0; i < rows.length; i++) {
+    if (abortRef.current) break;
+    if (rows[i].status === "accepted") continue;
+
+    setRows((prev) =>
+      prev.map((r, idx) => (idx === i ? { ...r, status: "scraping" as const } : r)),
+    );
+
+    try {
+      const { result, folderResult, matchedProvider } = await seekFolderViaPlugin(rows[i], pluginList);
+      if (result && folderResult) {
+        if (autoAccept && result.id) {
+          try {
+            await acceptScrapeResult(result.id);
+            setRows((prev) =>
+              prev.map((r, idx) =>
+                idx === i ? { ...r, status: "accepted" as const, result: folderResult, matchedProvider } : r,
+              ),
+            );
+          } catch {
+            setRows((prev) =>
+              prev.map((r, idx) =>
+                idx === i ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+              ),
+            );
+          }
+        } else {
+          setRows((prev) =>
+            prev.map((r, idx) =>
+              idx === i ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+            ),
+          );
+        }
+      } else {
+        setRows((prev) =>
+          prev.map((r, idx) => (idx === i ? { ...r, status: "no-result" as const } : r)),
+        );
+      }
+    } catch (err) {
+      setRows((prev) =>
+        prev.map((r, idx) =>
+          idx === i ? { ...r, status: "error" as const, error: err instanceof Error ? err.message : "Failed" } : r,
+        ),
+      );
+    }
+  }
+  setRunning(false);
+}
+
+/* ─── Accept all ──────────────────────────────────────────────── */
+
+export async function acceptAllVideoFolders(
+  rows: VideoFolderRow[],
+  _setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
+): Promise<void> {
+  // For now, folder accept requires the scrape_result ID — we'd need to store it on the row
+  // This will be implemented with the full folder metadata apply logic
 }
 
 /* ─── Rows renderer ───────────────────────────────────────────── */
@@ -86,7 +241,7 @@ function VideoFolderRowCard({
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-text-disabled text-[0.65rem]">
-              {row.folder.directSceneCount} videos
+              {row.folder.directSceneCount} video{row.folder.directSceneCount !== 1 ? "s" : ""}
             </span>
             {row.folder.studioName && (
               <span className="text-text-accent text-[0.65rem]">
@@ -141,7 +296,7 @@ function VideoFolderRowCard({
                 {row.result.date && (
                   <ToggleableField
                     field="date"
-                    label="Date"
+                    label="First Aired"
                     value={row.result.date}
                     enabled={row.selectedFields.has("date")}
                     onToggle={() => onToggleField("date")}
@@ -150,19 +305,19 @@ function VideoFolderRowCard({
                 {row.result.studioName && (
                   <ToggleableField
                     field="studio"
-                    label="Studio / Network"
+                    label="Network"
                     value={row.result.studioName}
                     enabled={row.selectedFields.has("studio")}
                     onToggle={() => onToggleField("studio")}
                   />
                 )}
-                {row.result.seasonNumber != null && (
+                {row.result.urls.length > 0 && (
                   <ToggleableField
-                    field="seasonNumber"
-                    label="Season"
-                    value={String(row.result.seasonNumber)}
-                    enabled={row.selectedFields.has("seasonNumber")}
-                    onToggle={() => onToggleField("seasonNumber")}
+                    field="url"
+                    label="URL"
+                    value={row.result.urls[0]}
+                    enabled={row.selectedFields.has("url")}
+                    onToggle={() => onToggleField("url")}
                   />
                 )}
               </div>
@@ -171,13 +326,21 @@ function VideoFolderRowCard({
                   {row.result.details}
                 </div>
               )}
+              {row.result.tagNames.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {row.result.tagNames.map((tag) => (
+                    <span key={tag} className="tag-chip tag-chip-default text-[0.55rem]">{tag}</span>
+                  ))}
+                </div>
+              )}
 
-              {/* Episode cascade button placeholder */}
-              {row.result.seriesExternalId && row.wizardStep === "idle" && (
-                <div className="pt-2">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-accent border border-border-accent/40 hover:bg-accent-950/50 transition-all">
-                    Cascade to episodes ({row.result.totalEpisodes ?? "?"})
-                  </button>
+              {/* Series info */}
+              {row.result.seriesExternalId && (
+                <div className="flex items-center gap-2 pt-1 text-[0.65rem] text-text-disabled font-mono">
+                  {row.result.seriesExternalId}
+                  {row.result.totalEpisodes != null && (
+                    <span> · {row.result.totalEpisodes} episodes</span>
+                  )}
                 </div>
               )}
             </div>
@@ -192,19 +355,4 @@ function VideoFolderRowCard({
       )}
     </div>
   );
-}
-
-/* ─── Scrape runner (placeholder) ─────────────────────────────── */
-
-export async function runVideoFolderIdentify(
-  _props: { rows: VideoFolderRow[] },
-): Promise<void> {
-  // Will be implemented when plugin execution is wired
-}
-
-export async function acceptAllVideoFolders(
-  _rows: VideoFolderRow[],
-  _setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
-): Promise<void> {
-  // Will be implemented when plugin execution is wired
 }

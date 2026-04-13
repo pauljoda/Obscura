@@ -60,7 +60,7 @@ import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
 import type { VideoFolderRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
 import { VIDEO_FOLDER_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
-import { IdentifyVideoFolderRows } from "../identify/identify-video-folders-tab";
+import { IdentifyVideoFolderRows, runVideoFolderIdentify, acceptAllVideoFolders } from "../identify/identify-video-folders-tab";
 import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
@@ -310,20 +310,31 @@ export function BulkScrape() {
   function handleRun() {
     if (tab === "scenes") {
       void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers, plugins: pluginsForTab });
+    } else if (tab === "video-folders") {
+      void runVideoFolderIdentify({
+        rows: folderRows,
+        setRows: setFolderRows,
+        plugins: pluginsForTab,
+        selectedProviderId: selectedScraperId,
+        autoAccept,
+        abortRef,
+        setRunning,
+      });
     } else if (tab === "performers") {
       void runPerformerScrape({ ...sharedTabProps, perfRows, setPerfRows, perfScrapers });
     } else if (tab === "studios") {
       void runStudioScrape({ ...sharedTabProps, studioRows, setStudioRows });
-    } else {
+    } else if (tab === "tags") {
       void runTagScrape({ ...sharedTabProps, tagRows, setTagRows });
     }
   }
 
   function handleAcceptAll() {
     if (tab === "scenes") void acceptAllScenes(sceneRows, setSceneRows);
+    else if (tab === "video-folders") void acceptAllVideoFolders(folderRows, setFolderRows);
     else if (tab === "performers") void acceptAllPerformers(perfRows, setPerfRows);
     else if (tab === "studios") void acceptAllStudios(studioRows, setStudioRows);
-    else void acceptAllTags(tagRows, setTagRows);
+    else if (tab === "tags") void acceptAllTags(tagRows, setTagRows);
   }
 
   /* ─── Render ─────────────────────────────────────────────────── */
