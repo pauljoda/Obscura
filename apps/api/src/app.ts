@@ -23,6 +23,7 @@ import { audioLibrariesRoutes } from "./routes/audio-libraries";
 import { audioTracksRoutes } from "./routes/audio-tracks";
 import { audioStreamRoutes } from "./routes/audio-stream";
 import { collectionsRoutes } from "./routes/collections";
+import { pluginsRoutes } from "./routes/plugins";
 import { configureDatabase } from "./db";
 import {
   configureQueueAdapter,
@@ -86,6 +87,7 @@ export async function buildApiApp(
   await app.register(audioTracksRoutes);
   await app.register(audioStreamRoutes);
   await app.register(collectionsRoutes);
+  await app.register(pluginsRoutes);
 
   return app;
 }

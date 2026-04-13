@@ -92,6 +92,16 @@ export const apiRoutes = {
   collectionPreviewRules: "/collections/preview-rules",
   collectionCover: "/collections/:id/cover",
   collectionCoverAsset: "/assets/collections/:id/cover",
+  // Plugins
+  pluginPackages: "/plugins/packages",
+  pluginPackageDetail: "/plugins/packages/:id",
+  pluginPackageAuth: "/plugins/packages/:id/auth",
+  pluginPackageAuthKey: "/plugins/packages/:id/auth/:key",
+  pluginsIndex: "/plugins/index",
+  pluginExecute: "/plugins/:id/execute",
+  pluginBatch: "/plugins/batch",
+  pluginBatchStatus: "/plugins/batch/:jobId",
+  pluginFolderCascade: "/plugins/:id/folder-cascade",
 } as const;
 
 export const API_BASE_URL =
@@ -226,6 +236,12 @@ export const queueDefinitions = [
     name: "collection-refresh",
     label: "Collection Refresh",
     description: "Re-evaluates dynamic collection rules and updates membership",
+    concurrency: 1,
+  },
+  {
+    name: "plugin-batch-identify",
+    label: "Plugin Batch Identify",
+    description: "Batch metadata identification via Obscura plugins",
     concurrency: 1,
   },
 ] as const;
@@ -501,6 +517,8 @@ export interface SceneFolderBreadcrumbDto {
 
 export interface SceneFolderDetailDto extends SceneFolderListItemDto {
   details: string | null;
+  urls: string[];
+  externalSeriesId: string | null;
   studio: { id: string; name: string } | null;
   performers: {
     id: string;
@@ -698,6 +716,8 @@ export interface ScraperPackageDto {
   sha256: string | null;
   capabilities: Record<string, boolean> | null;
   enabled: boolean;
+  isNsfw: boolean;
+  pluginType: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -716,9 +736,12 @@ export interface CommunityIndexEntryDto {
 
 export interface ScrapeResultDto {
   id: string;
-  sceneId: string;
+  sceneId: string | null;
+  entityType: string;
+  entityId: string | null;
   scraperPackageId: string | null;
   stashBoxEndpointId: string | null;
+  pluginPackageId: string | null;
   action: string;
   matchType: string | null;
   status: "pending" | "accepted" | "rejected";
@@ -727,10 +750,14 @@ export interface ScrapeResultDto {
   proposedDate: string | null;
   proposedDetails: string | null;
   proposedUrl: string | null;
+  proposedUrls: string[] | null;
   proposedStudioName: string | null;
   proposedPerformerNames: string[] | null;
   proposedTagNames: string[] | null;
   proposedImageUrl: string | null;
+  proposedEpisodeNumber: number | null;
+  proposedFolderResult: unknown | null;
+  proposedAudioResult: unknown | null;
   appliedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -743,6 +770,48 @@ export interface ScraperCapabilities {
   performerByURL: boolean;
   performerByName: boolean;
   performerByFragment: boolean;
+}
+
+// ─── Plugin DTOs ───────────────────────────────────────────────
+
+export interface PluginPackageDto {
+  id: string;
+  pluginId: string;
+  name: string;
+  version: string;
+  runtime: string;
+  installPath: string;
+  sha256: string | null;
+  isNsfw: boolean;
+  capabilities: Record<string, boolean> | null;
+  enabled: boolean;
+  sourceIndex: string | null;
+  authStatus: "ok" | "missing" | null;
+  authFields?: Array<{
+    key: string;
+    label: string;
+    required: boolean;
+    url?: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PluginIndexEntryDto {
+  id: string;
+  name: string;
+  version: string;
+  date: string;
+  path: string;
+  sha256: string;
+  runtime: string;
+  isNsfw: boolean;
+  capabilities: Record<string, boolean>;
+  description?: string;
+  author?: string;
+  requires?: string[];
+  installed?: boolean;
+  installedVersion?: string;
 }
 
 // ─── Stash-Box DTOs ─────────────────────────────────────────────
@@ -1285,6 +1354,8 @@ export interface SceneDetailDto extends SceneListItemDto {
   resumeTime: number | null;
   lastPlayedAt: string | null;
   url: string | null;
+  urls: string[];
+  episodeNumber: number | null;
   studio: { id: string; name: string; url: string | null } | null;
   markers: SceneMarkerDto[];
   subtitleTracks: SceneSubtitleTrackDto[];

@@ -805,6 +805,12 @@ export async function scrapersRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: "Result already applied" });
     }
 
+    // The legacy accept endpoint only handles scene results
+    if (!result.sceneId) {
+      return reply.code(400).send({ error: "This result has no scene — use the plugin accept endpoint" });
+    }
+    const sceneId = result.sceneId;
+
     // Determine which fields to apply (all if not specified)
     const fieldsToApply = new Set(
       body.fields ?? [
@@ -901,7 +907,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
       await tx
         .update(scenes)
         .set(sceneUpdate)
-        .where(eq(scenes.id, result.sceneId));
+        .where(eq(scenes.id, sceneId));
 
       // Performers: find or create, then link — also apply scraped metadata
       const excludedPerformers = new Set((body.excludePerformers ?? []).map((n) => n.toLowerCase()));
@@ -990,7 +996,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
           await tx
             .insert(scenePerformers)
-            .values({ sceneId: result.sceneId, performerId })
+            .values({ sceneId, performerId })
             .onConflictDoNothing();
         }
 
@@ -1000,7 +1006,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
             SELECT count(*) FROM scene_performers WHERE performer_id = performers.id
           )
           WHERE id IN (
-            SELECT performer_id FROM scene_performers WHERE scene_id = ${result.sceneId}
+            SELECT performer_id FROM scene_performers WHERE scene_id = ${sceneId}
           )
         `);
       }
@@ -1025,7 +1031,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
           await tx
             .insert(sceneTags)
-            .values({ sceneId: result.sceneId, tagId })
+            .values({ sceneId, tagId })
             .onConflictDoNothing();
         }
 
@@ -1035,7 +1041,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
             SELECT count(*) FROM scene_tags WHERE tag_id = tags.id
           )
           WHERE id IN (
-            SELECT tag_id FROM scene_tags WHERE scene_id = ${result.sceneId}
+            SELECT tag_id FROM scene_tags WHERE scene_id = ${sceneId}
           )
         `);
       }
@@ -1054,14 +1060,14 @@ export async function scrapersRoutes(app: FastifyInstance) {
             if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
             buffer = Buffer.from(await imgRes.arrayBuffer());
           }
-          const genDir = getGeneratedSceneDir(result.sceneId);
+          const genDir = getGeneratedSceneDir(sceneId);
           await mkdir(genDir, { recursive: true });
           await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
-          const assetUrl = `/assets/scenes/${result.sceneId}/thumb-custom`;
+          const assetUrl = `/assets/scenes/${sceneId}/thumb-custom`;
           await tx
             .update(scenes)
             .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
-            .where(eq(scenes.id, result.sceneId));
+            .where(eq(scenes.id, sceneId));
         } catch {
           // Image download failed — non-fatal
         }
@@ -1079,7 +1085,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
             .insert(stashIds)
             .values({
               entityType: "scene",
-              entityId: result.sceneId,
+              entityId: sceneId,
               stashBoxEndpointId: result.stashBoxEndpointId,
               stashId: remoteStashId,
             })
@@ -1098,7 +1104,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
         .where(eq(scrapeResults.id, id));
     });
 
-    return { ok: true, sceneId: result.sceneId };
+    return { ok: true, sceneId };
   });
 
   // ─── POST /scrapers/results/:id/reject ──────────────────────────

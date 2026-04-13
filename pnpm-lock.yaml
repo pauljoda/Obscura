@@ -65,6 +65,9 @@ importers:
       '@obscura/media-core':
         specifier: workspace:*
         version: link:../../packages/media-core
+      '@obscura/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins
       '@obscura/stash-import':
         specifier: workspace:*
         version: link:../../packages/stash-import
