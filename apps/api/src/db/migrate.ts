@@ -111,6 +111,78 @@ async function columnExists(
 }
 
 /**
+ * Replay migration 0000 (the baseline) in idempotent form.
+ *
+ * Push-managed installs could be frozen at any point in the pre-migration
+ * timeline, so they may have an arbitrary *subset* of the baseline tables —
+ * one real-world install had `library_roots`, `library_settings`, and
+ * `scene_markers` but no `scene_subtitles`. Checking "does library_roots
+ * exist?" is not enough to conclude 0000 is applied; we have to actually
+ * make sure every table/constraint/index from 0000 is present.
+ *
+ * Strategy: split 0000_initial.sql on drizzle's `--> statement-breakpoint`
+ * markers and rewrite each statement to be safe to re-run:
+ *
+ *   - `CREATE TABLE "x" (...)` → `CREATE TABLE IF NOT EXISTS "x" (...)`
+ *   - `CREATE [UNIQUE] INDEX ...` → `CREATE [UNIQUE] INDEX IF NOT EXISTS ...`
+ *   - `ALTER TABLE ... ADD CONSTRAINT ...` → wrapped in a DO block that
+ *     swallows `duplicate_object` (constraint already exists),
+ *     `undefined_table`, and `undefined_column` (defensive — in case the
+ *     install is even weirder than we expect).
+ *
+ * **Caveat.** `CREATE TABLE IF NOT EXISTS` does not reconcile columns on an
+ * already-existing table. If a legacy install has a table with fewer columns
+ * than 0000 defines, this function can't add the missing columns — later
+ * migrations that reference those columns may still fail. In practice,
+ * push installs were generated from the same `schema.ts` family that
+ * produced 0000, so missing-column scenarios are rare; missing-table is the
+ * realistic failure mode we've seen.
+ */
+async function healBaseline(client: SqlClient): Promise<void> {
+  const sqlPath = path.join(MIGRATIONS_FOLDER, "0000_initial.sql");
+  const raw = await readFile(sqlPath, "utf8");
+
+  const statements = raw
+    .split("--> statement-breakpoint")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  for (const rawStmt of statements) {
+    // Strip the trailing semicolon so we can safely compose wrappers.
+    const stmt = rawStmt.replace(/;\s*$/, "");
+
+    if (/^CREATE TABLE\b/i.test(stmt)) {
+      const rewritten = stmt.replace(
+        /^CREATE TABLE\b/i,
+        "CREATE TABLE IF NOT EXISTS",
+      );
+      await client.unsafe(rewritten);
+      continue;
+    }
+
+    if (/^CREATE (UNIQUE )?INDEX\b/i.test(stmt)) {
+      const rewritten = stmt.replace(
+        /^CREATE (UNIQUE )?INDEX\b/i,
+        (_m, unique: string | undefined) =>
+          `CREATE ${unique ?? ""}INDEX IF NOT EXISTS`,
+      );
+      await client.unsafe(rewritten);
+      continue;
+    }
+
+    if (/^ALTER TABLE .+ ADD CONSTRAINT\b/i.test(stmt)) {
+      const wrapped = `DO $$ BEGIN ${stmt}; EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END $$;`;
+      await client.unsafe(wrapped);
+      continue;
+    }
+
+    throw new Error(
+      `[obscura migrate] healBaseline: unsupported statement shape in 0000_initial.sql — ${stmt.slice(0, 120)}`,
+    );
+  }
+}
+
+/**
  * For each drizzle journal entry, a small introspection check that returns
  * `true` iff the migration's schema is already present in the live database.
  *
@@ -399,17 +471,34 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
       ) AS exists
     `;
 
-    if (hasCore && !hasMigrationsTable) {
-      console.log(
-        "[obscura migrate] Legacy push-managed install detected — applying bridge deltas",
-      );
+    // ── Heal the 0000 baseline ──────────────────────────────────────
+    // A push-managed install may have only a *subset* of the baseline
+    // tables (e.g. `library_roots` + `library_settings` but not
+    // `scene_subtitles`) depending on when its `schema.ts` snapshot was
+    // taken. Idempotently re-run 0000's CREATE TABLE / ADD CONSTRAINT /
+    // CREATE INDEX statements so every baseline object exists before
+    // anything else touches the schema.
+    //
+    // This runs on every boot when core tables are present — including
+    // installs that are already bridged but might still have holes
+    // (e.g. an install that was bridged under the previous whole-journal
+    // seeding logic and whose __drizzle_migrations row for 0000 lied
+    // about the live schema). On a healthy install it's a fast series
+    // of IF NOT EXISTS no-ops.
+    if (hasCore) {
+      await healBaseline(client);
 
-      // ── Pre-baseline deltas ─────────────────────────────────────────
+      // ── Pre-baseline column deltas ──────────────────────────────────
       // Push-only schema tweaks that were never captured in a migration
       // file. Their purpose is to align the live schema with migration
-      // 0000 (the baseline) so the bridge can honestly seed 0000 as
-      // applied. Every statement is guarded with IF (NOT) EXISTS so the
-      // bridge is safe to re-run — no transaction needed.
+      // 0000 (the baseline). `healBaseline` above handles missing
+      // tables, but it can't reconcile columns on tables that already
+      // exist — these deltas add/drop such columns idempotently.
+      //
+      // These run on every boot (not just inside the bridge block) so
+      // that installs which were already bridged but still carry column
+      // drift pick up the fix. Every statement is IF (NOT) EXISTS
+      // guarded, so it's a no-op on healthy installs.
       //
       // Rules for adding new entries here:
       //   - Only add deltas whose final state is reflected in migration
@@ -432,6 +521,16 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
         ALTER TABLE scene_markers
         DROP COLUMN IF EXISTS primary_tag_id
       `;
+
+      console.log(
+        "[obscura migrate] Baseline heal complete — 0000 schema ensured",
+      );
+    }
+
+    if (hasCore && !hasMigrationsTable) {
+      console.log(
+        "[obscura migrate] Legacy push-managed install detected — seeding drizzle journal",
+      );
 
       // ── Detect how far the install has actually progressed ────────
       // The older bridge seeded every journal entry as applied, which
