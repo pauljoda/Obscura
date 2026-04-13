@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Command palette ESC hint uses the shared `.kbd` keyboard style.
 - Entity labels now use a centralized terminology module, ensuring consistent “Actor”/”Video”/”Studio”/”Tag” naming across all pages.
 - Route loading animation updated to concentric square ripples with a pulsing core glow field around the brass LED.
+- API and worker startup are now split into explicit app/runtime builders plus thin server entrypoints, so tests can instantiate them without opening sockets, running migrations, or starting background loops at import time.
 
 ### Added
 
