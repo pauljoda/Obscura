@@ -121,6 +121,7 @@ export async function processLibraryScan(job: Job) {
           date: nfo?.aired ?? null,
           rating: nfo?.rating != null ? normalizeNfoRating(nfo.rating) : null,
           url: nfo?.url ?? null,
+          urls: nfo?.url ? [nfo.url] : [],
           filePath,
           organized: false,
         })
@@ -158,7 +159,10 @@ export async function processLibraryScan(job: Job) {
           const normalized = normalizeNfoRating(nfo.rating);
           if (normalized != null) patch.rating = normalized;
         }
-        if (!current.url && nfo.url) patch.url = nfo.url;
+        if (!current.url && nfo.url) {
+          patch.url = nfo.url;
+          patch.urls = [nfo.url];
+        }
 
         if (Object.keys(patch).length > 0) {
           patch.updatedAt = new Date();

@@ -60,6 +60,10 @@ const processorByQueue: Record<QueueName, (job: JobLike) => Promise<void>> = {
   "library-maintenance": processLibraryMaintenance,
   "extract-subtitles": processExtractSubtitles,
   "collection-refresh": processCollectionRefresh,
+  "plugin-batch-identify": async (_job) => {
+    // TODO: Implement batch identification via Obscura plugins
+    // This will be wired when the plugin execution pipeline is complete.
+  },
 };
 
 function wrapProcessor(
