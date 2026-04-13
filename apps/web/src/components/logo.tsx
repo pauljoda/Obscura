@@ -73,17 +73,17 @@ export function LogoMark({ className, size = 28, alt = "Obscura" }: LogoMarkProp
         fill="url(#ring-fill)"
         stroke={ring.stroke}
         strokeOpacity={ring.strokeOpacity}
-        strokeWidth={mode === "off" ? 2 : 3}
+        strokeWidth={mode === "off" ? 2 : 5}
       />
       {/* Outer glow ring (visible only in non-SFW modes) */}
       {mode !== "off" && (
         <circle
-          cx="256" cy="256" r="222"
+          cx="256" cy="256" r="223"
           fill="none"
           stroke={ring.stroke}
-          strokeOpacity={0.3}
-          strokeWidth={6}
-          style={{ filter: `drop-shadow(0 0 6px ${ring.glowColor})` }}
+          strokeOpacity={0.35}
+          strokeWidth={10}
+          style={{ filter: `drop-shadow(0 0 8px ${ring.glowColor})` }}
         />
       )}
       <circle cx="256" cy="256" r="218" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
