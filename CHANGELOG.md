@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- The Identify page is now visible in SFW mode — NSFW-classified plugins are hidden when NSFW mode is off, but SFW plugins (TVDB, MovieDB, YouTube, MusicBrainz) are always accessible.
+- Plugins page added to the navigation under the Operate section.
 - Logo mark in the sidebar and mobile header now reflects the current content mode: default subtle brass ring in SFW mode, a red outer glow ring in NSFW (show) mode, and a brass accent glow ring in blur mode.
 - Dashboard homepage replaced with a cinematic hero design featuring an auto-rotating carousel of featured scenes, quick-navigation tiles (scenes, performers, studios, tags, galleries, images, audio, folders), and a “New Additions” recent-ingest strip. Empty states display when no media has been scanned yet.
 - Hero carousel uses weighted random selection favoring top-rated and recently-played scenes, with NSFW content filtered client-side based on the current mode.

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { appShellSections } from "@obscura/ui/navigation/app-shell-sections";
 import { cn } from "@obscura/ui/lib/utils";
-import { useNsfw } from "./nsfw/nsfw-context";
 import { appShellNavIconMap } from "./app-shell-nav-icon-map";
 
 interface MobileMoreSheetProps {
@@ -16,7 +15,6 @@ interface MobileMoreSheetProps {
 
 export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
   const pathname = usePathname();
-  const { mode } = useNsfw();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -80,12 +78,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                 {section.kicker}
               </div>
               <ul className="space-y-0.5">
-                {section.items
-                  .filter((item) => {
-                    if (item.href === "/identify" && mode === "off") return false;
-                    return true;
-                  })
-                  .map((item) => {
+                {section.items.map((item) => {
                     const href = item.href as string;
                     const Icon = appShellNavIconMap[item.icon];
                     const isActive =

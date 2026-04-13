@@ -33,7 +33,7 @@ export type {
 
 export type Tab = "scenes" | "performers" | "studios" | "tags" | "phashes";
 
-export const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image"] as const;
+export const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image", "episodeNumber"] as const;
 export type SceneField = typeof SCENE_FIELDS[number];
 
 /** Unified provider that can be either a community scraper or StashBox endpoint */

@@ -9,7 +9,6 @@ import { cn } from "@obscura/ui/lib/utils";
 import { Logo, LogoMark } from "./logo";
 import { ChangelogDialog } from "./changelog-dialog";
 import { APP_VERSION } from "../lib/version";
-import { useNsfw } from "./nsfw/nsfw-context";
 import { appShellNavIconMap } from "./app-shell-nav-icon-map";
 
 interface SidebarProps {
@@ -73,8 +72,6 @@ function SidebarNavItem({ href, label, icon, pathname, isExpanded }: SidebarNavI
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
-  const { mode } = useNsfw();
-
   const isExpanded = !collapsed || hovered;
 
   return (
@@ -144,13 +141,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
             />
             <ul className="space-y-0.5 px-2">
-              {section.items
-                .filter((item) => {
-                  // Hide Identify in SFW mode
-                  if (item.href === "/identify" && mode === "off") return false;
-                  return true;
-                })
-                .map((item) => (
+              {section.items.map((item) => (
                   <SidebarNavItem
                     key={item.href}
                     href={item.href as string}

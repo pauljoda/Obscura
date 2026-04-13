@@ -25,6 +25,7 @@ export const appShellSections = [
     kicker: "Operate",
     items: [
       { label: "Identify", href: "/identify", icon: "scan-search" },
+      { label: "Plugins", href: "/plugins", icon: "puzzle" },
       { label: "Jobs", href: "/jobs", icon: "activity" },
       { label: "Settings", href: "/settings", icon: "settings" },
     ],
