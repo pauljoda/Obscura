@@ -434,6 +434,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
       const input = buildInput(action);
 
       try {
+        app.log.info(`[scrape] ${definition.name} → ${action} input=${JSON.stringify(input).slice(0, 200)}`);
+
         const rawResult = await scrapeScene(
           yamlPath,
           definition,
@@ -444,6 +446,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
         if (!rawResult) {
           errors.push(`${action}: no results`);
+          app.log.info(`[scrape] ${definition.name} → ${action}: returned null (no results)`);
           continue; // Try next action
         }
 
@@ -490,7 +493,9 @@ export async function scrapersRoutes(app: FastifyInstance) {
         return { result, normalized, action, triedActions };
       } catch (err) {
         if (err instanceof ScraperExecutionError) {
-          errors.push(`${action}: ${err.message}`);
+          const detail = err.stderr ? `${err.message}\nstderr: ${err.stderr.slice(0, 500)}` : err.message;
+          errors.push(`${action}: ${detail}`);
+          app.log.warn(`[scrape] ${definition.name} → ${action} error: ${detail}`);
           continue; // Try next action
         }
         throw err;
@@ -498,11 +503,20 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     // All actions exhausted
+    app.log.warn(`[scrape] ${definition.name} exhausted all actions for scene ${scene.id}. Tried: ${triedActions.join(" → ")}`);
     return {
       result: null,
       message: `No results found. Tried: ${triedActions.join(" → ")}`,
       triedActions,
       errors,
+      debug: {
+        scraperName: definition.name,
+        sceneTitle: scene.title,
+        sceneUrl: scene.url,
+        hasOshash: !!scene.oshash,
+        hasMd5: !!scene.checksumMd5,
+        hasPhash: !!scene.phash,
+      },
     };
   });
 
