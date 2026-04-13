@@ -351,6 +351,16 @@ export async function uninstallPlugin(id: string): Promise<{ ok: boolean }> {
   return fetchApi(`/plugins/packages/${id}`, { method: "DELETE" });
 }
 
+export async function acceptPluginResult(
+  resultId: string,
+  fields?: string[],
+): Promise<{ ok: boolean }> {
+  return fetchApi(`/plugins/results/${resultId}/accept`, {
+    method: "POST",
+    body: JSON.stringify({ fields }),
+  });
+}
+
 export async function savePluginAuthKey(
   pluginDbId: string,
   authKey: string,

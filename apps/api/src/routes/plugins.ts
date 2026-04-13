@@ -558,6 +558,94 @@ export async function pluginsRoutes(app: FastifyInstance) {
     });
   });
 
+  // ─── Accept a plugin scrape result for any entity type ───────
+  app.post<{
+    Params: { id: string };
+    Body: { fields?: string[] };
+  }>("/plugins/results/:id/accept", async (req, reply) => {
+    const { id } = req.params;
+
+    const [result] = await db
+      .select()
+      .from(scrapeResults)
+      .where(eq(scrapeResults.id, id))
+      .limit(1);
+
+    if (!result) return reply.code(404).send({ error: "Result not found" });
+    if (result.appliedAt) return reply.code(409).send({ error: "Already applied" });
+
+    const entityId = result.entityId;
+    if (!entityId) return reply.code(400).send({ error: "Result has no entity ID" });
+
+    const fieldsToApply = new Set(req.body.fields ?? [
+      "title", "date", "details", "url", "studio", "tags", "image",
+    ]);
+
+    if (result.entityType === "folder") {
+      // Apply to scene folder
+      const patch: Record<string, unknown> = {};
+      if (fieldsToApply.has("title") && result.proposedTitle) patch.customName = result.proposedTitle;
+      if (fieldsToApply.has("details") && result.proposedDetails) patch.details = result.proposedDetails;
+      if (fieldsToApply.has("date") && result.proposedDate) patch.date = result.proposedDate;
+      if (fieldsToApply.has("studio") && result.proposedStudioName) patch.studioName = result.proposedStudioName;
+      if (fieldsToApply.has("tags") && result.proposedTagNames?.length) patch.tagNames = result.proposedTagNames;
+
+      if (Object.keys(patch).length > 0) {
+        // Use the scene folder service for studio/tag resolution
+        const { updateSceneFolder } = await import("../services/scene-folder.service");
+        await updateSceneFolder(entityId, patch as Parameters<typeof updateSceneFolder>[1]);
+      }
+
+      // Apply direct columns (urls, externalSeriesId) outside the service
+      const directPatch: Record<string, unknown> = {};
+      if (fieldsToApply.has("url") && result.proposedUrls?.length) {
+        directPatch.urls = result.proposedUrls;
+      }
+      const rawResult = result.rawResult as Record<string, unknown> | null;
+      if (rawResult?.seriesExternalId) {
+        directPatch.externalSeriesId = rawResult.seriesExternalId;
+      }
+      if (Object.keys(directPatch).length > 0) {
+        directPatch.updatedAt = new Date();
+        await db.update(schema.sceneFolders).set(directPatch).where(eq(schema.sceneFolders.id, entityId));
+      }
+
+      // Download poster image if provided
+      if (fieldsToApply.has("image") && result.proposedImageUrl) {
+        try {
+          const imgRes = await fetch(result.proposedImageUrl);
+          if (imgRes.ok) {
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            const { setSceneFolderCover } = await import("../services/scene-folder.service");
+            await setSceneFolderCover(entityId, buffer);
+          }
+        } catch {
+          // Image download is best-effort
+        }
+      }
+    } else if (result.entityType === "scene" && result.sceneId) {
+      // For scenes, delegate to the existing accept logic
+      // (this path is a fallback — scenes normally use /scrapers/results/:id/accept)
+      return reply.code(400).send({
+        error: "Use /scrapers/results/:id/accept for scene results",
+      });
+    }
+
+    // Mark as applied
+    await db
+      .update(scrapeResults)
+      .set({ status: "pending", appliedAt: new Date(), updatedAt: new Date() })
+      .where(eq(scrapeResults.id, id));
+
+    // Update status to accepted
+    await db
+      .update(scrapeResults)
+      .set({ status: "accepted", updatedAt: new Date() })
+      .where(eq(scrapeResults.id, id));
+
+    return { ok: true, entityType: result.entityType, entityId };
+  });
+
   // ─── Obscura community plugin index ─────────────────────────
   app.get("/plugins/obscura-index", async (_req, reply) => {
     // In dev, read from local disk path; in production, fetch from remote URL

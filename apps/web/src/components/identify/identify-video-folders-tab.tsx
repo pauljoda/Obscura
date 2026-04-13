@@ -4,8 +4,8 @@ import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
 import { Check, ChevronDown, Loader2, ScanSearch, X, FolderOpen } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
-import { executePlugin, acceptScrapeResult, rejectScrapeResult } from "../../lib/api";
-import type { ScrapeResult, NormalizedScrapeResult } from "../scrape/types";
+import { executePlugin, acceptPluginResult } from "../../lib/api";
+import type { NormalizedScrapeResult } from "../scrape/types";
 import type { VideoFolderRow, VideoFolderField, NormalizedFolderIdentifyResult } from "./types";
 import { VIDEO_FOLDER_FIELDS } from "./types";
 import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
@@ -38,8 +38,7 @@ async function seekFolderViaPlugin(
   row: VideoFolderRow,
   pluginList: PluginInfo[],
 ): Promise<{
-  result?: ScrapeResult;
-  normalized?: NormalizedScrapeResult;
+  scrapeResultId?: string;
   folderResult?: NormalizedFolderIdentifyResult;
   matchedProvider?: string;
 }> {
@@ -53,11 +52,11 @@ async function seekFolderViaPlugin(
           saveResult: true,
           entityId: row.folder.id,
         }),
-        SEEK_TIMEOUT_MS * 2, // Give folder lookups a bit more time
+        SEEK_TIMEOUT_MS * 2,
       );
       if (res.ok && res.result && res.normalized) {
-        // Also extract the full folder result from the raw plugin output
-        const rawResult = (res.result as Record<string, unknown>).rawResult as Record<string, unknown> | undefined;
+        const savedRow = res.result as Record<string, unknown>;
+        const rawResult = savedRow.rawResult as Record<string, unknown> | undefined;
         const folderResult: NormalizedFolderIdentifyResult = {
           name: res.normalized.title,
           details: res.normalized.details,
@@ -72,8 +71,7 @@ async function seekFolderViaPlugin(
           totalEpisodes: rawResult?.totalEpisodes as number | undefined,
         };
         return {
-          result: res.result as ScrapeResult,
-          normalized: res.normalized,
+          scrapeResultId: savedRow.id as string,
           folderResult,
           matchedProvider: plugin.name,
         };
@@ -122,27 +120,27 @@ export async function runVideoFolderIdentify({
     );
 
     try {
-      const { result, folderResult, matchedProvider } = await seekFolderViaPlugin(rows[i], pluginList);
-      if (result && folderResult) {
-        if (autoAccept && result.id) {
+      const { scrapeResultId, folderResult, matchedProvider } = await seekFolderViaPlugin(rows[i], pluginList);
+      if (scrapeResultId && folderResult) {
+        if (autoAccept) {
           try {
-            await acceptScrapeResult(result.id);
+            await acceptPluginResult(scrapeResultId);
             setRows((prev) =>
               prev.map((r, idx) =>
-                idx === i ? { ...r, status: "accepted" as const, result: folderResult, matchedProvider } : r,
+                idx === i ? { ...r, status: "accepted" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
               ),
             );
           } catch {
             setRows((prev) =>
               prev.map((r, idx) =>
-                idx === i ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+                idx === i ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
               ),
             );
           }
         } else {
           setRows((prev) =>
             prev.map((r, idx) =>
-              idx === i ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+              idx === i ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
             ),
           );
         }
@@ -178,11 +176,11 @@ export async function seekFolderSingle(
   );
 
   try {
-    const { folderResult, matchedProvider } = await seekFolderViaPlugin(row, pluginList);
+    const { scrapeResultId, folderResult, matchedProvider } = await seekFolderViaPlugin(row, pluginList);
     if (folderResult) {
       setRows((prev) =>
         prev.map((r, i) =>
-          i === idx ? { ...r, status: "found" as const, result: folderResult, matchedProvider } : r,
+          i === idx ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
         ),
       );
     } else {
@@ -203,10 +201,20 @@ export async function seekFolderSingle(
 
 export async function acceptAllVideoFolders(
   rows: VideoFolderRow[],
-  _setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
+  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
 ): Promise<void> {
-  // For now, folder accept requires the scrape_result ID — we'd need to store it on the row
-  // This will be implemented with the full folder metadata apply logic
+  const found = rows
+    .map((r, i) => ({ row: r, idx: i }))
+    .filter(({ row }) => row.status === "found" && row.scrapeResultId);
+
+  for (const { row, idx } of found) {
+    try {
+      await acceptPluginResult(row.scrapeResultId!, Array.from(row.selectedFields));
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "accepted" as const } : r)),
+      );
+    } catch { /* skip */ }
+  }
 }
 
 /* ─── Rows renderer ───────────────────────────────────────────── */
@@ -237,9 +245,18 @@ export function IdentifyVideoFolderRows({
       expanded={expandedIds.has(row.folder.id)}
       onToggleExpand={() => toggleExpanded(row.folder.id)}
       onToggleField={(field) => toggleField(idx, field)}
+      onAccept={async () => {
+        if (!row.scrapeResultId) return;
+        try {
+          await acceptPluginResult(row.scrapeResultId, Array.from(row.selectedFields));
+          setRows((prev) =>
+            prev.map((r, i) => (i === idx ? { ...r, status: "accepted" as const } : r))
+          );
+        } catch { /* keep as found */ }
+      }}
       onDismiss={() => {
         setRows((prev) =>
-          prev.map((r, i) => (i === idx ? { ...r, status: "pending" as const, result: undefined, matchedProvider: undefined, error: undefined } : r))
+          prev.map((r, i) => (i === idx ? { ...r, status: "pending" as const, result: undefined, scrapeResultId: undefined, matchedProvider: undefined, error: undefined } : r))
         );
       }}
       onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
@@ -254,6 +271,7 @@ function VideoFolderRowCard({
   expanded,
   onToggleExpand,
   onToggleField,
+  onAccept,
   onDismiss,
   onSeekSingle,
 }: {
@@ -261,6 +279,7 @@ function VideoFolderRowCard({
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleField: (field: VideoFolderField) => void;
+  onAccept: () => void;
   onDismiss: () => void;
   onSeekSingle?: () => void;
 }) {
@@ -320,13 +339,22 @@ function VideoFolderRowCard({
             <Loader2 className="h-3.5 w-3.5 animate-spin text-text-accent" />
           )}
           {row.status === "found" && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-              className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
-              title="Dismiss result"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
+                title="Accept"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+                title="Dismiss result"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
           )}
           {row.status === "accepted" && (
             <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>

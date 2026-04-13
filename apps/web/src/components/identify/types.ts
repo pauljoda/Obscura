@@ -98,6 +98,8 @@ export interface VideoFolderRow {
   folder: SceneFolderListItemDto;
   status: RowStatus;
   result?: NormalizedFolderIdentifyResult;
+  /** The scrape_result DB row ID, used for accept/reject */
+  scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
   selectedFields: Set<VideoFolderField>;
