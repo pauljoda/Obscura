@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- Scene folder cards now use the same **poster-shaped** preview frame (2:3) as scene posters and folder headers, so thumbnails read as vertical artwork instead of widescreen crops.
 - **Universal Identification System** — the identify engine is being expanded from NSFW-only scene scraping to a full metadata identification suite covering videos, video folders (TV series), galleries, images, audio libraries, and audio tracks. First-party plugin support for TVDB, MovieDB, YouTube, and MusicBrainz is coming.
 - The homepage is now a cinematic dashboard with a full-width hero carousel showcasing your top-rated scenes, quick-nav tiles for every media type, and a “New Additions” strip of recent scenes and galleries.
 - Back buttons on detail pages now return you to where you came from — folder views, search results, performer pages, and more — instead of always going to the top-level list.
@@ -15,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Scene folder grid tiles (`SceneFolderCard`) use a 2:3 poster aspect ratio for preview media in both compact and default layouts, replacing 16:9 (compact) and 4:3 (default).
 - **Plugins page** — new dedicated `/plugins` page consolidates all metadata provider management. In SFW mode, all Stash-related tabs (Stash Community, StashBox Endpoints) and NSFW-tagged scrapers are hidden — only the Installed and Obscura Community tabs are visible, showing only SFW plugins. The Obscura Community tab reads from the local community plugins repo during development. Three tabs: Installed (with search, capability filtering, enable/disable/remove), Stash Community (full index browser with search, bulk install, SHA-verified downloads), and StashBox Endpoints (full CRUD with connection testing and preset URLs). Replaces the scattered settings/scrapers pages. Settings now links to Plugins instead of embedding StashBox configuration.
 - The Identify page is now visible in SFW mode — NSFW-classified plugins are hidden when NSFW mode is off, but SFW plugins (TVDB, MovieDB, YouTube, MusicBrainz) are always accessible.
 - Plugins page added to the navigation under the Operate section.

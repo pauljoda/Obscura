@@ -27,7 +27,7 @@ export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps)
         previewImages={folder.previewThumbnailPaths
           .map((path) => toApiUrl(path, folder.updatedAt))
           .filter(Boolean) as string[]}
-        className={compact ? "aspect-video" : "aspect-[4/3]"}
+        className="aspect-[2/3]"
       >
         <NsfwShowModeChip
           isNsfw={folder.isNsfw}
