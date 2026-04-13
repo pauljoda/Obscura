@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Collections editor polish.** Saving a new or edited collection now reliably navigates back to the collection view page, and any save failure is surfaced inline instead of leaving you stuck on the form. The tag/performer/studio pickers in the rules builder now hide entries with nothing in the library and show a real usage total (scenes + galleries + images + audio) instead of a scenes-only count that looked like "0 matches" for everything.
 - **Legacy installs now upgrade cleanly.** The startup migrator no longer crashes on older push-managed databases that pre-date recent tables (e.g. `scene_folders`). It now probes the live schema to figure out how far an install has actually progressed and lets the normal migrator apply any missing migrations on top — no database reset required.
 - Scene folder cards now use the same **poster-shaped** preview frame (2:3) as scene posters and folder headers, so thumbnails read as vertical artwork instead of widescreen crops.
 - **Universal Identification System** — the identify engine is being expanded from NSFW-only scene scraping to a full metadata identification suite covering videos, video folders (TV series), galleries, images, audio libraries, and audio tracks. First-party plugin support for TVDB, MovieDB, YouTube, and MusicBrainz is coming.
@@ -44,6 +45,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Collection editor now navigates back to the view page after save. The save handler invalidates the RSC cache via `router.refresh()` before pushing, and surfaces API errors inline on the form so failed saves are no longer silently swallowed.
+- Rules builder chip selectors (tags, performers, studios) now show combined usage counts across scenes, galleries, images, and audio libraries and filter out entries with zero usage, replacing the scenes-only `sceneCount` that displayed "0 matches" for everything non-video. The mapping lives in a new `lib/collection-suggestions.ts` helper shared by the new/edit pages.
 - Legacy push-managed installs that predate recent migrations (e.g. `scene_folders` from migration 0004) no longer crash at boot with `relation "scene_folders" does not exist`. The bridge in `apps/api/src/db/migrate.ts` now probes per-migration sentinels to detect how far the install has actually progressed, seeds only that prefix of the drizzle journal as already-applied, and lets the normal migrator run any remaining migrations on top. The stray `scene_folders.custom_name` pre-baseline delta (which belonged to migration 0005, not the 0000 baseline) has been removed, and `reconcileSchema` now guards its `scene_folders` ALTERs against the table not existing. A new `LEGACY_SCHEMA_SENTINELS` map must be kept in sync whenever a new migration file is added.
 - API scene resolution filtering now uses the shared `buildResolutionConditions` helper instead of a duplicated local implementation.
 - Gallery and library POST endpoints now correctly return HTTP 201 on creation.

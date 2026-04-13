@@ -5,6 +5,11 @@ import {
   fetchPerformers,
   fetchStudios,
 } from "../../../../lib/server-api";
+import {
+  buildPerformerSuggestions,
+  buildStudioSuggestions,
+  buildTagSuggestions,
+} from "../../../../lib/collection-suggestions";
 import { CollectionEditorClient } from "../../../../components/routes/collection-editor-client";
 
 export default async function NewCollectionPage() {
@@ -23,18 +28,11 @@ export default async function NewCollectionPage() {
   return (
     <CollectionEditorClient
       isNew
-      availableTags={tagsResponse.tags.map((t) => ({
-        name: t.name,
-        count: t.sceneCount,
-      }))}
-      availablePerformers={performersResponse.performers.map((p) => ({
-        name: p.name,
-        count: p.sceneCount,
-      }))}
-      availableStudios={studiosResponse.studios.map((s) => ({
-        name: s.name,
-        count: s.sceneCount,
-      }))}
+      availableTags={buildTagSuggestions(tagsResponse.tags)}
+      availablePerformers={buildPerformerSuggestions(
+        performersResponse.performers,
+      )}
+      availableStudios={buildStudioSuggestions(studiosResponse.studios)}
     />
   );
 }

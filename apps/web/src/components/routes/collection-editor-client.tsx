@@ -74,6 +74,7 @@ export function CollectionEditorClient({
 }: CollectionEditorClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [name, setName] = useState(collection?.name ?? "New Collection");
   const [description, setDescription] = useState(
@@ -94,7 +95,9 @@ export function CollectionEditorClient({
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
+      let targetId: string | null = null;
       if (isNew) {
         const dto: CollectionCreateDto = {
           name,
@@ -105,7 +108,7 @@ export function CollectionEditorClient({
           slideshowAutoAdvance,
         };
         const result = await createCollection(dto);
-        router.push(`/collections/${result.id}`);
+        targetId = result.id;
       } else if (collection) {
         const dto: CollectionPatchDto = {
           name,
@@ -116,11 +119,20 @@ export function CollectionEditorClient({
           slideshowAutoAdvance,
         };
         await updateCollection(collection.id, dto);
-        router.push(`/collections/${collection.id}`);
+        targetId = collection.id;
+      }
+
+      if (targetId) {
+        router.refresh();
+        router.push(`/collections/${targetId}`);
+      } else {
+        setIsSaving(false);
       }
     } catch (err) {
       console.error("Save failed:", err);
-    } finally {
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to save collection",
+      );
       setIsSaving(false);
     }
   }, [
@@ -168,6 +180,12 @@ export function CollectionEditorClient({
           {isNew ? "Create" : "Save"}
         </Button>
       </div>
+
+      {saveError && (
+        <div className="px-3 py-2 border border-error/20 bg-error-muted/30 text-[0.78rem] text-error-text">
+          {saveError}
+        </div>
+      )}
 
       {/* Two-column layout on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
