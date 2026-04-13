@@ -3,10 +3,9 @@ import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverVideoFiles,
   fileNameToTitle,
-  normalizeNfoRating,
-  readNfo,
+  readSidecarMetadata,
 } from "@obscura/media-core";
-import { db, scenes, libraryRoots } from "../lib/db.js";
+import { db, scenes, libraryRoots, tags, performers, sceneTags, scenePerformers } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { propagateSceneNsfw } from "../lib/nsfw.js";
 import {
@@ -107,21 +106,21 @@ export async function processLibraryScan(job: Job) {
 
     let scene = existing;
 
-    // Check for NFO sidecar metadata
-    const nfo = await readNfo(filePath);
+    // Check for sidecar metadata (NFO + JSON/.info.json)
+    const sidecar = await readSidecarMetadata(filePath);
 
     if (!scene) {
-      const title = nfo?.title || fileNameToTitle(filePath);
+      const title = sidecar?.title || fileNameToTitle(filePath);
 
       [scene] = await db
         .insert(scenes)
         .values({
           title,
-          details: nfo?.plot ?? null,
-          date: nfo?.aired ?? null,
-          rating: nfo?.rating != null ? normalizeNfoRating(nfo.rating) : null,
-          url: nfo?.url ?? null,
-          urls: nfo?.url ? [nfo.url] : [],
+          details: sidecar?.details ?? null,
+          date: sidecar?.date ?? null,
+          rating: sidecar?.rating ?? null,
+          url: sidecar?.url ?? null,
+          urls: sidecar?.urls ?? [],
           filePath,
           organized: false,
         })
@@ -138,8 +137,8 @@ export async function processLibraryScan(job: Job) {
           spritePath: scenes.spritePath,
           trickplayVttPath: scenes.trickplayVttPath,
         });
-    } else if (nfo) {
-      // Enrich existing scene with NFO data for any fields that are currently empty
+    } else if (sidecar) {
+      // Enrich existing scene with sidecar data for any fields that are currently empty
       const [current] = await db
         .select({
           details: scenes.details,
@@ -153,15 +152,14 @@ export async function processLibraryScan(job: Job) {
 
       if (current) {
         const patch: Record<string, unknown> = {};
-        if (!current.details && nfo.plot) patch.details = nfo.plot;
-        if (!current.date && nfo.aired) patch.date = nfo.aired;
-        if (current.rating == null && nfo.rating != null) {
-          const normalized = normalizeNfoRating(nfo.rating);
-          if (normalized != null) patch.rating = normalized;
+        if (!current.details && sidecar.details) patch.details = sidecar.details;
+        if (!current.date && sidecar.date) patch.date = sidecar.date;
+        if (current.rating == null && sidecar.rating != null) {
+          patch.rating = sidecar.rating;
         }
-        if (!current.url && nfo.url) {
-          patch.url = nfo.url;
-          patch.urls = [nfo.url];
+        if (!current.url && sidecar.url) {
+          patch.url = sidecar.url;
+          patch.urls = sidecar.urls ?? [sidecar.url];
         }
 
         if (Object.keys(patch).length > 0) {
@@ -169,6 +167,11 @@ export async function processLibraryScan(job: Job) {
           await db.update(scenes).set(patch).where(eq(scenes.id, scene.id));
         }
       }
+    }
+
+    // Link tags and performers from sidecar metadata
+    if (sidecar?.tags?.length || sidecar?.performers?.length) {
+      await linkSidecarMetadata(scene.id, sidecar.tags ?? [], sidecar.performers ?? []);
     }
 
     // Propagate isNsfw: library root flag takes precedence, then relation-based
@@ -276,4 +279,58 @@ export async function processLibraryScan(job: Job) {
     by: "library-scan",
     label: `Queued during ${root.label} scan`,
   });
+}
+
+/**
+ * Find-or-create tags and performers from sidecar metadata and link them to a scene.
+ * Idempotent — skips links that already exist.
+ */
+async function linkSidecarMetadata(
+  sceneId: string,
+  tagNames: string[],
+  performerNames: string[],
+) {
+  // Link tags
+  for (const name of tagNames) {
+    try {
+      const [existing] = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(eq(tags.name, name))
+        .limit(1);
+
+      const tagId = existing?.id ?? (
+        await db.insert(tags).values({ name }).returning({ id: tags.id })
+      )[0].id;
+
+      await db
+        .insert(sceneTags)
+        .values({ sceneId, tagId })
+        .onConflictDoNothing();
+    } catch {
+      // Skip on conflict or error — don't fail the scan for metadata linking
+    }
+  }
+
+  // Link performers
+  for (const name of performerNames) {
+    try {
+      const [existing] = await db
+        .select({ id: performers.id })
+        .from(performers)
+        .where(eq(performers.name, name))
+        .limit(1);
+
+      const performerId = existing?.id ?? (
+        await db.insert(performers).values({ name }).returning({ id: performers.id })
+      )[0].id;
+
+      await db
+        .insert(scenePerformers)
+        .values({ sceneId, performerId })
+        .onConflictDoNothing();
+    } catch {
+      // Skip on conflict or error
+    }
+  }
 }

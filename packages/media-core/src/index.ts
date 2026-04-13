@@ -403,6 +403,7 @@ export function getSidecarPaths(videoFilePath: string) {
     sprite: path.join(dir, `${stem}-sprite.jpg`),
     trickplayVtt: path.join(dir, `${stem}-trickplay.vtt`),
     nfo: path.join(dir, `${stem}.nfo`),
+    infoJson: path.join(dir, `${stem}.info.json`),
   };
 }
 
@@ -479,6 +480,23 @@ export interface NfoMetadata {
   runtime?: number;
   duration?: string;
   url?: string;
+}
+
+/**
+ * Unified sidecar metadata — superset of NfoMetadata with additional fields
+ * that JSON sidecars (yt-dlp .info.json, etc.) can provide.
+ */
+export interface SidecarMetadata {
+  title?: string;
+  details?: string;
+  date?: string;
+  studio?: string;
+  rating?: number;
+  url?: string;
+  urls?: string[];
+  tags?: string[];
+  performers?: string[];
+  duration?: number;
 }
 
 function xmlEscape(text: string): string {
@@ -559,6 +577,262 @@ export async function readNfo(videoFilePath: string): Promise<NfoMetadata | null
   } catch {
     return null;
   }
+}
+
+/**
+ * Read a JSON sidecar file (e.g. yt-dlp .info.json) next to a video file.
+ *
+ * Looks for `<stem>.info.json` first, then `<stem>.json`.
+ * Maps common fields from yt-dlp and other download tools to SidecarMetadata.
+ */
+export async function readSidecarJson(
+  videoFilePath: string,
+): Promise<SidecarMetadata | null> {
+  const sidecar = getSidecarPaths(videoFilePath);
+  const dir = path.dirname(videoFilePath);
+  const stem = path.basename(videoFilePath, path.extname(videoFilePath));
+
+  // Try .info.json first (yt-dlp convention), then .json
+  const candidates = [sidecar.infoJson, path.join(dir, `${stem}.json`)];
+
+  let raw: string | null = null;
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      try {
+        raw = await readFile(candidate, "utf8");
+        break;
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  }
+
+  if (!raw) return null;
+
+  try {
+    const json = JSON.parse(raw);
+    if (!json || typeof json !== "object") return null;
+
+    return parseSidecarJson(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a generic JSON sidecar into SidecarMetadata.
+ * Handles yt-dlp format, as well as generic field names.
+ */
+function parseSidecarJson(json: Record<string, unknown>): SidecarMetadata {
+  const result: SidecarMetadata = {};
+
+  // Title: yt-dlp uses "title" or "fulltitle"
+  const title = firstString(json, "title", "fulltitle");
+  if (title) result.title = title;
+
+  // Details/description
+  const details = firstString(json, "description", "plot", "synopsis");
+  if (details) result.details = details;
+
+  // Date: yt-dlp uses "upload_date" (YYYYMMDD format) or "release_date"
+  const uploadDate = firstString(json, "upload_date", "release_date");
+  if (uploadDate) {
+    result.date = normalizeSidecarDate(uploadDate);
+  } else {
+    const dateStr = firstString(json, "date", "aired");
+    if (dateStr) result.date = normalizeSidecarDate(dateStr);
+  }
+
+  // Studio/uploader: yt-dlp uses "uploader", "channel", "creator"
+  const studio = firstString(json, "uploader", "channel", "creator", "studio", "artist");
+  if (studio) result.studio = studio;
+
+  // URL: yt-dlp uses "webpage_url", also check "url" (but skip stream URLs)
+  const webpageUrl = firstString(json, "webpage_url", "original_url");
+  if (webpageUrl && (webpageUrl.startsWith("http://") || webpageUrl.startsWith("https://"))) {
+    result.url = webpageUrl;
+    result.urls = [webpageUrl];
+  } else {
+    const url = firstString(json, "url");
+    if (url && (url.startsWith("http://") || url.startsWith("https://")) && !isStreamUrl(url)) {
+      result.url = url;
+      result.urls = [url];
+    }
+  }
+
+  // Tags: yt-dlp has "tags" (array of strings), also merge "categories"
+  const tags: string[] = [];
+  if (Array.isArray(json.tags)) {
+    for (const t of json.tags) {
+      if (typeof t === "string" && t.trim()) tags.push(t.trim());
+    }
+  }
+  if (Array.isArray(json.categories)) {
+    for (const c of json.categories) {
+      if (typeof c === "string" && c.trim()) tags.push(c.trim());
+    }
+  }
+  // Also check "genre" (single or array)
+  if (typeof json.genre === "string" && json.genre.trim()) {
+    tags.push(json.genre.trim());
+  } else if (Array.isArray(json.genre)) {
+    for (const g of json.genre) {
+      if (typeof g === "string" && g.trim()) tags.push(g.trim());
+    }
+  }
+  if (tags.length > 0) {
+    // Deduplicate case-insensitively
+    const seen = new Set<string>();
+    result.tags = tags.filter((t) => {
+      const lower = t.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }
+
+  // Performers: yt-dlp doesn't have a standard performer field, but check
+  // "performers", "actors", "cast", and "uploader" for multi-person content
+  const performers: string[] = [];
+  for (const key of ["performers", "actors", "cast"]) {
+    const val = json[key];
+    if (Array.isArray(val)) {
+      for (const p of val) {
+        if (typeof p === "string" && p.trim()) performers.push(p.trim());
+      }
+    } else if (typeof val === "string" && val.trim()) {
+      performers.push(val.trim());
+    }
+  }
+  if (performers.length > 0) {
+    const seen = new Set<string>();
+    result.performers = performers.filter((p) => {
+      const lower = p.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }
+
+  // Duration: yt-dlp uses "duration" in seconds
+  if (typeof json.duration === "number" && json.duration > 0) {
+    result.duration = json.duration;
+  }
+
+  // Rating: yt-dlp has "like_count"/"dislike_count"/"average_rating" but not standard 0-100
+  if (typeof json.average_rating === "number") {
+    result.rating = normalizeNfoRating(json.average_rating) ?? undefined;
+  }
+
+  return result;
+}
+
+/** Grab the first non-empty string value from a set of keys on an object. */
+function firstString(obj: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const val = obj[key];
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  return null;
+}
+
+/** Detect stream/CDN URLs that aren't useful as source URLs. */
+function isStreamUrl(url: string): boolean {
+  return (
+    url.includes(".m3u8") ||
+    url.includes(".mpd") ||
+    url.includes("manifest") ||
+    url.includes("index-v1") ||
+    url.includes("/hls/")
+  );
+}
+
+/** Normalize date strings: YYYYMMDD → YYYY-MM-DD, or pass through if already formatted. */
+function normalizeSidecarDate(raw: string): string {
+  // YYYYMMDD format (yt-dlp)
+  if (/^\d{8}$/.test(raw)) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  }
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+  // Try parsing as date
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return raw;
+}
+
+/**
+ * Read all sidecar metadata for a video file.
+ *
+ * Checks both NFO (XML) and JSON (.info.json) sidecars.
+ * NFO values take priority when both exist; JSON fills gaps.
+ * Returns null if no sidecar files are found.
+ */
+export async function readSidecarMetadata(
+  videoFilePath: string,
+): Promise<SidecarMetadata | null> {
+  const [nfo, json] = await Promise.all([
+    readNfo(videoFilePath),
+    readSidecarJson(videoFilePath),
+  ]);
+
+  if (!nfo && !json) return null;
+
+  // Start with JSON as base (lower priority), overlay NFO on top
+  const result: SidecarMetadata = {};
+
+  // JSON base
+  if (json) {
+    if (json.title) result.title = json.title;
+    if (json.details) result.details = json.details;
+    if (json.date) result.date = json.date;
+    if (json.studio) result.studio = json.studio;
+    if (json.rating != null) result.rating = json.rating;
+    if (json.url) result.url = json.url;
+    if (json.urls?.length) result.urls = json.urls;
+    if (json.tags?.length) result.tags = json.tags;
+    if (json.performers?.length) result.performers = json.performers;
+    if (json.duration) result.duration = json.duration;
+  }
+
+  // NFO overlay (takes precedence)
+  if (nfo) {
+    if (nfo.title) result.title = nfo.title;
+    if (nfo.plot) result.details = nfo.plot;
+    if (nfo.aired) result.date = nfo.aired;
+    if (nfo.studio) result.studio = nfo.studio;
+    if (nfo.rating != null) result.rating = normalizeNfoRating(nfo.rating) ?? result.rating;
+    if (nfo.url) {
+      result.url = nfo.url;
+      // Merge NFO url into urls array
+      const existing = new Set(result.urls ?? []);
+      existing.add(nfo.url);
+      result.urls = Array.from(existing);
+    }
+    // Merge NFO tags/genres into tags
+    const nfoTags = [...(nfo.tags ?? []), ...(nfo.genres ?? [])];
+    if (nfoTags.length > 0) {
+      const seen = new Set((result.tags ?? []).map((t) => t.toLowerCase()));
+      const merged = [...(result.tags ?? [])];
+      for (const t of nfoTags) {
+        const lower = t.toLowerCase();
+        if (!seen.has(lower)) {
+          seen.add(lower);
+          merged.push(t);
+        }
+      }
+      result.tags = merged;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
 }
 
 function formatDurationHMS(totalSeconds: number): string {
