@@ -208,6 +208,7 @@ async function translateCondition(
       db,
       operator,
       value,
+      meta.idCol,
       meta.tagJoin,
       (names) => resolveTagNameIds(db, names),
     );
@@ -218,6 +219,7 @@ async function translateCondition(
       db,
       operator,
       value,
+      meta.idCol,
       meta.performerJoin,
       (names) => resolvePerformerNameIds(db, names),
     );
@@ -310,6 +312,7 @@ async function translateRelationCondition(
   db: AppDb,
   operator: CollectionOperator,
   value: CollectionConditionValue,
+  entityIdCol: PgColumn,
   joinMeta: { table: any; entityIdCol: PgColumn; tagIdCol?: PgColumn; performerIdCol?: PgColumn },
   resolveNames: (names: string[]) => Promise<string[]>,
 ): Promise<SQL | null> {
@@ -325,10 +328,10 @@ async function translateRelationCondition(
     .where(inArray(relIdCol, ids));
 
   if (operator === "in") {
-    return inArray(joinMeta.entityIdCol, matchingEntityIds);
+    return inArray(entityIdCol, matchingEntityIds);
   }
   if (operator === "not_in") {
-    return not(inArray(joinMeta.entityIdCol, matchingEntityIds));
+    return not(inArray(entityIdCol, matchingEntityIds));
   }
   return null;
 }
