@@ -12,6 +12,11 @@ import {
   Square,
   SkipForward,
   Film,
+  FolderOpen,
+  Images,
+  Image,
+  Library,
+  Music,
   Users,
   Building2,
   Tag,
@@ -23,6 +28,10 @@ import {
   fetchTags,
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
+  fetchSceneFolders,
+  fetchGalleries,
+  fetchImages,
+  fetchAudioLibraries,
 } from "../../lib/api";
 import { entityTerms } from "../../lib/terminology";
 import type {
@@ -47,6 +56,14 @@ import { ScrapeStudioRows, runStudioScrape, acceptAllStudios } from "./scrape-st
 import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
 import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
+import type { VideoFolderRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
+import { VIDEO_FOLDER_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
+import { IdentifyVideoFolderRows } from "../identify/identify-video-folders-tab";
+import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
+import { IdentifyImageRows } from "../identify/identify-images-tab";
+import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
+import { IdentifyAudioTrackRows } from "../identify/identify-audio-tracks-tab";
+
 /* ─── Component ─────────────────────────────────────────────────── */
 
 export function BulkScrape() {
@@ -67,6 +84,13 @@ export function BulkScrape() {
 
   // Tag state
   const [tagRows, setTagRows] = useState<TagRow[]>([]);
+
+  // New entity states
+  const [folderRows, setFolderRows] = useState<VideoFolderRow[]>([]);
+  const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
+  const [imageRows, setImageRows] = useState<ImageRow[]>([]);
+  const [audioLibraryRows, setAudioLibraryRows] = useState<AudioLibraryRow[]>([]);
+  const [audioTrackRows, setAudioTrackRows] = useState<AudioTrackRow[]>([]);
 
   // All items for show-all toggle
   const [allScenes, setAllScenes] = useState<SceneListItem[]>([]);
@@ -92,15 +116,15 @@ export function BulkScrape() {
   }
 
   function expandAll() {
-    if (tab === "performers") {
-      setExpandedIds(new Set(perfRows.map((r) => r.performer.id)));
-    } else if (tab === "studios") {
-      setExpandedIds(new Set(studioRows.map((r) => r.studio.id)));
-    } else if (tab === "tags") {
-      setExpandedIds(new Set(tagRows.map((r) => r.tag.id)));
-    } else {
-      setExpandedIds(new Set(sceneRows.map((r) => r.scene.id)));
-    }
+    if (tab === "scenes") setExpandedIds(new Set(sceneRows.map((r) => r.scene.id)));
+    else if (tab === "video-folders") setExpandedIds(new Set(folderRows.map((r) => r.folder.id)));
+    else if (tab === "galleries") setExpandedIds(new Set(galleryRows.map((r) => r.gallery.id)));
+    else if (tab === "images") setExpandedIds(new Set(imageRows.map((r) => r.image.id)));
+    else if (tab === "audio-libraries") setExpandedIds(new Set(audioLibraryRows.map((r) => r.library.id)));
+    else if (tab === "audio-tracks") setExpandedIds(new Set(audioTrackRows.map((r) => r.track.id)));
+    else if (tab === "performers") setExpandedIds(new Set(perfRows.map((r) => r.performer.id)));
+    else if (tab === "studios") setExpandedIds(new Set(studioRows.map((r) => r.studio.id)));
+    else if (tab === "tags") setExpandedIds(new Set(tagRows.map((r) => r.tag.id)));
   }
 
   function collapseAll() {
@@ -110,13 +134,17 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes] = await Promise.all([
+      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes] = await Promise.all([
         fetchAllScenes({ sort: "created_at" }),
         fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
         fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
+        fetchSceneFolders({}).catch(() => ({ items: [], total: 0, limit: 100, offset: 0 })),
+        fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 })),
+        fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 })),
+        fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 })),
       ]);
 
       setStashBoxEndpoints(stashBoxRes.endpoints.filter((e) => e.enabled));
@@ -155,6 +183,29 @@ export function BulkScrape() {
         return caps && (caps.performerByURL || caps.performerByName || caps.performerByFragment);
       });
       setPerfScrapers(perfCapable);
+
+      // Initialize new entity rows
+      setFolderRows(foldersRes.items.map((folder) => ({
+        folder,
+        status: "pending" as const,
+        selectedFields: new Set(VIDEO_FOLDER_FIELDS),
+        wizardStep: "idle" as const,
+      })));
+      setGalleryRows(galleriesRes.galleries.map((gallery) => ({
+        gallery,
+        status: "pending" as const,
+        selectedFields: new Set(GALLERY_FIELDS),
+      })));
+      setImageRows(imagesRes.images.filter((img) => !img.organized).map((image) => ({
+        image,
+        status: "pending" as const,
+        selectedFields: new Set(IMAGE_FIELDS),
+      })));
+      setAudioLibraryRows(audioRes.items.map((library) => ({
+        library,
+        status: "pending" as const,
+        selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
+      })));
     } finally {
       setLoading(false);
     }
@@ -192,15 +243,16 @@ export function BulkScrape() {
   /* ─── Stats ──────────────────────────────────────────────────── */
 
   const rows =
-    tab === "scenes"
-      ? sceneRows
-      : tab === "performers"
-        ? perfRows
-        : tab === "studios"
-          ? studioRows
-          : tab === "tags"
-            ? tagRows
-            : [];
+    tab === "scenes" ? sceneRows
+    : tab === "video-folders" ? folderRows
+    : tab === "galleries" ? galleryRows
+    : tab === "images" ? imageRows
+    : tab === "audio-libraries" ? audioLibraryRows
+    : tab === "audio-tracks" ? audioTrackRows
+    : tab === "performers" ? perfRows
+    : tab === "studios" ? studioRows
+    : tab === "tags" ? tagRows
+    : [];
   const foundCount = rows.filter((r) => r.status === "found").length;
   const acceptedCount = rows.filter((r) => r.status === "accepted").length;
   const missedCount = rows.filter((r) => r.status === "no-result" || r.status === "error").length;
@@ -269,20 +321,31 @@ export function BulkScrape() {
             Identify
           </h1>
           <p className="mt-1 text-text-muted text-[0.78rem]">
-            Match {entityTerms.scenes.toLowerCase()} and {entityTerms.performers.toLowerCase()} against metadata providers
+            Match media against metadata providers and identification plugins
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
         {([
           { key: "scenes" as Tab, label: entityTerms.scenes, icon: Film, count: sceneRows.length },
+          { key: "video-folders" as Tab, label: "Folders", icon: FolderOpen, count: folderRows.length },
+          { key: "galleries" as Tab, label: "Galleries", icon: Images, count: galleryRows.length },
+          { key: "images" as Tab, label: "Images", icon: Image, count: imageRows.length },
+          { key: "audio-libraries" as Tab, label: "Albums", icon: Library, count: audioLibraryRows.length },
+          { key: "audio-tracks" as Tab, label: "Tracks", icon: Music, count: audioTrackRows.length },
           { key: "performers" as Tab, label: entityTerms.performers, icon: Users, count: perfRows.length },
           { key: "studios" as Tab, label: "Studios", icon: Building2, count: studioRows.length },
           { key: "tags" as Tab, label: "Tags", icon: Tag, count: tagRows.length },
           { key: "phashes" as Tab, label: "pHashes", icon: Fingerprint, count: null as number | null },
-        ]).map(({ key, label, icon: Icon, count }) => (
+        ])
+        .filter(({ key, count }) => {
+          // Hide empty new entity tabs (no data in library)
+          if (["video-folders", "galleries", "images", "audio-libraries", "audio-tracks"].includes(key) && count === 0 && tab !== key) return false;
+          return true;
+        })
+        .map(({ key, label, icon: Icon, count }) => (
           <button
             key={key}
             onClick={() => { if (!running) setTab(key); }}
@@ -473,6 +536,46 @@ export function BulkScrape() {
             <ScrapeSceneRows
               sceneRows={sceneRows}
               setSceneRows={setSceneRows}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
+          {tab === "video-folders" && (
+            <IdentifyVideoFolderRows
+              rows={folderRows}
+              setRows={setFolderRows}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
+          {tab === "galleries" && (
+            <IdentifyGalleryRows
+              rows={galleryRows}
+              setRows={setGalleryRows}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
+          {tab === "images" && (
+            <IdentifyImageRows
+              rows={imageRows}
+              setRows={setImageRows}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
+          {tab === "audio-libraries" && (
+            <IdentifyAudioLibraryRows
+              rows={audioLibraryRows}
+              setRows={setAudioLibraryRows}
+              expandedIds={expandedIds}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
+          {tab === "audio-tracks" && (
+            <IdentifyAudioTrackRows
+              rows={audioTrackRows}
+              setRows={setAudioTrackRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
             />

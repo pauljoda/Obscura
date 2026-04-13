@@ -31,7 +31,7 @@ export type {
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
-export type Tab = "scenes" | "performers" | "studios" | "tags" | "phashes";
+export type Tab = "scenes" | "video-folders" | "galleries" | "images" | "audio-libraries" | "audio-tracks" | "performers" | "studios" | "tags" | "phashes";
 
 export const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image", "episodeNumber"] as const;
 export type SceneField = typeof SCENE_FIELDS[number];

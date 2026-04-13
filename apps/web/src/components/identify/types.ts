@@ -196,6 +196,7 @@ export interface NormalizedAudioTrackIdentifyResult {
   details: string | null;
   imageUrl: string | null;
   urls: string[];
+  tagNames: string[];
 }
 
 // ─── Series identification ─────────────────────────────────────────
