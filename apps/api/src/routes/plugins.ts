@@ -419,8 +419,23 @@ export async function pluginsRoutes(app: FastifyInstance) {
   // ─── Obscura community plugin index ─────────────────────────
   app.get("/plugins/obscura-index", async (_req, reply) => {
     // In dev, read from local disk path; in production, fetch from remote URL
-    const localPath = process.env.OBSCURA_PLUGIN_INDEX_PATH;
+    let localPath = process.env.OBSCURA_PLUGIN_INDEX_PATH;
     const remoteUrl = process.env.OBSCURA_PLUGIN_INDEX_URL;
+
+    // Dev fallback: walk up from cwd looking for the sibling repo
+    if (!localPath && !remoteUrl && process.env.NODE_ENV !== "production") {
+      let dir = process.cwd();
+      for (let i = 0; i < 5; i++) {
+        const parent = path.dirname(dir);
+        const candidate = path.join(parent, "obscura-community-plugins");
+        if (existsSync(path.join(candidate, "index.yml"))) {
+          localPath = candidate;
+          break;
+        }
+        if (parent === dir) break;
+        dir = parent;
+      }
+    }
 
     if (localPath) {
       const indexPath = path.join(localPath, "index.yml");

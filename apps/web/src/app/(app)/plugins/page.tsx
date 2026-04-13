@@ -155,10 +155,10 @@ export default function PluginsPage() {
     try {
       const res = await fetchCommunityIndex(force);
       setIndexEntries(res.entries);
-      setIndexLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch community index");
     } finally {
+      setIndexLoaded(true); // Mark loaded even on error to prevent re-fetch loop
       setIndexLoading(false);
     }
   }
@@ -169,10 +169,14 @@ export default function PluginsPage() {
     try {
       const entries = await fetchObscuraPluginIndex();
       setObscuraEntries(entries);
-      setObscuraLoaded(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load Obscura plugin index");
+      // Don't show error for 404 — just means the index isn't configured yet
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("404") && !msg.includes("not found") && !msg.includes("not configured")) {
+        setError(msg);
+      }
     } finally {
+      setObscuraLoaded(true); // Mark loaded even on error to prevent re-fetch loop
       setObscuraLoading(false);
     }
   }
