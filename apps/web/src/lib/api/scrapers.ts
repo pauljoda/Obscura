@@ -261,3 +261,26 @@ export async function lookupTagViaStashBox(
 }
 
 export type { NormalizedStudioScrapeResult, NormalizedTagScrapeResult };
+
+/* ─── Obscura Community Plugins ─────────────────────────────── */
+
+export interface ObscuraPluginIndexEntry {
+  id: string;
+  name: string;
+  version: string;
+  date: string;
+  path: string;
+  sha256: string;
+  runtime: string;
+  isNsfw: boolean;
+  description?: string;
+  author?: string;
+  capabilities: Record<string, boolean>;
+  requires?: string[];
+  installed?: boolean;
+  installedVersion?: string | null;
+}
+
+export async function fetchObscuraPluginIndex(): Promise<ObscuraPluginIndexEntry[]> {
+  return fetchApi("/plugins/obscura-index");
+}

@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { createHash } from "node:crypto";
-import { mkdir, rm, readdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, readdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import yaml from "js-yaml";
 import { unzipSync } from "fflate";
 import { db, schema } from "../db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -412,6 +413,68 @@ export async function pluginsRoutes(app: FastifyInstance) {
     // Placeholder — will invoke plugin's folderCascade capability
     return reply.code(501).send({
       error: "Folder cascade not yet implemented",
+    });
+  });
+
+  // ─── Obscura community plugin index ─────────────────────────
+  app.get("/plugins/obscura-index", async (_req, reply) => {
+    // In dev, read from local disk path; in production, fetch from remote URL
+    const localPath = process.env.OBSCURA_PLUGIN_INDEX_PATH;
+    const remoteUrl = process.env.OBSCURA_PLUGIN_INDEX_URL;
+
+    if (localPath) {
+      const indexPath = path.join(localPath, "index.yml");
+      if (!existsSync(indexPath)) {
+        return reply.code(404).send({ error: `Plugin index not found at ${indexPath}` });
+      }
+      try {
+        const raw = await readFile(indexPath, "utf-8");
+        const entries = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+        if (!Array.isArray(entries)) {
+          return reply.code(500).send({ error: "Invalid plugin index format" });
+        }
+
+        // Mark which are already installed
+        const installedPlugins = await db
+          .select({ pluginId: pluginPackages.pluginId, version: pluginPackages.version })
+          .from(pluginPackages);
+        const installedMap = new Map(installedPlugins.map((p) => [p.pluginId, p.version]));
+
+        return entries.map((e: Record<string, unknown>) => ({
+          ...e,
+          installed: installedMap.has(String(e.id)),
+          installedVersion: installedMap.get(String(e.id)) ?? null,
+        }));
+      } catch (err) {
+        return reply.code(500).send({
+          error: `Failed to read plugin index: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+    }
+
+    if (remoteUrl) {
+      try {
+        const entries = await fetchPluginIndex(remoteUrl);
+
+        const installedPlugins = await db
+          .select({ pluginId: pluginPackages.pluginId, version: pluginPackages.version })
+          .from(pluginPackages);
+        const installedMap = new Map(installedPlugins.map((p) => [p.pluginId, p.version]));
+
+        return entries.map((e) => ({
+          ...e,
+          installed: installedMap.has(e.id),
+          installedVersion: installedMap.get(e.id) ?? null,
+        }));
+      } catch (err) {
+        return reply.code(502).send({
+          error: `Failed to fetch remote plugin index: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+    }
+
+    return reply.code(404).send({
+      error: "No plugin index configured. Set OBSCURA_PLUGIN_INDEX_PATH (dev) or OBSCURA_PLUGIN_INDEX_URL (production).",
     });
   });
 }

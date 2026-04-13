@@ -20,6 +20,7 @@ services:
       - ../../.env.example
     environment:
       OBSCURA_CACHE_DIR: /data/cache
+      OBSCURA_PLUGIN_INDEX_PATH: ${OBSCURA_PLUGIN_INDEX_PATH:-}
     ports:
       - "4000:4000"
     depends_on:

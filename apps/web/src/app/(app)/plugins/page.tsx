@@ -1,18 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, StatusLed } from "@obscura/ui";
+import { Badge, Button } from "@obscura/ui";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   AlertCircle,
   Boxes,
   Check,
-  ChevronDown,
-  ChevronRight,
   Download,
   Film,
   Globe,
-  Image,
   Loader2,
   Package,
   Pencil,
@@ -22,6 +19,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Sparkles,
   ToggleLeft,
   ToggleRight,
   Trash2,
@@ -32,6 +30,7 @@ import {
   fetchCommunityIndex,
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
+  fetchObscuraPluginIndex,
   installScraper,
   uninstallScraper,
   toggleScraper,
@@ -42,8 +41,10 @@ import {
   type CommunityIndexEntry,
   type ScraperPackage,
   type StashBoxEndpoint,
+  type ObscuraPluginIndexEntry,
 } from "../../../lib/api";
 import { entityTerms } from "../../../lib/terminology";
+import { useNsfw } from "../../../components/nsfw/nsfw-context";
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
@@ -58,14 +59,25 @@ const CAPABILITY_META: Record<string, { label: string; category: string }> = {
   galleryByURL: { label: "Gallery by URL", category: "gallery" },
   galleryByFragment: { label: "Gallery by fragment", category: "gallery" },
   groupByURL: { label: "Group by URL", category: "group" },
+  // Obscura-native capabilities
+  videoByURL: { label: "Video by URL", category: "scene" },
+  videoByName: { label: "Video by name", category: "scene" },
+  folderByName: { label: "Series by name", category: "folder" },
+  folderCascade: { label: "Episode cascade", category: "folder" },
+  audioByURL: { label: "Audio by URL", category: "audio" },
+  audioLibraryByName: { label: "Album by name", category: "audio" },
 };
 
-type PluginsTab = "installed" | "stash-index" | "stashbox";
+type PluginsTab = "installed" | "obscura-index" | "stash-index" | "stashbox";
 type CapFilter = "all" | "scene" | "performer";
 
 /* ─── Page component ─────────────────────────────────────────── */
 
 export default function PluginsPage() {
+  const { mode } = useNsfw();
+  const isSfw = mode === "off";
+
+  // Default tab: in SFW mode, default to installed (stash tabs hidden)
   const [tab, setTab] = useState<PluginsTab>("installed");
 
   // Installed scrapers state
@@ -74,7 +86,7 @@ export default function PluginsPage() {
   const [capFilter, setCapFilter] = useState<CapFilter>("all");
   const [installedSearch, setInstalledSearch] = useState("");
 
-  // Community index state
+  // Stash community index state
   const [indexEntries, setIndexEntries] = useState<CommunityIndexEntry[]>([]);
   const [indexLoading, setIndexLoading] = useState(false);
   const [indexLoaded, setIndexLoaded] = useState(false);
@@ -82,6 +94,12 @@ export default function PluginsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [bulkInstalling, setBulkInstalling] = useState(false);
+
+  // Obscura plugin index state
+  const [obscuraEntries, setObscuraEntries] = useState<ObscuraPluginIndexEntry[]>([]);
+  const [obscuraLoading, setObscuraLoading] = useState(false);
+  const [obscuraLoaded, setObscuraLoaded] = useState(false);
+  const [obscuraSearch, setObscuraSearch] = useState("");
 
   // StashBox state
   const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
@@ -102,6 +120,13 @@ export default function PluginsPage() {
     setMessage(msg);
     setTimeout(() => setMessage(null), 3000);
   };
+
+  // If in SFW mode and on a stash tab, redirect to installed
+  useEffect(() => {
+    if (isSfw && (tab === "stash-index" || tab === "stashbox")) {
+      setTab("installed");
+    }
+  }, [isSfw, tab]);
 
   /* ─── Data loading ────────────────────────────────────────── */
 
@@ -124,7 +149,7 @@ export default function PluginsPage() {
     void loadInstalled();
   }, [loadInstalled]);
 
-  async function loadIndex(force = false) {
+  async function loadStashIndex(force = false) {
     setIndexLoading(true);
     setError(null);
     try {
@@ -138,12 +163,29 @@ export default function PluginsPage() {
     }
   }
 
-  // Auto-load index when switching to that tab
+  async function loadObscuraIndex() {
+    setObscuraLoading(true);
+    setError(null);
+    try {
+      const entries = await fetchObscuraPluginIndex();
+      setObscuraEntries(entries);
+      setObscuraLoaded(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load Obscura plugin index");
+    } finally {
+      setObscuraLoading(false);
+    }
+  }
+
+  // Auto-load indices when switching tabs
   useEffect(() => {
     if (tab === "stash-index" && !indexLoaded && !indexLoading) {
-      void loadIndex();
+      void loadStashIndex();
     }
-  }, [tab, indexLoaded, indexLoading]);
+    if (tab === "obscura-index" && !obscuraLoaded && !obscuraLoading) {
+      void loadObscuraIndex();
+    }
+  }, [tab, indexLoaded, indexLoading, obscuraLoaded, obscuraLoading]);
 
   /* ─── Installed scraper actions ────────────────────────────── */
 
@@ -170,7 +212,7 @@ export default function PluginsPage() {
     }
   }
 
-  /* ─── Community index actions ──────────────────────────────── */
+  /* ─── Stash community index actions ────────────────────────── */
 
   async function handleInstall(packageId: string) {
     setInstallingId(packageId);
@@ -255,15 +297,16 @@ export default function PluginsPage() {
 
   /* ─── Installed filtering ──────────────────────────────────── */
 
-  const filteredInstalled = installed.filter((pkg) => {
-    // Search filter
+  // In SFW mode, hide all NSFW (stash) scrapers from the installed list
+  const visibleInstalled = isSfw ? installed.filter((p) => !p.isNsfw) : installed;
+
+  const filteredInstalled = visibleInstalled.filter((pkg) => {
     if (installedSearch) {
       const q = installedSearch.toLowerCase();
       if (!pkg.name.toLowerCase().includes(q) && !pkg.packageId.toLowerCase().includes(q)) {
         return false;
       }
     }
-    // Capability filter
     if (capFilter === "all") return true;
     const caps = pkg.capabilities as Record<string, boolean> | null;
     if (!caps) return false;
@@ -274,14 +317,39 @@ export default function PluginsPage() {
     return true;
   });
 
-  const sceneCount = installed.filter((pkg) => {
+  const sceneCount = visibleInstalled.filter((pkg) => {
     const caps = pkg.capabilities as Record<string, boolean> | null;
     return caps && (caps.sceneByURL || caps.sceneByFragment || caps.sceneByName);
   }).length;
-  const performerCount = installed.filter((pkg) => {
+  const performerCount = visibleInstalled.filter((pkg) => {
     const caps = pkg.capabilities as Record<string, boolean> | null;
     return caps && (caps.performerByURL || caps.performerByName || caps.performerByFragment);
   }).length;
+
+  /* ─── Obscura index filtering ──────────────────────────────── */
+
+  const filteredObscura = obscuraSearch
+    ? obscuraEntries.filter(
+        (e) =>
+          e.name.toLowerCase().includes(obscuraSearch.toLowerCase()) ||
+          e.id.toLowerCase().includes(obscuraSearch.toLowerCase()),
+      )
+    : obscuraEntries;
+
+  // In SFW mode, only show non-NSFW Obscura plugins
+  const visibleObscura = isSfw ? filteredObscura.filter((e) => !e.isNsfw) : filteredObscura;
+
+  /* ─── Tab definitions ──────────────────────────────────────── */
+
+  const tabDefs: Array<{ key: PluginsTab; label: string; icon: typeof Boxes; count: number | null; nsfw: boolean }> = [
+    { key: "installed", label: "Installed", icon: Boxes, count: visibleInstalled.length, nsfw: false },
+    { key: "obscura-index", label: "Obscura Community", icon: Sparkles, count: obscuraEntries.length || null, nsfw: false },
+    { key: "stash-index", label: "Stash Community", icon: Globe, count: indexEntries.length || null, nsfw: true },
+    { key: "stashbox", label: "StashBox Endpoints", icon: Plug, count: stashBoxEndpoints.length, nsfw: true },
+  ];
+
+  // Filter tabs by NSFW mode
+  const visibleTabs = isSfw ? tabDefs.filter((t) => !t.nsfw) : tabDefs;
 
   /* ─── Render ───────────────────────────────────────────────── */
 
@@ -307,23 +375,33 @@ export default function PluginsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className={cn("grid gap-2", isSfw ? "grid-cols-2" : "grid-cols-4")}>
         <div className="surface-stat px-3 py-2">
           <span className="text-kicker !text-text-disabled">Installed</span>
-          <div className="text-lg font-semibold text-text-primary leading-tight">{installed.length}</div>
+          <div className="text-lg font-semibold text-text-primary leading-tight">{visibleInstalled.length}</div>
         </div>
-        <div className="surface-stat px-3 py-2">
-          <span className="text-kicker !text-text-disabled">{entityTerms.scene} Scrapers</span>
-          <div className="text-lg font-semibold text-text-primary leading-tight">{sceneCount}</div>
-        </div>
-        <div className="surface-stat px-3 py-2">
-          <span className="text-kicker !text-text-disabled">{entityTerms.performer} Scrapers</span>
-          <div className="text-lg font-semibold text-text-primary leading-tight">{performerCount}</div>
-        </div>
-        <div className="surface-stat px-3 py-2">
-          <span className="text-kicker !text-text-disabled">StashBox</span>
-          <div className="text-lg font-semibold text-text-primary leading-tight">{stashBoxEndpoints.length}</div>
-        </div>
+        {!isSfw && (
+          <>
+            <div className="surface-stat px-3 py-2">
+              <span className="text-kicker !text-text-disabled">{entityTerms.scene} Scrapers</span>
+              <div className="text-lg font-semibold text-text-primary leading-tight">{sceneCount}</div>
+            </div>
+            <div className="surface-stat px-3 py-2">
+              <span className="text-kicker !text-text-disabled">{entityTerms.performer} Scrapers</span>
+              <div className="text-lg font-semibold text-text-primary leading-tight">{performerCount}</div>
+            </div>
+            <div className="surface-stat px-3 py-2">
+              <span className="text-kicker !text-text-disabled">StashBox</span>
+              <div className="text-lg font-semibold text-text-primary leading-tight">{stashBoxEndpoints.length}</div>
+            </div>
+          </>
+        )}
+        {isSfw && (
+          <div className="surface-stat px-3 py-2">
+            <span className="text-kicker !text-text-disabled">Obscura Plugins</span>
+            <div className="text-lg font-semibold text-text-primary leading-tight">{obscuraEntries.filter((e) => !e.isNsfw).length}</div>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -343,11 +421,7 @@ export default function PluginsPage() {
 
       {/* Section tabs */}
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
-        {([
-          { key: "installed" as PluginsTab, label: "Installed", icon: Boxes, count: installed.length },
-          { key: "stash-index" as PluginsTab, label: "Stash Community", icon: Globe, count: indexEntries.length || null },
-          { key: "stashbox" as PluginsTab, label: "StashBox Endpoints", icon: Plug, count: stashBoxEndpoints.length },
-        ]).map(({ key, label, icon: Icon, count }) => (
+        {visibleTabs.map(({ key, label, icon: Icon, count, nsfw }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -360,6 +434,11 @@ export default function PluginsPage() {
           >
             <Icon className="h-3.5 w-3.5" />
             {label}
+            {nsfw && (
+              <span className="tag-chip text-[0.5rem] bg-status-error/10 text-status-error-text border border-status-error/20 px-1 py-0">
+                NSFW
+              </span>
+            )}
             {count != null && count > 0 && (
               <span className="text-mono-sm text-text-disabled ml-1">{count}</span>
             )}
@@ -370,98 +449,151 @@ export default function PluginsPage() {
       {/* ─── INSTALLED TAB ──────────────────────────────────────── */}
       {tab === "installed" && (
         <section className="space-y-2">
-          {/* Filter toolbar */}
           <div className="surface-well flex items-center gap-2 px-3 py-2 flex-wrap">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
-              <input
-                className="control-input pl-8 w-56 py-1.5 text-sm"
-                placeholder="Search installed..."
-                value={installedSearch}
-                onChange={(e) => setInstalledSearch(e.target.value)}
-              />
+              <input className="control-input pl-8 w-56 py-1.5 text-sm" placeholder="Search installed..." value={installedSearch} onChange={(e) => setInstalledSearch(e.target.value)} />
               {installedSearch && (
-                <button onClick={() => setInstalledSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted">
-                  <X className="h-3 w-3" />
-                </button>
+                <button onClick={() => setInstalledSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"><X className="h-3 w-3" /></button>
               )}
             </div>
-
-            <div className="w-px h-4 bg-border-subtle mx-1" />
-
-            {(["all", "scene", "performer"] as CapFilter[]).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setCapFilter(filter)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-all duration-fast",
-                  capFilter === filter
-                    ? "bg-accent-950 text-text-accent border border-border-accent"
-                    : "text-text-muted hover:text-text-secondary border border-transparent",
-                )}
-              >
-                {filter === "all" && <Package className="h-3 w-3" />}
-                {filter === "scene" && <Film className="h-3 w-3" />}
-                {filter === "performer" && <Users className="h-3 w-3" />}
-                {filter === "all" ? "All" : filter === "scene" ? entityTerms.scenes : entityTerms.performers}
-              </button>
-            ))}
-
+            {!isSfw && (
+              <>
+                <div className="w-px h-4 bg-border-subtle mx-1" />
+                {(["all", "scene", "performer"] as CapFilter[]).map((filter) => (
+                  <button key={filter} onClick={() => setCapFilter(filter)}
+                    className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-all duration-fast",
+                      capFilter === filter ? "bg-accent-950 text-text-accent border border-border-accent" : "text-text-muted hover:text-text-secondary border border-transparent")}>
+                    {filter === "all" && <Package className="h-3 w-3" />}
+                    {filter === "scene" && <Film className="h-3 w-3" />}
+                    {filter === "performer" && <Users className="h-3 w-3" />}
+                    {filter === "all" ? "All" : filter === "scene" ? entityTerms.scenes : entityTerms.performers}
+                  </button>
+                ))}
+              </>
+            )}
             <div className="flex-1" />
             <span className="text-mono-sm text-text-disabled">{filteredInstalled.length} shown</span>
           </div>
 
-          {/* Scraper cards */}
           {filteredInstalled.length === 0 ? (
             <div className="surface-card no-lift p-8 text-center">
               <Package className="h-8 w-8 text-text-disabled mx-auto mb-3" />
               <p className="text-text-muted text-sm">
-                {installed.length === 0
-                  ? "No plugins installed. Browse the Stash Community tab to get started."
+                {visibleInstalled.length === 0
+                  ? isSfw
+                    ? "No SFW plugins installed. Browse the Obscura Community tab to find plugins."
+                    : "No plugins installed. Browse the community tabs to get started."
                   : "No plugins match your filters."}
               </p>
             </div>
           ) : (
             <div className="space-y-1">
               {filteredInstalled.map((pkg) => (
-                <InstalledScraperCard
-                  key={pkg.id}
-                  pkg={pkg}
-                  onToggle={() => void handleToggle(pkg)}
-                  onRemove={() => void handleUninstall(pkg)}
-                />
+                <InstalledScraperCard key={pkg.id} pkg={pkg} onToggle={() => void handleToggle(pkg)} onRemove={() => void handleUninstall(pkg)} />
               ))}
             </div>
           )}
         </section>
       )}
 
-      {/* ─── STASH COMMUNITY INDEX TAB ──────────────────────────── */}
-      {tab === "stash-index" && (
+      {/* ─── OBSCURA COMMUNITY INDEX TAB ────────────────────────── */}
+      {tab === "obscura-index" && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-text-muted text-[0.72rem]">
-                {indexEntries.length} scrapers available · All Stash community scrapers are classified as NSFW
-              </p>
-            </div>
+            <p className="text-text-muted text-[0.72rem]">
+              {obscuraEntries.length} plugins available
+              {isSfw && obscuraEntries.some((e) => e.isNsfw) && ` · ${obscuraEntries.filter((e) => e.isNsfw).length} NSFW plugins hidden`}
+            </p>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
-                <input
-                  className="control-input pl-8 w-64 py-1.5 text-sm"
-                  placeholder="Filter by name or ID..."
-                  value={indexSearch}
-                  onChange={(e) => setIndexSearch(e.target.value)}
-                />
-                {indexSearch && (
-                  <button onClick={() => setIndexSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted">
-                    <X className="h-3 w-3" />
-                  </button>
+                <input className="control-input pl-8 w-64 py-1.5 text-sm" placeholder="Filter by name or ID..." value={obscuraSearch} onChange={(e) => setObscuraSearch(e.target.value)} />
+                {obscuraSearch && (
+                  <button onClick={() => setObscuraSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"><X className="h-3 w-3" /></button>
                 )}
               </div>
-              <Button variant="secondary" size="sm" onClick={() => void loadIndex(true)} disabled={indexLoading}>
+              <Button variant="secondary" size="sm" onClick={() => void loadObscuraIndex()} disabled={obscuraLoading}>
+                {obscuraLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {obscuraLoading && !obscuraLoaded ? (
+            <div className="surface-card no-lift p-12 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
+            </div>
+          ) : visibleObscura.length === 0 ? (
+            <div className="surface-card no-lift p-8 text-center">
+              <Sparkles className="h-8 w-8 text-text-disabled mx-auto mb-3" />
+              <p className="text-text-muted text-sm">
+                {obscuraSearch ? "No plugins match your search." : obscuraLoaded ? "No plugins available." : "Loading plugin index..."}
+              </p>
+              {!obscuraLoaded && !obscuraLoading && (
+                <p className="text-text-disabled text-xs mt-2">
+                  Set <code className="font-mono text-text-muted">OBSCURA_PLUGIN_INDEX_PATH</code> to point to the community plugins repo.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {visibleObscura.map((entry) => (
+                <div key={entry.id} className="surface-card no-lift px-4 py-3 flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{entry.name}</p>
+                      <span className="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
+                      {entry.isNsfw && (
+                        <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
+                      )}
+                      <span className="text-mono-sm text-text-disabled">v{entry.version}</span>
+                    </div>
+                    {entry.description && (
+                      <p className="text-text-muted text-[0.68rem] mt-0.5">{entry.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {Object.entries(entry.capabilities).filter(([, v]) => v).map(([key]) => {
+                        const meta = CAPABILITY_META[key];
+                        return (
+                          <span key={key} className="tag-chip-default text-[0.55rem] px-1.5 py-0.5">
+                            {meta?.label ?? key}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {entry.installed ? (
+                    <Badge variant="accent" className="text-[0.6rem] flex-shrink-0">
+                      <Check className="h-2.5 w-2.5 mr-1" />
+                      Installed
+                    </Badge>
+                  ) : (
+                    <span className="text-text-disabled text-[0.68rem] flex-shrink-0">Coming soon</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ─── STASH COMMUNITY INDEX TAB (NSFW only) ──────────────── */}
+      {tab === "stash-index" && !isSfw && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-text-muted text-[0.72rem]">
+              {indexEntries.length} scrapers available · All Stash community scrapers are classified as NSFW
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
+                <input className="control-input pl-8 w-64 py-1.5 text-sm" placeholder="Filter by name or ID..." value={indexSearch} onChange={(e) => setIndexSearch(e.target.value)} />
+                {indexSearch && (
+                  <button onClick={() => setIndexSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-muted"><X className="h-3 w-3" /></button>
+                )}
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => void loadStashIndex(true)} disabled={indexLoading}>
                 {indexLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                 Refresh
               </Button>
@@ -470,39 +602,23 @@ export default function PluginsPage() {
 
           {/* Bulk action bar */}
           <div className="surface-well flex items-center gap-3 px-3 py-2">
-            <button
-              onClick={selectAllUninstalled}
-              disabled={selectableCount === 0}
-              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors disabled:opacity-40"
-            >
-              <div className={cn(
-                "h-4 w-4 border flex items-center justify-center transition-colors",
-                selectableCount > 0 && selectedUninstalledCount === selectableCount
-                  ? "bg-accent-800 border-border-accent"
-                  : selectedUninstalledCount > 0
-                    ? "bg-accent-950 border-border-accent"
-                    : "border-border-subtle",
-              )}>
+            <button onClick={selectAllUninstalled} disabled={selectableCount === 0}
+              className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors disabled:opacity-40">
+              <div className={cn("h-4 w-4 border flex items-center justify-center transition-colors",
+                selectableCount > 0 && selectedUninstalledCount === selectableCount ? "bg-accent-800 border-border-accent"
+                : selectedUninstalledCount > 0 ? "bg-accent-950 border-border-accent" : "border-border-subtle")}>
                 {selectedUninstalledCount > 0 && <Check className="h-2.5 w-2.5 text-text-accent" />}
               </div>
               {selectedUninstalledCount > 0 ? `${selectedUninstalledCount} selected` : "Select all"}
             </button>
             <div className="flex-1" />
             {selectedUninstalledCount > 0 && (
-              <button onClick={() => setSelected(new Set())} className="text-xs text-text-muted hover:text-text-primary transition-colors">
-                Clear
-              </button>
+              <button onClick={() => setSelected(new Set())} className="text-xs text-text-muted hover:text-text-primary transition-colors">Clear</button>
             )}
-            <button
-              onClick={() => void handleBulkInstall()}
-              disabled={selectedUninstalledCount === 0 || bulkInstalling}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all duration-fast",
-                selectedUninstalledCount > 0
-                  ? "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900"
-                  : "text-text-disabled border border-transparent cursor-not-allowed",
-              )}
-            >
+            <button onClick={() => void handleBulkInstall()} disabled={selectedUninstalledCount === 0 || bulkInstalling}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all duration-fast",
+                selectedUninstalledCount > 0 ? "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900"
+                : "text-text-disabled border border-transparent cursor-not-allowed")}>
               {bulkInstalling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
               {bulkInstalling ? "Installing..." : selectedUninstalledCount > 0 ? `Install ${selectedUninstalledCount}` : "Install Selected"}
             </button>
@@ -515,25 +631,16 @@ export default function PluginsPage() {
           ) : (
             <div className="space-y-1 max-h-[600px] overflow-y-auto scrollbar-hidden">
               {filteredIndex.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={cn(
-                    "surface-card no-lift px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
-                    !entry.installed && selected.has(entry.id) && "border-border-accent/40",
-                  )}
-                >
+                <div key={entry.id} className={cn("surface-card no-lift px-4 py-3 flex items-center gap-3 transition-colors duration-fast",
+                  !entry.installed && selected.has(entry.id) && "border-border-accent/40")}>
                   {!entry.installed ? (
                     <button onClick={() => toggleSelected(entry.id)} className="flex-shrink-0">
-                      <div className={cn(
-                        "h-4 w-4 border flex items-center justify-center transition-colors",
-                        selected.has(entry.id) ? "bg-accent-800 border-border-accent" : "border-border-subtle hover:border-text-muted",
-                      )}>
+                      <div className={cn("h-4 w-4 border flex items-center justify-center transition-colors",
+                        selected.has(entry.id) ? "bg-accent-800 border-border-accent" : "border-border-subtle hover:border-text-muted")}>
                         {selected.has(entry.id) && <Check className="h-2.5 w-2.5 text-text-accent" />}
                       </div>
                     </button>
-                  ) : (
-                    <div className="w-4 flex-shrink-0" />
-                  )}
+                  ) : (<div className="w-4 flex-shrink-0" />)}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{entry.name}</p>
                     <p className="text-text-disabled text-[0.65rem] mt-0.5 font-mono">
@@ -543,16 +650,10 @@ export default function PluginsPage() {
                     </p>
                   </div>
                   {entry.installed ? (
-                    <Badge variant="accent" className="text-[0.6rem] flex-shrink-0">
-                      <Check className="h-2.5 w-2.5 mr-1" />
-                      Installed
-                    </Badge>
+                    <Badge variant="accent" className="text-[0.6rem] flex-shrink-0"><Check className="h-2.5 w-2.5 mr-1" />Installed</Badge>
                   ) : (
-                    <button
-                      onClick={() => void handleInstall(entry.id)}
-                      disabled={installingId === entry.id || bulkInstalling}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast flex-shrink-0 disabled:opacity-40"
-                    >
+                    <button onClick={() => void handleInstall(entry.id)} disabled={installingId === entry.id || bulkInstalling}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast flex-shrink-0 disabled:opacity-40">
                       {installingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                       Install
                     </button>
@@ -569,38 +670,24 @@ export default function PluginsPage() {
         </section>
       )}
 
-      {/* ─── STASHBOX ENDPOINTS TAB ─────────────────────────────── */}
-      {tab === "stashbox" && (
+      {/* ─── STASHBOX ENDPOINTS TAB (NSFW only) ─────────────────── */}
+      {tab === "stashbox" && !isSfw && (
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <p className="text-text-muted text-[0.72rem]">
-              Connect to StashDB, ThePornDB, FansDB, and other Stash-Box protocol servers for fingerprint-based identification
+              Connect to StashDB, ThePornDB, FansDB, and other Stash-Box protocol servers
             </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditingStashBox(null);
-                setSbName("");
-                setSbEndpoint("");
-                setSbApiKey("");
-                setSbTestResult(null);
-                setShowStashBoxForm(true);
-              }}
-              className="h-auto gap-1 px-2 py-1 text-[0.68rem] text-text-accent hover:bg-accent-950/60"
-            >
-              <Plus className="h-3 w-3" />
-              Add Endpoint
+            <Button type="button" variant="ghost" size="sm"
+              onClick={() => { setEditingStashBox(null); setSbName(""); setSbEndpoint(""); setSbApiKey(""); setSbTestResult(null); setShowStashBoxForm(true); }}
+              className="h-auto gap-1 px-2 py-1 text-[0.68rem] text-text-accent hover:bg-accent-950/60">
+              <Plus className="h-3 w-3" />Add Endpoint
             </Button>
           </div>
 
           {stashBoxEndpoints.length === 0 && !showStashBoxForm && (
             <div className="empty-rack-slot p-6 text-center">
               <Plug className="h-8 w-8 text-text-disabled mx-auto mb-3" />
-              <p className="text-[0.75rem] text-text-disabled">
-                No endpoints configured. Add one to enable fingerprint-based identification.
-              </p>
+              <p className="text-[0.75rem] text-text-disabled">No endpoints configured. Add one to enable fingerprint-based identification.</p>
             </div>
           )}
 
@@ -611,102 +698,39 @@ export default function PluginsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-[0.82rem] font-medium truncate">{ep.name}</span>
                     <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
-                    {!ep.enabled && (
-                      <Badge variant="default" className="text-[0.55rem] font-semibold uppercase tracking-wider">Disabled</Badge>
-                    )}
+                    {!ep.enabled && (<Badge variant="default" className="text-[0.55rem] font-semibold uppercase tracking-wider">Disabled</Badge>)}
                     {sbTestResult?.id === ep.id && (
-                      <Badge
-                        variant={sbTestResult.valid ? "success" : "error"}
-                        className="items-center gap-1 text-[0.55rem] font-medium normal-case tracking-normal"
-                      >
+                      <Badge variant={sbTestResult.valid ? "success" : "error"} className="items-center gap-1 text-[0.55rem] font-medium normal-case tracking-normal">
                         {sbTestResult.valid ? <Check className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
                         {sbTestResult.valid ? "Connected" : sbTestResult.error ?? "Failed"}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[0.65rem] text-text-disabled truncate mt-0.5">
-                    {ep.endpoint} · Key: {ep.apiKeyPreview}
-                  </p>
+                  <p className="text-[0.65rem] text-text-disabled truncate mt-0.5">{ep.endpoint} · Key: {ep.apiKeyPreview}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setSbTesting(ep.id);
-                      setSbTestResult(null);
-                      try {
-                        const result = await testStashBoxEndpoint(ep.id);
-                        setSbTestResult({ id: ep.id, ...result });
-                      } catch {
-                        setSbTestResult({ id: ep.id, valid: false, error: "Request failed" });
-                      } finally {
-                        setSbTesting(null);
-                      }
-                    }}
-                    disabled={sbTesting === ep.id}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-                    title="Test connection"
-                  >
-                    {sbTesting === ep.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-400 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
+                  <button type="button" onClick={async () => { setSbTesting(ep.id); setSbTestResult(null); try { const r = await testStashBoxEndpoint(ep.id); setSbTestResult({ id: ep.id, ...r }); } catch { setSbTestResult({ id: ep.id, valid: false, error: "Request failed" }); } finally { setSbTesting(null); } }}
+                    disabled={sbTesting === ep.id} className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary" title="Test connection">
+                    {sbTesting === ep.id ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-400" /> : <RefreshCw className="h-3.5 w-3.5" />}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingStashBox(ep);
-                      setSbName(ep.name);
-                      setSbEndpoint(ep.endpoint);
-                      setSbApiKey("");
-                      setSbTestResult(null);
-                      setShowStashBoxForm(true);
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-                    title="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await updateStashBoxEndpoint(ep.id, { enabled: !ep.enabled });
-                      setStashBoxEndpoints((prev) => prev.map((e) => (e.id === ep.id ? { ...e, enabled: !e.enabled } : e)));
-                      flashMessage(`${ep.name} ${ep.enabled ? "disabled" : "enabled"}.`);
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-                    title={ep.enabled ? "Disable" : "Enable"}
-                  >
+                  <button type="button" onClick={() => { setEditingStashBox(ep); setSbName(ep.name); setSbEndpoint(ep.endpoint); setSbApiKey(""); setSbTestResult(null); setShowStashBoxForm(true); }}
+                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={async () => { await updateStashBoxEndpoint(ep.id, { enabled: !ep.enabled }); setStashBoxEndpoints((prev) => prev.map((e) => (e.id === ep.id ? { ...e, enabled: !e.enabled } : e))); flashMessage(`${ep.name} ${ep.enabled ? "disabled" : "enabled"}.`); }}
+                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary" title={ep.enabled ? "Disable" : "Enable"}>
                     {ep.enabled ? <ToggleRight className="h-3.5 w-3.5 text-text-accent" /> : <ToggleLeft className="h-3.5 w-3.5" />}
                   </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await deleteStashBoxEndpoint(ep.id);
-                      setStashBoxEndpoints((prev) => prev.filter((e) => e.id !== ep.id));
-                      flashMessage(`${ep.name} removed.`);
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-status-error/10 hover:text-status-error-text"
-                    title="Remove"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <button type="button" onClick={async () => { await deleteStashBoxEndpoint(ep.id); setStashBoxEndpoints((prev) => prev.filter((e) => e.id !== ep.id)); flashMessage(`${ep.name} removed.`); }}
+                    className="p-1.5 text-text-muted transition-colors hover:bg-status-error/10 hover:text-status-error-text" title="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Add/Edit form */}
           {showStashBoxForm && (
             <div className="surface-well space-y-3 border border-border-accent/30 p-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-[0.78rem] font-medium">
-                  {editingStashBox ? "Edit Endpoint" : "Add Stash-Box Endpoint"}
-                </h4>
-                <button type="button" onClick={() => setShowStashBoxForm(false)} className="p-1 text-text-disabled transition-colors hover:text-text-muted">
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <h4 className="text-[0.78rem] font-medium">{editingStashBox ? "Edit Endpoint" : "Add Stash-Box Endpoint"}</h4>
+                <button type="button" onClick={() => setShowStashBoxForm(false)} className="p-1 text-text-disabled transition-colors hover:text-text-muted"><X className="h-3.5 w-3.5" /></button>
               </div>
               <div className="grid gap-2.5">
                 <div>
@@ -719,38 +743,23 @@ export default function PluginsPage() {
                   <input type="text" value={sbEndpoint} onChange={(e) => setSbEndpoint(e.target.value)} placeholder="https://stashdb.org/graphql"
                     className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors" />
                   <div className="flex gap-1.5 mt-1.5">
-                    {[
-                      { label: "StashDB", url: "https://stashdb.org/graphql" },
-                      { label: "FansDB", url: "https://fansdb.cc/graphql" },
-                      { label: "PMVStash", url: "https://pmvstash.org/graphql" },
-                      { label: "ThePornDB", url: "https://theporndb.net/graphql" },
-                    ].map((preset) => (
+                    {[{ label: "StashDB", url: "https://stashdb.org/graphql" }, { label: "FansDB", url: "https://fansdb.cc/graphql" }, { label: "PMVStash", url: "https://pmvstash.org/graphql" }, { label: "ThePornDB", url: "https://theporndb.net/graphql" }].map((preset) => (
                       <button key={preset.label} onClick={() => { setSbEndpoint(preset.url); if (!sbName) setSbName(preset.label); }}
-                        className="border border-border-subtle px-1.5 py-0.5 text-[0.6rem] text-text-disabled transition-colors hover:border-border-default hover:text-text-muted">
-                        {preset.label}
-                      </button>
+                        className="border border-border-subtle px-1.5 py-0.5 text-[0.6rem] text-text-disabled transition-colors hover:border-border-default hover:text-text-muted">{preset.label}</button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-[0.65rem] text-text-disabled block mb-1">
-                    API Key {editingStashBox && <span className="text-text-disabled">(leave blank to keep current)</span>}
-                  </label>
-                  <input type="password" value={sbApiKey} onChange={(e) => setSbApiKey(e.target.value)}
-                    placeholder={editingStashBox ? "••••••••" : "Paste your API key"}
+                  <label className="text-[0.65rem] text-text-disabled block mb-1">API Key {editingStashBox && <span className="text-text-disabled">(leave blank to keep current)</span>}</label>
+                  <input type="password" value={sbApiKey} onChange={(e) => setSbApiKey(e.target.value)} placeholder={editingStashBox ? "••••••••" : "Paste your API key"}
                     className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono" />
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 pt-1">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowStashBoxForm(false)} className="h-auto px-3 py-1.5 text-[0.72rem]">
-                  Cancel
-                </Button>
-                <Button
-                  type="button" variant="primary" size="sm"
-                  disabled={sbSaving || !sbName || !sbEndpoint}
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowStashBoxForm(false)} className="h-auto px-3 py-1.5 text-[0.72rem]">Cancel</Button>
+                <Button type="button" variant="primary" size="sm" disabled={sbSaving || !sbName || !sbEndpoint}
                   onClick={async () => {
-                    setSbSaving(true);
-                    setError(null);
+                    setSbSaving(true); setError(null);
                     try {
                       if (editingStashBox) {
                         const updates: Record<string, string> = {};
@@ -764,16 +773,10 @@ export default function PluginsPage() {
                         const created = await createStashBoxEndpoint({ name: sbName, endpoint: sbEndpoint, apiKey: sbApiKey });
                         setStashBoxEndpoints((prev) => [...prev, created]);
                       }
-                      setShowStashBoxForm(false);
-                      flashMessage(editingStashBox ? "Endpoint updated." : "Endpoint added.");
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : "Failed to save");
-                    } finally {
-                      setSbSaving(false);
-                    }
+                      setShowStashBoxForm(false); flashMessage(editingStashBox ? "Endpoint updated." : "Endpoint added.");
+                    } catch (err) { setError(err instanceof Error ? err.message : "Failed to save"); } finally { setSbSaving(false); }
                   }}
-                  className="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
-                >
+                  className="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]">
                   {sbSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                   {editingStashBox ? "Update" : "Save"}
                 </Button>
@@ -788,19 +791,12 @@ export default function PluginsPage() {
 
 /* ─── Installed Scraper Card ─────────────────────────────────── */
 
-function InstalledScraperCard({
-  pkg,
-  onToggle,
-  onRemove,
-}: {
-  pkg: ScraperPackage;
-  onToggle: () => void;
-  onRemove: () => void;
-}) {
+function InstalledScraperCard({ pkg, onToggle, onRemove }: { pkg: ScraperPackage; onToggle: () => void; onRemove: () => void }) {
   const caps = pkg.capabilities as Record<string, boolean> | null;
   const enabledCaps = caps ? Object.entries(caps).filter(([, v]) => v).map(([k]) => k) : [];
   const hasScene = enabledCaps.some((c) => c.startsWith("scene"));
   const hasPerformer = enabledCaps.some((c) => c.startsWith("performer"));
+  const isNsfw = pkg.isNsfw;
 
   return (
     <div className={cn("surface-card no-lift p-4 transition-opacity duration-fast", !pkg.enabled && "opacity-60")}>
@@ -808,40 +804,29 @@ function InstalledScraperCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <p className="text-sm font-semibold">{pkg.name}</p>
-            <span className="tag-chip tag-chip-default text-[0.55rem]">Stash</span>
-            <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
-            <Badge variant={pkg.enabled ? "accent" : "default"} className="text-[0.55rem]">
-              {pkg.enabled ? "Enabled" : "Disabled"}
-            </Badge>
+            <span className={cn("tag-chip text-[0.55rem]", isNsfw ? "tag-chip-default" : "tag-chip-accent")}>{isNsfw ? "Stash" : "Obscura"}</span>
+            {isNsfw && <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>}
+            <Badge variant={pkg.enabled ? "accent" : "default"} className="text-[0.55rem]">{pkg.enabled ? "Enabled" : "Disabled"}</Badge>
           </div>
           <p className="text-mono-sm text-text-disabled mt-0.5">{pkg.packageId}</p>
-
           {enabledCaps.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
               {hasScene && <span className="inline-flex items-center gap-1 text-[0.6rem] text-text-muted mr-0.5"><Film className="h-2.5 w-2.5" /></span>}
               {hasPerformer && <span className="inline-flex items-center gap-1 text-[0.6rem] text-text-accent mr-0.5"><Users className="h-2.5 w-2.5" /></span>}
               {enabledCaps.map((key) => {
                 const meta = CAPABILITY_META[key];
-                const label = meta?.label ?? key;
-                const isPerformer = meta?.category === "performer";
-                return (
-                  <span key={key} className={cn("text-[0.6rem] px-1.5 py-0.5", isPerformer ? "bg-accent-950/80 text-text-accent border border-border-accent/30" : "tag-chip-default")}>
-                    {label}
-                  </span>
-                );
+                return (<span key={key} className={cn("text-[0.6rem] px-1.5 py-0.5", meta?.category === "performer" ? "bg-accent-950/80 text-text-accent border border-border-accent/30" : "tag-chip-default")}>{meta?.label ?? key}</span>);
               })}
             </div>
           )}
         </div>
-
         <div className="flex items-center gap-2 flex-shrink-0">
           <button onClick={onToggle} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast text-text-muted hover:text-text-primary">
             {pkg.enabled ? <ToggleRight className="h-4 w-4 text-text-accent" /> : <ToggleLeft className="h-4 w-4" />}
             {pkg.enabled ? "Disable" : "Enable"}
           </button>
           <button onClick={onRemove} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-status-error-text transition-colors duration-fast">
-            <Trash2 className="h-3.5 w-3.5" />
-            Remove
+            <Trash2 className="h-3.5 w-3.5" />Remove
           </button>
         </div>
       </div>
