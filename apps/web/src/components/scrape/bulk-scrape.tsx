@@ -309,7 +309,7 @@ export function BulkScrape() {
 
   function handleRun() {
     if (tab === "scenes") {
-      void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers });
+      void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers, plugins: pluginsForTab });
     } else if (tab === "performers") {
       void runPerformerScrape({ ...sharedTabProps, perfRows, setPerfRows, perfScrapers });
     } else if (tab === "studios") {

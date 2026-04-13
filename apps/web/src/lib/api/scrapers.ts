@@ -299,6 +299,7 @@ export async function installObscuraPlugin(
 export interface PluginExecuteResult {
   ok: boolean;
   result: unknown;
+  normalized?: NormalizedScrapeResult;
   pluginId: string;
   action: string;
 }
@@ -307,10 +308,11 @@ export async function executePlugin(
   pluginDbId: string,
   action: string,
   input?: Record<string, unknown>,
+  options?: { saveResult?: boolean; entityId?: string },
 ): Promise<PluginExecuteResult> {
   return fetchApi(`/plugins/${pluginDbId}/execute`, {
     method: "POST",
-    body: JSON.stringify({ action, input }),
+    body: JSON.stringify({ action, input, ...options }),
   });
 }
 

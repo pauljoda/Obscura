@@ -458,6 +458,54 @@ export async function pluginsRoutes(app: FastifyInstance) {
         });
       }
 
+      // Optionally save as a scrape_result row
+      if (req.body.saveResult && req.body.entityId && result && typeof result === "object") {
+        const r = result as Record<string, unknown>;
+        const entityType = action.startsWith("folder") ? "folder"
+          : action.startsWith("audio") ? "audio_track"
+          : action.startsWith("gallery") ? "gallery"
+          : action.startsWith("image") ? "image"
+          : "scene";
+
+        const [saved] = await db
+          .insert(scrapeResults)
+          .values({
+            sceneId: entityType === "scene" ? req.body.entityId : null,
+            entityType,
+            entityId: req.body.entityId,
+            pluginPackageId: pkg.id,
+            action,
+            matchType: "plugin",
+            status: "pending",
+            rawResult: result as Record<string, unknown>,
+            proposedTitle: (r.title ?? r.name ?? null) as string | null,
+            proposedDate: (r.date ?? null) as string | null,
+            proposedDetails: (r.details ?? null) as string | null,
+            proposedUrl: Array.isArray(r.urls) ? (r.urls[0] as string ?? null) : (r.url as string ?? null),
+            proposedUrls: Array.isArray(r.urls) ? r.urls as string[] : null,
+            proposedStudioName: (r.studioName ?? null) as string | null,
+            proposedPerformerNames: Array.isArray(r.performerNames) ? r.performerNames as string[] : null,
+            proposedTagNames: Array.isArray(r.tagNames) ? r.tagNames as string[] : null,
+            proposedImageUrl: (r.imageUrl ?? null) as string | null,
+            proposedEpisodeNumber: typeof r.episodeNumber === "number" ? r.episodeNumber : null,
+          })
+          .returning();
+
+        // Build normalized result matching NormalizedScrapeResult shape
+        const normalized = {
+          title: (r.title ?? r.name ?? null) as string | null,
+          date: (r.date ?? null) as string | null,
+          details: (r.details ?? null) as string | null,
+          url: Array.isArray(r.urls) ? (r.urls[0] as string ?? null) : (r.url as string ?? null),
+          studioName: (r.studioName ?? null) as string | null,
+          performerNames: Array.isArray(r.performerNames) ? r.performerNames as string[] : [],
+          tagNames: Array.isArray(r.tagNames) ? r.tagNames as string[] : [],
+          imageUrl: (r.imageUrl ?? null) as string | null,
+        };
+
+        return { ok: true, result: saved, normalized, pluginId: pkg.pluginId, action };
+      }
+
       return { ok: true, result, pluginId: pkg.pluginId, action };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

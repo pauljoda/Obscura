@@ -10,6 +10,7 @@ import {
   identifyViaStashBox,
   acceptScrapeResult,
   rejectScrapeResult,
+  executePlugin,
   toApiUrl,
 } from "../../lib/api";
 import { entityTerms } from "../../lib/terminology";
@@ -31,6 +32,7 @@ export interface ScenesTabProps extends TabSharedProps {
   sceneRows: SceneRow[];
   setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>;
   sceneScrapers: ScraperPackage[];
+  plugins?: PluginInfo[];
 }
 
 /* ─── Seek helpers ────────────────────────────────────────────── */
@@ -62,7 +64,45 @@ async function seekSceneViaStashBox(row: SceneRow, endpoints: StashBoxEndpoint[]
   return {};
 }
 
-async function seekScene(row: SceneRow, scraperList: ScraperPackage[], sbEndpoints: StashBoxEndpoint[]): Promise<{
+interface PluginInfo { id: string; name: string }
+
+async function seekSceneViaPlugin(
+  row: SceneRow,
+  pluginList: PluginInfo[],
+): Promise<{ result?: ScrapeResult; normalized?: NormalizedScrapeResult; matchedScraper?: string }> {
+  for (const plugin of pluginList) {
+    try {
+      // Try videoByName with scene title
+      const res = await withTimeout(
+        executePlugin(plugin.id, "videoByName", {
+          name: row.scene.title,
+          title: row.scene.title,
+        }, {
+          saveResult: true,
+          entityId: row.scene.id,
+        }),
+        SEEK_TIMEOUT_MS,
+      );
+      if (res.result && res.normalized) {
+        return {
+          result: res.result as ScrapeResult,
+          normalized: res.normalized,
+          matchedScraper: plugin.name,
+        };
+      }
+    } catch {
+      // Timeout or error -- try next
+    }
+  }
+  return {};
+}
+
+async function seekScene(
+  row: SceneRow,
+  scraperList: ScraperPackage[],
+  sbEndpoints: StashBoxEndpoint[],
+  pluginList: PluginInfo[] = [],
+): Promise<{
   result?: ScrapeResult;
   normalized?: NormalizedScrapeResult;
   matchedScraper?: string;
@@ -72,6 +112,12 @@ async function seekScene(row: SceneRow, scraperList: ScraperPackage[], sbEndpoin
   if (sbEndpoints.length > 0) {
     const sbResult = await seekSceneViaStashBox(row, sbEndpoints);
     if (sbResult.result) return sbResult;
+  }
+
+  // Try Obscura plugins
+  if (pluginList.length > 0) {
+    const pluginResult = await seekSceneViaPlugin(row, pluginList);
+    if (pluginResult.result) return pluginResult;
   }
 
   // Fall back to community scrapers
@@ -161,13 +207,15 @@ export async function runSceneScrape({
   autoAccept,
   abortRef,
   setRunning,
+  plugins = [],
 }: ScenesTabProps) {
   setRunning(true);
   abortRef.current = false;
 
   const isStashBox = selectedScraperId.startsWith("stashbox:");
   const isScraper = selectedScraperId.startsWith("scraper:");
-  const realId = selectedScraperId.replace(/^(stashbox|scraper):/, "");
+  const isPlugin = selectedScraperId.startsWith("plugin:");
+  const realId = selectedScraperId.replace(/^(stashbox|scraper|plugin):/, "");
 
   const scraperList = isScraper
     ? sceneScrapers.filter((s) => s.id === realId)
@@ -175,6 +223,9 @@ export async function runSceneScrape({
   const sbEndpoints = isStashBox
     ? stashBoxEndpoints.filter((e) => e.id === realId)
     : selectedScraperId === "" ? stashBoxEndpoints : [];
+  const pluginList = isPlugin
+    ? plugins.filter((p) => p.id === realId)
+    : selectedScraperId === "" ? plugins : [];
 
   // Reset non-accepted rows
   setSceneRows((prev) =>
@@ -192,7 +243,7 @@ export async function runSceneScrape({
     );
 
     try {
-      const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList, sbEndpoints);
+      const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList, sbEndpoints, pluginList);
       if (result && normalized) {
         if (autoAccept) {
           try {
