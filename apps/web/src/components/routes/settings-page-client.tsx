@@ -13,10 +13,7 @@ import {
   Image,
   Loader2,
   Package,
-  Pencil,
   Plus,
-  RefreshCw,
-  Save,
   ScanSearch,
   Settings,
   Trash2,
@@ -26,7 +23,6 @@ import {
   ToggleRight,
   X,
   Check,
-  AlertCircle,
   Shield,
   Droplet,
   Flame,
@@ -43,31 +39,24 @@ import {
 } from "@obscura/contracts";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { entityTerms } from "../../lib/terminology";
-import { NsfwGate } from "../nsfw/nsfw-gate";
 import { ToggleCard, QualitySlider, NumberStepper, StorageStat } from "../settings/settings-controls";
 import { SubtitlesSection } from "../settings/subtitles-section";
 import { DiagnosticsSection } from "../settings/diagnostics-section";
 import {
   browseLibraryPath,
   createLibraryRoot,
-  createStashBoxEndpoint,
   deleteLibraryRoot,
-  deleteStashBoxEndpoint,
   fetchInstalledScrapers,
   fetchLibraryConfig,
-  fetchStashBoxEndpoints,
   migrateSceneAssetStorage,
   backfillPhashes,
   rebuildPreviews,
   runQueue,
-  testStashBoxEndpoint,
   updateLibraryRoot,
   updateLibrarySettings,
-  updateStashBoxEndpoint,
   type LibraryBrowse,
   type LibraryRoot,
   type LibrarySettings,
-  type StashBoxEndpoint,
   type StorageStats,
 } from "../../lib/api";
 
@@ -112,7 +101,6 @@ interface SettingsPageClientProps {
   initialScraperCount: number;
   initialSettings: LibrarySettings;
   initialStorage: StorageStats | null;
-  initialStashBoxEndpoints: StashBoxEndpoint[];
 }
 
 export function SettingsPageClient({
@@ -120,7 +108,6 @@ export function SettingsPageClient({
   initialScraperCount,
   initialSettings,
   initialStorage,
-  initialStashBoxEndpoints,
 }: SettingsPageClientProps) {
   const [settings, setSettings] = useState(() => normalizeSettings(initialSettings));
   const [roots, setRoots] = useState(initialRoots);
@@ -146,16 +133,6 @@ export function SettingsPageClient({
   const [error, setError] = useState<string | null>(null);
   const [scraperCount, setScraperCount] = useState(initialScraperCount);
 
-  // StashBox state
-  const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>(initialStashBoxEndpoints);
-  const [showStashBoxForm, setShowStashBoxForm] = useState(false);
-  const [editingStashBox, setEditingStashBox] = useState<StashBoxEndpoint | null>(null);
-  const [sbName, setSbName] = useState("");
-  const [sbEndpoint, setSbEndpoint] = useState("");
-  const [sbApiKey, setSbApiKey] = useState("");
-  const [sbSaving, setSbSaving] = useState(false);
-  const [sbTesting, setSbTesting] = useState<string | null>(null);
-  const [sbTestResult, setSbTestResult] = useState<{ id: string; valid: boolean; error?: string } | null>(null);
   const [metadataStorageDialogOpen, setMetadataStorageDialogOpen] = useState(false);
   const [metadataStorageBusy, setMetadataStorageBusy] = useState(false);
 
@@ -859,310 +836,37 @@ export function SettingsPageClient({
         }}
       />
 
-      <NsfwGate>
       <div className="border-t border-border-subtle" />
 
-      {/* ─── Metadata Providers ──────────────────────────────────── */}
+      {/* ─── Metadata Providers → Plugins link ──────────────────── */}
       <section className="space-y-3">
         <div className="flex items-center gap-2.5 px-1">
           <Database className="h-4 w-4 text-text-accent" />
           <div>
             <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">Metadata Providers</h2>
             <p className="text-[0.68rem] text-text-muted">
-              Stash-Box endpoints and community scrapers for identifying media
+              Manage identification plugins, scrapers, and StashBox endpoints
             </p>
           </div>
         </div>
 
-        {/* Stash-Box Endpoints */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[0.78rem] font-medium text-text-secondary">Stash-Box Endpoints</h3>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setEditingStashBox(null);
-                setSbName("");
-                setSbEndpoint("");
-                setSbApiKey("");
-                setSbTestResult(null);
-                setShowStashBoxForm(true);
-              }}
-              className="h-auto gap-1 px-2 py-1 text-[0.68rem] text-text-accent hover:bg-accent-950/60"
-            >
-              <Plus className="h-3 w-3" />
-              Add
-            </Button>
-          </div>
-
-          {stashBoxEndpoints.length === 0 && !showStashBoxForm && (
-            <div className="empty-rack-slot p-4 text-center">
-              <p className="text-[0.75rem] text-text-disabled">
-                No Stash-Box endpoints configured. Add one to enable fingerprint-based video identification.
-              </p>
-            </div>
-          )}
-
-          {stashBoxEndpoints.map((ep) => (
-            <div key={ep.id} className="surface-card no-lift p-3.5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[0.82rem] font-medium truncate">{ep.name}</span>
-                    {!ep.enabled && (
-                      <Badge variant="default" className="text-[0.55rem] font-semibold uppercase tracking-wider">
-                        Disabled
-                      </Badge>
-                    )}
-                    {sbTestResult?.id === ep.id && (
-                      <Badge
-                        variant={sbTestResult.valid ? "success" : "error"}
-                        className="items-center gap-1 text-[0.55rem] font-medium normal-case tracking-normal"
-                      >
-                        {sbTestResult.valid ? <Check className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
-                        {sbTestResult.valid ? "Connected" : sbTestResult.error ?? "Failed"}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-[0.65rem] text-text-disabled truncate mt-0.5">
-                    {ep.endpoint} · Key: {ep.apiKeyPreview}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setSbTesting(ep.id);
-                      setSbTestResult(null);
-                      try {
-                        const result = await testStashBoxEndpoint(ep.id);
-                        setSbTestResult({ id: ep.id, ...result });
-                      } catch {
-                        setSbTestResult({ id: ep.id, valid: false, error: "Request failed" });
-                      } finally {
-                        setSbTesting(null);
-                      }
-                    }}
-                    disabled={sbTesting === ep.id}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
-                    title="Test connection"
-                  >
-                    {sbTesting === ep.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-400 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingStashBox(ep);
-                      setSbName(ep.name);
-                      setSbEndpoint(ep.endpoint);
-                      setSbApiKey("");
-                      setSbTestResult(null);
-                      setShowStashBoxForm(true);
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
-                    title="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await updateStashBoxEndpoint(ep.id, { enabled: !ep.enabled });
-                      setStashBoxEndpoints((prev) =>
-                        prev.map((e) => (e.id === ep.id ? { ...e, enabled: !e.enabled } : e))
-                      );
-                      setMessage(`${ep.name} ${ep.enabled ? "disabled" : "enabled"}.`);
-                      setTimeout(() => setMessage(null), 2000);
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
-                    title={ep.enabled ? "Disable" : "Enable"}
-                  >
-                    {ep.enabled ? <ToggleRight className="h-3.5 w-3.5 text-text-accent" /> : <ToggleLeft className="h-3.5 w-3.5" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await deleteStashBoxEndpoint(ep.id);
-                      setStashBoxEndpoints((prev) => prev.filter((e) => e.id !== ep.id));
-                    }}
-                    className="p-1.5 text-text-muted transition-colors hover:bg-error-muted/25 hover:text-error-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/30"
-                    title="Remove"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Add/Edit form — recessed well reads as an active edit slot vs list cards */}
-          {showStashBoxForm && (
-            <div className="surface-well space-y-3 border border-border-accent/30 p-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[0.78rem] font-medium">
-                  {editingStashBox ? "Edit Endpoint" : "Add Stash-Box Endpoint"}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setShowStashBoxForm(false)}
-                  className="p-1 text-text-disabled transition-colors hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <div className="grid gap-2.5">
-                <div>
-                  <label className="text-[0.65rem] text-text-disabled block mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={sbName}
-                    onChange={(e) => setSbName(e.target.value)}
-                    placeholder="StashDB"
-                    className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-[0.65rem] text-text-disabled block mb-1">GraphQL Endpoint</label>
-                  <input
-                    type="text"
-                    value={sbEndpoint}
-                    onChange={(e) => setSbEndpoint(e.target.value)}
-                    placeholder="https://stashdb.org/graphql"
-                    className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors"
-                  />
-                  <div className="flex gap-1.5 mt-1.5">
-                    {[
-                      { label: "StashDB", url: "https://stashdb.org/graphql" },
-                      { label: "FansDB", url: "https://fansdb.cc/graphql" },
-                      { label: "PMVStash", url: "https://pmvstash.org/graphql" },
-                      { label: "ThePornDB", url: "https://theporndb.net/graphql" },
-                    ].map((preset) => (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          setSbEndpoint(preset.url);
-                          if (!sbName) setSbName(preset.label);
-                        }}
-                        className="border border-border-subtle px-1.5 py-0.5 text-[0.6rem] text-text-disabled transition-colors hover:border-border-default hover:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/25"
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[0.65rem] text-text-disabled block mb-1">
-                    API Key {editingStashBox && <span className="text-text-disabled">(leave blank to keep current)</span>}
-                  </label>
-                  <input
-                    type="password"
-                    value={sbApiKey}
-                    onChange={(e) => setSbApiKey(e.target.value)}
-                    placeholder={editingStashBox ? "••••••••" : "Paste your API key"}
-                    className="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <p className="flex items-center gap-1 text-[0.68rem] text-error-text">
-                  <AlertCircle className="h-3 w-3 shrink-0" />
-                  {error}
-                </p>
-              )}
-
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowStashBoxForm(false)}
-                  className="h-auto px-3 py-1.5 text-[0.72rem]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={sbSaving || !sbName || !sbEndpoint}
-                  onClick={async () => {
-                    setSbSaving(true);
-                    setError(null);
-                    try {
-                      if (editingStashBox) {
-                        const updates: Record<string, string> = {};
-                        if (sbName !== editingStashBox.name) updates.name = sbName;
-                        if (sbEndpoint !== editingStashBox.endpoint) updates.endpoint = sbEndpoint;
-                        if (sbApiKey) updates.apiKey = sbApiKey;
-                        const updated = await updateStashBoxEndpoint(editingStashBox.id, updates);
-                        setStashBoxEndpoints((prev) =>
-                          prev.map((e) => (e.id === updated.id ? updated : e))
-                        );
-                      } else {
-                        if (!sbApiKey) {
-                          setError("API key is required");
-                          setSbSaving(false);
-                          return;
-                        }
-                        const created = await createStashBoxEndpoint({
-                          name: sbName,
-                          endpoint: sbEndpoint,
-                          apiKey: sbApiKey,
-                        });
-                        setStashBoxEndpoints((prev) => [...prev, created]);
-                      }
-                      setShowStashBoxForm(false);
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : "Failed to save");
-                    } finally {
-                      setSbSaving(false);
-                    }
-                  }}
-                  className="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
-                >
-                  {sbSaving ? (
-                    <>
-                      <StatusLed status="accent" size="sm" pulse className="shrink-0" />
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-accent-300 drop-shadow-[0_0_6px_rgba(199,155,92,0.35)]" />
-                    </>
-                  ) : (
-                    <Save className="h-3 w-3" />
-                  )}
-                  {editingStashBox ? "Update" : "Save & Test"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Community Scrapers link */}
-        <Link href="/scrapers" className="group block">
-          <div
-            className={cn(
-              "surface-card no-lift p-3.5 transition-all duration-normal",
-              "hover:border-border-accent hover:shadow-[var(--shadow-glow-accent)]",
-            )}
-          >
+        <Link href="/plugins" className="group block">
+          <div className={cn(
+            "surface-card no-lift p-3.5 transition-all duration-normal",
+            "hover:border-border-accent hover:shadow-[var(--shadow-glow-accent)]",
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Package className="h-4 w-4 text-text-muted" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[0.82rem] font-medium transition-colors duration-fast group-hover:text-text-accent">
-                      Community Scrapers
+                      Plugins
                     </span>
                     <span className="pill-accent px-1.5 py-0.5 text-[0.55rem]">{scraperCount}</span>
                   </div>
                   <p className="text-[0.65rem] text-text-disabled">
-                    Install and manage community metadata scrapers
+                    Manage scrapers, StashBox endpoints, and identification plugins
                   </p>
                 </div>
               </div>
@@ -1171,7 +875,7 @@ export function SettingsPageClient({
           </div>
         </Link>
       </section>
-      </NsfwGate>
+
 
       <div className="border-t border-border-subtle" />
       <section className="space-y-3">
