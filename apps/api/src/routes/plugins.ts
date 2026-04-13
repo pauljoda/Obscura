@@ -12,16 +12,67 @@ import {
   readManifest,
   encryptAuthValue,
   resolvePluginAuth,
+  loadTypeScriptPlugin,
+  runNativePythonPlugin,
+  PluginExecutionError,
   fetchPluginIndex,
   clearPluginIndexCache,
   type PluginIndexEntry,
   type InstalledPluginDto,
+  type OscuraPluginManifest,
+  type PluginInput,
 } from "@obscura/plugins";
 
 const { pluginPackages, pluginAuth, scrapeResults } = schema;
 
 function getPluginsDir() {
   return path.join(getCacheRootDir(), "plugins");
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────
+
+async function upsertPlugin(
+  manifest: Awaited<ReturnType<typeof readManifest>>,
+  installPath: string,
+  sha256: string | null,
+  sourceIndex: string,
+) {
+  const existing = await db
+    .select()
+    .from(pluginPackages)
+    .where(eq(pluginPackages.pluginId, manifest.id))
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(pluginPackages)
+      .set({
+        name: manifest.name,
+        version: manifest.version,
+        runtime: manifest.runtime,
+        installPath,
+        sha256,
+        isNsfw: manifest.isNsfw,
+        capabilities: manifest.capabilities as Record<string, boolean>,
+        manifestRaw: manifest as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(pluginPackages.pluginId, manifest.id));
+  } else {
+    await db.insert(pluginPackages).values({
+      pluginId: manifest.id,
+      name: manifest.name,
+      version: manifest.version,
+      runtime: manifest.runtime,
+      installPath,
+      sha256,
+      isNsfw: manifest.isNsfw,
+      capabilities: manifest.capabilities as Record<string, boolean>,
+      manifestRaw: manifest as unknown as Record<string, unknown>,
+      enabled: true,
+      sourceIndex,
+    });
+  }
 }
 
 // ─── Route registration ────────────────────────────────────────────
@@ -81,97 +132,77 @@ export async function pluginsRoutes(app: FastifyInstance) {
     });
   });
 
-  // ─── Install plugin from community index ────────────────────────
+  // ─── Install plugin ─────────────────────────────────────────────
+  // Supports: zipUrl (download), or localPath (dev: copy from disk)
   app.post<{
-    Body: { pluginId: string; zipUrl: string; sha256?: string };
+    Body: { pluginId: string; zipUrl?: string; localPath?: string; sha256?: string };
   }>("/plugins/packages", async (req, reply) => {
-    const { pluginId, zipUrl, sha256: expectedSha } = req.body;
+    const { pluginId, zipUrl, localPath, sha256: expectedSha } = req.body;
 
-    // Download the zip
-    const res = await fetch(zipUrl);
-    if (!res.ok) {
-      return reply
-        .code(502)
-        .send({ error: `Failed to download plugin: ${res.status}` });
-    }
-
-    const buffer = Buffer.from(await res.arrayBuffer());
-
-    // Verify SHA256 if provided
-    if (expectedSha) {
-      const actual = createHash("sha256").update(buffer).digest("hex");
-      if (actual !== expectedSha) {
-        return reply.code(400).send({
-          error: `SHA256 mismatch: expected ${expectedSha}, got ${actual}`,
-        });
-      }
-    }
-
-    // Extract to plugins dir
     const pluginsDir = getPluginsDir();
     const installDir = path.join(pluginsDir, pluginId);
-    await mkdir(installDir, { recursive: true });
 
-    const files = unzipSync(new Uint8Array(buffer));
-    for (const [name, data] of Object.entries(files)) {
-      const outPath = path.join(installDir, name);
-      // Path traversal guard
-      if (!outPath.startsWith(installDir)) continue;
-      await mkdir(path.dirname(outPath), { recursive: true });
-      await writeFile(outPath, data);
+    if (localPath) {
+      // Dev mode: the plugin directory is on disk — just register it directly
+      // (no copy needed, we point installPath at the source)
+      if (!existsSync(localPath)) {
+        return reply.code(400).send({ error: `Local plugin path not found: ${localPath}` });
+      }
+
+      let manifest;
+      try {
+        manifest = await readManifest(localPath);
+      } catch (err) {
+        return reply.code(400).send({
+          error: `Invalid plugin manifest: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+
+      await upsertPlugin(manifest, localPath, null, "obscura-community");
+      return { ok: true, pluginId: manifest.id };
     }
 
-    // Parse manifest
-    let manifest;
-    try {
-      manifest = await readManifest(installDir);
-    } catch (err) {
-      await rm(installDir, { recursive: true, force: true });
-      return reply.code(400).send({
-        error: `Invalid plugin manifest: ${err instanceof Error ? err.message : String(err)}`,
-      });
+    if (zipUrl) {
+      // Production: download and extract zip
+      const res = await fetch(zipUrl);
+      if (!res.ok) {
+        return reply.code(502).send({ error: `Failed to download plugin: ${res.status}` });
+      }
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+
+      if (expectedSha) {
+        const actual = createHash("sha256").update(buffer).digest("hex");
+        if (actual !== expectedSha) {
+          return reply.code(400).send({ error: `SHA256 mismatch: expected ${expectedSha}, got ${actual}` });
+        }
+      }
+
+      await mkdir(installDir, { recursive: true });
+      const files = unzipSync(new Uint8Array(buffer));
+      for (const [name, data] of Object.entries(files)) {
+        const outPath = path.join(installDir, name);
+        if (!outPath.startsWith(installDir)) continue;
+        await mkdir(path.dirname(outPath), { recursive: true });
+        await writeFile(outPath, data);
+      }
+
+      let manifest;
+      try {
+        manifest = await readManifest(installDir);
+      } catch (err) {
+        await rm(installDir, { recursive: true, force: true });
+        return reply.code(400).send({
+          error: `Invalid plugin manifest: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+
+      const sha = createHash("sha256").update(buffer).digest("hex");
+      await upsertPlugin(manifest, installDir, sha, "obscura-community");
+      return { ok: true, pluginId: manifest.id };
     }
 
-    // Upsert into DB
-    const sha = createHash("sha256").update(buffer).digest("hex");
-    const existing = await db
-      .select()
-      .from(pluginPackages)
-      .where(eq(pluginPackages.pluginId, manifest.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(pluginPackages)
-        .set({
-          name: manifest.name,
-          version: manifest.version,
-          runtime: manifest.runtime,
-          installPath: installDir,
-          sha256: sha,
-          isNsfw: manifest.isNsfw,
-          capabilities: manifest.capabilities as Record<string, boolean>,
-          manifestRaw: manifest as unknown as Record<string, unknown>,
-          updatedAt: new Date(),
-        })
-        .where(eq(pluginPackages.pluginId, manifest.id));
-    } else {
-      await db.insert(pluginPackages).values({
-        pluginId: manifest.id,
-        name: manifest.name,
-        version: manifest.version,
-        runtime: manifest.runtime,
-        installPath: installDir,
-        sha256: sha,
-        isNsfw: manifest.isNsfw,
-        capabilities: manifest.capabilities as Record<string, boolean>,
-        manifestRaw: manifest as unknown as Record<string, unknown>,
-        enabled: true,
-        sourceIndex: "obscura-community",
-      });
-    }
-
-    return { ok: true, pluginId: manifest.id };
+    return reply.code(400).send({ error: "Either zipUrl or localPath is required" });
   });
 
   // ─── Uninstall plugin ───────────────────────────────────────────
@@ -367,11 +398,74 @@ export async function pluginsRoutes(app: FastifyInstance) {
       saveResult?: boolean;
     };
   }>("/plugins/:id/execute", async (req, reply) => {
-    // For now, this is a placeholder that returns the correct structure.
-    // Full execution logic will be wired when plugins are installed.
-    return reply.code(501).send({
-      error: "Plugin execution not yet implemented — install plugins first",
-    });
+    const { id } = req.params;
+    const { action, input } = req.body;
+
+    if (!action) {
+      return reply.code(400).send({ error: "action is required" });
+    }
+
+    // Look up the plugin
+    const [pkg] = await db
+      .select()
+      .from(pluginPackages)
+      .where(eq(pluginPackages.id, id))
+      .limit(1);
+
+    if (!pkg) {
+      return reply.code(404).send({ error: "Plugin not found" });
+    }
+
+    if (!pkg.enabled) {
+      return reply.code(400).send({ error: "Plugin is disabled" });
+    }
+
+    // Resolve auth credentials
+    const authRows = await db
+      .select({ authKey: pluginAuth.authKey, encryptedValue: pluginAuth.encryptedValue })
+      .from(pluginAuth)
+      .where(eq(pluginAuth.pluginId, pkg.pluginId));
+    const auth = await resolvePluginAuth(pkg.pluginId, authRows);
+
+    // Parse the manifest for runtime info
+    let manifest: OscuraPluginManifest;
+    try {
+      manifest = await readManifest(pkg.installPath);
+    } catch (err) {
+      return reply.code(500).send({
+        error: `Failed to read plugin manifest: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
+
+    // Execute based on runtime
+    try {
+      let result: unknown = null;
+
+      if (manifest.runtime === "typescript") {
+        const plugin = await loadTypeScriptPlugin(manifest, pkg.installPath);
+        result = await plugin.execute(action, (input ?? {}) as PluginInput, auth);
+      } else if (manifest.runtime === "python") {
+        result = await runNativePythonPlugin(
+          manifest,
+          pkg.installPath,
+          action,
+          (input ?? {}) as PluginInput,
+          auth,
+        );
+      } else {
+        return reply.code(400).send({
+          error: `Unsupported plugin runtime: ${manifest.runtime}`,
+        });
+      }
+
+      return { ok: true, result, pluginId: pkg.pluginId, action };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      app.log.warn(`[plugin-execute] ${pkg.pluginId} → ${action} error: ${message}`);
+      return reply.code(500).send({
+        error: `Plugin execution failed: ${message}`,
+      });
+    }
   });
 
   // ─── Batch identify (enqueue job) ───────────────────────────────
@@ -459,6 +553,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
           ...e,
           installed: installedMap.has(String(e.id)),
           installedVersion: installedMap.get(String(e.id)) ?? null,
+          // Include local path so the frontend can install from disk
+          localPath: path.join(localPath, "plugins", String(e.id)),
         }));
       } catch (err) {
         return reply.code(500).send({

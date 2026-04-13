@@ -279,8 +279,37 @@ export interface ObscuraPluginIndexEntry {
   requires?: string[];
   installed?: boolean;
   installedVersion?: string | null;
+  localPath?: string;
 }
 
 export async function fetchObscuraPluginIndex(): Promise<ObscuraPluginIndexEntry[]> {
   return fetchApi("/plugins/obscura-index");
+}
+
+export async function installObscuraPlugin(
+  pluginId: string,
+  options: { localPath?: string; zipUrl?: string; sha256?: string },
+): Promise<{ ok: boolean; pluginId: string }> {
+  return fetchApi("/plugins/packages", {
+    method: "POST",
+    body: JSON.stringify({ pluginId, ...options }),
+  });
+}
+
+export interface PluginExecuteResult {
+  ok: boolean;
+  result: unknown;
+  pluginId: string;
+  action: string;
+}
+
+export async function executePlugin(
+  pluginDbId: string,
+  action: string,
+  input?: Record<string, unknown>,
+): Promise<PluginExecuteResult> {
+  return fetchApi(`/plugins/${pluginDbId}/execute`, {
+    method: "POST",
+    body: JSON.stringify({ action, input }),
+  });
 }

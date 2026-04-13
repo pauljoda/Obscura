@@ -31,6 +31,7 @@ import {
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
   fetchObscuraPluginIndex,
+  installObscuraPlugin,
   installScraper,
   uninstallScraper,
   toggleScraper,
@@ -100,6 +101,7 @@ export default function PluginsPage() {
   const [obscuraLoading, setObscuraLoading] = useState(false);
   const [obscuraLoaded, setObscuraLoaded] = useState(false);
   const [obscuraSearch, setObscuraSearch] = useState("");
+  const [obscuraInstallingId, setObscuraInstallingId] = useState<string | null>(null);
 
   // StashBox state
   const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
@@ -297,6 +299,29 @@ export default function PluginsPage() {
     }
     setSelected(new Set());
     setBulkInstalling(false);
+  }
+
+  /* ─── Obscura plugin install ────────────────────────────────── */
+
+  async function handleObscuraInstall(entry: ObscuraPluginIndexEntry) {
+    setObscuraInstallingId(entry.id);
+    setError(null);
+    try {
+      await installObscuraPlugin(entry.id, {
+        localPath: entry.localPath,
+        zipUrl: entry.localPath ? undefined : entry.path,
+        sha256: entry.sha256 || undefined,
+      });
+      flashMessage(`Installed ${entry.name}`);
+      setObscuraEntries((prev) =>
+        prev.map((e) => (e.id === entry.id ? { ...e, installed: true } : e)),
+      );
+      await loadInstalled();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to install ${entry.name}`);
+    } finally {
+      setObscuraInstallingId(null);
+    }
   }
 
   /* ─── Installed filtering ──────────────────────────────────── */
@@ -573,7 +598,14 @@ export default function PluginsPage() {
                       Installed
                     </Badge>
                   ) : (
-                    <span className="text-text-disabled text-[0.68rem] flex-shrink-0">Coming soon</span>
+                    <button
+                      onClick={() => void handleObscuraInstall(entry)}
+                      disabled={obscuraInstallingId === entry.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-text-accent transition-colors duration-fast flex-shrink-0 disabled:opacity-40"
+                    >
+                      {obscuraInstallingId === entry.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      Install
+                    </button>
                   )}
                 </div>
               ))}
