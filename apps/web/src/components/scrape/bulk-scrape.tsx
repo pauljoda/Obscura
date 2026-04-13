@@ -193,9 +193,32 @@ export function BulkScrape() {
       // Store installed Obscura plugins (only enabled ones with auth OK)
       setPlugins(pluginsRes.filter((p) => p.enabled));
 
-      // Initialize new entity rows — only top-level folders (not sub-folders like "Season 1")
-      const topLevelFolders = foldersRes.items.filter((f) => !f.parentId);
-      setFolderRows(topLevelFolders.map((folder) => ({
+      // Initialize new entity rows — show content-level folders for identification.
+      // When "use library root as folder" is enabled, the parentId=null folders
+      // are library roots (no direct scenes, just children). In that case, show
+      // their direct children (depth 1) instead. When disabled, parentId=null
+      // folders ARE the content folders.
+      const allFolders = foldersRes.items;
+      const rootFolders = allFolders.filter((f) => !f.parentId);
+
+      // Detect library root wrappers: parentId=null, no direct scenes, has children
+      const libraryRootIds = new Set(
+        rootFolders
+          .filter((f) => f.directSceneCount === 0 && f.childFolderCount > 0)
+          .map((f) => f.id),
+      );
+
+      let contentFolders;
+      if (libraryRootIds.size > 0) {
+        // Mix: include genuine root-level content folders + children of library root wrappers
+        const genuineRoots = rootFolders.filter((f) => !libraryRootIds.has(f.id));
+        const childrenOfWrappers = allFolders.filter((f) => f.parentId && libraryRootIds.has(f.parentId));
+        contentFolders = [...genuineRoots, ...childrenOfWrappers];
+      } else {
+        contentFolders = rootFolders;
+      }
+
+      setFolderRows(contentFolders.map((folder) => ({
         folder,
         status: "pending" as const,
         selectedFields: new Set(VIDEO_FOLDER_FIELDS),
