@@ -14,6 +14,7 @@ COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/media-core/package.json packages/media-core/package.json
 COPY packages/stash-import/package.json packages/stash-import/package.json
+COPY packages/plugins/package.json packages/plugins/package.json
 
 RUN pnpm install --frozen-lockfile
 
