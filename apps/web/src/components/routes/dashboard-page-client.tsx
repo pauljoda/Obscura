@@ -25,6 +25,7 @@ import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 
 interface DashboardPageClientProps {
   scenes: SceneListItem[];
+  featuredScenes: SceneListItem[];
   galleries: GalleryListItem[];
   images: ImageListItemDto[];
   audioLibraries: AudioLibraryListItemDto[];
@@ -80,17 +81,28 @@ function AudioLibraryCard({
   );
 }
 
+import { useNsfw } from "../nsfw/nsfw-context";
+
 export function DashboardPageClient({
-  scenes,
-  galleries,
-  images,
-  audioLibraries,
-  sceneFolders,
-  performers,
-  studios,
+  scenes: initialRecent,
+  featuredScenes: initialFeatured,
+  galleries: initialGalleries,
+  images: initialImages,
+  audioLibraries: initialAudio,
+  sceneFolders: initialFolders,
+  performers: initialPerformers,
+  studios: initialStudios,
 }: DashboardPageClientProps) {
-  const featuredScenes = scenes.slice(0, 5);
-  const recentScenes = scenes.slice(5);
+  const { mode: nsfwMode } = useNsfw();
+
+  const featuredScenes = initialFeatured.filter(s => nsfwMode === "show" || !s.isNsfw);
+  const recentScenes = initialRecent.filter(s => nsfwMode === "show" || !s.isNsfw);
+  const galleries = initialGalleries.filter(g => nsfwMode === "show" || !g.isNsfw);
+  const images = initialImages.filter(i => nsfwMode === "show" || !i.isNsfw);
+  const audioLibraries = initialAudio.filter(a => nsfwMode === "show" || !a.isNsfw);
+  const sceneFolders = initialFolders.filter(f => nsfwMode === "show" || !f.isNsfw);
+  const performers = initialPerformers.filter(p => nsfwMode === "show" || !p.isNsfw);
+  const studios = initialStudios.filter(s => nsfwMode === "show" || !s.isNsfw);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -152,6 +164,12 @@ export function DashboardPageClient({
                         <Film className="w-4 h-4" />
                         Featured
                       </span>
+                      {scene.isNsfw && (
+                        <>
+                          <span className="text-text-muted">•</span>
+                          <NsfwShowModeChip isNsfw={scene.isNsfw} />
+                        </>
+                      )}
                       {scene.durationFormatted && (
                         <>
                           <span className="text-text-muted">•</span>

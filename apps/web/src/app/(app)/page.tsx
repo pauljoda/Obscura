@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     performersResponse,
     studiosResponse,
   ] = await Promise.all([
-    fetchScenes({ sort: "recent", order: "desc", limit: 20, nsfw: nsfwMode }).catch(() => ({
+    fetchScenes({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }).catch(() => ({
       scenes: [] as SceneListItem[],
     })),
     fetchGalleries({ limit: 12, nsfw: nsfwMode }).catch(() => ({
@@ -54,9 +54,25 @@ export default async function DashboardPage() {
     })),
   ]);
 
+      const allScenes = scenesResponse.scenes;
+      
+      const scoredScenes = [...allScenes].map(scene => {
+        let score = Math.random() * 20;
+        if (scene.playCount === 0) score += 50;
+        if (scene.rating) score += scene.rating;
+        return { scene, score };
+      });
+      
+      scoredScenes.sort((a, b) => b.score - a.score);
+      const featuredScenes = scoredScenes.slice(0, 5).map(s => s.scene);
+      
+      const featuredIds = new Set(featuredScenes.map(s => s.id));
+      const recentScenes = allScenes.filter(s => !featuredIds.has(s.id)).slice(0, 15);
+
   return (
     <DashboardPageClient
-      scenes={scenesResponse.scenes}
+      scenes={recentScenes}
+      featuredScenes={featuredScenes}
       galleries={galleriesResponse.galleries}
       images={imagesResponse.images}
       audioLibraries={audioResponse.items}
