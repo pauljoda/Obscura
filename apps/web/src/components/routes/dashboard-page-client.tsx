@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Play, Image as ImageIcon, Film, Layers } from "lucide-react";
+import { Play, Image as ImageIcon, Film, Layers, Music, FolderOpen, Users, Building2 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { GalleryListItem, SceneListItem } from "../../lib/api";
-import type { ImageListItemDto } from "@obscura/contracts";
+import type { GalleryListItem, SceneListItem, PerformerItem, StudioItem } from "../../lib/api";
+import type { ImageListItemDto, AudioLibraryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
 
 import { SceneCard } from "../scenes/scene-card";
@@ -14,14 +14,81 @@ import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
 import { ImageEntityCard } from "../images/image-entity-card";
 import { imageItemToCardData } from "../images/image-card-data";
+import { SceneFolderCard } from "../scene-folders/scene-folder-card";
+import { PerformerEntityCard } from "../performers/performer-entity-card";
+import { performerItemToCardData } from "../performers/performer-card-data";
+import { StudioEntityCard } from "../studios/studio-entity-card";
+import { studioItemToCardData } from "../studios/studio-card-data";
+import { EntityPreviewMedia } from "../shared/entity-preview-media";
+import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
+import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 
 interface DashboardPageClientProps {
   scenes: SceneListItem[];
   galleries: GalleryListItem[];
   images: ImageListItemDto[];
+  audioLibraries: AudioLibraryListItemDto[];
+  sceneFolders: SceneFolderListItemDto[];
+  performers: PerformerItem[];
+  studios: StudioItem[];
 }
 
-export function DashboardPageClient({ scenes, galleries, images }: DashboardPageClientProps) {
+function AudioLibraryCard({
+  library,
+  index,
+}: {
+  library: AudioLibraryListItemDto;
+  index: number;
+}) {
+  const coverUrl = toApiUrl(library.coverImagePath);
+  const gradientClass = SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length];
+
+  return (
+    <Link
+      href={`/audio/${library.id}`}
+      className="group surface-card-sharp overflow-hidden hover:border-border-accent transition-colors block"
+    >
+      <NsfwBlur isNsfw={library.isNsfw} className="overflow-hidden relative">
+        <EntityPreviewMedia
+          title={library.title}
+          mode="cover-only"
+          coverImage={coverUrl}
+          className="aspect-square"
+          fallback={
+            <div className={cn("w-full h-full flex items-center justify-center", gradientClass)}>
+              <Music className="h-10 w-10 text-white/20" />
+            </div>
+          }
+        >
+          <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
+            <NsfwShowModeChip isNsfw={library.isNsfw} />
+          </div>
+        </EntityPreviewMedia>
+      </NsfwBlur>
+      <div className="p-2.5">
+        <h3 className="text-sm font-medium truncate">{library.title}</h3>
+        <p className="text-xs text-text-muted mt-0.5">
+          {library.trackCount} track{library.trackCount !== 1 ? "s" : ""}
+        </p>
+        {library.performers.length > 0 && (
+          <p className="text-xs text-text-disabled mt-0.5 truncate">
+            {library.performers.map((p) => p.name).join(", ")}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+export function DashboardPageClient({
+  scenes,
+  galleries,
+  images,
+  audioLibraries,
+  sceneFolders,
+  performers,
+  studios,
+}: DashboardPageClientProps) {
   const featuredScenes = scenes.slice(0, 5);
   const recentScenes = scenes.slice(5);
 
@@ -203,6 +270,80 @@ export function DashboardPageClient({ scenes, galleries, images }: DashboardPage
                   <ImageEntityCard
                     image={imageItemToCardData(image, "/")}
                     variant="grid"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Audio Libraries Row */}
+        {audioLibraries.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Music className="w-5 h-5 text-accent-500" />
+              Recent Audio
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
+              {audioLibraries.map((library, i) => (
+                <div key={library.id} className="flex-none w-48 md:w-56 snap-start">
+                  <AudioLibraryCard library={library} index={i} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Scene Folders Row */}
+        {sceneFolders.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-accent-500" />
+              Recent Folders
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
+              {sceneFolders.map((folder) => (
+                <div key={folder.id} className="flex-none w-64 md:w-72 snap-start">
+                  <SceneFolderCard folder={folder} href={`/scene-folders/${folder.id}`} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Performers Row */}
+        {performers.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Users className="w-5 h-5 text-accent-500" />
+              Recent Performers
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
+              {performers.map((performer) => (
+                <div key={performer.id} className="flex-none w-40 md:w-48 snap-start">
+                  <PerformerEntityCard
+                    performer={performerItemToCardData(performer, "/")}
+                    variant="portrait"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Studios Row */}
+        {studios.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-accent-500" />
+              Studios
+            </h2>
+            <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
+              {studios.map((studio) => (
+                <div key={studio.id} className="flex-none w-64 md:w-72 snap-start">
+                  <StudioEntityCard
+                    studio={studioItemToCardData(studio, "/")}
+                    variant="banner"
                   />
                 </div>
               ))}
