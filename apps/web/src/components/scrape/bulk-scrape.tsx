@@ -194,29 +194,29 @@ export function BulkScrape() {
       setPlugins(pluginsRes.filter((p) => p.enabled));
 
       // Initialize new entity rows — show content-level folders for identification.
-      // When "use library root as folder" is enabled, the parentId=null folders
-      // are library roots (no direct scenes, just children). In that case, show
-      // their direct children (depth 1) instead. When disabled, parentId=null
-      // folders ARE the content folders.
+      // A folder with relativePath "." is the library root itself (created when
+      // "use library root as folder" is enabled) — always skip those.
+      // Then show their direct children (the real content folders).
+      // When the setting is disabled, content folders have parentId=null already.
       const allFolders = foldersRes.items;
-      const rootFolders = allFolders.filter((f) => !f.parentId);
 
-      // Detect library root wrappers: parentId=null, no direct scenes, has children
-      const libraryRootIds = new Set(
-        rootFolders
-          .filter((f) => f.directSceneCount === 0 && f.childFolderCount > 0)
-          .map((f) => f.id),
+      // IDs of folders that ARE library roots (relativePath ".")
+      const libraryRootFolderIds = new Set(
+        allFolders.filter((f) => f.relativePath === ".").map((f) => f.id),
       );
 
-      let contentFolders;
-      if (libraryRootIds.size > 0) {
-        // Mix: include genuine root-level content folders + children of library root wrappers
-        const genuineRoots = rootFolders.filter((f) => !libraryRootIds.has(f.id));
-        const childrenOfWrappers = allFolders.filter((f) => f.parentId && libraryRootIds.has(f.parentId));
-        contentFolders = [...genuineRoots, ...childrenOfWrappers];
-      } else {
-        contentFolders = rootFolders;
-      }
+      // Content folders: either children of a library root folder, or
+      // top-level folders that aren't library roots themselves
+      const contentFolders = allFolders.filter((f) => {
+        // Never show the library root itself
+        if (libraryRootFolderIds.has(f.id)) return false;
+        // Show direct children of library root folders
+        if (f.parentId && libraryRootFolderIds.has(f.parentId)) return true;
+        // Show top-level folders (when setting is off, these are content folders)
+        if (!f.parentId) return true;
+        // Skip deeper sub-folders (Season 1, etc.)
+        return false;
+      });
 
       setFolderRows(contentFolders.map((folder) => ({
         folder,
