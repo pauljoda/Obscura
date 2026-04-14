@@ -108,6 +108,14 @@ export const apiRoutes = {
   videoEpisodeAcceptScrape: "/video/episodes/:id/accept-scrape",
   videoSeriesAcceptScrape: "/video/series/:id/accept-scrape",
 
+  // Video library read
+  videoLibraryCounts: "/video/library/counts",
+  videoMovies: "/video/movies",
+  videoMovieDetail: "/video/movies/:id",
+  videoSeries: "/video/series",
+  videoSeriesDetail: "/video/series/:id",
+  videoEpisodeDetail: "/video/episodes/:id",
+
   // System
   systemStatus: "/system/status",
   systemMigrationFinalize: "/system/migrations/:name/finalize",
