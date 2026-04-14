@@ -382,7 +382,12 @@ export interface DataMigration {
 }
 
 export interface DataMigrationContext {
-  db: PostgresJsDatabase<typeof schema>;
+  // Raw postgres.js client, NOT drizzle. Migrations must not import
+  // from packages/db/src/schema.ts because that file only describes
+  // the current (post-migration) shape — tables this migration needs
+  // to read may no longer exist there. Each migration owns a frozen
+  // legacy-schema adapter alongside it for reading retired tables.
+  client: DataMigrationClient;  // postgres.Sql<{}>
   logger: Logger;
   reportProgress(pct: number, message?: string): void;
 }
