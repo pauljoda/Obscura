@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Scene cards, dashboard hero play buttons, breadcrumbs, mobile nav, desktop quick-nav, search result links (including scene and scene-folder results from the API), and collection item hrefs now all route to `/videos/:id` and `/videos?folder=:id` instead of `/scenes/:id` / `/scenes?folder=:id`. The `SceneDetail` and `SceneEdit` components default to the `"videos"` source now that the legacy routes are gone.
+
+### Removed
+
+- Legacy `/scenes`, `/scenes/:id`, `/scenes/:id/edit`, and `/scene-folders/:id` Next.js route files are deleted. The shared `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components remain and are driven exclusively by the `/videos` route stack. Server-side `fetchSceneDetail` / `fetchSceneStats` helpers in `lib/server-api/media.ts` are removed since nothing consumes them after the route deletion.
+
 ### Added
 
 - `apps/api/src/services/video-scene.service.ts` — new service that returns `SceneListItemDto`/`SceneDetailDto`/`SceneStatsDto`-shaped data backed by `video_episodes` + `video_movies` + `video_series`. First step in porting the existing `/scenes` UI stack to the new typed video tables.
