@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- Write-lockdown guard helper (`apps/api/src/db/data-migrations/lockdown.ts`) for routes to block video writes while a data migration is in `staging`, `staged`, or `finalizing` state. Exposes `getLockdownStatus()` and `assertNotLockedDown()` (throws an error tagged with `code = "MIGRATION_LOCKDOWN"`).
+
 ### Docs
 
 - Added design spec `docs/superpowers/specs/2026-04-13-video-series-model-design.md` covering the planned Series → Season → Episode / Movie data model, library scan and parsing rules, staged data-migration framework, MovieDB cascade identify flow, and folder-view UI adaptation.
