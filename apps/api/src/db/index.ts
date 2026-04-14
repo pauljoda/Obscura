@@ -55,4 +55,15 @@ export function getDatabaseUrl() {
   return state.connectionString;
 }
 
+/**
+ * Returns the raw `postgres` client backing the current database state.
+ * Prefer this over importing `queryClient` directly when you need the
+ * raw client inside long-lived code (e.g. route handlers), because
+ * `configureDatabase()` can swap the underlying instance and a captured
+ * reference would go stale.
+ */
+export function getDatabaseClient(): ApiQueryClient {
+  return state.queryClient;
+}
+
 export { schema };

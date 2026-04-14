@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- New `/system/status` endpoint returning the registered data-migration statuses and current lockdown state, plus `POST /system/migrations/:name/finalize` to run a staged migration's `finalize()` phase. Backed by a new `getDatabaseClient()` helper in `apps/api/src/db/index.ts` that returns the live raw `postgres` client.
 - API route constants `systemStatus` (`/system/status`) and `systemMigrationFinalize` (`/system/migrations/:name/finalize`) in `@obscura/contracts` for the upcoming system/data-migration endpoints.
 - Write-lockdown guard helper (`apps/api/src/db/data-migrations/lockdown.ts`) for routes to block video writes while a data migration is in `staging`, `staged`, or `finalizing` state. Exposes `getLockdownStatus()` and `assertNotLockedDown()` (throws an error tagged with `code = "MIGRATION_LOCKDOWN"`).
 
