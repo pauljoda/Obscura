@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Typed external-IDs helpers** in `@obscura/plugins` — small utilities for plugins to read, merge, and emit `ExternalIds` values without hand-writing provider key strings.
 - **Frozen legacy-schema adapter** (`apps/api/src/db/data-migrations/videos_to_series_model_v1/legacy-schema.ts`) capturing the retired `scenes`, `scene_folders`, and their join tables as-of the migration boundary, so `videos_to_series_model_v1` can read legacy rows without depending on the live schema module.
 - **Legacy-schema read helpers** (`read.ts`) exposing typed `readAllLegacyScenes`, `readAllLegacySceneFolders`, the four join-table readers, and `readLibraryRoots` against the raw migration `DataMigrationClient`.
+- **Series tree builder** (`series-tree.ts`) — pure `buildSeriesTree` helper that groups classified episode files into a `series → season → episodes` tree, the shape the upcoming `videos_to_series_model_v1` stage/finalize steps write against.
 
 ### Changed
 
