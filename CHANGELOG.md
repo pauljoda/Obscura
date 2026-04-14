@@ -34,6 +34,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Filename and folder parsing module** in `packages/media-core/src/parsing/` — `parseSeasonFolder`, `parseSeriesFolder`, `parseEpisodeFilename`, and `parseMovieFilename` extract series titles, season numbers, episode numbers, movie titles, and release years from common folder and file naming conventions. Each helper ships with unit tests and is re-exported from the package root for use by the upcoming video scan pipeline.
 - **`ExternalIds` type and `KnownExternalIdProviders` constants** in `@obscura/contracts`, giving every entity a typed, provider-keyed bag of external identifiers (TMDB, TVDB, MusicBrainz, YouTube, etc.) that the identify engine and plugins can read and write against a stable contract.
 - **Typed external-IDs helpers** in `@obscura/plugins` — small utilities for plugins to read, merge, and emit `ExternalIds` values without hand-writing provider key strings.
+- **Frozen legacy-schema adapter** (`apps/api/src/db/data-migrations/videos_to_series_model_v1/legacy-schema.ts`) capturing the retired `scenes`, `scene_folders`, and their join tables as-of the migration boundary, so `videos_to_series_model_v1` can read legacy rows without depending on the live schema module.
+- **Legacy-schema read helpers** (`read.ts`) exposing typed `readAllLegacyScenes`, `readAllLegacySceneFolders`, the four join-table readers, and `readLibraryRoots` against the raw migration `DataMigrationClient`.
 
 ### Changed
 
