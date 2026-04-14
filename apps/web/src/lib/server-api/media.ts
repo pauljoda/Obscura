@@ -22,9 +22,7 @@ import { buildQueryString, serverFetch } from "./core";
 import type {
   PerformerDetail,
   PerformerItem,
-  SceneDetail,
   SceneListItem,
-  SceneStats,
   StudioItem,
   TagItem,
 } from "../api/types";
@@ -91,20 +89,6 @@ export async function fetchScenes(params: {
     `/scenes${qs}`,
     { tags: ["scenes"] },
   );
-}
-
-export async function fetchSceneDetail(id: string) {
-  return serverFetch<SceneDetail>(`/scenes/${id}`, {
-    revalidate: 15,
-    tags: ["scenes", `scene-${id}`],
-  });
-}
-
-export async function fetchSceneStats(nsfw?: string) {
-  const qs = buildQueryString({ nsfw });
-  return serverFetch<SceneStats>(`/scenes/stats${qs}`, {
-    tags: ["scenes"],
-  });
 }
 
 export async function fetchSceneFolders(params?: {

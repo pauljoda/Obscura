@@ -87,7 +87,7 @@ export function SceneEdit({
   inline,
   onSaved,
   currentPlaybackTime,
-  source = "scenes",
+  source = "videos",
 }: SceneEditProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();

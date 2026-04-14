@@ -61,7 +61,7 @@ export function SceneDetail({
   id,
   initialScene = null,
   initialTags = [],
-  source = "scenes",
+  source = "videos",
 }: {
   id: string;
   initialScene?: SceneDetailType | null;
