@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- `apps/api/src/services/video-scene.service.ts` — new service that returns `SceneListItemDto`/`SceneDetailDto`/`SceneStatsDto`-shaped data backed by `video_episodes` + `video_movies` + `video_series`. First step in porting the existing `/scenes` UI stack to the new typed video tables.
+
 ### What's New
 
 - **New Video Library view.** A new `/video-library` page surfaces the typed series/season/episode and movie model introduced over the previous releases. Two tabs — Series and Movies — show grids with counts at the top. It's intentionally read-only and lightweight; the full UI port of the existing scenes/folders pages is planned for a follow-up release. In the meantime, both the old UI and the new Video Library view coexist, and clicking "Finalize migration" in the banner is now a safe, non-destructive operation.
