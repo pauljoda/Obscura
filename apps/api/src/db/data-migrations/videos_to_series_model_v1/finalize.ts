@@ -1,32 +1,30 @@
 import type { DataMigrationContext, FinalizeResult } from "../types";
 
 /**
- * Destructively drop the legacy scenes/scene_folders family after
- * stage() has successfully populated the new video_* tables and the
- * UI has been adapted to read from the new shape (Plan D).
+ * Non-destructive finalize. The original videos_to_series_model_v1
+ * plan called for dropping the legacy `scenes` and `scene_folders`
+ * tables here, but the web UI still reads from them. Until a
+ * dedicated cleanup plan adapts every consumer, finalize just marks
+ * the migration complete and leaves the legacy schema in place.
+ *
+ * Side effects:
+ *   - None to the database.
+ *   - The orchestrator wraps this call in a transaction and flips
+ *     the data_migrations row to `complete` after it returns.
+ *
+ * Legacy-table cleanup is deferred to a future plan that lands after
+ * the web UI stops reading from scenes/scene_folders.
  */
 export async function finalize(
   ctx: DataMigrationContext,
 ): Promise<FinalizeResult> {
-  const { client, logger, reportProgress } = ctx;
-
-  reportProgress(10, "dropping legacy join tables");
-  await client`DROP TABLE IF EXISTS scene_folder_tags CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_folder_performers CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_tags CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_performers CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_markers CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_subtitles CASCADE`;
-
-  reportProgress(40, "dropping legacy scenes and scene_folders");
-  await client`DROP TABLE IF EXISTS scenes CASCADE`;
-  await client`DROP TABLE IF EXISTS scene_folders CASCADE`;
-
-  reportProgress(80, "dropping legacy scan_videos column");
-  await client`ALTER TABLE library_roots DROP COLUMN IF EXISTS scan_videos`;
-
-  reportProgress(100, "finalize complete");
-  logger.info("videos_to_series_model_v1 finalize complete");
-
-  return { metrics: {} };
+  const { logger, reportProgress } = ctx;
+  reportProgress(100, "finalize (non-destructive)");
+  logger.info("videos_to_series_model_v1 finalize complete (non-destructive)");
+  return {
+    metrics: {
+      destructive: false,
+      droppedTables: 0,
+    },
+  };
 }

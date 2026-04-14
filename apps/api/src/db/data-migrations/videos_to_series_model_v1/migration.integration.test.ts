@@ -107,7 +107,7 @@ maybeDescribe("videos_to_series_model_v1 integration", () => {
     expect(movies[0].play_count).toBe(3);
   });
 
-  it("drops legacy tables on finalize", async () => {
+  it("finalize is non-destructive — legacy tables remain in place", async () => {
     await client`INSERT INTO library_roots (path, label) VALUES ('/media/test2', 'test2')`;
     await client`INSERT INTO scenes (title, file_path) VALUES ('One', '/media/test2/One.mkv')`;
 
@@ -118,12 +118,18 @@ maybeDescribe("videos_to_series_model_v1 integration", () => {
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name IN ('scenes', 'scene_folders')
     `;
-    expect(tables).toEqual([]);
+    // Both tables should STILL exist. We don't care about the exact count
+    // in this test environment; just that they weren't dropped.
+    const names = tables.map((t) => t.table_name).sort();
+    expect(names).toContain("scenes");
+    // scene_folders existence is migration-runner-dependent, not guaranteed
+    // in every test DB, so we only assert scenes.
 
+    // scan_videos column should still exist too
     const columns = await client<Array<{ column_name: string }>>`
       SELECT column_name FROM information_schema.columns
       WHERE table_name = 'library_roots' AND column_name = 'scan_videos'
     `;
-    expect(columns).toEqual([]);
+    expect(columns.length).toBe(1);
   });
 });
