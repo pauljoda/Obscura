@@ -39,7 +39,7 @@ import type {
 
 // We import the scene list item builder from the scene service
 // to construct polymorphic entity embeds
-import * as sceneService from "./scene.service";
+import * as videoSceneService from "./video-scene.service";
 import * as galleryService from "./gallery.service";
 import * as imageService from "./image.service";
 import * as audioTrackService from "./audio-track.service";
@@ -274,9 +274,14 @@ async function loadEntitiesForItems(
     idsByType[row.entityType].push(row.entityId);
   }
 
-  // Fetch each type
+  // Fetch each type. Collection items stored with entityType "scene"
+  // now resolve against the new video_episodes / video_movies tables;
+  // the string tag stays "scene" for backward compatibility with
+  // existing collection_items rows, but the lookup hits the video
+  // tables. Legacy scene IDs that were never migrated will be absent
+  // from the resolved set and surface as "missing" in the UI.
   if (idsByType.scene?.length) {
-    const scenes = await sceneService.getScenesByIds(idsByType.scene);
+    const scenes = await videoSceneService.getVideosByIds(idsByType.scene);
     for (const scene of scenes) {
       entityMap.set(`scene:${scene.id}`, scene as Record<string, unknown>);
     }

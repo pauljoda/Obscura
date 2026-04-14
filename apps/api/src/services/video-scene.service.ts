@@ -1021,6 +1021,202 @@ export async function getVideoSceneDetail(id: string) {
   };
 }
 
+/**
+ * Bulk-fetch videos (episodes + movies) by id, returning
+ * `SceneListItemDto`-shaped rows. Used by collection.service to
+ * hydrate polymorphic collection items whose entityType is "scene"
+ * but whose entityIds now resolve to the new video tables.
+ *
+ * Ids that do not match either table are silently skipped — the
+ * caller is expected to treat missing entities as such.
+ */
+export async function getVideosByIds(ids: string[]) {
+  if (ids.length === 0) return [] as ReturnType<typeof toVideoListItem>[];
+
+  // Episodes — joined to video_series so we can project seriesTitle/studioId.
+  const epRows = await db
+    .select()
+    .from(videoEpisodes)
+    .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
+    .where(inArray(videoEpisodes.id, ids));
+
+  const mvRows = await db
+    .select()
+    .from(videoMovies)
+    .where(inArray(videoMovies.id, ids));
+
+  const episodeIds = epRows.map((r) => r.video_episodes.id);
+  const movieIds = mvRows.map((r) => r.id);
+
+  // Parallel performer + tag joins for both tables
+  const [
+    epPerfJoins,
+    epTagJoins,
+    mvPerfJoins,
+    mvTagJoins,
+  ] = await Promise.all([
+    episodeIds.length > 0
+      ? db
+          .select({
+            entityId: videoEpisodePerformers.episodeId,
+            performerId: performers.id,
+            performerName: performers.name,
+            performerImagePath: performers.imagePath,
+            performerIsNsfw: performers.isNsfw,
+          })
+          .from(videoEpisodePerformers)
+          .innerJoin(
+            performers,
+            eq(videoEpisodePerformers.performerId, performers.id),
+          )
+          .where(inArray(videoEpisodePerformers.episodeId, episodeIds))
+      : [],
+    episodeIds.length > 0
+      ? db
+          .select({
+            entityId: videoEpisodeTags.episodeId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(videoEpisodeTags)
+          .innerJoin(tags, eq(videoEpisodeTags.tagId, tags.id))
+          .where(inArray(videoEpisodeTags.episodeId, episodeIds))
+      : [],
+    movieIds.length > 0
+      ? db
+          .select({
+            entityId: videoMoviePerformers.movieId,
+            performerId: performers.id,
+            performerName: performers.name,
+            performerImagePath: performers.imagePath,
+            performerIsNsfw: performers.isNsfw,
+          })
+          .from(videoMoviePerformers)
+          .innerJoin(
+            performers,
+            eq(videoMoviePerformers.performerId, performers.id),
+          )
+          .where(inArray(videoMoviePerformers.movieId, movieIds))
+      : [],
+    movieIds.length > 0
+      ? db
+          .select({
+            entityId: videoMovieTags.movieId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(videoMovieTags)
+          .innerJoin(tags, eq(videoMovieTags.tagId, tags.id))
+          .where(inArray(videoMovieTags.movieId, movieIds))
+      : [],
+  ]);
+
+  const perfByEntity = new Map<
+    string,
+    { id: string; name: string; imagePath: string | null; isNsfw: boolean }[]
+  >();
+  for (const j of [...epPerfJoins, ...mvPerfJoins]) {
+    const list = perfByEntity.get(j.entityId) ?? [];
+    list.push({
+      id: j.performerId,
+      name: j.performerName,
+      imagePath: j.performerImagePath,
+      isNsfw: j.performerIsNsfw,
+    });
+    perfByEntity.set(j.entityId, list);
+  }
+
+  const tagsByEntity = new Map<
+    string,
+    { id: string; name: string; isNsfw: boolean }[]
+  >();
+  for (const j of [...epTagJoins, ...mvTagJoins]) {
+    const list = tagsByEntity.get(j.entityId) ?? [];
+    list.push({ id: j.tagId, name: j.tagName, isNsfw: j.tagIsNsfw });
+    tagsByEntity.set(j.entityId, list);
+  }
+
+  const items: ReturnType<typeof toVideoListItem>[] = [];
+
+  for (const row of epRows) {
+    const ep = row.video_episodes;
+    const ser = row.video_series;
+    const videoRow: VideoRow = {
+      kind: "episode",
+      id: ep.id,
+      title: ep.title ?? "Untitled Episode",
+      details: ep.overview,
+      date: ep.airDate,
+      rating: ep.rating,
+      organized: ep.organized,
+      isNsfw: ep.isNsfw,
+      duration: ep.duration,
+      width: ep.width,
+      height: ep.height,
+      codec: ep.codec,
+      container: ep.container,
+      fileSize: ep.fileSize,
+      filePath: ep.filePath,
+      thumbnailPath: ep.thumbnailPath,
+      cardThumbnailPath: ep.cardThumbnailPath,
+      spritePath: ep.spritePath,
+      trickplayVttPath: ep.trickplayVttPath,
+      playCount: ep.playCount,
+      orgasmCount: ep.orgasmCount,
+      studioId: ser?.studioId ?? null,
+      seriesId: ep.seriesId,
+      seriesTitle: ser?.title ?? null,
+      createdAt: ep.createdAt,
+      updatedAt: ep.updatedAt,
+      episodeNumber: ep.episodeNumber,
+    };
+    const item = toVideoListItem(videoRow);
+    item.performers = perfByEntity.get(ep.id) ?? [];
+    item.tags = tagsByEntity.get(ep.id) ?? [];
+    items.push(item);
+  }
+
+  for (const mv of mvRows) {
+    const videoRow: VideoRow = {
+      kind: "movie",
+      id: mv.id,
+      title: mv.title,
+      details: mv.overview,
+      date: mv.releaseDate,
+      rating: mv.rating,
+      organized: mv.organized,
+      isNsfw: mv.isNsfw,
+      duration: mv.duration,
+      width: mv.width,
+      height: mv.height,
+      codec: mv.codec,
+      container: mv.container,
+      fileSize: mv.fileSize,
+      filePath: mv.filePath,
+      thumbnailPath: mv.thumbnailPath,
+      cardThumbnailPath: mv.cardThumbnailPath,
+      spritePath: mv.spritePath,
+      trickplayVttPath: mv.trickplayVttPath,
+      playCount: mv.playCount,
+      orgasmCount: mv.orgasmCount,
+      studioId: mv.studioId,
+      seriesId: null,
+      seriesTitle: null,
+      createdAt: mv.createdAt,
+      updatedAt: mv.updatedAt,
+      episodeNumber: null,
+    };
+    const item = toVideoListItem(videoRow);
+    item.performers = perfByEntity.get(mv.id) ?? [];
+    item.tags = tagsByEntity.get(mv.id) ?? [];
+    items.push(item);
+  }
+
+  return items;
+}
+
 // ─── Mutations ────────────────────────────────────────────────
 
 export async function updateVideoScene(id: string, body: UpdateVideoBody) {

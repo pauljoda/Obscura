@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Legacy `/scenes/:id/subtitles/*` API surface is gone. The subtitles route file and its backing `subtitles.service.ts` have been deleted. Subtitles for the new video model will return as a dedicated future feature; the `/videos/:id/subtitles/*` stubs in `videos.ts` already return 501.
 
+### Changed
+
+- Collection item hydration for entityType `"scene"` now resolves against the new `video_episodes` / `video_movies` tables via a new `getVideosByIds` helper in `video-scene.service.ts`, instead of the legacy `scenes` table. Collection items pointing at old scene IDs that were never migrated will appear as missing — existing collections can be rebuilt from the new video library.
+
 ### Added
 
 - `enqueuePendingVideoJob` worker helper, and `media-probe`, `fingerprint`, and `preview` processors now dispatch on an `entityKind` payload discriminator (`video_episode` / `video_movie`) so downstream jobs run against the new typed video tables as well as the legacy `scenes` table.
