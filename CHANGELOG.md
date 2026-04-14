@@ -40,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`videos_to_series_model_v1` precheck** — safety check that skips the migration on fresh installs (no `scenes` table or zero rows), bails if Plan A's `video_series` schema isn't present yet, and refuses to re-run when the new `video_*` tables already hold rows.
 - **`videos_to_series_model_v1` stage implementation** — non-destructive reshape pass that classifies every legacy scene against its library root, groups episodes into a series tree, and inserts `video_series` / `video_seasons` / `video_episodes` / `video_movies` rows carrying over titles, overviews, studios, ratings, file metadata, watch state, and NSFW flags. Rewrites `scene_performers` / `scene_tags` / `scene_folder_performers` / `scene_folder_tags` into the new typed join tables and re-points `scrape_results.entity_type` from `scene` / `scene_folder` to `episode` / `movie` / `series`.
 - **`videos_to_series_model_v1` finalize implementation** — destructive phase that drops the legacy `scene_folder_tags`, `scene_folder_performers`, `scene_tags`, `scene_performers`, `scene_markers`, `scene_subtitles`, `scenes`, and `scene_folders` tables in FK-safe order, and removes the obsolete `library_roots.scan_videos` column.
+- **`videos_to_series_model_v1` migration module** — assembles the precheck, stage, and finalize functions into a `DataMigration` export (`videosToSeriesModelV1`). Not yet registered in the data-migrations registry.
 
 ### Changed
 
