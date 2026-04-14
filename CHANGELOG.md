@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **New Video Library view.** A new `/video-library` page surfaces the typed series/season/episode and movie model introduced over the previous releases. Two tabs — Series and Movies — show grids with counts at the top. It's intentionally read-only and lightweight; the full UI port of the existing scenes/folders pages is planned for a follow-up release. In the meantime, both the old UI and the new Video Library view coexist, and clicking "Finalize migration" in the banner is now a safe, non-destructive operation.
 - **Migration banner now visible in the app.** If Obscura detects a staged data migration, a brass-accented banner appears at the top of every page with a short description and a "Finalize migration" button. Finalizing drops the legacy `scenes` and `scene_folders` tables — the current UI depends on these, so clicking it will break the existing views until the new UI ships. The banner's warning text makes that tradeoff explicit.
 - **Library organization guide** — new `docs/library-organization.md` explains how files under a library root are classified into movies, flat series, and seasoned series, with good/bad layout examples and filename convention tips.
 - **Video migration is now live.** On next boot, Obscura detects existing scene data and stages the migration into the new typed series/season/episode/movie tables, preserving ratings, watch progress, and NSFW state. Library scans pause automatically during the staged window. The in-app migration banner and finalize button arrive in the next release — until then, scans stay paused and nothing is destroyed; the legacy tables remain in place and fully readable.
@@ -22,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Video library service and routes** — new read-only endpoints `GET /video/library/counts`, `GET /video/movies`, `GET /video/movies/:id`, `GET /video/series`, `GET /video/series/:id`, and `GET /video/episodes/:id`. Backed by a small Drizzle service that queries the typed tables directly. Consumed by the new Video Library web page.
+- **`fetchVideoLibraryCounts` / `fetchVideoMovies` / `fetchVideoSeriesList` / `fetchVideoSeriesDetail`** in `apps/web/src/lib/api/video-library.ts` — typed wrappers for the new endpoints.
 - **New `processLibraryScan` pipeline** — replaces the old scan with one that writes directly to `video_series` / `video_seasons` / `video_episodes` / `video_movies`. Uses `classifyVideoFile` for per-file routing and builds the series tree up front. The worker's obsolete `lib/lockdown.ts` is removed; the new pipeline is safe to run during the staged state because it targets the new tables.
 - **`acceptSeriesScrape` cascade handler** in `apps/api/src/services/scrape-accept.service.ts` — accepts a `NormalizedSeriesResult` with optional `CascadeAcceptSpec` that walks the cascade tree, applying series, season, and episode field masks. Upserts performers/tags/studios on the way.
 - **`POST /video/series/:id/accept-scrape` route** — HTTP entry point for the cascade accept handler. Consumes a `scrapeResultId`, optional `fieldMask`, and optional `cascade` spec.
@@ -60,6 +63,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **`videos_to_series_model_v1` finalize is now non-destructive.** The original plan was for finalize to drop the legacy `scenes` and `scene_folders` tables, but since the existing UI still reads from them, dropping them would break the app. Finalize now just marks the migration complete and leaves the legacy schema in place. A future cleanup release will drop the legacy tables after the web UI has been fully adapted.
+- **Migration banner** — destructive warning replaced with a safe confirm. The banner now explains that finalize is a no-op drop and that both UIs continue to work after confirmation.
 - Scene folder grid tiles (`SceneFolderCard`) use a 2:3 poster aspect ratio for preview media in both compact and default layouts, replacing 16:9 (compact) and 4:3 (default).
 - **Plugins page** — new dedicated `/plugins` page consolidates all metadata provider management. In SFW mode, all Stash-related tabs (Stash Community, StashBox Endpoints) and NSFW-tagged scrapers are hidden — only the Installed and Obscura Community tabs are visible, showing only SFW plugins. The Obscura Community tab reads from the local community plugins repo during development. Three tabs: Installed (with search, capability filtering, enable/disable/remove), Stash Community (full index browser with search, bulk install, SHA-verified downloads), and StashBox Endpoints (full CRUD with connection testing and preset URLs). Replaces the scattered settings/scrapers pages. Settings now links to Plugins instead of embedding StashBox configuration.
 - The Identify page is now visible in SFW mode — NSFW-classified plugins are hidden when NSFW mode is off, but SFW plugins (TVDB, MovieDB, YouTube, MusicBrainz) are always accessible.
