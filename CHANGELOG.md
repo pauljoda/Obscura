@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Removed
+
+- Legacy `/scenes/:id/subtitles/*` API surface is gone. The subtitles route file and its backing `subtitles.service.ts` have been deleted. Subtitles for the new video model will return as a dedicated future feature; the `/videos/:id/subtitles/*` stubs in `videos.ts` already return 501.
+
 ### Added
 
 - `enqueuePendingVideoJob` worker helper, and `media-probe`, `fingerprint`, and `preview` processors now dispatch on an `entityKind` payload discriminator (`video_episode` / `video_movie`) so downstream jobs run against the new typed video tables as well as the legacy `scenes` table.

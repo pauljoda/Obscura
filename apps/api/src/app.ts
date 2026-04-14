@@ -7,7 +7,6 @@ import { changelogRoutes } from "./routes/changelog";
 import { settingsRoutes } from "./routes/settings";
 import { jobsRoutes } from "./routes/jobs";
 import { assetsRoutes } from "./routes/assets";
-import { subtitlesRoutes } from "./routes/subtitles";
 import { studiosRoutes } from "./routes/studios";
 import { tagsRoutes } from "./routes/tags";
 import { performersRoutes } from "./routes/performers";
@@ -74,7 +73,6 @@ export async function buildApiApp(
   await app.register(settingsRoutes);
   await app.register(jobsRoutes);
   await app.register(assetsRoutes);
-  await app.register(subtitlesRoutes);
   await app.register(studiosRoutes);
   await app.register(tagsRoutes);
   await app.register(performersRoutes);
