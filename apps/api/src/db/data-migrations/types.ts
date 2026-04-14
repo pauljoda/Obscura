@@ -87,6 +87,14 @@ export interface DataMigration {
    * Non-destructive. Reads from old tables (via a frozen legacy-schema
    * adapter owned by this migration), writes to new tables. Must run
    * inside a single transaction wrapper provided by the orchestrator.
+   *
+   * MUST BE IDEMPOTENT. The orchestrator sets `status = 'staging'` before
+   * calling `stage()` and then sets `status = 'staged'` after. If the
+   * process crashes between the stage transaction committing and the
+   * final status update, the row is left in `'staging'` and the
+   * orchestrator will re-run `stage()` on the next boot. Use
+   * INSERT … ON CONFLICT DO NOTHING (or equivalent upsert semantics) so
+   * re-running does not produce duplicate rows.
    */
   stage(ctx: DataMigrationContext): Promise<StageResult>;
   /**

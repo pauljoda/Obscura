@@ -45,9 +45,14 @@ async function ensureRow(
   `;
   if (existing.length > 0) return existing[0];
 
+  // Race-safe insert: a concurrent process may have inserted this row
+  // between our SELECT and INSERT. ON CONFLICT DO NOTHING swallows the
+  // unique-constraint violation; we re-SELECT if RETURNING comes back
+  // empty.
   const inserted = await client<DataMigrationRow[]>`
     INSERT INTO data_migrations (name, status, metrics)
     VALUES (${migration.name}, 'pending', '{}'::jsonb)
+    ON CONFLICT (name) DO NOTHING
     RETURNING
       name,
       status,
@@ -59,7 +64,28 @@ async function ensureRow(
       created_at     AS "createdAt",
       updated_at     AS "updatedAt"
   `;
-  return inserted[0];
+  if (inserted.length > 0) return inserted[0];
+
+  const afterRace = await client<DataMigrationRow[]>`
+    SELECT
+      name,
+      status,
+      staged_at      AS "stagedAt",
+      finalized_at   AS "finalizedAt",
+      failed_at      AS "failedAt",
+      last_error     AS "lastError",
+      metrics,
+      created_at     AS "createdAt",
+      updated_at     AS "updatedAt"
+    FROM data_migrations
+    WHERE name = ${migration.name}
+  `;
+  if (afterRace.length === 0) {
+    throw new Error(
+      `Failed to ensure data_migrations row for ${migration.name}`,
+    );
+  }
+  return afterRace[0];
 }
 
 async function setStatus(
@@ -190,11 +216,18 @@ export async function runStagedMigrations(
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        await setStatus(client, migration.name, {
-          status: "failed",
-          failedAt: new Date(),
-          lastError: message,
-        });
+        try {
+          await setStatus(client, migration.name, {
+            status: "failed",
+            failedAt: new Date(),
+            lastError: message,
+          });
+        } catch (statusErr) {
+          ctx.logger.error(
+            `failed to record stage failure for ${migration.name}`,
+            { statusErr },
+          );
+        }
         ctx.logger.error(`migration ${migration.name} stage() threw`, {
           message,
         });
@@ -253,11 +286,18 @@ export async function finalizeMigration(
     ctx.logger.info(`migration ${name} finalized`, result.metrics);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await setStatus(client, name, {
-      status: "failed",
-      failedAt: new Date(),
-      lastError: message,
-    });
+    try {
+      await setStatus(client, name, {
+        status: "failed",
+        failedAt: new Date(),
+        lastError: message,
+      });
+    } catch (statusErr) {
+      ctx.logger.error(
+        `failed to record finalize failure for ${name}`,
+        { statusErr },
+      );
+    }
     throw err;
   }
 }

@@ -512,8 +512,9 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
     // staged/complete/failed). Finalize is user-initiated via the
     // /system/migrations/:name/finalize endpoint.
     const report = await runStagedMigrations(client);
-    if (report.length > 0) {
-      console.log("[obscura migrate] Data migration status:", report);
+    const actionable = report.filter((r) => r.status !== "complete");
+    if (actionable.length > 0) {
+      console.log("[obscura migrate] Data migration status:", actionable);
     }
   } finally {
     await client.end();
