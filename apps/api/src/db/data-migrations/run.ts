@@ -178,64 +178,83 @@ export async function runStagedMigrations(
     }
 
     if (row.status === "pending" || row.status === "staging") {
-      if (migration.precheck) {
-        const precheck = await migration.precheck(ctx);
-        if (!precheck.ok) {
-          ctx.logger.info(
-            `migration ${migration.name} precheck failed — skipping`,
-            { reasons: precheck.reasons },
-          );
-          report.push({
-            name: migration.name,
-            status: "pending",
-            description: migration.description,
-          });
-          continue;
-        }
+      const lockRows = await client<Array<{ locked: boolean }>>`
+        SELECT pg_try_advisory_lock(hashtext(${migration.name})) AS locked
+      `;
+      if (!lockRows[0]?.locked) {
+        ctx.logger.info(
+          `migration ${migration.name} is being staged by another process — skipping on this boot`,
+        );
+        report.push({
+          name: migration.name,
+          status: row.status,
+          description: migration.description,
+        });
+        continue;
       }
 
-      await setStatus(client, migration.name, { status: "staging" });
       try {
-        const result = await client.begin(async (tx) => {
-          return migration.stage({
-            ...ctx,
-            client: tx as unknown as DataMigrationClient,
-          });
-        });
-        await setStatus(client, migration.name, {
-          status: "staged",
-          metrics: result.metrics,
-          stagedAt: new Date(),
-          lastError: null,
-        });
-        ctx.logger.info(`migration ${migration.name} staged`, result.metrics);
-        report.push({
-          name: migration.name,
-          status: "staged",
-          description: migration.description,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        try {
-          await setStatus(client, migration.name, {
-            status: "failed",
-            failedAt: new Date(),
-            lastError: message,
-          });
-        } catch (statusErr) {
-          ctx.logger.error(
-            `failed to record stage failure for ${migration.name}`,
-            { statusErr },
-          );
+        if (migration.precheck) {
+          const precheck = await migration.precheck(ctx);
+          if (!precheck.ok) {
+            ctx.logger.info(
+              `migration ${migration.name} precheck failed — skipping`,
+              { reasons: precheck.reasons },
+            );
+            report.push({
+              name: migration.name,
+              status: "pending",
+              description: migration.description,
+            });
+            continue;
+          }
         }
-        ctx.logger.error(`migration ${migration.name} stage() threw`, {
-          message,
-        });
-        report.push({
-          name: migration.name,
-          status: "failed",
-          description: migration.description,
-        });
+
+        await setStatus(client, migration.name, { status: "staging" });
+        try {
+          const result = await client.begin(async (tx) => {
+            return migration.stage({
+              ...ctx,
+              client: tx as unknown as DataMigrationClient,
+            });
+          });
+          await setStatus(client, migration.name, {
+            status: "staged",
+            metrics: result.metrics,
+            stagedAt: new Date(),
+            lastError: null,
+          });
+          ctx.logger.info(`migration ${migration.name} staged`, result.metrics);
+          report.push({
+            name: migration.name,
+            status: "staged",
+            description: migration.description,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          try {
+            await setStatus(client, migration.name, {
+              status: "failed",
+              failedAt: new Date(),
+              lastError: message,
+            });
+          } catch (statusErr) {
+            ctx.logger.error(
+              `failed to record stage failure for ${migration.name}`,
+              { statusErr },
+            );
+          }
+          ctx.logger.error(`migration ${migration.name} stage() threw`, {
+            message,
+          });
+          report.push({
+            name: migration.name,
+            status: "failed",
+            description: migration.description,
+          });
+        }
+      } finally {
+        await client`SELECT pg_advisory_unlock(hashtext(${migration.name}))`;
       }
     }
   }
@@ -256,20 +275,27 @@ export async function finalizeMigration(
   if (!migration) {
     throw new Error(`Unknown migration: ${name}`);
   }
-  const rows = await client<Array<{ status: DataMigrationStatus }>>`
-    SELECT status FROM data_migrations WHERE name = ${name}
+  const claimed = await client<Array<{ status: DataMigrationStatus }>>`
+    UPDATE data_migrations
+    SET status = 'finalizing', updated_at = now()
+    WHERE name = ${name} AND status = 'staged'
+    RETURNING status
   `;
-  if (rows.length === 0) {
-    throw new Error(`Migration row not found: ${name}`);
-  }
-  if (rows[0].status !== "staged") {
+  if (claimed.length === 0) {
+    // Either the row doesn't exist, or it's not in 'staged'. Read
+    // current status so the caller gets an informative error.
+    const existing = await client<Array<{ status: DataMigrationStatus }>>`
+      SELECT status FROM data_migrations WHERE name = ${name}
+    `;
+    if (existing.length === 0) {
+      throw new Error(`Migration row not found: ${name}`);
+    }
     throw new Error(
-      `Migration ${name} is in status ${rows[0].status}, cannot finalize`,
+      `Migration ${name} is in status ${existing[0].status}, cannot finalize`,
     );
   }
 
   const ctx = makeContext(client);
-  await setStatus(client, name, { status: "finalizing" });
   try {
     const result = await client.begin(async (tx) => {
       return migration.finalize({
