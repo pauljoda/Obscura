@@ -151,6 +151,7 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     columnExists(c, "library_settings", "use_library_root_as_folder"),
   "0008_loud_loa": (c) => tableExists(c, "collection_items"),
   "0009_gray_yellowjacket": (c) => tableExists(c, "external_ids"),
+  "0010_slippery_snowbird": (c) => tableExists(c, "video_series"),
 };
 
 /**
