@@ -48,6 +48,7 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { runStagedMigrations } from "./data-migrations/run";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -505,6 +506,15 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
     // IF (NOT) EXISTS / DO blocks so it stays safe on healthy DBs.
     await reconcileSchema(client);
     console.log("[obscura migrate] Schema reconcile complete");
+
+    // Run any registered staged data migrations. Each registered
+    // migration is driven to the `staged` state (or skipped if already
+    // staged/complete/failed). Finalize is user-initiated via the
+    // /system/migrations/:name/finalize endpoint.
+    const report = await runStagedMigrations(client);
+    if (report.length > 0) {
+      console.log("[obscura migrate] Data migration status:", report);
+    }
   } finally {
     await client.end();
   }
