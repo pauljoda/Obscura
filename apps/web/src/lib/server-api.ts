@@ -18,3 +18,4 @@ export type {
 
 export * from "./server-api/media";
 export * from "./server-api/system";
+export * from "./server-api/videos";

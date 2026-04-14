@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `apps/api/src/services/video-folder.service.ts` — projects `video_series` rows as `SceneFolderListItemDto`/`SceneFolderDetailDto`-shaped objects. Flat folder model for v1: each series is a depth-0 folder with no subfolders.
 - New API routes: `GET/PATCH/DELETE /videos`, `GET /videos/stats`, `POST /videos/:id/reset-metadata`, `GET/PATCH /video-folders`, and `/video-stream/:id/*` (including `hls` and `hls2` endpoints). These give the upcoming `/videos` web route a full, DTO-compatible backend.
 - Route constants for the new endpoints in `@obscura/contracts` under `apiRoutes` (`videos`, `videoDetail`, `videoStats`, `videoFolders`, `videoStream*`, etc.).
+- `apps/web/src/lib/api/videos.ts` + `apps/web/src/lib/server-api/videos.ts` — client and server fetchers for `/videos`, `/video-folders`, and the video stream endpoints. Return types reuse the existing `SceneListItem`/`SceneDetail`/`SceneStats` shapes so both data sources are interchangeable.
+- New Next.js route `/videos` (list, detail, edit) that reuses the existing `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components but feeds them data from the new video tables. The list page shares the `obscura-scenes-list-prefs` cookie with `/scenes` so view/sort preferences follow you between routes.
+
+### Changed
+
+- Primary navigation now points the "Videos" entry at `/videos` instead of `/scenes`. The old `/scenes` route remains available for deep links and continues to query the legacy `scenes` table.
 
 ### What's New
 
