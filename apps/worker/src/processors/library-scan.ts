@@ -5,7 +5,8 @@ import {
   fileNameToTitle,
   readSidecarMetadata,
 } from "@obscura/media-core";
-import { db, scenes, libraryRoots, tags, performers, sceneTags, scenePerformers } from "../lib/db.js";
+import { db, queryClient, scenes, libraryRoots, tags, performers, sceneTags, scenePerformers } from "../lib/db.js";
+import { getLockdownStatus } from "../lib/lockdown.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { propagateSceneNsfw } from "../lib/nsfw.js";
 import {
@@ -29,6 +30,14 @@ export async function processLibraryScan(job: Job) {
 
   if (!root) {
     throw new Error("Library root not found");
+  }
+
+  const lockdown = await getLockdownStatus(queryClient);
+  if (lockdown.active) {
+    console.log(
+      `[library-scan] skipping scan of ${root.label}: migration "${lockdown.blockedBy}" is ${lockdown.blockingStatus}`,
+    );
+    return;
   }
 
   await markJobActive(job, "library-scan", {
