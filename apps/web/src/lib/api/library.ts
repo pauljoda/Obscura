@@ -110,14 +110,20 @@ export async function cancelJobRun(jobRunId: string): Promise<{
   return fetchApi(`/jobs/${jobRunId}/cancel`, { method: "POST" });
 }
 
-export async function rebuildScenePreview(sceneId: string, nsfwMode: string): Promise<{
+export async function rebuildScenePreview(sceneId: string, _nsfwMode: string): Promise<{
   ok: boolean;
-  jobId: string;
+  jobId: string | null;
 }> {
-  return fetchApi(`/jobs/rebuild-preview/${sceneId}`, {
-    method: "POST",
-    body: JSON.stringify({ nsfw: nsfwMode }),
-  });
+  // Now backed by /videos/:id/preview/rebuild, which dispatches on the
+  // video_episodes / video_movies tables. Keeps the helper name stable
+  // so existing call sites don't have to change.
+  const res = await fetchApi<{ ok: true; jobId: string | null }>(
+    `/videos/${sceneId}/preview/rebuild`,
+    {
+      method: "POST",
+    },
+  );
+  return { ok: res.ok, jobId: res.jobId };
 }
 
 export async function backfillPhashes(nsfwMode: string): Promise<{

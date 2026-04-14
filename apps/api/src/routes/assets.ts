@@ -17,7 +17,33 @@ import {
 } from "@obscura/media-core";
 import { ensureLibrarySettingsRow } from "../lib/library";
 
-const { scenes, galleries, images } = schema;
+const { scenes, galleries, images, videoEpisodes, videoMovies } = schema;
+
+/**
+ * Resolve an entity id to its file_path by probing scenes, video_episodes,
+ * and video_movies in that order. The scenes lookup will be dropped once
+ * the scenes table is gone; until then we prefer it to preserve behavior
+ * for legacy rows.
+ */
+async function resolveVideoFilePath(id: string): Promise<string | null> {
+  const scene = await db.query.scenes.findFirst({
+    where: eq(scenes.id, id),
+    columns: { filePath: true },
+  });
+  if (scene?.filePath) return scene.filePath;
+  const [ep] = await db
+    .select({ filePath: videoEpisodes.filePath })
+    .from(videoEpisodes)
+    .where(eq(videoEpisodes.id, id))
+    .limit(1);
+  if (ep?.filePath) return ep.filePath;
+  const [mv] = await db
+    .select({ filePath: videoMovies.filePath })
+    .from(videoMovies)
+    .where(eq(videoMovies.id, id))
+    .limit(1);
+  return mv?.filePath ?? null;
+}
 
 const IMAGE_EXTENSIONS = ["jpg", "png", "svg", "webp"] as const;
 const CONTENT_TYPES: Record<string, string> = {
@@ -142,12 +168,9 @@ export async function assetsRoutes(app: FastifyInstance) {
       return { error: "Unknown asset kind" };
     }
 
-    const scene = await db.query.scenes.findFirst({
-      where: eq(scenes.id, id),
-      columns: { filePath: true },
-    });
+    const filePath = await resolveVideoFilePath(id);
 
-    if (!scene?.filePath) {
+    if (!filePath) {
       reply.code(404);
       return { error: "Video not found" };
     }
@@ -155,8 +178,8 @@ export async function assetsRoutes(app: FastifyInstance) {
     const libraryRow = await ensureLibrarySettingsRow();
     const dedicatedPrimary = libraryRow.metadataStorageDedicated ?? true;
 
-    const pathsDedicated = getSceneVideoGeneratedDiskPaths(id, scene.filePath, "dedicated");
-    const pathsSidecar = getSceneVideoGeneratedDiskPaths(id, scene.filePath, "sidecar");
+    const pathsDedicated = getSceneVideoGeneratedDiskPaths(id, filePath, "dedicated");
+    const pathsSidecar = getSceneVideoGeneratedDiskPaths(id, filePath, "sidecar");
     const primary = dedicatedPrimary ? pathsDedicated : pathsSidecar;
     const secondary = dedicatedPrimary ? pathsSidecar : pathsDedicated;
 

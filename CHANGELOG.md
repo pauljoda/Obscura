@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - New `/videos/:id/...` write endpoints: thumbnail upload/from-url/from-frame/delete, play tracking, orgasm tracking, preview rebuild, and `POST /videos/upload`. Upload target is always `video_movies` at the library root. Subtitle and marker endpoints are stubbed as 501 until the video subtitle/marker tables land.
 - `GET /videos` now accepts `tag`, `performer`, `studio`, `codec`, and `interactive` filters, matching the legacy `/scenes` query surface. `PATCH /videos/:id` accepts `url`, `studioName`, `performerNames`, and `tagNames` (for episodes the studio write updates the parent series row).
 
+### Removed
+
+- Legacy API route files `routes/scenes.ts`, `routes/scene-folders.ts`, and `routes/stream.ts` are gone. The `/scenes/*`, `/scene-folders/*`, and `/stream/*` HTTP surfaces no longer exist — clients must use `/videos/*`, `/video-folders/*`, and `/video-stream/*` instead. The underlying `scene.service.ts` and `scene-folder.service.ts` helpers are retained because `collection.service` and the plugins scraper accept flow still read/write the legacy `scenes` and `scene_folders` tables; those will be cleaned up alongside the collection/plugin port.
+- Legacy `/scenes/:id/*` URL helpers in `apps/web/src/lib/api/media.ts` and `apps/web/src/lib/server-api/media.ts` now point at `/videos/:id/*` and `/video-folders/:id/*` internally. `rebuildScenePreview` targets `/videos/:id/preview/rebuild` and the uploader posts to `/videos/upload`. Existing helper names are unchanged so call sites are unaffected.
+
 ### Changed
 
 - Scene cards, dashboard hero play buttons, breadcrumbs, mobile nav, desktop quick-nav, search result links (including scene and scene-folder results from the API), and collection item hrefs now all route to `/videos/:id` and `/videos?folder=:id` instead of `/scenes/:id` / `/scenes?folder=:id`. The `SceneDetail` and `SceneEdit` components default to the `"videos"` source now that the legacy routes are gone.

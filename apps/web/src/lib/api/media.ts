@@ -91,7 +91,7 @@ export async function fetchScenes(params: {
     },
   );
 
-  return fetchApi(`/scenes${qs}`);
+  return fetchApi(`/videos${qs}`);
 }
 
 const FETCH_ALL_PAGE_SIZE = 2000;
@@ -114,14 +114,14 @@ export async function fetchAllScenes(
 }
 
 export async function fetchSceneDetail(id: string): Promise<SceneDetail> {
-  return fetchApi(`/scenes/${id}`);
+  return fetchApi(`/videos/${id}`);
 }
 
 export async function fetchSceneSubtitleCues(
   sceneId: string,
   trackId: string,
 ): Promise<{ cues: import("@obscura/contracts").SubtitleCueDto[] }> {
-  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}/cues`);
+  return fetchApi(`/videos/${sceneId}/subtitles/${trackId}/cues`);
 }
 
 /**
@@ -133,7 +133,7 @@ export async function fetchSceneSubtitleSource(
   trackId: string,
 ): Promise<string> {
   const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-  const res = await fetch(`${base}/scenes/${sceneId}/subtitles/${trackId}/source`);
+  const res = await fetch(`${base}/videos/${sceneId}/subtitles/${trackId}/source`);
   if (!res.ok) {
     throw new Error(`Failed to load subtitle source: ${res.status}`);
   }
@@ -151,7 +151,7 @@ export async function uploadSceneSubtitle(
   if (label) form.append("label", label);
   form.append("file", file);
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/scenes/${sceneId}/subtitles`,
+    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/videos/${sceneId}/subtitles`,
     { method: "POST", body: form },
   );
   if (!res.ok) {
@@ -164,7 +164,7 @@ export async function deleteSceneSubtitle(
   sceneId: string,
   trackId: string,
 ): Promise<{ ok: true }> {
-  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}`, { method: "DELETE" });
+  return fetchApi(`/videos/${sceneId}/subtitles/${trackId}`, { method: "DELETE" });
 }
 
 export async function updateSceneSubtitle(
@@ -172,7 +172,7 @@ export async function updateSceneSubtitle(
   trackId: string,
   patch: { language?: string; label?: string | null },
 ): Promise<{ track: import("@obscura/contracts").SceneSubtitleTrackDto }> {
-  return fetchApi(`/scenes/${sceneId}/subtitles/${trackId}`, {
+  return fetchApi(`/videos/${sceneId}/subtitles/${trackId}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
   });
@@ -181,7 +181,7 @@ export async function updateSceneSubtitle(
 export async function extractSceneSubtitles(
   sceneId: string,
 ): Promise<{ enqueued: boolean; jobId: string | null }> {
-  return fetchApi(`/scenes/${sceneId}/subtitles/extract`, { method: "POST" });
+  return fetchApi(`/videos/${sceneId}/subtitles/extract`, { method: "POST" });
 }
 
 export async function updateScene(
@@ -200,7 +200,7 @@ export async function updateScene(
     tagNames?: string[];
   },
 ): Promise<{ ok: true; id: string }> {
-  return fetchApi(`/scenes/${id}`, {
+  return fetchApi(`/videos/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -211,13 +211,13 @@ export async function deleteScene(
   deleteFile?: boolean,
 ): Promise<{ ok: true }> {
   const qs = deleteFile ? "?deleteFile=true" : "";
-  return fetchApi(`/scenes/${id}${qs}`, { method: "DELETE" });
+  return fetchApi(`/videos/${id}${qs}`, { method: "DELETE" });
 }
 
 export async function resetSceneMetadata(
   id: string,
 ): Promise<{ ok: true; id: string; title: string }> {
-  return fetchApi(`/scenes/${id}/reset-metadata`, { method: "POST" });
+  return fetchApi(`/videos/${id}/reset-metadata`, { method: "POST" });
 }
 
 export async function deleteImage(
@@ -240,7 +240,7 @@ export async function createMarker(
   sceneId: string,
   data: { title: string; seconds: number; endSeconds?: number | null },
 ): Promise<MarkerDto> {
-  return fetchApi(`/scenes/${sceneId}/markers`, {
+  return fetchApi(`/videos/${sceneId}/markers`, {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -250,27 +250,27 @@ export async function updateMarker(
   markerId: string,
   data: { title?: string; seconds?: number; endSeconds?: number | null },
 ): Promise<{ ok: true }> {
-  return fetchApi(`/scenes/markers/${markerId}`, {
+  return fetchApi(`/videos/markers/${markerId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteMarker(markerId: string): Promise<{ ok: true }> {
-  return fetchApi(`/scenes/markers/${markerId}`, { method: "DELETE" });
+  return fetchApi(`/videos/markers/${markerId}`, { method: "DELETE" });
 }
 
 export async function trackPlay(sceneId: string): Promise<{ ok: true }> {
-  return fetchApi(`/scenes/${sceneId}/play`, { method: "POST" });
+  return fetchApi(`/videos/${sceneId}/play`, { method: "POST" });
 }
 
 export async function trackOrgasm(sceneId: string): Promise<{ ok: true; orgasmCount: number }> {
-  return fetchApi(`/scenes/${sceneId}/orgasm`, { method: "POST" });
+  return fetchApi(`/videos/${sceneId}/orgasm`, { method: "POST" });
 }
 
 export async function fetchSceneStats(nsfw?: string): Promise<SceneStats> {
   const qs = buildQueryString({ nsfw });
-  return fetchApi(`/scenes/stats${qs}`);
+  return fetchApi(`/videos/stats${qs}`);
 }
 
 export async function fetchSceneFolders(params?: {
@@ -293,7 +293,7 @@ export async function fetchSceneFolders(params?: {
     studio: params?.studio,
     tag: params?.tag,
   });
-  return fetchApi(`/scene-folders${qs}`);
+  return fetchApi(`/video-folders${qs}`);
 }
 
 export async function fetchSceneFolderDetail(
@@ -301,7 +301,7 @@ export async function fetchSceneFolderDetail(
   params?: { nsfw?: string },
 ): Promise<SceneFolderDetailDto> {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return fetchApi(`/scene-folders/${id}${qs}`);
+  return fetchApi(`/video-folders/${id}${qs}`);
 }
 
 export async function updateSceneFolder(
@@ -317,7 +317,7 @@ export async function updateSceneFolder(
     date?: string | null;
   },
 ): Promise<{ ok: true; id: string }> {
-  return fetchApi(`/scene-folders/${id}`, {
+  return fetchApi(`/video-folders/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -327,26 +327,26 @@ export async function uploadSceneFolderCover(
   id: string,
   file: File,
 ): Promise<{ ok: true; coverImagePath: string }> {
-  return uploadFile(`/scene-folders/${id}/cover`, file);
+  return uploadFile(`/video-folders/${id}/cover`, file);
 }
 
 export async function deleteSceneFolderCover(
   id: string,
 ): Promise<{ ok: true }> {
-  return fetchApi(`/scene-folders/${id}/cover`, { method: "DELETE" });
+  return fetchApi(`/video-folders/${id}/cover`, { method: "DELETE" });
 }
 
 export async function uploadSceneFolderBackdrop(
   id: string,
   file: File,
 ): Promise<{ ok: true; backdropImagePath: string }> {
-  return uploadFile(`/scene-folders/${id}/backdrop`, file);
+  return uploadFile(`/video-folders/${id}/backdrop`, file);
 }
 
 export async function deleteSceneFolderBackdrop(
   id: string,
 ): Promise<{ ok: true }> {
-  return fetchApi(`/scene-folders/${id}/backdrop`, { method: "DELETE" });
+  return fetchApi(`/video-folders/${id}/backdrop`, { method: "DELETE" });
 }
 
 export async function fetchGalleries(params?: {
@@ -660,13 +660,13 @@ export async function uploadThumbnail(
   sceneId: string,
   file: File,
 ): Promise<{ ok: true; thumbnailPath: string }> {
-  return uploadFile(`/scenes/${sceneId}/thumbnail`, file);
+  return uploadFile(`/videos/${sceneId}/thumbnail`, file);
 }
 
 export async function deleteThumbnail(
   sceneId: string,
 ): Promise<{ ok: true; thumbnailPath: string }> {
-  return fetchApi(`/scenes/${sceneId}/thumbnail`, {
+  return fetchApi(`/videos/${sceneId}/thumbnail`, {
     method: "DELETE",
   });
 }
@@ -675,7 +675,7 @@ export async function uploadThumbnailFromUrl(
   sceneId: string,
   imageUrl: string,
 ): Promise<{ ok: true; thumbnailPath: string }> {
-  return fetchApi(`/scenes/${sceneId}/thumbnail/from-url`, {
+  return fetchApi(`/videos/${sceneId}/thumbnail/from-url`, {
     method: "POST",
     body: JSON.stringify({ imageUrl }),
   });
@@ -685,7 +685,7 @@ export async function generateThumbnailFromFrame(
   sceneId: string,
   seconds: number,
 ): Promise<{ ok: true; thumbnailPath: string; seconds: number }> {
-  return fetchApi(`/scenes/${sceneId}/thumbnail/from-frame`, {
+  return fetchApi(`/videos/${sceneId}/thumbnail/from-frame`, {
     method: "POST",
     body: JSON.stringify({ seconds }),
   });

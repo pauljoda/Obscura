@@ -67,23 +67,18 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
         );
         try {
           if (target.kind === "scene") {
-            // Folder-targeted upload: send sceneFolderId instead of libraryRootId
-            if (target.sceneFolderId) {
-              await uploadFile("/scenes/upload", file, {
-                sceneFolderId: target.sceneFolderId,
-              });
-            } else {
-              const libraryRootId =
-                explicitIds?.rootId ??
-                target.libraryRootId ??
-                resolvedRootIdRef.current;
-              if (!libraryRootId) {
-                throw new Error("No library root selected for scene upload");
-              }
-              await uploadFile("/scenes/upload", file, {
-                libraryRootId,
-              });
+            // /videos/upload always lands at the library root (folder-aware
+            // uploads are not yet supported on the new video_movies target).
+            const libraryRootId =
+              explicitIds?.rootId ??
+              target.libraryRootId ??
+              resolvedRootIdRef.current;
+            if (!libraryRootId) {
+              throw new Error("No library root selected for video upload");
             }
+            await uploadFile("/videos/upload", file, {
+              libraryRootId,
+            });
           } else if (target.kind === "image") {
             await uploadFile(
               `/galleries/${target.galleryId}/images/upload`,

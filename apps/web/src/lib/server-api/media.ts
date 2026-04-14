@@ -86,7 +86,7 @@ export async function fetchScenes(params: {
   );
 
   return serverFetch<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }>(
-    `/scenes${qs}`,
+    `/videos${qs}`,
     { tags: ["scenes"] },
   );
 }
@@ -112,7 +112,7 @@ export async function fetchSceneFolders(params?: {
     total: number;
     limit: number;
     offset: number;
-  }>(`/scene-folders${qs}`, {
+  }>(`/video-folders${qs}`, {
     revalidate: 0,
     tags: ["scene-folders"],
   });
@@ -120,7 +120,7 @@ export async function fetchSceneFolders(params?: {
 
 export async function fetchSceneFolderDetail(id: string, params?: { nsfw?: string }) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return serverFetch<SceneFolderDetailDto>(`/scene-folders/${id}${qs}`, {
+  return serverFetch<SceneFolderDetailDto>(`/video-folders/${id}${qs}`, {
     revalidate: 0,
     tags: ["scene-folders", `scene-folder-${id}`],
   });
