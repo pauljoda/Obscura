@@ -52,9 +52,9 @@ export async function assertNotLockedDown(
 ): Promise<void> {
   const status = await getLockdownStatus(client);
   if (!status.active) return;
-  const err = new Error(
-    `Video writes are temporarily disabled while migration "${status.blockedBy}" is ${status.blockingStatus}.`,
-  );
+  const message = `Video writes are temporarily disabled while migration "${status.blockedBy}" is ${status.blockingStatus}.`;
+  console.warn(`[data-migration] lockdown blocked a write: ${message}`);
+  const err = new Error(message);
   (err as Error & { code?: string }).code = "MIGRATION_LOCKDOWN";
   throw err;
 }
