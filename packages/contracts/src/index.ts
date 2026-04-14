@@ -102,6 +102,10 @@ export const apiRoutes = {
   pluginBatch: "/plugins/batch",
   pluginBatchStatus: "/plugins/batch/:jobId",
   pluginFolderCascade: "/plugins/:id/folder-cascade",
+
+  // System
+  systemStatus: "/system/status",
+  systemMigrationFinalize: "/system/migrations/:name/finalize",
 } as const;
 
 export const API_BASE_URL =
