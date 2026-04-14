@@ -1512,3 +1512,5 @@ export interface StashBoxTagResultDto {
   category: { id: string; name: string; description: string | null } | null;
 }
 
+export * from "./external-ids";
+
