@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Collection item hydration for entityType `"scene"` now resolves against the new `video_episodes` / `video_movies` tables via a new `getVideosByIds` helper in `video-scene.service.ts`, instead of the legacy `scenes` table. Collection items pointing at old scene IDs that were never migrated will appear as missing — existing collections can be rebuilt from the new video library.
+- The plugin scrape-accept flow (`POST /plugins/results/:id/accept` for `entityType === "folder"`) now writes its details, date, studio, and tag fields to `video_series` via `updateVideoFolder`, and merges scraped URLs and `seriesExternalId` into `video_series.externalIds` instead of updating the legacy `scene_folders` table. Poster-image download is stubbed pending unified video folder asset storage.
 
 ### Added
 

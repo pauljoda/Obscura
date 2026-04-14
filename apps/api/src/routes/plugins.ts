@@ -582,46 +582,54 @@ export async function pluginsRoutes(app: FastifyInstance) {
     ]);
 
     if (result.entityType === "folder") {
-      // Apply to scene folder
+      // Apply to a video_series row. The entityType tag stays "folder"
+      // for backward compat with existing scrape_results rows, but the
+      // entityId now resolves to a video_series id.
       const patch: Record<string, unknown> = {};
-      if (fieldsToApply.has("title") && result.proposedTitle) patch.customName = result.proposedTitle;
+      // customName is not yet modelled on video_series — intentionally
+      // skipped so the title write is a no-op until video-folder gains
+      // a rename field. See updateVideoFolder TODO for details.
       if (fieldsToApply.has("details") && result.proposedDetails) patch.details = result.proposedDetails;
       if (fieldsToApply.has("date") && result.proposedDate) patch.date = result.proposedDate;
       if (fieldsToApply.has("studio") && result.proposedStudioName) patch.studioName = result.proposedStudioName;
       if (fieldsToApply.has("tags") && result.proposedTagNames?.length) patch.tagNames = result.proposedTagNames;
 
       if (Object.keys(patch).length > 0) {
-        // Use the scene folder service for studio/tag resolution
-        const { updateSceneFolder } = await import("../services/scene-folder.service");
-        await updateSceneFolder(entityId, patch as Parameters<typeof updateSceneFolder>[1]);
+        const { updateVideoFolder } = await import("../services/video-folder.service");
+        await updateVideoFolder(entityId, patch as Parameters<typeof updateVideoFolder>[1]);
       }
 
-      // Apply direct columns (urls, externalSeriesId) outside the service
-      const directPatch: Record<string, unknown> = {};
-      if (fieldsToApply.has("url") && result.proposedUrls?.length) {
-        directPatch.urls = result.proposedUrls;
-      }
+      // Merge scrape-result external identifiers into the jsonb
+      // externalIds column on video_series. Preserve any existing keys.
       const rawResult = result.rawResult as Record<string, unknown> | null;
-      if (rawResult?.seriesExternalId) {
-        directPatch.externalSeriesId = rawResult.seriesExternalId;
+      const externalIdPatch: Record<string, string> = {};
+      if (fieldsToApply.has("url") && result.proposedUrls?.length) {
+        result.proposedUrls.forEach((url, idx) => {
+          externalIdPatch[idx === 0 ? "url" : `url_${idx}`] = url;
+        });
       }
-      if (Object.keys(directPatch).length > 0) {
-        directPatch.updatedAt = new Date();
-        await db.update(schema.sceneFolders).set(directPatch).where(eq(schema.sceneFolders.id, entityId));
+      if (rawResult && typeof rawResult.seriesExternalId === "string") {
+        externalIdPatch.seriesExternalId = rawResult.seriesExternalId;
+      }
+      if (Object.keys(externalIdPatch).length > 0) {
+        const [existing] = await db
+          .select({ externalIds: schema.videoSeries.externalIds })
+          .from(schema.videoSeries)
+          .where(eq(schema.videoSeries.id, entityId))
+          .limit(1);
+        const merged = { ...(existing?.externalIds ?? {}), ...externalIdPatch };
+        await db
+          .update(schema.videoSeries)
+          .set({ externalIds: merged, updatedAt: new Date() })
+          .where(eq(schema.videoSeries.id, entityId));
       }
 
-      // Download poster image if provided
+      // TODO(videos): download/save poster image to disk and update
+      // video_series.posterPath. Cover upload for video folders is
+      // stubbed as 501 in routes/video-folders.ts and needs to land
+      // alongside the unified folder-asset storage change.
       if (fieldsToApply.has("image") && result.proposedImageUrl) {
-        try {
-          const imgRes = await fetch(result.proposedImageUrl);
-          if (imgRes.ok) {
-            const buffer = Buffer.from(await imgRes.arrayBuffer());
-            const { setSceneFolderCover } = await import("../services/scene-folder.service");
-            await setSceneFolderCover(entityId, buffer);
-          }
-        } catch {
-          // Image download is best-effort
-        }
+        // intentionally no-op for now
       }
     } else if (result.entityType === "scene" && result.sceneId) {
       // For scenes, delegate to the existing accept logic
