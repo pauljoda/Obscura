@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@obscura/ui/lib/utils";
 import { Sidebar } from "./sidebar";
 import { CanvasHeader } from "./canvas-header";
+import { MigrationBanner } from "./system/migration-banner";
 import { MobileNav } from "./mobile-nav";
 import { SearchProvider } from "./search/search-context";
 import { CommandPalette } from "./search/command-palette";
@@ -45,6 +46,7 @@ function AppShellMain({
       )}
       style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
     >
+      <MigrationBanner />
       <CanvasHeader />
       <div className="flex-1 p-5">{children}</div>
     </main>
