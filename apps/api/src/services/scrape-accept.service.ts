@@ -3,6 +3,10 @@ import {
   scrapeResults,
   videoMovies,
   videoEpisodes,
+  videoSeries,
+  videoSeasons,
+  videoSeriesPerformers,
+  videoSeriesTags,
   performers,
   tags,
   studios,
@@ -14,6 +18,7 @@ import {
 import type {
   NormalizedMovieResult,
   NormalizedEpisodeResult,
+  NormalizedSeriesResult,
 } from "@obscura/contracts";
 import { db } from "../db";
 
@@ -219,4 +224,170 @@ export async function acceptEpisodeScrape(
     .update(scrapeResults)
     .set({ status: "accepted", appliedAt: new Date(), updatedAt: new Date() })
     .where(eq(scrapeResults.id, input.scrapeResultId));
+}
+
+// ---------------------------------------------------------------------------
+// Series cascade accept
+// ---------------------------------------------------------------------------
+
+export interface CascadeAcceptSpec {
+  acceptAllSeasons?: boolean;
+  seasonOverrides?: Record<
+    number,
+    {
+      accepted: boolean;
+      fieldMask?: AcceptFieldMask;
+      episodes?: Record<
+        number,
+        {
+          accepted: boolean;
+          fieldMask?: AcceptFieldMask;
+        }
+      >;
+    }
+  >;
+}
+
+export interface AcceptSeriesInput {
+  scrapeResultId: string;
+  seriesId: string;
+  result: NormalizedSeriesResult;
+  fieldMask?: AcceptFieldMask;
+  cascade?: CascadeAcceptSpec;
+}
+
+export async function acceptSeriesScrape(
+  input: AcceptSeriesInput,
+): Promise<{ episodesUpdated: number; seasonsUpdated: number }> {
+  const mask = applyMask(input.fieldMask);
+  const patch: Record<string, unknown> = {};
+  if (mask.title) patch.title = input.result.title;
+  if (mask.overview) patch.overview = input.result.overview;
+  if (mask.tagline) patch.tagline = input.result.tagline;
+  if (mask.releaseDate) patch.firstAirDate = input.result.firstAirDate;
+  if (mask.externalIds) patch.externalIds = input.result.externalIds;
+  if (mask.studio && input.result.studioName) {
+    patch.studioId = await upsertStudioByName(input.result.studioName);
+  }
+  patch.organized = true;
+  patch.updatedAt = new Date();
+
+  if (Object.keys(patch).length > 0) {
+    await db
+      .update(videoSeries)
+      .set(patch)
+      .where(eq(videoSeries.id, input.seriesId));
+  }
+
+  if (mask.genres && input.result.genres.length > 0) {
+    for (const genre of input.result.genres) {
+      const tagId = await upsertTagByName(genre);
+      await db
+        .insert(videoSeriesTags)
+        .values({ seriesId: input.seriesId, tagId })
+        .onConflictDoNothing();
+    }
+  }
+
+  if (mask.cast && input.result.cast && input.result.cast.length > 0) {
+    for (const member of input.result.cast) {
+      const performerId = await upsertPerformerByName(member.name);
+      await db
+        .insert(videoSeriesPerformers)
+        .values({
+          seriesId: input.seriesId,
+          performerId,
+          character: member.character ?? null,
+          order: member.order ?? null,
+        })
+        .onConflictDoNothing();
+    }
+  }
+
+  let seasonsUpdated = 0;
+  let episodesUpdated = 0;
+
+  if (input.cascade && input.result.seasons.length > 0) {
+    const existingSeasons = await db
+      .select({
+        id: videoSeasons.id,
+        seasonNumber: videoSeasons.seasonNumber,
+      })
+      .from(videoSeasons)
+      .where(eq(videoSeasons.seriesId, input.seriesId));
+
+    for (const proposedSeason of input.result.seasons) {
+      const override =
+        input.cascade.seasonOverrides?.[proposedSeason.seasonNumber];
+      const acceptThisSeason =
+        input.cascade.acceptAllSeasons ||
+        (override?.accepted ?? input.cascade.acceptAllSeasons ?? true);
+      if (!acceptThisSeason) continue;
+
+      const existingSeason = existingSeasons.find(
+        (s) => s.seasonNumber === proposedSeason.seasonNumber,
+      );
+      if (!existingSeason) continue;
+
+      const seasonPatch: Record<string, unknown> = {};
+      const seasonMask = applyMask(override?.fieldMask);
+      if (seasonMask.title) seasonPatch.title = proposedSeason.title;
+      if (seasonMask.overview) seasonPatch.overview = proposedSeason.overview;
+      if (seasonMask.airDate) seasonPatch.airDate = proposedSeason.airDate;
+      if (seasonMask.externalIds)
+        seasonPatch.externalIds = proposedSeason.externalIds;
+      seasonPatch.updatedAt = new Date();
+
+      await db
+        .update(videoSeasons)
+        .set(seasonPatch)
+        .where(eq(videoSeasons.id, existingSeason.id));
+      seasonsUpdated += 1;
+
+      if (proposedSeason.episodes.length > 0) {
+        const existingEpisodes = await db
+          .select({
+            id: videoEpisodes.id,
+            episodeNumber: videoEpisodes.episodeNumber,
+          })
+          .from(videoEpisodes)
+          .where(eq(videoEpisodes.seasonId, existingSeason.id));
+
+        for (const proposedEp of proposedSeason.episodes) {
+          const epOverride = override?.episodes?.[proposedEp.episodeNumber];
+          const acceptThisEpisode = epOverride?.accepted ?? true;
+          if (!acceptThisEpisode) continue;
+
+          const existingEp = existingEpisodes.find(
+            (e) => e.episodeNumber === proposedEp.episodeNumber,
+          );
+          if (!existingEp) continue;
+
+          const epPatch: Record<string, unknown> = {};
+          const epMask = applyMask(epOverride?.fieldMask);
+          if (epMask.title) epPatch.title = proposedEp.title;
+          if (epMask.overview) epPatch.overview = proposedEp.overview;
+          if (epMask.airDate) epPatch.airDate = proposedEp.airDate;
+          if (epMask.runtime) epPatch.runtime = proposedEp.runtime;
+          if (epMask.externalIds)
+            epPatch.externalIds = proposedEp.externalIds;
+          epPatch.organized = true;
+          epPatch.updatedAt = new Date();
+
+          await db
+            .update(videoEpisodes)
+            .set(epPatch)
+            .where(eq(videoEpisodes.id, existingEp.id));
+          episodesUpdated += 1;
+        }
+      }
+    }
+  }
+
+  await db
+    .update(scrapeResults)
+    .set({ status: "accepted", appliedAt: new Date(), updatedAt: new Date() })
+    .where(eq(scrapeResults.id, input.scrapeResultId));
+
+  return { seasonsUpdated, episodesUpdated };
 }
