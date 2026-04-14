@@ -34,7 +34,9 @@ import { useSearchParams } from "next/navigation";
 import { buildHrefWithFrom } from "../lib/back-navigation";
 import {
   fetchSceneDetail,
+  fetchVideoDetail,
   updateScene,
+  updateVideo,
   fetchInstalledScrapers,
   fetchTags,
   fetchPerformers,
@@ -70,6 +72,12 @@ interface SceneEditProps {
   inline?: boolean;
   onSaved?: () => void;
   currentPlaybackTime?: number;
+  /**
+   * Selects the backend this editor reads/writes. The DTO shapes are
+   * identical between `/scenes/:id` and `/videos/:id`, so the rest of
+   * the form is unchanged. Defaults to `"scenes"` for backward compat.
+   */
+  source?: "scenes" | "videos";
 }
 
 // ─── Main Component ────────────────────────────────────────────
@@ -79,12 +87,19 @@ export function SceneEdit({
   inline,
   onSaved,
   currentPlaybackTime,
+  source = "scenes",
 }: SceneEditProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from");
-  const backToScene = fromParam ? buildHrefWithFrom(`/scenes/${id}`, fromParam) : `/scenes/${id}`;
+  const isVideoSource = source === "videos";
+  const detailBaseHref = isVideoSource ? `/videos/${id}` : `/scenes/${id}`;
+  const backToScene = fromParam ? buildHrefWithFrom(detailBaseHref, fromParam) : detailBaseHref;
+  const loadDetail = (): Promise<SceneDetail> =>
+    isVideoSource ? fetchVideoDetail(id) : fetchSceneDetail(id);
+  const saveDetail = (data: Parameters<typeof updateScene>[1]) =>
+    isVideoSource ? updateVideo(id, data) : updateScene(id, data);
   const explicitCounterLabels = nsfwMode === "show";
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +145,7 @@ export function SceneEdit({
 
   useEffect(() => {
     Promise.all([
-      fetchSceneDetail(id),
+      loadDetail(),
       fetchInstalledScrapers(),
       fetchTags({ nsfw: nsfwMode }),
       fetchPerformers({ nsfw: nsfwMode, limit: 100 }),
@@ -187,7 +202,7 @@ export function SceneEdit({
     setMessage(null);
 
     try {
-      await updateScene(id, {
+      await saveDetail({
         title: title.trim(),
         details: details.trim() || null,
         date: date.trim() || null,
@@ -201,7 +216,7 @@ export function SceneEdit({
       });
 
       setMessage("Saved");
-      const updated = await fetchSceneDetail(id);
+      const updated = await loadDetail();
       setScene(updated);
       populateForm(updated);
       setEditing(false);
@@ -311,7 +326,7 @@ export function SceneEdit({
       ) {
         try {
           await uploadThumbnailFromUrl(id, result.imageUrl);
-          const updated = await fetchSceneDetail(id);
+          const updated = await loadDetail();
           setScene(updated);
           onSaved?.();
         } catch {
@@ -416,7 +431,7 @@ export function SceneEdit({
           ) {
             try {
               await uploadThumbnailFromUrl(id, result.imageUrl);
-              const updated = await fetchSceneDetail(id);
+              const updated = await loadDetail();
               setScene(updated);
               onSaved?.();
             } catch {
@@ -448,7 +463,7 @@ export function SceneEdit({
     setError(null);
     try {
       await uploadThumbnail(id, file);
-      const updated = await fetchSceneDetail(id);
+      const updated = await loadDetail();
       setScene(updated);
       onSaved?.();
       setMessage("Thumbnail updated");
@@ -472,7 +487,7 @@ export function SceneEdit({
     setError(null);
     try {
       await deleteThumbnail(id);
-      const updated = await fetchSceneDetail(id);
+      const updated = await loadDetail();
       setScene(updated);
       onSaved?.();
       setMessage("Reverted to generated thumbnail");
@@ -494,7 +509,7 @@ export function SceneEdit({
     setError(null);
     try {
       await generateThumbnailFromFrame(id, seconds);
-      const updated = await fetchSceneDetail(id);
+      const updated = await loadDetail();
       setScene(updated);
       onSaved?.();
       setMessage(`Thumbnail captured at ${formatSecondsLabel(seconds)}`);

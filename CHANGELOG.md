@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - `SceneDetail` now accepts an optional `source: "scenes" | "videos"` prop (default `"scenes"`) and dispatches all detail fetches, rating/organized/metadata writes, and reset-metadata calls to the matching backend. Play/orgasm tracking and preview rebuild remain scenes-only — the videos source no-ops these because `/videos` has no equivalent endpoints yet.
+- `SceneEdit` accepts the same `source: "scenes" | "videos"` prop and dispatches its detail fetch + save through the matching client. Back-link fallbacks resolve against `/videos/:id` when the editor is hosted under the videos source.
 - New Next.js route `/videos` (list, detail, edit) that reuses the existing `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components but feeds them data from the new video tables. The list page shares the `obscura-scenes-list-prefs` cookie with `/scenes` so view/sort preferences follow you between routes.
 - Primary navigation now points the "Videos" entry at `/videos` instead of `/scenes`. The old `/scenes` route remains available for deep links and continues to query the legacy `scenes` table.
 
