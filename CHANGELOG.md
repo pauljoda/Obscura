@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Legacy-schema read helpers** (`read.ts`) exposing typed `readAllLegacyScenes`, `readAllLegacySceneFolders`, the four join-table readers, and `readLibraryRoots` against the raw migration `DataMigrationClient`.
 - **Series tree builder** (`series-tree.ts`) — pure `buildSeriesTree` helper that groups classified episode files into a `series → season → episodes` tree, the shape the upcoming `videos_to_series_model_v1` stage/finalize steps write against.
 - **`videos_to_series_model_v1` precheck** — safety check that skips the migration on fresh installs (no `scenes` table or zero rows), bails if Plan A's `video_series` schema isn't present yet, and refuses to re-run when the new `video_*` tables already hold rows.
+- **`videos_to_series_model_v1` stage implementation** — non-destructive reshape pass that classifies every legacy scene against its library root, groups episodes into a series tree, and inserts `video_series` / `video_seasons` / `video_episodes` / `video_movies` rows carrying over titles, overviews, studios, ratings, file metadata, watch state, and NSFW flags. Rewrites `scene_performers` / `scene_tags` / `scene_folder_performers` / `scene_folder_tags` into the new typed join tables and re-points `scrape_results.entity_type` from `scene` / `scene_folder` to `episode` / `movie` / `series`.
 
 ### Changed
 
