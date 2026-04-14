@@ -10,11 +10,13 @@ import {
   runProcess,
   sceneVideoGeneratedLayoutFromDedicated,
 } from "@obscura/media-core";
-import { db, scenes } from "../lib/db.js";
+import { db, scenes, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { sceneAssetUrl } from "../lib/helpers.js";
-import { applyVideoProbeToScene } from "./media-probe.js";
+import { applyVideoProbeToScene, applyVideoProbeToVideoEntity } from "./media-probe.js";
+
+type VideoEntityKind = "video_episode" | "video_movie";
 
 /**
  * Linearly interpolate resolution based on quality setting.
@@ -105,39 +107,78 @@ function trickplayJpegQuality(quality: number) {
 }
 
 export async function processPreview(job: Job) {
-  const sceneId = String(job.data.sceneId);
-  const [scene] = await db
-    .select({
-      id: scenes.id,
-      title: scenes.title,
-      filePath: scenes.filePath,
-      duration: scenes.duration,
-      width: scenes.width,
-      height: scenes.height,
-    })
-    .from(scenes)
-    .where(eq(scenes.id, sceneId))
-    .limit(1);
+  const entityKind = (job.data.entityKind as VideoEntityKind | undefined) ?? null;
 
-  if (!scene?.filePath) {
-    throw new Error("Video file not found");
+  let scene: {
+    id: string;
+    title: string | null;
+    filePath: string | null;
+    duration: number | null;
+    width: number | null;
+    height: number | null;
+  };
+  let targetType: string;
+
+  if (entityKind === "video_episode" || entityKind === "video_movie") {
+    const entityId = String(job.data.entityId);
+    const table = entityKind === "video_episode" ? videoEpisodes : videoMovies;
+    const [row] = await db
+      .select({
+        id: table.id,
+        title: table.title,
+        filePath: table.filePath,
+        duration: table.duration,
+        width: table.width,
+        height: table.height,
+      })
+      .from(table)
+      .where(eq(table.id, entityId))
+      .limit(1);
+    if (!row?.filePath) {
+      throw new Error("Video file not found");
+    }
+    scene = row;
+    targetType = entityKind;
+  } else {
+    const sceneId = String(job.data.sceneId);
+    const [row] = await db
+      .select({
+        id: scenes.id,
+        title: scenes.title,
+        filePath: scenes.filePath,
+        duration: scenes.duration,
+        width: scenes.width,
+        height: scenes.height,
+      })
+      .from(scenes)
+      .where(eq(scenes.id, sceneId))
+      .limit(1);
+
+    if (!row?.filePath) {
+      throw new Error("Video file not found");
+    }
+    scene = row;
+    targetType = "scene";
   }
 
   await markJobActive(job, "preview", {
-    type: "scene",
+    type: targetType,
     id: scene.id,
-    label: scene.title,
+    label: scene.title ?? undefined,
   });
 
   const payload = job.data as JobPayload;
   const settings = await ensureLibrarySettingsRow();
 
+  const filePath = scene.filePath!;
   const metadata =
     payload.jobKind === "force-rebuild"
-      ? await applyVideoProbeToScene(scene.id, scene.filePath)
+      ? entityKind
+        ? await applyVideoProbeToVideoEntity(entityKind, scene.id, filePath)
+        : await applyVideoProbeToScene(scene.id, filePath)
       : scene.duration && scene.width && scene.height
         ? scene
-        : await probeVideoFile(scene.filePath);
+        : await probeVideoFile(filePath);
 
   if (payload.jobKind === "force-rebuild") {
     await markJobProgress(job, "preview", 12);
@@ -146,7 +187,7 @@ export async function processPreview(job: Job) {
   const layout = sceneVideoGeneratedLayoutFromDedicated(
     settings.metadataStorageDedicated ?? true
   );
-  const genPaths = getSceneVideoGeneratedDiskPaths(scene.id, scene.filePath, layout);
+  const genPaths = getSceneVideoGeneratedDiskPaths(scene.id, filePath, layout);
 
   const thumbnailFile = genPaths.thumb;
   const previewFile = genPaths.preview;
@@ -208,7 +249,7 @@ export async function processPreview(job: Job) {
     "-ss",
     String(thumbnailAt),
     "-i",
-    scene.filePath,
+    filePath,
     "-frames:v",
     "1",
     "-vf",
@@ -226,7 +267,7 @@ export async function processPreview(job: Job) {
     "-ss",
     String(thumbnailAt),
     "-i",
-    scene.filePath,
+    filePath,
     "-frames:v",
     "1",
     "-vf",
@@ -247,7 +288,7 @@ export async function processPreview(job: Job) {
     "-t",
     String(previewDuration),
     "-i",
-    scene.filePath,
+    filePath,
     "-vf",
     "scale=960:-2",
     "-an",
@@ -281,7 +322,7 @@ export async function processPreview(job: Job) {
           "-ss",
           String(seekTime),
           "-i",
-          scene.filePath,
+          filePath,
           "-frames:v",
           "1",
           "-vf",
@@ -357,15 +398,20 @@ export async function processPreview(job: Job) {
     await rm(tmpFrameDir, { recursive: true, force: true });
   }
 
-  await db
-    .update(scenes)
-    .set({
-      thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
-      cardThumbnailPath: sceneAssetUrl(scene.id, "card"),
-      previewPath: sceneAssetUrl(scene.id, "preview"),
-      spritePath: sceneAssetUrl(scene.id, "sprite"),
-      trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),
-      updatedAt: new Date(),
-    })
-    .where(eq(scenes.id, scene.id));
+  const assetPatch = {
+    thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
+    cardThumbnailPath: sceneAssetUrl(scene.id, "card"),
+    previewPath: sceneAssetUrl(scene.id, "preview"),
+    spritePath: sceneAssetUrl(scene.id, "sprite"),
+    trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),
+    updatedAt: new Date(),
+  };
+
+  if (entityKind === "video_episode") {
+    await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, scene.id));
+  } else if (entityKind === "video_movie") {
+    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, scene.id));
+  } else {
+    await db.update(scenes).set(assetPatch).where(eq(scenes.id, scene.id));
+  }
 }

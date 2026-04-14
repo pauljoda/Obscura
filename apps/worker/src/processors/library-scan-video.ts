@@ -20,6 +20,7 @@ import {
   enqueueGalleryRootJob,
   enqueueAudioRootJob,
   enqueueCollectionRefreshAll,
+  enqueuePendingVideoJob,
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 
@@ -321,9 +322,21 @@ export async function processLibraryScan(job: Job): Promise<void> {
       );
     }
 
-    // TODO: Plan D3 — enqueue media-probe / fingerprint / preview / trickplay
-    // once those processors learn about videoEpisodeId. For D2 the new scan
-    // populates typed rows but leaves probe/fingerprint/preview unwired.
+    // Enqueue downstream processors for the episode (media-probe,
+    // fingerprint, preview). Each processor dispatches on entityKind.
+    const epTrigger = {
+      by: "library-scan" as const,
+      label: `Queued during ${root.label} scan`,
+    };
+    try {
+      await enqueuePendingVideoJob("media-probe", "video_episode", episodeId, epTrigger);
+      await enqueuePendingVideoJob("fingerprint", "video_episode", episodeId, epTrigger);
+      await enqueuePendingVideoJob("preview", "video_episode", episodeId, epTrigger);
+    } catch (err) {
+      console.warn(
+        `[library-scan-video] failed to enqueue downstream jobs for episode ${episodeId}: ${(err as Error).message}`,
+      );
+    }
 
     await markJobProgress(
       job,
@@ -417,7 +430,20 @@ export async function processLibraryScan(job: Job): Promise<void> {
       );
     }
 
-    // TODO: Plan D3 — enqueue downstream jobs for movies.
+    // Enqueue downstream processors for the movie.
+    const mvTrigger = {
+      by: "library-scan" as const,
+      label: `Queued during ${root.label} scan`,
+    };
+    try {
+      await enqueuePendingVideoJob("media-probe", "video_movie", movieId, mvTrigger);
+      await enqueuePendingVideoJob("fingerprint", "video_movie", movieId, mvTrigger);
+      await enqueuePendingVideoJob("preview", "video_movie", movieId, mvTrigger);
+    } catch (err) {
+      console.warn(
+        `[library-scan-video] failed to enqueue downstream jobs for movie ${movieId}: ${(err as Error).message}`,
+      );
+    }
 
     await markJobProgress(
       job,

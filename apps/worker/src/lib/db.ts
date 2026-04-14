@@ -85,4 +85,12 @@ export const {
   audioTrackTags,
   collections,
   collectionItems,
+  videoSeries,
+  videoSeasons,
+  videoEpisodes,
+  videoMovies,
+  videoEpisodePerformers,
+  videoEpisodeTags,
+  videoMoviePerformers,
+  videoMovieTags,
 } = schema;

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- `enqueuePendingVideoJob` worker helper, and `media-probe`, `fingerprint`, and `preview` processors now dispatch on an `entityKind` payload discriminator (`video_episode` / `video_movie`) so downstream jobs run against the new typed video tables as well as the legacy `scenes` table.
+- The new video library scan processor now enqueues `media-probe`, `fingerprint`, and `preview` jobs for every freshly-discovered episode and movie, bringing the new scan pipeline to feature parity with the legacy scene scanner.
+
 ### Changed
 
 - Scene cards, dashboard hero play buttons, breadcrumbs, mobile nav, desktop quick-nav, search result links (including scene and scene-folder results from the API), and collection item hrefs now all route to `/videos/:id` and `/videos?folder=:id` instead of `/scenes/:id` / `/scenes?folder=:id`. The `SceneDetail` and `SceneEdit` components default to the `"videos"` source now that the legacy routes are gone.

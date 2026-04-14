@@ -1,6 +1,14 @@
 import { eq, sql } from "drizzle-orm";
 import type { QueueName } from "@obscura/contracts";
-import { db, scenes, images, audioTracks, collections } from "./db.js";
+import {
+  db,
+  scenes,
+  images,
+  audioTracks,
+  collections,
+  videoEpisodes,
+  videoMovies,
+} from "./db.js";
 import { sendJob } from "./queues.js";
 import {
   type QueueTarget,
@@ -71,6 +79,62 @@ export async function enqueuePendingSceneJob(
       type: "scene",
       id: scene.id,
       label: scene.title,
+    },
+    trigger,
+  });
+}
+
+/**
+ * Video-entity variant of enqueuePendingSceneJob. Supports the new
+ * video_episodes / video_movies tables. The payload carries an
+ * `entityKind` discriminator so processors can look the row up in the
+ * right table.
+ */
+export type VideoEntityKind = "video_episode" | "video_movie";
+
+export async function enqueuePendingVideoJob(
+  queueName: QueueName,
+  entityKind: VideoEntityKind,
+  entityId: string,
+  trigger: QueueTrigger = {},
+) {
+  const targetType = entityKind;
+  if (
+    await hasPendingJob(queueName, {
+      type: targetType,
+      id: entityId,
+    })
+  ) {
+    return;
+  }
+
+  let title: string | null = null;
+  if (entityKind === "video_episode") {
+    const [row] = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
+      .where(eq(videoEpisodes.id, entityId))
+      .limit(1);
+    if (!row) return;
+    title = row.title;
+  } else {
+    const [row] = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(eq(videoMovies.id, entityId))
+      .limit(1);
+    if (!row) return;
+    title = row.title;
+  }
+
+  await enqueueJobIfNeeded({
+    queueName,
+    jobName: `${entityKind}-${queueName}`,
+    data: { entityKind, entityId },
+    target: {
+      type: targetType,
+      id: entityId,
+      label: title,
     },
     trigger,
   });
