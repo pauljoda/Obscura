@@ -292,7 +292,7 @@ export function normalizeSeriesResult(raw: unknown): NormalizedSeriesResult | nu
     raw.candidates,
   )
     ? raw.candidates
-        .map((c) => {
+        .map((c): NormalizedSeriesCandidate | null => {
           if (!isObject(c)) return null;
           const candTitle = toStringOrNull(c.title);
           if (!candTitle) return null;

@@ -85,3 +85,5 @@ export {
 } from "./index-fetcher";
 
 export * from "./external-ids";
+
+export * from "./normalized-video";
