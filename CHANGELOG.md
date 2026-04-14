@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Frozen legacy-schema adapter** (`apps/api/src/db/data-migrations/videos_to_series_model_v1/legacy-schema.ts`) capturing the retired `scenes`, `scene_folders`, and their join tables as-of the migration boundary, so `videos_to_series_model_v1` can read legacy rows without depending on the live schema module.
 - **Legacy-schema read helpers** (`read.ts`) exposing typed `readAllLegacyScenes`, `readAllLegacySceneFolders`, the four join-table readers, and `readLibraryRoots` against the raw migration `DataMigrationClient`.
 - **Series tree builder** (`series-tree.ts`) — pure `buildSeriesTree` helper that groups classified episode files into a `series → season → episodes` tree, the shape the upcoming `videos_to_series_model_v1` stage/finalize steps write against.
+- **`videos_to_series_model_v1` precheck** — safety check that skips the migration on fresh installs (no `scenes` table or zero rows), bails if Plan A's `video_series` schema isn't present yet, and refuses to re-run when the new `video_*` tables already hold rows.
 
 ### Changed
 
