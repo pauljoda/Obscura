@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Migration banner now visible in the app.** If Obscura detects a staged data migration, a brass-accented banner appears at the top of every page with a short description and a "Finalize migration" button. Finalizing drops the legacy `scenes` and `scene_folders` tables — the current UI depends on these, so clicking it will break the existing views until the new UI ships. The banner's warning text makes that tradeoff explicit.
+- **Library organization guide** — new `docs/library-organization.md` explains how files under a library root are classified into movies, flat series, and seasoned series, with good/bad layout examples and filename convention tips.
 - **Video migration is now live.** On next boot, Obscura detects existing scene data and stages the migration into the new typed series/season/episode/movie tables, preserving ratings, watch progress, and NSFW state. Library scans pause automatically during the staged window. The in-app migration banner and finalize button arrive in the next release — until then, scans stay paused and nothing is destroyed; the legacy tables remain in place and fully readable.
 - **Collections editor polish.** Saving a new or edited collection now reliably navigates back to the collection view page, and any save failure is surfaced inline instead of leaving you stuck on the form. The tag/performer/studio pickers in the rules builder now hide entries with nothing in the library and show a real usage total (scenes + galleries + images + audio) instead of a scenes-only count that looked like "0 matches" for everything.
 - **Legacy installs now upgrade cleanly.** The startup migrator no longer crashes on older push-managed databases that pre-date recent tables (e.g. `scene_folders`). It now probes the live schema to figure out how far an install has actually progressed and lets the normal migrator apply any missing migrations on top — no database reset required.
@@ -20,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **New `processLibraryScan` pipeline** — replaces the old scan with one that writes directly to `video_series` / `video_seasons` / `video_episodes` / `video_movies`. Uses `classifyVideoFile` for per-file routing and builds the series tree up front. The worker's obsolete `lib/lockdown.ts` is removed; the new pipeline is safe to run during the staged state because it targets the new tables.
+- **`acceptSeriesScrape` cascade handler** in `apps/api/src/services/scrape-accept.service.ts` — accepts a `NormalizedSeriesResult` with optional `CascadeAcceptSpec` that walks the cascade tree, applying series, season, and episode field masks. Upserts performers/tags/studios on the way.
+- **`POST /video/series/:id/accept-scrape` route** — HTTP entry point for the cascade accept handler. Consumes a `scrapeResultId`, optional `fieldMask`, and optional `cascade` spec.
+- **`/system/status` and migration-finalize web API client** in `apps/web/src/lib/api/system.ts` — typed wrappers for the existing backend endpoints, consumed by the new migration banner.
 - **`videos_to_series_model_v1` registered** — the data migration is now part of `dataMigrationsRegistry` and will run its `stage()` phase on the next API/worker boot if it detects an existing populated `scenes` table and empty new video tables.
 - **Scan worker lockdown guard** — `processLibraryScan` short-circuits cleanly when a data migration is in a staging or staged state, logging the reason and exiting without touching the database.
 - **`scrape-accept` service** (`apps/api/src/services/scrape-accept.service.ts`) with `acceptMovieScrape` and `acceptEpisodeScrape` — typed handlers that apply a `NormalizedMovieResult` or `NormalizedEpisodeResult` back onto the target row, upsert related performers/tags/studios, and mark the scrape result as accepted.
