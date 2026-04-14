@@ -818,6 +818,8 @@ export const scrapeResults = pgTable(
     matchType: text("match_type"),
     status: text("status").notNull().default("pending"),
     rawResult: jsonb("raw_result"),
+    proposedResult: jsonb("proposed_result").$type<Record<string, unknown>>(),
+    cascadeParentId: uuid("cascade_parent_id"),
     // Common proposed fields (scene-compatible)
     proposedTitle: text("proposed_title"),
     proposedDate: text("proposed_date"),
