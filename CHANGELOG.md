@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Docs
+
+- Added design spec `docs/superpowers/specs/2026-04-13-video-series-model-design.md` covering the planned Series → Season → Episode / Movie data model, library scan and parsing rules, staged data-migration framework, MovieDB cascade identify flow, and folder-view UI adaptation.
+
 ### What's New
 
 - **Collections editor polish.** Saving a new or edited collection now reliably navigates back to the collection view page, and any save failure is surfaced inline instead of leaving you stuck on the form. The tag/performer/studio pickers in the rules builder now hide entries with nothing in the library and show a real usage total (scenes + galleries + images + audio) instead of a scenes-only count that looked like "0 matches" for everything.
