@@ -153,6 +153,8 @@ const LEGACY_SCHEMA_SENTINELS: Record<
   "0008_loud_loa": (c) => tableExists(c, "collection_items"),
   "0009_gray_yellowjacket": (c) => tableExists(c, "external_ids"),
   "0010_natural_meteorite": (c) => tableExists(c, "video_series"),
+  "0011_amazing_invisible_woman": (c) =>
+    columnExists(c, "scrape_results", "proposed_result"),
 };
 
 /**
