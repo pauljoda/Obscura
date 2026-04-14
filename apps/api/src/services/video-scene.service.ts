@@ -9,6 +9,22 @@
  * `uncategorized` scope.
  */
 import { existsSync } from "node:fs";
+import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
+import path from "node:path";
+import type { MultipartFile } from "@fastify/multipart";
+import {
+  getGeneratedSceneDir,
+  fileNameToTitle,
+  runProcess,
+  allSceneVideoGeneratedDiskPaths,
+} from "@obscura/media-core";
+import { enqueueQueueJob } from "../lib/job-enqueue";
+import {
+  assertDirExists,
+  resolveCollisionSafePath,
+  streamToFile,
+  validateUpload,
+} from "../lib/upload";
 import {
   eq,
   ilike,
@@ -74,6 +90,11 @@ export interface ListVideosQuery {
   organized?: string;
   hasFile?: string;
   played?: string;
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string | string[];
+  codec?: string | string[];
+  interactive?: string;
   sceneFolderId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: string;
@@ -84,9 +105,13 @@ export interface UpdateVideoBody {
   details?: string | null;
   date?: string | null;
   rating?: number | null;
+  url?: string | null;
   organized?: boolean;
   isNsfw?: boolean;
   orgasmCount?: number;
+  studioName?: string | null;
+  performerNames?: string[];
+  tagNames?: string[];
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -329,6 +354,85 @@ export async function listVideoScenes(query: ListVideosQuery) {
       conds.push(eq(videoEpisodes.seriesId, query.sceneFolderId));
     }
 
+    // Codec filter (case-insensitive substring against stored codec name).
+    const codecValues = toArray(query.codec).map((c) => c.toLowerCase());
+    if (codecValues.length > 0) {
+      conds.push(
+        or(
+          ...codecValues.map((c) => ilike(videoEpisodes.codec, c)),
+        )!,
+      );
+    }
+
+    // Tag filter — join through video_episode_tags → tags.
+    const tagValues = toArray(query.tag);
+    if (tagValues.length > 0) {
+      const tagRows = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(inArray(tags.name, tagValues));
+      const tagIds = tagRows.map((t) => t.id);
+      if (tagIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        const taggedEpisodeIds = await db
+          .selectDistinct({ id: videoEpisodeTags.episodeId })
+          .from(videoEpisodeTags)
+          .where(inArray(videoEpisodeTags.tagId, tagIds));
+        const ids = taggedEpisodeIds.map((r) => r.id);
+        if (ids.length === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoEpisodes.id, ids));
+      }
+    }
+
+    // Performer filter — join through video_episode_performers → performers.
+    const performerValues = toArray(query.performer);
+    if (performerValues.length > 0) {
+      const perfRows = await db
+        .select({ id: performers.id })
+        .from(performers)
+        .where(inArray(performers.name, performerValues));
+      const perfIds = perfRows.map((p) => p.id);
+      if (perfIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        const perfEpisodeIds = await db
+          .selectDistinct({ id: videoEpisodePerformers.episodeId })
+          .from(videoEpisodePerformers)
+          .where(inArray(videoEpisodePerformers.performerId, perfIds));
+        const ids = perfEpisodeIds.map((r) => r.id);
+        if (ids.length === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoEpisodes.id, ids));
+      }
+    }
+
+    // Studio filter — episodes inherit from series. Names are looked up
+    // against studios.name; ids are also accepted for API parity.
+    const studioValues = toArray(query.studio);
+    if (studioValues.length > 0) {
+      const studioRows = await db
+        .select({ id: studios.id })
+        .from(studios)
+        .where(
+          or(
+            inArray(studios.id, studioValues),
+            inArray(studios.name, studioValues),
+          )!,
+        );
+      const studioIds = studioRows.map((s) => s.id);
+      if (studioIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        const seriesRows = await db
+          .select({ id: videoSeries.id })
+          .from(videoSeries)
+          .where(inArray(videoSeries.studioId, studioIds));
+        const seriesIds = seriesRows.map((r) => r.id);
+        if (seriesIds.length === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoEpisodes.seriesId, seriesIds));
+      }
+    }
+
     const where = conds.length > 0 ? and(...conds) : undefined;
 
     const [countRow] = await db
@@ -480,6 +584,78 @@ export async function listVideoScenes(query: ListVideosQuery) {
       );
     }
     conds.push(...buildCommonDateFilters(query, "movie"));
+
+    // Codec filter
+    const codecValues = toArray(query.codec).map((c) => c.toLowerCase());
+    if (codecValues.length > 0) {
+      conds.push(
+        or(
+          ...codecValues.map((c) => ilike(videoMovies.codec, c)),
+        )!,
+      );
+    }
+
+    // Tag filter
+    const tagValues = toArray(query.tag);
+    if (tagValues.length > 0) {
+      const tagRows = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(inArray(tags.name, tagValues));
+      const tagIds = tagRows.map((t) => t.id);
+      if (tagIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        const taggedMovieIds = await db
+          .selectDistinct({ id: videoMovieTags.movieId })
+          .from(videoMovieTags)
+          .where(inArray(videoMovieTags.tagId, tagIds));
+        const ids = taggedMovieIds.map((r) => r.id);
+        if (ids.length === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoMovies.id, ids));
+      }
+    }
+
+    // Performer filter
+    const performerValues = toArray(query.performer);
+    if (performerValues.length > 0) {
+      const perfRows = await db
+        .select({ id: performers.id })
+        .from(performers)
+        .where(inArray(performers.name, performerValues));
+      const perfIds = perfRows.map((p) => p.id);
+      if (perfIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        const perfMovieIds = await db
+          .selectDistinct({ id: videoMoviePerformers.movieId })
+          .from(videoMoviePerformers)
+          .where(inArray(videoMoviePerformers.performerId, perfIds));
+        const ids = perfMovieIds.map((r) => r.id);
+        if (ids.length === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoMovies.id, ids));
+      }
+    }
+
+    // Studio filter — movies have studioId directly.
+    const studioValues = toArray(query.studio);
+    if (studioValues.length > 0) {
+      const studioRows = await db
+        .select({ id: studios.id })
+        .from(studios)
+        .where(
+          or(
+            inArray(studios.id, studioValues),
+            inArray(studios.name, studioValues),
+          )!,
+        );
+      const studioIds = studioRows.map((s) => s.id);
+      if (studioIds.length === 0) {
+        conds.push(sql`false`);
+      } else {
+        conds.push(inArray(videoMovies.studioId, studioIds));
+      }
+    }
 
     const where = conds.length > 0 ? and(...conds) : undefined;
     const [countRow] = await db
@@ -866,21 +1042,135 @@ export async function updateVideoScene(id: string, body: UpdateVideoBody) {
   }
 
   const table = kind === "episode" ? videoEpisodes : videoMovies;
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.title !== undefined) patch.title = body.title;
-  if (body.details !== undefined) {
-    // overview in video schema
-    patch.overview = body.details;
-  }
-  if (body.date !== undefined) {
-    patch[kind === "episode" ? "airDate" : "releaseDate"] = body.date;
-  }
-  if (body.rating !== undefined) patch.rating = body.rating;
-  if (body.organized !== undefined) patch.organized = body.organized;
-  if (body.isNsfw !== undefined) patch.isNsfw = body.isNsfw;
-  if (body.orgasmCount !== undefined) patch.orgasmCount = body.orgasmCount;
 
-  await db.update(table).set(patch).where(eq(table.id, id));
+  await db.transaction(async (tx) => {
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.title !== undefined) patch.title = body.title;
+    if (body.details !== undefined) patch.overview = body.details;
+    if (body.date !== undefined) {
+      patch[kind === "episode" ? "airDate" : "releaseDate"] = body.date;
+    }
+    if (body.rating !== undefined) patch.rating = body.rating;
+    if (body.organized !== undefined) patch.organized = body.organized;
+    if (body.isNsfw !== undefined) patch.isNsfw = body.isNsfw;
+    if (body.orgasmCount !== undefined) patch.orgasmCount = body.orgasmCount;
+
+    // Studio: movies carry studioId directly; episodes inherit it from their
+    // series, so a studio write on an episode updates the series row.
+    if (body.studioName !== undefined) {
+      let resolvedStudioId: string | null = null;
+      if (body.studioName && body.studioName.trim()) {
+        const [existingStudio] = await tx
+          .select({ id: studios.id })
+          .from(studios)
+          .where(ilike(studios.name, body.studioName.trim()))
+          .limit(1);
+        resolvedStudioId =
+          existingStudio?.id ??
+          (
+            await tx
+              .insert(studios)
+              .values({ name: body.studioName.trim() })
+              .returning({ id: studios.id })
+          )[0].id;
+      }
+      if (kind === "movie") {
+        patch.studioId = resolvedStudioId;
+      } else {
+        // Update series row instead.
+        const [epRow] = await tx
+          .select({ seriesId: videoEpisodes.seriesId })
+          .from(videoEpisodes)
+          .where(eq(videoEpisodes.id, id))
+          .limit(1);
+        if (epRow?.seriesId) {
+          await tx
+            .update(videoSeries)
+            .set({ studioId: resolvedStudioId, updatedAt: new Date() })
+            .where(eq(videoSeries.id, epRow.seriesId));
+        }
+      }
+    }
+
+    await tx.update(table).set(patch).where(eq(table.id, id));
+
+    // Performers / tags — join tables depend on kind
+    const perfJoin =
+      kind === "episode" ? videoEpisodePerformers : videoMoviePerformers;
+    const perfIdCol =
+      kind === "episode"
+        ? videoEpisodePerformers.episodeId
+        : videoMoviePerformers.movieId;
+    const tagJoin =
+      kind === "episode" ? videoEpisodeTags : videoMovieTags;
+    const tagIdCol =
+      kind === "episode"
+        ? videoEpisodeTags.episodeId
+        : videoMovieTags.movieId;
+
+    if (body.performerNames !== undefined) {
+      await tx.delete(perfJoin).where(eq(perfIdCol, id));
+      for (const name of body.performerNames) {
+        if (!name.trim()) continue;
+        const [existingPerf] = await tx
+          .select({ id: performers.id })
+          .from(performers)
+          .where(ilike(performers.name, name.trim()))
+          .limit(1);
+        const performerId =
+          existingPerf?.id ??
+          (
+            await tx
+              .insert(performers)
+              .values({ name: name.trim() })
+              .returning({ id: performers.id })
+          )[0].id;
+        if (kind === "episode") {
+          await tx
+            .insert(videoEpisodePerformers)
+            .values({ episodeId: id, performerId })
+            .onConflictDoNothing();
+        } else {
+          await tx
+            .insert(videoMoviePerformers)
+            .values({ movieId: id, performerId })
+            .onConflictDoNothing();
+        }
+      }
+    }
+
+    if (body.tagNames !== undefined) {
+      await tx.delete(tagJoin).where(eq(tagIdCol, id));
+      for (const name of body.tagNames) {
+        if (!name.trim()) continue;
+        const [existingTag] = await tx
+          .select({ id: tags.id })
+          .from(tags)
+          .where(ilike(tags.name, name.trim()))
+          .limit(1);
+        const tagId =
+          existingTag?.id ??
+          (
+            await tx
+              .insert(tags)
+              .values({ name: name.trim() })
+              .returning({ id: tags.id })
+          )[0].id;
+        if (kind === "episode") {
+          await tx
+            .insert(videoEpisodeTags)
+            .values({ episodeId: id, tagId })
+            .onConflictDoNothing();
+        } else {
+          await tx
+            .insert(videoMovieTags)
+            .values({ movieId: id, tagId })
+            .onConflictDoNothing();
+        }
+      }
+    }
+  });
+
   return { ok: true as const, id };
 }
 
@@ -906,6 +1196,377 @@ export async function deleteVideoScene(id: string, _deleteFile?: boolean) {
   // assets and optionally the source file here. For the v1 /videos
   // route we only remove the database row; file deletion will land
   // alongside the unified-delete worker.
+}
+
+// ─── Shared video-entity helpers ──────────────────────────────
+
+export type VideoEntityKind = "video_episode" | "video_movie";
+
+/**
+ * Resolve a video id to its owning table ("episode" or "movie").
+ * Returns null when neither table has a matching row.
+ */
+export async function findVideoEntity(
+  id: string,
+): Promise<{ kind: VideoEntityKind; title: string; filePath: string | null } | null> {
+  const [ep] = await db
+    .select({
+      id: videoEpisodes.id,
+      title: videoEpisodes.title,
+      filePath: videoEpisodes.filePath,
+    })
+    .from(videoEpisodes)
+    .where(eq(videoEpisodes.id, id))
+    .limit(1);
+  if (ep) {
+    return {
+      kind: "video_episode",
+      title: ep.title ?? "Untitled Episode",
+      filePath: ep.filePath,
+    };
+  }
+  const [mv] = await db
+    .select({
+      id: videoMovies.id,
+      title: videoMovies.title,
+      filePath: videoMovies.filePath,
+    })
+    .from(videoMovies)
+    .where(eq(videoMovies.id, id))
+    .limit(1);
+  if (mv) {
+    return {
+      kind: "video_movie",
+      title: mv.title,
+      filePath: mv.filePath,
+    };
+  }
+  return null;
+}
+
+function videoEntityTable(kind: VideoEntityKind) {
+  return kind === "video_episode" ? videoEpisodes : videoMovies;
+}
+
+// ─── Thumbnails ───────────────────────────────────────────────
+
+async function saveCustomVideoThumbnail(
+  id: string,
+  buffer: Buffer,
+): Promise<{ thumbnailPath: string }> {
+  const genDir = getGeneratedSceneDir(id);
+  await mkdir(genDir, { recursive: true });
+  const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
+  await writeFile(thumbPath, buffer);
+
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+  const table = videoEntityTable(entity.kind);
+  await db
+    .update(table)
+    .set({
+      thumbnailPath: assetUrl,
+      cardThumbnailPath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, id));
+  return { thumbnailPath: assetUrl };
+}
+
+export async function setCustomVideoThumbnail(id: string, buffer: Buffer) {
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  return saveCustomVideoThumbnail(id, buffer);
+}
+
+export async function setCustomVideoThumbnailFromUrl(
+  id: string,
+  imageUrl: string,
+) {
+  if (!imageUrl || !imageUrl.startsWith("http")) {
+    throw new AppError(400, "Invalid image URL");
+  }
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  let buffer: Buffer;
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) throw new AppError(502, `Failed to fetch image: ${res.status}`);
+    buffer = Buffer.from(await res.arrayBuffer());
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(502, "Failed to download image");
+  }
+  return saveCustomVideoThumbnail(id, buffer);
+}
+
+export async function setCustomVideoThumbnailFromFrame(
+  id: string,
+  requestedSeconds: number,
+) {
+  if (!Number.isFinite(requestedSeconds)) {
+    throw new AppError(400, "Invalid frame time");
+  }
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  if (!entity.filePath || !existsSync(entity.filePath)) {
+    throw new AppError(404, "Video file not found");
+  }
+
+  // Load duration for clamping.
+  const table = videoEntityTable(entity.kind);
+  const [row] = await db
+    .select({ duration: table.duration })
+    .from(table)
+    .where(eq(table.id, id))
+    .limit(1);
+  const duration = row?.duration ?? null;
+  const maxSeconds =
+    duration && duration > 0 ? Math.max(0, duration - 0.05) : null;
+  const seconds =
+    maxSeconds != null
+      ? Math.min(Math.max(0, requestedSeconds), maxSeconds)
+      : Math.max(0, requestedSeconds);
+
+  const genDir = getGeneratedSceneDir(id);
+  await mkdir(genDir, { recursive: true });
+  const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
+
+  try {
+    await runProcess("ffmpeg", [
+      "-y",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      entity.filePath,
+      "-ss",
+      seconds.toFixed(3),
+      "-frames:v",
+      "1",
+      "-q:v",
+      "2",
+      thumbPath,
+    ]);
+  } catch {
+    throw new AppError(500, "Failed to generate thumbnail from frame");
+  }
+
+  const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+  await db
+    .update(table)
+    .set({
+      thumbnailPath: assetUrl,
+      cardThumbnailPath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, id));
+
+  return { ok: true as const, thumbnailPath: assetUrl, seconds };
+}
+
+export async function resetVideoThumbnail(id: string) {
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+
+  const customPath = path.join(
+    getGeneratedSceneDir(id),
+    "thumbnail-custom.jpg",
+  );
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    // non-fatal
+  }
+
+  const defaultUrl = `/assets/scenes/${id}/thumb`;
+  const defaultCardUrl = `/assets/scenes/${id}/card`;
+  const table = videoEntityTable(entity.kind);
+  await db
+    .update(table)
+    .set({
+      thumbnailPath: defaultUrl,
+      cardThumbnailPath: defaultCardUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, id));
+
+  return { ok: true as const, thumbnailPath: defaultUrl };
+}
+
+// ─── Play / orgasm tracking ───────────────────────────────────
+
+export async function recordVideoPlay(id: string) {
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  const table = videoEntityTable(entity.kind);
+  await db
+    .update(table)
+    .set({
+      playCount: sql`${table.playCount} + 1`,
+      lastPlayedAt: new Date(),
+    })
+    .where(eq(table.id, id));
+  return { ok: true as const };
+}
+
+export async function recordVideoOrgasm(id: string) {
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  const table = videoEntityTable(entity.kind);
+  const [updated] = await db
+    .update(table)
+    .set({
+      orgasmCount: sql`${table.orgasmCount} + 1`,
+    })
+    .where(eq(table.id, id))
+    .returning({ orgasmCount: table.orgasmCount });
+  return { ok: true as const, orgasmCount: updated.orgasmCount };
+}
+
+// ─── Preview rebuild ──────────────────────────────────────────
+
+export async function rebuildVideoPreview(id: string) {
+  const entity = await findVideoEntity(id);
+  if (!entity) throw new AppError(404, "Video not found");
+  if (!entity.filePath) {
+    throw new AppError(400, "Video has no file on disk");
+  }
+
+  // Best-effort: remove existing derivative files so the rebuild
+  // actually replaces rather than reuses.
+  for (const p of allSceneVideoGeneratedDiskPaths(id, entity.filePath)) {
+    try {
+      if (existsSync(p)) await unlink(p);
+    } catch {
+      // ignore
+    }
+  }
+
+  const table = videoEntityTable(entity.kind);
+  await db
+    .update(table)
+    .set({
+      thumbnailPath: null,
+      cardThumbnailPath: null,
+      previewPath: null,
+      spritePath: null,
+      trickplayVttPath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, id));
+
+  const result = await enqueueQueueJob({
+    queueName: "preview",
+    jobName: `${entity.kind}-preview`,
+    data: {
+      entityKind: entity.kind,
+      entityId: id,
+    },
+    target: {
+      type: entity.kind,
+      id,
+      label: entity.title,
+    },
+    trigger: {
+      by: "manual",
+      kind: "force-rebuild",
+      label: "Force rebuild preview",
+    },
+  });
+
+  return { ok: true as const, jobId: result?.id ?? null };
+}
+
+// ─── Upload ───────────────────────────────────────────────────
+
+export async function uploadVideoMovie(
+  libraryRootId: string,
+  file: MultipartFile,
+) {
+  const [root] = await db
+    .select()
+    .from(schema.libraryRoots)
+    .where(eq(schema.libraryRoots.id, libraryRootId))
+    .limit(1);
+  if (!root) {
+    throw new AppError(404, "Library root not found");
+  }
+  if (!root.scanVideos) {
+    throw new AppError(
+      400,
+      "Selected library root is not configured to receive video uploads",
+    );
+  }
+  if (!root.enabled) {
+    throw new AppError(400, "Selected library root is disabled");
+  }
+  if (!root.path) {
+    throw new AppError(500, "Library root is missing a filesystem path");
+  }
+
+  await assertDirExists(root.path);
+  const { safeName } = validateUpload(file, { category: "video" });
+  const dest = await resolveCollisionSafePath(root.path, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  const [created] = await db
+    .insert(videoMovies)
+    .values({
+      libraryRootId: root.id,
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      organized: false,
+      isNsfw: root.isNsfw ?? false,
+    })
+    .returning({
+      id: videoMovies.id,
+      title: videoMovies.title,
+      filePath: videoMovies.filePath,
+    });
+  if (!created) {
+    throw new AppError(500, "Failed to create video movie row after upload");
+  }
+
+  const target = {
+    type: "video_movie",
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${root.label}`,
+  };
+  await enqueueQueueJob({
+    queueName: "media-probe",
+    jobName: "video_movie-media-probe",
+    data: { entityKind: "video_movie", entityId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "fingerprint",
+    jobName: "video_movie-fingerprint",
+    data: { entityKind: "video_movie", entityId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "preview",
+    jobName: "video_movie-preview",
+    data: { entityKind: "video_movie", entityId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath,
+    libraryRootId: root.id,
+  };
 }
 
 export async function resetVideoSceneMetadata(id: string) {

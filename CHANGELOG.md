@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - `enqueuePendingVideoJob` worker helper, and `media-probe`, `fingerprint`, and `preview` processors now dispatch on an `entityKind` payload discriminator (`video_episode` / `video_movie`) so downstream jobs run against the new typed video tables as well as the legacy `scenes` table.
 - The new video library scan processor now enqueues `media-probe`, `fingerprint`, and `preview` jobs for every freshly-discovered episode and movie, bringing the new scan pipeline to feature parity with the legacy scene scanner.
+- New `/videos/:id/...` write endpoints: thumbnail upload/from-url/from-frame/delete, play tracking, orgasm tracking, preview rebuild, and `POST /videos/upload`. Upload target is always `video_movies` at the library root. Subtitle and marker endpoints are stubbed as 501 until the video subtitle/marker tables land.
+- `GET /videos` now accepts `tag`, `performer`, `studio`, `codec`, and `interactive` filters, matching the legacy `/scenes` query surface. `PATCH /videos/:id` accepts `url`, `studioName`, `performerNames`, and `tagNames` (for episodes the studio write updates the parent series row).
 
 ### Changed
 
