@@ -116,6 +116,21 @@ export const apiRoutes = {
   videoSeriesDetail: "/video/series/:id",
   videoEpisodeDetail: "/video/episodes/:id",
 
+  // Unified /videos route (backed by video_episodes + video_movies)
+  videos: "/videos",
+  videoDetail: "/videos/:id",
+  videoStats: "/videos/stats",
+  videoResetMetadata: "/videos/:id/reset-metadata",
+  videoFolders: "/video-folders",
+  videoFolderDetail: "/video-folders/:id",
+  videoFolderCover: "/video-folders/:id/cover",
+  videoFolderBackdrop: "/video-folders/:id/backdrop",
+  videoStream: "/video-stream/:id",
+  videoStreamSource: "/video-stream/:id/source",
+  videoStreamHlsStatus: "/video-stream/:id/hls/status",
+  videoStreamHlsMaster: "/video-stream/:id/hls/master.m3u8",
+  videoStreamHlsFile: "/video-stream/:id/hls/*",
+
   // System
   systemStatus: "/system/status",
   systemMigrationFinalize: "/system/migrations/:name/finalize",

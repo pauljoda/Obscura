@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - `apps/api/src/services/video-scene.service.ts` — new service that returns `SceneListItemDto`/`SceneDetailDto`/`SceneStatsDto`-shaped data backed by `video_episodes` + `video_movies` + `video_series`. First step in porting the existing `/scenes` UI stack to the new typed video tables.
+- `apps/api/src/services/video-folder.service.ts` — projects `video_series` rows as `SceneFolderListItemDto`/`SceneFolderDetailDto`-shaped objects. Flat folder model for v1: each series is a depth-0 folder with no subfolders.
+- New API routes: `GET/PATCH/DELETE /videos`, `GET /videos/stats`, `POST /videos/:id/reset-metadata`, `GET/PATCH /video-folders`, and `/video-stream/:id/*` (including `hls` and `hls2` endpoints). These give the upcoming `/videos` web route a full, DTO-compatible backend.
+- Route constants for the new endpoints in `@obscura/contracts` under `apiRoutes` (`videos`, `videoDetail`, `videoStats`, `videoFolders`, `videoStream*`, etc.).
 
 ### What's New
 

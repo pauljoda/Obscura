@@ -27,6 +27,9 @@ import { pluginsRoutes } from "./routes/plugins";
 import { systemRoutes } from "./routes/system";
 import { videoAcceptRoutes } from "./routes/video-accept";
 import { videoLibraryRoutes } from "./routes/video-library";
+import { videosRoutes } from "./routes/videos";
+import { videoFoldersRoutes } from "./routes/video-folders";
+import { videoStreamRoutes } from "./routes/video-stream";
 import { configureDatabase } from "./db";
 import {
   configureQueueAdapter,
@@ -94,6 +97,9 @@ export async function buildApiApp(
   await app.register(systemRoutes);
   await app.register(videoAcceptRoutes);
   await app.register(videoLibraryRoutes);
+  await app.register(videosRoutes);
+  await app.register(videoFoldersRoutes);
+  await app.register(videoStreamRoutes);
 
   return app;
 }
