@@ -76,7 +76,7 @@ export const sceneFoldersSearchProvider: SearchProvider = {
             ? `${r.totalSceneCount} scene${r.totalSceneCount !== 1 ? "s" : ""}`
             : null,
         imagePath: r.coverImagePath ?? null,
-        href: `/scenes?folder=${r.id}`,
+        href: `/videos?folder=${r.id}`,
         rating: r.rating,
         score: r.score,
         meta: { sceneCount: r.totalSceneCount },

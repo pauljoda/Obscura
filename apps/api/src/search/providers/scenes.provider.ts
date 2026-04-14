@@ -81,7 +81,7 @@ export const scenesSearchProvider: SearchProvider = {
         title: r.title,
         subtitle: r.studioName ?? null,
         imagePath: r.thumbnailPath ?? null,
-        href: `/scenes/${r.id}`,
+        href: `/videos/${r.id}`,
         rating: r.rating,
         score: r.score,
         meta: {
