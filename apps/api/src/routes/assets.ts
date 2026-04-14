@@ -20,17 +20,12 @@ import { ensureLibrarySettingsRow } from "../lib/library";
 const { scenes, galleries, images, videoEpisodes, videoMovies } = schema;
 
 /**
- * Resolve an entity id to its file_path by probing scenes, video_episodes,
- * and video_movies in that order. The scenes lookup will be dropped once
- * the scenes table is gone; until then we prefer it to preserve behavior
- * for legacy rows.
+ * Resolve an entity id to its file_path by probing video_episodes,
+ * video_movies, then the legacy scenes table. New content lives in
+ * the video_* tables so we prefer those; the scenes fall-back will
+ * be removed once the legacy scenes table is dropped entirely.
  */
 async function resolveVideoFilePath(id: string): Promise<string | null> {
-  const scene = await db.query.scenes.findFirst({
-    where: eq(scenes.id, id),
-    columns: { filePath: true },
-  });
-  if (scene?.filePath) return scene.filePath;
   const [ep] = await db
     .select({ filePath: videoEpisodes.filePath })
     .from(videoEpisodes)
@@ -42,7 +37,12 @@ async function resolveVideoFilePath(id: string): Promise<string | null> {
     .from(videoMovies)
     .where(eq(videoMovies.id, id))
     .limit(1);
-  return mv?.filePath ?? null;
+  if (mv?.filePath) return mv.filePath;
+  const scene = await db.query.scenes.findFirst({
+    where: eq(scenes.id, id),
+    columns: { filePath: true },
+  });
+  return scene?.filePath ?? null;
 }
 
 const IMAGE_EXTENSIONS = ["jpg", "png", "svg", "webp"] as const;

@@ -9,11 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 - Legacy `/scenes/:id/subtitles/*` API surface is gone. The subtitles route file and its backing `subtitles.service.ts` have been deleted. Subtitles for the new video model will return as a dedicated future feature; the `/videos/:id/subtitles/*` stubs in `videos.ts` already return 501.
+- Deleted the legacy `scene.service.ts` and `scene-folder.service.ts` backing modules now that no route or service imports them. The `scenes` and `scene_folders` drizzle tables remain in the schema for the migration bridge and legacy-read paths, but the service-layer code paths are fully gone.
 
 ### Changed
 
 - Collection item hydration for entityType `"scene"` now resolves against the new `video_episodes` / `video_movies` tables via a new `getVideosByIds` helper in `video-scene.service.ts`, instead of the legacy `scenes` table. Collection items pointing at old scene IDs that were never migrated will appear as missing — existing collections can be rebuilt from the new video library.
 - The plugin scrape-accept flow (`POST /plugins/results/:id/accept` for `entityType === "folder"`) now writes its details, date, studio, and tag fields to `video_series` via `updateVideoFolder`, and merges scraped URLs and `seriesExternalId` into `video_series.externalIds` instead of updating the legacy `scene_folders` table. Poster-image download is stubbed pending unified video folder asset storage.
+- `/assets/scenes/:id/:kind` now resolves entity IDs against `video_episodes` and `video_movies` first, falling back to the legacy `scenes` table only as a last resort. New content (which lives in the video tables) now resolves without an unnecessary scenes probe.
 
 ### Added
 
