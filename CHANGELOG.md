@@ -6,17 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Added
-
-- `systemRoutes` registered in the API app so `/system/status` and `/system/migrations/:name/finalize` are reachable.
-- New `/system/status` endpoint returning the registered data-migration statuses and current lockdown state, plus `POST /system/migrations/:name/finalize` to run a staged migration's `finalize()` phase. Backed by a new `getDatabaseClient()` helper in `apps/api/src/db/index.ts` that returns the live raw `postgres` client.
-- API route constants `systemStatus` (`/system/status`) and `systemMigrationFinalize` (`/system/migrations/:name/finalize`) in `@obscura/contracts` for the upcoming system/data-migration endpoints.
-- Write-lockdown guard helper (`apps/api/src/db/data-migrations/lockdown.ts`) for routes to block video writes while a data migration is in `staging`, `staged`, or `finalizing` state. Exposes `getLockdownStatus()` and `assertNotLockedDown()` (throws an error tagged with `code = "MIGRATION_LOCKDOWN"`).
-
-### Docs
-
-- Added design spec `docs/superpowers/specs/2026-04-13-video-series-model-design.md` covering the planned Series → Season → Episode / Movie data model, library scan and parsing rules, staged data-migration framework, MovieDB cascade identify flow, and folder-view UI adaptation.
-
 ### What's New
 
 - **Collections editor polish.** Saving a new or edited collection now reliably navigates back to the collection view page, and any save failure is surfaced inline instead of leaving you stuck on the form. The tag/performer/studio pickers in the rules builder now hide entries with nothing in the library and show a real usage total (scenes + galleries + images + audio) instead of a scenes-only count that looked like "0 matches" for everything.
@@ -26,6 +15,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The homepage is now a cinematic dashboard with a full-width hero carousel showcasing your top-rated scenes, quick-nav tiles for every media type, and a “New Additions” strip of recent scenes and galleries.
 - Back buttons on detail pages now return you to where you came from — folder views, search results, performer pages, and more — instead of always going to the top-level list.
 - The Settings page and Generation Pipeline section received a visual overhaul to match the Dark Room design language.
+- **Groundwork for a Series → Season → Episode video library.** Obscura is rebuilding its video subsystem around a typed series/season/episode model, with movies as a first-class type alongside them. This release lays the foundation: new database tables for series, seasons, episodes, and movies; a reusable two-phase upgrade framework that will move existing scenes into the new shape without losing user state; a new parsing library that recognizes seasons and episodes from folder and file names; and new `/system/status` and finalize endpoints that will drive an in-app migration banner in a future release. There's no user-visible change yet — the scan pipeline, identify flow, and UI updates that hang off this groundwork ship in the next releases.
+
+### Added
+
+- **Universal identify tabs** — the Identify page now has tabs for Video Folders (series), Galleries, Images, Audio Libraries (albums), and Audio Tracks, in addition to the existing Videos, Actors, Studios, Tags, and pHashes tabs. Empty tabs are auto-hidden when no content exists for that type.
+- **Plugin execution engine** — Obscura-native plugins can now be installed from the community index and executed via the `/plugins/:id/execute` API. TypeScript plugins are loaded dynamically, Python plugins run via stdin/stdout. Auth credentials are resolved from the plugin_auth table and injected at execution time. Dev mode supports installing directly from a local plugin repo path without zipping.
+- **JSON sidecar metadata extraction** — library scans now read `.info.json` and `.json` sidecar files alongside NFO files. Supports yt-dlp download metadata: title, description, upload date, uploader/channel (as studio), webpage URL, tags, categories, duration, and performers. Tags and performers from sidecars are automatically created and linked to scenes during scan. NFO data takes priority when both sources exist.
+- **Plugin system database foundations** — new `plugin_packages`, `plugin_auth`, and `external_ids` tables for the Obscura-native plugin engine. Scrape results expanded to support all entity types (not just scenes). `urls` array added to scenes, scene folders, galleries, images, audio libraries, and audio tracks. `episode_number` added to scenes for series identification. Scraper packages gain `is_nsfw` classification and `plugin_type` discriminator.
+- **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation include the `from` context.
+- Internal `/design-language` reference page — gallery of Dark Room design tokens (not linked in nav).
+- Multi-layer validation coverage now includes disposable-Postgres integration tests for the API and worker, jsdom coverage for web interaction helpers and components, and a new Validate workflow with Playwright smoke scaffolding for the running stack.
+- **Video series data model tables** — new `video_series`, `video_seasons`, `video_episodes`, and `video_movies` tables in the API schema, plus the typed join tables `video_series_performers`, `video_series_tags`, `video_episode_performers`, `video_episode_tags`, `video_movie_performers`, and `video_movie_tags`. Generated as drizzle migration `0010_natural_meteorite.sql` with a matching legacy-install sentinel so push-managed deployments pick the migration up cleanly.
+- **Data migrations framework** — new `data_migrations` table plus a reusable two-phase orchestrator (`apps/api/src/db/data-migrations/`) that lets reshape work span two boots: a non-destructive `stage()` phase that runs automatically during `runMigrations()`, and a user-triggered `finalize()` phase. The orchestrator is wired into API and worker startup, ships an empty registry ready for the first real migration, and is documented in `apps/api/src/db/data-migrations/README.md`.
+- **`/system/status` and `/system/migrations/:name/finalize` endpoints** — new system routes expose the registered data-migration statuses and current write-lockdown state, and let the user click to run a staged migration's `finalize()` phase. Registered via `systemRoutes` in the API app. Backed by a new `getDatabaseClient()` helper in `apps/api/src/db/index.ts` that returns the live raw `postgres` client. Matching `systemStatus` and `systemMigrationFinalize` route constants live in `@obscura/contracts`.
+- **Write-lockdown guard helper** (`apps/api/src/db/data-migrations/lockdown.ts`) for routes to block video writes while a data migration is in `staging`, `staged`, or `finalizing` state. Exposes `getLockdownStatus()` and `assertNotLockedDown()` (throws an error tagged with `code = "MIGRATION_LOCKDOWN"`).
+- **`library_roots.scan_movies` and `library_roots.scan_series` columns** so each library root can declare which kinds of content the upcoming video scan pipeline should look for under it.
+- **Filename and folder parsing module** in `packages/media-core/src/parsing/` — `parseSeasonFolder`, `parseSeriesFolder`, `parseEpisodeFilename`, and `parseMovieFilename` extract series titles, season numbers, episode numbers, movie titles, and release years from common folder and file naming conventions. Each helper ships with unit tests and is re-exported from the package root for use by the upcoming video scan pipeline.
+- **`ExternalIds` type and `KnownExternalIdProviders` constants** in `@obscura/contracts`, giving every entity a typed, provider-keyed bag of external identifiers (TMDB, TVDB, MusicBrainz, YouTube, etc.) that the identify engine and plugins can read and write against a stable contract.
+- **Typed external-IDs helpers** in `@obscura/plugins` — small utilities for plugins to read, merge, and emit `ExternalIds` values without hand-writing provider key strings.
 
 ### Changed
 
@@ -44,19 +52,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Route loading animation updated to concentric square ripples with a pulsing core glow field around the brass LED.
 - API and worker startup are now split into explicit app/runtime builders plus thin server entrypoints, so tests can instantiate them without opening sockets, running migrations, or starting background loops at import time.
 
-### Added
-
-- **Universal identify tabs** — the Identify page now has tabs for Video Folders (series), Galleries, Images, Audio Libraries (albums), and Audio Tracks, in addition to the existing Videos, Actors, Studios, Tags, and pHashes tabs. Empty tabs are auto-hidden when no content exists for that type.
-- **Plugin execution engine** — Obscura-native plugins can now be installed from the community index and executed via the `/plugins/:id/execute` API. TypeScript plugins are loaded dynamically, Python plugins run via stdin/stdout. Auth credentials are resolved from the plugin_auth table and injected at execution time. Dev mode supports installing directly from a local plugin repo path without zipping.
-- **JSON sidecar metadata extraction** — library scans now read `.info.json` and `.json` sidecar files alongside NFO files. Supports yt-dlp download metadata: title, description, upload date, uploader/channel (as studio), webpage URL, tags, categories, duration, and performers. Tags and performers from sidecars are automatically created and linked to scenes during scan. NFO data takes priority when both sources exist.
-- **Plugin system database foundations** — new `plugin_packages`, `plugin_auth`, and `external_ids` tables for the Obscura-native plugin engine. Scrape results expanded to support all entity types (not just scenes). `urls` array added to scenes, scene folders, galleries, images, audio libraries, and audio tracks. `episode_number` added to scenes for series identification. Scraper packages gain `is_nsfw` classification and `plugin_type` discriminator.
-- **Contextual back navigation** — detail pages (scenes, performers, studios, tags, galleries, images, audio, collections) now accept a `from` query parameter encoding the originating page URL. Back buttons return users to where they came from (e.g., a folder view, search results, or another entity page) instead of always going to the root list. All card links, search results, the command palette, the dashboard, and collection playlist navigation include the `from` context.
-- Internal `/design-language` reference page — gallery of Dark Room design tokens (not linked in nav).
-- Multi-layer validation coverage now includes disposable-Postgres integration tests for the API and worker, jsdom coverage for web interaction helpers and components, and a new Validate workflow with Playwright smoke scaffolding for the running stack.
-
 ### Fixed
 
 - Data-migration framework (`apps/api/src/db/data-migrations/run.ts`) is now safe under concurrent boots and partial failures: `ensureRow` upserts via `INSERT … ON CONFLICT (name) DO NOTHING` so the API and worker starting at the same time in the unified image no longer crash on a unique-constraint collision; `setStatus(failed)` is wrapped in `try/catch` inside both `runStagedMigrations` and `finalizeMigration` so a DB failure during error recording cannot mask the original error; the `DataMigration.stage` JSDoc now documents that `stage()` MUST be idempotent because the orchestrator may re-run it after a crash between the stage transaction committing and the final status update; and the boot-time data-migration status log filters out `complete` entries so it does not reprint on every boot once a migration has finalized.
+- `POST /system/migrations/:name/finalize` now discriminates error codes properly: unknown migration names return `404 NOT_FOUND`, migrations that aren't in the `staged` state return `409 CONFLICT` with the actual current status, and only genuine `finalize()` exceptions fall through to `500`. The lockdown guard also emits a console warning whenever it blocks a write so operators can see write-lockdown rejections in the logs.
 - Video series, season, episode, and movie tables now use `integer` for `rating` (matching every other entity) and the six new `video_*` join tables (`video_movie_performers`, `video_movie_tags`, `video_series_performers`, `video_series_tags`, `video_episode_performers`, `video_episode_tags`) gained reverse-lookup BTREE indexes on the non-leading column of their composite uniques, matching the pattern used by every existing scene/gallery/image/audio join table. Migration 0010 was regenerated in place (`0010_natural_meteorite.sql`) before the branch shipped, and the legacy-install sentinel was retagged to match.
 - Collection rule engine no longer crashes with `missing FROM-clause entry for table "scene_tags"` when a tag/performer relation condition is combined with any scalar condition (e.g. a title filter). The outer `IN (...)` predicate in `translateRelationCondition` was referencing the join table's entity column, which isn't in scope when the outer query is `FROM scenes`; it now uses the entity's own id column.
 - Collection editor now navigates back to the view page after save. The save handler invalidates the RSC cache via `router.refresh()` before pushing, and surfaces API errors inline on the form so failed saves are no longer silently swallowed.
@@ -70,6 +69,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 - Empty `packages/config/` package deleted (contained only a package.json with no source code).
+
+### Docs
+
+- Added design spec `docs/superpowers/specs/2026-04-13-video-series-model-design.md` covering the planned Series → Season → Episode / Movie data model, library scan and parsing rules, staged data-migration framework, MovieDB cascade identify flow, and folder-view UI adaptation.
+- Added developer README at `apps/api/src/db/data-migrations/README.md` documenting the data migrations framework: when to use it, the lifecycle states, how to write a new migration, the `DataMigration` contract (including the idempotency requirement on `stage()`), the write-lockdown rules, concurrent-boot safety, and observability.
 
 ## [0.19.0] - 2026-04-12
 ### What's New
