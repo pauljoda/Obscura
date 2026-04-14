@@ -1518,3 +1518,13 @@ export interface StashBoxTagResultDto {
 
 export * from "./external-ids";
 
+export type {
+  ImageCandidate,
+  NormalizedCastMember,
+  NormalizedMovieResult,
+  NormalizedSeriesResult,
+  NormalizedSeriesCandidate,
+  NormalizedSeasonResult,
+  NormalizedEpisodeResult,
+} from "./normalized-video";
+

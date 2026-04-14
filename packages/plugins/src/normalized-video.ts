@@ -1,10 +1,14 @@
 /**
- * Normalized shapes for the video subsystem's new typed results:
+ * Normalizer functions for the video subsystem's new typed results:
  * movie, series (with optional cascade children), season, episode.
- * Paired normalizer functions convert raw plugin output into these
- * shapes, mirroring the style of the existing per-entity normalizers
- * in ./normalizer.ts — trim strings, drop empties, validate URLs,
- * deduplicate case-insensitively, preserve external_ids as-is.
+ * The type declarations live in @obscura/contracts/normalized-video
+ * so the web UI and scrape-accept service can consume them without
+ * depending on the plugins engine. This file re-exports those types
+ * and provides paired normalizer functions that convert raw plugin
+ * output into them, mirroring the style of the existing per-entity
+ * normalizers in ./normalizer.ts — trim strings, drop empties,
+ * validate URLs, deduplicate case-insensitively, preserve external_ids
+ * as-is.
  *
  * These types coexist with the existing NormalizedVideoResult /
  * NormalizedFolderResult / NormalizedGalleryResult / etc. types; they
@@ -13,92 +17,25 @@
  * retire once the UI has adapted.
  */
 
-export interface ImageCandidate {
-  url: string;
-  language?: string | null;
-  width?: number;
-  height?: number;
-  aspectRatio?: number;
-  rank?: number;
-  source: string;
-}
+import type {
+  ImageCandidate,
+  NormalizedCastMember,
+  NormalizedMovieResult,
+  NormalizedSeriesResult,
+  NormalizedSeriesCandidate,
+  NormalizedSeasonResult,
+  NormalizedEpisodeResult,
+} from "@obscura/contracts";
 
-export interface NormalizedCastMember {
-  name: string;
-  character?: string | null;
-  order?: number | null;
-}
-
-export interface NormalizedMovieResult {
-  title: string;
-  originalTitle?: string | null;
-  overview?: string | null;
-  tagline?: string | null;
-  releaseDate?: string | null;
-  runtime?: number | null;
-  genres: string[];
-  studioName?: string | null;
-  cast?: NormalizedCastMember[];
-  posterCandidates: ImageCandidate[];
-  backdropCandidates: ImageCandidate[];
-  logoCandidates: ImageCandidate[];
-  externalIds: Record<string, string>;
-  rating?: number | null;
-  contentRating?: string | null;
-}
-
-export interface NormalizedSeriesResult {
-  title: string;
-  originalTitle?: string | null;
-  overview?: string | null;
-  tagline?: string | null;
-  firstAirDate?: string | null;
-  endAirDate?: string | null;
-  status?: "returning" | "ended" | "canceled" | "unknown" | null;
-  genres: string[];
-  studioName?: string | null;
-  cast?: NormalizedCastMember[];
-  posterCandidates: ImageCandidate[];
-  backdropCandidates: ImageCandidate[];
-  logoCandidates: ImageCandidate[];
-  externalIds: Record<string, string>;
-  seasons: NormalizedSeasonResult[];
-  candidates?: NormalizedSeriesCandidate[];
-}
-
-export interface NormalizedSeriesCandidate {
-  externalIds: Record<string, string>;
-  title: string;
-  year?: number | null;
-  overview?: string | null;
-  posterUrl?: string | null;
-  popularity?: number | null;
-}
-
-export interface NormalizedSeasonResult {
-  seasonNumber: number;
-  title?: string | null;
-  overview?: string | null;
-  airDate?: string | null;
-  posterCandidates: ImageCandidate[];
-  externalIds: Record<string, string>;
-  episodes: NormalizedEpisodeResult[];
-}
-
-export interface NormalizedEpisodeResult {
-  seasonNumber: number;
-  episodeNumber: number;
-  absoluteEpisodeNumber?: number | null;
-  title?: string | null;
-  overview?: string | null;
-  airDate?: string | null;
-  runtime?: number | null;
-  stillCandidates: ImageCandidate[];
-  guestStars?: NormalizedCastMember[];
-  externalIds: Record<string, string>;
-  matched?: boolean;
-  localFilePath?: string | null;
-}
+export type {
+  ImageCandidate,
+  NormalizedCastMember,
+  NormalizedMovieResult,
+  NormalizedSeriesResult,
+  NormalizedSeriesCandidate,
+  NormalizedSeasonResult,
+  NormalizedEpisodeResult,
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
