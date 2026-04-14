@@ -71,6 +71,13 @@
       "when": 1776046919104,
       "tag": "0009_gray_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776134881552,
+      "tag": "0010_slippery_snowbird",
+      "breakpoints": true
     }
   ]
 }
