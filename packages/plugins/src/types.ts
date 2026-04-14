@@ -72,6 +72,23 @@ export interface PluginCapabilities {
   performerByFragment?: boolean;
   performerByName?: boolean;
 
+  // Movies — Plan C
+  movieByName?: boolean;
+  movieByURL?: boolean;
+  movieByFragment?: boolean;
+
+  // Series (show-level lookup)
+  seriesByName?: boolean;
+  seriesByURL?: boolean;
+  seriesByFragment?: boolean;
+
+  // Series cascade (returns full season+episode tree)
+  seriesCascade?: boolean;
+
+  // Episode per-file lookup
+  episodeByName?: boolean;
+  episodeByFragment?: boolean;
+
   // Batch support
   supportsBatch?: boolean;
 }
@@ -92,6 +109,15 @@ export const pluginCapabilityKeys: (keyof PluginCapabilities)[] = [
   "performerByURL",
   "performerByFragment",
   "performerByName",
+  "movieByName",
+  "movieByURL",
+  "movieByFragment",
+  "seriesByName",
+  "seriesByURL",
+  "seriesByFragment",
+  "seriesCascade",
+  "episodeByName",
+  "episodeByFragment",
   "supportsBatch",
 ];
 
