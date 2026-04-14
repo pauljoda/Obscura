@@ -106,6 +106,7 @@ export const apiRoutes = {
   // Video accept (scrape-accept)
   videoMovieAcceptScrape: "/video/movies/:id/accept-scrape",
   videoEpisodeAcceptScrape: "/video/episodes/:id/accept-scrape",
+  videoSeriesAcceptScrape: "/video/series/:id/accept-scrape",
 
   // System
   systemStatus: "/system/status",

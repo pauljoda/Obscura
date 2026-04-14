@@ -4,13 +4,16 @@ import { apiRoutes } from "@obscura/contracts";
 import type {
   NormalizedMovieResult,
   NormalizedEpisodeResult,
+  NormalizedSeriesResult,
 } from "@obscura/contracts";
 import { scrapeResults } from "@obscura/db/src/schema";
 import { db } from "../db";
 import {
   acceptMovieScrape,
   acceptEpisodeScrape,
+  acceptSeriesScrape,
   type AcceptFieldMask,
+  type CascadeAcceptSpec,
 } from "../services/scrape-accept.service";
 
 interface AcceptBody {
@@ -77,5 +80,36 @@ export async function videoAcceptRoutes(app: FastifyInstance) {
       fieldMask: body.fieldMask,
     });
     return { ok: true };
+  });
+
+  app.post(apiRoutes.videoSeriesAcceptScrape, async (request, reply) => {
+    const { id: seriesId } = request.params as { id: string };
+    const body = request.body as AcceptBody & { cascade?: CascadeAcceptSpec };
+    if (!body?.scrapeResultId) {
+      return reply.code(400).send({ ok: false, error: "scrapeResultId required" });
+    }
+    const [row] = await db
+      .select()
+      .from(scrapeResults)
+      .where(eq(scrapeResults.id, body.scrapeResultId))
+      .limit(1);
+    if (!row) {
+      return reply.code(404).send({ ok: false, error: "scrape result not found" });
+    }
+    const proposed = row.proposedResult as unknown;
+    if (!proposed || typeof proposed !== "object") {
+      return reply.code(400).send({
+        ok: false,
+        error: "scrape result has no proposed_result payload",
+      });
+    }
+    const counts = await acceptSeriesScrape({
+      scrapeResultId: body.scrapeResultId,
+      seriesId,
+      result: proposed as NormalizedSeriesResult,
+      fieldMask: body.fieldMask,
+      cascade: body.cascade,
+    });
+    return { ok: true, ...counts };
   });
 }
