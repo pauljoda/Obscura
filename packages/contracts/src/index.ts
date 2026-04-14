@@ -103,6 +103,10 @@ export const apiRoutes = {
   pluginBatchStatus: "/plugins/batch/:jobId",
   pluginFolderCascade: "/plugins/:id/folder-cascade",
 
+  // Video accept (scrape-accept)
+  videoMovieAcceptScrape: "/video/movies/:id/accept-scrape",
+  videoEpisodeAcceptScrape: "/video/episodes/:id/accept-scrape",
+
   // System
   systemStatus: "/system/status",
   systemMigrationFinalize: "/system/migrations/:name/finalize",

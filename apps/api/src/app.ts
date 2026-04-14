@@ -25,6 +25,7 @@ import { audioStreamRoutes } from "./routes/audio-stream";
 import { collectionsRoutes } from "./routes/collections";
 import { pluginsRoutes } from "./routes/plugins";
 import { systemRoutes } from "./routes/system";
+import { videoAcceptRoutes } from "./routes/video-accept";
 import { configureDatabase } from "./db";
 import {
   configureQueueAdapter,
@@ -90,6 +91,7 @@ export async function buildApiApp(
   await app.register(collectionsRoutes);
   await app.register(pluginsRoutes);
   await app.register(systemRoutes);
+  await app.register(videoAcceptRoutes);
 
   return app;
 }
