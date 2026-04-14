@@ -14,10 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Route constants for the new endpoints in `@obscura/contracts` under `apiRoutes` (`videos`, `videoDetail`, `videoStats`, `videoFolders`, `videoStream*`, etc.).
 - `apps/web/src/lib/api/videos.ts` + `apps/web/src/lib/server-api/videos.ts` — client and server fetchers for `/videos`, `/video-folders`, and the video stream endpoints. Return types reuse the existing `SceneListItem`/`SceneDetail`/`SceneStats` shapes so both data sources are interchangeable.
 - `updateVideo` (expanded to mirror `updateScene` field set) and `resetVideoMetadata` in `apps/web/src/lib/api/videos.ts`. Re-exported `apps/web/src/lib/api/videos.ts` from the `lib/api` barrel so components can dispatch between scene and video write paths through a single import.
-- New Next.js route `/videos` (list, detail, edit) that reuses the existing `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components but feeds them data from the new video tables. The list page shares the `obscura-scenes-list-prefs` cookie with `/scenes` so view/sort preferences follow you between routes.
 
 ### Changed
 
+- `SceneDetail` now accepts an optional `source: "scenes" | "videos"` prop (default `"scenes"`) and dispatches all detail fetches, rating/organized/metadata writes, and reset-metadata calls to the matching backend. Play/orgasm tracking and preview rebuild remain scenes-only — the videos source no-ops these because `/videos` has no equivalent endpoints yet.
+- New Next.js route `/videos` (list, detail, edit) that reuses the existing `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components but feeds them data from the new video tables. The list page shares the `obscura-scenes-list-prefs` cookie with `/scenes` so view/sort preferences follow you between routes.
 - Primary navigation now points the "Videos" entry at `/videos` instead of `/scenes`. The old `/scenes` route remains available for deep links and continues to query the legacy `scenes` table.
 
 ### What's New

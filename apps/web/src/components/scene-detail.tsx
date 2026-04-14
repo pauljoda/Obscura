@@ -30,9 +30,12 @@ import {
   fetchLibraryConfig,
   fetchSceneDetail,
   fetchTags,
+  fetchVideoDetail,
   updateScene,
+  updateVideo,
   rebuildScenePreview,
   resetSceneMetadata,
+  resetVideoMetadata,
   trackPlay,
   trackOrgasm,
   toApiUrl,
@@ -58,11 +61,32 @@ export function SceneDetail({
   id,
   initialScene = null,
   initialTags = [],
+  source = "scenes",
 }: {
   id: string;
   initialScene?: SceneDetailType | null;
   initialTags?: TagItem[];
+  /**
+   * Selects which backend to read/write for this entity. The DTO shapes
+   * are identical between `/scenes/:id` and `/videos/:id`, so the rest of
+   * the component is unchanged. Defaults to `"scenes"` for backward compat.
+   */
+  source?: "scenes" | "videos";
 }) {
+  const isVideoSource = source === "videos";
+  const loadDetail = useCallback(
+    () => (isVideoSource ? fetchVideoDetail(id) : fetchSceneDetail(id)),
+    [id, isVideoSource],
+  );
+  const saveDetail = useCallback(
+    (data: Parameters<typeof updateScene>[1]) =>
+      isVideoSource ? updateVideo(id, data) : updateScene(id, data),
+    [id, isVideoSource],
+  );
+  const resetMetadata = useCallback(
+    () => (isVideoSource ? resetVideoMetadata(id) : resetSceneMetadata(id)),
+    [id, isVideoSource],
+  );
   const playlist = usePlaylistContext();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
   const [scene, setScene] = useState<SceneDetailType | null>(initialScene);
@@ -268,10 +292,10 @@ export function SceneDetail({
   const terms = useTerms();
 
   const refreshScene = useCallback(() => {
-    fetchSceneDetail(id)
+    loadDetail()
       .then(setScene)
       .catch((err) => setError(err.message));
-  }, [id]);
+  }, [loadDetail]);
 
   useEffect(() => {
     if (initialScene?.id === id) {
@@ -279,18 +303,21 @@ export function SceneDetail({
     }
 
     setLoading(true);
-    Promise.all([fetchSceneDetail(id), fetchTags({ nsfw: nsfwMode })])
+    Promise.all([loadDetail(), fetchTags({ nsfw: nsfwMode })])
       .then(([sceneData, tagsData]) => {
         setScene(sceneData);
         setAllTags(tagsData.tags);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id, initialScene, nsfwMode]);
+  }, [id, initialScene, nsfwMode, loadDetail]);
 
   const handlePlayStarted = useCallback(() => {
+    // Play tracking only exists on the legacy /scenes endpoint today; the
+    // new /videos stack has no equivalent yet, so no-op there.
+    if (isVideoSource) return;
     trackPlay(id).catch(() => {});
-  }, [id]);
+  }, [id, isVideoSource]);
 
   const [displayTime, setDisplayTime] = useState(0);
   const handleTimeUpdate = useCallback((time: number) => {
@@ -306,7 +333,7 @@ export function SceneDetail({
     setScene((prev) => (prev ? { ...prev, rating: newRating } : prev));
     setSavingRating(true);
     try {
-      await updateScene(id, { rating: newRating });
+      await saveDetail({ rating: newRating });
     } catch {
       setScene((prev) => (prev ? { ...prev, rating: previousRating } : prev));
     } finally {
@@ -316,6 +343,8 @@ export function SceneDetail({
 
   async function handleOrgasm() {
     if (!scene) return;
+    // The /videos stack has no orgasm tracking endpoint yet; no-op there.
+    if (isVideoSource) return;
     try {
       const res = await trackOrgasm(id);
       setScene((prev) =>
@@ -330,7 +359,7 @@ export function SceneDetail({
     if (!scene) return;
     const newVal = !scene.organized;
     try {
-      await updateScene(id, { organized: newVal });
+      await saveDetail({ organized: newVal });
       setScene((prev) => (prev ? { ...prev, organized: newVal } : prev));
     } catch {
       // silent
@@ -341,8 +370,20 @@ export function SceneDetail({
     "idle" | "queued" | "done"
   >("idle");
 
+  const rebuildPreviewWarnedRef = useRef(false);
   async function handleRebuildPreview() {
     if (rebuildPreviewState !== "idle") return;
+    // No /videos equivalent for preview rebuild yet — no-op with a one-time
+    // warning so the button click is observable in dev without spamming.
+    if (isVideoSource) {
+      if (!rebuildPreviewWarnedRef.current) {
+        rebuildPreviewWarnedRef.current = true;
+        console.warn(
+          "[SceneDetail] rebuildScenePreview has no /videos equivalent yet; ignoring.",
+        );
+      }
+      return;
+    }
     setRebuildPreviewState("queued");
     try {
       await rebuildScenePreview(id, nsfwMode);
@@ -371,14 +412,14 @@ export function SceneDetail({
 
     setResetMetadataState("running");
     try {
-      await resetSceneMetadata(id);
+      await resetMetadata();
     } catch (err) {
       setResetMetadataState("idle");
       setError(err instanceof Error ? err.message : "Failed to reset metadata");
       return;
     }
     try {
-      const fresh = await fetchSceneDetail(id);
+      const fresh = await loadDetail();
       setScene(fresh);
     } catch {
       // non-fatal — reset succeeded, refresh failed
@@ -404,7 +445,7 @@ export function SceneDetail({
         <p className="text-text-muted text-sm">
           {error ?? `${terms.scene} not found`}
         </p>
-        <BackLink fallback="/scenes" label={`Back to ${terms.scenes}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
+        <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={`Back to ${terms.scenes}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
       </div>
     );
   }
@@ -423,7 +464,7 @@ export function SceneDetail({
   return (
     <div className="space-y-5">
       {/* Back link */}
-      <BackLink fallback="/scenes" label={terms.scenes} className="py-1.5 font-medium hover:border-border-accent w-fit" />
+      <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={terms.scenes} className="py-1.5 font-medium hover:border-border-accent w-fit" />
 
       {/* Video Player — optionally side-by-side with a docked transcript
           on desktop widths (>= lg). On smaller viewports the player stays
@@ -773,6 +814,7 @@ export function SceneDetail({
           inline
           onSaved={refreshScene}
           currentPlaybackTime={displayTime}
+          source={source}
         />
       )}
 
