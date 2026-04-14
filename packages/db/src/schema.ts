@@ -150,6 +150,8 @@ export const libraryRoots = pgTable(
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
     scanVideos: boolean("scan_videos").default(true).notNull(),
+    scanMovies: boolean("scan_movies").default(false).notNull(),
+    scanSeries: boolean("scan_series").default(false).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
     scanAudio: boolean("scan_audio").default(true).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
@@ -1441,3 +1443,318 @@ export const collectionItemsRelations = relations(
     }),
   })
 );
+
+// ─── Video Series Model (Plan A) ────────────────────────────────────
+// New typed tables for the Series → Season → Episode / Movie reshape.
+// These coexist with scenes/scene_folders until the data migration in
+// Plan B populates them and the finalize step drops the old tables.
+
+export const videoSeries = pgTable(
+  "video_series",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    libraryRootId: uuid("library_root_id")
+      .references(() => libraryRoots.id, { onDelete: "cascade" })
+      .notNull(),
+    folderPath: text("folder_path").notNull(),
+    relativePath: text("relative_path").notNull(),
+    title: text("title").notNull(),
+    sortTitle: text("sort_title"),
+    originalTitle: text("original_title"),
+    overview: text("overview"),
+    tagline: text("tagline"),
+    status: text("status"),
+    firstAirDate: text("first_air_date"),
+    endAirDate: text("end_air_date"),
+    posterPath: text("poster_path"),
+    backdropPath: text("backdrop_path"),
+    logoPath: text("logo_path"),
+    studioId: uuid("studio_id").references(() => studios.id, {
+      onDelete: "set null",
+    }),
+    rating: real("rating"),
+    contentRating: text("content_rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    organized: boolean("organized").default(false).notNull(),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_series_folder_path_idx").on(table.folderPath),
+    index("video_series_library_root_idx").on(table.libraryRootId),
+    index("video_series_studio_idx").on(table.studioId),
+    index("video_series_is_nsfw_idx").on(table.isNsfw),
+  ],
+);
+
+export const videoSeasons = pgTable(
+  "video_seasons",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    seriesId: uuid("series_id")
+      .references(() => videoSeries.id, { onDelete: "cascade" })
+      .notNull(),
+    seasonNumber: integer("season_number").notNull(),
+    folderPath: text("folder_path"),
+    title: text("title"),
+    overview: text("overview"),
+    posterPath: text("poster_path"),
+    airDate: text("air_date"),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_seasons_series_season_idx").on(
+      table.seriesId,
+      table.seasonNumber,
+    ),
+    index("video_seasons_series_idx").on(table.seriesId),
+  ],
+);
+
+export const videoEpisodes = pgTable(
+  "video_episodes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    seasonId: uuid("season_id")
+      .references(() => videoSeasons.id, { onDelete: "cascade" })
+      .notNull(),
+    seriesId: uuid("series_id")
+      .references(() => videoSeries.id, { onDelete: "cascade" })
+      .notNull(),
+    seasonNumber: integer("season_number").notNull(),
+    episodeNumber: integer("episode_number"),
+    absoluteEpisodeNumber: integer("absolute_episode_number"),
+    title: text("title"),
+    overview: text("overview"),
+    airDate: text("air_date"),
+    stillPath: text("still_path"),
+    runtime: integer("runtime"),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    filePath: text("file_path").notNull(),
+    fileSize: real("file_size"),
+    duration: real("duration"),
+    width: integer("width"),
+    height: integer("height"),
+    frameRate: real("frame_rate"),
+    bitRate: integer("bit_rate"),
+    codec: text("codec"),
+    container: text("container"),
+    checksumMd5: text("checksum_md5"),
+    oshash: text("oshash"),
+    phash: text("phash"),
+    thumbnailPath: text("thumbnail_path"),
+    cardThumbnailPath: text("card_thumbnail_path"),
+    previewPath: text("preview_path"),
+    spritePath: text("sprite_path"),
+    trickplayVttPath: text("trickplay_vtt_path"),
+    playCount: integer("play_count").default(0).notNull(),
+    orgasmCount: integer("orgasm_count").default(0).notNull(),
+    playDuration: real("play_duration").default(0).notNull(),
+    resumeTime: real("resume_time").default(0).notNull(),
+    lastPlayedAt: timestamp("last_played_at"),
+    rating: integer("rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    organized: boolean("organized").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_episodes_file_path_idx").on(table.filePath),
+    index("video_episodes_season_idx").on(table.seasonId),
+    index("video_episodes_series_idx").on(table.seriesId),
+    index("video_episodes_is_nsfw_idx").on(table.isNsfw),
+  ],
+);
+
+export const videoMovies = pgTable(
+  "video_movies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    libraryRootId: uuid("library_root_id")
+      .references(() => libraryRoots.id, { onDelete: "cascade" })
+      .notNull(),
+    title: text("title").notNull(),
+    sortTitle: text("sort_title"),
+    originalTitle: text("original_title"),
+    overview: text("overview"),
+    tagline: text("tagline"),
+    releaseDate: text("release_date"),
+    runtime: integer("runtime"),
+    posterPath: text("poster_path"),
+    backdropPath: text("backdrop_path"),
+    logoPath: text("logo_path"),
+    studioId: uuid("studio_id").references(() => studios.id, {
+      onDelete: "set null",
+    }),
+    rating: integer("rating"),
+    contentRating: text("content_rating"),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    organized: boolean("organized").default(false).notNull(),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    filePath: text("file_path").notNull(),
+    fileSize: real("file_size"),
+    duration: real("duration"),
+    width: integer("width"),
+    height: integer("height"),
+    frameRate: real("frame_rate"),
+    bitRate: integer("bit_rate"),
+    codec: text("codec"),
+    container: text("container"),
+    checksumMd5: text("checksum_md5"),
+    oshash: text("oshash"),
+    phash: text("phash"),
+    thumbnailPath: text("thumbnail_path"),
+    cardThumbnailPath: text("card_thumbnail_path"),
+    previewPath: text("preview_path"),
+    spritePath: text("sprite_path"),
+    trickplayVttPath: text("trickplay_vtt_path"),
+    playCount: integer("play_count").default(0).notNull(),
+    orgasmCount: integer("orgasm_count").default(0).notNull(),
+    playDuration: real("play_duration").default(0).notNull(),
+    resumeTime: real("resume_time").default(0).notNull(),
+    lastPlayedAt: timestamp("last_played_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_movies_file_path_idx").on(table.filePath),
+    index("video_movies_library_root_idx").on(table.libraryRootId),
+    index("video_movies_studio_idx").on(table.studioId),
+    index("video_movies_is_nsfw_idx").on(table.isNsfw),
+  ],
+);
+
+export const videoMoviePerformers = pgTable(
+  "video_movie_performers",
+  {
+    movieId: uuid("movie_id")
+      .references(() => videoMovies.id, { onDelete: "cascade" })
+      .notNull(),
+    performerId: uuid("performer_id")
+      .references(() => performers.id, { onDelete: "cascade" })
+      .notNull(),
+    character: text("character"),
+    order: integer("order"),
+  },
+  (table) => [
+    uniqueIndex("video_movie_performers_pk").on(
+      table.movieId,
+      table.performerId,
+    ),
+  ],
+);
+
+export const videoMovieTags = pgTable(
+  "video_movie_tags",
+  {
+    movieId: uuid("movie_id")
+      .references(() => videoMovies.id, { onDelete: "cascade" })
+      .notNull(),
+    tagId: uuid("tag_id")
+      .references(() => tags.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_movie_tags_pk").on(table.movieId, table.tagId),
+  ],
+);
+
+export const videoSeriesPerformers = pgTable(
+  "video_series_performers",
+  {
+    seriesId: uuid("series_id")
+      .references(() => videoSeries.id, { onDelete: "cascade" })
+      .notNull(),
+    performerId: uuid("performer_id")
+      .references(() => performers.id, { onDelete: "cascade" })
+      .notNull(),
+    character: text("character"),
+    order: integer("order"),
+  },
+  (table) => [
+    uniqueIndex("video_series_performers_pk").on(
+      table.seriesId,
+      table.performerId,
+    ),
+  ],
+);
+
+export const videoSeriesTags = pgTable(
+  "video_series_tags",
+  {
+    seriesId: uuid("series_id")
+      .references(() => videoSeries.id, { onDelete: "cascade" })
+      .notNull(),
+    tagId: uuid("tag_id")
+      .references(() => tags.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_series_tags_pk").on(table.seriesId, table.tagId),
+  ],
+);
+
+export const videoEpisodePerformers = pgTable(
+  "video_episode_performers",
+  {
+    episodeId: uuid("episode_id")
+      .references(() => videoEpisodes.id, { onDelete: "cascade" })
+      .notNull(),
+    performerId: uuid("performer_id")
+      .references(() => performers.id, { onDelete: "cascade" })
+      .notNull(),
+    character: text("character"),
+    order: integer("order"),
+  },
+  (table) => [
+    uniqueIndex("video_episode_performers_pk").on(
+      table.episodeId,
+      table.performerId,
+    ),
+  ],
+);
+
+export const videoEpisodeTags = pgTable(
+  "video_episode_tags",
+  {
+    episodeId: uuid("episode_id")
+      .references(() => videoEpisodes.id, { onDelete: "cascade" })
+      .notNull(),
+    tagId: uuid("tag_id")
+      .references(() => tags.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_episode_tags_pk").on(table.episodeId, table.tagId),
+  ],
+);
+
+export const dataMigrations = pgTable("data_migrations", {
+  name: text("name").primaryKey(),
+  status: text("status").notNull().default("pending"),
+  stagedAt: timestamp("staged_at"),
+  finalizedAt: timestamp("finalized_at"),
+  failedAt: timestamp("failed_at"),
+  lastError: text("last_error"),
+  metrics: jsonb("metrics")
+    .$type<Record<string, unknown>>()
+    .default({})
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
