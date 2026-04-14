@@ -32,7 +32,7 @@ export function MigrationBanner() {
   const handleFinalize = async () => {
     if (
       !window.confirm(
-        `Finalize "${staged.name}"? This will drop the legacy scenes and scene_folders tables. Your existing UI may break until the new UI is released. This action is irreversible.`,
+        `Finalize "${staged.name}"? This is now a non-destructive operation — the legacy tables stay in place, the migration row is marked complete, and you can continue using both the old and new UI surfaces. Proceed?`,
       )
     ) {
       return;
@@ -85,10 +85,10 @@ export function MigrationBanner() {
               fontSize: "0.75rem",
             }}
           >
-            Library scans are paused until you finalize. Finalizing drops the
-            legacy <code>scenes</code> and <code>scene_folders</code> tables —
-            the current UI depends on these and will break until the new UI
-            ships. Only finalize if you know what you&apos;re doing.
+            The new typed video tables have been populated from your existing
+            scenes. The legacy tables remain in place, so the existing UI
+            continues to work; finalize simply marks this migration complete
+            and unlocks the next round of cleanup work.
           </div>
           {error && (
             <div style={{ color: "#ff8080", marginTop: "0.25rem" }}>
