@@ -1341,3 +1341,4 @@ export function getGeneratedAudioTrackDir(trackId: string) {
 }
 
 export * from "./parsing";
+export * from "./classifier";
