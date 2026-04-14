@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - New API routes: `GET/PATCH/DELETE /videos`, `GET /videos/stats`, `POST /videos/:id/reset-metadata`, `GET/PATCH /video-folders`, and `/video-stream/:id/*` (including `hls` and `hls2` endpoints). These give the upcoming `/videos` web route a full, DTO-compatible backend.
 - Route constants for the new endpoints in `@obscura/contracts` under `apiRoutes` (`videos`, `videoDetail`, `videoStats`, `videoFolders`, `videoStream*`, etc.).
 - `apps/web/src/lib/api/videos.ts` + `apps/web/src/lib/server-api/videos.ts` — client and server fetchers for `/videos`, `/video-folders`, and the video stream endpoints. Return types reuse the existing `SceneListItem`/`SceneDetail`/`SceneStats` shapes so both data sources are interchangeable.
+- `updateVideo` (expanded to mirror `updateScene` field set) and `resetVideoMetadata` in `apps/web/src/lib/api/videos.ts`. Re-exported `apps/web/src/lib/api/videos.ts` from the `lib/api` barrel so components can dispatch between scene and video write paths through a single import.
 - New Next.js route `/videos` (list, detail, edit) that reuses the existing `ScenesPageClient`, `SceneDetail`, and `SceneEdit` components but feeds them data from the new video tables. The list page shares the `obscura-scenes-list-prefs` cookie with `/scenes` so view/sort preferences follow you between routes.
 
 ### Changed

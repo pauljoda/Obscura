@@ -114,15 +114,25 @@ export async function updateVideo(
     details?: string | null;
     date?: string | null;
     rating?: number | null;
+    url?: string | null;
     organized?: boolean;
-    isNsfw?: boolean;
     orgasmCount?: number;
+    isNsfw?: boolean;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
   },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/videos/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export async function resetVideoMetadata(
+  id: string,
+): Promise<{ ok: true; id: string; title: string }> {
+  return fetchApi(`/videos/${id}/reset-metadata`, { method: "POST" });
 }
 
 export async function updateVideoFolder(
