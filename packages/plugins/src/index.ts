@@ -83,3 +83,5 @@ export {
   fetchPluginIndex,
   clearPluginIndexCache,
 } from "./index-fetcher";
+
+export * from "./external-ids";
