@@ -34,15 +34,16 @@ export const EXTERNAL_ID_PROVIDER_DESCRIPTORS: Record<
   KnownExternalIdProvider,
   ExternalIdProviderDescriptor
 > = {
+  // TMDB and TVDB URLs require entity-type context (movie vs tv), which
+  // the descriptor layer doesn't know. Consumers build these links with
+  // full context; no linkTemplate here on purpose.
   tmdb: {
     key: "tmdb",
     label: "The Movie Database",
-    linkTemplate: (value) => `https://www.themoviedb.org/?id=${value}`,
   },
   tvdb: {
     key: "tvdb",
     label: "TheTVDB",
-    linkTemplate: (value) => `https://thetvdb.com/?id=${value}`,
   },
   imdb: {
     key: "imdb",

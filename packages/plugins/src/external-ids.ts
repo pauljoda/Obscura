@@ -24,7 +24,7 @@ export function setExternalId(
   value: string,
 ): ExternalIds {
   const base: ExternalIds = { ...(externalIds ?? {}) };
-  const trimmed = value?.trim() ?? "";
+  const trimmed = value.trim();
   if (trimmed === "") {
     delete base[provider];
   } else {
