@@ -152,7 +152,7 @@ CREATE TABLE "video_series" (
 	"backdrop_path" text,
 	"logo_path" text,
 	"studio_id" uuid,
-	"rating" real,
+	"rating" integer,
 	"content_rating" text,
 	"is_nsfw" boolean DEFAULT false NOT NULL,
 	"organized" boolean DEFAULT false NOT NULL,
@@ -195,13 +195,17 @@ ALTER TABLE "video_series_performers" ADD CONSTRAINT "video_series_performers_pe
 ALTER TABLE "video_series_tags" ADD CONSTRAINT "video_series_tags_series_id_video_series_id_fk" FOREIGN KEY ("series_id") REFERENCES "public"."video_series"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "video_series_tags" ADD CONSTRAINT "video_series_tags_tag_id_tags_id_fk" FOREIGN KEY ("tag_id") REFERENCES "public"."tags"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "video_episode_performers_pk" ON "video_episode_performers" USING btree ("episode_id","performer_id");--> statement-breakpoint
+CREATE INDEX "video_episode_performers_performer_idx" ON "video_episode_performers" USING btree ("performer_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_episode_tags_pk" ON "video_episode_tags" USING btree ("episode_id","tag_id");--> statement-breakpoint
+CREATE INDEX "video_episode_tags_tag_idx" ON "video_episode_tags" USING btree ("tag_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_episodes_file_path_idx" ON "video_episodes" USING btree ("file_path");--> statement-breakpoint
 CREATE INDEX "video_episodes_season_idx" ON "video_episodes" USING btree ("season_id");--> statement-breakpoint
 CREATE INDEX "video_episodes_series_idx" ON "video_episodes" USING btree ("series_id");--> statement-breakpoint
 CREATE INDEX "video_episodes_is_nsfw_idx" ON "video_episodes" USING btree ("is_nsfw");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_movie_performers_pk" ON "video_movie_performers" USING btree ("movie_id","performer_id");--> statement-breakpoint
+CREATE INDEX "video_movie_performers_performer_idx" ON "video_movie_performers" USING btree ("performer_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_movie_tags_pk" ON "video_movie_tags" USING btree ("movie_id","tag_id");--> statement-breakpoint
+CREATE INDEX "video_movie_tags_tag_idx" ON "video_movie_tags" USING btree ("tag_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_movies_file_path_idx" ON "video_movies" USING btree ("file_path");--> statement-breakpoint
 CREATE INDEX "video_movies_library_root_idx" ON "video_movies" USING btree ("library_root_id");--> statement-breakpoint
 CREATE INDEX "video_movies_studio_idx" ON "video_movies" USING btree ("studio_id");--> statement-breakpoint
@@ -213,12 +217,18 @@ CREATE INDEX "video_series_library_root_idx" ON "video_series" USING btree ("lib
 CREATE INDEX "video_series_studio_idx" ON "video_series" USING btree ("studio_id");--> statement-breakpoint
 CREATE INDEX "video_series_is_nsfw_idx" ON "video_series" USING btree ("is_nsfw");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_series_performers_pk" ON "video_series_performers" USING btree ("series_id","performer_id");--> statement-breakpoint
+CREATE INDEX "video_series_performers_performer_idx" ON "video_series_performers" USING btree ("performer_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "video_series_tags_pk" ON "video_series_tags" USING btree ("series_id","tag_id");--> statement-breakpoint
+CREATE INDEX "video_series_tags_tag_idx" ON "video_series_tags" USING btree ("tag_id");
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_series_tmdb_idx"
-  ON "video_series" ((external_ids->>'tmdb'));--> statement-breakpoint
+  ON "video_series" ((external_ids->>'tmdb'));
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_seasons_tmdb_idx"
-  ON "video_seasons" ((external_ids->>'tmdb'));--> statement-breakpoint
+  ON "video_seasons" ((external_ids->>'tmdb'));
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_episodes_tmdb_idx"
-  ON "video_episodes" ((external_ids->>'tmdb'));--> statement-breakpoint
+  ON "video_episodes" ((external_ids->>'tmdb'));
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "video_movies_tmdb_idx"
   ON "video_movies" ((external_ids->>'tmdb'));

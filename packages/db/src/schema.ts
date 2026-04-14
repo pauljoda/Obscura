@@ -1472,7 +1472,7 @@ export const videoSeries = pgTable(
     studioId: uuid("studio_id").references(() => studios.id, {
       onDelete: "set null",
     }),
-    rating: real("rating"),
+    rating: integer("rating"),
     contentRating: text("content_rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
     organized: boolean("organized").default(false).notNull(),
@@ -1656,6 +1656,7 @@ export const videoMoviePerformers = pgTable(
       table.movieId,
       table.performerId,
     ),
+    index("video_movie_performers_performer_idx").on(table.performerId),
   ],
 );
 
@@ -1671,6 +1672,7 @@ export const videoMovieTags = pgTable(
   },
   (table) => [
     uniqueIndex("video_movie_tags_pk").on(table.movieId, table.tagId),
+    index("video_movie_tags_tag_idx").on(table.tagId),
   ],
 );
 
@@ -1691,6 +1693,7 @@ export const videoSeriesPerformers = pgTable(
       table.seriesId,
       table.performerId,
     ),
+    index("video_series_performers_performer_idx").on(table.performerId),
   ],
 );
 
@@ -1706,6 +1709,7 @@ export const videoSeriesTags = pgTable(
   },
   (table) => [
     uniqueIndex("video_series_tags_pk").on(table.seriesId, table.tagId),
+    index("video_series_tags_tag_idx").on(table.tagId),
   ],
 );
 
@@ -1726,6 +1730,7 @@ export const videoEpisodePerformers = pgTable(
       table.episodeId,
       table.performerId,
     ),
+    index("video_episode_performers_performer_idx").on(table.performerId),
   ],
 );
 
@@ -1741,6 +1746,7 @@ export const videoEpisodeTags = pgTable(
   },
   (table) => [
     uniqueIndex("video_episode_tags_pk").on(table.episodeId, table.tagId),
+    index("video_episode_tags_tag_idx").on(table.tagId),
   ],
 );
 

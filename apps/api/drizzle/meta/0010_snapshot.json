@@ -1,5 +1,5 @@
 {
-  "id": "62f4c2f2-bf9d-4fc7-86ab-16eabc6797f9",
+  "id": "56cc3cf0-4c28-4601-ab77-df658852a88d",
   "prevId": "fee6bed0-d1d5-4c70-ba4f-9d3cce66e075",
   "version": "7",
   "dialect": "postgresql",
@@ -5872,6 +5872,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "video_episode_performers_performer_idx": {
+          "name": "video_episode_performers_performer_idx",
+          "columns": [
+            {
+              "expression": "performer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -5943,6 +5958,21 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "video_episode_tags_tag_idx": {
+          "name": "video_episode_tags_tag_idx",
+          "columns": [
+            {
+              "expression": "tag_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6377,6 +6407,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "video_movie_performers_performer_idx": {
+          "name": "video_movie_performers_performer_idx",
+          "columns": [
+            {
+              "expression": "performer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6448,6 +6493,21 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "video_movie_tags_tag_idx": {
+          "name": "video_movie_tags_tag_idx",
+          "columns": [
+            {
+              "expression": "tag_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7087,7 +7147,7 @@
         },
         "rating": {
           "name": "rating",
-          "type": "real",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -7279,6 +7339,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "video_series_performers_performer_idx": {
+          "name": "video_series_performers_performer_idx",
+          "columns": [
+            {
+              "expression": "performer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7350,6 +7425,21 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "video_series_tags_tag_idx": {
+          "name": "video_series_tags_tag_idx",
+          "columns": [
+            {
+              "expression": "tag_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
