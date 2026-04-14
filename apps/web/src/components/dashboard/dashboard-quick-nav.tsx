@@ -53,7 +53,7 @@ export function DashboardQuickNav({ sceneCount }: { sceneCount?: number }) {
   const terms = useTerms();
 
   const navItems = [
-    { href: "/scenes", label: terms.scenes, icon: Film, count: sceneCount },
+    { href: "/videos", label: terms.scenes, icon: Film, count: sceneCount },
     { href: "/performers", label: terms.performers, icon: Users },
     { href: "/studios", label: terms.studios, icon: Building2 },
     { href: "/tags", label: terms.tags, icon: Tag },

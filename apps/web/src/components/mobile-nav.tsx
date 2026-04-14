@@ -9,7 +9,7 @@ import { MobileMoreSheet } from "./mobile-more-sheet";
 import { MobileMoreNavButton } from "./mobile-more-nav-button";
 
 const primaryTabs = [
-  { label: "Videos", href: "/scenes", icon: Film },
+  { label: "Videos", href: "/videos", icon: Film },
   { label: "Galleries", href: "/galleries", icon: Images },
   { label: "Actors", href: "/performers", icon: Users },
   { label: "Jobs", href: "/jobs", icon: Activity },

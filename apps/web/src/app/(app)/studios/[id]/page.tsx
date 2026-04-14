@@ -329,7 +329,7 @@ export default function StudioPage({ params }: StudioPageProps) {
               <SceneFolderCard
                 key={f.id}
                 folder={f}
-                href={`/scenes?folder=${f.id}`}
+                href={`/videos?folder=${f.id}`}
                 compact
               />
             ))}

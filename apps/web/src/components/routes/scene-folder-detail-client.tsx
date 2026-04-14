@@ -156,7 +156,7 @@ export function SceneFolderDetailClient({
     <div className="space-y-4">
       {/* ── Back link ────────────────────────────────────────── */}
       <BackLink
-        fallback={`/scenes?folder=${folder.parentId ?? ""}`}
+        fallback={`/videos?folder=${folder.parentId ?? ""}`}
         label="Back to folder view"
         variant="text"
       />
@@ -266,7 +266,7 @@ export function SceneFolderDetailClient({
           items={folder.breadcrumbs.map((crumb) => ({
             id: crumb.id,
             title: crumb.displayTitle,
-            href: `/scenes?folder=${crumb.id}`,
+            href: `/videos?folder=${crumb.id}`,
           }))}
         />
       )}
@@ -294,7 +294,7 @@ export function SceneFolderDetailClient({
                   <SceneFolderCard
                     key={child.id}
                     folder={child}
-                    href={`/scenes?folder=${child.id}`}
+                    href={`/videos?folder=${child.id}`}
                     compact
                   />
                 ))}

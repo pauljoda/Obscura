@@ -5,7 +5,7 @@ export function getEntityHref(item: CollectionItemDto, from?: string): string {
   let base: string;
   switch (item.entityType) {
     case "scene":
-      base = `/scenes/${item.entityId}`;
+      base = `/videos/${item.entityId}`;
       break;
     case "gallery":
       base = `/galleries/${item.entityId}`;

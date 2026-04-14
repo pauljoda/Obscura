@@ -794,11 +794,11 @@ export function ScenesPageClient({
             {/* ── Breadcrumbs ──────────────────────────────────── */}
             <HierarchyBreadcrumbs
               items={[
-                { id: "root", title: terms.scenes, href: "/scenes" },
+                { id: "root", title: terms.scenes, href: "/videos" },
                 ...activeFolder.breadcrumbs.map((crumb) => ({
                   id: crumb.id,
                   title: crumb.displayTitle,
-                  href: `/scenes?folder=${crumb.id}`,
+                  href: `/videos?folder=${crumb.id}`,
                 })),
               ]}
             />
@@ -1133,7 +1133,7 @@ export function ScenesPageClient({
                     <SceneFolderCard
                       key={folder.id}
                       folder={folder}
-                      href={`/scenes?folder=${folder.id}`}
+                      href={`/videos?folder=${folder.id}`}
                       compact
                     />
                   ))}
@@ -1172,7 +1172,7 @@ export function ScenesPageClient({
                     <SceneFolderCard
                       key={folder.id}
                       folder={folder}
-                      href={`/scenes?folder=${folder.id}`}
+                      href={`/videos?folder=${folder.id}`}
                       compact
                     />
                   ))}

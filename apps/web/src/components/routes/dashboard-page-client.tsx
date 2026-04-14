@@ -224,7 +224,7 @@ export function DashboardPageClient({
                     )}
                     <div className="pt-6 flex items-center gap-4">
                       <Link
-                        href={`/scenes/${scene.id}`}
+                        href={`/videos/${scene.id}`}
                         className="flex items-center gap-2 bg-accent-500 hover:bg-accent-400 text-accent-950 px-8 py-3 font-semibold transition-all duration-normal hover:shadow-[0_0_24px_rgba(196,154,90,0.4)]"
                       >
                         <Play className="w-5 h-5 fill-current" />
@@ -353,7 +353,7 @@ export function DashboardPageClient({
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
               {sceneFolders.map((folder) => (
                 <div key={folder.id} className="flex-none w-64 md:w-72 snap-start">
-                  <SceneFolderCard folder={folder} href={`/scene-folders/${folder.id}`} />
+                  <SceneFolderCard folder={folder} href={`/videos?folder=${folder.id}`} />
                 </div>
               ))}
             </div>

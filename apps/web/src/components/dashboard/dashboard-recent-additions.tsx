@@ -146,7 +146,7 @@ export function DashboardRecentAdditions({
         <h2 className="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">New Additions</h2>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Link
-            href="/scenes"
+            href="/videos"
             className="glass-chip border border-white/6 px-2.5 py-1 text-[0.7rem] font-medium text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
           >
             <span className="inline-flex items-center gap-1.5">

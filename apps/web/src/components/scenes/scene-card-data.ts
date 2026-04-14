@@ -44,7 +44,7 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
 }
 
 export function sceneListItemToCardData(scene: SceneListItem, from?: string): SceneCardData {
-  const base = `/scenes/${scene.id}`;
+  const base = `/videos/${scene.id}`;
   return {
     id: scene.id,
     href: from ? buildHrefWithFrom(base, from) : base,
