@@ -24,5 +24,12 @@ export default async function ScenePage({ params }: ScenePageProps) {
     fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] as TagItem[] })),
   ]);
 
-  return <SceneDetail id={id} initialScene={scene} initialTags={tagsResponse.tags} />;
+  return (
+    <SceneDetail
+      id={id}
+      initialScene={scene}
+      initialTags={tagsResponse.tags}
+      source="scenes"
+    />
+  );
 }

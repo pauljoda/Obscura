@@ -7,5 +7,5 @@ interface SceneEditPageProps {
 export default async function SceneEditPage({ params }: SceneEditPageProps) {
   const { id } = await params;
 
-  return <SceneEdit id={id} />;
+  return <SceneEdit id={id} source="scenes" />;
 }
