@@ -100,22 +100,54 @@ async function setStatus(
     lastError?: string | null;
   },
 ): Promise<void> {
-  const metricsParam =
-    patch.metrics === undefined
-      ? null
-      : client.json(patch.metrics as Record<string, never>);
+  // postgres-js's parameter binding struggles with conditional Date
+  // values inside COALESCE, so we issue separate UPDATE statements for
+  // each field that's actually present in the patch. This is chatty but
+  // rock-solid across driver versions.
   await client`
     UPDATE data_migrations
-    SET
-      status        = ${patch.status},
-      metrics       = COALESCE(${metricsParam}::jsonb, metrics),
-      staged_at     = COALESCE(${patch.stagedAt ?? null}, staged_at),
-      finalized_at  = COALESCE(${patch.finalizedAt ?? null}, finalized_at),
-      failed_at     = COALESCE(${patch.failedAt ?? null}, failed_at),
-      last_error    = ${patch.lastError ?? null},
-      updated_at    = now()
+    SET status = ${patch.status}, updated_at = now()
     WHERE name = ${name}
   `;
+  if (patch.metrics !== undefined) {
+    const metricsJson = JSON.stringify(patch.metrics);
+    await client`
+      UPDATE data_migrations
+      SET metrics = ${metricsJson}::jsonb, updated_at = now()
+      WHERE name = ${name}
+    `;
+  }
+  if (patch.stagedAt !== undefined) {
+    const iso = patch.stagedAt.toISOString();
+    await client`
+      UPDATE data_migrations
+      SET staged_at = ${iso}::timestamp, updated_at = now()
+      WHERE name = ${name}
+    `;
+  }
+  if (patch.finalizedAt !== undefined) {
+    const iso = patch.finalizedAt.toISOString();
+    await client`
+      UPDATE data_migrations
+      SET finalized_at = ${iso}::timestamp, updated_at = now()
+      WHERE name = ${name}
+    `;
+  }
+  if (patch.failedAt !== undefined) {
+    const iso = patch.failedAt.toISOString();
+    await client`
+      UPDATE data_migrations
+      SET failed_at = ${iso}::timestamp, updated_at = now()
+      WHERE name = ${name}
+    `;
+  }
+  if (patch.lastError !== undefined) {
+    await client`
+      UPDATE data_migrations
+      SET last_error = ${patch.lastError}, updated_at = now()
+      WHERE name = ${name}
+    `;
+  }
 }
 
 export interface StageBootReport {

@@ -153,7 +153,7 @@ export async function stage(
         ${existingFolder ? true : false},
         ${existingFolder?.coverImagePath ?? null},
         ${existingFolder?.backdropImagePath ?? null},
-        ${client.json(externalIds)}
+        ${JSON.stringify(externalIds)}::jsonb
       )
       RETURNING id
     `;
@@ -178,7 +178,7 @@ export async function stage(
           ${season.seasonNumber},
           ${season.folderPath},
           ${season.folderName ?? null},
-          ${client.json({})}
+          ${"{}"}::jsonb
         )
         RETURNING id
       `;
@@ -238,7 +238,7 @@ export async function stage(
         ${scene.rating},
         ${scene.isNsfw ?? false},
         ${scene.organized ?? false},
-        ${client.json({})},
+        ${"{}"}::jsonb,
         ${scene.createdAt ?? new Date()}
       )
       RETURNING id
@@ -272,7 +272,7 @@ export async function stage(
         ${scene.isNsfw ?? false},
         ${scene.organized ?? false},
         ${scene.studioId},
-        ${client.json({})},
+        ${"{}"}::jsonb,
         ${result.filePath},
         ${scene.fileSize},
         ${scene.duration},
