@@ -1339,3 +1339,5 @@ export function getGeneratedAudioLibraryDir(libraryId: string) {
 export function getGeneratedAudioTrackDir(trackId: string) {
   return path.join(getCacheRootDir(), "audio-tracks", trackId);
 }
+
+export * from "./parsing";
