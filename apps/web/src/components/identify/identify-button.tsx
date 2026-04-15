@@ -35,8 +35,10 @@ import {
   fetchInstalledPlugins,
   type InstalledPlugin,
 } from "../../lib/api/scrapers";
+import { fetchVideoSeriesLibraryDetail } from "../../lib/api/videos";
 import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
+import { buildLocalSeasonsInput } from "./identify-video-folders-tab";
 
 type EntityKind = "video_series" | "video_movie" | "video_episode";
 
@@ -133,13 +135,32 @@ export function IdentifyButton({
           `${plugin.name} does not advertise a ${entityKind} lookup capability.`,
         );
       }
+      // Build the plugin input. For series we additionally fetch the
+      // local library detail so we can pass `localSeasons` — the
+      // cascade plugin (TMDB) needs this to match user-held
+      // episodes against the remote season/episode tree. Without it
+      // the drawer renders "The plugin did not return any season
+      // data." even though the series side of the fetch succeeded.
+      let pluginInput: Record<string, unknown> = {
+        title,
+        name: title,
+      };
+      if (entityKind === "video_series") {
+        try {
+          const detail = await fetchVideoSeriesLibraryDetail(entityId);
+          const extra = buildLocalSeasonsInput(detail);
+          if (extra) pluginInput = { ...pluginInput, ...extra };
+        } catch {
+          // Non-fatal: the plugin can still return series-level
+          // metadata without localSeasons, we just won't get
+          // per-episode matching.
+        }
+      }
+
       const res = await executePlugin(
         plugin.id,
         action,
-        {
-          title,
-          name: title,
-        },
+        pluginInput,
         { saveResult: true, entityId },
       );
       if (!res.ok) {

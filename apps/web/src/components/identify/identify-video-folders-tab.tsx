@@ -48,7 +48,14 @@ export interface VideoFolderRunProps {
 
 /* ─── Local library → plugin input (TMDb cascade) ─────────────── */
 
-function buildLocalSeasonsInput(detail: VideoSeriesLibraryDetail):
+/**
+ * Build the `localSeasons` cascade input that TMDB (and any other
+ * cascade plugin) consumes to match user-held episodes against the
+ * remote season/episode tree. Exported so the per-entity identify
+ * button and the cascade review drawer can both fetch + build this
+ * input without duplicating the logic.
+ */
+export function buildLocalSeasonsInput(detail: VideoSeriesLibraryDetail):
   | { localSeasons: Array<{ seasonNumber: number; episodes: Array<{
         episodeNumber: number;
         localFilePath: string;

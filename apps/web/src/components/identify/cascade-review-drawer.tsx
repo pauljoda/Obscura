@@ -53,6 +53,8 @@ import {
   type CascadeAcceptSpec,
   type SelectedImages,
 } from "../../lib/api/scrapers";
+import { fetchVideoSeriesLibraryDetail } from "../../lib/api/videos";
+import { buildLocalSeasonsInput } from "./identify-video-folders-tab";
 import { ImagePicker } from "./image-picker";
 
 /* ─── Shape discrimination ───────────────────────────────────────── */
@@ -200,14 +202,31 @@ export function CascadeReviewDrawer({
             : entityKind === "video_movie"
               ? "movieByName"
               : "episodeByName";
+
+        // Rebuild the localSeasons input for series re-runs so the
+        // cascade plugin matches the new tmdb id against the same
+        // on-disk episodes. Without this the re-run produces
+        // series-only metadata and the user loses all per-episode
+        // context when picking a candidate.
+        let pluginInput: Record<string, unknown> = {
+          title: label,
+          name: label,
+          externalIds: { tmdb: tmdbId },
+        };
+        if (entityKind === "video_series") {
+          try {
+            const detail = await fetchVideoSeriesLibraryDetail(entityId);
+            const extra = buildLocalSeasonsInput(detail);
+            if (extra) pluginInput = { ...pluginInput, ...extra };
+          } catch {
+            // fall through — metadata-only re-run is better than no re-run
+          }
+        }
+
         const res = await executePlugin(
           row.pluginPackageId,
           action,
-          {
-            title: label,
-            name: label,
-            externalIds: { tmdb: tmdbId },
-          },
+          pluginInput,
           { saveResult: true, entityId },
         );
         if (!res.ok) {
