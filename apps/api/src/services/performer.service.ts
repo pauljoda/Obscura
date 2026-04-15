@@ -29,13 +29,15 @@ import {
   performerAudioLibraryCountExpr,
   performerImageAppearanceCountExpr,
   performerSfwSceneCountExpr,
+  performerTotalSceneCountExpr,
 } from "../lib/appearance-count-expressions";
 
-const { performers, performerTags, scenePerformers, tags, scenes } = schema;
+const { performers, performerTags, tags } = schema;
 
 // ─── SQL Expressions ──────────────────────────────────────────
 
 const sfwPerformerSceneCountExpr = performerSfwSceneCountExpr();
+const totalPerformerSceneCountExpr = performerTotalSceneCountExpr();
 
 // ─── Query Types ──────────────────────────────────────────────
 
@@ -211,18 +213,16 @@ export async function listPerformers(query: ListPerformersQuery) {
   const scm =
     query.sceneCountMin !== undefined ? Number(query.sceneCountMin) : NaN;
   if (Number.isInteger(scm) && scm >= 1) {
-    if (sfwOnly) {
-      conditions.push(gte(sfwPerformerSceneCountExpr, scm));
-    } else {
-      conditions.push(gte(performers.sceneCount, scm));
-    }
+    conditions.push(
+      gte(sfwOnly ? sfwPerformerSceneCountExpr : totalPerformerSceneCountExpr, scm),
+    );
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const sceneCountSelect = sfwOnly
     ? sfwPerformerSceneCountExpr
-    : performers.sceneCount;
+    : totalPerformerSceneCountExpr;
 
   // Sorting
   const sortDir = query.order === "asc" ? asc : desc;
@@ -233,11 +233,9 @@ export async function listPerformers(query: ListPerformersQuery) {
       orderBy = (sortAsc ?? asc)(performers.name);
       break;
     case "scenes":
-      orderBy = sfwOnly
-        ? query.order === "asc"
-          ? asc(sfwPerformerSceneCountExpr)
-          : desc(sfwPerformerSceneCountExpr)
-        : sortDir(performers.sceneCount);
+      orderBy = query.order === "asc"
+        ? asc(sceneCountSelect)
+        : desc(sceneCountSelect);
       break;
     case "rating":
       orderBy = sortDir(performers.rating);
@@ -306,20 +304,18 @@ export async function getPerformerById(id: string, sfwOnly: boolean) {
   if (!row) throw new AppError(404, "Actor not found");
   if (sfwOnly && row.isNsfw) throw new AppError(404, "Actor not found");
 
-  let sceneCount = row.sceneCount;
-  if (sfwOnly) {
-    const [cnt] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(scenePerformers)
-      .innerJoin(scenes, eq(scenes.id, scenePerformers.sceneId))
-      .where(
-        and(
-          eq(scenePerformers.performerId, id),
-          ne(scenes.isNsfw, true),
-        ),
-      );
-    sceneCount = Number(cnt?.n ?? 0);
-  }
+  // Always compute from video_episodes + video_movies. The cached
+  // `performers.scene_count` column is ignored and will be dropped in
+  // the videos_to_series finalize phase.
+  const [cnt] = await db
+    .select({
+      n: sfwOnly
+        ? performerSfwSceneCountExpr()
+        : performerTotalSceneCountExpr(),
+    })
+    .from(performers)
+    .where(eq(performers.id, id));
+  const sceneCount = Number(cnt?.n ?? 0);
 
   return {
     id: row.id,

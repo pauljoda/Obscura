@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- `performer.service.ts`, `tag.service.ts`, and `studio.service.ts` no longer touch the legacy `scenes` / `scene_performers` / `scene_tags` tables. Scene counts (and the `sceneCountMin` filter / `sort=scenes` option on the performers list) are now computed at query time from `video_episode_performers` + `video_movie_performers` (and the equivalent tag/studio joins), SFW-filtered against the episode/movie NSFW flag. The DTO fields keep the `sceneCount` name for wire compatibility. The cached `performers.scene_count`, `tags.scene_count`, and `studios.scene_count` columns are still present in the schema but are ignored by the services and will be dropped in the videos-to-series finalize phase.
+- Deleting a studio now detaches the studio via `video_series.studio_id` and `video_movies.studio_id` instead of updating `scenes.studio_id`. Deleting a tag no longer explicitly wipes `scene_tags`; `video_episode_tags` / `video_movie_tags` / `video_series_tags` all have ON DELETE CASCADE via their tag_id FK.
+
 ### Removed
 
 - Deleted the retired worker `scene-folder-sync.ts` helper that fed the old scan pipeline's hierarchy writes into `scene_folders`, plus the unused `scene-folder-schema.ts` schema-probes in both `apps/worker` and `apps/api`. The new `processLibraryScan` pipeline writes straight to `video_series` / `video_seasons`, so there is no remaining caller for any of these modules.

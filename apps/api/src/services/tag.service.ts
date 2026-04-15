@@ -17,11 +17,13 @@ import {
 import { getGeneratedTagDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
+import {
+  tagSfwSceneCountExpr,
+  tagTotalSceneCountExpr,
+} from "../lib/appearance-count-expressions";
 
 const {
   tags,
-  scenes,
-  sceneTags,
   performerTags,
   galleryTags,
   imageTags,
@@ -33,70 +35,47 @@ const {
 // ─── listTags ─────────────────────────────────────────────────
 
 export async function listTags(sfwOnly: boolean) {
-  if (!sfwOnly) {
-    const rows = await db.select().from(tags).orderBy(desc(tags.sceneCount));
+  const sceneCountExpr = sfwOnly
+    ? tagSfwSceneCountExpr()
+    : tagTotalSceneCountExpr();
 
-    const imageTagCounts = await db
-      .select({
-        tagId: imageTags.tagId,
-        count: sql<number>`count(*)`,
-      })
-      .from(imageTags)
-      .groupBy(imageTags.tagId);
-    const imageCountMap = new Map(imageTagCounts.map((r) => [r.tagId, Number(r.count)]));
-
-    return {
-      tags: rows.map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        description: tag.description,
-        aliases: tag.aliases,
-        imagePath: tag.imagePath,
-        favorite: tag.favorite,
-        rating: tag.rating,
-        isNsfw: tag.isNsfw,
-        sceneCount: tag.sceneCount,
-        imageCount: imageCountMap.get(tag.id) ?? 0,
-      })),
-    };
-  }
-
-  const [sceneAgg, imageAgg] = await Promise.all([
-    db
-      .select({
-        tagId: sceneTags.tagId,
-        cnt: sql<number>`count(*)::int`,
-      })
-      .from(sceneTags)
-      .innerJoin(scenes, eq(scenes.id, sceneTags.sceneId))
-      .where(ne(scenes.isNsfw, true))
-      .groupBy(sceneTags.tagId),
-    db
-      .select({
-        tagId: imageTags.tagId,
-        cnt: sql<number>`count(*)::int`,
-      })
-      .from(imageTags)
-      .innerJoin(images, eq(images.id, imageTags.imageId))
-      .where(ne(images.isNsfw, true))
-      .groupBy(imageTags.tagId),
-  ]);
-
-  const sceneMap = new Map(sceneAgg.map((r) => [r.tagId, Number(r.cnt)]));
+  const imageAgg = sfwOnly
+    ? await db
+        .select({
+          tagId: imageTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(imageTags)
+        .innerJoin(images, eq(images.id, imageTags.imageId))
+        .where(ne(images.isNsfw, true))
+        .groupBy(imageTags.tagId)
+    : await db
+        .select({
+          tagId: imageTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(imageTags)
+        .groupBy(imageTags.tagId);
   const imageMap = new Map(imageAgg.map((r) => [r.tagId, Number(r.cnt)]));
 
-  const rows = await db.select().from(tags).where(ne(tags.isNsfw, true));
+  const tagRows = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+      description: tags.description,
+      aliases: tags.aliases,
+      imagePath: tags.imagePath,
+      favorite: tags.favorite,
+      rating: tags.rating,
+      isNsfw: tags.isNsfw,
+      sceneCount: sceneCountExpr,
+    })
+    .from(tags)
+    .where(sfwOnly ? ne(tags.isNsfw, true) : undefined);
 
-  const mapped = rows.map((tag) => ({
-    id: tag.id,
-    name: tag.name,
-    description: tag.description,
-    aliases: tag.aliases,
-    imagePath: tag.imagePath,
-    favorite: tag.favorite,
-    rating: tag.rating,
-    isNsfw: tag.isNsfw,
-    sceneCount: sceneMap.get(tag.id) ?? 0,
+  const mapped = tagRows.map((tag) => ({
+    ...tag,
+    sceneCount: Number(tag.sceneCount ?? 0),
     imageCount: imageMap.get(tag.id) ?? 0,
   }));
 
@@ -111,15 +90,16 @@ export async function getTagById(id: string, sfwOnly: boolean) {
   const row = await db.query.tags.findFirst({ where: eq(tags.id, id) });
   if (!row) throw new AppError(404, "Tag not found");
 
-  let sceneCount = row.sceneCount;
-  if (sfwOnly) {
-    const [cnt] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(sceneTags)
-      .innerJoin(scenes, eq(scenes.id, sceneTags.sceneId))
-      .where(and(eq(sceneTags.tagId, id), ne(scenes.isNsfw, true)));
-    sceneCount = Number(cnt?.n ?? 0);
-  }
+  // Recompute scene count from video_episode_tags + video_movie_tags.
+  // The cached `tags.scene_count` column is ignored and will be dropped
+  // in the videos_to_series finalize phase.
+  const [cnt] = await db
+    .select({
+      n: sfwOnly ? tagSfwSceneCountExpr() : tagTotalSceneCountExpr(),
+    })
+    .from(tags)
+    .where(eq(tags.id, id));
+  const sceneCount = Number(cnt?.n ?? 0);
 
   return {
     id: row.id,
@@ -219,8 +199,10 @@ export async function deleteTag(id: string) {
       .where(eq(tags.parentId, id));
 
     // Remove entity associations explicitly so delete succeeds even if the DB
-    // predates ON DELETE CASCADE on join tables.
-    await tx.delete(sceneTags).where(eq(sceneTags.tagId, id));
+    // predates ON DELETE CASCADE on join tables. video_episode_tags,
+    // video_movie_tags, and video_series_tags all have ON DELETE CASCADE from
+    // their tag_id FK, so they clean up automatically when the tag row is
+    // deleted — no explicit wipes needed.
     await tx.delete(performerTags).where(eq(performerTags.tagId, id));
     await tx.delete(galleryTags).where(eq(galleryTags.tagId, id));
     await tx.delete(imageTags).where(eq(imageTags.tagId, id));

@@ -23,9 +23,19 @@ import { AppError } from "../plugins/error-handler";
 import {
   studioAudioLibraryCountExpr,
   studioImageAppearanceCountExpr,
+  studioSfwSceneCountExpr,
+  studioTotalSceneCountExpr,
 } from "../lib/appearance-count-expressions";
 
-const { scenes, studios, galleries, images, audioLibraries, audioTracks } = schema;
+const {
+  studios,
+  galleries,
+  images,
+  audioLibraries,
+  audioTracks,
+  videoSeries,
+  videoMovies,
+} = schema;
 
 // ─── listStudios ──────────────────────────────────────────────
 
@@ -43,7 +53,9 @@ export async function listStudios(sfwOnly: boolean) {
       favorite: studios.favorite,
       rating: studios.rating,
       isNsfw: studios.isNsfw,
-      sceneCount: studios.sceneCount,
+      sceneCount: sfwOnly
+        ? studioSfwSceneCountExpr()
+        : studioTotalSceneCountExpr(),
       createdAt: studios.createdAt,
       updatedAt: studios.updatedAt,
       imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
@@ -52,21 +64,6 @@ export async function listStudios(sfwOnly: boolean) {
     .from(studios)
     .where(sfwOnly ? ne(studios.isNsfw, true) : undefined)
     .orderBy(asc(studios.name));
-
-  let sfwSceneByStudio = new Map<string, number>();
-  if (sfwOnly) {
-    const agg = await db
-      .select({
-        studioId: scenes.studioId,
-        cnt: sql<number>`count(*)::int`,
-      })
-      .from(scenes)
-      .where(and(isNotNull(scenes.studioId), ne(scenes.isNsfw, true)))
-      .groupBy(scenes.studioId);
-    sfwSceneByStudio = new Map(
-      agg.filter((r) => r.studioId != null).map((r) => [r.studioId!, Number(r.cnt)]),
-    );
-  }
 
   return {
     studios: rows.map((r) => ({
@@ -81,7 +78,7 @@ export async function listStudios(sfwOnly: boolean) {
       favorite: r.favorite,
       rating: r.rating,
       isNsfw: r.isNsfw,
-      sceneCount: sfwOnly ? (sfwSceneByStudio.get(r.id) ?? 0) : r.sceneCount,
+      sceneCount: Number(r.sceneCount ?? 0),
       imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
       audioLibraryCount: Number(r.audioLibraryCount ?? 0),
       createdAt: r.createdAt,
@@ -98,7 +95,7 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
     with: {
       parent: { columns: { id: true, name: true, imagePath: true, imageUrl: true } },
       children: {
-        columns: { id: true, name: true, imagePath: true, imageUrl: true, sceneCount: true, isNsfw: true },
+        columns: { id: true, name: true, imagePath: true, imageUrl: true, isNsfw: true },
         orderBy: asc(studios.name),
       },
     },
@@ -106,29 +103,42 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
   if (!row) throw new AppError(404, "Studio not found");
   if (sfwOnly && row.isNsfw) throw new AppError(404, "Studio not found");
 
+  // Compute scene counts (episodes + movies) across the row and all its
+  // children in a single UNION aggregate so one DB roundtrip covers both
+  // the detail view and its child studio chips.
   const studioIdsForCounts = [row.id, ...row.children.map((c) => c.id)];
-  let sfwSceneByStudio = new Map<string, number>();
-  if (sfwOnly) {
-    const agg = await db
-      .select({
-        studioId: scenes.studioId,
-        cnt: sql<number>`count(*)::int`,
-      })
-      .from(scenes)
-      .where(
-        and(
-          inArray(scenes.studioId, studioIdsForCounts),
-          isNotNull(scenes.studioId),
-          ne(scenes.isNsfw, true),
-        ),
-      )
-      .groupBy(scenes.studioId);
-    sfwSceneByStudio = new Map(
-      agg.filter((r) => r.studioId != null).map((r) => [r.studioId!, Number(r.cnt)]),
-    );
+  const nsfwClause = sfwOnly ? sql`AND (is_nsfw IS NOT TRUE)` : sql``;
+  const sceneCountsByStudio = await db.execute<{
+    studio_id: string;
+    cnt: number;
+  }>(sql`
+    SELECT studio_id::text AS studio_id, SUM(cnt)::int AS cnt FROM (
+      SELECT vs.studio_id AS studio_id, COUNT(*)::int AS cnt
+      FROM video_episodes ve
+      INNER JOIN video_series vs ON vs.id = ve.series_id
+      WHERE vs.studio_id IS NOT NULL
+        AND vs.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
+        ${nsfwClause}
+      GROUP BY vs.studio_id
+      UNION ALL
+      SELECT vm.studio_id AS studio_id, COUNT(*)::int AS cnt
+      FROM video_movies vm
+      WHERE vm.studio_id IS NOT NULL
+        AND vm.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
+        ${nsfwClause}
+      GROUP BY vm.studio_id
+    ) combined
+    GROUP BY studio_id
+  `);
+  const sceneCountBy = new Map<string, number>();
+  for (const r of sceneCountsByStudio as unknown as Array<{
+    studio_id: string;
+    cnt: number;
+  }>) {
+    sceneCountBy.set(r.studio_id, Number(r.cnt ?? 0));
   }
 
-  const sceneCount = sfwOnly ? (sfwSceneByStudio.get(row.id) ?? 0) : row.sceneCount;
+  const sceneCount = sceneCountBy.get(row.id) ?? 0;
 
   return {
     id: row.id,
@@ -147,7 +157,7 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
         name: c.name,
         imagePath: c.imagePath,
         imageUrl: c.imageUrl,
-        sceneCount: sfwOnly ? (sfwSceneByStudio.get(c.id) ?? 0) : c.sceneCount,
+        sceneCount: sceneCountBy.get(c.id) ?? 0,
       })),
     imageUrl: row.imageUrl,
     imagePath: row.imagePath,
@@ -191,22 +201,29 @@ export async function updateStudio(
   if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
   await db.update(studios).set(updates).where(eq(studios.id, id));
-  const [updated] = await db.select().from(studios).where(eq(studios.id, id)).limit(1);
+  const [updated] = await db
+    .select({
+      id: studios.id,
+      name: studios.name,
+      description: studios.description,
+      aliases: studios.aliases,
+      url: studios.url,
+      parentId: studios.parentId,
+      imageUrl: studios.imageUrl,
+      imagePath: studios.imagePath,
+      favorite: studios.favorite,
+      rating: studios.rating,
+      isNsfw: studios.isNsfw,
+      sceneCount: studioTotalSceneCountExpr(),
+      createdAt: studios.createdAt,
+      updatedAt: studios.updatedAt,
+    })
+    .from(studios)
+    .where(eq(studios.id, id))
+    .limit(1);
   return {
-    id: updated.id,
-    name: updated.name,
-    description: updated.description,
-    aliases: updated.aliases,
-    url: updated.url,
-    parentId: updated.parentId,
-    imageUrl: updated.imageUrl,
-    imagePath: updated.imagePath,
-    favorite: updated.favorite,
-    rating: updated.rating,
-    isNsfw: updated.isNsfw,
-    sceneCount: updated.sceneCount,
-    createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
+    ...updated,
+    sceneCount: Number(updated.sceneCount ?? 0),
   };
 }
 
@@ -337,9 +354,13 @@ export async function deleteStudio(id: string) {
       .set({ parentId: null, updatedAt: new Date() })
       .where(eq(studios.parentId, id));
     await tx
-      .update(scenes)
+      .update(videoSeries)
       .set({ studioId: null, updatedAt: new Date() })
-      .where(eq(scenes.studioId, id));
+      .where(eq(videoSeries.studioId, id));
+    await tx
+      .update(videoMovies)
+      .set({ studioId: null, updatedAt: new Date() })
+      .where(eq(videoMovies.studioId, id));
     await tx
       .update(galleries)
       .set({ studioId: null, updatedAt: new Date() })

@@ -1,18 +1,60 @@
 /**
  * Correlated subqueries for performer/studio rows: cross-media appearance counts.
- * When `sfwOnly`, NSFW-tagged galleries, images, and audio libraries are excluded.
+ * When `sfwOnly`, NSFW-tagged episodes, movies, galleries, images, and audio
+ * libraries are excluded.
+ *
+ * "Video appearance count" in Obscura's new model is the union of individual
+ * playable files linked to the entity: video_episodes + video_movies. Series
+ * and season rows are containers, not files, so they do not contribute to the
+ * count. Episode NSFW status is its own column; movie NSFW status is its own
+ * column; both apply independently from the parent series/season.
  */
 import { sql } from "drizzle-orm";
-import { performers, studios } from "../db/schema";
+import { performers, studios, tags } from "../db/schema";
 
-/** Scenes linked to this performer that are viewable in SFW mode. */
+/**
+ * Episodes + movies linked to this performer that are viewable in SFW mode.
+ * Returned as a single integer so existing callers that selected the old
+ * `scenes` column unchanged.
+ */
 export function performerSfwSceneCountExpr() {
   return sql<number>`(
-    SELECT COUNT(*)::int
-    FROM scene_performers sp
-    INNER JOIN scenes s ON s.id = sp.scene_id
-    WHERE sp.performer_id = ${performers.id}
-      AND (s.is_nsfw IS NOT TRUE)
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episode_performers vep
+      INNER JOIN video_episodes ve ON ve.id = vep.episode_id
+      WHERE vep.performer_id = ${performers.id}
+        AND (ve.is_nsfw IS NOT TRUE)
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movie_performers vmp
+      INNER JOIN video_movies vm ON vm.id = vmp.movie_id
+      WHERE vmp.performer_id = ${performers.id}
+        AND (vm.is_nsfw IS NOT TRUE)
+    ), 0)
+  )`;
+}
+
+/**
+ * Episodes + movies linked to this performer regardless of NSFW status.
+ * Replaces the cached `performers.scene_count` column after the
+ * videos-to-series finalize phase drops the legacy scenes tables.
+ */
+export function performerTotalSceneCountExpr() {
+  return sql<number>`(
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episode_performers vep
+      WHERE vep.performer_id = ${performers.id}
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movie_performers vmp
+      WHERE vmp.performer_id = ${performers.id}
+    ), 0)
   )`;
 }
 
@@ -64,11 +106,48 @@ export function performerAudioLibraryCountExpr(sfwOnly: boolean) {
       ), 0)`;
 }
 
-/** Scenes linked to this studio that are viewable in SFW mode. */
+/**
+ * Episodes + movies under this studio that are viewable in SFW mode. Episodes
+ * inherit studio via their parent `video_series` row since episodes themselves
+ * carry no studioId column.
+ */
 export function studioSfwSceneCountExpr() {
   return sql<number>`(
-    SELECT COUNT(*)::int FROM scenes s
-    WHERE s.studio_id = ${studios.id} AND (s.is_nsfw IS NOT TRUE)
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episodes ve
+      INNER JOIN video_series vs ON vs.id = ve.series_id
+      WHERE vs.studio_id = ${studios.id}
+        AND (ve.is_nsfw IS NOT TRUE)
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movies vm
+      WHERE vm.studio_id = ${studios.id}
+        AND (vm.is_nsfw IS NOT TRUE)
+    ), 0)
+  )`;
+}
+
+/**
+ * Episodes + movies under this studio regardless of NSFW status.
+ * Replaces the cached `studios.scene_count` column.
+ */
+export function studioTotalSceneCountExpr() {
+  return sql<number>`(
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episodes ve
+      INNER JOIN video_series vs ON vs.id = ve.series_id
+      WHERE vs.studio_id = ${studios.id}
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movies vm
+      WHERE vm.studio_id = ${studios.id}
+    ), 0)
   )`;
 }
 
@@ -92,6 +171,53 @@ export function studioImageAppearanceCountExpr(sfwOnly: boolean) {
       ), 0)`;
 
   return sql<number>`(${galleryPart} + ${imagePart})`;
+}
+
+/**
+ * Episodes + movies linked to this tag, SFW-filtered.
+ * Tag join tables: video_episode_tags, video_movie_tags, and optionally
+ * video_series_tags. Series-level tags are counted via all the episodes of
+ * the series so the number stays consistent with a "how many playable files
+ * carry this tag" reading.
+ */
+export function tagSfwSceneCountExpr() {
+  return sql<number>`(
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episode_tags vet
+      INNER JOIN video_episodes ve ON ve.id = vet.episode_id
+      WHERE vet.tag_id = ${tags.id}
+        AND (ve.is_nsfw IS NOT TRUE)
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movie_tags vmt
+      INNER JOIN video_movies vm ON vm.id = vmt.movie_id
+      WHERE vmt.tag_id = ${tags.id}
+        AND (vm.is_nsfw IS NOT TRUE)
+    ), 0)
+  )`;
+}
+
+/**
+ * Episodes + movies linked to this tag regardless of NSFW status.
+ * Replaces the cached `tags.scene_count` column.
+ */
+export function tagTotalSceneCountExpr() {
+  return sql<number>`(
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_episode_tags vet
+      WHERE vet.tag_id = ${tags.id}
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_movie_tags vmt
+      WHERE vmt.tag_id = ${tags.id}
+    ), 0)
+  )`;
 }
 
 export function studioAudioLibraryCountExpr(sfwOnly: boolean) {
