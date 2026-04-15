@@ -34,7 +34,7 @@ export const VIDEO_FOLDER_FIELDS = [
   "url",
   "studio",
   "image",
-  "seasonNumber",
+  "seasonCount",
 ] as const;
 export type VideoFolderField = (typeof VIDEO_FOLDER_FIELDS)[number];
 
@@ -157,7 +157,8 @@ export interface NormalizedFolderIdentifyResult {
   tagNames: string[];
   urls: string[];
   seriesExternalId?: string;
-  seasonNumber?: number;
+  /** TMDb-reported season count (not a single season index). */
+  seasonCount?: number;
   totalEpisodes?: number;
 }
 

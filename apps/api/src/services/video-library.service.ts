@@ -153,6 +153,8 @@ export interface SeriesDetailResponse {
       duration: number | null;
       isNsfw: boolean;
       organized: boolean;
+      /** On-disk path — included for identify / plugin cascade matching. */
+      filePath: string;
     }>;
   }>;
 }
@@ -213,6 +215,7 @@ export async function getVideoSeriesDetail(
           duration: e.duration,
           isNsfw: e.isNsfw,
           organized: e.organized,
+          filePath: e.filePath,
         })),
     })),
   };

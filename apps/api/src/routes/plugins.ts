@@ -22,6 +22,7 @@ import {
   type OscuraPluginManifest,
   type PluginInput,
 } from "@obscura/plugins";
+import { deriveProposedResultFromPluginOutput } from "../lib/plugin-proposed-result";
 
 const { pluginPackages, pluginAuth, scrapeResults } = schema;
 
@@ -467,6 +468,37 @@ export async function pluginsRoutes(app: FastifyInstance) {
           : action.startsWith("image") ? "image"
           : "scene";
 
+        const proposedResult = deriveProposedResultFromPluginOutput(result);
+        const pr = proposedResult as Record<string, unknown> | null;
+
+        function firstPosterUrl(): string | null {
+          if (!pr || !Array.isArray(pr.posterCandidates)) return null;
+          const first = pr.posterCandidates[0] as Record<string, unknown> | undefined;
+          return typeof first?.url === "string" ? first.url : null;
+        }
+
+        const castNames = (): string[] | null => {
+          if (Array.isArray(r.performerNames)) return r.performerNames as string[];
+          if (!pr || !Array.isArray(pr.cast)) return null;
+          const out: string[] = [];
+          for (const c of pr.cast as { name?: string }[]) {
+            if (typeof c?.name === "string" && c.name.trim()) out.push(c.name.trim());
+          }
+          return out.length ? out : null;
+        };
+
+        const genreTags = (): string[] | null => {
+          if (Array.isArray(r.tagNames)) return r.tagNames as string[];
+          if (!pr || !Array.isArray(pr.genres)) return null;
+          const g = (pr.genres as unknown[]).filter((x): x is string => typeof x === "string");
+          return g.length ? g : null;
+        };
+
+        const proposedTitle = (pr?.title ?? r.title ?? r.name ?? null) as string | null;
+        const proposedDate = (pr?.firstAirDate ?? r.date ?? null) as string | null;
+        const proposedDetails = (pr?.overview ?? r.details ?? null) as string | null;
+        const proposedImageUrl = (firstPosterUrl() ?? (r.imageUrl ?? null)) as string | null;
+
         const [saved] = await db
           .insert(scrapeResults)
           .values({
@@ -478,29 +510,30 @@ export async function pluginsRoutes(app: FastifyInstance) {
             matchType: "plugin",
             status: "pending",
             rawResult: result as Record<string, unknown>,
-            proposedTitle: (r.title ?? r.name ?? null) as string | null,
-            proposedDate: (r.date ?? null) as string | null,
-            proposedDetails: (r.details ?? null) as string | null,
+            proposedResult: proposedResult ?? null,
+            proposedTitle,
+            proposedDate,
+            proposedDetails,
             proposedUrl: Array.isArray(r.urls) ? (r.urls[0] as string ?? null) : (r.url as string ?? null),
             proposedUrls: Array.isArray(r.urls) ? r.urls as string[] : null,
-            proposedStudioName: (r.studioName ?? null) as string | null,
-            proposedPerformerNames: Array.isArray(r.performerNames) ? r.performerNames as string[] : null,
-            proposedTagNames: Array.isArray(r.tagNames) ? r.tagNames as string[] : null,
-            proposedImageUrl: (r.imageUrl ?? null) as string | null,
+            proposedStudioName: (pr?.studioName ?? r.studioName ?? null) as string | null,
+            proposedPerformerNames: castNames(),
+            proposedTagNames: genreTags(),
+            proposedImageUrl,
             proposedEpisodeNumber: typeof r.episodeNumber === "number" ? r.episodeNumber : null,
           })
           .returning();
 
         // Build normalized result matching NormalizedScrapeResult shape
         const normalized = {
-          title: (r.title ?? r.name ?? null) as string | null,
-          date: (r.date ?? null) as string | null,
-          details: (r.details ?? null) as string | null,
+          title: proposedTitle,
+          date: proposedDate,
+          details: proposedDetails,
           url: Array.isArray(r.urls) ? (r.urls[0] as string ?? null) : (r.url as string ?? null),
-          studioName: (r.studioName ?? null) as string | null,
-          performerNames: Array.isArray(r.performerNames) ? r.performerNames as string[] : [],
-          tagNames: Array.isArray(r.tagNames) ? r.tagNames as string[] : [],
-          imageUrl: (r.imageUrl ?? null) as string | null,
+          studioName: (pr?.studioName ?? r.studioName ?? null) as string | null,
+          performerNames: castNames() ?? [],
+          tagNames: genreTags() ?? [],
+          imageUrl: proposedImageUrl,
         };
 
         return { ok: true, result: saved, normalized, pluginId: pkg.pluginId, action };

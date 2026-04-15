@@ -163,3 +163,29 @@ export async function deleteVideo(
   const qs = deleteFile ? "?deleteFile=true" : "";
   return fetchApi(`/videos/${id}${qs}`, { method: "DELETE" });
 }
+
+/** `GET /video/series/:id` — full series + seasons + episodes (for identify cascade). */
+export interface VideoSeriesLibraryDetail {
+  id: string;
+  title: string;
+  overview: string | null;
+  seasons: Array<{
+    id: string;
+    seasonNumber: number;
+    title: string | null;
+    overview: string | null;
+    episodes: Array<{
+      id: string;
+      seasonNumber: number;
+      episodeNumber: number | null;
+      title: string | null;
+      filePath: string;
+    }>;
+  }>;
+}
+
+export async function fetchVideoSeriesLibraryDetail(
+  id: string,
+): Promise<VideoSeriesLibraryDetail> {
+  return fetchApi(`/video/series/${id}`);
+}

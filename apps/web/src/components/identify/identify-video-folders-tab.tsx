@@ -14,6 +14,10 @@ import {
 } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
 import { executePlugin, acceptPluginResult } from "../../lib/api";
+import {
+  fetchVideoSeriesLibraryDetail,
+  type VideoSeriesLibraryDetail,
+} from "../../lib/api/videos";
 import type { NormalizedScrapeResult } from "../scrape/types";
 import type { VideoFolderRow, VideoFolderField, NormalizedFolderIdentifyResult } from "./types";
 import { VIDEO_FOLDER_FIELDS } from "./types";
@@ -42,6 +46,30 @@ export interface VideoFolderRunProps {
   setRunning: (running: boolean) => void;
 }
 
+/* ─── Local library → plugin input (TMDb cascade) ─────────────── */
+
+function buildLocalSeasonsInput(detail: VideoSeriesLibraryDetail):
+  | { localSeasons: Array<{ seasonNumber: number; episodes: Array<{
+        episodeNumber: number;
+        localFilePath: string;
+        title: string | null;
+      }> }> }
+  | undefined {
+  const seasons = detail.seasons
+    .map((s) => ({
+      seasonNumber: s.seasonNumber,
+      episodes: s.episodes
+        .filter((e) => e.episodeNumber != null)
+        .map((e) => ({
+          episodeNumber: e.episodeNumber!,
+          localFilePath: e.filePath,
+          title: e.title,
+        })),
+    }))
+    .filter((s) => s.episodes.length > 0);
+  return seasons.length ? { localSeasons: seasons } : undefined;
+}
+
 /* ─── Seek via plugin ─────────────────────────────────────────── */
 
 async function seekFolderViaPlugin(
@@ -54,15 +82,24 @@ async function seekFolderViaPlugin(
 }> {
   for (const plugin of pluginList) {
     try {
+      let pluginInput: Record<string, unknown> = {
+        name: row.folder.displayTitle || row.folder.title,
+        title: row.folder.displayTitle || row.folder.title,
+      };
+      try {
+        const seriesLib = await fetchVideoSeriesLibraryDetail(row.folder.id);
+        const extra = buildLocalSeasonsInput(seriesLib);
+        if (extra) pluginInput = { ...pluginInput, ...extra };
+      } catch {
+        // Identify still works with series-only metadata when detail fetch fails.
+      }
+
       const res = await withTimeout(
-        executePlugin(plugin.id, "folderByName", {
-          name: row.folder.displayTitle || row.folder.title,
-          title: row.folder.displayTitle || row.folder.title,
-        }, {
+        executePlugin(plugin.id, "folderByName", pluginInput, {
           saveResult: true,
           entityId: row.folder.id,
         }),
-        SEEK_TIMEOUT_MS * 2,
+        SEEK_TIMEOUT_MS * 6,
       );
       if (res.ok && res.result && res.normalized) {
         const savedRow = res.result as Record<string, unknown>;
@@ -77,7 +114,7 @@ async function seekFolderViaPlugin(
           tagNames: res.normalized.tagNames ?? [],
           urls: rawResult?.urls as string[] ?? (res.normalized.url ? [res.normalized.url] : []),
           seriesExternalId: rawResult?.seriesExternalId as string | undefined,
-          seasonNumber: rawResult?.seasonNumber as number | undefined,
+          seasonCount: rawResult?.seasonCount as number | undefined,
           totalEpisodes: rawResult?.totalEpisodes as number | undefined,
         };
         return {
