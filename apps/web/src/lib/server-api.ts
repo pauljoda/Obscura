@@ -7,7 +7,7 @@ export type {
   LibrarySettings,
   PerformerDetail,
   PerformerItem,
-  SceneDetail,
+  VideoDetail,
   SceneListItem,
   SceneStats,
   ScrapeResult,

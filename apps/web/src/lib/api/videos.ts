@@ -2,7 +2,7 @@
  * Client-side fetchers for the new /videos route stack.
  *
  * Return types deliberately reuse the scene types (`SceneListItem`,
- * `SceneDetail`, `SceneStats`, `SceneFolderListItemDto`,
+ * `VideoDetail`, `SceneStats`, `SceneFolderListItemDto`,
  * `SceneFolderDetailDto`) so downstream components can consume both
  * data sources interchangeably.
  */
@@ -11,7 +11,7 @@ import type {
   SceneFolderListItemDto,
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi } from "./core";
-import type { SceneDetail, SceneListItem, SceneStats } from "./types";
+import type { VideoDetail, SceneListItem, SceneStats } from "./types";
 
 export async function fetchVideos(params: {
   search?: string;
@@ -62,7 +62,7 @@ export async function fetchVideos(params: {
   return fetchApi(`/videos${qs}`);
 }
 
-export async function fetchVideoDetail(id: string): Promise<SceneDetail> {
+export async function fetchVideoDetail(id: string): Promise<VideoDetail> {
   return fetchApi(`/videos/${id}`);
 }
 

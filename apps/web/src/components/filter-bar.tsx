@@ -20,7 +20,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import type { PerformerItem, StudioItem, TagItem } from "../lib/api";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { tagsVisibleInNsfwMode } from "./nsfw/nsfw-gate";
-import type { SortDir, SortOption, ViewMode } from "../lib/scene-browse-types";
+import type { SortDir, SortOption, ViewMode } from "../lib/video-browse-types";
 import { FilterSection } from "./filters/filter-section";
 import { FilterChip } from "./filters/filter-chip";
 import {
@@ -30,7 +30,7 @@ import {
 import type { FilterPreset } from "../lib/filter-presets";
 import { FilterPresetDropdown } from "./filters/filter-preset-dropdown";
 
-export type { SortDir, SortOption, ViewMode } from "../lib/scene-browse-types";
+export type { SortDir, SortOption, ViewMode } from "../lib/video-browse-types";
 
 const defaultSortDir: Record<SortOption, SortDir> = {
   recent: "desc",

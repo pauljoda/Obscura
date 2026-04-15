@@ -1,10 +1,10 @@
-import type { ScenesListPrefsActiveFilter } from "./scenes-list-prefs";
-import type { SortDir, SortOption } from "./scene-browse-types";
+import type { VideosListPrefsActiveFilter } from "./videos-list-prefs";
+import type { SortDir, SortOption } from "./video-browse-types";
 
 export interface FilterPreset {
   id: string;
   name: string;
-  filters: ScenesListPrefsActiveFilter[];
+  filters: VideosListPrefsActiveFilter[];
   sortBy: SortOption;
   sortDir: SortDir;
 }
@@ -31,7 +31,7 @@ function validatePreset(raw: unknown): FilterPreset | null {
   return {
     id,
     name: name.slice(0, 100),
-    filters: filters as ScenesListPrefsActiveFilter[],
+    filters: filters as VideosListPrefsActiveFilter[],
     sortBy: sortBy as SortOption,
     sortDir,
   };

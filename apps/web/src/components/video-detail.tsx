@@ -7,8 +7,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { SceneEdit } from "./scene-edit";
-import { SceneTranscriptPanel } from "./scene-transcript-panel";
+import { VideoEdit } from "./video-edit";
+import { VideoTranscriptPanel } from "./video-transcript-panel";
 import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
 import { cn } from "@obscura/ui/lib/utils";
 import {
@@ -28,9 +28,8 @@ import {
 import Link from "next/link";
 import {
   fetchLibraryConfig,
-  fetchSceneDetail,
-  fetchTags,
   fetchVideoDetail,
+  fetchTags,
   updateScene,
   updateVideo,
   rebuildScenePreview,
@@ -40,7 +39,7 @@ import {
   trackOrgasm,
   toApiUrl,
   type LibrarySettings,
-  type SceneDetail as SceneDetailType,
+  type VideoDetail as VideoDetailType,
   type TagItem,
 } from "../lib/api";
 import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contracts";
@@ -49,22 +48,22 @@ import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 import { AddToCollectionModal } from "./collections/add-to-collection-modal";
 import { usePlaylistContext } from "./collections/playlist-context";
-import { SceneMetadataPanel } from "./scenes/scene-metadata-panel";
-import { SceneMarkerEditor } from "./scenes/scene-marker-editor";
-import { SceneFileInfo } from "./scenes/scene-file-info";
+import { VideoMetadataPanel } from "./videos/video-metadata-panel";
+import { VideoMarkerEditor } from "./videos/video-marker-editor";
+import { VideoFileInfo } from "./videos/video-file-info";
 import { BackLink } from "./shared/back-link";
 
 const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
 type Tab = (typeof tabs)[number];
 
-export function SceneDetail({
+export function VideoDetail({
   id,
   initialScene = null,
   initialTags = [],
   source = "videos",
 }: {
   id: string;
-  initialScene?: SceneDetailType | null;
+  initialScene?: VideoDetailType | null;
   initialTags?: TagItem[];
   /**
    * Selects which backend to read/write for this entity. The DTO shapes
@@ -75,7 +74,7 @@ export function SceneDetail({
 }) {
   const isVideoSource = source === "videos";
   const loadDetail = useCallback(
-    () => (isVideoSource ? fetchVideoDetail(id) : fetchSceneDetail(id)),
+    () => (isVideoSource ? fetchVideoDetail(id) : fetchVideoDetail(id)),
     [id, isVideoSource],
   );
   const saveDetail = useCallback(
@@ -89,7 +88,7 @@ export function SceneDetail({
   );
   const playlist = usePlaylistContext();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
-  const [scene, setScene] = useState<SceneDetailType | null>(initialScene);
+  const [scene, setScene] = useState<VideoDetailType | null>(initialScene);
   const [loading, setLoading] = useState(initialScene == null);
   const [error, setError] = useState<string | null>(null);
   const [ratingHover, setRatingHover] = useState(0);
@@ -379,7 +378,7 @@ export function SceneDetail({
       if (!rebuildPreviewWarnedRef.current) {
         rebuildPreviewWarnedRef.current = true;
         console.warn(
-          "[SceneDetail] rebuildScenePreview has no /videos equivalent yet; ignoring.",
+          "[VideoDetail] rebuildScenePreview has no /videos equivalent yet; ignoring.",
         );
       }
       return;
@@ -544,7 +543,7 @@ export function SceneDetail({
                     : undefined
                 }
               >
-                <SceneTranscriptPanel
+                <VideoTranscriptPanel
                   sceneId={scene.id}
                   tracks={scene.subtitleTracks ?? []}
                   activeTrackId={activeSubtitleId}
@@ -806,10 +805,10 @@ export function SceneDetail({
       </div>
 
       {/* Tab content */}
-      {activeTab === "Details" && <SceneMetadataPanel scene={scene} />}
+      {activeTab === "Details" && <VideoMetadataPanel scene={scene} />}
 
       {activeTab === "Metadata" && (
-        <SceneEdit
+        <VideoEdit
           id={scene.id}
           inline
           onSaved={refreshScene}
@@ -819,7 +818,7 @@ export function SceneDetail({
       )}
 
       {activeTab === "Markers" && (
-        <SceneMarkerEditor
+        <VideoMarkerEditor
           scene={scene}
           currentTimeRef={currentTimeRef}
           displayTime={displayTime}
@@ -840,7 +839,7 @@ export function SceneDetail({
                 Move it back here
               </button>
             </div>
-            <SceneTranscriptPanel
+            <VideoTranscriptPanel
               sceneId={scene.id}
               tracks={scene.subtitleTracks ?? []}
               activeTrackId={activeSubtitleId}
@@ -854,7 +853,7 @@ export function SceneDetail({
             />
           </div>
         ) : (
-          <SceneTranscriptPanel
+          <VideoTranscriptPanel
             sceneId={scene.id}
             tracks={scene.subtitleTracks ?? []}
             activeTrackId={activeSubtitleId}
@@ -868,7 +867,7 @@ export function SceneDetail({
         )
       )}
 
-      {activeTab === "Files" && <SceneFileInfo scene={scene} />}
+      {activeTab === "Files" && <VideoFileInfo scene={scene} />}
 
       <AddToCollectionModal
         open={collectionModalOpen}

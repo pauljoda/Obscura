@@ -1,5 +1,5 @@
 /** Tag name → chip class for gallery / dashboard cards (shared with scene grid). */
-export const SCENE_TAG_COLORS: Record<string, string> = {
+export const VIDEO_TAG_COLORS: Record<string, string> = {
   Outdoor: "tag-chip-success",
   Indoor: "tag-chip-default",
   Interview: "tag-chip-info",

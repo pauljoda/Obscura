@@ -19,7 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
-import { SceneGrid } from "../../../../components/scene-grid";
+import { VideoGrid } from "../../../../components/video-grid";
 import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
@@ -339,7 +339,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       <section>
         <h4 className="text-kicker mb-3">{terms.scenes}</h4>
-        <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+        <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
       </section>
 
       <div className="separator" />

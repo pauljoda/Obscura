@@ -1,4 +1,4 @@
-import { SceneEdit } from "../../../../../components/scene-edit";
+import { VideoEdit } from "../../../../../components/video-edit";
 
 interface VideoEditPageProps {
   params: Promise<{ id: string }>;
@@ -6,5 +6,5 @@ interface VideoEditPageProps {
 
 export default async function VideoEditPage({ params }: VideoEditPageProps) {
   const { id } = await params;
-  return <SceneEdit id={id} source="videos" />;
+  return <VideoEdit id={id} source="videos" />;
 }

@@ -11,8 +11,8 @@ import { searchImageItemToCardData } from "../images/image-card-data";
 import { ImageEntityCard } from "../images/image-entity-card";
 import { searchPerformerItemToCardData } from "../performers/performer-card-data";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
-import { searchSceneItemToCardData } from "../scenes/scene-card-data";
-import { SceneCard } from "../scenes/scene-card";
+import { searchVideoItemToCardData } from "../videos/video-card-data";
+import { SceneCard } from "../videos/video-card";
 import { searchStudioItemToCardData } from "../studios/studio-card-data";
 import { StudioEntityCard } from "../studios/studio-entity-card";
 import { SEARCH_KIND_CONFIG } from "./search-kind-config";
@@ -33,7 +33,7 @@ export function SearchResultCard({
   from,
 }: SearchResultCardProps) {
   if (item.kind === "scene") {
-    const scene = searchSceneItemToCardData(item, from);
+    const scene = searchVideoItemToCardData(item, from);
 
     if (scene) {
       return (

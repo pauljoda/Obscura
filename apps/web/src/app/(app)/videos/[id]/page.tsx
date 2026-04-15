@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
-import { SceneDetail } from "../../../../components/scene-detail";
+import { VideoDetail } from "../../../../components/video-detail";
 import {
   fetchTags,
   fetchVideoDetail,
-  type SceneDetail as SceneDetailType,
+  type VideoDetail as VideoDetailType,
   type TagItem,
 } from "../../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../../lib/nsfw-cookie";
@@ -20,12 +20,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
 
   const [scene, tagsResponse] = await Promise.all([
-    fetchVideoDetail(id).catch(() => null as SceneDetailType | null),
+    fetchVideoDetail(id).catch(() => null as VideoDetailType | null),
     fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] as TagItem[] })),
   ]);
 
   return (
-    <SceneDetail
+    <VideoDetail
       id={id}
       initialScene={scene}
       initialTags={tagsResponse.tags}

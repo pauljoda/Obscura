@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { Film, Loader2 } from "lucide-react";
-import type { ViewMode } from "../lib/scene-browse-types";
+import type { ViewMode } from "../lib/video-browse-types";
 import type { SceneListItem } from "../lib/api";
 import { useTerms } from "../lib/terminology";
-import { SceneCard } from "./scenes/scene-card";
-import { sceneListItemToCardData } from "./scenes/scene-card-data";
+import { SceneCard } from "./videos/video-card";
+import { videoListItemToCardData } from "./videos/video-card-data";
 
-interface SceneGridProps {
+interface VideoGridProps {
   scenes: SceneListItem[];
   viewMode: ViewMode;
   loading?: boolean;
@@ -21,7 +21,7 @@ interface SceneGridProps {
   from?: string;
 }
 
-export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: SceneGridProps) {
+export function VideoGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: VideoGridProps) {
   const terms = useTerms();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +83,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
           {scenes.map((scene, i) => (
             <SceneCard
               key={scene.id}
-              scene={sceneListItemToCardData(scene, from)}
+              scene={videoListItemToCardData(scene, from)}
               variant="list"
               index={i}
               selected={selectedIds?.has(scene.id)}
@@ -102,7 +102,7 @@ export function SceneGrid({ scenes, viewMode, loading, hasMore = false, loadingM
       {scenes.map((scene, i) => (
         <SceneCard
           key={scene.id}
-          scene={sceneListItemToCardData(scene, from)}
+          scene={videoListItemToCardData(scene, from)}
           index={i}
           imageLoading={i < 8 ? "eager" : "lazy"}
         />

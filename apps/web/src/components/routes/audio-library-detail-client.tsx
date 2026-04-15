@@ -28,7 +28,7 @@ import { PerformersSection, TagsSection, InfoRow } from "../shared/metadata-pane
 import { StarRatingPicker } from "../shared/star-rating-picker";
 import { NsfwBlur, NsfwChip, NsfwEditToggle, NsfwGate, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
-import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 import {
   toApiUrl,
   fetchAudioLibraryDetail,
@@ -352,7 +352,7 @@ export function AudioLibraryDetailClient({
               className="w-full h-full overflow-hidden surface-card-sharp"
             >
               <div className="relative w-full h-full">
-                <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[0])}>
+                <div className={cn("w-full h-full flex items-center justify-center", VIDEO_CARD_GRADIENTS[0])}>
                   <Music className="h-12 w-12 text-white/20" />
                 </div>
                 {coverUrl && (
@@ -659,7 +659,7 @@ export function AudioLibraryDetailClient({
                     className="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors"
                   >
                     <NsfwBlur isNsfw={child.isNsfw} className="aspect-square overflow-hidden relative">
-                      <div className={cn("w-full h-full flex items-center justify-center", SCENE_CARD_GRADIENTS[i % SCENE_CARD_GRADIENTS.length])}>
+                      <div className={cn("w-full h-full flex items-center justify-center", VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length])}>
                         <Music className="h-8 w-8 text-white/20" />
                       </div>
                       {childCover && (

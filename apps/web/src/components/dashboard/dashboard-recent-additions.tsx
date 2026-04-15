@@ -10,8 +10,8 @@ import {
 } from "../../lib/api";
 import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
-import { SceneCard } from "../scenes/scene-card";
-import { sceneListItemToCardData } from "../scenes/scene-card-data";
+import { SceneCard } from "../videos/video-card";
+import { videoListItemToCardData } from "../videos/video-card-data";
 import { DASHBOARD_STAT_GRADIENTS, formatIngestStamp } from "./dashboard-utils";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useTerms } from "../../lib/terminology";
@@ -55,7 +55,7 @@ function SceneIngestTile({
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
       <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
         <SceneCard
-          scene={sceneListItemToCardData(scene, from)}
+          scene={videoListItemToCardData(scene, from)}
           index={index}
           imageLoading="lazy"
         />

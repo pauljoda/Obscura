@@ -5,14 +5,14 @@ import { Captions, Clock, Eye, Film, HardDrive, Star } from "lucide-react";
 import { MediaCard } from "@obscura/ui/composed/media-card";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
-import { SCENE_TAG_COLORS } from "../scene-tag-colors";
-import type { SceneCardData } from "./scene-card-data";
-import { SCENE_CARD_GRADIENTS } from "./scene-card-gradients";
+import { VIDEO_TAG_COLORS } from "../video-tag-colors";
+import type { VideoCardData } from "./video-card-data";
+import { VIDEO_CARD_GRADIENTS } from "./video-card-gradients";
 import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, NsfwText, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
 
-interface SceneCardProps {
-  scene: SceneCardData;
+interface VideoCardProps {
+  scene: VideoCardData;
   variant?: "grid" | "list" | "compact";
   index?: number;
   imageLoading?: "eager" | "lazy";
@@ -29,7 +29,7 @@ export function SceneCard({
   onSelect,
   selected,
   onToggleSelect,
-}: SceneCardProps) {
+}: VideoCardProps) {
   if (variant === "list") {
     return <SceneListCard scene={scene} index={index} selected={selected} onToggleSelect={onToggleSelect} />;
   }
@@ -38,15 +38,15 @@ export function SceneCard({
     return <SceneCompactCard scene={scene} onSelect={onSelect} />;
   }
 
-  return <SceneGridCard scene={scene} imageLoading={imageLoading} index={index} />;
+  return <VideoGridCard scene={scene} imageLoading={imageLoading} index={index} />;
 }
 
-function SceneGridCard({
+function VideoGridCard({
   scene,
   imageLoading,
   index,
 }: {
-  scene: SceneCardData;
+  scene: VideoCardData;
   imageLoading: "eager" | "lazy";
   index: number;
 }) {
@@ -82,7 +82,7 @@ function SceneGridCard({
                 {tagRow.slice(0, 3).map((tag) => (
                   <span
                     key={tag.name}
-                    className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}
+                    className={cn("tag-chip", VIDEO_TAG_COLORS[tag.name] || "tag-chip-default")}
                   >
                     <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                   </span>
@@ -95,10 +95,10 @@ function SceneGridCard({
               </div>
             ) : null
           }
-          tagColors={SCENE_TAG_COLORS}
+          tagColors={VIDEO_TAG_COLORS}
           rating={scene.rating}
           views={scene.views}
-          gradientClass={SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length]}
+          gradientClass={VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
         />
       </Link>
     </NsfwBlur>
@@ -111,7 +111,7 @@ function SceneListCard({
   selected,
   onToggleSelect,
 }: {
-  scene: SceneCardData;
+  scene: VideoCardData;
   index: number;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -138,7 +138,7 @@ function SceneListCard({
           <div
             className={cn(
               "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
-              SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length],
+              VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length],
             )}
           >
             {scene.thumbnail && (
@@ -218,7 +218,7 @@ function SceneListCard({
               {tagRow.slice(0, 4).map((tag) => (
                 <span
                   key={tag.name}
-                  className={cn("tag-chip", SCENE_TAG_COLORS[tag.name] || "tag-chip-default")}
+                  className={cn("tag-chip", VIDEO_TAG_COLORS[tag.name] || "tag-chip-default")}
                 >
                   <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                 </span>
@@ -262,7 +262,7 @@ function SceneCompactCard({
   scene,
   onSelect,
 }: {
-  scene: SceneCardData;
+  scene: VideoCardData;
   onSelect?: (href: string) => void;
 }) {
   const content = (
@@ -270,7 +270,7 @@ function SceneCompactCard({
       <div
         className={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ",
-          !scene.thumbnail && SCENE_CARD_GRADIENTS[0],
+          !scene.thumbnail && VIDEO_CARD_GRADIENTS[0],
         )}
       >
         {scene.cardThumbnail || scene.thumbnail ? (

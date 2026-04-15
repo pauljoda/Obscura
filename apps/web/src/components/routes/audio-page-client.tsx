@@ -15,7 +15,7 @@ import { formatDuration } from "@obscura/contracts";
 import { HierarchyBrowser } from "../shared/hierarchy-browser";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
-import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import type { TagItem, StudioItem } from "../../lib/api";
 import { toApiUrl, fetchAudioLibraryStats } from "../../lib/api";
@@ -201,7 +201,7 @@ function AudioLibraryCard({
   index: number;
 }) {
   const coverUrl = toApiUrl(library.coverImagePath);
-  const gradientClass = SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length];
+  const gradientClass = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length];
 
   return (
     <Link

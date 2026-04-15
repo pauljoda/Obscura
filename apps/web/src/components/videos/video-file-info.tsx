@@ -1,9 +1,9 @@
 "use client";
 
-import { type SceneDetail as SceneDetailType } from "../../lib/api";
+import { type VideoDetail as VideoDetailType } from "../../lib/api";
 
-export interface SceneFileInfoProps {
-  scene: SceneDetailType;
+export interface VideoFileInfoProps {
+  scene: VideoDetailType;
 }
 
 function formatBitRate(bps: number | null): string {
@@ -21,7 +21,7 @@ function FileInfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function SceneFileInfo({ scene }: SceneFileInfoProps) {
+export function VideoFileInfo({ scene }: VideoFileInfoProps) {
   return (
     <div className="surface-well p-4">
       <div className="space-y-2 text-mono-sm">

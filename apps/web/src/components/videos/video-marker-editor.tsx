@@ -7,26 +7,26 @@ import {
   createMarker,
   updateMarker,
   deleteMarker,
-  type SceneDetail as SceneDetailType,
+  type VideoDetail as VideoDetailType,
 } from "../../lib/api";
 import {
   TimeMarkerForm,
   formatSecondsInput,
 } from "../shared/time-marker-form";
 
-export interface SceneMarkerEditorProps {
-  scene: SceneDetailType;
+export interface VideoMarkerEditorProps {
+  scene: VideoDetailType;
   currentTimeRef: React.RefObject<number>;
   displayTime: number;
   onRefresh: () => void;
 }
 
-export function SceneMarkerEditor({
+export function VideoMarkerEditor({
   scene,
   currentTimeRef,
   displayTime,
   onRefresh,
-}: SceneMarkerEditorProps) {
+}: VideoMarkerEditorProps) {
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
   const [markerTitle, setMarkerTitle] = useState("");
   const [markerSeconds, setMarkerSeconds] = useState(0);
@@ -40,7 +40,7 @@ export function SceneMarkerEditor({
     setMarkerEndSeconds(null);
   }
 
-  function startEditMarker(m: SceneDetailType["markers"][0]) {
+  function startEditMarker(m: VideoDetailType["markers"][0]) {
     setEditingMarker(m.id);
     setMarkerTitle(m.title);
     setMarkerSeconds(m.seconds);

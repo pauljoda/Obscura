@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SceneGrid } from "../scene-grid";
+import { VideoGrid } from "../video-grid";
 import { ImportButton, UploadDropZone } from "../upload";
 import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
@@ -62,7 +62,7 @@ import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from ".
 import { ChipInput } from "../shared/chip-input";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
-import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { formatVideoCount, useTerms } from "../../lib/terminology";
 import { cn } from "@obscura/ui/lib/utils";
@@ -71,14 +71,14 @@ import { useSelection } from "../../hooks/use-selection";
 import { SelectAllHeader } from "../select-all-header";
 import { BulkActionToolbar } from "../bulk-action-toolbar";
 import { ConfirmDeleteDialog } from "../confirm-delete-dialog";
-import type { ScenesListPrefs, ScenesListPrefsActiveFilter } from "../../lib/scenes-list-prefs";
+import type { VideosListPrefs, VideosListPrefsActiveFilter } from "../../lib/videos-list-prefs";
 import {
-  defaultScenesListPrefs,
-  isDefaultScenesListPrefs,
-  scenesListPrefsToFetchParams,
-  writeScenesListPrefsCookie,
-  clearScenesListPrefsCookie,
-} from "../../lib/scenes-list-prefs";
+  defaultVideosListPrefs,
+  isDefaultVideosListPrefs,
+  videosListPrefsToFetchParams,
+  writeVideosListPrefsCookie,
+  clearVideosListPrefsCookie,
+} from "../../lib/videos-list-prefs";
 import {
   type FilterPreset,
   loadPresets,
@@ -90,19 +90,19 @@ import { HierarchySection } from "../shared/hierarchy-section";
 import { HierarchyShell } from "../shared/hierarchy-shell";
 import { useCurrentPath } from "../../hooks/use-current-path";
 
-interface ScenesPageClientProps {
+interface VideosPageClientProps {
   initialScenes: SceneListItem[];
   initialStats: SceneStats | null;
   initialStudios: StudioItem[];
   initialTags: TagItem[];
   initialPerformers: PerformerItem[];
   initialTotal: number;
-  initialListPrefs: ScenesListPrefs;
+  initialListPrefs: VideosListPrefs;
   initialRootFolders: SceneFolderListItem[];
   initialActiveFolder: SceneFolderDetail | null;
 }
 
-export function ScenesPageClient({
+export function VideosPageClient({
   initialScenes,
   initialStats,
   initialStudios,
@@ -112,7 +112,7 @@ export function ScenesPageClient({
   initialListPrefs,
   initialRootFolders,
   initialActiveFolder,
-}: ScenesPageClientProps) {
+}: VideosPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
   const currentPath = useCurrentPath();
@@ -156,7 +156,7 @@ export function ScenesPageClient({
   const [sortBy, setSortBy] = useState<SortOption>(initialListPrefs.sortBy);
   const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
   const [searchQuery, setSearchQuery] = useState(initialListPrefs.search);
-  const [activeFilters, setActiveFilters] = useState<ScenesListPrefsActiveFilter[]>(
+  const [activeFilters, setActiveFilters] = useState<VideosListPrefsActiveFilter[]>(
     initialListPrefs.activeFilters,
   );
   const [scenes, setScenes] = useState(initialScenes);
@@ -210,7 +210,7 @@ export function ScenesPageClient({
   }, [initialRootFolders, initialActiveFolder]);
 
   useEffect(() => {
-    const prefs: ScenesListPrefs = {
+    const prefs: VideosListPrefs = {
       viewMode,
       sortBy,
       sortDir,
@@ -218,15 +218,15 @@ export function ScenesPageClient({
       activeFilters,
       activePresetId: activePresetId ?? undefined,
     };
-    if (isDefaultScenesListPrefs(prefs)) {
-      clearScenesListPrefsCookie();
+    if (isDefaultVideosListPrefs(prefs)) {
+      clearVideosListPrefsCookie();
     } else {
-      writeScenesListPrefsCookie(prefs);
+      writeVideosListPrefsCookie(prefs);
     }
   }, [viewMode, sortBy, sortDir, searchQuery, activeFilters, activePresetId]);
 
   const handleClearFiltersAndSort = useCallback(() => {
-    const d = defaultScenesListPrefs();
+    const d = defaultVideosListPrefs();
     setViewMode(d.viewMode);
     setSortBy(d.sortBy);
     setSortDir(d.sortDir);
@@ -235,7 +235,7 @@ export function ScenesPageClient({
   }, []);
 
   const buildParams = useCallback(() => {
-    return scenesListPrefsToFetchParams(
+    return videosListPrefsToFetchParams(
       {
         viewMode,
         sortBy,
@@ -603,7 +603,7 @@ export function ScenesPageClient({
     startTransition(() => {
       if (activePresetId === preset.id) {
         // Toggle off: clear filters back to defaults
-        const d = defaultScenesListPrefs();
+        const d = defaultVideosListPrefs();
         setActiveFilters(d.activeFilters);
         setSortBy(d.sortBy);
         setSortDir(d.sortDir);
@@ -756,7 +756,7 @@ export function ScenesPageClient({
         onAddFilter={addFilter}
         onClearFiltersAndSort={handleClearFiltersAndSort}
         canClearFiltersAndSort={
-          !isDefaultScenesListPrefs({
+          !isDefaultVideosListPrefs({
             viewMode,
             sortBy,
             sortDir,
@@ -1143,7 +1143,7 @@ export function ScenesPageClient({
 
             {/* ── Scenes ───────────────────────────────────────── */}
             <HierarchySection title={sceneSectionTitle}>
-              <SceneGrid
+              <VideoGrid
                 scenes={scenes}
                 viewMode="grid"
                 loading={loading}
@@ -1185,7 +1185,7 @@ export function ScenesPageClient({
             )}
 
             <HierarchySection title={sceneSectionTitle}>
-              <SceneGrid
+              <VideoGrid
                 scenes={scenes}
                 viewMode="grid"
                 loading={loading}
@@ -1199,7 +1199,7 @@ export function ScenesPageClient({
         )
       ) : (
         <>
-          <SceneGrid
+          <VideoGrid
             scenes={scenes}
             viewMode={viewMode}
             loading={loading}

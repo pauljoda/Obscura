@@ -5,13 +5,13 @@ import { formatDuration } from "@obscura/contracts";
 import { toApiUrl, type SceneListItem } from "../../lib/api";
 import { buildHrefWithFrom } from "../../lib/back-navigation";
 
-export interface SceneCardPerformer {
+export interface VideoCardPerformer {
   name: string;
   imagePath?: string;
   isNsfw?: boolean;
 }
 
-export interface SceneCardData {
+export interface VideoCardData {
   id: string;
   href: string;
   title: string;
@@ -25,7 +25,7 @@ export interface SceneCardData {
   codec?: string;
   fileSize?: string;
   studio?: string;
-  performers?: SceneCardPerformer[];
+  performers?: VideoCardPerformer[];
   tags?: { name: string; isNsfw: boolean }[];
   rating?: number;
   views?: number;
@@ -43,7 +43,7 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function sceneListItemToCardData(scene: SceneListItem, from?: string): SceneCardData {
+export function videoListItemToCardData(scene: SceneListItem, from?: string): VideoCardData {
   const base = `/videos/${scene.id}`;
   return {
     id: scene.id,
@@ -73,7 +73,7 @@ export function sceneListItemToCardData(scene: SceneListItem, from?: string): Sc
   };
 }
 
-export function searchSceneItemToCardData(item: SearchResultItem, from?: string): SceneCardData | null {
+export function searchVideoItemToCardData(item: SearchResultItem, from?: string): VideoCardData | null {
   if (item.kind !== "scene") return null;
 
   const thumbnailPath = toApiUrl(item.imagePath);

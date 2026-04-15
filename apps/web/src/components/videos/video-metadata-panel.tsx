@@ -9,7 +9,7 @@ import {
   Play,
 } from "lucide-react";
 import {
-  type SceneDetail as SceneDetailType,
+  type VideoDetail as VideoDetailType,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
 import { NsfwGate } from "../nsfw/nsfw-gate";
@@ -20,8 +20,8 @@ import {
   InfoRow,
 } from "../shared/metadata-panel";
 
-export interface SceneMetadataPanelProps {
-  scene: SceneDetailType;
+export interface VideoMetadataPanelProps {
+  scene: VideoDetailType;
 }
 
 function formatBitRate(bps: number | null): string {
@@ -30,7 +30,7 @@ function formatBitRate(bps: number | null): string {
   return `${(bps / 1000).toFixed(0)} Kbps`;
 }
 
-export function SceneMetadataPanel({ scene }: SceneMetadataPanelProps) {
+export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
   return (
     <MetadataPanel
       sidebar={

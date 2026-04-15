@@ -7,7 +7,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../../lib/api";
 import { NsfwBlur } from "../nsfw/nsfw-gate";
 import { useNsfw } from "../nsfw/nsfw-context";
-import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 
 interface AudioLibraryAppearanceGridProps {
   libraries: AudioLibraryListItemDto[];
@@ -47,7 +47,7 @@ function AudioAppearanceCard({
   index: number;
 }) {
   const coverUrl = library.coverImagePath ? toApiUrl(library.coverImagePath) : null;
-  const gradientClass = SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length];
+  const gradientClass = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length];
 
   return (
     <Link

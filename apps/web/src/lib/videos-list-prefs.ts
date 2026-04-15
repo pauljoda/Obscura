@@ -1,23 +1,23 @@
 import { createListPrefs, isRecord } from "./list-prefs";
-import type { SortDir, SortOption, ViewMode } from "./scene-browse-types";
+import type { SortDir, SortOption, ViewMode } from "./video-browse-types";
 
-export const SCENES_LIST_PREFS_COOKIE = "obscura-scenes-list";
+export const VIDEOS_LIST_PREFS_COOKIE = "obscura-scenes-list";
 export const SCENES_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
 const PAGE_SIZE = 50;
 
-export interface ScenesListPrefsActiveFilter {
+export interface VideosListPrefsActiveFilter {
   label: string;
   type: string;
   value: string;
 }
 
-export interface ScenesListPrefs {
+export interface VideosListPrefs {
   viewMode: ViewMode;
   sortBy: SortOption;
   sortDir: SortDir;
   search: string;
-  activeFilters: ScenesListPrefsActiveFilter[];
+  activeFilters: VideosListPrefsActiveFilter[];
   activePresetId?: string;
 }
 
@@ -31,9 +31,9 @@ const SORT_OPTIONS: readonly SortOption[] = [
   "plays",
 ];
 
-function parseActiveFilters(raw: unknown): ScenesListPrefsActiveFilter[] | null {
+function parseActiveFilters(raw: unknown): VideosListPrefsActiveFilter[] | null {
   if (!Array.isArray(raw)) return null;
-  const out: ScenesListPrefsActiveFilter[] = [];
+  const out: VideosListPrefsActiveFilter[] = [];
   for (const item of raw) {
     if (!isRecord(item)) return null;
     const { label, type, value } = item;
@@ -45,8 +45,8 @@ function parseActiveFilters(raw: unknown): ScenesListPrefsActiveFilter[] | null 
   return out;
 }
 
-const scenesPrefs = createListPrefs<ScenesListPrefs>({
-  cookieName: SCENES_LIST_PREFS_COOKIE,
+const scenesPrefs = createListPrefs<VideosListPrefs>({
+  cookieName: VIDEOS_LIST_PREFS_COOKIE,
   maxAge: SCENES_LIST_PREFS_MAX_AGE,
   defaults: () => ({
     viewMode: "grid",
@@ -82,19 +82,19 @@ const scenesPrefs = createListPrefs<ScenesListPrefs>({
 });
 
 // Re-export under original names for backward compatibility
-export const defaultScenesListPrefs = scenesPrefs.defaults;
-export const isDefaultScenesListPrefs = scenesPrefs.isDefault;
-export const parseScenesListPrefs = scenesPrefs.parse;
+export const defaultVideosListPrefs = scenesPrefs.defaults;
+export const isDefaultVideosListPrefs = scenesPrefs.isDefault;
+export const parseVideosListPrefs = scenesPrefs.parse;
 
-export function serializeScenesListPrefs(p: ScenesListPrefs): string {
+export function serializeVideosListPrefs(p: VideosListPrefs): string {
   return scenesPrefs.serialize({
     ...p,
     // Strip activePresetId from serialization when not set (matches original behavior)
   });
 }
 
-export const writeScenesListPrefsCookie = scenesPrefs.writeCookie;
-export const clearScenesListPrefsCookie = scenesPrefs.clearCookie;
+export const writeVideosListPrefsCookie = scenesPrefs.writeCookie;
+export const clearVideosListPrefsCookie = scenesPrefs.clearCookie;
 
 const DURATION_PRESET_TO_API: Record<string, { durationMin?: number; durationMax?: number }> = {
   lt300: { durationMax: 300 },
@@ -103,8 +103,8 @@ const DURATION_PRESET_TO_API: Record<string, { durationMin?: number; durationMax
   gte1800: { durationMin: 1800 },
 };
 
-export function scenesListPrefsToFetchParams(
-  p: ScenesListPrefs,
+export function videosListPrefsToFetchParams(
+  p: VideosListPrefs,
   nsfw: string,
 ): {
   search?: string;

@@ -33,7 +33,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { buildHrefWithFrom } from "../lib/back-navigation";
 import {
-  fetchSceneDetail,
   fetchVideoDetail,
   updateScene,
   updateVideo,
@@ -47,7 +46,7 @@ import {
   generateThumbnailFromFrame,
   deleteThumbnail,
   toApiUrl,
-  type SceneDetail,
+  type VideoDetail,
   type ScraperPackage,
   type NormalizedScrapeResult,
   type TagItem,
@@ -67,7 +66,7 @@ import { ChipInput } from "./shared/chip-input";
 import { StarRatingPicker } from "./shared/star-rating-picker";
 import { MetadataRow } from "./shared/metadata-row";
 
-interface SceneEditProps {
+interface VideoEditProps {
   id: string;
   inline?: boolean;
   onSaved?: () => void;
@@ -82,13 +81,13 @@ interface SceneEditProps {
 
 // ─── Main Component ────────────────────────────────────────────
 
-export function SceneEdit({
+export function VideoEdit({
   id,
   inline,
   onSaved,
   currentPlaybackTime,
   source = "videos",
-}: SceneEditProps) {
+}: VideoEditProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const searchParams = useSearchParams();
@@ -96,12 +95,12 @@ export function SceneEdit({
   const isVideoSource = source === "videos";
   const detailBaseHref = isVideoSource ? `/videos/${id}` : `/scenes/${id}`;
   const backToScene = fromParam ? buildHrefWithFrom(detailBaseHref, fromParam) : detailBaseHref;
-  const loadDetail = (): Promise<SceneDetail> =>
-    isVideoSource ? fetchVideoDetail(id) : fetchSceneDetail(id);
+  const loadDetail = (): Promise<VideoDetail> =>
+    isVideoSource ? fetchVideoDetail(id) : fetchVideoDetail(id);
   const saveDetail = (data: Parameters<typeof updateScene>[1]) =>
     isVideoSource ? updateVideo(id, data) : updateScene(id, data);
   const explicitCounterLabels = nsfwMode === "show";
-  const [scene, setScene] = useState<SceneDetail | null>(null);
+  const [scene, setScene] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,7 +166,7 @@ export function SceneEdit({
       .finally(() => setLoading(false));
   }, [id, nsfwMode]);
 
-  function populateForm(data: SceneDetail) {
+  function populateForm(data: VideoDetail) {
     setTitle(data.title);
     setDetails(data.details ?? "");
     setDate(data.date ?? "");

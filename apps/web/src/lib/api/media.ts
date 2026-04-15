@@ -29,7 +29,7 @@ import type {
 import { buildQueryString, fetchApi, uploadFile } from "./core";
 import type {
   MarkerDto,
-  SceneDetail,
+  VideoDetail,
   SceneListItem,
   SceneStats,
 } from "./types";
@@ -113,9 +113,9 @@ export async function fetchAllScenes(
   return { scenes, total };
 }
 
-export async function fetchSceneDetail(id: string): Promise<SceneDetail> {
-  return fetchApi(`/videos/${id}`);
-}
+// fetchVideoDetail lives in `./videos.ts` — api.ts re-exports it from
+// there. The legacy `fetchSceneDetail` name used to live here and has
+// been retired; call `fetchVideoDetail(id)` directly.
 
 export async function fetchSceneSubtitleCues(
   sceneId: string,

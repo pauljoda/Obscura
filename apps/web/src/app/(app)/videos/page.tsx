@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
-import { ScenesPageClient } from "../../../components/routes/scenes-page-client";
+import { VideosPageClient } from "../../../components/routes/videos-page-client";
 import {
   fetchPerformers,
   fetchStudios,
@@ -13,11 +13,11 @@ import {
 } from "../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../lib/nsfw-cookie";
 import {
-  defaultScenesListPrefs,
-  scenesListPrefsToFetchParams,
-  SCENES_LIST_PREFS_COOKIE,
-  parseScenesListPrefs,
-} from "../../../lib/scenes-list-prefs";
+  defaultVideosListPrefs,
+  videosListPrefsToFetchParams,
+  VIDEOS_LIST_PREFS_COOKIE,
+  parseVideosListPrefs,
+} from "../../../lib/videos-list-prefs";
 
 interface VideosPageProps {
   searchParams?: Promise<{ folder?: string }>;
@@ -27,9 +27,9 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
   const cookieStore = await cookies();
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
   const listPrefs =
-    parseScenesListPrefs(cookieStore.get(SCENES_LIST_PREFS_COOKIE)?.value) ??
-    defaultScenesListPrefs();
-  const sceneFetchParams = scenesListPrefsToFetchParams(listPrefs, nsfwMode);
+    parseVideosListPrefs(cookieStore.get(VIDEOS_LIST_PREFS_COOKIE)?.value) ??
+    defaultVideosListPrefs();
+  const sceneFetchParams = videosListPrefsToFetchParams(listPrefs, nsfwMode);
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const requestedFolderId =
     typeof resolvedSearchParams.folder === "string"
@@ -86,7 +86,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
   ]);
 
   return (
-    <ScenesPageClient
+    <VideosPageClient
       initialScenes={videosResponse.scenes}
       initialStats={stats}
       initialStudios={studiosResponse.studios}

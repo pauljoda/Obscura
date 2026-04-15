@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import { useTerms, formatVideoCount } from "../../lib/terminology";
 import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
-import { SceneGrid } from "../scene-grid";
+import { VideoGrid } from "../video-grid";
 import { GalleryGrid } from "../gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../audio/audio-library-appearance-grid";
 import { PerformerEdit } from "../performer-edit";
@@ -498,7 +498,7 @@ export function PerformerPageClient({
           <section>
             <h4 className="mb-3 text-kicker">{terms.scenes}</h4>
             {totalScenes > 0 ? (
-              <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+              <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />

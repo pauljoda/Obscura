@@ -1,4 +1,4 @@
-export const SCENE_CARD_GRADIENTS = [
+export const VIDEO_CARD_GRADIENTS = [
   "gradient-thumb-1",
   "gradient-thumb-2",
   "gradient-thumb-3",

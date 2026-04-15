@@ -1,22 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
-  defaultScenesListPrefs,
-  parseScenesListPrefs,
-  scenesListPrefsToFetchParams,
-  serializeScenesListPrefs,
-} from "./scenes-list-prefs";
+  defaultVideosListPrefs,
+  parseVideosListPrefs,
+  videosListPrefsToFetchParams,
+  serializeVideosListPrefs,
+} from "./videos-list-prefs";
 
 describe("scenes list preferences", () => {
   it("serializes and parses valid prefs", () => {
     const prefs = {
-      ...defaultScenesListPrefs(),
+      ...defaultVideosListPrefs(),
       search: "cats",
       activeFilters: [{ label: "Studio", type: "studio", value: "studio-1" }],
       activePresetId: "preset-1",
     };
 
-    const raw = serializeScenesListPrefs(prefs);
-    expect(parseScenesListPrefs(raw)).toEqual(prefs);
+    const raw = serializeVideosListPrefs(prefs);
+    expect(parseVideosListPrefs(raw)).toEqual(prefs);
   });
 
   it("rejects malformed prefs payloads", () => {
@@ -30,11 +30,11 @@ describe("scenes list preferences", () => {
       }),
     );
 
-    expect(parseScenesListPrefs(raw)).toBeNull();
+    expect(parseVideosListPrefs(raw)).toBeNull();
   });
 
   it("maps UI filters to API params", () => {
-    const params = scenesListPrefsToFetchParams(
+    const params = videosListPrefsToFetchParams(
       {
         viewMode: "grid",
         sortBy: "rating",

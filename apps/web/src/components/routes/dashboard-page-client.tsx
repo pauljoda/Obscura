@@ -8,8 +8,8 @@ import type { GalleryListItem, SceneListItem, PerformerItem, StudioItem } from "
 import type { ImageListItemDto, AudioLibraryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
 
-import { SceneCard } from "../scenes/scene-card";
-import { sceneListItemToCardData } from "../scenes/scene-card-data";
+import { SceneCard } from "../videos/video-card";
+import { videoListItemToCardData } from "../videos/video-card-data";
 import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
 import { ImageEntityCard } from "../images/image-entity-card";
@@ -21,7 +21,7 @@ import { StudioEntityCard } from "../studios/studio-entity-card";
 import { studioItemToCardData } from "../studios/studio-card-data";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
 import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
-import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
+import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 
 interface DashboardPageClientProps {
   scenes: SceneListItem[];
@@ -42,7 +42,7 @@ function AudioLibraryCard({
   index: number;
 }) {
   const coverUrl = toApiUrl(library.coverImagePath);
-  const gradientClass = SCENE_CARD_GRADIENTS[index % SCENE_CARD_GRADIENTS.length];
+  const gradientClass = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length];
 
   return (
     <Link
@@ -275,7 +275,7 @@ export function DashboardPageClient({
               {recentScenes.map((scene, i) => (
                 <div key={scene.id} className="flex-none w-72 md:w-80 snap-start">
                   <SceneCard
-                    scene={sceneListItemToCardData(scene, "/")}
+                    scene={videoListItemToCardData(scene, "/")}
                     variant="grid"
                     index={i}
                   />

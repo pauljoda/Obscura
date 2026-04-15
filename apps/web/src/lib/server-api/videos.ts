@@ -11,7 +11,7 @@ import type {
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
 import type {
-  SceneDetail,
+  VideoDetail,
   SceneListItem,
   SceneStats,
 } from "../api/types";
@@ -36,7 +36,7 @@ export async function fetchVideos(params: {
   sceneFolderId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
-  // Accepted for spread-compatibility with scenesListPrefsToFetchParams.
+  // Accepted for spread-compatibility with videosListPrefsToFetchParams.
   // The /videos backend does not yet filter on these; they are ignored.
   tag?: string[];
   performer?: string[];
@@ -77,7 +77,7 @@ export async function fetchVideos(params: {
 }
 
 export async function fetchVideoDetail(id: string) {
-  return serverFetch<SceneDetail>(`/videos/${id}`, {
+  return serverFetch<VideoDetail>(`/videos/${id}`, {
     revalidate: 15,
     tags: ["videos", `video-${id}`],
   });

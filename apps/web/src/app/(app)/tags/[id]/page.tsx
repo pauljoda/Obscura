@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
 import type { AudioLibraryListItemDto, GalleryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
-import { SceneGrid } from "../../../../components/scene-grid";
+import { VideoGrid } from "../../../../components/video-grid";
 import { GalleryGrid } from "../../../../components/gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
 import { SeriesCard } from "../../../../components/series/series-card";
@@ -328,7 +328,7 @@ export default function TagPage({ params }: TagPageProps) {
             <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} with this tag.</p>
           </div>
         ) : (
-          <SceneGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+          <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
         )}
       </section>
 

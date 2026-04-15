@@ -33,7 +33,7 @@ import {
 
 export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
 
-interface SceneTranscriptPanelProps {
+interface VideoTranscriptPanelProps {
   sceneId: string;
   tracks: SceneSubtitleTrackDto[];
   activeTrackId: string | null;
@@ -70,7 +70,7 @@ function languageLabel(language: string): string {
   }
 }
 
-export function SceneTranscriptPanel({
+export function VideoTranscriptPanel({
   sceneId,
   tracks,
   activeTrackId,
@@ -81,7 +81,7 @@ export function SceneTranscriptPanel({
   variant = "full",
   isDocked = false,
   onDockToggle,
-}: SceneTranscriptPanelProps) {
+}: VideoTranscriptPanelProps) {
   const showTrackManagement = variant !== "list-only";
   const showTranscriptList = variant !== "tracks-only";
   const isListOnly = variant === "list-only";
