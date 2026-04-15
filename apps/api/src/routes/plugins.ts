@@ -586,9 +586,12 @@ export async function pluginsRoutes(app: FastifyInstance) {
       // for backward compat with existing scrape_results rows, but the
       // entityId now resolves to a video_series id.
       const patch: Record<string, unknown> = {};
-      // customName is not yet modelled on video_series — intentionally
-      // skipped so the title write is a no-op until video-folder gains
-      // a rename field. See updateVideoFolder TODO for details.
+      if (fieldsToApply.has("title") && result.proposedTitle) {
+        // Scraped title lands in customName so the user's original
+        // folder structure on disk stays intact while the display name
+        // reflects the provider-supplied title.
+        patch.customName = result.proposedTitle;
+      }
       if (fieldsToApply.has("details") && result.proposedDetails) patch.details = result.proposedDetails;
       if (fieldsToApply.has("date") && result.proposedDate) patch.date = result.proposedDate;
       if (fieldsToApply.has("studio") && result.proposedStudioName) patch.studioName = result.proposedStudioName;
@@ -624,12 +627,26 @@ export async function pluginsRoutes(app: FastifyInstance) {
           .where(eq(schema.videoSeries.id, entityId));
       }
 
-      // TODO(videos): download/save poster image to disk and update
-      // video_series.posterPath. Cover upload for video folders is
-      // stubbed as 501 in routes/video-folders.ts and needs to land
-      // alongside the unified folder-asset storage change.
+      // Download the scraped poster image and wire it onto the series.
       if (fieldsToApply.has("image") && result.proposedImageUrl) {
-        // intentionally no-op for now
+        try {
+          const { setVideoFolderCoverFromUrl } = await import(
+            "../services/video-folder.service"
+          );
+          await setVideoFolderCoverFromUrl(
+            entityId,
+            "cover",
+            result.proposedImageUrl,
+          );
+        } catch (err) {
+          // Non-fatal — accept the rest of the patch and let the user
+          // retry the image upload manually.
+          console.warn(
+            `[plugins/accept] cover download failed for series ${entityId}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+        }
       }
     } else if (result.entityType === "scene" && result.sceneId) {
       // For scenes, delegate to the existing accept logic

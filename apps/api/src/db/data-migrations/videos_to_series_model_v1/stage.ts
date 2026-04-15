@@ -521,6 +521,37 @@ export async function stage(
   }
   (metrics as unknown as Record<string, unknown>).markersCopied = markersCopied;
 
+  // ── collection_items scene id rewrites ───────────────────────────
+  // Collections created before the cutover still carry `entityType =
+  // 'scene'` + the old scene uuid. The external `"scene"` type tag
+  // stays (the collection service's hydration logic keys off of it),
+  // but entity_id gets rewritten to the new video_episodes /
+  // video_movies uuid the migration built. Legacy scene ids that were
+  // never migrated (missing file, rejected by depth) are left alone —
+  // hydration surfaces them as "missing" in the UI.
+  reportProgress(98, "rewriting collection_items entity ids");
+  let collectionItemsRewritten = 0;
+  for (const [sceneId, episodeId] of episodeIdBySceneId) {
+    const rows = (await client`
+      UPDATE collection_items
+      SET entity_id = ${episodeId}
+      WHERE entity_type = 'scene' AND entity_id = ${sceneId}
+      RETURNING id
+    `) as Array<{ id: string }>;
+    collectionItemsRewritten += rows.length;
+  }
+  for (const [sceneId, movieId] of movieIdBySceneId) {
+    const rows = (await client`
+      UPDATE collection_items
+      SET entity_id = ${movieId}
+      WHERE entity_type = 'scene' AND entity_id = ${sceneId}
+      RETURNING id
+    `) as Array<{ id: string }>;
+    collectionItemsRewritten += rows.length;
+  }
+  (metrics as unknown as Record<string, unknown>).collectionItemsRewritten =
+    collectionItemsRewritten;
+
   // ── scene_folders.custom_name → video_series.custom_name ──────────
   // Carried over directly rather than being merged with title so a
   // user-renamed folder keeps surfacing as that name in the UI.

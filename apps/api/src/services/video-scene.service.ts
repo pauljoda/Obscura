@@ -1935,6 +1935,121 @@ export async function uploadVideoMovie(
   };
 }
 
+/**
+ * Upload a video file into an existing video_series folder. The file
+ * is written under the series' folder_path and a video_episodes row is
+ * created pointing at it. A synthetic "Specials" season (season 0) is
+ * created on demand if the series has no seasons yet.
+ */
+export async function uploadVideoEpisode(
+  seriesId: string,
+  file: MultipartFile,
+) {
+  const [series] = await db
+    .select({
+      id: schema.videoSeries.id,
+      folderPath: schema.videoSeries.folderPath,
+      libraryRootId: schema.videoSeries.libraryRootId,
+      isNsfw: schema.videoSeries.isNsfw,
+      title: schema.videoSeries.title,
+    })
+    .from(schema.videoSeries)
+    .where(eq(schema.videoSeries.id, seriesId))
+    .limit(1);
+  if (!series) throw new AppError(404, "Video folder not found");
+
+  await assertDirExists(series.folderPath);
+  const { safeName } = validateUpload(file, { category: "video" });
+  const dest = await resolveCollisionSafePath(series.folderPath, safeName);
+  const { bytesWritten } = await streamToFile(file, dest);
+
+  // Find or create the season-0 container row. Case A series (flat,
+  // no numbered seasons) use season 0 for everything; Case B series
+  // with numbered seasons still get a season 0 "Specials" row for
+  // ad-hoc uploads that don't fit an explicit season folder.
+  let [season] = await db
+    .select({ id: schema.videoSeasons.id })
+    .from(schema.videoSeasons)
+    .where(
+      and(
+        eq(schema.videoSeasons.seriesId, seriesId),
+        eq(schema.videoSeasons.seasonNumber, 0),
+      ),
+    )
+    .limit(1);
+  if (!season) {
+    const [created] = await db
+      .insert(schema.videoSeasons)
+      .values({
+        seriesId,
+        seasonNumber: 0,
+        title: series.title,
+      })
+      .returning({ id: schema.videoSeasons.id });
+    season = created;
+  }
+
+  const [created] = await db
+    .insert(videoEpisodes)
+    .values({
+      seriesId,
+      seasonId: season!.id,
+      seasonNumber: 0,
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      organized: false,
+      isNsfw: series.isNsfw,
+    })
+    .returning({
+      id: videoEpisodes.id,
+      title: videoEpisodes.title,
+      filePath: videoEpisodes.filePath,
+    });
+  if (!created) {
+    throw new AppError(500, "Failed to create video episode row after upload");
+  }
+
+  const target = {
+    type: "video_episode",
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${series.title}`,
+  };
+  await enqueueQueueJob({
+    queueName: "media-probe",
+    jobName: "video_episode-media-probe",
+    data: { entityKind: "video_episode", entityId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "fingerprint",
+    jobName: "video_episode-fingerprint",
+    data: { entityKind: "video_episode", entityId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob({
+    queueName: "preview",
+    jobName: "video_episode-preview",
+    data: { entityKind: "video_episode", entityId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath,
+    seriesId,
+    libraryRootId: series.libraryRootId,
+  };
+}
+
 export async function resetVideoSceneMetadata(id: string) {
   const row = await loadVideoRow(id);
   if (!row) throw new AppError(404, "Video not found");

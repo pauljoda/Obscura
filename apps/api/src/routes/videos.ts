@@ -94,13 +94,17 @@ export async function videosRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /videos/upload ──────────────────────────────────────
-  // Uploads a new video file and creates a video_movies row at the
-  // library root (no series context — a freshly-uploaded file is
-  // always a movie).
+  // Uploads a new video file. Two modes:
+  //   - `seriesId` field → file lands inside the series' folder and a
+  //     video_episodes row is created pointing at it.
+  //   - `libraryRootId` field → file lands at the root and a
+  //     video_movies row is created.
+  // Exactly one of the two must be supplied.
   app.post("/videos/upload", async (request, reply) => {
     const parts = request.parts();
     let file: import("@fastify/multipart").MultipartFile | null = null;
     let libraryRootId: string | null = null;
+    let seriesId: string | null = null;
     for await (const part of parts) {
       if (part.type === "file") {
         if (file) {
@@ -113,23 +117,38 @@ export async function videosRoutes(app: FastifyInstance) {
       if (part.type === "field" && part.fieldname === "libraryRootId") {
         libraryRootId = typeof part.value === "string" ? part.value : null;
       }
+      if (part.type === "field" && part.fieldname === "seriesId") {
+        seriesId = typeof part.value === "string" ? part.value : null;
+      }
     }
     if (!file) {
       reply.code(400);
       return { error: "No file uploaded" };
     }
+    // Fall back to picking up field metadata from the file part (some
+    // multipart clients put non-file fields on the busboy file event).
+    const fileFields = (file.fields as Record<string, unknown> | undefined) ?? {};
     if (!libraryRootId) {
-      const raw = (file.fields as Record<string, unknown> | undefined)?.[
-        "libraryRootId"
-      ];
+      const raw = fileFields["libraryRootId"];
       if (raw && typeof raw === "object" && "value" in raw) {
         const value = (raw as { value?: unknown }).value;
         if (typeof value === "string") libraryRootId = value;
       }
     }
+    if (!seriesId) {
+      const raw = fileFields["seriesId"];
+      if (raw && typeof raw === "object" && "value" in raw) {
+        const value = (raw as { value?: unknown }).value;
+        if (typeof value === "string") seriesId = value;
+      }
+    }
+
+    if (seriesId) {
+      return videoSceneService.uploadVideoEpisode(seriesId, file);
+    }
     if (!libraryRootId) {
       reply.code(400);
-      return { error: "libraryRootId field is required" };
+      return { error: "libraryRootId or seriesId field is required" };
     }
     return videoSceneService.uploadVideoMovie(libraryRootId, file);
   });

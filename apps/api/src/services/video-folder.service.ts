@@ -7,7 +7,12 @@
  * with no parent and no children. Seasons exist as metadata on the
  * underlying episodes but are not exposed as subfolders.
  */
+import { existsSync } from "node:fs";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import type { MultipartFile } from "@fastify/multipart";
 import { and, asc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { getGeneratedSceneFolderDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import { parsePagination } from "../lib/query-helpers";
@@ -425,4 +430,130 @@ export async function updateVideoFolder(
   });
 
   return { ok: true as const, id };
+}
+
+// ─── Cover / backdrop upload ──────────────────────────────────
+
+type CoverKind = "cover" | "backdrop";
+
+function coverFilename(kind: CoverKind) {
+  return kind === "cover" ? "cover-custom.jpg" : "backdrop-custom.jpg";
+}
+
+function coverAssetUrl(seriesId: string, kind: CoverKind) {
+  return `/assets/video-folders/${seriesId}/${kind}`;
+}
+
+async function writeSeriesImage(
+  id: string,
+  kind: CoverKind,
+  buffer: Buffer,
+): Promise<string> {
+  const [series] = await db
+    .select({ id: videoSeries.id })
+    .from(videoSeries)
+    .where(eq(videoSeries.id, id))
+    .limit(1);
+  if (!series) throw new AppError(404, "Video folder not found");
+
+  const dir = getGeneratedSceneFolderDir(id);
+  await mkdir(dir, { recursive: true });
+  const outPath = path.join(dir, coverFilename(kind));
+  await writeFile(outPath, buffer);
+
+  const assetUrl = coverAssetUrl(id, kind);
+  await db
+    .update(videoSeries)
+    .set(
+      kind === "cover"
+        ? { posterPath: assetUrl, updatedAt: new Date() }
+        : { backdropPath: assetUrl, updatedAt: new Date() },
+    )
+    .where(eq(videoSeries.id, id));
+  return assetUrl;
+}
+
+/**
+ * Accept a multipart upload for a folder cover or backdrop. Writes the
+ * image to the series' cache directory and points `posterPath` /
+ * `backdropPath` at the new asset URL so the list + detail views
+ * immediately reflect it.
+ */
+export async function uploadVideoFolderCover(
+  id: string,
+  kind: CoverKind,
+  file: MultipartFile,
+) {
+  const buffer = await file.toBuffer();
+  if (buffer.length === 0) {
+    throw new AppError(400, "Empty file upload");
+  }
+  const url = await writeSeriesImage(id, kind, buffer);
+  return { ok: true as const, url };
+}
+
+/**
+ * Download a remote image and persist it as the folder's cover or
+ * backdrop. Used by scrape-accept flows so a plugin can hand in a URL
+ * without having to pre-download the bytes.
+ */
+export async function setVideoFolderCoverFromUrl(
+  id: string,
+  kind: CoverKind,
+  imageUrl: string,
+) {
+  let buffer: Buffer;
+  if (imageUrl.startsWith("data:image/")) {
+    const b64 = imageUrl.split(",")[1];
+    if (!b64) throw new AppError(400, "Bad data URL");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new AppError(502, `Image download failed: HTTP ${res.status}`);
+    }
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+  const url = await writeSeriesImage(id, kind, buffer);
+  return { ok: true as const, url };
+}
+
+/** Delete the user-uploaded cover / backdrop for a folder. */
+export async function deleteVideoFolderCover(
+  id: string,
+  kind: CoverKind,
+) {
+  const [series] = await db
+    .select({
+      id: videoSeries.id,
+      posterPath: videoSeries.posterPath,
+      backdropPath: videoSeries.backdropPath,
+    })
+    .from(videoSeries)
+    .where(eq(videoSeries.id, id))
+    .limit(1);
+  if (!series) throw new AppError(404, "Video folder not found");
+
+  const dir = getGeneratedSceneFolderDir(id);
+  const onDisk = path.join(dir, coverFilename(kind));
+  if (existsSync(onDisk)) {
+    await unlink(onDisk).catch(() => undefined);
+  }
+
+  // Only clear the path in the DB if it currently points at our asset URL —
+  // we don't want to wipe a plugin-scraped TMDb URL that shared the slot.
+  const currentUrl =
+    kind === "cover" ? series.posterPath : series.backdropPath;
+  if (currentUrl?.startsWith(coverAssetUrl(id, kind))) {
+    await db
+      .update(videoSeries)
+      .set(
+        kind === "cover"
+          ? { posterPath: null, updatedAt: new Date() }
+          : { backdropPath: null, updatedAt: new Date() },
+      )
+      .where(eq(videoSeries.id, id));
+  }
+
+  return { ok: true as const };
 }
