@@ -27,6 +27,12 @@ export const studios = pgTable(
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    /**
+     * @deprecated Legacy cached counter — the live services compute
+     * scene count on demand from video_episodes + video_movies. Kept in
+     * the schema so drizzle's diff stays clean against the live DB
+     * until the videos-to-series finalize phase drops it.
+     */
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -80,6 +86,7 @@ export const performers = pgTable(
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    /** @deprecated see note on studios.scene_count */
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -118,6 +125,7 @@ export const tags = pgTable(
     imagePath: text("image_path"),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
+    /** @deprecated see note on studios.scene_count */
     sceneCount: integer("scene_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -149,6 +157,12 @@ export const libraryRoots = pgTable(
     label: text("label").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
+    /**
+     * @deprecated Retired in favor of scan_movies + scan_series. No
+     * code reads this column anymore; the videos-to-series finalize
+     * phase drops it. Still declared here so drizzle's schema diff
+     * stays clean against the live DB until then.
+     */
     scanVideos: boolean("scan_videos").default(true).notNull(),
     scanMovies: boolean("scan_movies").default(false).notNull(),
     scanSeries: boolean("scan_series").default(false).notNull(),
@@ -758,9 +772,13 @@ export const fingerprintSubmissions = pgTable(
   "fingerprint_submissions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    sceneId: uuid("scene_id")
-      .notNull()
-      .references(() => scenes.id, { onDelete: "cascade" }),
+    // Legacy scene id column, retained nullable after the videos-to-series
+    // finalize phase drops the scenes table. New submissions are keyed via
+    // entity_type + entity_id. The FK to scenes has been removed so the
+    // DROP TABLE in finalize() can run cleanly.
+    sceneId: uuid("scene_id"),
+    entityType: text("entity_type"), // "video_episode" | "video_movie"
+    entityId: uuid("entity_id"),
     stashBoxEndpointId: uuid("stash_box_endpoint_id")
       .notNull()
       .references(() => stashBoxEndpoints.id, { onDelete: "cascade" }),
@@ -778,6 +796,10 @@ export const fingerprintSubmissions = pgTable(
       table.hash,
     ),
     index("fingerprint_submissions_scene_idx").on(table.sceneId),
+    index("fingerprint_submissions_entity_idx").on(
+      table.entityType,
+      table.entityId,
+    ),
     index("fingerprint_submissions_endpoint_idx").on(table.stashBoxEndpointId),
   ],
 );
@@ -785,10 +807,6 @@ export const fingerprintSubmissions = pgTable(
 export const fingerprintSubmissionsRelations = relations(
   fingerprintSubmissions,
   ({ one }) => ({
-    scene: one(scenes, {
-      fields: [fingerprintSubmissions.sceneId],
-      references: [scenes.id],
-    }),
     stashBoxEndpoint: one(stashBoxEndpoints, {
       fields: [fingerprintSubmissions.stashBoxEndpointId],
       references: [stashBoxEndpoints.id],
@@ -801,9 +819,10 @@ export const scrapeResults = pgTable(
   "scrape_results",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    // Legacy scene reference — nullable for multi-entity support
-    sceneId: uuid("scene_id")
-      .references(() => scenes.id, { onDelete: "cascade" }),
+    // Legacy scene reference — retained nullable after the videos-to-series
+    // finalize phase drops the scenes table. The FK to scenes has been
+    // removed so the DROP TABLE in finalize() can run cleanly.
+    sceneId: uuid("scene_id"),
     // Generic entity reference
     entityType: text("entity_type").notNull().default("scene"),
     entityId: uuid("entity_id"),
@@ -849,10 +868,6 @@ export const scrapeResults = pgTable(
 );
 
 export const scrapeResultsRelations = relations(scrapeResults, ({ one }) => ({
-  scene: one(scenes, {
-    fields: [scrapeResults.sceneId],
-    references: [scenes.id],
-  }),
   scraperPackage: one(scraperPackages, {
     fields: [scrapeResults.scraperPackageId],
     references: [scraperPackages.id],

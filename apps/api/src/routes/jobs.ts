@@ -14,7 +14,21 @@ import { ensureLibrarySettingsRow } from "../lib/library";
 import { pruneUntrackedLibraryReferences } from "../lib/library-prune";
 import { cancelJob, deleteJob, sendJob } from "../lib/queues";
 
-const { jobRuns, libraryRoots, scenes, audioTracks } = schema;
+const {
+  jobRuns,
+  libraryRoots,
+  audioTracks,
+  videoEpisodes,
+  videoMovies,
+} = schema;
+
+type VideoEntityKind = "video_episode" | "video_movie";
+
+interface VideoEntityTarget {
+  kind: VideoEntityKind;
+  id: string;
+  title: string | null;
+}
 
 type JobPayload = Record<string, unknown> & {
   jobKind?: JobKind;
@@ -45,12 +59,21 @@ function readSfwOnly(request: FastifyRequest): boolean {
   return headerVal === "off";
 }
 
-function scenesSfwFilter(sfwOnly: boolean): SQL | undefined {
-  return sfwOnly ? ne(scenes.isNsfw, true) : undefined;
+function episodesSfwFilter(sfwOnly: boolean): SQL | undefined {
+  return sfwOnly ? ne(videoEpisodes.isNsfw, true) : undefined;
 }
 
-function andSceneSfw(base: SQL, sfwOnly: boolean): SQL {
-  const sfw = scenesSfwFilter(sfwOnly);
+function moviesSfwFilter(sfwOnly: boolean): SQL | undefined {
+  return sfwOnly ? ne(videoMovies.isNsfw, true) : undefined;
+}
+
+function andEpisodeSfw(base: SQL, sfwOnly: boolean): SQL {
+  const sfw = episodesSfwFilter(sfwOnly);
+  return sfw ? and(base, sfw)! : base;
+}
+
+function andMovieSfw(base: SQL, sfwOnly: boolean): SQL {
+  const sfw = moviesSfwFilter(sfwOnly);
   return sfw ? and(base, sfw)! : base;
 }
 
@@ -166,8 +189,8 @@ async function enqueueQueueJob(input: {
   return { id: jobId };
 }
 
-/** One job moves all scenes' generated video assets; deduped by target id `scene-asset-layout`. */
-async function queueSceneAssetStorageMigration(
+/** One job relocates all video-entity generated assets; deduped by target id `scene-asset-layout`. */
+async function queueVideoAssetStorageMigration(
   targetDedicated: boolean,
   trigger: QueueTrigger,
   targetLabel: string,
@@ -175,7 +198,7 @@ async function queueSceneAssetStorageMigration(
 ) {
   return enqueueQueueJob({
     queueName: "library-maintenance",
-    jobName: "migrate-scene-assets",
+    jobName: "migrate-video-assets",
     data: {
       targetDedicated,
       ...(options?.sfwRedactJobLog ? { sfwRedactJobLog: true as const } : {}),
@@ -229,66 +252,129 @@ async function enqueueLibraryScans(trigger: QueueTrigger = {}, sfwOnly = false) 
   return { jobIds: createdJobIds, skipped };
 }
 
-async function enqueueMissingSceneJobs(
+async function collectMissingVideoTargets(
   queueName: QueueName,
-  trigger: QueueTrigger = {},
-  sfwOnly = false
-) {
-  let sceneRows: Array<{ id: string; title: string }> = [];
+  sfwOnly: boolean,
+): Promise<VideoEntityTarget[]> {
+  const targets: VideoEntityTarget[] = [];
 
   if (queueName === "media-probe") {
-    sceneRows = await db
-      .select({ id: scenes.id, title: scenes.title })
-      .from(scenes)
+    const episodeRows = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
       .where(
-        andSceneSfw(or(isNull(scenes.duration), isNull(scenes.width), isNull(scenes.codec))!, sfwOnly)
-      );
-  } else if (queueName === "fingerprint") {
-    sceneRows = await db
-      .select({ id: scenes.id, title: scenes.title })
-      .from(scenes)
-      .where(andSceneSfw(or(isNull(scenes.checksumMd5), isNull(scenes.oshash))!, sfwOnly));
-  } else if (queueName === "preview") {
-    sceneRows = await db
-      .select({ id: scenes.id, title: scenes.title })
-      .from(scenes)
-      .where(
-        andSceneSfw(
+        andEpisodeSfw(
           or(
-            isNull(scenes.previewPath),
-            isNull(scenes.spritePath),
-            isNull(scenes.trickplayVttPath),
-            and(
-              or(isNull(scenes.thumbnailPath), not(like(scenes.thumbnailPath, "%thumb-custom%"))),
-              or(isNull(scenes.thumbnailPath), isNull(scenes.cardThumbnailPath))
-            )
+            isNull(videoEpisodes.duration),
+            isNull(videoEpisodes.width),
+            isNull(videoEpisodes.codec),
           )!,
-          sfwOnly
-        )
+          sfwOnly,
+        ),
       );
+    for (const r of episodeRows) targets.push({ kind: "video_episode", ...r });
+
+    const movieRows = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(
+        andMovieSfw(
+          or(
+            isNull(videoMovies.duration),
+            isNull(videoMovies.width),
+            isNull(videoMovies.codec),
+          )!,
+          sfwOnly,
+        ),
+      );
+    for (const r of movieRows) targets.push({ kind: "video_movie", ...r });
+  } else if (queueName === "fingerprint") {
+    const episodeRows = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
+      .where(
+        andEpisodeSfw(
+          or(isNull(videoEpisodes.checksumMd5), isNull(videoEpisodes.oshash))!,
+          sfwOnly,
+        ),
+      );
+    for (const r of episodeRows) targets.push({ kind: "video_episode", ...r });
+
+    const movieRows = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(
+        andMovieSfw(
+          or(isNull(videoMovies.checksumMd5), isNull(videoMovies.oshash))!,
+          sfwOnly,
+        ),
+      );
+    for (const r of movieRows) targets.push({ kind: "video_movie", ...r });
+  } else if (queueName === "preview") {
+    const previewMissing = (kind: "episode" | "movie") => {
+      const t = kind === "episode" ? videoEpisodes : videoMovies;
+      return or(
+        isNull(t.previewPath),
+        isNull(t.spritePath),
+        isNull(t.trickplayVttPath),
+        and(
+          or(isNull(t.thumbnailPath), not(like(t.thumbnailPath, "%thumb-custom%"))),
+          or(isNull(t.thumbnailPath), isNull(t.cardThumbnailPath)),
+        ),
+      )!;
+    };
+
+    const episodeRows = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
+      .where(andEpisodeSfw(previewMissing("episode"), sfwOnly));
+    for (const r of episodeRows) targets.push({ kind: "video_episode", ...r });
+
+    const movieRows = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(andMovieSfw(previewMissing("movie"), sfwOnly));
+    for (const r of movieRows) targets.push({ kind: "video_movie", ...r });
   } else if (queueName === "metadata-import") {
-    const sfw = scenesSfwFilter(sfwOnly);
-    sceneRows = sfw
-      ? await db
-          .select({ id: scenes.id, title: scenes.title })
-          .from(scenes)
-          .where(sfw)
-          .limit(25)
-      : await db.select({ id: scenes.id, title: scenes.title }).from(scenes).limit(25);
+    // Just sample some rows — metadata-import is a generic provider
+    // sync and the 25-row limit matches the old behavior.
+    const episodeRows = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
+      .where(episodesSfwFilter(sfwOnly))
+      .limit(25);
+    for (const r of episodeRows) targets.push({ kind: "video_episode", ...r });
+
+    const movieRows = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(moviesSfwFilter(sfwOnly))
+      .limit(25);
+    for (const r of movieRows) targets.push({ kind: "video_movie", ...r });
   }
+
+  return targets;
+}
+
+async function enqueueMissingVideoJobs(
+  queueName: QueueName,
+  trigger: QueueTrigger = {},
+  sfwOnly = false,
+) {
+  const targets = await collectMissingVideoTargets(queueName, sfwOnly);
 
   const createdJobIds: string[] = [];
   let skipped = 0;
 
-  for (const scene of sceneRows) {
+  for (const target of targets) {
     const job = await enqueueQueueJob({
       queueName,
-      jobName: `scene-${queueName}`,
-      data: { sceneId: scene.id },
+      jobName: `${target.kind}-${queueName}`,
+      data: { entityKind: target.kind, entityId: target.id },
       target: {
-        type: "scene",
-        id: scene.id,
-        label: scene.title,
+        type: target.kind,
+        id: target.id,
+        label: target.title,
       },
       trigger,
     });
@@ -661,15 +747,18 @@ export async function jobsRoutes(app: FastifyInstance) {
         : targetDedicated
           ? "Scene assets to dedicated cache"
           : "Scene assets beside media files";
-      const job = await queueSceneAssetStorageMigration(targetDedicated, manualTrigger, targetLabel, {
-        sfwRedactJobLog: sfwOnly,
-      });
+      const job = await queueVideoAssetStorageMigration(
+        targetDedicated,
+        manualTrigger,
+        targetLabel,
+        { sfwRedactJobLog: sfwOnly },
+      );
       result = {
         jobIds: job ? [String(job.id)] : [],
         skipped: job ? 0 : 1,
       };
     } else {
-      result = await enqueueMissingSceneJobs(queueName, manualTrigger, sfwOnly);
+      result = await enqueueMissingVideoJobs(queueName, manualTrigger, sfwOnly);
     }
 
     return {
@@ -751,15 +840,28 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.post("/jobs/phash-backfill", async (request) => {
     const sfwOnly = readSfwOnly(request);
 
-    const sceneRows = await db
-      .select({ id: scenes.id, title: scenes.title })
-      .from(scenes)
+    const episodeRows = await db
+      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+      .from(videoEpisodes)
       .where(
-        andSceneSfw(
-          and(isNull(scenes.phash), not(isNull(scenes.duration)))!,
+        andEpisodeSfw(
+          and(isNull(videoEpisodes.phash), not(isNull(videoEpisodes.duration)))!,
           sfwOnly,
         ),
       );
+    const movieRows = await db
+      .select({ id: videoMovies.id, title: videoMovies.title })
+      .from(videoMovies)
+      .where(
+        andMovieSfw(
+          and(isNull(videoMovies.phash), not(isNull(videoMovies.duration)))!,
+          sfwOnly,
+        ),
+      );
+    const targets: VideoEntityTarget[] = [
+      ...episodeRows.map((r) => ({ kind: "video_episode" as const, ...r })),
+      ...movieRows.map((r) => ({ kind: "video_movie" as const, ...r })),
+    ];
 
     const trigger: QueueTrigger = {
       by: "manual",
@@ -770,15 +872,19 @@ export async function jobsRoutes(app: FastifyInstance) {
     const createdJobIds: string[] = [];
     let skipped = 0;
 
-    for (const scene of sceneRows) {
+    for (const target of targets) {
       const job = await enqueueQueueJob({
         queueName: "fingerprint",
-        jobName: "scene-fingerprint",
-        data: { sceneId: scene.id, phashOnly: true },
+        jobName: `${target.kind}-fingerprint`,
+        data: {
+          entityKind: target.kind,
+          entityId: target.id,
+          phashOnly: true,
+        },
         target: {
-          type: "scene",
-          id: scene.id,
-          label: scene.title,
+          type: target.kind,
+          id: target.id,
+          label: target.title,
         },
         trigger,
       });
@@ -795,27 +901,58 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post("/jobs/rebuild-preview/:sceneId", async (request, reply) => {
-    const { sceneId } = request.params as { sceneId: string };
+  app.post("/jobs/rebuild-preview/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
     const sfwOnly = readSfwOnly(request);
-    const scene = await db.query.scenes.findFirst({
-      where: eq(scenes.id, sceneId),
-      columns: { id: true, title: true, filePath: true, isNsfw: true },
-    });
 
-    if (!scene) {
+    // The route id may be an episode or a movie — try both.
+    const [episode] = await db
+      .select({
+        id: videoEpisodes.id,
+        title: videoEpisodes.title,
+        filePath: videoEpisodes.filePath,
+        isNsfw: videoEpisodes.isNsfw,
+      })
+      .from(videoEpisodes)
+      .where(eq(videoEpisodes.id, id))
+      .limit(1);
+    let kind: VideoEntityKind | null = episode ? "video_episode" : null;
+    let row: {
+      id: string;
+      title: string | null;
+      filePath: string | null;
+      isNsfw: boolean;
+    } | null = episode ?? null;
+    if (!row) {
+      const [movie] = await db
+        .select({
+          id: videoMovies.id,
+          title: videoMovies.title,
+          filePath: videoMovies.filePath,
+          isNsfw: videoMovies.isNsfw,
+        })
+        .from(videoMovies)
+        .where(eq(videoMovies.id, id))
+        .limit(1);
+      if (movie) {
+        row = movie;
+        kind = "video_movie";
+      }
+    }
+
+    if (!row || !kind) {
       reply.code(404);
       return { error: "Video not found" };
     }
 
-    if (sfwOnly && scene.isNsfw) {
+    if (sfwOnly && row.isNsfw) {
       reply.code(409);
       return { error: "Preview rebuild is not available for NSFW content in SFW mode" };
     }
 
-    // Delete existing scene derivative files (dedicated cache and/or sidecar) so stale assets aren't served
-    if (scene.filePath) {
-      for (const file of allSceneVideoGeneratedDiskPaths(scene.id, scene.filePath)) {
+    // Delete existing derivative files (dedicated cache and/or sidecar) so stale assets aren't served.
+    if (row.filePath) {
+      for (const file of allSceneVideoGeneratedDiskPaths(row.id, row.filePath)) {
         try {
           if (existsSync(file)) unlinkSync(file);
         } catch {
@@ -824,34 +961,36 @@ export async function jobsRoutes(app: FastifyInstance) {
       }
     }
 
-    await db
-      .update(scenes)
-      .set({
-        thumbnailPath: null,
-        cardThumbnailPath: null,
-        previewPath: null,
-        spritePath: null,
-        trickplayVttPath: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(scenes.id, sceneId));
+    const clearSet = {
+      thumbnailPath: null as null,
+      cardThumbnailPath: null as null,
+      previewPath: null as null,
+      spritePath: null as null,
+      trickplayVttPath: null as null,
+      updatedAt: new Date(),
+    };
+    if (kind === "video_episode") {
+      await db.update(videoEpisodes).set(clearSet).where(eq(videoEpisodes.id, id));
+    } else {
+      await db.update(videoMovies).set(clearSet).where(eq(videoMovies.id, id));
+    }
 
     const payload = withTriggerMetadata(
-      { sceneId },
+      { entityKind: kind, entityId: id },
       {
         by: "manual",
         kind: "force-rebuild",
         label: "Force rebuild preview from Operations",
-      }
+      },
     );
     const jobId = await sendJob("preview", payload);
 
     await recordQueuedJob({
       queueName: "preview",
       bullmqJobId: jobId,
-      targetType: "scene",
-      targetId: scene.id,
-      targetLabel: scene.title,
+      targetType: kind,
+      targetId: row.id,
+      targetLabel: row.title,
       payload,
     });
 
@@ -870,19 +1009,27 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
 
     if (sfwOnly) {
-      await db.update(scenes).set(clearSet).where(ne(scenes.isNsfw, true));
+      await db
+        .update(videoEpisodes)
+        .set(clearSet)
+        .where(ne(videoEpisodes.isNsfw, true));
+      await db
+        .update(videoMovies)
+        .set(clearSet)
+        .where(ne(videoMovies.isNsfw, true));
     } else {
-      await db.update(scenes).set(clearSet);
+      await db.update(videoEpisodes).set(clearSet);
+      await db.update(videoMovies).set(clearSet);
     }
 
-    const result = await enqueueMissingSceneJobs(
+    const result = await enqueueMissingVideoJobs(
       "preview",
       {
         by: "manual",
         kind: "force-rebuild",
         label: "Force rebuild previews from Operations",
       },
-      sfwOnly
+      sfwOnly,
     );
 
     return {
@@ -902,25 +1049,25 @@ export async function jobsRoutes(app: FastifyInstance) {
 
     const sfwOnly = readSfwOnly(request);
     const targetLabel = sfwOnly
-      ? "Relocate scene generated files"
+      ? "Relocate video generated files"
       : body.targetDedicated
-        ? "Scene assets to dedicated cache"
-        : "Scene assets beside media files";
+        ? "Video assets to dedicated cache"
+        : "Video assets beside media files";
 
-    const job = await queueSceneAssetStorageMigration(
+    const job = await queueVideoAssetStorageMigration(
       body.targetDedicated,
       {
         by: "manual",
         kind: "standard",
-        label: "Migrate scene generated asset paths",
+        label: "Migrate video generated asset paths",
       },
       targetLabel,
-      { sfwRedactJobLog: sfwOnly }
+      { sfwRedactJobLog: sfwOnly },
     );
 
     if (!job) {
       reply.code(409);
-      return { error: "Scene asset migration is already queued or running" };
+      return { error: "Video asset migration is already queued or running" };
     }
 
     return { ok: true as const, jobId: String(job.id) };

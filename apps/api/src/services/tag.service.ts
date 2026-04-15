@@ -163,7 +163,7 @@ export async function updateTag(
     rating: updated.rating,
     isNsfw: updated.isNsfw,
     ignoreAutoTag: updated.ignoreAutoTag,
-    sceneCount: updated.sceneCount,
+    sceneCount: 0,
     createdAt: updated.createdAt,
     updatedAt: updated.updatedAt,
   };

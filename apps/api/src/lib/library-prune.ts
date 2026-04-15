@@ -3,6 +3,6 @@
  */
 export {
   pruneUntrackedLibraryReferences,
-  removeGeneratedSceneDirs,
+  removeGeneratedVideoDirs,
   removeGeneratedImageDirs,
 } from "@obscura/db/src/lib/library-prune";

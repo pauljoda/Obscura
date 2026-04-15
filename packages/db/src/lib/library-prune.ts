@@ -6,7 +6,15 @@ import { getGeneratedImageDir, getGeneratedSceneDir } from "@obscura/media-core"
 import type { AppDb } from "../types";
 import * as schema from "../schema";
 
-const { libraryRoots, scenes, images, galleries } = schema;
+const {
+  libraryRoots,
+  images,
+  galleries,
+  videoEpisodes,
+  videoMovies,
+  videoSeasons,
+  videoSeries,
+} = schema;
 
 function getRootScopedPath(filePath: string) {
   return filePath.includes("::") ? (filePath.split("::")[0] ?? filePath) : filePath;
@@ -22,9 +30,12 @@ function isPathWithinAnyRoot(filePath: string, rootPaths: string[]) {
   return rootPaths.some((rootPath) => isPathWithinRoot(filePath, rootPath));
 }
 
-export async function removeGeneratedSceneDirs(sceneIds: string[]) {
-  for (const sceneId of sceneIds) {
-    await rm(getGeneratedSceneDir(sceneId), { recursive: true, force: true });
+/** Generated asset directories for video entities use the same naming
+ * convention as the old scene asset dirs — keyed by the entity id.
+ */
+export async function removeGeneratedVideoDirs(entityIds: string[]) {
+  for (const id of entityIds) {
+    await rm(getGeneratedSceneDir(id), { recursive: true, force: true });
   }
 }
 
@@ -35,52 +46,113 @@ export async function removeGeneratedImageDirs(imageIds: string[]) {
 }
 
 /**
- * Remove DB rows (and generated dirs) for media no longer under any enabled library root,
- * and scenes whose files disappeared from disk.
- * Call once before enqueueing library scans so it also runs when there are zero roots.
+ * Remove DB rows (and generated dirs) for media no longer under any
+ * enabled library root, and videos whose files disappeared from disk.
+ * Call once before enqueueing library scans so it also runs when there
+ * are zero roots.
  */
 export async function pruneUntrackedLibraryReferences(db: AppDb) {
   const allRoots = await db
     .select({
       path: libraryRoots.path,
-      scanVideos: libraryRoots.scanVideos,
+      scanMovies: libraryRoots.scanMovies,
+      scanSeries: libraryRoots.scanSeries,
       scanImages: libraryRoots.scanImages,
     })
     .from(libraryRoots)
     .where(eq(libraryRoots.enabled, true));
 
-  const videoRootPaths = allRoots.filter((r) => r.scanVideos).map((r) => r.path);
+  const videoRootPaths = allRoots
+    .filter((r) => r.scanMovies || r.scanSeries)
+    .map((r) => r.path);
   const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
 
-  const allKnownScenes = await db
+  // ── Video episodes ──────────────────────────────────────────────
+  const allEpisodes = await db
     .select({
-      id: scenes.id,
-      filePath: scenes.filePath,
+      id: videoEpisodes.id,
+      filePath: videoEpisodes.filePath,
     })
-    .from(scenes);
+    .from(videoEpisodes);
 
-  const missingSceneIds = allKnownScenes
-    .filter((scene) => scene.filePath && !existsSync(scene.filePath))
-    .map((scene) => scene.id);
+  const missingEpisodeIds = allEpisodes
+    .filter((ep) => ep.filePath && !existsSync(ep.filePath))
+    .map((ep) => ep.id);
 
-  if (missingSceneIds.length > 0) {
-    await removeGeneratedSceneDirs(missingSceneIds);
-    await db.delete(scenes).where(inArray(scenes.id, missingSceneIds));
+  if (missingEpisodeIds.length > 0) {
+    await removeGeneratedVideoDirs(missingEpisodeIds);
+    await db
+      .delete(videoEpisodes)
+      .where(inArray(videoEpisodes.id, missingEpisodeIds));
   }
 
-  const orphanedSceneIds = allKnownScenes
-    .filter((scene) => {
-      if (!scene.filePath) return false;
-      if (missingSceneIds.includes(scene.id)) return false;
-      return !isPathWithinAnyRoot(scene.filePath, videoRootPaths);
+  const orphanedEpisodeIds = allEpisodes
+    .filter((ep) => {
+      if (!ep.filePath) return false;
+      if (missingEpisodeIds.includes(ep.id)) return false;
+      return !isPathWithinAnyRoot(ep.filePath, videoRootPaths);
     })
-    .map((scene) => scene.id);
+    .map((ep) => ep.id);
 
-  if (orphanedSceneIds.length > 0) {
-    await removeGeneratedSceneDirs(orphanedSceneIds);
-    await db.delete(scenes).where(inArray(scenes.id, orphanedSceneIds));
+  if (orphanedEpisodeIds.length > 0) {
+    await removeGeneratedVideoDirs(orphanedEpisodeIds);
+    await db
+      .delete(videoEpisodes)
+      .where(inArray(videoEpisodes.id, orphanedEpisodeIds));
   }
 
+  // ── Video movies ────────────────────────────────────────────────
+  const allMovies = await db
+    .select({
+      id: videoMovies.id,
+      filePath: videoMovies.filePath,
+    })
+    .from(videoMovies);
+
+  const missingMovieIds = allMovies
+    .filter((mv) => mv.filePath && !existsSync(mv.filePath))
+    .map((mv) => mv.id);
+
+  if (missingMovieIds.length > 0) {
+    await removeGeneratedVideoDirs(missingMovieIds);
+    await db.delete(videoMovies).where(inArray(videoMovies.id, missingMovieIds));
+  }
+
+  const orphanedMovieIds = allMovies
+    .filter((mv) => {
+      if (!mv.filePath) return false;
+      if (missingMovieIds.includes(mv.id)) return false;
+      return !isPathWithinAnyRoot(mv.filePath, videoRootPaths);
+    })
+    .map((mv) => mv.id);
+
+  if (orphanedMovieIds.length > 0) {
+    await removeGeneratedVideoDirs(orphanedMovieIds);
+    await db.delete(videoMovies).where(inArray(videoMovies.id, orphanedMovieIds));
+  }
+
+  // Seasons whose parent series vanished cascade via FK ON DELETE, but
+  // seasons with no remaining episodes should be cleaned up too. Series
+  // with no remaining seasons follow the same rule. This keeps the UI
+  // from showing phantom empty series cards after a prune.
+  await db.execute(`
+    DELETE FROM video_seasons vs
+    WHERE NOT EXISTS (
+      SELECT 1 FROM video_episodes ve WHERE ve.season_id = vs.id
+    )
+  `);
+  await db.execute(`
+    DELETE FROM video_series vsrs
+    WHERE NOT EXISTS (
+      SELECT 1 FROM video_seasons vs WHERE vs.series_id = vsrs.id
+    )
+  `);
+  // Suppress unused-import warnings for tables referenced only via raw
+  // SQL above.
+  void videoSeasons;
+  void videoSeries;
+
+  // ── Images ──────────────────────────────────────────────────────
   const allKnownImages = await db
     .select({
       id: images.id,
@@ -97,6 +169,7 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
     await db.delete(images).where(inArray(images.id, orphanedImageIds));
   }
 
+  // ── Galleries ───────────────────────────────────────────────────
   const allKnownGalleries = await db
     .select({
       id: galleries.id,

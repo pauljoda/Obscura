@@ -4,16 +4,16 @@ import { db, schema } from "./index";
 import { MEDIA_SCENES_DIR, probeVideoFile } from "../lib/media";
 
 const {
+  libraryRoots,
   studios,
   performers,
   tags,
-  scenes,
-  scenePerformers,
-  sceneTags,
-  sceneMarkers,
+  videoMovies,
+  videoMoviePerformers,
+  videoMovieTags,
 } = schema;
 
-interface SceneDescriptor {
+interface MovieDescriptor {
   fileName: string;
   title: string;
   details: string;
@@ -21,11 +21,6 @@ interface SceneDescriptor {
   studioName: string;
   performers: string[];
   tags: string[];
-  markers: Array<{
-    title: string;
-    seconds: number;
-    endSeconds?: number;
-  }>;
 }
 
 const studioData = [
@@ -60,7 +55,7 @@ const tagData = [
   { name: "Test Asset", description: "Local reference media for player testing" },
 ];
 
-const sceneDescriptors: SceneDescriptor[] = [
+const movieDescriptors: MovieDescriptor[] = [
   {
     fileName: "big_buck_bunny.mp4",
     title: "Big Buck Bunny",
@@ -70,11 +65,6 @@ const sceneDescriptors: SceneDescriptor[] = [
     studioName: "Blender Studio",
     performers: ["Bunny", "Frank", "Rinky", "Gamera"],
     tags: ["Open Movie", "Animation", "Comedy", "Short Film", "Test Asset"],
-    markers: [
-      { title: "Forest calm", seconds: 8, endSeconds: 70 },
-      { title: "Rodent ambush", seconds: 132, endSeconds: 210 },
-      { title: "Bunny retaliation", seconds: 382, endSeconds: 520 },
-    ],
   },
   {
     fileName: "sintel_trailer.mp4",
@@ -93,11 +83,6 @@ const sceneDescriptors: SceneDescriptor[] = [
       "Surround Audio",
       "Test Asset",
     ],
-    markers: [
-      { title: "Title reveal", seconds: 0, endSeconds: 4 },
-      { title: "Dragon glimpse", seconds: 8, endSeconds: 15 },
-      { title: "Action montage", seconds: 18, endSeconds: 31 },
-    ],
   },
   {
     fileName: "tears_of_steel.mp4",
@@ -108,24 +93,35 @@ const sceneDescriptors: SceneDescriptor[] = [
     studioName: "Blender Studio",
     performers: ["Thom", "Celia"],
     tags: ["Open Movie", "Live Action", "Sci-Fi", "Short Film", "Test Asset"],
-    markers: [
-      { title: "Rooftop setup", seconds: 0, endSeconds: 48 },
-      { title: "Robot escalation", seconds: 72, endSeconds: 122 },
-      { title: "Canal finale", seconds: 138, endSeconds: 176 },
-    ],
   },
 ];
 
 async function seed() {
-  console.log("Seeding database from real scene files...");
+  console.log("Seeding database from real movie files...");
 
-  await db.delete(sceneMarkers);
-  await db.delete(sceneTags);
-  await db.delete(scenePerformers);
-  await db.delete(scenes);
+  await db.delete(videoMovieTags);
+  await db.delete(videoMoviePerformers);
+  await db.delete(videoMovies);
   await db.delete(performers);
   await db.delete(tags);
   await db.delete(studios);
+
+  // Ensure at least one library root to own the seeded movies.
+  let [root] = await db
+    .select({ id: libraryRoots.id })
+    .from(libraryRoots)
+    .limit(1);
+  if (!root) {
+    [root] = await db
+      .insert(libraryRoots)
+      .values({
+        path: MEDIA_SCENES_DIR,
+        label: "Seed fixture",
+        enabled: true,
+        recursive: true,
+      })
+      .returning({ id: libraryRoots.id });
+  }
 
   const insertedStudios = await db.insert(studios).values(studioData).returning();
   const studioMap = Object.fromEntries(insertedStudios.map((studio) => [studio.name, studio.id]));
@@ -139,21 +135,20 @@ async function seed() {
   const insertedTags = await db.insert(tags).values(tagData).returning();
   const tagMap = Object.fromEntries(insertedTags.map((tag) => [tag.name, tag.id]));
 
-  let markerCount = 0;
-
-  for (const descriptor of sceneDescriptors) {
+  for (const descriptor of movieDescriptors) {
     const filePath = path.join(MEDIA_SCENES_DIR, descriptor.fileName);
     if (!existsSync(filePath)) {
       throw new Error(`Missing expected media file: ${filePath}`);
     }
 
     const metadata = await probeVideoFile(filePath);
-    const [scene] = await db
-      .insert(scenes)
+    const [movie] = await db
+      .insert(videoMovies)
       .values({
+        libraryRootId: root.id,
         title: descriptor.title,
-        details: descriptor.details,
-        date: descriptor.date,
+        overview: descriptor.details,
+        releaseDate: descriptor.date,
         organized: true,
         filePath,
         fileSize: metadata.fileSize,
@@ -169,54 +164,29 @@ async function seed() {
       .returning();
 
     if (descriptor.performers.length > 0) {
-      await db.insert(scenePerformers).values(
+      await db.insert(videoMoviePerformers).values(
         descriptor.performers.map((name) => ({
-          sceneId: scene.id,
+          movieId: movie.id,
           performerId: performerMap[name],
-        }))
+        })),
       );
     }
 
     if (descriptor.tags.length > 0) {
-      await db.insert(sceneTags).values(
+      await db.insert(videoMovieTags).values(
         descriptor.tags.map((name) => ({
-          sceneId: scene.id,
+          movieId: movie.id,
           tagId: tagMap[name],
-        }))
+        })),
       );
-    }
-
-    if (descriptor.markers.length > 0) {
-      await db.insert(sceneMarkers).values(
-        descriptor.markers.map((marker) => ({
-          sceneId: scene.id,
-          title: marker.title,
-          seconds: marker.seconds,
-          endSeconds: marker.endSeconds,
-        }))
-      );
-      markerCount += descriptor.markers.length;
     }
   }
-
-  await db.execute(
-    `UPDATE performers SET scene_count = (
-      SELECT COUNT(*) FROM scene_performers WHERE scene_performers.performer_id = performers.id
-    )`
-  );
-
-  await db.execute(
-    `UPDATE tags SET scene_count = (
-      SELECT COUNT(*) FROM scene_tags WHERE scene_tags.tag_id = tags.id
-    )`
-  );
 
   console.log("Seeded:");
   console.log(`  ${insertedStudios.length} studios`);
   console.log(`  ${insertedPerformers.length} performers`);
   console.log(`  ${insertedTags.length} tags`);
-  console.log(`  ${sceneDescriptors.length} scenes`);
-  console.log(`  ${markerCount} scene markers`);
+  console.log(`  ${movieDescriptors.length} movies`);
 
   process.exit(0);
 }

@@ -5,6 +5,7 @@ import {
   studioAudioLibraryCountExpr,
   studioImageAppearanceCountExpr,
   studioSfwSceneCountExpr,
+  studioTotalSceneCountExpr,
 } from "../../lib/appearance-count-expressions";
 
 const { studios } = schema;
@@ -38,7 +39,9 @@ export const studiosSearchProvider: SearchProvider = {
       ELSE 30
     END`;
 
-    const sceneCountSelect = sfwOnly ? studioSfwSceneCountExpr() : studios.sceneCount;
+    const sceneCountSelect = sfwOnly
+      ? studioSfwSceneCountExpr()
+      : studioTotalSceneCountExpr();
 
     const [rows, countResult] = await Promise.all([
       db.select({

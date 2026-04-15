@@ -124,7 +124,10 @@ export async function processLibraryScan(job: Job): Promise<void> {
 
   const settings = await ensureLibrarySettingsRow();
 
-  const scanVideos = root.scanVideos ?? true;
+  // Classify files. Classification is pure and fast.
+  const scanMovies = root.scanMovies ?? true;
+  const scanSeries = root.scanSeries ?? true;
+  const scanVideos = scanMovies || scanSeries;
   const files = scanVideos
     ? await discoverVideoFiles(root.path, root.recursive)
     : [];
@@ -132,10 +135,6 @@ export async function processLibraryScan(job: Job): Promise<void> {
   const gallerySfwOpts = Boolean(job.data.sfwOnly)
     ? { sfwOnly: true as const }
     : undefined;
-
-  // Classify files. Classification is pure and fast.
-  const scanMovies = root.scanMovies ?? true;
-  const scanSeries = root.scanSeries ?? true;
 
   const movies: VideoClassificationMovie[] = [];
   const episodes: VideoClassificationEpisode[] = [];

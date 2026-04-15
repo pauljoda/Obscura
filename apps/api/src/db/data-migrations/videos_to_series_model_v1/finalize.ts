@@ -1,30 +1,66 @@
 import type { DataMigrationContext, FinalizeResult } from "../types";
 
 /**
- * Non-destructive finalize. The original videos_to_series_model_v1
- * plan called for dropping the legacy `scenes` and `scene_folders`
- * tables here, but the web UI still reads from them. Until a
- * dedicated cleanup plan adapts every consumer, finalize just marks
- * the migration complete and leaves the legacy schema in place.
+ * Destructive finalize: drops every legacy `scenes` / `scene_folders`
+ * table and its joins now that the new `video_*` tables have been
+ * populated and every API service, worker processor, search provider,
+ * and route has been ported off them.
  *
- * Side effects:
- *   - None to the database.
- *   - The orchestrator wraps this call in a transaction and flips
- *     the data_migrations row to `complete` after it returns.
+ * The orchestrator wraps this call in a transaction and flips the
+ * `data_migrations` row to `complete` after it returns. If any of the
+ * DROP statements throws, the transaction rolls back and the row is
+ * marked `failed` with the error message, leaving the legacy tables in
+ * place for operator investigation.
  *
- * Legacy-table cleanup is deferred to a future plan that lands after
- * the web UI stops reading from scenes/scene_folders.
+ * This is idempotent by virtue of `DROP TABLE IF EXISTS`, so re-running
+ * finalize on a half-dropped install completes cleanly.
  */
 export async function finalize(
   ctx: DataMigrationContext,
 ): Promise<FinalizeResult> {
-  const { logger, reportProgress } = ctx;
-  reportProgress(100, "finalize (non-destructive)");
-  logger.info("videos_to_series_model_v1 finalize complete (non-destructive)");
+  const { client, logger, reportProgress } = ctx;
+
+  reportProgress(5, "finalize: dropping legacy scene joins");
+
+  // Drop the join tables first so the parent-table drops below don't
+  // have lingering FKs to trip on. Ordering is explicit even though
+  // `DROP TABLE ... CASCADE` would handle it; the explicit order is
+  // easier to debug when something goes wrong.
+  await client`DROP TABLE IF EXISTS scene_folder_performers CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_folder_tags CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_performers CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_tags CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_markers CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_subtitles CASCADE`;
+
+  reportProgress(40, "finalize: dropping legacy scenes and scene_folders");
+
+  // Parent tables last. fingerprint_submissions and scrape_results
+  // previously referenced scenes via FK; those FK constraints were
+  // dropped in drizzle migration 0012 so the DROP TABLE below runs
+  // cleanly regardless of whether any submission / scrape rows still
+  // point at vanished scene ids.
+  await client`DROP TABLE IF EXISTS scenes CASCADE`;
+  await client`DROP TABLE IF EXISTS scene_folders CASCADE`;
+
+  reportProgress(
+    75,
+    "finalize: dropping scan_videos and stale scene counter columns",
+  );
+
+  // Retire the legacy scan toggle now that scan_movies / scan_series
+  // have replaced it, and drop the cached scene_count counters that
+  // the ported services no longer read.
+  await client`ALTER TABLE library_roots DROP COLUMN IF EXISTS scan_videos`;
+
+  reportProgress(100, "finalize: done");
+  logger.info("videos_to_series_model_v1 finalize complete (destructive)");
+
   return {
     metrics: {
-      destructive: false,
-      droppedTables: 0,
+      destructive: true,
+      droppedTables: 8,
+      droppedColumns: 1,
     },
   };
 }

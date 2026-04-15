@@ -5,6 +5,7 @@ import {
   performerAudioLibraryCountExpr,
   performerImageAppearanceCountExpr,
   performerSfwSceneCountExpr,
+  performerTotalSceneCountExpr,
 } from "../../lib/appearance-count-expressions";
 
 const { performers } = schema;
@@ -38,7 +39,9 @@ export const performersSearchProvider: SearchProvider = {
       ELSE 30
     END`;
 
-    const sceneCountSelect = sfwOnly ? performerSfwSceneCountExpr() : performers.sceneCount;
+    const sceneCountSelect = sfwOnly
+      ? performerSfwSceneCountExpr()
+      : performerTotalSceneCountExpr();
 
     const [rows, countResult] = await Promise.all([
       db.select({

@@ -1689,7 +1689,7 @@ export async function uploadVideoMovie(
   if (!root) {
     throw new AppError(404, "Library root not found");
   }
-  if (!root.scanVideos) {
+  if (!root.scanMovies && !root.scanSeries) {
     throw new AppError(
       400,
       "Selected library root is not configured to receive video uploads",

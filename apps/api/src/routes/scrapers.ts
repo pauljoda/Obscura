@@ -26,14 +26,108 @@ import yaml from "js-yaml";
 const {
   scraperPackages,
   scrapeResults,
-  scenes,
   performers,
   tags,
   studios,
-  scenePerformers,
-  sceneTags,
   stashIds,
+  videoEpisodes,
+  videoMovies,
+  videoSeries,
+  videoEpisodePerformers,
+  videoEpisodeTags,
+  videoMoviePerformers,
+  videoMovieTags,
+  videoSeriesPerformers,
+  videoSeriesTags,
 } = schema;
+
+type VideoEntityKind = "video_episode" | "video_movie";
+
+interface VideoSceneSource {
+  kind: VideoEntityKind;
+  id: string;
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  url: string | null;
+  duration: number | null;
+  checksumMd5: string | null;
+  oshash: string | null;
+  phash: string | null;
+  filePath: string | null;
+}
+
+/**
+ * Look up a video entity by id. Tries `video_episodes` first, then
+ * `video_movies`. Returns a flat row shape the legacy stash-compat
+ * scraper pipeline can consume (title/date/details/url mapped onto the
+ * new video columns where possible).
+ */
+async function loadVideoSource(videoId: string): Promise<VideoSceneSource | null> {
+  const [episode] = await db
+    .select({
+      id: videoEpisodes.id,
+      title: videoEpisodes.title,
+      airDate: videoEpisodes.airDate,
+      overview: videoEpisodes.overview,
+      duration: videoEpisodes.duration,
+      checksumMd5: videoEpisodes.checksumMd5,
+      oshash: videoEpisodes.oshash,
+      phash: videoEpisodes.phash,
+      filePath: videoEpisodes.filePath,
+    })
+    .from(videoEpisodes)
+    .where(eq(videoEpisodes.id, videoId))
+    .limit(1);
+  if (episode) {
+    return {
+      kind: "video_episode",
+      id: episode.id,
+      title: episode.title,
+      date: episode.airDate,
+      details: episode.overview,
+      url: null,
+      duration: episode.duration,
+      checksumMd5: episode.checksumMd5,
+      oshash: episode.oshash,
+      phash: episode.phash,
+      filePath: episode.filePath,
+    };
+  }
+
+  const [movie] = await db
+    .select({
+      id: videoMovies.id,
+      title: videoMovies.title,
+      releaseDate: videoMovies.releaseDate,
+      overview: videoMovies.overview,
+      duration: videoMovies.duration,
+      checksumMd5: videoMovies.checksumMd5,
+      oshash: videoMovies.oshash,
+      phash: videoMovies.phash,
+      filePath: videoMovies.filePath,
+    })
+    .from(videoMovies)
+    .where(eq(videoMovies.id, videoId))
+    .limit(1);
+  if (movie) {
+    return {
+      kind: "video_movie",
+      id: movie.id,
+      title: movie.title,
+      date: movie.releaseDate,
+      details: movie.overview,
+      url: null,
+      duration: movie.duration,
+      checksumMd5: movie.checksumMd5,
+      oshash: movie.oshash,
+      phash: movie.phash,
+      filePath: movie.filePath,
+    };
+  }
+
+  return null;
+}
 
 function getScrapersDir() {
   return path.join(getCacheRootDir(), "scrapers");
@@ -337,27 +431,15 @@ export async function scrapersRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Scraper is disabled" });
     }
 
-    // Load scene data for fragment-based scraping
-    const [scene] = await db
-      .select({
-        id: scenes.id,
-        title: scenes.title,
-        url: scenes.url,
-        date: scenes.date,
-        details: scenes.details,
-        duration: scenes.duration,
-        checksumMd5: scenes.checksumMd5,
-        oshash: scenes.oshash,
-        phash: scenes.phash,
-        filePath: scenes.filePath,
-      })
-      .from(scenes)
-      .where(eq(scenes.id, body.sceneId))
-      .limit(1);
+    // Resolve the video entity (episode or movie) that the scraper is
+    // running against. The body parameter is still called `sceneId` for
+    // wire compatibility with existing web clients.
+    const sceneOrNull = await loadVideoSource(body.sceneId);
 
-    if (!scene) {
+    if (!sceneOrNull) {
       return reply.code(404).send({ error: "Video not found" });
     }
+    const scene: VideoSceneSource = sceneOrNull;
 
     // Find the YAML definition
     const files = await readdir(pkg.installPath);
@@ -470,11 +552,14 @@ export async function scrapersRoutes(app: FastifyInstance) {
           continue;
         }
 
-        // Store the result
+        // Store the result, keyed on the video entity the scraper
+        // targeted. The legacy `sceneId` column is left NULL; the
+        // accept path reads `entityType` + `entityId` instead.
         const [result] = await db
           .insert(scrapeResults)
           .values({
-            sceneId: scene.id,
+            entityType: scene.kind,
+            entityId: scene.id,
             scraperPackageId: pkg.id,
             action,
             status: "pending",
@@ -819,11 +904,22 @@ export async function scrapersRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: "Result already applied" });
     }
 
-    // The legacy accept endpoint only handles scene results
-    if (!result.sceneId) {
-      return reply.code(400).send({ error: "This result has no scene — use the plugin accept endpoint" });
+    // Resolve the target video entity. Post–videos-to-series cutover the
+    // scrape result is keyed by `entityType` + `entityId`; legacy rows
+    // that still only carry `sceneId` cannot be applied because scenes
+    // are gone.
+    const entityType = result.entityType;
+    const entityId = result.entityId;
+    if (
+      (entityType !== "video_episode" && entityType !== "video_movie") ||
+      !entityId
+    ) {
+      return reply.code(400).send({
+        error: "This result is not keyed to a video entity — use the plugin accept endpoint",
+      });
     }
-    const sceneId = result.sceneId;
+    const videoKind = entityType as VideoEntityKind;
+    const videoId = entityId;
 
     // Determine which fields to apply (all if not specified)
     const fieldsToApply = new Set(
@@ -840,20 +936,32 @@ export async function scrapersRoutes(app: FastifyInstance) {
     );
 
     await db.transaction(async (tx) => {
-      // Build scene update
+      // Build video update. Episodes and movies share title / overview /
+      // isNsfw / organized columns but disagree on the date field name
+      // (`airDate` vs `releaseDate`) — pick the right key up front.
       const sceneUpdate: Record<string, unknown> = { updatedAt: new Date() };
 
       if (fieldsToApply.has("title") && result.proposedTitle) {
         sceneUpdate.title = result.proposedTitle;
       }
       if (fieldsToApply.has("date") && result.proposedDate) {
-        sceneUpdate.date = result.proposedDate;
+        if (videoKind === "video_episode") {
+          sceneUpdate.airDate = result.proposedDate;
+        } else {
+          sceneUpdate.releaseDate = result.proposedDate;
+        }
       }
       if (fieldsToApply.has("details") && result.proposedDetails) {
-        sceneUpdate.details = result.proposedDetails;
+        sceneUpdate.overview = result.proposedDetails;
       }
       if (fieldsToApply.has("url") && result.proposedUrl) {
-        sceneUpdate.url = result.proposedUrl;
+        // Video tables have no freeform `url` column. The scraped URL
+        // goes into the externalIds map under a `custom:scraped` key so
+        // the information isn't lost; the plugin identify flow uses
+        // the same map.
+        sceneUpdate.externalIds = sql`COALESCE(${
+          videoKind === "video_episode" ? videoEpisodes.externalIds : videoMovies.externalIds
+        }, '{}'::jsonb) || ${JSON.stringify({ "custom:scraped": result.proposedUrl })}::jsonb`;
       }
 
       // Studio: find or create, enriching with URL/image/parent from raw result
@@ -910,18 +1018,42 @@ export async function scrapersRoutes(app: FastifyInstance) {
           return created.id;
         };
 
-        sceneUpdate.studioId = await findOrCreateStudio(studioName, rawStudio);
+        const studioId = await findOrCreateStudio(studioName, rawStudio);
+        if (videoKind === "video_movie") {
+          sceneUpdate.studioId = studioId;
+        } else {
+          // Episodes inherit studio from the parent series. Update the
+          // series directly so cards and filters see the new value.
+          const [ep] = await tx
+            .select({ seriesId: videoEpisodes.seriesId })
+            .from(videoEpisodes)
+            .where(eq(videoEpisodes.id, videoId))
+            .limit(1);
+          if (ep?.seriesId) {
+            await tx
+              .update(videoSeries)
+              .set({ studioId, updatedAt: new Date() })
+              .where(eq(videoSeries.id, ep.seriesId));
+          }
+        }
       }
 
       // Mark organized and NSFW (identify flow always treats content as NSFW)
       sceneUpdate.organized = true;
       sceneUpdate.isNsfw = true;
 
-      // Update scene
-      await tx
-        .update(scenes)
-        .set(sceneUpdate)
-        .where(eq(scenes.id, sceneId));
+      // Update the correct video table
+      if (videoKind === "video_episode") {
+        await tx
+          .update(videoEpisodes)
+          .set(sceneUpdate)
+          .where(eq(videoEpisodes.id, videoId));
+      } else {
+        await tx
+          .update(videoMovies)
+          .set(sceneUpdate)
+          .where(eq(videoMovies.id, videoId));
+      }
 
       // Performers: find or create, then link — also apply scraped metadata
       const excludedPerformers = new Set((body.excludePerformers ?? []).map((n) => n.toLowerCase()));
@@ -1008,21 +1140,18 @@ export async function scrapersRoutes(app: FastifyInstance) {
             }
           }
 
-          await tx
-            .insert(scenePerformers)
-            .values({ sceneId, performerId })
-            .onConflictDoNothing();
+          if (videoKind === "video_episode") {
+            await tx
+              .insert(videoEpisodePerformers)
+              .values({ episodeId: videoId, performerId })
+              .onConflictDoNothing();
+          } else {
+            await tx
+              .insert(videoMoviePerformers)
+              .values({ movieId: videoId, performerId })
+              .onConflictDoNothing();
+          }
         }
-
-        // Update performer scene counts
-        await tx.execute(sql`
-          UPDATE performers SET scene_count = (
-            SELECT count(*) FROM scene_performers WHERE performer_id = performers.id
-          )
-          WHERE id IN (
-            SELECT performer_id FROM scene_performers WHERE scene_id = ${sceneId}
-          )
-        `);
       }
 
       // Tags: find or create, then link
@@ -1043,24 +1172,23 @@ export async function scrapersRoutes(app: FastifyInstance) {
               .returning({ id: tags.id })
           )[0].id;
 
-          await tx
-            .insert(sceneTags)
-            .values({ sceneId, tagId })
-            .onConflictDoNothing();
+          if (videoKind === "video_episode") {
+            await tx
+              .insert(videoEpisodeTags)
+              .values({ episodeId: videoId, tagId })
+              .onConflictDoNothing();
+          } else {
+            await tx
+              .insert(videoMovieTags)
+              .values({ movieId: videoId, tagId })
+              .onConflictDoNothing();
+          }
         }
-
-        // Update tag scene counts
-        await tx.execute(sql`
-          UPDATE tags SET scene_count = (
-            SELECT count(*) FROM scene_tags WHERE tag_id = tags.id
-          )
-          WHERE id IN (
-            SELECT tag_id FROM scene_tags WHERE scene_id = ${sceneId}
-          )
-        `);
       }
 
-      // Download scene thumbnail if available
+      // Download video thumbnail if available. The /assets/scenes/:id/*
+      // URL format is preserved — the assets route already looks up the
+      // id against video_episodes / video_movies first.
       if (fieldsToApply.has("image") && result.proposedImageUrl) {
         try {
           const imageUrl = result.proposedImageUrl;
@@ -1074,20 +1202,27 @@ export async function scrapersRoutes(app: FastifyInstance) {
             if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
             buffer = Buffer.from(await imgRes.arrayBuffer());
           }
-          const genDir = getGeneratedSceneDir(sceneId);
+          const genDir = getGeneratedSceneDir(videoId);
           await mkdir(genDir, { recursive: true });
           await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
-          const assetUrl = `/assets/scenes/${sceneId}/thumb-custom`;
-          await tx
-            .update(scenes)
-            .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
-            .where(eq(scenes.id, sceneId));
+          const assetUrl = `/assets/scenes/${videoId}/thumb-custom`;
+          if (videoKind === "video_episode") {
+            await tx
+              .update(videoEpisodes)
+              .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
+              .where(eq(videoEpisodes.id, videoId));
+          } else {
+            await tx
+              .update(videoMovies)
+              .set({ thumbnailPath: assetUrl, cardThumbnailPath: null, updatedAt: new Date() })
+              .where(eq(videoMovies.id, videoId));
+          }
         } catch {
           // Image download failed — non-fatal
         }
       }
 
-      // Auto-link stash_ids when accepting a StashBox result so the scene is
+      // Auto-link stash_ids when accepting a StashBox result so the video is
       // immediately contributable via the pHashes tab. Only runs for results
       // sourced from a StashBox endpoint — community-scraper results have no
       // remote scene_id to submit against.
@@ -1098,8 +1233,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
           await tx
             .insert(stashIds)
             .values({
-              entityType: "scene",
-              entityId: sceneId,
+              entityType: videoKind,
+              entityId: videoId,
               stashBoxEndpointId: result.stashBoxEndpointId,
               stashId: remoteStashId,
             })
@@ -1118,7 +1253,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
         .where(eq(scrapeResults.id, id));
     });
 
-    return { ok: true, sceneId };
+    return { ok: true, videoId, entityType: videoKind };
   });
 
   // ─── POST /scrapers/results/:id/reject ──────────────────────────

@@ -6,7 +6,7 @@ import {
   subtitleDisplayStyles,
   type SubtitleDisplayStyle,
 } from "@obscura/contracts";
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, or, type SQL } from "drizzle-orm";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
@@ -131,11 +131,29 @@ export async function settingsRoutes(app: FastifyInstance) {
       return undefined;
     };
     const filters: SQL[] = [];
-    const scanVideos = asBool(query.scanVideos);
+    // The legacy `scanVideos` query param is preserved as a client alias
+    // that maps to the new `scanMovies` + `scanSeries` booleans. Passing
+    // `?scanVideos=true` filters for roots with at least one of the two
+    // video flags enabled; `?scanVideos=false` requires both to be off.
+    const scanVideosAlias = asBool(query.scanVideos);
     const scanImages = asBool(query.scanImages);
     const scanAudio = asBool(query.scanAudio);
     const enabled = asBool(query.enabled);
-    if (scanVideos != null) filters.push(eq(libraryRoots.scanVideos, scanVideos));
+    if (scanVideosAlias === true) {
+      filters.push(
+        or(
+          eq(libraryRoots.scanMovies, true),
+          eq(libraryRoots.scanSeries, true),
+        )!,
+      );
+    } else if (scanVideosAlias === false) {
+      filters.push(
+        and(
+          eq(libraryRoots.scanMovies, false),
+          eq(libraryRoots.scanSeries, false),
+        )!,
+      );
+    }
     if (scanImages != null) filters.push(eq(libraryRoots.scanImages, scanImages));
     if (scanAudio != null) filters.push(eq(libraryRoots.scanAudio, scanAudio));
     if (enabled != null) filters.push(eq(libraryRoots.enabled, enabled));
@@ -165,6 +183,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       enabled?: boolean;
       recursive?: boolean;
       scanVideos?: boolean;
+      scanMovies?: boolean;
+      scanSeries?: boolean;
       scanImages?: boolean;
       scanAudio?: boolean;
     };
@@ -173,6 +193,10 @@ export async function settingsRoutes(app: FastifyInstance) {
       const resolvedPath = path.resolve(body.path);
       await verifyDirectory(resolvedPath);
 
+      // The legacy `scanVideos` body param is an alias that enables
+      // both scan_movies and scan_series (or disables both). Explicit
+      // scanMovies / scanSeries overrides still apply on top.
+      const videoAlias = body.scanVideos;
       const [created] = await db
         .insert(libraryRoots)
         .values({
@@ -180,7 +204,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           label: body.label?.trim() || labelForPath(resolvedPath),
           enabled: body.enabled ?? true,
           recursive: body.recursive ?? true,
-          scanVideos: body.scanVideos ?? true,
+          scanMovies: body.scanMovies ?? videoAlias ?? true,
+          scanSeries: body.scanSeries ?? videoAlias ?? true,
           scanImages: body.scanImages ?? true,
           scanAudio: body.scanAudio ?? true,
         })
@@ -201,6 +226,8 @@ export async function settingsRoutes(app: FastifyInstance) {
       enabled?: boolean;
       recursive?: boolean;
       scanVideos?: boolean;
+      scanMovies?: boolean;
+      scanSeries?: boolean;
       scanImages?: boolean;
       scanAudio?: boolean;
       isNsfw?: boolean;
@@ -215,6 +242,11 @@ export async function settingsRoutes(app: FastifyInstance) {
         await verifyDirectory(nextPath);
       }
 
+      // Legacy `scanVideos` body param is still honored as a paired
+      // alias that flips both scan_movies + scan_series. Explicit
+      // individual flags win when supplied.
+      const videoAlias = body.scanVideos;
+
       const [updated] = await db
         .update(libraryRoots)
         .set({
@@ -222,7 +254,10 @@ export async function settingsRoutes(app: FastifyInstance) {
           label: body.label?.trim() || existing.label,
           enabled: body.enabled ?? existing.enabled,
           recursive: body.recursive ?? existing.recursive,
-          scanVideos: body.scanVideos ?? existing.scanVideos,
+          scanMovies:
+            body.scanMovies ?? videoAlias ?? existing.scanMovies,
+          scanSeries:
+            body.scanSeries ?? videoAlias ?? existing.scanSeries,
           scanImages: body.scanImages ?? existing.scanImages,
           scanAudio: body.scanAudio ?? existing.scanAudio,
           isNsfw: body.isNsfw ?? existing.isNsfw,

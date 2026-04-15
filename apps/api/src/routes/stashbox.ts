@@ -19,11 +19,58 @@ const {
   stashBoxEndpoints,
   stashIds,
   scrapeResults,
-  scenes,
   performers,
   scraperPackages,
   fingerprintSubmissions,
+  videoEpisodes,
+  videoMovies,
 } = schema;
+
+type VideoEntityKind = "video_episode" | "video_movie";
+
+interface VideoFingerprintSource {
+  kind: VideoEntityKind;
+  id: string;
+  title: string | null;
+  duration: number | null;
+  checksumMd5: string | null;
+  oshash: string | null;
+  phash: string | null;
+}
+
+async function loadVideoFingerprintSource(
+  videoId: string,
+): Promise<VideoFingerprintSource | null> {
+  const [episode] = await db
+    .select({
+      id: videoEpisodes.id,
+      title: videoEpisodes.title,
+      duration: videoEpisodes.duration,
+      checksumMd5: videoEpisodes.checksumMd5,
+      oshash: videoEpisodes.oshash,
+      phash: videoEpisodes.phash,
+    })
+    .from(videoEpisodes)
+    .where(eq(videoEpisodes.id, videoId))
+    .limit(1);
+  if (episode) return { kind: "video_episode", ...episode };
+
+  const [movie] = await db
+    .select({
+      id: videoMovies.id,
+      title: videoMovies.title,
+      duration: videoMovies.duration,
+      checksumMd5: videoMovies.checksumMd5,
+      oshash: videoMovies.oshash,
+      phash: videoMovies.phash,
+    })
+    .from(videoMovies)
+    .where(eq(videoMovies.id, videoId))
+    .limit(1);
+  if (movie) return { kind: "video_movie", ...movie };
+
+  return null;
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -219,18 +266,10 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "StashBox endpoint is disabled" });
     }
 
-    // Load scene with fingerprints
-    const [scene] = await db
-      .select({
-        id: scenes.id,
-        title: scenes.title,
-        checksumMd5: scenes.checksumMd5,
-        oshash: scenes.oshash,
-        phash: scenes.phash,
-      })
-      .from(scenes)
-      .where(eq(scenes.id, body.sceneId))
-      .limit(1);
+    // Load the target video entity (episode or movie). The body parameter
+    // is still called `sceneId` for wire compatibility with existing web
+    // clients.
+    const scene = await loadVideoFingerprintSource(body.sceneId);
 
     if (!scene) {
       return reply.code(404).send({ error: "Video not found" });
@@ -249,7 +288,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .from(stashIds)
       .where(
         and(
-          eq(stashIds.entityType, "scene"),
+          eq(stashIds.entityType, scene.kind),
           eq(stashIds.entityId, scene.id),
           eq(stashIds.stashBoxEndpointId, ep.id),
         ),
@@ -267,7 +306,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
             const [result] = await db
               .insert(scrapeResults)
               .values({
-                sceneId: scene.id,
+                entityType: scene.kind, entityId: scene.id,
                 stashBoxEndpointId: ep.id,
                 action: "findById",
                 matchType: "stashid",
@@ -316,7 +355,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
             const [result] = await db
               .insert(scrapeResults)
               .values({
-                sceneId: scene.id,
+                entityType: scene.kind, entityId: scene.id,
                 stashBoxEndpointId: ep.id,
                 action: "findByFingerprint",
                 matchType: "fingerprint",
@@ -356,7 +395,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
             const [result] = await db
               .insert(scrapeResults)
               .values({
-                sceneId: scene.id,
+                entityType: scene.kind, entityId: scene.id,
                 stashBoxEndpointId: ep.id,
                 action: "searchByTitle",
                 matchType: "title",
@@ -671,24 +710,13 @@ export async function stashboxRoutes(app: FastifyInstance) {
       if (!ep.enabled)
         return reply.code(400).send({ error: "StashBox endpoint is disabled" });
 
-      const [scene] = await db
-        .select({
-          id: scenes.id,
-          title: scenes.title,
-          duration: scenes.duration,
-          checksumMd5: scenes.checksumMd5,
-          oshash: scenes.oshash,
-          phash: scenes.phash,
-        })
-        .from(scenes)
-        .where(eq(scenes.id, body.sceneId))
-        .limit(1);
+      const scene = await loadVideoFingerprintSource(body.sceneId);
       if (!scene) return reply.code(404).send({ error: "Video not found" });
 
       if (!scene.duration || scene.duration <= 0) {
         return reply
           .code(400)
-          .send({ error: "Scene duration is required to submit fingerprints" });
+          .send({ error: "Video duration is required to submit fingerprints" });
       }
 
       const [link] = await db
@@ -696,7 +724,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
         .from(stashIds)
         .where(
           and(
-            eq(stashIds.entityType, "scene"),
+            eq(stashIds.entityType, scene.kind),
             eq(stashIds.entityId, scene.id),
             eq(stashIds.stashBoxEndpointId, ep.id),
           ),
@@ -705,7 +733,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       if (!link) {
         return reply.code(404).send({
           error:
-            "Scene is not linked to this StashBox endpoint — run identify and accept a match first",
+            "Video is not linked to this StashBox endpoint — run identify and accept a match first",
         });
       }
 
@@ -761,7 +789,13 @@ export async function stashboxRoutes(app: FastifyInstance) {
         await db
           .insert(fingerprintSubmissions)
           .values({
+            // sceneId is retained as the unique-constraint key post-finalize;
+            // it no longer has an FK to scenes and is reused for the video
+            // entity id. entityType / entityId mirror the key for new code
+            // that wants a typed read path.
             sceneId: scene.id,
+            entityType: scene.kind,
+            entityId: scene.id,
             stashBoxEndpointId: ep.id,
             algorithm: c.algorithm,
             hash: c.hash,
@@ -808,31 +842,57 @@ export async function stashboxRoutes(app: FastifyInstance) {
     );
     const offset = (page - 1) * pageSize;
 
-    const sceneIdRows = await db
-      .selectDistinct({ id: stashIds.entityId })
+    // Pull all stash-id rows that point at a video entity (episode or
+    // movie). The legacy `entityType = 'scene'` string is queried too so
+    // pre-port rows continue to show up until the post-finalize data
+    // migration rewrites them.
+    const stashIdRows = await db
+      .selectDistinct({
+        entityId: stashIds.entityId,
+        entityType: stashIds.entityType,
+      })
       .from(stashIds)
-      .where(eq(stashIds.entityType, "scene"))
+      .where(
+        inArray(stashIds.entityType, ["video_episode", "video_movie", "scene"]),
+      )
       .orderBy(stashIds.entityId);
 
-    const total = sceneIdRows.length;
-    const pageIds = sceneIdRows.slice(offset, offset + pageSize).map((r) => r.id);
+    const total = stashIdRows.length;
+    const pageRows = stashIdRows.slice(offset, offset + pageSize);
+    const pageIds = pageRows.map((r) => r.entityId);
 
     if (pageIds.length === 0) {
       return { total, page, pageSize, items: [] };
     }
 
-    const sceneRows = await db
-      .select({
-        id: scenes.id,
-        title: scenes.title,
-        thumbnailPath: scenes.thumbnailPath,
-        duration: scenes.duration,
-        checksumMd5: scenes.checksumMd5,
-        oshash: scenes.oshash,
-        phash: scenes.phash,
-      })
-      .from(scenes)
-      .where(inArray(scenes.id, pageIds));
+    // Fetch matching video rows from both episode and movie tables.
+    const [episodeRows, movieRows] = await Promise.all([
+      db
+        .select({
+          id: videoEpisodes.id,
+          title: videoEpisodes.title,
+          thumbnailPath: videoEpisodes.thumbnailPath,
+          duration: videoEpisodes.duration,
+          checksumMd5: videoEpisodes.checksumMd5,
+          oshash: videoEpisodes.oshash,
+          phash: videoEpisodes.phash,
+        })
+        .from(videoEpisodes)
+        .where(inArray(videoEpisodes.id, pageIds)),
+      db
+        .select({
+          id: videoMovies.id,
+          title: videoMovies.title,
+          thumbnailPath: videoMovies.thumbnailPath,
+          duration: videoMovies.duration,
+          checksumMd5: videoMovies.checksumMd5,
+          oshash: videoMovies.oshash,
+          phash: videoMovies.phash,
+        })
+        .from(videoMovies)
+        .where(inArray(videoMovies.id, pageIds)),
+    ]);
+    const sceneRows = [...episodeRows, ...movieRows];
 
     const linkRows = await db
       .select({
@@ -848,7 +908,14 @@ export async function stashboxRoutes(app: FastifyInstance) {
         eq(stashIds.stashBoxEndpointId, stashBoxEndpoints.id),
       )
       .where(
-        and(eq(stashIds.entityType, "scene"), inArray(stashIds.entityId, pageIds)),
+        and(
+          inArray(stashIds.entityType, [
+            "video_episode",
+            "video_movie",
+            "scene",
+          ]),
+          inArray(stashIds.entityId, pageIds),
+        ),
       );
 
     const submissionRows = await db

@@ -17,13 +17,12 @@ import {
 } from "@obscura/media-core";
 import { ensureLibrarySettingsRow } from "../lib/library";
 
-const { scenes, galleries, images, videoEpisodes, videoMovies } = schema;
+const { galleries, images, videoEpisodes, videoMovies } = schema;
 
 /**
- * Resolve an entity id to its file_path by probing video_episodes,
- * video_movies, then the legacy scenes table. New content lives in
- * the video_* tables so we prefer those; the scenes fall-back will
- * be removed once the legacy scenes table is dropped entirely.
+ * Resolve a video id to its file_path by probing video_episodes then
+ * video_movies. The id could be either an episode or a movie; we try
+ * both in that order.
  */
 async function resolveVideoFilePath(id: string): Promise<string | null> {
   const [ep] = await db
@@ -37,12 +36,7 @@ async function resolveVideoFilePath(id: string): Promise<string | null> {
     .from(videoMovies)
     .where(eq(videoMovies.id, id))
     .limit(1);
-  if (mv?.filePath) return mv.filePath;
-  const scene = await db.query.scenes.findFirst({
-    where: eq(scenes.id, id),
-    columns: { filePath: true },
-  });
-  return scene?.filePath ?? null;
+  return mv?.filePath ?? null;
 }
 
 const IMAGE_EXTENSIONS = ["jpg", "png", "svg", "webp"] as const;

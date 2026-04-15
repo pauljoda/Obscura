@@ -155,6 +155,8 @@ const LEGACY_SCHEMA_SENTINELS: Record<
   "0010_natural_meteorite": (c) => tableExists(c, "video_series"),
   "0011_amazing_invisible_woman": (c) =>
     columnExists(c, "scrape_results", "proposed_result"),
+  "0012_little_bill_hollister": (c) =>
+    columnExists(c, "fingerprint_submissions", "entity_type"),
 };
 
 /**

@@ -1,6 +1,10 @@
 import { db, schema } from "../../db";
 import { ilike, or, sql, and, gte, count, ne } from "drizzle-orm";
 import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import {
+  tagSfwSceneCountExpr,
+  tagTotalSceneCountExpr,
+} from "../../lib/appearance-count-expressions";
 
 const { tags } = schema;
 
@@ -32,18 +36,23 @@ export const tagsSearchProvider: SearchProvider = {
       ELSE 30
     END`;
 
+    const sfwOnly = filters.nsfw === "off";
+    const sceneCountExpr = sfwOnly
+      ? tagSfwSceneCountExpr()
+      : tagTotalSceneCountExpr();
+
     const [rows, countResult] = await Promise.all([
       db.select({
         id: tags.id,
         name: tags.name,
         imagePath: tags.imagePath,
         rating: tags.rating,
-        sceneCount: tags.sceneCount,
+        sceneCount: sceneCountExpr,
         score: scoreExpr,
       })
         .from(tags)
         .where(where)
-        .orderBy(sql`${scoreExpr} DESC`, sql`${tags.sceneCount} DESC`)
+        .orderBy(sql`${scoreExpr} DESC`, sql`${sceneCountExpr} DESC`)
         .limit(limit)
         .offset(offset),
       db.select({ total: count() }).from(tags).where(where),
@@ -57,12 +66,12 @@ export const tagsSearchProvider: SearchProvider = {
         id: r.id,
         kind: "tag" as const,
         title: r.name,
-        subtitle: r.sceneCount > 0 ? `${r.sceneCount} scenes` : null,
+        subtitle: Number(r.sceneCount ?? 0) > 0 ? `${Number(r.sceneCount)} videos` : null,
         imagePath: r.imagePath ?? null,
         href: `/tags/${encodeURIComponent(r.name)}`,
         rating: r.rating,
         score: r.score,
-        meta: { sceneCount: r.sceneCount },
+        meta: { sceneCount: Number(r.sceneCount ?? 0) },
       })),
     };
   },

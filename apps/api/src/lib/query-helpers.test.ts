@@ -9,7 +9,7 @@ import {
   toArray,
 } from "./query-helpers.js";
 
-const { scenes } = schema;
+const { videoMovies } = schema;
 
 describe("toArray", () => {
   it("normalizes scalar, list, and empty values", () => {
@@ -34,18 +34,18 @@ describe("parsePagination", () => {
 
 describe("query helper condition builders", () => {
   it("builds rating and date conditions only for valid values", () => {
-    expect(buildRatingConditions(scenes.rating, "4", "5")).toHaveLength(2);
-    expect(buildRatingConditions(scenes.rating, "bogus", "99")).toHaveLength(0);
-    expect(buildDateConditions(scenes.date, "2026-01-01", "2026-12-31")).toHaveLength(2);
-    expect(buildDateConditions(scenes.date, "invalid", "also-invalid")).toHaveLength(0);
+    expect(buildRatingConditions(videoMovies.rating, "4", "5")).toHaveLength(2);
+    expect(buildRatingConditions(videoMovies.rating, "bogus", "99")).toHaveLength(0);
+    expect(buildDateConditions(videoMovies.releaseDate, "2026-01-01", "2026-12-31")).toHaveLength(2);
+    expect(buildDateConditions(videoMovies.releaseDate, "invalid", "also-invalid")).toHaveLength(0);
   });
 
   it("maps boolean and resolution filters", () => {
-    expect(buildBooleanCondition(scenes.organized, "true")).toBeTruthy();
-    expect(buildBooleanCondition(scenes.organized, "false")).toBeTruthy();
-    expect(buildBooleanCondition(scenes.organized, "maybe")).toBeUndefined();
+    expect(buildBooleanCondition(videoMovies.organized, "true")).toBeTruthy();
+    expect(buildBooleanCondition(videoMovies.organized, "false")).toBeTruthy();
+    expect(buildBooleanCondition(videoMovies.organized, "maybe")).toBeUndefined();
 
-    expect(buildResolutionConditions(scenes.height, ["1080p"])).toBeTruthy();
-    expect(buildResolutionConditions(scenes.height, ["unknown"])).toBeUndefined();
+    expect(buildResolutionConditions(videoMovies.height, ["1080p"])).toBeTruthy();
+    expect(buildResolutionConditions(videoMovies.height, ["unknown"])).toBeUndefined();
   });
 });
