@@ -33,6 +33,7 @@ export async function fetchVideos(params: {
   sceneFolderId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
+  seasonNumber?: string;
 }): Promise<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
@@ -54,6 +55,7 @@ export async function fetchVideos(params: {
       sceneFolderId: params.sceneFolderId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
+      seasonNumber: params.seasonNumber,
     },
     {
       resolution: params.resolution,

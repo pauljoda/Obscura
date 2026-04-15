@@ -542,6 +542,21 @@ export interface SceneFolderBreadcrumbDto {
   displayTitle: string;
 }
 
+/**
+ * Season summary projected onto the series detail response. Case A
+ * series (flat, episodes only in season 0) have exactly one entry.
+ * Case B series have numbered seasons (and optionally a Specials
+ * row with seasonNumber = 0).
+ */
+export interface VideoSeriesSeasonDto {
+  id: string;
+  seasonNumber: number;
+  title: string | null;
+  posterPath: string | null;
+  episodeCount: number;
+  previewThumbnailPath: string | null;
+}
+
 export interface SceneFolderDetailDto extends SceneFolderListItemDto {
   details: string | null;
   urls: string[];
@@ -557,6 +572,15 @@ export interface SceneFolderDetailDto extends SceneFolderListItemDto {
   tags: TagEmbedDto[];
   breadcrumbs: SceneFolderBreadcrumbDto[];
   children: SceneFolderListItemDto[];
+  /** Seasons under this series. Empty for movie-style folders. */
+  seasons: VideoSeriesSeasonDto[];
+  /**
+   * `"flat"` when the UI should render the series as a single
+   * uninterrupted episode list (Case A — only season 0 populated).
+   * `"seasons"` when the UI should render season headers with
+   * episodes nested under them (Case B — any numbered season).
+   */
+  renderingMode: "flat" | "seasons";
 }
 
 export interface SceneFolderPatchDto {

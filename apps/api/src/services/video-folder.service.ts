@@ -19,6 +19,7 @@ import { parsePagination } from "../lib/query-helpers";
 
 const {
   videoSeries,
+  videoSeasons,
   videoEpisodes,
   videoSeriesPerformers,
   videoSeriesTags,
@@ -27,6 +28,91 @@ const {
   performers,
   tags,
 } = schema;
+
+/**
+ * Season summary projected onto the folder detail response. The web
+ * folder view uses this to render the series → season → episode
+ * hierarchy (per spec §5.2). Case A series (flat, only season 0) will
+ * have exactly one row here with episodeCount = the total.
+ */
+export interface VideoSeriesSeasonSummary {
+  id: string;
+  seasonNumber: number;
+  title: string | null;
+  posterPath: string | null;
+  episodeCount: number;
+  /** First episode thumbnail to use as a preview if there's no poster. */
+  previewThumbnailPath: string | null;
+}
+
+async function fetchSeriesSeasons(
+  seriesId: string,
+  nsfwMode?: string,
+): Promise<VideoSeriesSeasonSummary[]> {
+  const seasons = await db
+    .select({
+      id: videoSeasons.id,
+      seasonNumber: videoSeasons.seasonNumber,
+      title: videoSeasons.title,
+      posterPath: videoSeasons.posterPath,
+    })
+    .from(videoSeasons)
+    .where(eq(videoSeasons.seriesId, seriesId))
+    .orderBy(asc(videoSeasons.seasonNumber));
+
+  if (seasons.length === 0) return [];
+
+  // Count episodes per season and grab a preview thumbnail, respecting
+  // the SFW filter. Two single-scan aggregates keep the query cost flat.
+  const countWhere =
+    nsfwMode === "off"
+      ? and(
+          eq(videoEpisodes.seriesId, seriesId),
+          eq(videoEpisodes.isNsfw, false),
+        )
+      : eq(videoEpisodes.seriesId, seriesId);
+  const countRows = await db
+    .select({
+      seasonId: videoEpisodes.seasonId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(videoEpisodes)
+    .where(countWhere)
+    .groupBy(videoEpisodes.seasonId);
+  const countBySeason = new Map(
+    countRows.map((r) => [r.seasonId, Number(r.count ?? 0)]),
+  );
+
+  const previewRows = await db
+    .select({
+      seasonId: videoEpisodes.seasonId,
+      cardThumbnailPath: videoEpisodes.cardThumbnailPath,
+      thumbnailPath: videoEpisodes.thumbnailPath,
+    })
+    .from(videoEpisodes)
+    .where(countWhere)
+    .orderBy(asc(videoEpisodes.seasonNumber), asc(videoEpisodes.episodeNumber));
+  const previewBySeason = new Map<string, string | null>();
+  for (const row of previewRows) {
+    if (!previewBySeason.has(row.seasonId)) {
+      previewBySeason.set(
+        row.seasonId,
+        row.cardThumbnailPath ?? row.thumbnailPath ?? null,
+      );
+    }
+  }
+
+  return seasons
+    .map((s) => ({
+      id: s.id,
+      seasonNumber: s.seasonNumber,
+      title: s.title,
+      posterPath: s.posterPath,
+      episodeCount: countBySeason.get(s.id) ?? 0,
+      previewThumbnailPath: previewBySeason.get(s.id) ?? null,
+    }))
+    .filter((s) => s.episodeCount > 0);
+}
 
 interface LibraryRootLabelRow {
   id: string;
@@ -257,12 +343,14 @@ export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
     throw new AppError(404, "Video folder not found");
   }
 
-  const [rootLabels, studioNames, episodeCounts, previews] = await Promise.all([
-    fetchLibraryRootLabels([series.libraryRootId]),
-    fetchStudioNames([series.studioId]),
-    fetchSeriesEpisodeCounts([series.id], nsfwMode),
-    fetchSeriesPreviewThumbnails(series.id, nsfwMode),
-  ]);
+  const [rootLabels, studioNames, episodeCounts, previews, seasons] =
+    await Promise.all([
+      fetchLibraryRootLabels([series.libraryRootId]),
+      fetchStudioNames([series.studioId]),
+      fetchSeriesEpisodeCounts([series.id], nsfwMode),
+      fetchSeriesPreviewThumbnails(series.id, nsfwMode),
+      fetchSeriesSeasons(series.id, nsfwMode),
+    ]);
 
   const studioEmbed = series.studioId
     ? {
@@ -308,6 +396,13 @@ export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
     previews,
   );
 
+  // Per spec §5.2: if the series has any numbered season (> 0), it
+  // renders as Case B (season headers); otherwise Case A (flat).
+  const hasNumberedSeason = seasons.some((s) => s.seasonNumber > 0);
+  const renderingMode: "flat" | "seasons" = hasNumberedSeason
+    ? "seasons"
+    : "flat";
+
   return {
     ...base,
     details: series.overview,
@@ -318,6 +413,8 @@ export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
     tags: filteredTags,
     breadcrumbs: [],
     children: [] as typeof base[],
+    seasons,
+    renderingMode,
   };
 }
 

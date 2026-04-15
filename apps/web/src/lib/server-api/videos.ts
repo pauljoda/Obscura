@@ -36,6 +36,7 @@ export async function fetchVideos(params: {
   sceneFolderId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
+  seasonNumber?: string;
   // Accepted for spread-compatibility with videosListPrefsToFetchParams.
   // The /videos backend does not yet filter on these; they are ignored.
   tag?: string[];
@@ -64,6 +65,7 @@ export async function fetchVideos(params: {
       sceneFolderId: params.sceneFolderId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
+      seasonNumber: params.seasonNumber,
     },
     {
       resolution: params.resolution,

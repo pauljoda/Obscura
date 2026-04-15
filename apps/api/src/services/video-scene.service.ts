@@ -98,6 +98,13 @@ export interface ListVideosQuery {
   sceneFolderId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: string;
+  /**
+   * Restrict episodes to a specific season under the parent series
+   * passed in `sceneFolderId`. Only meaningful when `sceneFolderId`
+   * is set. Values are numeric strings; "0" picks season 0 (Specials
+   * or the single flat season for Case A series).
+   */
+  seasonNumber?: string;
 }
 
 export interface UpdateVideoBody {
@@ -352,6 +359,14 @@ export async function listVideoScenes(query: ListVideosQuery) {
 
     if (query.sceneFolderId) {
       conds.push(eq(videoEpisodes.seriesId, query.sceneFolderId));
+
+      // Optional season filter — only applied when a series is scoped.
+      if (query.seasonNumber != null && query.seasonNumber !== "") {
+        const n = Number(query.seasonNumber);
+        if (Number.isInteger(n) && n >= 0) {
+          conds.push(eq(videoEpisodes.seasonNumber, n));
+        }
+      }
     }
 
     // Codec filter (case-insensitive substring against stored codec name).

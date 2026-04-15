@@ -166,6 +166,14 @@ export function VideosPageClient({
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
   const [rootFolders, setRootFolders] = useState(initialRootFolders);
   const [activeFolder, setActiveFolder] = useState<SceneFolderDetail | null>(initialActiveFolder);
+  /**
+   * When browsing a Case B series (seasons), the user can drill into a
+   * specific season. `null` means "show the season grid" (no episodes
+   * loaded); a number means "show episodes from that season only".
+   * Case A series (single flat season) skip this entirely — the page
+   * loads episodes directly.
+   */
+  const [activeSeasonNumber, setActiveSeasonNumber] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
@@ -207,6 +215,7 @@ export function VideosPageClient({
   useEffect(() => {
     setRootFolders(initialRootFolders);
     setActiveFolder(initialActiveFolder);
+    setActiveSeasonNumber(null);
   }, [initialRootFolders, initialActiveFolder]);
 
   useEffect(() => {
@@ -291,7 +300,22 @@ export function VideosPageClient({
     });
   }, [activeFilters, filterStudios]);
 
+  // Should we hold off on fetching episodes and instead show the
+  // season grid? True only for Case B series (seasons rendering mode)
+  // when the user hasn't drilled into a specific season yet.
+  const showSeasonGrid =
+    viewMode === "folders" &&
+    activeFolder?.renderingMode === "seasons" &&
+    activeSeasonNumber === null &&
+    !hasFolderScopedSceneQuery;
+
   const loadScenes = useCallback(async () => {
+    if (showSeasonGrid) {
+      setScenes([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -304,6 +328,10 @@ export function VideosPageClient({
               folderScope:
                 activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
               uncategorized: !activeFolder?.id,
+              seasonNumber:
+                activeFolder?.id && activeSeasonNumber !== null
+                  ? String(activeSeasonNumber)
+                  : undefined,
             }
           : {
               ...buildParams(),
@@ -318,7 +346,14 @@ export function VideosPageClient({
     } finally {
       setLoading(false);
     }
-  }, [activeFolder?.id, buildParams, hasFolderScopedSceneQuery, viewMode]);
+  }, [
+    activeFolder?.id,
+    activeSeasonNumber,
+    buildParams,
+    hasFolderScopedSceneQuery,
+    showSeasonGrid,
+    viewMode,
+  ]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || scenes.length >= total) return;
@@ -335,6 +370,10 @@ export function VideosPageClient({
               folderScope:
                 activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
               uncategorized: !activeFolder?.id,
+              seasonNumber:
+                activeFolder?.id && activeSeasonNumber !== null
+                  ? String(activeSeasonNumber)
+                  : undefined,
             }
           : {
               ...buildParams(),
@@ -1141,18 +1180,95 @@ export function VideosPageClient({
               </HierarchySection>
             )}
 
-            {/* ── Scenes ───────────────────────────────────────── */}
-            <HierarchySection title={sceneSectionTitle}>
-              <VideoGrid
-                scenes={scenes}
-                viewMode="grid"
-                loading={loading}
-                hasMore={scenes.length < total}
-                loadingMore={loadingMore}
-                onLoadMore={loadMore}
-                from={currentPath}
-              />
-            </HierarchySection>
+            {/* ── Seasons (Case B) ─────────────────────────────── */}
+            {activeFolder.renderingMode === "seasons" &&
+              activeFolder.seasons.length > 0 &&
+              activeSeasonNumber === null && (
+                <HierarchySection title="Seasons">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    {activeFolder.seasons.map((season) => {
+                      const label =
+                        season.seasonNumber === 0
+                          ? "Specials"
+                          : `Season ${season.seasonNumber}`;
+                      return (
+                        <button
+                          key={season.id}
+                          type="button"
+                          onClick={() =>
+                            setActiveSeasonNumber(season.seasonNumber)
+                          }
+                          className="group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent"
+                        >
+                          <div className="relative aspect-[2/3] bg-surface-2">
+                            {season.posterPath || season.previewThumbnailPath ? (
+                              <img
+                                src={
+                                  toApiUrl(
+                                    season.posterPath ??
+                                      season.previewThumbnailPath,
+                                  ) ?? undefined
+                                }
+                                alt={label}
+                                className="absolute inset-0 h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-text-disabled">
+                                <FolderOpen className="h-8 w-8" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-1 px-2.5 py-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="truncate text-[0.82rem] font-medium text-text-primary">
+                                {label}
+                              </h3>
+                            </div>
+                            <div className="text-[0.68rem] text-text-muted">
+                              {formatVideoCount(season.episodeCount)}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </HierarchySection>
+              )}
+
+            {/* ── Videos ────────────────────────────────────────── */}
+            {!showSeasonGrid && (
+              <HierarchySection
+                title={
+                  activeSeasonNumber !== null
+                    ? activeSeasonNumber === 0
+                      ? "Specials"
+                      : `Season ${activeSeasonNumber}`
+                    : sceneSectionTitle
+                }
+                action={
+                  activeSeasonNumber !== null ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSeasonNumber(null)}
+                      className="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
+                    >
+                      ← All seasons
+                    </button>
+                  ) : null
+                }
+              >
+                <VideoGrid
+                  scenes={scenes}
+                  viewMode="grid"
+                  loading={loading}
+                  hasMore={scenes.length < total}
+                  loadingMore={loadingMore}
+                  onLoadMore={loadMore}
+                  from={currentPath}
+                />
+              </HierarchySection>
+            )}
           </div>
         ) : (
           <HierarchyShell
