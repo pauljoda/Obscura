@@ -91,7 +91,7 @@ export function DiagnosticsSection() {
             <p className="text-[0.68rem] text-text-muted">
               Queue a Stash-compatible pHash generation job for every {entityTerms.scene.toLowerCase()} that has a
               known duration but no stored phash. Required before you can contribute those hashes to StashDB /
-              ThePornDB from the Identify → pHashes tab. CPU-heavy (25 ffmpeg frame extractions per scene).
+              ThePornDB from the Identify → pHashes tab. CPU-heavy (25 ffmpeg frame extractions per {entityTerms.scene.toLowerCase()}).
             </p>
           </div>
           <div className="flex items-center gap-3">

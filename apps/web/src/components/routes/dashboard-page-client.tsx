@@ -14,7 +14,7 @@ import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
 import { ImageEntityCard } from "../images/image-entity-card";
 import { imageItemToCardData } from "../images/image-card-data";
-import { SceneFolderCard } from "../scene-folders/scene-folder-card";
+import { SeriesCard } from "../series/series-card";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { performerItemToCardData } from "../performers/performer-card-data";
 import { StudioEntityCard } from "../studios/studio-entity-card";
@@ -353,7 +353,7 @@ export function DashboardPageClient({
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
               {sceneFolders.map((folder) => (
                 <div key={folder.id} className="flex-none w-64 md:w-72 snap-start">
-                  <SceneFolderCard folder={folder} href={`/videos?folder=${folder.id}`} />
+                  <SeriesCard folder={folder} href={`/videos?folder=${folder.id}`} />
                 </div>
               ))}
             </div>

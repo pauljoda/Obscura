@@ -64,7 +64,7 @@ import { StarRatingPicker } from "../shared/star-rating-picker";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
 import { SCENE_CARD_GRADIENTS } from "../scenes/scene-card-gradients";
 import { useNsfw } from "../nsfw/nsfw-context";
-import { useTerms } from "../../lib/terminology";
+import { formatVideoCount, useTerms } from "../../lib/terminology";
 import { cn } from "@obscura/ui/lib/utils";
 import { DASHBOARD_STAT_GRADIENTS } from "../dashboard/dashboard-utils";
 import { useSelection } from "../../hooks/use-selection";
@@ -84,7 +84,7 @@ import {
   loadPresets,
   savePresets,
 } from "../../lib/filter-presets";
-import { SceneFolderCard } from "../scene-folders/scene-folder-card";
+import { SeriesCard } from "../series/series-card";
 import { HierarchyBreadcrumbs } from "../shared/hierarchy-breadcrumbs";
 import { HierarchySection } from "../shared/hierarchy-section";
 import { HierarchyShell } from "../shared/hierarchy-shell";
@@ -1068,11 +1068,11 @@ export function ScenesPageClient({
                           <StarRatingPicker value={activeFolder.rating} readOnly />
                         )}
                         <span className="text-white/40">
-                          {activeFolder.totalSceneCount} scene{activeFolder.totalSceneCount !== 1 ? "s" : ""}
+                          {formatVideoCount(activeFolder.totalSceneCount)}
                         </span>
                         {activeFolder.childFolderCount > 0 && (
                           <span className="text-white/40">
-                            {activeFolder.childFolderCount} subfolder{activeFolder.childFolderCount !== 1 ? "s" : ""}
+                            {activeFolder.childFolderCount} child {activeFolder.childFolderCount !== 1 ? terms.sceneFolders.toLowerCase() : terms.sceneFolder.toLowerCase()}
                           </span>
                         )}
                         {activeFolder.isNsfw && <NsfwChip />}
@@ -1130,7 +1130,7 @@ export function ScenesPageClient({
               <HierarchySection title={`Child ${terms.sceneFolders.toLowerCase()}`}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {folderCards.map((folder) => (
-                    <SceneFolderCard
+                    <SeriesCard
                       key={folder.id}
                       folder={folder}
                       href={`/videos?folder=${folder.id}`}
@@ -1173,7 +1173,7 @@ export function ScenesPageClient({
               <HierarchySection title={folderSectionTitle}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {folderCards.map((folder) => (
-                    <SceneFolderCard
+                    <SeriesCard
                       key={folder.id}
                       folder={folder}
                       href={`/videos?folder=${folder.id}`}

@@ -7,14 +7,15 @@ import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../../lib/api";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
 import { NsfwShowModeChip } from "../nsfw/nsfw-gate";
+import { entityTerms, formatVideoCount } from "../../lib/terminology";
 
-interface SceneFolderCardProps {
+interface SeriesCardProps {
   folder: SceneFolderListItemDto;
   href: string;
   compact?: boolean;
 }
 
-export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps) {
+export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
   return (
     <Link
       href={href}
@@ -47,14 +48,13 @@ export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps)
           </h3>
         </div>
         <div className={cn("flex items-center gap-2 text-text-muted", compact ? "text-[0.62rem]" : "text-[0.68rem]")}>
-          <span>
-            {folder.visibleSfwSceneCount} scene
-            {folder.visibleSfwSceneCount === 1 ? "" : "s"}
-          </span>
+          <span>{formatVideoCount(folder.visibleSfwSceneCount)}</span>
           {folder.childFolderCount > 0 ? (
             <span>
-              {folder.childFolderCount} subfolder
-              {folder.childFolderCount === 1 ? "" : "s"}
+              {folder.childFolderCount} child{" "}
+              {folder.childFolderCount === 1
+                ? entityTerms.sceneFolder.toLowerCase()
+                : entityTerms.sceneFolders.toLowerCase()}
             </span>
           ) : null}
         </div>
@@ -66,7 +66,7 @@ export function SceneFolderCard({ folder, href, compact }: SceneFolderCardProps)
         ) : null}
         {!compact && folder.containsNsfwDescendants && !folder.isNsfw ? (
           <div className="text-[0.65rem] text-text-disabled">
-            Mixed-content folder
+            Mixed-content {entityTerms.sceneFolder.toLowerCase()}
           </div>
         ) : null}
       </div>

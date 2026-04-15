@@ -379,7 +379,7 @@ export function CollectionDetailClient({
             This collection is empty.{" "}
             {collection.mode !== "manual"
               ? "Try refreshing the dynamic rules."
-              : "Add items from scene, gallery, image, or audio pages."}
+              : "Add items from video, gallery, image, or audio pages."}
           </p>
         </div>
       ) : viewMode === "mixed" ? (

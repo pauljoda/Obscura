@@ -762,7 +762,7 @@ export function SettingsPageClient({
               Playback
             </h2>
             <p className="text-[0.68rem] text-text-muted">
-              Defaults applied to the video player when a scene loads
+              Defaults applied to the video player when a video loads
             </p>
           </div>
         </div>
@@ -945,7 +945,7 @@ export function SettingsPageClient({
           />
           <ToggleCard
             label="Perceptual hash (pHash)"
-            description="Stash-compatible video phash via the bundled helper. CPU-heavy (25 ffmpeg frame extractions per scene) but required to contribute fingerprints back to StashDB / ThePornDB."
+            description="Stash-compatible video phash via the bundled helper. CPU-heavy (25 ffmpeg frame extractions per video) but required to contribute fingerprints back to StashDB / ThePornDB."
             checked={settings.generatePhash}
             onChange={(checked) => {
               setSettings((current) => ({ ...current, generatePhash: checked }));
@@ -1076,7 +1076,7 @@ export function SettingsPageClient({
           />
           <div className="relative surface-elevated border border-border-subtle w-full max-w-md mx-4 p-6 space-y-4">
             <h3 className="text-base font-heading font-semibold text-text-primary">
-              Relocate existing scene assets?
+              Relocate existing video assets?
             </h3>
             <p className="text-[0.78rem] text-text-muted leading-relaxed">
               You changed where new thumbnails, preview clips, sprites, and trickplay files are stored. Move

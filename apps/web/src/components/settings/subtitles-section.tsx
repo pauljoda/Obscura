@@ -61,7 +61,7 @@ export function SubtitlesSection({
             Subtitles
           </h2>
           <p className="text-[0.68rem] text-text-muted">
-            Defaults applied to the video player when a scene has subtitle tracks
+            Defaults applied to the video player when a video has subtitle tracks
           </p>
         </div>
       </div>
@@ -69,7 +69,7 @@ export function SubtitlesSection({
       <div className="grid gap-2 md:grid-cols-2">
         <ToggleCard
           label="Auto-enable on load"
-          description="Turn on subtitles automatically when a scene has a track matching your preferred languages."
+          description="Turn on subtitles automatically when a video has a track matching your preferred languages."
           checked={settings.subtitlesAutoEnable ?? false}
           onChange={onToggleAutoEnable}
         />

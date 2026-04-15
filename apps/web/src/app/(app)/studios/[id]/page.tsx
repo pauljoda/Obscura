@@ -42,7 +42,7 @@ import {
 } from "../../../../lib/api";
 import { GalleryGrid } from "../../../../components/gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
-import { SceneFolderCard } from "../../../../components/scene-folders/scene-folder-card";
+import { SeriesCard } from "../../../../components/series/series-card";
 import { use, useEffect } from "react";
 import { useTerms, formatVideoCount } from "../../../../lib/terminology";
 import { BackLink } from "../../../../components/shared/back-link";
@@ -326,7 +326,7 @@ export default function StudioPage({ params }: StudioPageProps) {
           <h4 className="text-kicker mb-3">Folders</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
             {folders.map((f) => (
-              <SceneFolderCard
+              <SeriesCard
                 key={f.id}
                 folder={f}
                 href={`/videos?folder=${f.id}`}

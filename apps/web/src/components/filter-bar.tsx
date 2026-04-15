@@ -142,7 +142,7 @@ export function FilterBar({
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
           <input
             type="text"
-            placeholder="Search scenes..."
+            placeholder="Search videos..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className={cn(
@@ -161,7 +161,7 @@ export function FilterBar({
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled pointer-events-none" />
             <input
               type="text"
-              placeholder="Search scenes..."
+              placeholder="Search videos..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className={cn(

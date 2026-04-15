@@ -390,7 +390,7 @@ export function BulkScrape() {
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
         {([
           { key: "scenes" as Tab, label: entityTerms.scenes, icon: Film, count: sceneRows.length },
-          { key: "video-folders" as Tab, label: "Folders", icon: FolderOpen, count: folderRows.length },
+          { key: "video-folders" as Tab, label: entityTerms.sceneFolders, icon: FolderOpen, count: folderRows.length },
           { key: "galleries" as Tab, label: "Galleries", icon: Images, count: galleryRows.length },
           { key: "images" as Tab, label: "Images", icon: Image, count: imageRows.length },
           { key: "audio-libraries" as Tab, label: "Albums", icon: Library, count: audioLibraryRows.length },

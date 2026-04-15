@@ -317,7 +317,7 @@ export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosP
           <div className="surface-well mt-px p-3">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <div className="text-kicker mb-2">Min scene count</div>
+                <div className="text-kicker mb-2">Min video count</div>
                 <div className="flex flex-wrap gap-1">
                   {[
                     { n: 0, label: "Any" },

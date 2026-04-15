@@ -479,7 +479,7 @@ function PhashRow({ item, endpoints, submitting, onSubmit, onRemoveStashId, onAd
             <input
               value={newStashId}
               onChange={(e) => setNewStashId(e.target.value)}
-              placeholder="remote scene UUID"
+              placeholder="remote video UUID"
               className="control-input py-0.5 text-xs w-56"
             />
             <button

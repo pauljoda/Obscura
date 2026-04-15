@@ -561,7 +561,7 @@ export function ResolveWorkflow() {
             <div className="surface-well flex flex-col items-center justify-center py-20">
               <ScanSearch className="h-12 w-12 text-text-disabled mb-3" />
               <p className="text-text-muted text-sm">
-                Select a scene from the queue to begin.
+                Select a video from the queue to begin.
               </p>
             </div>
           )}

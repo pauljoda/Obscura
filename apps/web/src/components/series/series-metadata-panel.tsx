@@ -28,7 +28,7 @@ import { useNsfw } from "../nsfw/nsfw-context";
 import { ChipInput } from "../shared/chip-input";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 
-interface SceneFolderMetadataPanelProps {
+interface SeriesMetadataPanelProps {
   folder: SceneFolderDetailDto;
   coverBusy?: boolean;
   backdropBusy?: boolean;
@@ -48,7 +48,7 @@ interface SceneFolderMetadataPanelProps {
   onDeleteBackdrop: () => void;
 }
 
-export function SceneFolderMetadataPanel({
+export function SeriesMetadataPanel({
   folder,
   coverBusy = false,
   backdropBusy = false,
@@ -57,7 +57,7 @@ export function SceneFolderMetadataPanel({
   onDeleteCover,
   onUploadBackdrop,
   onDeleteBackdrop,
-}: SceneFolderMetadataPanelProps) {
+}: SeriesMetadataPanelProps) {
   const { mode: nsfwMode } = useNsfw();
   const coverUrl = toApiUrl(folder.coverImagePath, folder.updatedAt);
   const backdropUrl = toApiUrl(folder.backdropImagePath, folder.updatedAt);

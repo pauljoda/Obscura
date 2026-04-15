@@ -628,7 +628,7 @@ export function PerformersPageClient({
                 </select>
               </div>
               <div>
-                <div className="mb-1 text-kicker">Min scene count</div>
+                <div className="mb-1 text-kicker">Min video count</div>
                 <div className="flex flex-wrap gap-1">
                   {[1, 3, 5, 10, 25].map((n) => (
                     <button
