@@ -1158,6 +1158,10 @@ export async function getVideoSceneDetail(id: string) {
 
   return {
     id: row.id,
+    entityKind:
+      row.kind === "episode"
+        ? ("video_episode" as const)
+        : ("video_movie" as const),
     title: row.title,
     details: row.details,
     date: row.date,
@@ -1555,28 +1559,64 @@ export async function updateVideoScene(id: string, body: UpdateVideoBody) {
   return { ok: true as const, id };
 }
 
-export async function deleteVideoScene(id: string, _deleteFile?: boolean) {
+export async function deleteVideoScene(id: string, deleteFile?: boolean) {
+  // Look up the row first so we know where the source file and
+  // the derivative cache files live. We keep a local copy of the
+  // file path because the DELETE below removes the row and we
+  // still need the path to unlink derivatives (and optionally the
+  // source).
   const [ep] = await db
-    .select({ id: videoEpisodes.id })
+    .select({
+      id: videoEpisodes.id,
+      filePath: videoEpisodes.filePath,
+    })
     .from(videoEpisodes)
     .where(eq(videoEpisodes.id, id))
     .limit(1);
+
+  let filePath: string | null = null;
   if (ep) {
+    filePath = ep.filePath;
     await db.delete(videoEpisodes).where(eq(videoEpisodes.id, id));
-    return { ok: true as const };
+  } else {
+    const [mv] = await db
+      .select({
+        id: videoMovies.id,
+        filePath: videoMovies.filePath,
+      })
+      .from(videoMovies)
+      .where(eq(videoMovies.id, id))
+      .limit(1);
+    if (!mv) throw new AppError(404, "Video not found");
+    filePath = mv.filePath;
+    await db.delete(videoMovies).where(eq(videoMovies.id, id));
   }
-  const [mv] = await db
-    .select({ id: videoMovies.id })
-    .from(videoMovies)
-    .where(eq(videoMovies.id, id))
-    .limit(1);
-  if (!mv) throw new AppError(404, "Video not found");
-  await db.delete(videoMovies).where(eq(videoMovies.id, id));
+
+  // Best-effort: unlink every derivative the scan/preview pipeline
+  // could have produced. We hold the row before deletion above so
+  // the id/path combination is stable, but the unlink is
+  // idempotent so a missing file is fine.
+  if (filePath) {
+    for (const derivative of allSceneVideoGeneratedDiskPaths(id, filePath)) {
+      try {
+        if (existsSync(derivative)) await unlink(derivative);
+      } catch {
+        // Swallow — cache files are best-effort cleanup.
+      }
+    }
+
+    if (deleteFile) {
+      try {
+        if (existsSync(filePath)) await unlink(filePath);
+      } catch {
+        // A failed source unlink is not fatal; the DB row is
+        // already gone and the file manager will surface the stale
+        // file on the next scan.
+      }
+    }
+  }
+
   return { ok: true as const };
-  // TODO: the legacy scene.service.ts also unlinks on-disk generated
-  // assets and optionally the source file here. For the v1 /videos
-  // route we only remove the database row; file deletion will land
-  // alongside the unified-delete worker.
 }
 
 // ─── Shared video-entity helpers ──────────────────────────────

@@ -10,6 +10,7 @@ import {
 import { VideoEdit } from "./video-edit";
 import { VideoTranscriptPanel } from "./video-transcript-panel";
 import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
+import { IdentifyButton } from "./identify/identify-button";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Star,
@@ -667,6 +668,20 @@ export function VideoDetail({
             >
               <CheckCircle2 className="h-4 w-4" />
             </button>
+
+            {/* Identify (plugin-driven cascade/movie/episode review) */}
+            {scene.entityKind && (
+              <IdentifyButton
+                entityKind={scene.entityKind}
+                entityId={scene.id}
+                title={scene.title}
+                label={
+                  scene.entityKind === "video_movie"
+                    ? "Identify"
+                    : "Re-identify"
+                }
+              />
+            )}
 
             {/* More Actions flyout */}
             <div className="relative">

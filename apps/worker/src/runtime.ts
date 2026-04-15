@@ -60,9 +60,18 @@ const processorByQueue: Record<QueueName, (job: JobLike) => Promise<void>> = {
   "library-maintenance": processLibraryMaintenance,
   "extract-subtitles": processExtractSubtitles,
   "collection-refresh": processCollectionRefresh,
-  "plugin-batch-identify": async (_job) => {
-    // TODO: Implement batch identification via Obscura plugins
-    // This will be wired when the plugin execution pipeline is complete.
+  "plugin-batch-identify": async (job) => {
+    // Bulk identify runs from the web UI today (see
+    // `/identify` → `bulk-scrape.tsx`), which calls
+    // `executePlugin` inline rather than enqueueing a job. This
+    // queue is kept registered so the dispatcher doesn't reject
+    // any stray rows that land in it from older deployments — we
+    // log a warning and mark the job complete so the queue drains.
+    const data = (job as { data?: unknown })?.data;
+    console.warn(
+      "[plugin-batch-identify] dropped unexpected job; bulk identify runs inline from the web UI now",
+      data ?? null,
+    );
   },
 };
 

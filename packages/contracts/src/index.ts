@@ -1421,6 +1421,14 @@ export interface SceneDetailDto extends SceneListItemDto {
   url: string | null;
   urls: string[];
   episodeNumber: number | null;
+  /**
+   * Discriminator so the UI can tell whether a given row is backed
+   * by `video_episodes` or `video_movies` without a second round-trip.
+   * Drives behavior like the Identify button on the detail page (which
+   * calls into the matching `/video/{movies|episodes}/:id/accept-scrape`
+   * endpoint).
+   */
+  entityKind: "video_episode" | "video_movie";
   studio: { id: string; name: string; url: string | null } | null;
   markers: SceneMarkerDto[];
   subtitleTracks: SceneSubtitleTrackDto[];

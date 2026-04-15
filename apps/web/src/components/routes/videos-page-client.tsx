@@ -87,6 +87,7 @@ import {
 import { SeriesCard } from "../series/series-card";
 import { HierarchyBreadcrumbs } from "../shared/hierarchy-breadcrumbs";
 import { HierarchySection } from "../shared/hierarchy-section";
+import { IdentifyButton } from "../identify/identify-button";
 import { HierarchyShell } from "../shared/hierarchy-shell";
 import { useCurrentPath } from "../../hooks/use-current-path";
 
@@ -1115,6 +1116,16 @@ export function VideosPageClient({
                           </span>
                         )}
                         {activeFolder.isNsfw && <NsfwChip />}
+                      </div>
+
+                      {/* Identify (plugin-driven cascade review) */}
+                      <div className="mt-3">
+                        <IdentifyButton
+                          entityKind="video_series"
+                          entityId={activeFolder.id}
+                          title={activeFolder.displayTitle}
+                          label="Identify Series"
+                        />
                       </div>
 
                       {/* Description */}
