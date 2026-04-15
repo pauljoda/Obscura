@@ -698,15 +698,15 @@ export function ScenesPageClient({
   }, [activeFolder]);
 
   const folderSectionTitle = activeFolder
-    ? "Child folders"
+    ? `Child ${terms.sceneFolders.toLowerCase()}`
     : folderSearch
-      ? "Matching folders"
-      : "Folders";
+      ? `Matching ${terms.sceneFolders.toLowerCase()}`
+      : terms.sceneFolders;
   const sceneSectionTitle = activeFolder
     ? hasFolderScopedSceneQuery
-      ? "Matching scenes in this folder tree"
-      : "Scenes in this folder"
-    : "Uncategorized scenes";
+      ? `Matching ${terms.scenes.toLowerCase()} in this ${terms.sceneFolder.toLowerCase()}`
+      : `${terms.scenes} in this ${terms.sceneFolder.toLowerCase()}`
+    : terms.uncategorizedScenes;
 
   const uploadTarget = activeFolder
     ? { kind: "scene" as const, sceneFolderId: activeFolder.id }
@@ -1125,9 +1125,9 @@ export function ScenesPageClient({
               <FolderCastStrip performers={activeFolder.performers} />
             )}
 
-            {/* ── Subfolders ───────────────────────────────────── */}
+            {/* ── Child series ──────────────────────────────────── */}
             {folderCards.length > 0 && (
-              <HierarchySection title="Subfolders">
+              <HierarchySection title={`Child ${terms.sceneFolders.toLowerCase()}`}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {folderCards.map((folder) => (
                     <SceneFolderCard
@@ -1158,9 +1158,13 @@ export function ScenesPageClient({
           <HierarchyShell
             title={
               <div>
-                <h2 className="text-2xl font-semibold text-text-primary">Scene folders</h2>
+                <h2 className="text-2xl font-semibold text-text-primary">
+                  {terms.sceneFolders}
+                </h2>
                 <p className="mt-1 text-[0.78rem] text-text-muted">
-                  Browse folders from disk, then drill down into scenes.
+                  Browse {terms.sceneFolders.toLowerCase()} and{" "}
+                  {terms.uncategorizedScenes.toLowerCase()} from disk, then
+                  drill down into individual {terms.scenes.toLowerCase()}.
                 </p>
               </div>
             }

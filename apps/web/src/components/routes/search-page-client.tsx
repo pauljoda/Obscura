@@ -280,7 +280,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
       {!hasQuery && (
         <div className="flex flex-col items-center justify-center py-20 text-text-disabled">
           <Search className="h-8 w-8 mb-3 opacity-30" />
-          <div className="text-sm">Enter a search term to find scenes, performers, studios, and more</div>
+          <div className="text-sm">Enter a search term to find videos, performers, studios, and more</div>
         </div>
       )}
 

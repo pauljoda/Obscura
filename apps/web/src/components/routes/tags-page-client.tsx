@@ -425,7 +425,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
         <div className="surface-well mt-px p-3">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <div className="text-kicker mb-2">Min usage (scenes + images)</div>
+              <div className="text-kicker mb-2">Min usage (videos + images)</div>
               <div className="flex flex-wrap gap-1">
                 {[
                   { n: 0, label: "Any" },

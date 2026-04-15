@@ -22,13 +22,13 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
   {
     id: "maintenance",
     title: "Library maintenance",
-    description: "One-off tasks such as relocating generated scene files.",
+    description: "One-off tasks such as relocating generated video files.",
     queueNames: ["library-maintenance"],
   },
   {
     id: "scene-media",
-    title: "Scene media pipeline",
-    description: "Technical metadata, fingerprints, and previews for video scenes.",
+    title: "Video media pipeline",
+    description: "Technical metadata, fingerprints, and previews for videos.",
     queueNames: ["media-probe", "fingerprint", "preview"],
   },
   {

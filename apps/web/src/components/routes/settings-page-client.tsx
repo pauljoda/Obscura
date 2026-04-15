@@ -972,7 +972,7 @@ export function SettingsPageClient({
           />
           <ToggleCard
             label="Store video previews in dedicated cache directory"
-            description="When on, thumbnails, preview clips, sprites, and trickplay data live under the app data volume (OBSCURA_CACHE_DIR, e.g. /data/cache). When off, those files are written next to each video. Scene .nfo files always stay beside the media file."
+            description="When on, thumbnails, preview clips, sprites, and trickplay data live under the app data volume (OBSCURA_CACHE_DIR, e.g. /data/cache). When off, those files are written next to each video. Video .nfo files always stay beside the media file."
             checked={settings.metadataStorageDedicated}
             onChange={handleMetadataStorageToggle}
           />

@@ -343,12 +343,12 @@ export function DashboardPageClient({
           </section>
         )}
 
-        {/* Scene Folders Row */}
+        {/* Series row (video_series) */}
         {sceneFolders.length > 0 && (
           <section>
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <FolderOpen className="w-5 h-5 text-accent-500" />
-              Recent Folders
+              Recent Series
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
               {sceneFolders.map((folder) => (

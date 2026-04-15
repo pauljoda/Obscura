@@ -262,6 +262,8 @@ export function FilterBar({
         {/* View mode */}
         <div className="flex items-center border border-border-subtle overflow-hidden">
           <button
+            title="Grid view"
+            aria-label="Grid view"
             onClick={() => onViewModeChange("grid")}
             className={cn(
               "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
@@ -273,6 +275,8 @@ export function FilterBar({
             <LayoutGrid className="h-3.5 w-3.5" />
           </button>
           <button
+            title="List view"
+            aria-label="List view"
             onClick={() => onViewModeChange("list")}
             className={cn(
               "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
@@ -284,6 +288,8 @@ export function FilterBar({
             <LayoutList className="h-3.5 w-3.5" />
           </button>
           <button
+            title="Series view"
+            aria-label="Series view"
             onClick={() => onViewModeChange("folders")}
             className={cn(
               "flex h-7 w-7 items-center justify-center transition-colors duration-fast",

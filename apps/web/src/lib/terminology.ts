@@ -5,6 +5,11 @@
 export const entityTerms = {
   scenes: "Videos",
   scene: "Video",
+  /** Containers of videos. In the new model, these are series rows. */
+  sceneFolders: "Series",
+  sceneFolder: "Series",
+  /** Videos that live outside a series (the video_movies rows). */
+  uncategorizedScenes: "Movies",
   performers: "Actors",
   performer: "Actor",
   studios: "Studios",

@@ -60,7 +60,7 @@ const modeLabels = {
 };
 
 const typeLabels: Record<CollectionEntityType, string> = {
-  scene: "Scenes",
+  scene: "Videos",
   gallery: "Galleries",
   image: "Images",
   "audio-track": "Audio",

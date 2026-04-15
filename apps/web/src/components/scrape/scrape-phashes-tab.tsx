@@ -270,7 +270,7 @@ export function ScrapePhashesTab() {
         <div className="text-xs text-text-muted flex items-center gap-2">
           <Fingerprint className="h-3.5 w-3.5 text-text-accent" />
           <span>
-            {total} {total === 1 ? "scene" : "scenes"} linked to StashBox endpoints
+            {total} {total === 1 ? "video" : "videos"} linked to StashBox endpoints
           </span>
         </div>
 
@@ -332,7 +332,7 @@ export function ScrapePhashesTab() {
       {items.length === 0 && !loading && (
         <div className="surface-card no-lift p-12 text-center">
           <Fingerprint className="h-10 w-10 text-text-disabled mx-auto mb-3" />
-          <p className="text-text-muted text-sm">No scenes linked to StashBox endpoints yet.</p>
+          <p className="text-text-muted text-sm">No videos linked to StashBox endpoints yet.</p>
           <p className="text-text-disabled text-xs mt-1">
             Run Identify and accept a match to link scenes, then return here to contribute their fingerprints.
           </p>

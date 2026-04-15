@@ -19,7 +19,7 @@ function RecentJobRow({ job, nsfwMode }: { job: JobRun; nsfwMode: string }) {
 
   const targetLabel =
     nsfwMode === "off" && job.queueName === "library-maintenance"
-      ? "Relocate scene generated files"
+      ? "Relocate video generated files"
       : job.targetLabel;
 
   return (

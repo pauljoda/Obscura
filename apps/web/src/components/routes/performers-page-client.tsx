@@ -417,7 +417,7 @@ export function PerformersPageClient({
               ) : null}
               {minSceneCount != null ? (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
-                  <span className="text-accent-400/70">Scenes:</span>
+                  <span className="text-accent-400/70">Videos:</span>
                   <span className="text-accent-200">{minSceneCount}+</span>
                   <button
                     type="button"
