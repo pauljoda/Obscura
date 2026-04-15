@@ -42,12 +42,10 @@ export async function processAudioScan(job: Job) {
   });
 
   const settings = await ensureLibrarySettingsRow();
-  const useLibraryRootAsFolder = settings.useLibraryRootAsFolder;
   const discovery = await discoverAudioFilesAndDirs(root.path, root.recursive);
   const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
     discovery.dirs,
     root.path,
-    useLibraryRootAsFolder,
   );
   const discoveredDirSet = new Set(sortedDirs);
   const includeRootInParentMap = discoveredDirSet.has(root.path);
@@ -112,7 +110,6 @@ export async function processAudioScan(job: Job) {
             dirPath,
             root.path,
             root.label,
-            useLibraryRootAsFolder,
           ),
           updatedAt: new Date(),
         })
@@ -132,7 +129,6 @@ export async function processAudioScan(job: Job) {
             dirPath,
             root.path,
             root.label,
-            useLibraryRootAsFolder,
           ),
           folderPath: dirPath,
           parentId,

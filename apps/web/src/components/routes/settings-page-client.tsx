@@ -83,7 +83,6 @@ function normalizeSettings(s: LibrarySettings): LibrarySettings {
     thumbnailQuality: s.thumbnailQuality ?? 2,
     trickplayQuality: s.trickplayQuality ?? 2,
     backgroundWorkerConcurrency: s.backgroundWorkerConcurrency ?? 1,
-    useLibraryRootAsFolder: s.useLibraryRootAsFolder ?? false,
     metadataStorageDedicated: s.metadataStorageDedicated ?? true,
     subtitlesAutoEnable: s.subtitlesAutoEnable ?? false,
     subtitlesPreferredLanguages:
@@ -912,18 +911,6 @@ export function SettingsPageClient({
               void autoSaveSetting({ scanIntervalMinutes: val });
             }}
           />
-
-          <div className="md:col-span-2">
-            <ToggleCard
-              label="Library name as top folder"
-              description="When enabled, scans place each library’s display name above its subfolders (e.g. Shows → Series → Season). When disabled, the tree starts at the first folder inside the library path. Run a library scan after changing this."
-              checked={settings.useLibraryRootAsFolder}
-              onChange={(checked) => {
-                setSettings((current) => ({ ...current, useLibraryRootAsFolder: checked }));
-                void autoSaveSetting({ useLibraryRootAsFolder: checked });
-              }}
-            />
-          </div>
 
           <ToggleCard
             label="Technical metadata"

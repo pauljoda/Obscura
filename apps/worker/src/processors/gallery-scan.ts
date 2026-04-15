@@ -68,7 +68,6 @@ export async function processGalleryScan(job: Job) {
   const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
     discovery.dirs,
     root.path,
-    settings.useLibraryRootAsFolder,
   );
   const discoveredDirSet = new Set(sortedDirs);
   const includeRootInParentMap = discoveredDirSet.has(root.path);
@@ -84,7 +83,6 @@ export async function processGalleryScan(job: Job) {
       )
     );
 
-  const useLibraryRootAsFolder = settings.useLibraryRootAsFolder;
   const staleFolderIds = pickStaleContainerIds(knownFolderGalleries, discoveredDirSet);
 
   if (staleFolderIds.length > 0) {
@@ -174,7 +172,6 @@ export async function processGalleryScan(job: Job) {
             dirPath,
             root.path,
             root.label,
-            useLibraryRootAsFolder,
           ),
           updatedAt: new Date(),
         })
@@ -194,7 +191,6 @@ export async function processGalleryScan(job: Job) {
             dirPath,
             root.path,
             root.label,
-            useLibraryRootAsFolder,
           ),
           galleryType: "folder",
           folderPath: dirPath,

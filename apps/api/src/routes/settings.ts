@@ -78,8 +78,6 @@ export async function settingsRoutes(app: FastifyInstance) {
           payload.backgroundWorkerConcurrency ?? settings.backgroundWorkerConcurrency
         ),
         nsfwLanAutoEnable: payload.nsfwLanAutoEnable ?? settings.nsfwLanAutoEnable,
-        useLibraryRootAsFolder:
-          payload.useLibraryRootAsFolder ?? settings.useLibraryRootAsFolder,
         metadataStorageDedicated:
           payload.metadataStorageDedicated ?? settings.metadataStorageDedicated,
         subtitlesAutoEnable:

@@ -445,12 +445,7 @@ export interface LibrarySettingsDto {
   /** Parallel jobs per queue in the worker process (1–32). */
   backgroundWorkerConcurrency: number;
   nsfwLanAutoEnable: boolean;
-  /**
-   * When true, library scans add the library’s display name as the top folder (e.g. Shows → Series → Season).
-   * When false, folders start at the first directory under the library path (Series → Season).
-   */
-  useLibraryRootAsFolder: boolean;
-  /** Scene video derivatives (thumb, preview, sprite, trickplay) in cache dir vs next to media. */
+  /** Video derivatives (thumb, preview, sprite, trickplay) in cache dir vs next to media. */
   metadataStorageDedicated: boolean;
   /** When true, player auto-enables a subtitle track on load if a matching language is available. */
   subtitlesAutoEnable: boolean;

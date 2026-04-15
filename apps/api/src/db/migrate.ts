@@ -178,6 +178,10 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     `;
     return rows[0]?.column_default?.startsWith("true") ?? false;
   },
+  "0016_perpetual_falcon": async (c) =>
+    // 0016 drops library_settings.use_library_root_as_folder. "Applied"
+    // == "column is gone".
+    !(await columnExists(c, "library_settings", "use_library_root_as_folder")),
 };
 
 /**
@@ -263,11 +267,10 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
     ADD COLUMN IF NOT EXISTS generate_phash boolean NOT NULL DEFAULT false
   `;
 
-  // 0007_slow_marvel_apes: optional library label as top folder in scans.
-  await client`
-    ALTER TABLE library_settings
-    ADD COLUMN IF NOT EXISTS use_library_root_as_folder boolean NOT NULL DEFAULT false
-  `;
+  // 0007_slow_marvel_apes previously added library_settings.use_library_root_as_folder.
+  // The concept was retired once the videos-to-series model gave
+  // series and seasons first-class tables. We no longer re-add the
+  // column on bridged installs; migration 0016 drops it outright.
 
   // 0010_natural_meteorite: scan_movies / scan_series columns replaced
   // the legacy scan_videos boolean. The migration added the new columns

@@ -24,7 +24,6 @@ const defaultSettings: LibrarySettings = {
   trickplayQuality: 2,
   backgroundWorkerConcurrency: 1,
   nsfwLanAutoEnable: false,
-  useLibraryRootAsFolder: false,
   metadataStorageDedicated: true,
   subtitlesAutoEnable: false,
   subtitlesPreferredLanguages: "en,eng",
