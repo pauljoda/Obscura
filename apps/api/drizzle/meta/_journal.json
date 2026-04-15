@@ -99,6 +99,13 @@
       "when": 1776215462239,
       "tag": "0013_blushing_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776217135585,
+      "tag": "0014_majestic_zaran",
+      "breakpoints": true
     }
   ]
 }

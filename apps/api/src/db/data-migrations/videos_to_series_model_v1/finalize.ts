@@ -43,15 +43,14 @@ export async function finalize(
   await client`DROP TABLE IF EXISTS scenes CASCADE`;
   await client`DROP TABLE IF EXISTS scene_folders CASCADE`;
 
-  reportProgress(
-    75,
-    "finalize: dropping scan_videos and stale scene counter columns",
-  );
-
-  // Retire the legacy scan toggle now that scan_movies / scan_series
-  // have replaced it, and drop the cached scene_count counters that
-  // the ported services no longer read.
-  await client`ALTER TABLE library_roots DROP COLUMN IF EXISTS scan_videos`;
+  // NB: drizzle migration 0014 now owns dropping
+  // `library_roots.scan_videos` and the `performers/tags/studios.scene_count`
+  // counter columns. Finalize used to drop them inline but that left the
+  // live schema out of sync with packages/db/src/schema.ts on any install
+  // that finalized before 0014 shipped — the SELECT projections would
+  // try to read columns that were already gone. 0014 runs every boot
+  // with `IF EXISTS` so it's safe regardless of whether a given install
+  // already had finalize touch the columns.
 
   reportProgress(100, "finalize: done");
   logger.info("videos_to_series_model_v1 finalize complete (destructive)");
@@ -60,7 +59,6 @@ export async function finalize(
     metrics: {
       destructive: true,
       droppedTables: 8,
-      droppedColumns: 1,
     },
   };
 }

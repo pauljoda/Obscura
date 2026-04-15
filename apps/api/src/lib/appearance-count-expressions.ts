@@ -10,7 +10,15 @@
  * column; both apply independently from the parent series/season.
  */
 import { sql } from "drizzle-orm";
-import { performers, studios, tags } from "../db/schema";
+
+// Drizzle renders `${table.column}` inside nested correlated subqueries
+// as a bare `"column"`, which PostgreSQL can't resolve when the inner
+// scope shadows the outer column name (e.g. `video_episodes.id` in a
+// subquery correlated with `studios.id`). Use explicit qualified raw
+// references for every outer-table correlation. These are safe because
+// the table names are fixed.
+const PERFORMERS_ID_REF = sql.raw('"performers"."id"');
+const TAGS_ID_REF = sql.raw('"tags"."id"');
 
 /**
  * Episodes + movies linked to this performer that are viewable in SFW mode.
@@ -23,7 +31,7 @@ export function performerSfwSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_episode_performers vep
       INNER JOIN video_episodes ve ON ve.id = vep.episode_id
-      WHERE vep.performer_id = ${performers.id}
+      WHERE vep.performer_id = ${PERFORMERS_ID_REF}
         AND (ve.is_nsfw IS NOT TRUE)
     ), 0)
     +
@@ -31,7 +39,7 @@ export function performerSfwSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_movie_performers vmp
       INNER JOIN video_movies vm ON vm.id = vmp.movie_id
-      WHERE vmp.performer_id = ${performers.id}
+      WHERE vmp.performer_id = ${PERFORMERS_ID_REF}
         AND (vm.is_nsfw IS NOT TRUE)
     ), 0)
   )`;
@@ -47,13 +55,13 @@ export function performerTotalSceneCountExpr() {
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_episode_performers vep
-      WHERE vep.performer_id = ${performers.id}
+      WHERE vep.performer_id = ${PERFORMERS_ID_REF}
     ), 0)
     +
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_movie_performers vmp
-      WHERE vmp.performer_id = ${performers.id}
+      WHERE vmp.performer_id = ${PERFORMERS_ID_REF}
     ), 0)
   )`;
 }
@@ -64,13 +72,13 @@ export function performerImageAppearanceCountExpr(sfwOnly: boolean) {
         SELECT COUNT(DISTINCT gp.gallery_id)::int
         FROM gallery_performers gp
         INNER JOIN galleries g ON g.id = gp.gallery_id
-        WHERE gp.performer_id = ${performers.id}
+        WHERE gp.performer_id = ${PERFORMERS_ID_REF}
           AND (g.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql`COALESCE((
         SELECT COUNT(DISTINCT gp.gallery_id)::int
         FROM gallery_performers gp
-        WHERE gp.performer_id = ${performers.id}
+        WHERE gp.performer_id = ${PERFORMERS_ID_REF}
       ), 0)`;
 
   const imagePart = sfwOnly
@@ -78,13 +86,13 @@ export function performerImageAppearanceCountExpr(sfwOnly: boolean) {
         SELECT COUNT(DISTINCT ip.image_id)::int
         FROM image_performers ip
         INNER JOIN images i ON i.id = ip.image_id
-        WHERE ip.performer_id = ${performers.id}
+        WHERE ip.performer_id = ${PERFORMERS_ID_REF}
           AND (i.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql`COALESCE((
         SELECT COUNT(DISTINCT ip.image_id)::int
         FROM image_performers ip
-        WHERE ip.performer_id = ${performers.id}
+        WHERE ip.performer_id = ${PERFORMERS_ID_REF}
       ), 0)`;
 
   return sql<number>`(${galleryPart} + ${imagePart})`;
@@ -96,15 +104,17 @@ export function performerAudioLibraryCountExpr(sfwOnly: boolean) {
         SELECT COUNT(DISTINCT alp.library_id)::int
         FROM audio_library_performers alp
         INNER JOIN audio_libraries al ON al.id = alp.library_id
-        WHERE alp.performer_id = ${performers.id}
+        WHERE alp.performer_id = ${PERFORMERS_ID_REF}
           AND (al.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql<number>`COALESCE((
         SELECT COUNT(DISTINCT alp.library_id)::int
         FROM audio_library_performers alp
-        WHERE alp.performer_id = ${performers.id}
+        WHERE alp.performer_id = ${PERFORMERS_ID_REF}
       ), 0)`;
 }
+
+const STUDIOS_ID_REF = sql.raw('"studios"."id"');
 
 /**
  * Episodes + movies under this studio that are viewable in SFW mode. Episodes
@@ -117,14 +127,14 @@ export function studioSfwSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_episodes ve
       INNER JOIN video_series vs ON vs.id = ve.series_id
-      WHERE vs.studio_id = ${studios.id}
+      WHERE vs.studio_id = ${STUDIOS_ID_REF}
         AND (ve.is_nsfw IS NOT TRUE)
     ), 0)
     +
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_movies vm
-      WHERE vm.studio_id = ${studios.id}
+      WHERE vm.studio_id = ${STUDIOS_ID_REF}
         AND (vm.is_nsfw IS NOT TRUE)
     ), 0)
   )`;
@@ -140,13 +150,13 @@ export function studioTotalSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_episodes ve
       INNER JOIN video_series vs ON vs.id = ve.series_id
-      WHERE vs.studio_id = ${studios.id}
+      WHERE vs.studio_id = ${STUDIOS_ID_REF}
     ), 0)
     +
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_movies vm
-      WHERE vm.studio_id = ${studios.id}
+      WHERE vm.studio_id = ${STUDIOS_ID_REF}
     ), 0)
   )`;
 }
@@ -155,19 +165,19 @@ export function studioImageAppearanceCountExpr(sfwOnly: boolean) {
   const galleryPart = sfwOnly
     ? sql`COALESCE((
         SELECT COUNT(*)::int FROM galleries g
-        WHERE g.studio_id = ${studios.id} AND (g.is_nsfw IS NOT TRUE)
+        WHERE g.studio_id = ${STUDIOS_ID_REF} AND (g.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql`COALESCE((
-        SELECT COUNT(*)::int FROM galleries g WHERE g.studio_id = ${studios.id}
+        SELECT COUNT(*)::int FROM galleries g WHERE g.studio_id = ${STUDIOS_ID_REF}
       ), 0)`;
 
   const imagePart = sfwOnly
     ? sql`COALESCE((
         SELECT COUNT(*)::int FROM images i
-        WHERE i.studio_id = ${studios.id} AND (i.is_nsfw IS NOT TRUE)
+        WHERE i.studio_id = ${STUDIOS_ID_REF} AND (i.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql`COALESCE((
-        SELECT COUNT(*)::int FROM images i WHERE i.studio_id = ${studios.id}
+        SELECT COUNT(*)::int FROM images i WHERE i.studio_id = ${STUDIOS_ID_REF}
       ), 0)`;
 
   return sql<number>`(${galleryPart} + ${imagePart})`;
@@ -186,7 +196,7 @@ export function tagSfwSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_episode_tags vet
       INNER JOIN video_episodes ve ON ve.id = vet.episode_id
-      WHERE vet.tag_id = ${tags.id}
+      WHERE vet.tag_id = ${TAGS_ID_REF}
         AND (ve.is_nsfw IS NOT TRUE)
     ), 0)
     +
@@ -194,7 +204,7 @@ export function tagSfwSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_movie_tags vmt
       INNER JOIN video_movies vm ON vm.id = vmt.movie_id
-      WHERE vmt.tag_id = ${tags.id}
+      WHERE vmt.tag_id = ${TAGS_ID_REF}
         AND (vm.is_nsfw IS NOT TRUE)
     ), 0)
   )`;
@@ -209,13 +219,13 @@ export function tagTotalSceneCountExpr() {
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_episode_tags vet
-      WHERE vet.tag_id = ${tags.id}
+      WHERE vet.tag_id = ${TAGS_ID_REF}
     ), 0)
     +
     COALESCE((
       SELECT COUNT(*)::int
       FROM video_movie_tags vmt
-      WHERE vmt.tag_id = ${tags.id}
+      WHERE vmt.tag_id = ${TAGS_ID_REF}
     ), 0)
   )`;
 }
@@ -224,9 +234,9 @@ export function studioAudioLibraryCountExpr(sfwOnly: boolean) {
   return sfwOnly
     ? sql<number>`COALESCE((
         SELECT COUNT(*)::int FROM audio_libraries al
-        WHERE al.studio_id = ${studios.id} AND (al.is_nsfw IS NOT TRUE)
+        WHERE al.studio_id = ${STUDIOS_ID_REF} AND (al.is_nsfw IS NOT TRUE)
       ), 0)`
     : sql<number>`COALESCE((
-        SELECT COUNT(*)::int FROM audio_libraries al WHERE al.studio_id = ${studios.id}
+        SELECT COUNT(*)::int FROM audio_libraries al WHERE al.studio_id = ${STUDIOS_ID_REF}
       ), 0)`;
 }

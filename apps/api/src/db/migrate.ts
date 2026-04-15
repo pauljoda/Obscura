@@ -161,6 +161,11 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     // Sentinel column lives on video_series; video_subtitles and
     // video_markers are both new in this migration so either would work.
     columnExists(c, "video_series", "custom_name"),
+  "0014_majestic_zaran": async (c) =>
+    // 0014 drops a bunch of legacy columns. "Applied" == "columns are
+    // gone". Bridged installs that still have them stop detection here
+    // so the drizzle migrator runs 0014 normally.
+    !(await columnExists(c, "library_roots", "scan_videos")),
 };
 
 /**
@@ -220,15 +225,25 @@ async function probeLegacySchemaLevel(
  *     happens to run before the migrator on a pre-baseline install.
  */
 async function reconcileSchema(client: SqlClient): Promise<void> {
+  // Post videos-to-series finalize, the scene_* tables are gone. The
+  // scene-specific reconcile blocks below only run when their target
+  // table still exists, so reconcile is a safe no-op on a finalized
+  // install.
+  const hasSceneSubtitles = await tableExists(client, "scene_subtitles");
+  const hasSceneFolders = await tableExists(client, "scene_folders");
+  const hasScenes = await tableExists(client, "scenes");
+
   // 0001_wandering_blue_shield: scene_subtitles source metadata.
-  await client`
-    ALTER TABLE scene_subtitles
-    ADD COLUMN IF NOT EXISTS source_format text NOT NULL DEFAULT 'vtt'
-  `;
-  await client`
-    ALTER TABLE scene_subtitles
-    ADD COLUMN IF NOT EXISTS source_path text
-  `;
+  if (hasSceneSubtitles) {
+    await client`
+      ALTER TABLE scene_subtitles
+      ADD COLUMN IF NOT EXISTS source_format text NOT NULL DEFAULT 'vtt'
+    `;
+    await client`
+      ALTER TABLE scene_subtitles
+      ADD COLUMN IF NOT EXISTS source_path text
+    `;
+  }
 
   // 0002_bored_piledriver: pHash generation toggle on library settings.
   await client`
@@ -255,15 +270,21 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
       submitted_at timestamp DEFAULT now() NOT NULL
     )
   `;
-  await client`
-    DO $$ BEGIN
-      ALTER TABLE fingerprint_submissions
-      ADD CONSTRAINT fingerprint_submissions_scene_id_scenes_id_fk
-      FOREIGN KEY (scene_id) REFERENCES public.scenes(id) ON DELETE CASCADE;
-    EXCEPTION
-      WHEN duplicate_object THEN NULL;
-    END $$;
-  `;
+  // The FK to scenes is only meaningful pre-finalize. On post-finalize
+  // installs the scenes table is gone and the FK can't be re-added —
+  // migration 0012 (which predates 0014) already dropped it anyway, so
+  // we only re-add it when both tables exist.
+  if (hasScenes) {
+    await client`
+      DO $$ BEGIN
+        ALTER TABLE fingerprint_submissions
+        ADD CONSTRAINT fingerprint_submissions_scene_id_scenes_id_fk
+        FOREIGN KEY (scene_id) REFERENCES public.scenes(id) ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+  }
   await client`
     DO $$ BEGIN
       ALTER TABLE fingerprint_submissions
@@ -293,7 +314,7 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
   // installs this table may not exist yet. The smart bridge lets the drizzle
   // migrator create it, but we still guard the ALTERs here so reconcile is
   // a safe no-op if it runs before/without the migrator having built 0004.
-  if (await tableExists(client, "scene_folders")) {
+  if (hasSceneFolders) {
     await client`
       ALTER TABLE scene_folders ADD COLUMN IF NOT EXISTS backdrop_image_path text
     `;
@@ -318,71 +339,75 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
         WHEN duplicate_object THEN NULL;
       END $$;
     `;
+
+    // scene_folder_performers and scene_folder_tags only make sense
+    // when scene_folders exists — post-finalize both these join tables
+    // are gone and we skip the reconcile block entirely.
+    await client`
+      CREATE TABLE IF NOT EXISTS scene_folder_performers (
+        scene_folder_id uuid NOT NULL,
+        performer_id uuid NOT NULL
+      )
+    `;
+    await client`
+      DO $$ BEGIN
+        ALTER TABLE scene_folder_performers
+        ADD CONSTRAINT scene_folder_performers_scene_folder_id_scene_folders_id_fk
+        FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+    await client`
+      DO $$ BEGIN
+        ALTER TABLE scene_folder_performers
+        ADD CONSTRAINT scene_folder_performers_performer_id_performers_id_fk
+        FOREIGN KEY (performer_id) REFERENCES public.performers(id) ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+    await client`
+      CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_performers_pk
+      ON scene_folder_performers (scene_folder_id, performer_id)
+    `;
+    await client`
+      CREATE INDEX IF NOT EXISTS scene_folder_performers_performer_idx
+      ON scene_folder_performers (performer_id)
+    `;
+    await client`
+      CREATE TABLE IF NOT EXISTS scene_folder_tags (
+        scene_folder_id uuid NOT NULL,
+        tag_id uuid NOT NULL
+      )
+    `;
+    await client`
+      DO $$ BEGIN
+        ALTER TABLE scene_folder_tags
+        ADD CONSTRAINT scene_folder_tags_scene_folder_id_scene_folders_id_fk
+        FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+    await client`
+      DO $$ BEGIN
+        ALTER TABLE scene_folder_tags
+        ADD CONSTRAINT scene_folder_tags_tag_id_tags_id_fk
+        FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `;
+    await client`
+      CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_tags_pk
+      ON scene_folder_tags (scene_folder_id, tag_id)
+    `;
+    await client`
+      CREATE INDEX IF NOT EXISTS scene_folder_tags_tag_idx
+      ON scene_folder_tags (tag_id)
+    `;
   }
-  await client`
-    CREATE TABLE IF NOT EXISTS scene_folder_performers (
-      scene_folder_id uuid NOT NULL,
-      performer_id uuid NOT NULL
-    )
-  `;
-  await client`
-    DO $$ BEGIN
-      ALTER TABLE scene_folder_performers
-      ADD CONSTRAINT scene_folder_performers_scene_folder_id_scene_folders_id_fk
-      FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
-    EXCEPTION
-      WHEN duplicate_object THEN NULL;
-    END $$;
-  `;
-  await client`
-    DO $$ BEGIN
-      ALTER TABLE scene_folder_performers
-      ADD CONSTRAINT scene_folder_performers_performer_id_performers_id_fk
-      FOREIGN KEY (performer_id) REFERENCES public.performers(id) ON DELETE CASCADE;
-    EXCEPTION
-      WHEN duplicate_object THEN NULL;
-    END $$;
-  `;
-  await client`
-    CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_performers_pk
-    ON scene_folder_performers (scene_folder_id, performer_id)
-  `;
-  await client`
-    CREATE INDEX IF NOT EXISTS scene_folder_performers_performer_idx
-    ON scene_folder_performers (performer_id)
-  `;
-  await client`
-    CREATE TABLE IF NOT EXISTS scene_folder_tags (
-      scene_folder_id uuid NOT NULL,
-      tag_id uuid NOT NULL
-    )
-  `;
-  await client`
-    DO $$ BEGIN
-      ALTER TABLE scene_folder_tags
-      ADD CONSTRAINT scene_folder_tags_scene_folder_id_scene_folders_id_fk
-      FOREIGN KEY (scene_folder_id) REFERENCES public.scene_folders(id) ON DELETE CASCADE;
-    EXCEPTION
-      WHEN duplicate_object THEN NULL;
-    END $$;
-  `;
-  await client`
-    DO $$ BEGIN
-      ALTER TABLE scene_folder_tags
-      ADD CONSTRAINT scene_folder_tags_tag_id_tags_id_fk
-      FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
-    EXCEPTION
-      WHEN duplicate_object THEN NULL;
-    END $$;
-  `;
-  await client`
-    CREATE UNIQUE INDEX IF NOT EXISTS scene_folder_tags_pk
-    ON scene_folder_tags (scene_folder_id, tag_id)
-  `;
-  await client`
-    CREATE INDEX IF NOT EXISTS scene_folder_tags_tag_idx
-    ON scene_folder_tags (tag_id)
-  `;
 }
 
 /**
@@ -434,14 +459,19 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
         ALTER TABLE library_settings
         ADD COLUMN IF NOT EXISTS default_playback_mode text NOT NULL DEFAULT 'direct'
       `;
-      await client`
-        ALTER TABLE scene_markers
-        DROP CONSTRAINT IF EXISTS scene_markers_primary_tag_id_tags_id_fk
-      `;
-      await client`
-        ALTER TABLE scene_markers
-        DROP COLUMN IF EXISTS primary_tag_id
-      `;
+      // scene_markers may no longer exist on installs that have already
+      // finalized the videos-to-series migration. Only run these
+      // pre-baseline deltas if the table is still present.
+      if (await tableExists(client, "scene_markers")) {
+        await client`
+          ALTER TABLE scene_markers
+          DROP CONSTRAINT IF EXISTS scene_markers_primary_tag_id_tags_id_fk
+        `;
+        await client`
+          ALTER TABLE scene_markers
+          DROP COLUMN IF EXISTS primary_tag_id
+        `;
+      }
 
       // ── Detect how far the install has actually progressed ────────
       // The older bridge seeded every journal entry as applied, which

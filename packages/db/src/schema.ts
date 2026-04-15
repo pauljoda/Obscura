@@ -27,13 +27,8 @@ export const studios = pgTable(
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
-    /**
-     * @deprecated Legacy cached counter — the live services compute
-     * scene count on demand from video_episodes + video_movies. Kept in
-     * the schema so drizzle's diff stays clean against the live DB
-     * until the videos-to-series finalize phase drops it.
-     */
-    sceneCount: integer("scene_count").default(0).notNull(),
+    // scene_count is dropped by drizzle migration 0014 — services
+    // compute counts on demand from video_episodes + video_movies.
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -86,8 +81,7 @@ export const performers = pgTable(
     favorite: boolean("favorite").default(false).notNull(),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
-    /** @deprecated see note on studios.scene_count */
-    sceneCount: integer("scene_count").default(0).notNull(),
+    // scene_count dropped by drizzle migration 0014 (see studios note).
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -125,8 +119,7 @@ export const tags = pgTable(
     imagePath: text("image_path"),
     rating: integer("rating"),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
-    /** @deprecated see note on studios.scene_count */
-    sceneCount: integer("scene_count").default(0).notNull(),
+    // scene_count dropped by drizzle migration 0014 (see studios note).
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -157,13 +150,10 @@ export const libraryRoots = pgTable(
     label: text("label").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
-    /**
-     * @deprecated Retired in favor of scan_movies + scan_series. No
-     * code reads this column anymore; the videos-to-series finalize
-     * phase drops it. Still declared here so drizzle's schema diff
-     * stays clean against the live DB until then.
-     */
-    scanVideos: boolean("scan_videos").default(true).notNull(),
+    // scan_videos retired in favor of scan_movies + scan_series.
+    // The column is dropped by drizzle migration 0014; no code reads
+    // it anymore. Kept out of this schema so SELECT * doesn't include
+    // a column that may not exist on finalized installs.
     scanMovies: boolean("scan_movies").default(false).notNull(),
     scanSeries: boolean("scan_series").default(false).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
