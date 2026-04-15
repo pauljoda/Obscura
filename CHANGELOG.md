@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+- Deleted the retired worker `scene-folder-sync.ts` helper that fed the old scan pipeline's hierarchy writes into `scene_folders`, plus the unused `scene-folder-schema.ts` schema-probes in both `apps/worker` and `apps/api`. The new `processLibraryScan` pipeline writes straight to `video_series` / `video_seasons`, so there is no remaining caller for any of these modules.
 - Legacy `/scenes/:id/subtitles/*` API surface is gone. The subtitles route file and its backing `subtitles.service.ts` have been deleted. Subtitles for the new video model will return as a dedicated future feature; the `/videos/:id/subtitles/*` stubs in `videos.ts` already return 501.
 - Deleted the legacy `scene.service.ts` and `scene-folder.service.ts` backing modules now that no route or service imports them. The `scenes` and `scene_folders` drizzle tables remain in the schema for the migration bridge and legacy-read paths, but the service-layer code paths are fully gone.
 
