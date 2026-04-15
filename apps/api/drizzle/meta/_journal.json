@@ -92,6 +92,13 @@
       "when": 1776214209995,
       "tag": "0012_little_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776215462239,
+      "tag": "0013_blushing_bruce_banner",
+      "breakpoints": true
     }
   ]
 }

@@ -157,6 +157,10 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     columnExists(c, "scrape_results", "proposed_result"),
   "0012_little_bill_hollister": (c) =>
     columnExists(c, "fingerprint_submissions", "entity_type"),
+  "0013_blushing_bruce_banner": (c) =>
+    // Sentinel column lives on video_series; video_subtitles and
+    // video_markers are both new in this migration so either would work.
+    columnExists(c, "video_series", "custom_name"),
 };
 
 /**

@@ -1,5 +1,8 @@
 import type { FastifyInstance } from "fastify";
+import type { MultipartFile } from "@fastify/multipart";
 import * as videoSceneService from "../services/video-scene.service";
+import * as videoSubtitlesService from "../services/video-subtitles.service";
+import * as videoMarkersService from "../services/video-markers.service";
 
 export async function videosRoutes(app: FastifyInstance) {
   // ─── GET /videos ──────────────────────────────────────────────
@@ -131,59 +134,103 @@ export async function videosRoutes(app: FastifyInstance) {
     return videoSceneService.uploadVideoMovie(libraryRootId, file);
   });
 
-  // ─── Subtitles (not yet wired for video entities) ─────────────
-  // The `sceneSubtitles` table is keyed to `scene_id` and there's no
-  // matching table for video_episodes / video_movies yet. Stub these
-  // as 501 so callers get a clear "not implemented" signal.
-  // TODO(videos): port subtitle tracks to video entities.
-  app.get("/videos/:id/subtitles", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.post("/videos/:id/subtitles", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.post("/videos/:id/subtitles/extract", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.get("/videos/:id/subtitles/:trackId", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.get("/videos/:id/subtitles/:trackId/source", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.get("/videos/:id/subtitles/:trackId/cues", async (_request, reply) => {
-    reply.code(501);
-    // Return empty cues list to keep the player happy.
-    return { cues: [] };
-  });
-  app.patch("/videos/:id/subtitles/:trackId", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
-  });
-  app.delete("/videos/:id/subtitles/:trackId", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Subtitles are not yet supported for video entities" };
+  // ─── Subtitles ────────────────────────────────────────────────
+  app.get("/videos/:id/subtitles", async (request) => {
+    const { id } = request.params as { id: string };
+    const tracks = await videoSubtitlesService.listSubtitleTracks(id);
+    return { tracks };
   });
 
-  // ─── Markers (not yet wired for video entities) ───────────────
-  // `sceneMarkers` is keyed to `scene_id`; video entities don't have
-  // a marker table yet. Stub these as 501.
-  // TODO(videos): port scene_markers to video entities.
-  app.post("/videos/:id/markers", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Markers are not yet supported for video entities" };
+  app.post("/videos/:id/subtitles", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parts = request.parts();
+    let file: MultipartFile | undefined;
+    const fields: videoSubtitlesService.UploadSubtitleFields = {};
+    for await (const part of parts) {
+      if (part.type === "file") {
+        file = part;
+        break;
+      }
+      if (part.fieldname === "language") {
+        fields.language = String((part as { value?: unknown }).value ?? "");
+      }
+      if (part.fieldname === "label") {
+        const raw = (part as { value?: unknown }).value;
+        fields.label = typeof raw === "string" ? raw : null;
+      }
+    }
+    if (!file) {
+      reply.code(400);
+      return { error: "file is required" };
+    }
+    return videoSubtitlesService.uploadSubtitle(id, file, fields);
   });
-  app.patch("/videos/markers/:markerId", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Markers are not yet supported for video entities" };
+
+  app.post("/videos/:id/subtitles/extract", async (request) => {
+    const { id } = request.params as { id: string };
+    return videoSubtitlesService.enqueueEmbeddedExtraction(id);
   });
-  app.delete("/videos/markers/:markerId", async (_request, reply) => {
-    reply.code(501);
-    return { error: "Markers are not yet supported for video entities" };
+
+  app.get("/videos/:id/subtitles/:trackId", async (request, reply) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    const vtt = await videoSubtitlesService.readSubtitleVtt(id, trackId);
+    reply.header("Content-Type", "text/vtt; charset=utf-8");
+    return vtt;
+  });
+
+  app.get("/videos/:id/subtitles/:trackId/source", async (request, reply) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    const { content, format } = await videoSubtitlesService.readSubtitleSource(
+      id,
+      trackId,
+    );
+    reply.header(
+      "Content-Type",
+      format === "ass" || format === "ssa"
+        ? "text/x-ssa; charset=utf-8"
+        : "text/plain; charset=utf-8",
+    );
+    return content;
+  });
+
+  app.get("/videos/:id/subtitles/:trackId/cues", async (request) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    const cues = await videoSubtitlesService.getSubtitleCues(id, trackId);
+    return { cues };
+  });
+
+  app.patch("/videos/:id/subtitles/:trackId", async (request) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    const body = request.body as videoSubtitlesService.UpdateSubtitleBody;
+    return videoSubtitlesService.updateSubtitleTrack(id, trackId, body);
+  });
+
+  app.delete("/videos/:id/subtitles/:trackId", async (request) => {
+    const { id, trackId } = request.params as { id: string; trackId: string };
+    return videoSubtitlesService.deleteSubtitleTrack(id, trackId);
+  });
+
+  // ─── Markers ──────────────────────────────────────────────────
+  app.get("/videos/:id/markers", async (request) => {
+    const { id } = request.params as { id: string };
+    const markers = await videoMarkersService.listMarkers(id);
+    return { markers };
+  });
+
+  app.post("/videos/:id/markers", async (request) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as videoMarkersService.CreateMarkerBody;
+    return videoMarkersService.createMarker(id, body);
+  });
+
+  app.patch("/videos/markers/:markerId", async (request) => {
+    const { markerId } = request.params as { markerId: string };
+    const body = request.body as videoMarkersService.UpdateMarkerBody;
+    return videoMarkersService.updateMarker(markerId, body);
+  });
+
+  app.delete("/videos/markers/:markerId", async (request) => {
+    const { markerId } = request.params as { markerId: string };
+    return videoMarkersService.deleteMarker(markerId);
   });
 }

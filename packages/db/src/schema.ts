@@ -1476,6 +1476,12 @@ export const videoSeries = pgTable(
     folderPath: text("folder_path").notNull(),
     relativePath: text("relative_path").notNull(),
     title: text("title").notNull(),
+    /**
+     * User-overridden display name. When non-null, UI components show
+     * `customName` instead of `title`. Persists across scans so a
+     * manual rename survives re-discovery and metadata scrape accepts.
+     */
+    customName: text("custom_name"),
     sortTitle: text("sort_title"),
     originalTitle: text("original_title"),
     overview: text("overview"),
@@ -1764,6 +1770,62 @@ export const videoEpisodeTags = pgTable(
   (table) => [
     uniqueIndex("video_episode_tags_pk").on(table.episodeId, table.tagId),
     index("video_episode_tags_tag_idx").on(table.tagId),
+  ],
+);
+
+/**
+ * Polymorphic subtitle store for the new video model. Each row belongs
+ * to either a video_episode or a video_movie — the discriminator is
+ * `entity_type`. There's no FK to the underlying table; the video-scene
+ * service cleans up on delete. Replaces the legacy `scene_subtitles`
+ * table that used to hard-reference scenes.id.
+ */
+export const videoSubtitles = pgTable(
+  "video_subtitles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entityType: text("entity_type").notNull(), // "video_episode" | "video_movie"
+    entityId: uuid("entity_id").notNull(),
+    language: text("language").notNull(),
+    label: text("label"),
+    format: text("format").notNull(),
+    source: text("source").notNull(),
+    storagePath: text("storage_path").notNull(),
+    sourceFormat: text("source_format").notNull().default("vtt"),
+    sourcePath: text("source_path"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("video_subtitles_entity_idx").on(table.entityType, table.entityId),
+    uniqueIndex("video_subtitles_entity_lang_source_idx").on(
+      table.entityType,
+      table.entityId,
+      table.language,
+      table.source,
+    ),
+  ],
+);
+
+/**
+ * Polymorphic marker store for the new video model. Same pattern as
+ * video_subtitles: discriminator column, no FK. Replaces the legacy
+ * `scene_markers` table.
+ */
+export const videoMarkers = pgTable(
+  "video_markers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entityType: text("entity_type").notNull(), // "video_episode" | "video_movie"
+    entityId: uuid("entity_id").notNull(),
+    title: text("title").notNull(),
+    seconds: real("seconds").notNull(),
+    endSeconds: real("end_seconds"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("video_markers_entity_idx").on(table.entityType, table.entityId),
   ],
 );
 

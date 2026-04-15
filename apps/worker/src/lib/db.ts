@@ -90,4 +90,6 @@ export const {
   videoEpisodeTags,
   videoMoviePerformers,
   videoMovieTags,
+  videoSubtitles,
+  videoMarkers,
 } = schema;

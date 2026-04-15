@@ -375,12 +375,15 @@ export async function stage(
     metrics.tagLinksRewritten += 1;
   }
 
-  reportProgress(95, "rewriting scrape_results entity types");
+  reportProgress(93, "rewriting scrape_results entity types");
   // Re-point scene-entity scrapes to either video_episodes or video_movies.
+  // The live services write `video_episode` / `video_movie` / `video_series`
+  // for scrape_results.entity_type — keep the migration consistent with
+  // the runtime so accept handlers find migrated rows.
   for (const [sceneId, episodeId] of episodeIdBySceneId) {
     const { count } = (await client`
       UPDATE scrape_results
-      SET entity_type = 'episode', entity_id = ${episodeId}
+      SET entity_type = 'video_episode', entity_id = ${episodeId}
       WHERE entity_type = 'scene' AND entity_id = ${sceneId}
     `) as unknown as { count: number };
     metrics.scrapeResultsRewritten += count ?? 0;
@@ -388,7 +391,7 @@ export async function stage(
   for (const [sceneId, movieId] of movieIdBySceneId) {
     const { count } = (await client`
       UPDATE scrape_results
-      SET entity_type = 'movie', entity_id = ${movieId}
+      SET entity_type = 'video_movie', entity_id = ${movieId}
       WHERE entity_type = 'scene' AND entity_id = ${sceneId}
     `) as unknown as { count: number };
     metrics.scrapeResultsRewritten += count ?? 0;
@@ -399,10 +402,142 @@ export async function stage(
     if (!folder) continue;
     const { count } = (await client`
       UPDATE scrape_results
-      SET entity_type = 'series', entity_id = ${seriesId}
+      SET entity_type = 'video_series', entity_id = ${seriesId}
       WHERE entity_type = 'scene_folder' AND entity_id = ${folder.id}
     `) as unknown as { count: number };
     metrics.scrapeResultsRewritten += count ?? 0;
+  }
+
+  // ── Scene subtitles → video_subtitles ──────────────────────────────
+  reportProgress(95, "copying scene_subtitles into video_subtitles");
+  let subtitlesCopied = 0;
+  for (const [sceneId, episodeId] of episodeIdBySceneId) {
+    const rows = (await client`
+      SELECT id, language, label, format, source, storage_path AS "storagePath",
+             source_format AS "sourceFormat", source_path AS "sourcePath",
+             is_default AS "isDefault", created_at AS "createdAt"
+      FROM scene_subtitles
+      WHERE scene_id = ${sceneId}
+    `) as Array<{
+      id: string;
+      language: string;
+      label: string | null;
+      format: string;
+      source: string;
+      storagePath: string;
+      sourceFormat: string | null;
+      sourcePath: string | null;
+      isDefault: boolean;
+    }>;
+    for (const r of rows) {
+      await client`
+        INSERT INTO video_subtitles (
+          entity_type, entity_id, language, label, format, source,
+          storage_path, source_format, source_path, is_default
+        ) VALUES (
+          'video_episode', ${episodeId}, ${r.language}, ${r.label},
+          ${r.format}, ${r.source}, ${r.storagePath},
+          ${r.sourceFormat ?? "vtt"}, ${r.sourcePath}, ${r.isDefault}
+        )
+        ON CONFLICT DO NOTHING
+      `;
+      subtitlesCopied += 1;
+    }
+  }
+  for (const [sceneId, movieId] of movieIdBySceneId) {
+    const rows = (await client`
+      SELECT id, language, label, format, source, storage_path AS "storagePath",
+             source_format AS "sourceFormat", source_path AS "sourcePath",
+             is_default AS "isDefault", created_at AS "createdAt"
+      FROM scene_subtitles
+      WHERE scene_id = ${sceneId}
+    `) as Array<{
+      id: string;
+      language: string;
+      label: string | null;
+      format: string;
+      source: string;
+      storagePath: string;
+      sourceFormat: string | null;
+      sourcePath: string | null;
+      isDefault: boolean;
+    }>;
+    for (const r of rows) {
+      await client`
+        INSERT INTO video_subtitles (
+          entity_type, entity_id, language, label, format, source,
+          storage_path, source_format, source_path, is_default
+        ) VALUES (
+          'video_movie', ${movieId}, ${r.language}, ${r.label},
+          ${r.format}, ${r.source}, ${r.storagePath},
+          ${r.sourceFormat ?? "vtt"}, ${r.sourcePath}, ${r.isDefault}
+        )
+        ON CONFLICT DO NOTHING
+      `;
+      subtitlesCopied += 1;
+    }
+  }
+  (metrics as unknown as Record<string, unknown>).subtitlesCopied =
+    subtitlesCopied;
+
+  // ── Scene markers → video_markers ──────────────────────────────────
+  reportProgress(97, "copying scene_markers into video_markers");
+  let markersCopied = 0;
+  for (const [sceneId, episodeId] of episodeIdBySceneId) {
+    const rows = (await client`
+      SELECT title, seconds, end_seconds AS "endSeconds"
+      FROM scene_markers
+      WHERE scene_id = ${sceneId}
+    `) as Array<{
+      title: string;
+      seconds: number;
+      endSeconds: number | null;
+    }>;
+    for (const r of rows) {
+      await client`
+        INSERT INTO video_markers (entity_type, entity_id, title, seconds, end_seconds)
+        VALUES ('video_episode', ${episodeId}, ${r.title}, ${r.seconds}, ${r.endSeconds})
+      `;
+      markersCopied += 1;
+    }
+  }
+  for (const [sceneId, movieId] of movieIdBySceneId) {
+    const rows = (await client`
+      SELECT title, seconds, end_seconds AS "endSeconds"
+      FROM scene_markers
+      WHERE scene_id = ${sceneId}
+    `) as Array<{
+      title: string;
+      seconds: number;
+      endSeconds: number | null;
+    }>;
+    for (const r of rows) {
+      await client`
+        INSERT INTO video_markers (entity_type, entity_id, title, seconds, end_seconds)
+        VALUES ('video_movie', ${movieId}, ${r.title}, ${r.seconds}, ${r.endSeconds})
+      `;
+      markersCopied += 1;
+    }
+  }
+  (metrics as unknown as Record<string, unknown>).markersCopied = markersCopied;
+
+  // ── scene_folders.custom_name → video_series.custom_name ──────────
+  // Carried over directly rather than being merged with title so a
+  // user-renamed folder keeps surfacing as that name in the UI.
+  for (const folder of legacyFolders) {
+    if (!folder.folderPath) continue;
+    const seriesId = seriesIdByPath.get(folder.folderPath);
+    if (!seriesId) continue;
+    const [row] = (await client`
+      SELECT custom_name FROM scene_folders WHERE id = ${folder.id}
+    `) as Array<{ custom_name: string | null }>;
+    if (row?.custom_name) {
+      await client`
+        UPDATE video_series
+        SET custom_name = ${row.custom_name}, updated_at = now()
+        WHERE id = ${seriesId}
+      `;
+    }
   }
 
   reportProgress(100, "stage complete");

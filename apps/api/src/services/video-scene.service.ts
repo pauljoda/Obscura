@@ -713,9 +713,130 @@ export async function listVideoScenes(query: ListVideosQuery) {
     return bv - av;
   });
   const sliced = merged.slice(0, limit);
+  const items = sliced.map(toVideoListItem);
+
+  // Batch-load performer and tag joins for the visible slice in two
+  // queries each (one for episodes, one for movies) so list pagination
+  // stays fast on large libraries instead of doing N+1.
+  const visibleEpisodeIds = sliced
+    .filter((r) => r.kind === "episode")
+    .map((r) => r.id);
+  const visibleMovieIds = sliced
+    .filter((r) => r.kind === "movie")
+    .map((r) => r.id);
+
+  if (visibleEpisodeIds.length > 0 || visibleMovieIds.length > 0) {
+    const [epPerfRows, mvPerfRows, epTagRows, mvTagRows, subtitleRows] =
+      await Promise.all([
+        visibleEpisodeIds.length > 0
+          ? db
+              .select({
+                episodeId: videoEpisodePerformers.episodeId,
+                id: performers.id,
+                name: performers.name,
+                imagePath: performers.imagePath,
+                isNsfw: performers.isNsfw,
+              })
+              .from(videoEpisodePerformers)
+              .innerJoin(
+                performers,
+                eq(performers.id, videoEpisodePerformers.performerId),
+              )
+              .where(inArray(videoEpisodePerformers.episodeId, visibleEpisodeIds))
+          : Promise.resolve([]),
+        visibleMovieIds.length > 0
+          ? db
+              .select({
+                movieId: videoMoviePerformers.movieId,
+                id: performers.id,
+                name: performers.name,
+                imagePath: performers.imagePath,
+                isNsfw: performers.isNsfw,
+              })
+              .from(videoMoviePerformers)
+              .innerJoin(
+                performers,
+                eq(performers.id, videoMoviePerformers.performerId),
+              )
+              .where(inArray(videoMoviePerformers.movieId, visibleMovieIds))
+          : Promise.resolve([]),
+        visibleEpisodeIds.length > 0
+          ? db
+              .select({
+                episodeId: videoEpisodeTags.episodeId,
+                id: tags.id,
+                name: tags.name,
+                isNsfw: tags.isNsfw,
+              })
+              .from(videoEpisodeTags)
+              .innerJoin(tags, eq(tags.id, videoEpisodeTags.tagId))
+              .where(inArray(videoEpisodeTags.episodeId, visibleEpisodeIds))
+          : Promise.resolve([]),
+        visibleMovieIds.length > 0
+          ? db
+              .select({
+                movieId: videoMovieTags.movieId,
+                id: tags.id,
+                name: tags.name,
+                isNsfw: tags.isNsfw,
+              })
+              .from(videoMovieTags)
+              .innerJoin(tags, eq(tags.id, videoMovieTags.tagId))
+              .where(inArray(videoMovieTags.movieId, visibleMovieIds))
+          : Promise.resolve([]),
+        [...visibleEpisodeIds, ...visibleMovieIds].length > 0
+          ? db
+              .select({ entityId: schema.videoSubtitles.entityId })
+              .from(schema.videoSubtitles)
+              .where(
+                inArray(schema.videoSubtitles.entityId, [
+                  ...visibleEpisodeIds,
+                  ...visibleMovieIds,
+                ]),
+              )
+          : Promise.resolve([]),
+      ]);
+
+    const byId = new Map(items.map((item) => [item.id, item]));
+    for (const r of epPerfRows) {
+      const item = byId.get(r.episodeId);
+      if (!item) continue;
+      item.performers.push({
+        id: r.id,
+        name: r.name,
+        imagePath: r.imagePath,
+        isNsfw: r.isNsfw,
+      });
+    }
+    for (const r of mvPerfRows) {
+      const item = byId.get(r.movieId);
+      if (!item) continue;
+      item.performers.push({
+        id: r.id,
+        name: r.name,
+        imagePath: r.imagePath,
+        isNsfw: r.isNsfw,
+      });
+    }
+    for (const r of epTagRows) {
+      const item = byId.get(r.episodeId);
+      if (!item) continue;
+      item.tags.push({ id: r.id, name: r.name, isNsfw: r.isNsfw });
+    }
+    for (const r of mvTagRows) {
+      const item = byId.get(r.movieId);
+      if (!item) continue;
+      item.tags.push({ id: r.id, name: r.name, isNsfw: r.isNsfw });
+    }
+    const hasSubtitlesById = new Set<string>();
+    for (const r of subtitleRows) hasSubtitlesById.add(r.entityId);
+    for (const item of items) {
+      if (hasSubtitlesById.has(item.id)) item.hasSubtitles = true;
+    }
+  }
 
   return {
-    scenes: sliced.map(toVideoListItem),
+    scenes: items,
     total: episodeCount + movieCount,
     limit,
     offset,
@@ -971,6 +1092,55 @@ export async function getVideoSceneDetail(id: string) {
 
   const hasVideo = !!(row.filePath && existsSync(row.filePath));
 
+  // Markers and subtitle tracks for the detail view. Both live in the
+  // polymorphic video_markers / video_subtitles tables keyed on the
+  // entity id (regardless of episode vs movie), so one query each.
+  const markerRowsRaw = await db
+    .select()
+    .from(schema.videoMarkers)
+    .where(eq(schema.videoMarkers.entityId, row.id))
+    .orderBy(asc(schema.videoMarkers.seconds));
+  const markers = markerRowsRaw.map((m) => ({
+    id: m.id,
+    title: m.title,
+    seconds: Number(m.seconds),
+    endSeconds: m.endSeconds != null ? Number(m.endSeconds) : null,
+  }));
+
+  const subtitleRowsRaw = await db
+    .select()
+    .from(schema.videoSubtitles)
+    .where(eq(schema.videoSubtitles.entityId, row.id))
+    .orderBy(asc(schema.videoSubtitles.createdAt));
+  const subtitleTracks = subtitleRowsRaw.map((r) => {
+    const sourceFormat = (r.sourceFormat ?? "vtt") as
+      | "vtt"
+      | "srt"
+      | "ass"
+      | "ssa";
+    const hasRawSource =
+      (sourceFormat === "ass" || sourceFormat === "ssa") && !!r.sourcePath;
+    return {
+      id: r.id,
+      sceneId: r.entityId,
+      language: r.language,
+      label: r.label,
+      format: "vtt" as const,
+      source: r.source as "upload" | "embedded" | "sidecar",
+      sourceFormat,
+      isDefault: r.isDefault,
+      url: `/videos/${r.entityId}/subtitles/${r.id}`,
+      sourceUrl: hasRawSource
+        ? `/videos/${r.entityId}/subtitles/${r.id}/source`
+        : null,
+      createdAt:
+        r.createdAt instanceof Date
+          ? r.createdAt.toISOString()
+          : String(r.createdAt),
+    };
+  });
+  const hasSubtitles = subtitleTracks.length > 0;
+
   return {
     id: row.id,
     title: row.title,
@@ -1004,7 +1174,7 @@ export async function getVideoSceneDetail(id: string) {
     trickplayVttPath: row.trickplayVttPath,
     playCount: row.playCount,
     orgasmCount: row.orgasmCount,
-    hasSubtitles: false,
+    hasSubtitles,
     sceneFolderId: row.seriesId,
     sceneFolderTitle: row.seriesTitle,
     episodeNumber: row.episodeNumber,
@@ -1014,8 +1184,8 @@ export async function getVideoSceneDetail(id: string) {
     studio: studioEmbed,
     performers: perfRows,
     tags: tagRows,
-    markers: [],
-    subtitleTracks: [],
+    markers,
+    subtitleTracks,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

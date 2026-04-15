@@ -23,6 +23,7 @@ import {
   enqueuePendingVideoJob,
 } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
+import { ingestSidecarSubtitlesForVideoEntity } from "../lib/sidecar-subtitles.js";
 
 const {
   videoSeries,
@@ -322,7 +323,8 @@ export async function processLibraryScan(job: Job): Promise<void> {
     }
 
     // Enqueue downstream processors for the episode (media-probe,
-    // fingerprint, preview). Each processor dispatches on entityKind.
+    // fingerprint, preview, extract-subtitles). Each processor
+    // dispatches on entityKind.
     const epTrigger = {
       by: "library-scan" as const,
       label: `Queued during ${root.label} scan`,
@@ -331,9 +333,28 @@ export async function processLibraryScan(job: Job): Promise<void> {
       await enqueuePendingVideoJob("media-probe", "video_episode", episodeId, epTrigger);
       await enqueuePendingVideoJob("fingerprint", "video_episode", episodeId, epTrigger);
       await enqueuePendingVideoJob("preview", "video_episode", episodeId, epTrigger);
+      await enqueuePendingVideoJob(
+        "extract-subtitles",
+        "video_episode",
+        episodeId,
+        epTrigger,
+      );
     } catch (err) {
       console.warn(
         `[library-scan-video] failed to enqueue downstream jobs for episode ${episodeId}: ${(err as Error).message}`,
+      );
+    }
+
+    // Best-effort sidecar subtitle ingestion.
+    try {
+      await ingestSidecarSubtitlesForVideoEntity(
+        "video_episode",
+        episodeId,
+        episode.filePath,
+      );
+    } catch (err) {
+      console.warn(
+        `[library-scan-video] sidecar subtitle ingest failed for episode ${episodeId}: ${(err as Error).message}`,
       );
     }
 
@@ -438,9 +459,28 @@ export async function processLibraryScan(job: Job): Promise<void> {
       await enqueuePendingVideoJob("media-probe", "video_movie", movieId, mvTrigger);
       await enqueuePendingVideoJob("fingerprint", "video_movie", movieId, mvTrigger);
       await enqueuePendingVideoJob("preview", "video_movie", movieId, mvTrigger);
+      await enqueuePendingVideoJob(
+        "extract-subtitles",
+        "video_movie",
+        movieId,
+        mvTrigger,
+      );
     } catch (err) {
       console.warn(
         `[library-scan-video] failed to enqueue downstream jobs for movie ${movieId}: ${(err as Error).message}`,
+      );
+    }
+
+    // Best-effort sidecar subtitle ingestion.
+    try {
+      await ingestSidecarSubtitlesForVideoEntity(
+        "video_movie",
+        movieId,
+        movie.filePath,
+      );
+    } catch (err) {
+      console.warn(
+        `[library-scan-video] sidecar subtitle ingest failed for movie ${movieId}: ${(err as Error).message}`,
       );
     }
 

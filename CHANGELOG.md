@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- **Subtitles are back for videos.** Upload, extract-from-embedded, and .ass/.ssa/.srt sidecar files all work end-to-end against the new video library. Tracks show up in the player's subtitle menu on both episode and movie pages, and library scans automatically pick up sidecar subtitles next to the file as they discover new videos.
+- **Scene markers on the new video library.** Chapter / scene markers you create on a movie or episode persist, show on the timeline, and round-trip through the `/videos/:id/markers` endpoints. The videos-to-series migration also copies every legacy `scene_markers` row onto the matching new entity.
+- **Custom folder names.** Renaming a series folder from the UI now sticks — `video_series` carries a `custom_name` column, and the folder cards / detail pages show the custom name when it's set. The migration copies any existing `scene_folders.custom_name` values onto their new `video_series` rows.
+- **Richer video list cards.** `/videos` list responses now include per-row performer and tag chips (hydrated with one batched query per page) and a `hasSubtitles` flag so the card can show the CC badge.
+
+### Added
+
+- **New polymorphic tables: `video_subtitles` and `video_markers`** keyed on `entity_type` (`video_episode` | `video_movie`) + `entity_id`. No FK — the video-scene and worker services handle lifecycle. Ships in drizzle migration `0013_blushing_bruce_banner` alongside `video_series.custom_name`, with a matching `LEGACY_SCHEMA_SENTINELS` entry.
+- **`video-subtitles.service.ts` + `video-markers.service.ts`** — the typed business logic behind `/videos/:id/subtitles/*` and `/videos/:id/markers`. Replaces the 501-stub routes. Keeps the legacy `SceneSubtitleTrackDto` / `SceneMarkerDto` wire shapes so existing web player code consumes them unchanged, except track URLs point at `/videos/:id/subtitles/:trackId` instead of `/scenes/...`.
+- **Extract-subtitles + sidecar-subtitles wiring for video entities.** The worker processor consumes `{ entityKind, entityId }` payloads and writes to `video_subtitles`. `library-scan-video` enqueues `extract-subtitles` for every new episode and movie and calls `ingestSidecarSubtitlesForVideoEntity` to pick up sidecars on disk.
+- **Videos-to-series stage() copies subtitles, markers, and custom folder names.** Legacy `scene_subtitles` rows land in `video_subtitles`, `scene_markers` land in `video_markers`, and `scene_folders.custom_name` merges onto `video_series.custom_name`. Metrics report `subtitlesCopied` and `markersCopied`.
+
 ### Changed
 
 - API routes `routes/jobs.ts`, `routes/scrapers.ts`, `routes/stashbox.ts`, and `routes/assets.ts` now operate exclusively on `video_episodes` + `video_movies`. Manual job-enqueue, phash backfill, rebuild-preview, and asset-layout migration all route through the typed video tables; the stash-compat scraper pipeline writes scrape results keyed on `entity_type = "video_episode"` / `"video_movie"` and applies accepts by updating the right video table (with studio changes on episodes flowing through to the parent series). StashBox identify, submit-fingerprints, and the pHash contributions list resolve videos the same way.

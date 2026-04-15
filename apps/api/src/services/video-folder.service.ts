@@ -119,8 +119,8 @@ function toSeriesListItem(
   return {
     id: series.id,
     title: series.title,
-    customName: null,
-    displayTitle: series.title,
+    customName: series.customName,
+    displayTitle: series.customName ?? series.title,
     folderPath: series.folderPath,
     relativePath: series.relativePath,
     parentId: null,
@@ -342,9 +342,11 @@ export async function updateVideoFolder(
     if (patch.details !== undefined) updatePatch.overview = patch.details;
     if (patch.rating !== undefined) updatePatch.rating = patch.rating;
     if (patch.date !== undefined) updatePatch.firstAirDate = patch.date;
-    // customName is not yet modelled on video_series — ignored on purpose.
-    // TODO(videos): add `customName` column to video_series so the folder
-    // rename flow matches the scene-folder UX.
+    if (patch.customName !== undefined) {
+      const trimmed =
+        typeof patch.customName === "string" ? patch.customName.trim() : "";
+      updatePatch.customName = trimmed.length > 0 ? trimmed : null;
+    }
 
     if (patch.studioName !== undefined) {
       if (!patch.studioName) {
