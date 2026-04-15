@@ -880,6 +880,24 @@ export async function scrapersRoutes(app: FastifyInstance) {
     return { results, total: count, limit, offset };
   });
 
+  // ─── GET /scrapers/results/:id ──────────────────────────────────
+  // Fetch a single scrape result row, including its typed
+  // `proposedResult` payload. Used by the cascade review drawer to
+  // hydrate its UI state from whichever normalized shape the plugin
+  // wrote during the seek phase.
+  app.get("/scrapers/results/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const [row] = await db
+      .select()
+      .from(scrapeResults)
+      .where(eq(scrapeResults.id, id))
+      .limit(1);
+    if (!row) {
+      return reply.code(404).send({ error: "Scrape result not found" });
+    }
+    return row;
+  });
+
   // ─── POST /scrapers/results/:id/accept ──────────────────────────
   // Apply a scrape result to the scene
   app.post("/scrapers/results/:id/accept", async (request, reply) => {

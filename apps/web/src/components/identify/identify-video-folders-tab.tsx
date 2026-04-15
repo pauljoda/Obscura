@@ -1,14 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@obscura/ui/primitives/badge";
 import { cn } from "@obscura/ui/lib/utils";
-import { Check, ChevronDown, Loader2, ScanSearch, X, FolderOpen } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Layers,
+  Loader2,
+  ScanSearch,
+  X,
+  FolderOpen,
+} from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
 import { executePlugin, acceptPluginResult } from "../../lib/api";
 import type { NormalizedScrapeResult } from "../scrape/types";
 import type { VideoFolderRow, VideoFolderField, NormalizedFolderIdentifyResult } from "./types";
 import { VIDEO_FOLDER_FIELDS } from "./types";
 import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
+import { CascadeReviewDrawer } from "./cascade-review-drawer";
 
 /* ─── Props ───────────────────────────────────────────────────── */
 
@@ -226,6 +236,13 @@ export function IdentifyVideoFolderRows({
   toggleExpanded,
   onSeekSingle,
 }: VideoFoldersTabProps) {
+  const [reviewing, setReviewing] = useState<{
+    idx: number;
+    scrapeResultId: string;
+    label: string;
+    seriesId: string;
+  } | null>(null);
+
   function toggleField(idx: number, field: VideoFolderField) {
     setRows((prev) =>
       prev.map((r, i) => {
@@ -238,30 +255,83 @@ export function IdentifyVideoFolderRows({
     );
   }
 
-  return rows.map((row, idx) => (
-    <VideoFolderRowCard
-      key={row.folder.id}
-      row={row}
-      expanded={expandedIds.has(row.folder.id)}
-      onToggleExpand={() => toggleExpanded(row.folder.id)}
-      onToggleField={(field) => toggleField(idx, field)}
-      onAccept={async () => {
-        if (!row.scrapeResultId) return;
-        try {
-          await acceptPluginResult(row.scrapeResultId, Array.from(row.selectedFields));
-          setRows((prev) =>
-            prev.map((r, i) => (i === idx ? { ...r, status: "accepted" as const } : r))
-          );
-        } catch { /* keep as found */ }
-      }}
-      onDismiss={() => {
-        setRows((prev) =>
-          prev.map((r, i) => (i === idx ? { ...r, status: "pending" as const, result: undefined, scrapeResultId: undefined, matchedProvider: undefined, error: undefined } : r))
-        );
-      }}
-      onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
-    />
-  ));
+  return (
+    <>
+      {rows.map((row, idx) => (
+        <VideoFolderRowCard
+          key={row.folder.id}
+          row={row}
+          expanded={expandedIds.has(row.folder.id)}
+          onToggleExpand={() => toggleExpanded(row.folder.id)}
+          onToggleField={(field) => toggleField(idx, field)}
+          onAccept={async () => {
+            if (!row.scrapeResultId) return;
+            try {
+              await acceptPluginResult(
+                row.scrapeResultId,
+                Array.from(row.selectedFields),
+              );
+              setRows((prev) =>
+                prev.map((r, i) =>
+                  i === idx ? { ...r, status: "accepted" as const } : r,
+                ),
+              );
+            } catch {
+              /* keep as found */
+            }
+          }}
+          onDismiss={() => {
+            setRows((prev) =>
+              prev.map((r, i) =>
+                i === idx
+                  ? {
+                      ...r,
+                      status: "pending" as const,
+                      result: undefined,
+                      scrapeResultId: undefined,
+                      matchedProvider: undefined,
+                      error: undefined,
+                    }
+                  : r,
+              ),
+            );
+          }}
+          onReview={
+            row.scrapeResultId
+              ? () =>
+                  setReviewing({
+                    idx,
+                    scrapeResultId: row.scrapeResultId!,
+                    label: row.folder.displayTitle || row.folder.title,
+                    seriesId: row.folder.id,
+                  })
+              : undefined
+          }
+          onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
+        />
+      ))}
+
+      {reviewing && (
+        <CascadeReviewDrawer
+          scrapeResultId={reviewing.scrapeResultId}
+          entityKind="video_series"
+          entityId={reviewing.seriesId}
+          label={reviewing.label}
+          onAccepted={() => {
+            setRows((prev) =>
+              prev.map((r, i) =>
+                i === reviewing.idx
+                  ? { ...r, status: "accepted" as const }
+                  : r,
+              ),
+            );
+            setReviewing(null);
+          }}
+          onClose={() => setReviewing(null)}
+        />
+      )}
+    </>
+  );
 }
 
 /* ─── Row card ────────────────────────────────────────────────── */
@@ -273,6 +343,7 @@ function VideoFolderRowCard({
   onToggleField,
   onAccept,
   onDismiss,
+  onReview,
   onSeekSingle,
 }: {
   row: VideoFolderRow;
@@ -281,6 +352,7 @@ function VideoFolderRowCard({
   onToggleField: (field: VideoFolderField) => void;
   onAccept: () => void;
   onDismiss: () => void;
+  onReview?: () => void;
   onSeekSingle?: () => void;
 }) {
   return (
@@ -340,10 +412,22 @@ function VideoFolderRowCard({
           )}
           {row.status === "found" && (
             <>
+              {onReview && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReview();
+                  }}
+                  className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
+                  title="Review cascade (seasons + episodes + images)"
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); onAccept(); }}
                 className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
-                title="Accept"
+                title="Quick accept (legacy)"
               >
                 <Check className="h-3.5 w-3.5" />
               </button>

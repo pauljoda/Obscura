@@ -809,6 +809,20 @@ export interface ScrapeResultDto {
   proposedEpisodeNumber: number | null;
   proposedFolderResult: unknown | null;
   proposedAudioResult: unknown | null;
+  /**
+   * Typed payload for the new cascade review flow (Plan C /
+   * Plan D). Plugins that implement `seriesCascade`, `movieByName`,
+   * `episodeBy*` etc. write their discriminated
+   * `{ kind, movie | series | episode }` result here; the cascade
+   * review drawer discriminates on the shape of this field.
+   */
+  proposedResult: unknown | null;
+  /**
+   * When a plugin seek returns ancillary child scrape-results
+   * alongside a parent (e.g. per-episode results linked to a series
+   * cascade), they are threaded through this parent id.
+   */
+  cascadeParentId: string | null;
   appliedAt: string | null;
   createdAt: string;
   updatedAt: string;

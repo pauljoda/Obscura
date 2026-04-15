@@ -114,6 +114,16 @@ export async function fetchAllScrapeResults(params?: {
   return { results, total };
 }
 
+/**
+ * Fetch a single scrape_result row by id. The cascade review drawer
+ * uses this to hydrate the typed `proposedResult` payload that the
+ * list endpoint would normally also include, but without burning the
+ * 500-row page for one row.
+ */
+export async function fetchScrapeResult(id: string): Promise<ScrapeResult> {
+  return fetchApi(`/scrapers/results/${id}`);
+}
+
 export async function acceptScrapeResult(
   id: string,
   fields?: string[],
@@ -358,6 +368,116 @@ export async function acceptPluginResult(
   return fetchApi(`/plugins/results/${resultId}/accept`, {
     method: "POST",
     body: JSON.stringify({ fields }),
+  });
+}
+
+// ─── Typed cascade / movie / episode accept endpoints ───────────────
+//
+// These target the new `scrape-accept.service.ts` handlers added in
+// Plan D1. Unlike `acceptPluginResult` (legacy field-list), they take
+// a structured field mask, optional per-slot image selections, and
+// — for series — a cascade spec with per-season and per-episode
+// overrides assembled by the cascade review drawer.
+//
+// The helpers are deliberately thin; the drawer owns spec assembly.
+
+/**
+ * Per-field acceptance mask — one boolean per text field the user
+ * toggled in the review screen. Fields not present in the mask are
+ * left as-is on the target row. Mirrors `AcceptFieldMask` in
+ * `scrape-accept.service.ts`.
+ */
+export interface AcceptFieldMask {
+  title?: boolean;
+  overview?: boolean;
+  tagline?: boolean;
+  releaseDate?: boolean;
+  airDate?: boolean;
+  runtime?: boolean;
+  genres?: boolean;
+  studio?: boolean;
+  cast?: boolean;
+  rating?: boolean;
+  contentRating?: boolean;
+  externalIds?: boolean;
+}
+
+/**
+ * Per-slot image URL choices assembled by the ImagePicker for each
+ * review screen. The server fetches only the selected URLs during
+ * accept.
+ */
+export interface SelectedImages {
+  poster?: string;
+  backdrop?: string;
+  logo?: string;
+  still?: string;
+}
+
+/**
+ * Cascade accept spec — collapses the drawer's per-season and
+ * per-episode checkbox state into the shape the API expects.
+ */
+export interface CascadeAcceptSpec {
+  acceptAllSeasons?: boolean;
+  seasonOverrides?: Record<
+    number,
+    {
+      accepted: boolean;
+      fieldMask?: AcceptFieldMask;
+      selectedImages?: SelectedImages;
+      episodes?: Record<
+        number,
+        {
+          accepted: boolean;
+          fieldMask?: AcceptFieldMask;
+          selectedImages?: SelectedImages;
+        }
+      >;
+    }
+  >;
+}
+
+export async function acceptVideoMovieScrape(
+  movieId: string,
+  body: {
+    scrapeResultId: string;
+    fieldMask?: AcceptFieldMask;
+    selectedImages?: SelectedImages;
+  },
+): Promise<{ ok: boolean }> {
+  return fetchApi(`/video/movies/${movieId}/accept-scrape`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function acceptVideoEpisodeScrape(
+  episodeId: string,
+  body: {
+    scrapeResultId: string;
+    fieldMask?: AcceptFieldMask;
+    selectedImages?: SelectedImages;
+  },
+): Promise<{ ok: boolean }> {
+  return fetchApi(`/video/episodes/${episodeId}/accept-scrape`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function acceptVideoSeriesScrape(
+  seriesId: string,
+  body: {
+    scrapeResultId: string;
+    fieldMask?: AcceptFieldMask;
+    selectedImages?: SelectedImages;
+    cascade?: CascadeAcceptSpec;
+  },
+): Promise<{ ok: boolean; seasonsUpdated: number; episodesUpdated: number }> {
+  return fetchApi(`/video/series/${seriesId}/accept-scrape`, {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 
