@@ -67,6 +67,16 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
     .map((r) => r.path);
   const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
 
+  // Safety: if there are no video-enabled roots at all, skip the
+  // orphan-delete step entirely. An empty `videoRootPaths` would
+  // classify every existing row as "orphaned" and wipe the entire
+  // video library in a single call — almost always a misconfiguration
+  // (scan_movies/scan_series defaulted to false on a legacy install,
+  // the user hasn't opted into the new scan toggles yet, etc.) rather
+  // than a legitimate prune. Missing-file pruning still runs because
+  // those deletions are per-row and tied to actual disk state.
+  const pruneOrphansByRoot = videoRootPaths.length > 0;
+
   // ── Video episodes ──────────────────────────────────────────────
   const allEpisodes = await db
     .select({
@@ -86,19 +96,21 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
       .where(inArray(videoEpisodes.id, missingEpisodeIds));
   }
 
-  const orphanedEpisodeIds = allEpisodes
-    .filter((ep) => {
-      if (!ep.filePath) return false;
-      if (missingEpisodeIds.includes(ep.id)) return false;
-      return !isPathWithinAnyRoot(ep.filePath, videoRootPaths);
-    })
-    .map((ep) => ep.id);
+  if (pruneOrphansByRoot) {
+    const orphanedEpisodeIds = allEpisodes
+      .filter((ep) => {
+        if (!ep.filePath) return false;
+        if (missingEpisodeIds.includes(ep.id)) return false;
+        return !isPathWithinAnyRoot(ep.filePath, videoRootPaths);
+      })
+      .map((ep) => ep.id);
 
-  if (orphanedEpisodeIds.length > 0) {
-    await removeGeneratedVideoDirs(orphanedEpisodeIds);
-    await db
-      .delete(videoEpisodes)
-      .where(inArray(videoEpisodes.id, orphanedEpisodeIds));
+    if (orphanedEpisodeIds.length > 0) {
+      await removeGeneratedVideoDirs(orphanedEpisodeIds);
+      await db
+        .delete(videoEpisodes)
+        .where(inArray(videoEpisodes.id, orphanedEpisodeIds));
+    }
   }
 
   // ── Video movies ────────────────────────────────────────────────
@@ -118,17 +130,19 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
     await db.delete(videoMovies).where(inArray(videoMovies.id, missingMovieIds));
   }
 
-  const orphanedMovieIds = allMovies
-    .filter((mv) => {
-      if (!mv.filePath) return false;
-      if (missingMovieIds.includes(mv.id)) return false;
-      return !isPathWithinAnyRoot(mv.filePath, videoRootPaths);
-    })
-    .map((mv) => mv.id);
+  if (pruneOrphansByRoot) {
+    const orphanedMovieIds = allMovies
+      .filter((mv) => {
+        if (!mv.filePath) return false;
+        if (missingMovieIds.includes(mv.id)) return false;
+        return !isPathWithinAnyRoot(mv.filePath, videoRootPaths);
+      })
+      .map((mv) => mv.id);
 
-  if (orphanedMovieIds.length > 0) {
-    await removeGeneratedVideoDirs(orphanedMovieIds);
-    await db.delete(videoMovies).where(inArray(videoMovies.id, orphanedMovieIds));
+    if (orphanedMovieIds.length > 0) {
+      await removeGeneratedVideoDirs(orphanedMovieIds);
+      await db.delete(videoMovies).where(inArray(videoMovies.id, orphanedMovieIds));
+    }
   }
 
   // Seasons whose parent series vanished cascade via FK ON DELETE, but

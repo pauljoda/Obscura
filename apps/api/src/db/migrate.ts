@@ -166,6 +166,18 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     // gone". Bridged installs that still have them stop detection here
     // so the drizzle migrator runs 0014 normally.
     !(await columnExists(c, "library_roots", "scan_videos")),
+  "0015_next_pride": async (c) => {
+    // 0015 flips the scan_movies / scan_series column defaults to
+    // true. There's no schema-shape change to probe, so key on the
+    // column default in the catalog. True = default flipped.
+    const rows = await c<{ column_default: string | null }[]>`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'library_roots'
+        AND column_name = 'scan_movies'
+    `;
+    return rows[0]?.column_default?.startsWith("true") ?? false;
+  },
 };
 
 /**
@@ -256,6 +268,28 @@ async function reconcileSchema(client: SqlClient): Promise<void> {
     ALTER TABLE library_settings
     ADD COLUMN IF NOT EXISTS use_library_root_as_folder boolean NOT NULL DEFAULT false
   `;
+
+  // 0010_natural_meteorite: scan_movies / scan_series columns replaced
+  // the legacy scan_videos boolean. The migration added the new columns
+  // with DEFAULT false and never backfilled from scan_videos, which
+  // left every existing root with both toggles off — breaking post-
+  // migration scans and (more severely) causing
+  // pruneUntrackedLibraryReferences to wipe the video tables whenever
+  // it ran with an empty video-root list. This backfill one-shot sets
+  // both toggles to `true` on any root that had `scan_videos = true`,
+  // and is a safe no-op afterwards because the WHERE matches nothing.
+  // The `scan_videos` column is dropped by migration 0014, so this
+  // only fires on installs that still have it — bridging legacy
+  // push-managed deployments exactly once.
+  if (await columnExists(client, "library_roots", "scan_videos")) {
+    await client`
+      UPDATE library_roots
+      SET scan_movies = TRUE, scan_series = TRUE
+      WHERE scan_videos = TRUE
+        AND scan_movies = FALSE
+        AND scan_series = FALSE
+    `;
+  }
 
   // 0003_colossal_donald_blake: fingerprint_submissions table + FKs + indexes.
   await client`
