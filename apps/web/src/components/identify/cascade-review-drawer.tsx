@@ -23,7 +23,7 @@
  * endpoint from `scrape-accept.service.ts`.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   NormalizedEpisodeResult,
   NormalizedMovieResult,
@@ -47,6 +47,7 @@ import {
   acceptVideoEpisodeScrape,
   acceptVideoMovieScrape,
   acceptVideoSeriesScrape,
+  executePlugin,
   fetchScrapeResult,
   type AcceptFieldMask,
   type CascadeAcceptSpec,
@@ -132,22 +133,29 @@ export interface CascadeReviewDrawerProps {
 /* ─── Drawer shell ───────────────────────────────────────────────── */
 
 export function CascadeReviewDrawer({
-  scrapeResultId,
+  scrapeResultId: initialScrapeResultId,
   entityKind,
   entityId,
   label,
   onAccepted,
   onClose,
 }: CascadeReviewDrawerProps) {
+  // The user can re-run the plugin from inside the drawer (e.g. to
+  // disambiguate a series match). Each re-run persists a new scrape
+  // row, so the "current" id is tracked in state — starts as the prop
+  // value and moves forward whenever `reRunWithExternalId` completes.
+  const [currentScrapeResultId, setCurrentScrapeResultId] =
+    useState(initialScrapeResultId);
   const [row, setRow] = useState<ScrapeResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rerunning, setRerunning] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchScrapeResult(scrapeResultId)
+    fetchScrapeResult(currentScrapeResultId)
       .then((r) => {
         if (!cancelled) {
           setRow(r);
@@ -163,12 +171,61 @@ export function CascadeReviewDrawer({
     return () => {
       cancelled = true;
     };
-  }, [scrapeResultId]);
+  }, [currentScrapeResultId]);
 
   const mode = useMemo<DrawerMode>(() => {
     if (!row) return { kind: "empty", reason: "Loading…" };
     return classifyProposedResult(row.proposedResult);
   }, [row]);
+
+  /**
+   * Re-run the plugin that produced this scrape result with a
+   * caller-supplied override (typically `{ externalIds: { tmdb } }`
+   * from a candidate pick). We round-trip through the server so the
+   * new normalized payload is persisted on a fresh `scrape_results`
+   * row, then point the drawer at it.
+   */
+  const reRunWithExternalId = useCallback(
+    async (tmdbId: string) => {
+      if (!row?.pluginPackageId) {
+        setError("Cannot re-run — scrape row has no plugin reference.");
+        return;
+      }
+      setRerunning(true);
+      setError(null);
+      try {
+        const action =
+          entityKind === "video_series"
+            ? "folderByName"
+            : entityKind === "video_movie"
+              ? "movieByName"
+              : "episodeByName";
+        const res = await executePlugin(
+          row.pluginPackageId,
+          action,
+          {
+            title: label,
+            name: label,
+            externalIds: { tmdb: tmdbId },
+          },
+          { saveResult: true, entityId },
+        );
+        if (!res.ok) {
+          throw new Error("Plugin returned no result for the picked candidate.");
+        }
+        const saved = res.result as { id?: string } | null;
+        if (!saved?.id) {
+          throw new Error("Plugin did not persist a scrape result.");
+        }
+        setCurrentScrapeResultId(saved.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Re-run failed");
+      } finally {
+        setRerunning(false);
+      }
+    },
+    [row?.pluginPackageId, entityKind, entityId, label],
+  );
 
   return (
     <div
@@ -219,16 +276,20 @@ export function CascadeReviewDrawer({
           )}
           {!loading && !error && mode.kind === "series" && entityKind === "video_series" && (
             <SeriesCascadeBody
+              key={currentScrapeResultId}
               result={mode.result}
-              scrapeResultId={scrapeResultId}
+              scrapeResultId={currentScrapeResultId}
               seriesId={entityId}
+              rerunning={rerunning}
+              onPickCandidate={(id) => void reRunWithExternalId(id)}
               onAccepted={onAccepted}
             />
           )}
           {!loading && !error && mode.kind === "movie" && entityKind === "video_movie" && (
             <MovieReviewBody
+              key={currentScrapeResultId}
               result={mode.result}
-              scrapeResultId={scrapeResultId}
+              scrapeResultId={currentScrapeResultId}
               movieId={entityId}
               onAccepted={onAccepted}
             />
@@ -238,8 +299,9 @@ export function CascadeReviewDrawer({
             mode.kind === "episode" &&
             entityKind === "video_episode" && (
               <EpisodeReviewBody
+                key={currentScrapeResultId}
                 result={mode.result}
-                scrapeResultId={scrapeResultId}
+                scrapeResultId={currentScrapeResultId}
                 episodeId={entityId}
                 onAccepted={onAccepted}
               />
@@ -328,18 +390,23 @@ function SeriesCascadeBody({
   result,
   scrapeResultId,
   seriesId,
+  rerunning,
+  onPickCandidate,
   onAccepted,
 }: {
   result: NormalizedSeriesResult;
   scrapeResultId: string;
   seriesId: string;
+  rerunning: boolean;
+  onPickCandidate: (tmdbId: string) => void;
   onAccepted: () => void;
 }) {
   // Disambiguation: if the plugin returned multiple candidates the
-  // user picks one first. Picking a candidate replaces the series
-  // header with that candidate's info — in practice the caller
-  // re-runs the cascade with the chosen externalId, but for now the
-  // drawer at least surfaces the candidates list.
+  // user picks one first. Picking a candidate triggers a plugin
+  // re-run in the parent drawer via `onPickCandidate`; when the new
+  // scrape row lands the drawer re-mounts this component (see the
+  // `key={currentScrapeResultId}` on the drawer shell), so local
+  // state is reset and the picker disappears automatically.
   const [pickedCandidate, setPickedCandidate] = useState<string | null>(null);
 
   const [seriesMask, setSeriesMask] = useState<AcceptFieldMask>(() =>
@@ -527,7 +594,11 @@ function SeriesCascadeBody({
         <CandidatePicker
           candidates={result.candidates}
           picked={pickedCandidate}
-          onPick={(id) => setPickedCandidate(id)}
+          rerunning={rerunning}
+          onPick={(id) => {
+            setPickedCandidate(id);
+            onPickCandidate(id);
+          }}
         />
       )}
 
@@ -686,30 +757,44 @@ function SeriesCascadeBody({
 function CandidatePicker({
   candidates,
   picked,
+  rerunning,
   onPick,
 }: {
   candidates: NormalizedSeriesCandidate[];
   picked: string | null;
+  rerunning: boolean;
   onPick: (externalId: string) => void;
 }) {
   return (
     <div className="border-b border-border-accent/30 bg-surface-2/40 p-4">
-      <div className="mb-2 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
+      <div className="mb-2 flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
         Multiple matches — pick one
+        {rerunning && (
+          <span className="flex items-center gap-1 text-text-accent">
+            <Loader2 className="h-3 w-3 animate-spin" /> refetching…
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         {candidates.map((c) => {
+          // Prefer the tmdb id specifically so the parent drawer can
+          // re-run the plugin with `{ externalIds: { tmdb } }` — the
+          // plugin side uses this as a direct lookup bypass.
           const id =
-            Object.values(c.externalIds)[0] ?? c.title + (c.year ?? "");
+            c.externalIds.tmdb ??
+            Object.values(c.externalIds)[0] ??
+            c.title + (c.year ?? "");
           const isPicked = id === picked;
           return (
             <button
               key={id}
               type="button"
               onClick={() => onPick(id)}
+              disabled={rerunning}
               className={cn(
                 "surface-card no-lift flex gap-2 p-2 text-left transition-colors",
                 isPicked && "border-border-accent",
+                rerunning && "opacity-50 cursor-not-allowed",
               )}
             >
               {c.posterUrl && (
@@ -737,12 +822,6 @@ function CandidatePicker({
           );
         })}
       </div>
-      {picked && (
-        <p className="mt-2 text-[0.65rem] text-text-muted">
-          Picked <span className="font-mono text-text-accent">{picked}</span>.
-          Re-run the identify with this id to refresh the cascade.
-        </p>
-      )}
     </div>
   );
 }

@@ -35,6 +35,7 @@ import {
   fetchInstalledPlugins,
   type InstalledPlugin,
 } from "../../lib/api/scrapers";
+import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
 
 type EntityKind = "video_series" | "video_movie" | "video_episode";
@@ -93,8 +94,14 @@ export function IdentifyButton({
       .finally(() => setLoadingPlugins(false));
   }, [open, plugins.length, loadingPlugins]);
 
+  // Hide NSFW plugins while the user is in SFW mode. `useNsfwAwareProviders`
+  // is a pure derived hook — it reads the current nsfw mode from context
+  // and filters the list so the popover never offers an NSFW provider
+  // the user is explicitly trying to avoid.
+  const visiblePlugins = useNsfwAwareProviders(plugins);
+
   const eligibleCapabilities = CAPABILITY_BY_KIND[entityKind];
-  const eligible = plugins.filter((p) => {
+  const eligible = visiblePlugins.filter((p) => {
     const caps = p.capabilities ?? {};
     return eligibleCapabilities.some((key) => !!caps[key]);
   });

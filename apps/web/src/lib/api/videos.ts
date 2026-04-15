@@ -123,6 +123,9 @@ export async function updateVideo(
     studioName?: string | null;
     performerNames?: string[];
     tagNames?: string[];
+    seasonNumber?: number | null;
+    episodeNumber?: number | null;
+    absoluteEpisodeNumber?: number | null;
   },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/videos/${id}`, {

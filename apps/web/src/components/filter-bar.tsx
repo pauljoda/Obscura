@@ -40,6 +40,7 @@ const defaultSortDir: Record<SortOption, SortDir> = {
   rating: "desc",
   date: "desc",
   plays: "desc",
+  episode: "asc",
 };
 
 interface FilterBarProps {
@@ -70,6 +71,7 @@ interface FilterBarProps {
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "episode", label: "Episode order" },
   { value: "recent", label: "Recently Added" },
   { value: "date", label: "Video date" },
   { value: "title", label: "Title A-Z" },

@@ -65,6 +65,7 @@ import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
 import { IdentifyAudioTrackRows } from "../identify/identify-audio-tracks-tab";
+import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 
 /* ─── Component ─────────────────────────────────────────────────── */
 
@@ -293,10 +294,18 @@ export function BulkScrape() {
   const totalCount = rows.length;
 
   // Studios/tags only use stashbox; scenes/performers also use community scrapers
-  const scrapersForTab = tab === "scenes" ? sceneScrapers : tab === "performers" ? perfScrapers : [];
+  const scrapersForTab = useNsfwAwareProviders(
+    tab === "scenes" ? sceneScrapers : tab === "performers" ? perfScrapers : [],
+  );
+
+  // Hide NSFW plugins from the identify + bulk scrape UI while the
+  // user is in SFW mode. Keeps NSFW providers from ever being offered
+  // as a seek source for a SFW run. The hook filters against the
+  // current NsfwContext mode.
+  const nsfwAwarePlugins = useNsfwAwareProviders(plugins);
 
   // Filter Obscura plugins by capabilities relevant to the current tab
-  const pluginsForTab = plugins.filter((p) => {
+  const pluginsForTab = nsfwAwarePlugins.filter((p) => {
     const caps = p.capabilities ?? {};
     switch (tab) {
       case "scenes": return caps.videoByURL || caps.videoByName || caps.videoByFragment;

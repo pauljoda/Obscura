@@ -1420,7 +1420,16 @@ export interface SceneDetailDto extends SceneListItemDto {
   lastPlayedAt: string | null;
   url: string | null;
   urls: string[];
+  /**
+   * Episode placement fields, only populated when `entityKind ===
+   * "video_episode"`. `seasonNumber` is 0 for Specials / flat-series
+   * layouts. `absoluteEpisodeNumber` is the cumulative count across
+   * all seasons (honored by the filename parser when the scheme only
+   * carries a single number).
+   */
+  seasonNumber: number | null;
   episodeNumber: number | null;
+  absoluteEpisodeNumber: number | null;
   /**
    * Discriminator so the UI can tell whether a given row is backed
    * by `video_episodes` or `video_movies` without a second round-trip.

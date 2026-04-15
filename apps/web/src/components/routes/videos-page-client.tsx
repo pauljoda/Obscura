@@ -154,8 +154,17 @@ export function VideosPageClient({
   }, [nsfwMode]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(initialListPrefs.viewMode);
-  const [sortBy, setSortBy] = useState<SortOption>(initialListPrefs.sortBy);
-  const [sortDir, setSortDir] = useState<SortDir>(initialListPrefs.sortDir);
+  // When the page lands inside a series folder (activeFolder set),
+  // default to episode-order sort per spec §5.x — the natural way to
+  // view a show is season 1 ep 1, 2, 3… Otherwise the user's saved
+  // prefs win. `loadScenes` re-reads `sortBy` from state, so this
+  // initial override flows through the first fetch.
+  const [sortBy, setSortBy] = useState<SortOption>(
+    initialActiveFolder ? "episode" : initialListPrefs.sortBy,
+  );
+  const [sortDir, setSortDir] = useState<SortDir>(
+    initialActiveFolder ? "asc" : initialListPrefs.sortDir,
+  );
   const [searchQuery, setSearchQuery] = useState(initialListPrefs.search);
   const [activeFilters, setActiveFilters] = useState<VideosListPrefsActiveFilter[]>(
     initialListPrefs.activeFilters,
@@ -217,7 +226,19 @@ export function VideosPageClient({
     setRootFolders(initialRootFolders);
     setActiveFolder(initialActiveFolder);
     setActiveSeasonNumber(null);
-  }, [initialRootFolders, initialActiveFolder]);
+    // Navigating INTO a series folder resets the sort to episode
+    // order; navigating OUT (initialActiveFolder becomes null) falls
+    // back to the user's saved listing preference. Keeps "episode"
+    // meaningful only where it makes sense and never bleeds into the
+    // flat video feed.
+    if (initialActiveFolder) {
+      setSortBy("episode");
+      setSortDir("asc");
+    } else {
+      setSortBy(initialListPrefs.sortBy);
+      setSortDir(initialListPrefs.sortDir);
+    }
+  }, [initialRootFolders, initialActiveFolder, initialListPrefs]);
 
   useEffect(() => {
     const prefs: VideosListPrefs = {

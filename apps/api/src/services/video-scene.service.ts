@@ -119,6 +119,10 @@ export interface UpdateVideoBody {
   studioName?: string | null;
   performerNames?: string[];
   tagNames?: string[];
+  /** Episode placement — ignored for movies. */
+  seasonNumber?: number | null;
+  episodeNumber?: number | null;
+  absoluteEpisodeNumber?: number | null;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -156,7 +160,9 @@ interface VideoRow {
   seriesTitle: string | null;
   createdAt: Date;
   updatedAt: Date;
+  seasonNumber: number | null;
   episodeNumber: number | null;
+  absoluteEpisodeNumber: number | null;
 }
 
 function toVideoListItem(row: VideoRow) {
@@ -225,14 +231,35 @@ function parseSort(query: ListVideosQuery, kind: "episode" | "movie") {
     rating: "desc",
     date: "desc",
     plays: "desc",
+    episode: "asc",
   };
   const sortKey = query.sort ?? "recent";
+
+  // Episode sort: compound — (seasonNumber, episodeNumber,
+  // absoluteEpisodeNumber, createdAt) ASC by default. Only applies
+  // to episode queries; movie lists fall back to createdAt.
+  if (sortKey === "episode") {
+    const dir =
+      query.order === "asc" || query.order === "desc" ? query.order : "asc";
+    if (kind === "episode") {
+      const dirFn = dir === "asc" ? asc : desc;
+      return [
+        dirFn(videoEpisodes.seasonNumber),
+        dirFn(videoEpisodes.episodeNumber),
+        dirFn(videoEpisodes.absoluteEpisodeNumber),
+        asc(videoEpisodes.createdAt),
+      ];
+    }
+    // Movies: episode sort is meaningless; fall through to createdAt asc.
+    return [dir === "asc" ? asc(table.createdAt) : desc(table.createdAt)];
+  }
+
   const col = columns[sortKey] ?? table.createdAt;
   const dir =
     query.order === "asc" || query.order === "desc"
       ? query.order
       : (defaultDir[sortKey] ?? "desc");
-  return dir === "asc" ? asc(col) : desc(col);
+  return [dir === "asc" ? asc(col) : desc(col)];
 }
 
 function buildCommonDateFilters<T extends "episode" | "movie">(
@@ -483,12 +510,14 @@ export async function listVideoScenes(query: ListVideosQuery) {
         seriesStudioId: videoSeries.studioId,
         createdAt: videoEpisodes.createdAt,
         updatedAt: videoEpisodes.updatedAt,
+        seasonNumber: videoEpisodes.seasonNumber,
         episodeNumber: videoEpisodes.episodeNumber,
+        absoluteEpisodeNumber: videoEpisodes.absoluteEpisodeNumber,
       })
       .from(videoEpisodes)
       .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
       .where(where)
-      .orderBy(parseSort(query, "episode"))
+      .orderBy(...parseSort(query, "episode"))
       .limit(limit)
       .offset(offset);
 
@@ -519,7 +548,9 @@ export async function listVideoScenes(query: ListVideosQuery) {
       seriesTitle: r.seriesTitle,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+      seasonNumber: r.seasonNumber,
       episodeNumber: r.episodeNumber,
+      absoluteEpisodeNumber: r.absoluteEpisodeNumber,
     }));
   }
 
@@ -683,7 +714,7 @@ export async function listVideoScenes(query: ListVideosQuery) {
       .select()
       .from(videoMovies)
       .where(where)
-      .orderBy(parseSort(query, "movie"))
+      .orderBy(...parseSort(query, "movie"))
       .limit(limit)
       .offset(offset);
 
@@ -714,7 +745,9 @@ export async function listVideoScenes(query: ListVideosQuery) {
       seriesTitle: null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+      seasonNumber: null,
       episodeNumber: null,
+      absoluteEpisodeNumber: null,
     }));
   }
 
@@ -967,7 +1000,9 @@ async function loadEpisodeRow(id: string): Promise<VideoSourceRow | null> {
     seriesTitle: ser?.title ?? null,
     createdAt: ep.createdAt,
     updatedAt: ep.updatedAt,
+    seasonNumber: ep.seasonNumber,
     episodeNumber: ep.episodeNumber,
+    absoluteEpisodeNumber: ep.absoluteEpisodeNumber,
     interactive: false,
     frameRate: ep.frameRate,
     bitRate: ep.bitRate,
@@ -1012,7 +1047,9 @@ async function loadMovieRow(id: string): Promise<VideoSourceRow | null> {
     seriesTitle: null,
     createdAt: mv.createdAt,
     updatedAt: mv.updatedAt,
+    seasonNumber: null,
     episodeNumber: null,
+    absoluteEpisodeNumber: null,
     interactive: false,
     frameRate: mv.frameRate,
     bitRate: mv.bitRate,
@@ -1196,7 +1233,9 @@ export async function getVideoSceneDetail(id: string) {
     hasSubtitles,
     sceneFolderId: row.seriesId,
     sceneFolderTitle: row.seriesTitle,
+    seasonNumber: row.seasonNumber,
     episodeNumber: row.episodeNumber,
+    absoluteEpisodeNumber: row.absoluteEpisodeNumber,
     playDuration: row.playDuration,
     resumeTime: row.resumeTime,
     lastPlayedAt: row.lastPlayedAt,
@@ -1359,7 +1398,9 @@ export async function getVideosByIds(ids: string[]) {
       seriesTitle: ser?.title ?? null,
       createdAt: ep.createdAt,
       updatedAt: ep.updatedAt,
+      seasonNumber: ep.seasonNumber,
       episodeNumber: ep.episodeNumber,
+      absoluteEpisodeNumber: ep.absoluteEpisodeNumber,
     };
     const item = toVideoListItem(videoRow);
     item.performers = perfByEntity.get(ep.id) ?? [];
@@ -1395,7 +1436,9 @@ export async function getVideosByIds(ids: string[]) {
       seriesTitle: null,
       createdAt: mv.createdAt,
       updatedAt: mv.updatedAt,
+      seasonNumber: null,
       episodeNumber: null,
+      absoluteEpisodeNumber: null,
     };
     const item = toVideoListItem(videoRow);
     item.performers = perfByEntity.get(mv.id) ?? [];
@@ -1439,6 +1482,26 @@ export async function updateVideoScene(id: string, body: UpdateVideoBody) {
     if (body.organized !== undefined) patch.organized = body.organized;
     if (body.isNsfw !== undefined) patch.isNsfw = body.isNsfw;
     if (body.orgasmCount !== undefined) patch.orgasmCount = body.orgasmCount;
+
+    // Episode placement — only meaningful for episode rows. The
+    // movies branch silently ignores these keys so the web edit
+    // form doesn't need to guard per-type.
+    if (kind === "episode") {
+      if (body.seasonNumber !== undefined) {
+        patch.seasonNumber =
+          body.seasonNumber === null ? null : Math.max(0, body.seasonNumber);
+      }
+      if (body.episodeNumber !== undefined) {
+        patch.episodeNumber =
+          body.episodeNumber === null ? null : Math.max(0, body.episodeNumber);
+      }
+      if (body.absoluteEpisodeNumber !== undefined) {
+        patch.absoluteEpisodeNumber =
+          body.absoluteEpisodeNumber === null
+            ? null
+            : Math.max(0, body.absoluteEpisodeNumber);
+      }
+    }
 
     // Studio: movies carry studioId directly; episodes inherit it from their
     // series, so a studio write on an episode updates the series row.

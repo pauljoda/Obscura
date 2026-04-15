@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Clapperboard,
   SkipForward,
+  Tv,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -119,6 +120,11 @@ export function VideoEdit({
   const [tagNames, setTagNames] = useState<string[]>([]);
   const [orgasmCount, setOrgasmCount] = useState(0);
   const [studioFocused, setStudioFocused] = useState(false);
+  // Episode placement — only populated / writable for video_episode rows.
+  // Kept as strings so an empty field can round-trip back to null.
+  const [seasonNumber, setSeasonNumber] = useState<string>("");
+  const [episodeNumber, setEpisodeNumber] = useState<string>("");
+  const [absoluteEpisodeNumber, setAbsoluteEpisodeNumber] = useState<string>("");
 
   // Suggestions for autocomplete
   const [allTags, setAllTags] = useState<TagItem[]>([]);
@@ -177,6 +183,15 @@ export function VideoEdit({
     setPerformerNames(data.performers.map((p) => p.name));
     setTagNames(data.tags.map((t) => t.name));
     setOrgasmCount(data.orgasmCount ?? 0);
+    setSeasonNumber(data.seasonNumber != null ? String(data.seasonNumber) : "");
+    setEpisodeNumber(
+      data.episodeNumber != null ? String(data.episodeNumber) : "",
+    );
+    setAbsoluteEpisodeNumber(
+      data.absoluteEpisodeNumber != null
+        ? String(data.absoluteEpisodeNumber)
+        : "",
+    );
   }
 
   function enterEditMode() {
@@ -201,6 +216,18 @@ export function VideoEdit({
     setMessage(null);
 
     try {
+      // Parse episode-placement strings. Empty string → null (clear
+      // the column). A non-numeric string is treated as unchanged so
+      // typos don't blow away existing values.
+      const parseNullable = (raw: string): number | null | undefined => {
+        if (raw.trim() === "") return null;
+        const n = Number.parseInt(raw, 10);
+        return Number.isFinite(n) && n >= 0 ? n : undefined;
+      };
+      const seasonPatch = parseNullable(seasonNumber);
+      const episodePatch = parseNullable(episodeNumber);
+      const absolutePatch = parseNullable(absoluteEpisodeNumber);
+
       await saveDetail({
         title: title.trim(),
         details: details.trim() || null,
@@ -212,6 +239,13 @@ export function VideoEdit({
         studioName: studioName.trim() || null,
         performerNames: performerNames,
         tagNames: tagNames,
+        ...(scene?.entityKind === "video_episode"
+          ? {
+              seasonNumber: seasonPatch,
+              episodeNumber: episodePatch,
+              absoluteEpisodeNumber: absolutePatch,
+            }
+          : {}),
       });
 
       setMessage("Saved");
@@ -612,6 +646,37 @@ export function VideoEdit({
               </span>
             </MetadataRow>
 
+            {scene.entityKind === "video_episode" && (
+              <MetadataRow label="Episode" icon={Tv}>
+                <span className="text-sm text-text-secondary font-mono">
+                  {scene.seasonNumber != null
+                    ? scene.seasonNumber === 0
+                      ? "Specials"
+                      : `S${String(scene.seasonNumber).padStart(2, "0")}`
+                    : null}
+                  {scene.seasonNumber != null && scene.episodeNumber != null
+                    ? " "
+                    : ""}
+                  {scene.episodeNumber != null
+                    ? `E${String(scene.episodeNumber).padStart(2, "0")}`
+                    : null}
+                  {scene.absoluteEpisodeNumber != null ? (
+                    <span className="text-text-muted">
+                      {scene.episodeNumber != null || scene.seasonNumber != null
+                        ? " · "
+                        : ""}
+                      Abs {scene.absoluteEpisodeNumber}
+                    </span>
+                  ) : null}
+                  {scene.seasonNumber == null &&
+                    scene.episodeNumber == null &&
+                    scene.absoluteEpisodeNumber == null && (
+                      <span className="text-text-disabled">--</span>
+                    )}
+                </span>
+              </MetadataRow>
+            )}
+
             <MetadataRow label="Rating" icon={Star}>
               <StarRatingPicker value={scene.rating} readOnly />
             </MetadataRow>
@@ -923,6 +988,46 @@ export function VideoEdit({
                   onChange={(e) => setOrgasmCount(Number(e.target.value) || 0)}
                 />
               </FormField>
+
+              {scene.entityKind === "video_episode" && (
+                <>
+                  <FormField label="Season">
+                    <input
+                      className="control-input w-full"
+                      type="number"
+                      min="0"
+                      value={seasonNumber}
+                      onChange={(e) => setSeasonNumber(e.target.value)}
+                      placeholder="e.g. 1"
+                    />
+                  </FormField>
+                  <FormField label="Episode">
+                    <input
+                      className="control-input w-full"
+                      type="number"
+                      min="0"
+                      value={episodeNumber}
+                      onChange={(e) => setEpisodeNumber(e.target.value)}
+                      placeholder="e.g. 3"
+                    />
+                  </FormField>
+                  <FormField
+                    label="Absolute Episode"
+                    className="md:col-span-2"
+                  >
+                    <input
+                      className="control-input w-full"
+                      type="number"
+                      min="0"
+                      value={absoluteEpisodeNumber}
+                      onChange={(e) =>
+                        setAbsoluteEpisodeNumber(e.target.value)
+                      }
+                      placeholder="Cumulative count across all seasons (optional)"
+                    />
+                  </FormField>
+                </>
+              )}
 
               <FormField label="URL" className="md:col-span-2">
                 <input

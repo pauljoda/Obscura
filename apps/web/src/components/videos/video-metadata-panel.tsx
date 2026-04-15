@@ -7,6 +7,7 @@ import {
   Link2,
   Zap,
   Play,
+  Tv,
 } from "lucide-react";
 import {
   type VideoDetail as VideoDetailType,
@@ -30,13 +31,56 @@ function formatBitRate(bps: number | null): string {
   return `${(bps / 1000).toFixed(0)} Kbps`;
 }
 
+/**
+ * Compact "S01E03 · Abs 27" label for the episode-info row. Omits
+ * parts that aren't set so the output is always readable: a Specials
+ * file with episode number 4 renders as "Specials E04"; an episode
+ * with only absolute numbering renders as "Abs 27".
+ */
+function formatEpisodeLabel(
+  seasonNumber: number | null,
+  episodeNumber: number | null,
+  absoluteEpisodeNumber: number | null,
+): string {
+  const parts: string[] = [];
+  if (seasonNumber != null) {
+    parts.push(seasonNumber === 0 ? "Specials" : `S${String(seasonNumber).padStart(2, "0")}`);
+  }
+  if (episodeNumber != null) {
+    parts.push(`E${String(episodeNumber).padStart(2, "0")}`);
+  }
+  if (absoluteEpisodeNumber != null && episodeNumber == null) {
+    parts.push(`Abs ${absoluteEpisodeNumber}`);
+  } else if (absoluteEpisodeNumber != null) {
+    parts.push(`· Abs ${absoluteEpisodeNumber}`);
+  }
+  return parts.length > 0 ? parts.join(" ") : "\u2014";
+}
+
 export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
+  const isEpisode = scene.entityKind === "video_episode";
+  const hasEpisodeMeta =
+    isEpisode &&
+    (scene.seasonNumber != null ||
+      scene.episodeNumber != null ||
+      scene.absoluteEpisodeNumber != null);
   return (
     <MetadataPanel
       sidebar={
         <>
           <h4 className="text-kicker">File Information</h4>
           <div className="space-y-2.5">
+            {hasEpisodeMeta && (
+              <InfoRow
+                icon={Tv}
+                label="Episode"
+                value={formatEpisodeLabel(
+                  scene.seasonNumber,
+                  scene.episodeNumber,
+                  scene.absoluteEpisodeNumber,
+                )}
+              />
+            )}
             <InfoRow
               icon={Monitor}
               label="Resolution"
