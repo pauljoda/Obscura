@@ -2,7 +2,6 @@ import { eq, sql } from "drizzle-orm";
 import type { QueueName } from "@obscura/contracts";
 import {
   db,
-  scenes,
   images,
   audioTracks,
   collections,
@@ -47,46 +46,9 @@ export async function enqueueJobIfNeeded(input: {
   return { id: jobId };
 }
 
-export async function enqueuePendingSceneJob(
-  queueName: QueueName,
-  sceneId: string,
-  trigger: QueueTrigger = {}
-) {
-  if (
-    await hasPendingJob(queueName, {
-      type: "scene",
-      id: sceneId,
-    })
-  ) {
-    return;
-  }
-
-  const [scene] = await db
-    .select({ id: scenes.id, title: scenes.title })
-    .from(scenes)
-    .where(eq(scenes.id, sceneId))
-    .limit(1);
-
-  if (!scene) {
-    return;
-  }
-
-  await enqueueJobIfNeeded({
-    queueName,
-    jobName: `scene-${queueName}`,
-    data: { sceneId },
-    target: {
-      type: "scene",
-      id: scene.id,
-      label: scene.title,
-    },
-    trigger,
-  });
-}
-
 /**
- * Video-entity variant of enqueuePendingSceneJob. Supports the new
- * video_episodes / video_movies tables. The payload carries an
+ * Enqueue a job keyed on a video entity (episode or movie). Supersedes
+ * the legacy `enqueuePendingSceneJob` helper; the payload carries an
  * `entityKind` discriminator so processors can look the row up in the
  * right table.
  */

@@ -58,9 +58,6 @@ export function getDatabaseUrl() {
 export { schema };
 
 export const {
-  scenes,
-  sceneFolders,
-  sceneSubtitles,
   libraryRoots,
   librarySettings,
   jobRuns,
@@ -74,8 +71,6 @@ export const {
   performers,
   tags,
   studios,
-  scenePerformers,
-  sceneTags,
   audioLibraries,
   audioTracks,
   audioTrackMarkers,
@@ -89,6 +84,8 @@ export const {
   videoSeasons,
   videoEpisodes,
   videoMovies,
+  videoSeriesPerformers,
+  videoSeriesTags,
   videoEpisodePerformers,
   videoEpisodeTags,
   videoMoviePerformers,

@@ -10,11 +10,11 @@ import {
   runProcess,
   sceneVideoGeneratedLayoutFromDedicated,
 } from "@obscura/media-core";
-import { db, scenes, videoEpisodes, videoMovies } from "../lib/db.js";
+import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { sceneAssetUrl } from "../lib/helpers.js";
-import { applyVideoProbeToScene, applyVideoProbeToVideoEntity } from "./media-probe.js";
+import { applyVideoProbeToVideoEntity } from "./media-probe.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
 
@@ -107,59 +107,41 @@ function trickplayJpegQuality(quality: number) {
 }
 
 export async function processPreview(job: Job) {
-  const entityKind = (job.data.entityKind as VideoEntityKind | undefined) ?? null;
+  const entityKind =
+    (job.data.entityKind as VideoEntityKind | undefined) ?? null;
 
-  let scene: {
+  if (entityKind !== "video_episode" && entityKind !== "video_movie") {
+    throw new Error(
+      `preview processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+    );
+  }
+
+  const entityId = String(job.data.entityId);
+  const table = entityKind === "video_episode" ? videoEpisodes : videoMovies;
+  const [row] = await db
+    .select({
+      id: table.id,
+      title: table.title,
+      filePath: table.filePath,
+      duration: table.duration,
+      width: table.width,
+      height: table.height,
+    })
+    .from(table)
+    .where(eq(table.id, entityId))
+    .limit(1);
+  if (!row?.filePath) {
+    throw new Error("Video file not found");
+  }
+  const scene: {
     id: string;
     title: string | null;
     filePath: string | null;
     duration: number | null;
     width: number | null;
     height: number | null;
-  };
-  let targetType: string;
-
-  if (entityKind === "video_episode" || entityKind === "video_movie") {
-    const entityId = String(job.data.entityId);
-    const table = entityKind === "video_episode" ? videoEpisodes : videoMovies;
-    const [row] = await db
-      .select({
-        id: table.id,
-        title: table.title,
-        filePath: table.filePath,
-        duration: table.duration,
-        width: table.width,
-        height: table.height,
-      })
-      .from(table)
-      .where(eq(table.id, entityId))
-      .limit(1);
-    if (!row?.filePath) {
-      throw new Error("Video file not found");
-    }
-    scene = row;
-    targetType = entityKind;
-  } else {
-    const sceneId = String(job.data.sceneId);
-    const [row] = await db
-      .select({
-        id: scenes.id,
-        title: scenes.title,
-        filePath: scenes.filePath,
-        duration: scenes.duration,
-        width: scenes.width,
-        height: scenes.height,
-      })
-      .from(scenes)
-      .where(eq(scenes.id, sceneId))
-      .limit(1);
-
-    if (!row?.filePath) {
-      throw new Error("Video file not found");
-    }
-    scene = row;
-    targetType = "scene";
-  }
+  } = row;
+  const targetType = entityKind;
 
   await markJobActive(job, "preview", {
     type: targetType,
@@ -173,9 +155,7 @@ export async function processPreview(job: Job) {
   const filePath = scene.filePath!;
   const metadata =
     payload.jobKind === "force-rebuild"
-      ? entityKind
-        ? await applyVideoProbeToVideoEntity(entityKind, scene.id, filePath)
-        : await applyVideoProbeToScene(scene.id, filePath)
+      ? await applyVideoProbeToVideoEntity(entityKind, scene.id, filePath)
       : scene.duration && scene.width && scene.height
         ? scene
         : await probeVideoFile(filePath);
@@ -409,9 +389,7 @@ export async function processPreview(job: Job) {
 
   if (entityKind === "video_episode") {
     await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, scene.id));
-  } else if (entityKind === "video_movie") {
-    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, scene.id));
   } else {
-    await db.update(scenes).set(assetPatch).where(eq(scenes.id, scene.id));
+    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, scene.id));
   }
 }

@@ -8,7 +8,7 @@ import {
   parseZipImageMembers,
   getGeneratedImageDir,
 } from "@obscura/media-core";
-import { db, scenes, images, galleries, libraryRoots } from "../lib/db.js";
+import { db, images, galleries, libraryRoots } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";

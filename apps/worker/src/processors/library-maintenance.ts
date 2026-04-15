@@ -4,7 +4,7 @@ import path from "node:path";
 import { isNotNull } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import { getSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
-import { db, scenes } from "../lib/db.js";
+import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 
 const ASSET_KEYS = ["thumb", "card", "preview", "sprite", "trickplay"] as const;
@@ -28,7 +28,10 @@ async function consolidateGeneratedFile(from: string, to: string) {
 }
 
 export async function processLibraryMaintenance(job: Job) {
-  const payload = job.data as JobPayload & { targetDedicated?: boolean; sfwRedactJobLog?: boolean };
+  const payload = job.data as JobPayload & {
+    targetDedicated?: boolean;
+    sfwRedactJobLog?: boolean;
+  };
   const targetDedicated = Boolean(payload.targetDedicated);
   const sfwRedact = Boolean(payload.sfwRedactJobLog);
 
@@ -36,19 +39,28 @@ export async function processLibraryMaintenance(job: Job) {
     type: "library",
     id: "scene-asset-layout",
     label: sfwRedact
-      ? "Relocate scene generated files"
+      ? "Relocate video generated files"
       : targetDedicated
-        ? "Scene assets → dedicated cache"
-        : "Scene assets → beside media",
+        ? "Video assets → dedicated cache"
+        : "Video assets → beside media",
   });
 
   const fromLayout = targetDedicated ? "sidecar" : "dedicated";
   const toLayout = targetDedicated ? "dedicated" : "sidecar";
 
-  const rows = await db
-    .select({ id: scenes.id, filePath: scenes.filePath })
-    .from(scenes)
-    .where(isNotNull(scenes.filePath));
+  // Walk video_episodes + video_movies. Each row owns the same asset key
+  // set, so the consolidation loop is identical for both kinds.
+  const episodeRows = await db
+    .select({ id: videoEpisodes.id, filePath: videoEpisodes.filePath })
+    .from(videoEpisodes)
+    .where(isNotNull(videoEpisodes.filePath));
+
+  const movieRows = await db
+    .select({ id: videoMovies.id, filePath: videoMovies.filePath })
+    .from(videoMovies)
+    .where(isNotNull(videoMovies.filePath));
+
+  const rows = [...episodeRows, ...movieRows];
 
   const total = rows.length;
   let done = 0;
@@ -62,7 +74,11 @@ export async function processLibraryMaintenance(job: Job) {
     }
     done += 1;
     if (total > 0 && done % 20 === 0) {
-      await markJobProgress(job, "library-maintenance", Math.min(99, Math.floor((done / total) * 100)));
+      await markJobProgress(
+        job,
+        "library-maintenance",
+        Math.min(99, Math.floor((done / total) * 100)),
+      );
     }
   }
 
