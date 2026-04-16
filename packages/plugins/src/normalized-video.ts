@@ -144,6 +144,7 @@ function toCastMembers(value: unknown): NormalizedCastMember[] {
       name,
       character: toStringOrNull(raw.character),
       order: toIntOrNull(raw.order),
+      profileUrl: toStringOrNull(raw.profileUrl),
     });
   }
   return out;

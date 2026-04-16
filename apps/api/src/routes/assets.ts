@@ -50,12 +50,16 @@ const CONTENT_TYPES: Record<string, string> = {
 
 /** Serve an entity image from a directory, detecting format automatically. */
 async function serveEntityImage(dir: string, entityLabel: string, reply: import("fastify").FastifyReply) {
-  for (const ext of IMAGE_EXTENSIONS) {
-    const filePath = path.join(dir, `image.${ext}`);
-    if (existsSync(filePath)) {
-      reply.header("Cache-Control", "public, max-age=86400, immutable");
-      reply.header("Content-Type", CONTENT_TYPES[ext] ?? "application/octet-stream");
-      return reply.send(createReadStream(filePath));
+  // Check both `image.*` (manual upload) and `profile.*` (scrape-accept
+  // headshot download) so both flows resolve to the same asset URL.
+  for (const base of ["image", "profile"]) {
+    for (const ext of IMAGE_EXTENSIONS) {
+      const filePath = path.join(dir, `${base}.${ext}`);
+      if (existsSync(filePath)) {
+        reply.header("Cache-Control", "public, max-age=86400, immutable");
+        reply.header("Content-Type", CONTENT_TYPES[ext] ?? "application/octet-stream");
+        return reply.send(createReadStream(filePath));
+      }
     }
   }
   reply.code(404);

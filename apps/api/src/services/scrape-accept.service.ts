@@ -22,7 +22,7 @@ import type {
   NormalizedEpisodeResult,
   NormalizedSeriesResult,
 } from "@obscura/contracts";
-import { getGeneratedSceneFolderDir, getCacheRootDir } from "@obscura/media-core";
+import { getGeneratedSceneFolderDir, getGeneratedPerformerDir, getCacheRootDir } from "@obscura/media-core";
 import { db } from "../db";
 
 // ─── Image download helper ──────────────────────────────────────────
@@ -138,18 +138,40 @@ function applyMask(mask: AcceptFieldMask | undefined): Required<AcceptFieldMask>
   return { ...FULL_MASK, ...mask };
 }
 
-async function upsertPerformerByName(name: string): Promise<string> {
+async function upsertPerformerByName(
+  name: string,
+  profileUrl?: string | null,
+): Promise<string> {
   const [existing] = await db
-    .select({ id: performers.id })
+    .select({ id: performers.id, imagePath: performers.imagePath })
     .from(performers)
     .where(eq(performers.name, name))
     .limit(1);
-  if (existing) return existing.id;
-  const [inserted] = await db
-    .insert(performers)
-    .values({ name })
-    .returning({ id: performers.id });
-  return inserted.id;
+
+  const id = existing
+    ? existing.id
+    : (
+        await db
+          .insert(performers)
+          .values({ name })
+          .returning({ id: performers.id })
+      )[0].id;
+
+  // Download headshot if the performer row doesn't already have a
+  // local image (we don't overwrite user-uploaded photos).
+  if (profileUrl && (!existing || !existing.imagePath)) {
+    const dir = getGeneratedPerformerDir(id);
+    const file = await downloadImageToCache(profileUrl, dir, "profile");
+    if (file) {
+      const assetUrl = `/assets/performers/${id}/image`;
+      await db
+        .update(performers)
+        .set({ imagePath: assetUrl, imageUrl: profileUrl, updatedAt: new Date() })
+        .where(eq(performers.id, id));
+    }
+  }
+
+  return id;
 }
 
 async function upsertTagByName(name: string): Promise<string> {
@@ -227,7 +249,7 @@ export async function acceptMovieScrape(
 
   if (mask.cast && input.result.cast && input.result.cast.length > 0) {
     for (const member of input.result.cast) {
-      const performerId = await upsertPerformerByName(member.name);
+      const performerId = await upsertPerformerByName(member.name, member.profileUrl);
       await db
         .insert(videoMoviePerformers)
         .values({
@@ -289,7 +311,7 @@ export async function acceptEpisodeScrape(
 
   if (mask.cast && input.result.guestStars && input.result.guestStars.length > 0) {
     for (const star of input.result.guestStars) {
-      const performerId = await upsertPerformerByName(star.name);
+      const performerId = await upsertPerformerByName(star.name, star.profileUrl);
       await db
         .insert(videoEpisodePerformers)
         .values({
@@ -393,7 +415,7 @@ export async function acceptSeriesScrape(
 
   if (mask.cast && input.result.cast && input.result.cast.length > 0) {
     for (const member of input.result.cast) {
-      const performerId = await upsertPerformerByName(member.name);
+      const performerId = await upsertPerformerByName(member.name, member.profileUrl);
       await db
         .insert(videoSeriesPerformers)
         .values({
@@ -504,7 +526,7 @@ export async function acceptSeriesScrape(
             proposedEp.guestStars.length > 0
           ) {
             for (const star of proposedEp.guestStars) {
-              const performerId = await upsertPerformerByName(star.name);
+              const performerId = await upsertPerformerByName(star.name, star.profileUrl);
               await db
                 .insert(videoEpisodePerformers)
                 .values({

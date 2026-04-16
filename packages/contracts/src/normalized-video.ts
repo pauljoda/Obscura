@@ -21,6 +21,9 @@ export interface NormalizedCastMember {
   name: string;
   character?: string | null;
   order?: number | null;
+  /** TMDB-hosted profile image URL (w185 size). Downloaded to local
+   *  disk during cascade accept for offline availability. */
+  profileUrl?: string | null;
 }
 
 export interface NormalizedMovieResult {

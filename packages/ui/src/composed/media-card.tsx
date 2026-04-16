@@ -45,6 +45,8 @@ export interface MediaCardProps {
   className?: string;
   /** Rendered inside the thumbnail, bottom-right (e.g. NSFW badge in Show mode). */
   thumbnailOverlay?: ReactNode;
+  /** Rendered inside the thumbnail, top-left (e.g. episode number badge). */
+  topLeftBadge?: ReactNode;
 }
 
 export function MediaCard({
@@ -70,6 +72,7 @@ export function MediaCard({
   views,
   className,
   thumbnailOverlay,
+  topLeftBadge,
 }: MediaCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -326,6 +329,12 @@ export function MediaCard({
         {thumbnailOverlay ? (
           <div className="pointer-events-none absolute right-2 bottom-2 z-[25]">
             {thumbnailOverlay}
+          </div>
+        ) : null}
+
+        {topLeftBadge ? (
+          <div className="pointer-events-none absolute left-1.5 top-1.5 z-[25]">
+            {topLeftBadge}
           </div>
         ) : null}
       </div>

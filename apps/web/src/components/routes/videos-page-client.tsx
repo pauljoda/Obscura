@@ -27,7 +27,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { VideoGrid } from "../video-grid";
 import { ImportButton, UploadDropZone } from "../upload";
 import { FilterBar } from "../filter-bar";
@@ -183,14 +183,30 @@ export function VideosPageClient({
    * Case A series (single flat season) skip this entirely — the page
    * loads episodes directly.
    */
-  const [activeSeasonNumber, setActiveSeasonNumberRaw] = useState<number | null>(null);
+  const router = useRouter();
 
-  /**
-   * Set the active season AND push the `&season=N` param so the
-   * browser back button returns to the season grid instead of
-   * jumping to the root videos page. Passing null removes the param,
-   * returning to the series season grid view.
-   */
+  // Read season param from Next.js router state so that
+  // `useSearchParams()` (and thus `useCurrentPath()`) stays in sync.
+  // Using the router instead of `window.history.pushState` ensures
+  // that when the user clicks an episode, the `from` param on the
+  // episode link includes `&season=N`, and browser-back returns to
+  // the season drilldown.
+  const searchParams = useSearchParams();
+  const seasonFromUrl = useMemo(() => {
+    const raw = searchParams.get("season");
+    if (raw == null) return null;
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  }, [searchParams]);
+  const [activeSeasonNumber, setActiveSeasonNumberRaw] = useState<number | null>(
+    seasonFromUrl,
+  );
+
+  // Sync client state when the URL changes (e.g. browser back).
+  useEffect(() => {
+    setActiveSeasonNumberRaw(seasonFromUrl);
+  }, [seasonFromUrl]);
+
   const setActiveSeasonNumber = useCallback(
     (n: number | null) => {
       setActiveSeasonNumberRaw(n);
@@ -201,9 +217,9 @@ export function VideosPageClient({
       } else {
         url.searchParams.delete("season");
       }
-      window.history.pushState(null, "", url.toString());
+      router.replace(url.pathname + url.search, { scroll: false });
     },
-    [activeFolder],
+    [activeFolder, router],
   );
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -243,28 +259,11 @@ export function VideosPageClient({
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
 
-  // Restore the active season from the URL `?season=N` param on
-  // initial mount and browser-back / popstate events so the back
-  // button returns to the season grid instead of the root page.
-  useEffect(() => {
-    function readSeason(): number | null {
-      const raw = new URLSearchParams(window.location.search).get("season");
-      if (raw == null) return null;
-      const n = Number.parseInt(raw, 10);
-      return Number.isFinite(n) && n >= 0 ? n : null;
-    }
-    setActiveSeasonNumberRaw(readSeason());
-    function onPopState() {
-      setActiveSeasonNumberRaw(readSeason());
-    }
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [initialActiveFolder]);
-
   useEffect(() => {
     setRootFolders(initialRootFolders);
     setActiveFolder(initialActiveFolder);
-    setActiveSeasonNumberRaw(null);
+    // Don't reset season to null here — seasonFromUrl above handles
+    // reading the initial ?season= param from the URL.
     // Navigating INTO a series folder resets the sort to episode
     // order; navigating OUT (initialActiveFolder becomes null) falls
     // back to the user's saved listing preference. Keeps "episode"
@@ -774,7 +773,6 @@ export function VideosPageClient({
   }
 
   const visibleIds = scenes.map((s) => s.id);
-  const router = useRouter();
   const folderCards = useMemo(() => {
     if (!activeFolder) return rootFolders;
     if (!folderSearch) return activeFolder.children;
