@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Removed
+
+- Deleted frozen `legacy-schema.ts` and `read.ts` from the videos-to-series migration module — dead code after the destructive finalize dropped the legacy scene tables.
+
 ### Fixed
 
 - Fixed flaky `computePhash` test in media-core that timed out under parallel Vitest workers by bumping the per-test timeout to 30 seconds.
