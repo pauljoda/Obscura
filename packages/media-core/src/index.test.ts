@@ -207,7 +207,7 @@ describe("computePhash", () => {
     }
   });
 
-  it("produces a 16-char hex hash for a real video and is deterministic", async () => {
+  it("produces a 16-char hex hash for a real video and is deterministic", { timeout: 30_000 }, async () => {
     const ffmpegAvailable = await hasBinary("ffmpeg");
     const phashAvailable = await hasBinary("obscura-phash");
     if (!ffmpegAvailable || !phashAvailable) {

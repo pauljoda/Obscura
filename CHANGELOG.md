@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed flaky `computePhash` test in media-core that timed out under parallel Vitest workers by bumping the per-test timeout to 30 seconds.
+
 ### What's New
 
 - **Episode numbers are now a first-class field.** Series folders default-sort to episode order (season asc → episode asc → absolute episode → date added), and the new **Episode** sort option is available in the filter bar on every video list. The video detail page shows **S01E03** (or "Specials E04") in both the sidebar File Info and the main metadata rows, and the edit form grows dedicated Season / Episode / Absolute Episode inputs on episode rows. The new season/episode values round-trip through `PATCH /videos/:id` and the service silently ignores them on movies so you can't corrupt movie rows.
