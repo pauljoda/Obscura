@@ -753,15 +753,18 @@ export async function listVideoScenes(query: ListVideosQuery) {
     }));
   }
 
-  // Merge — when both contribute, fall back to a client-stable
-  // order (most-recent first) and clip to `limit`. This is a pragmatic
-  // compromise given we can't do a cross-table ORDER BY cheaply.
+  // Merge — when both sources contributed, re-sort by createdAt as a
+  // pragmatic cross-table tiebreaker. When only one source produced
+  // rows, skip the merge sort entirely so the DB-level ORDER BY
+  // (episode order, title, rating, etc.) is preserved.
   const merged = [...episodes, ...movies];
-  merged.sort((a, b) => {
-    const av = a.createdAt?.getTime?.() ?? 0;
-    const bv = b.createdAt?.getTime?.() ?? 0;
-    return bv - av;
-  });
+  if (episodes.length > 0 && movies.length > 0) {
+    merged.sort((a, b) => {
+      const av = a.createdAt?.getTime?.() ?? 0;
+      const bv = b.createdAt?.getTime?.() ?? 0;
+      return bv - av;
+    });
+  }
   const sliced = merged.slice(0, limit);
   const items = sliced.map(toVideoListItem);
 
@@ -1125,6 +1128,37 @@ export async function getVideoSceneDetail(id: string) {
       ),
     )
     .where(eq(joinIdCol, row.id));
+
+  // Episodes inherit the series-level cast. Merge series performers
+  // first (they represent the main cast) so they show before
+  // episode-specific guest stars in the performer list.
+  if (row.kind === "episode" && row.seriesId) {
+    const seriesPerfRows = await db
+      .select({
+        id: performers.id,
+        name: performers.name,
+        gender: performers.gender,
+        imageUrl: performers.imageUrl,
+        imagePath: performers.imagePath,
+        favorite: performers.favorite,
+        isNsfw: performers.isNsfw,
+      })
+      .from(schema.videoSeriesPerformers)
+      .innerJoin(
+        performers,
+        eq(schema.videoSeriesPerformers.performerId, performers.id),
+      )
+      .where(eq(schema.videoSeriesPerformers.seriesId, row.seriesId));
+
+    // Dedupe: series performers go first, episode performers after.
+    const epIds = new Set(perfRows.map((p) => p.id));
+    const merged = [
+      ...seriesPerfRows.filter((p) => !epIds.has(p.id)),
+      ...perfRows,
+    ];
+    perfRows.length = 0;
+    perfRows.push(...merged);
+  }
 
   const tagRows = await db
     .select({

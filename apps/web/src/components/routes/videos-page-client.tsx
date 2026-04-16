@@ -27,7 +27,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { VideoGrid } from "../video-grid";
 import { ImportButton, UploadDropZone } from "../upload";
 import { FilterBar } from "../filter-bar";
@@ -116,7 +116,7 @@ export function VideosPageClient({
 }: VideosPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
-  const currentPath = useCurrentPath();
+  const _currentPath = useCurrentPath();
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
@@ -185,27 +185,33 @@ export function VideosPageClient({
    */
   const router = useRouter();
 
-  // Read season param from Next.js router state so that
-  // `useSearchParams()` (and thus `useCurrentPath()`) stays in sync.
-  // Using the router instead of `window.history.pushState` ensures
-  // that when the user clicks an episode, the `from` param on the
-  // episode link includes `&season=N`, and browser-back returns to
-  // the season drilldown.
-  const searchParams = useSearchParams();
-  const seasonFromUrl = useMemo(() => {
-    const raw = searchParams.get("season");
+  // Season drill-down state. Uses pushState (NOT router.replace) to
+  // avoid triggering a server re-render that would flash the full
+  // episode list before the client-side re-fetch with the season
+  // param. A popstate listener keeps the state in sync with
+  // browser-back, and we compute the `from` param for episode links
+  // manually below so it includes `&season=N`.
+  const [activeSeasonNumber, setActiveSeasonNumberRaw] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("season");
     if (raw == null) return null;
     const n = Number.parseInt(raw, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
-  }, [searchParams]);
-  const [activeSeasonNumber, setActiveSeasonNumberRaw] = useState<number | null>(
-    seasonFromUrl,
-  );
+  });
 
-  // Sync client state when the URL changes (e.g. browser back).
   useEffect(() => {
-    setActiveSeasonNumberRaw(seasonFromUrl);
-  }, [seasonFromUrl]);
+    function readSeason(): number | null {
+      const raw = new URLSearchParams(window.location.search).get("season");
+      if (raw == null) return null;
+      const n = Number.parseInt(raw, 10);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    }
+    function onPopState() {
+      setActiveSeasonNumberRaw(readSeason());
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const setActiveSeasonNumber = useCallback(
     (n: number | null) => {
@@ -217,10 +223,20 @@ export function VideosPageClient({
       } else {
         url.searchParams.delete("season");
       }
-      router.replace(url.pathname + url.search, { scroll: false });
+      window.history.pushState(null, "", url.toString());
     },
-    [activeFolder, router],
+    [activeFolder],
   );
+
+  // useCurrentPath reads from useSearchParams which doesn't see
+  // pushState updates. Manually inject &season=N so episode card
+  // links encode the correct from-path for browser-back.
+  const currentPath = useMemo(() => {
+    if (activeSeasonNumber == null) return _currentPath;
+    const sep = _currentPath.includes("?") ? "&" : "?";
+    return `${_currentPath}${sep}season=${activeSeasonNumber}`;
+  }, [_currentPath, activeSeasonNumber]);
+
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);

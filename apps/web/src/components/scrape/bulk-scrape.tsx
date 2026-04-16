@@ -65,11 +65,13 @@ import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
 import { IdentifyAudioTrackRows } from "../identify/identify-audio-tracks-tab";
+import { useNsfw } from "../nsfw/nsfw-context";
 import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 
 /* ─── Component ─────────────────────────────────────────────────── */
 
 export function BulkScrape() {
+  const { mode: nsfwMode } = useNsfw();
   const [tab, setTab] = useState<Tab>("scenes");
   const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,13 +143,13 @@ export function BulkScrape() {
     setLoading(true);
     try {
       const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
-        fetchAllScenes({ sort: "created_at" }),
+        fetchAllScenes({ sort: "created_at", nsfw: nsfwMode }),
         fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
         fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
-        fetchSceneFolders({ root: "all", limit: 500 }).catch(() => ({ items: [], total: 0, limit: 500, offset: 0 })),
+        fetchSceneFolders({ root: "all", limit: 500, nsfw: nsfwMode }).catch(() => ({ items: [], total: 0, limit: 500, offset: 0 })),
         fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 })),
         fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 })),
         fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 })),
