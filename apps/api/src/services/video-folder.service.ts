@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { MultipartFile } from "@fastify/multipart";
-import { and, asc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { getGeneratedSceneFolderDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
@@ -68,7 +68,7 @@ async function fetchSeriesSeasons(
     nsfwMode === "off"
       ? and(
           eq(videoEpisodes.seriesId, seriesId),
-          eq(videoEpisodes.isNsfw, false),
+          ne(videoEpisodes.isNsfw, true),
         )
       : eq(videoEpisodes.seriesId, seriesId);
   const countRows = await db
@@ -151,7 +151,7 @@ async function fetchSeriesEpisodeCounts(
   const where = nsfwMode === "off"
     ? and(
         inArray(videoEpisodes.seriesId, seriesIds),
-        eq(videoEpisodes.isNsfw, false),
+        ne(videoEpisodes.isNsfw, true),
       )
     : inArray(videoEpisodes.seriesId, seriesIds);
   const rows = await db
@@ -179,7 +179,7 @@ async function fetchSeriesPreviewThumbnails(
   const where = nsfwMode === "off"
     ? and(
         eq(videoEpisodes.seriesId, seriesId),
-        eq(videoEpisodes.isNsfw, false),
+        ne(videoEpisodes.isNsfw, true),
         isNotNull(videoEpisodes.thumbnailPath),
       )
     : and(

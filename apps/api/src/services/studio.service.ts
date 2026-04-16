@@ -107,7 +107,8 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
   // children in a single UNION aggregate so one DB roundtrip covers both
   // the detail view and its child studio chips.
   const studioIdsForCounts = [row.id, ...row.children.map((c) => c.id)];
-  const nsfwClause = sfwOnly ? sql`AND (is_nsfw IS NOT TRUE)` : sql``;
+  const epNsfwClause = sfwOnly ? sql`AND (ve.is_nsfw IS NOT TRUE)` : sql``;
+  const movieNsfwClause = sfwOnly ? sql`AND (vm.is_nsfw IS NOT TRUE)` : sql``;
   const sceneCountsByStudio = await db.execute<{
     studio_id: string;
     cnt: number;
@@ -118,14 +119,14 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
       INNER JOIN video_series vs ON vs.id = ve.series_id
       WHERE vs.studio_id IS NOT NULL
         AND vs.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
-        ${nsfwClause}
+        ${epNsfwClause}
       GROUP BY vs.studio_id
       UNION ALL
       SELECT vm.studio_id AS studio_id, COUNT(*)::int AS cnt
       FROM video_movies vm
       WHERE vm.studio_id IS NOT NULL
         AND vm.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
-        ${nsfwClause}
+        ${movieNsfwClause}
       GROUP BY vm.studio_id
     ) combined
     GROUP BY studio_id

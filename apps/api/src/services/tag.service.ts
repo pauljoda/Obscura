@@ -150,22 +150,29 @@ export async function updateTag(
   if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
   await db.update(tags).set(updates).where(eq(tags.id, id));
-  const [updated] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
+  const [updated] = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+      description: tags.description,
+      aliases: tags.aliases,
+      parentId: tags.parentId,
+      imageUrl: tags.imageUrl,
+      imagePath: tags.imagePath,
+      favorite: tags.favorite,
+      rating: tags.rating,
+      isNsfw: tags.isNsfw,
+      ignoreAutoTag: tags.ignoreAutoTag,
+      sceneCount: tagTotalSceneCountExpr(),
+      createdAt: tags.createdAt,
+      updatedAt: tags.updatedAt,
+    })
+    .from(tags)
+    .where(eq(tags.id, id))
+    .limit(1);
   return {
-    id: updated.id,
-    name: updated.name,
-    description: updated.description,
-    aliases: updated.aliases,
-    parentId: updated.parentId,
-    imageUrl: updated.imageUrl,
-    imagePath: updated.imagePath,
-    favorite: updated.favorite,
-    rating: updated.rating,
-    isNsfw: updated.isNsfw,
-    ignoreAutoTag: updated.ignoreAutoTag,
-    sceneCount: 0,
-    createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
+    ...updated,
+    sceneCount: Number(updated.sceneCount ?? 0),
   };
 }
 

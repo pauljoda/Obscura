@@ -168,7 +168,7 @@ function DefaultFallbackResultCard({ item }: { item: SearchResultItem }) {
       </div>
 
       <span className="tag-chip tag-chip-default shrink-0 text-[0.55rem]">
-        {item.kind}
+        {SEARCH_KIND_CONFIG[item.kind]?.label ?? item.kind}
       </span>
     </Link>
   );
@@ -206,7 +206,7 @@ function CompactFallbackResultCard({
       </div>
 
       <span className="tag-chip tag-chip-default shrink-0 text-[0.6rem]">
-        {item.kind}
+        {SEARCH_KIND_CONFIG[item.kind]?.label ?? item.kind}
       </span>
     </>
   );
