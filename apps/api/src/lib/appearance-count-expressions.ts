@@ -42,6 +42,19 @@ export function performerSfwSceneCountExpr() {
       WHERE vmp.performer_id = ${PERFORMERS_ID_REF}
         AND (vm.is_nsfw IS NOT TRUE)
     ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_series_performers vsp
+      INNER JOIN video_episodes ve2 ON ve2.series_id = vsp.series_id
+      WHERE vsp.performer_id = ${PERFORMERS_ID_REF}
+        AND (ve2.is_nsfw IS NOT TRUE)
+        AND NOT EXISTS (
+          SELECT 1 FROM video_episode_performers vep2
+          WHERE vep2.episode_id = ve2.id
+            AND vep2.performer_id = ${PERFORMERS_ID_REF}
+        )
+    ), 0)
   )`;
 }
 
@@ -62,6 +75,18 @@ export function performerTotalSceneCountExpr() {
       SELECT COUNT(*)::int
       FROM video_movie_performers vmp
       WHERE vmp.performer_id = ${PERFORMERS_ID_REF}
+    ), 0)
+    +
+    COALESCE((
+      SELECT COUNT(*)::int
+      FROM video_series_performers vsp
+      INNER JOIN video_episodes ve2 ON ve2.series_id = vsp.series_id
+      WHERE vsp.performer_id = ${PERFORMERS_ID_REF}
+        AND NOT EXISTS (
+          SELECT 1 FROM video_episode_performers vep2
+          WHERE vep2.episode_id = ve2.id
+            AND vep2.performer_id = ${PERFORMERS_ID_REF}
+        )
     ), 0)
   )`;
 }

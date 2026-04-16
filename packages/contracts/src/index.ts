@@ -1408,6 +1408,8 @@ export interface SceneListItemDto {
     imagePath?: string | null;
     favorite?: boolean;
     isNsfw?: boolean;
+    /** Role name from the join table (e.g. "Ron Trosper"). */
+    character?: string | null;
   }[];
   tags: TagEmbedDto[];
   createdAt: string;

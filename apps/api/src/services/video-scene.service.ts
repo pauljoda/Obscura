@@ -429,7 +429,9 @@ export async function listVideoScenes(query: ListVideosQuery) {
       }
     }
 
-    // Performer filter — join through video_episode_performers → performers.
+    // Performer filter — episodes linked directly via
+    // video_episode_performers OR inherited from series cast via
+    // video_series_performers.
     const performerValues = toArray(query.performer);
     if (performerValues.length > 0) {
       const perfRows = await db
@@ -440,13 +442,34 @@ export async function listVideoScenes(query: ListVideosQuery) {
       if (perfIds.length === 0) {
         conds.push(sql`false`);
       } else {
+        // Direct episode-level links
         const perfEpisodeIds = await db
           .selectDistinct({ id: videoEpisodePerformers.episodeId })
           .from(videoEpisodePerformers)
           .where(inArray(videoEpisodePerformers.performerId, perfIds));
-        const ids = perfEpisodeIds.map((r) => r.id);
-        if (ids.length === 0) conds.push(sql`false`);
-        else conds.push(inArray(videoEpisodes.id, ids));
+        // Series-level links — inherit all episodes in the series
+        const seriesIds = await db
+          .selectDistinct({ id: schema.videoSeriesPerformers.seriesId })
+          .from(schema.videoSeriesPerformers)
+          .where(inArray(schema.videoSeriesPerformers.performerId, perfIds));
+        let seriesEpisodeIds: { id: string }[] = [];
+        if (seriesIds.length > 0) {
+          seriesEpisodeIds = await db
+            .selectDistinct({ id: videoEpisodes.id })
+            .from(videoEpisodes)
+            .where(
+              inArray(
+                videoEpisodes.seriesId,
+                seriesIds.map((s) => s.id),
+              ),
+            );
+        }
+        const allIds = new Set([
+          ...perfEpisodeIds.map((r) => r.id),
+          ...seriesEpisodeIds.map((r) => r.id),
+        ]);
+        if (allIds.size === 0) conds.push(sql`false`);
+        else conds.push(inArray(videoEpisodes.id, [...allIds]));
       }
     }
 
@@ -1107,6 +1130,11 @@ export async function getVideoSceneDetail(id: string) {
       ? videoEpisodeTags.episodeId
       : videoMovieTags.movieId;
 
+  const characterCol =
+    row.kind === "episode"
+      ? videoEpisodePerformers.character
+      : videoMoviePerformers.character;
+
   const perfRows = await db
     .select({
       id: performers.id,
@@ -1116,6 +1144,7 @@ export async function getVideoSceneDetail(id: string) {
       imagePath: performers.imagePath,
       favorite: performers.favorite,
       isNsfw: performers.isNsfw,
+      character: characterCol,
     })
     .from(perfJoinTable)
     .innerJoin(
@@ -1142,6 +1171,7 @@ export async function getVideoSceneDetail(id: string) {
         imagePath: performers.imagePath,
         favorite: performers.favorite,
         isNsfw: performers.isNsfw,
+        character: schema.videoSeriesPerformers.character,
       })
       .from(schema.videoSeriesPerformers)
       .innerJoin(

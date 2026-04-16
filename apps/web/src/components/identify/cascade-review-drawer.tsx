@@ -441,7 +441,7 @@ function SeriesCascadeBody({
     let cancelled = false;
     Promise.all([
       import("../../lib/api").then((m) => m.fetchTags()),
-      import("../../lib/api").then((m) => m.fetchPerformers()),
+      import("../../lib/api").then((m) => m.fetchAllPerformers()),
     ])
       .then(([tagsRes, perfRes]) => {
         if (cancelled) return;
@@ -657,7 +657,7 @@ function SeriesCascadeBody({
 
       {/* Series header */}
       <div className="border-b border-border-subtle p-5 space-y-4">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
           <div className="min-w-0 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
               {result.title}
@@ -755,16 +755,6 @@ function SeriesCascadeBody({
               setSelectedImages((p) => ({ ...p, backdrop: url ?? undefined }))
             }
             className="w-36"
-          />
-          <ImagePicker
-            label="Logo"
-            aspect="logo"
-            candidates={result.logoCandidates}
-            value={selectedImages.logo ?? undefined}
-            onSelect={(url) =>
-              setSelectedImages((p) => ({ ...p, logo: url ?? undefined }))
-            }
-            className="w-28"
           />
         </div>
 
