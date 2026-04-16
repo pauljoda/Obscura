@@ -31,6 +31,8 @@ export interface VideoCardData {
   views?: number;
   isNsfw?: boolean;
   hasSubtitles?: boolean;
+  seasonNumber?: number;
+  episodeNumber?: number;
 }
 
 function readMetaString(meta: SearchResultItem["meta"], key: string): string | undefined {
@@ -70,6 +72,8 @@ export function videoListItemToCardData(scene: SceneListItem, from?: string): Vi
     views: scene.playCount,
     isNsfw: scene.isNsfw,
     hasSubtitles: scene.hasSubtitles ?? false,
+    seasonNumber: scene.seasonNumber ?? undefined,
+    episodeNumber: scene.episodeNumber ?? undefined,
   };
 }
 

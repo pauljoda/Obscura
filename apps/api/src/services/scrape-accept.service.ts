@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import path from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import {
   scrapeResults,
   videoMovies,
@@ -20,7 +22,87 @@ import type {
   NormalizedEpisodeResult,
   NormalizedSeriesResult,
 } from "@obscura/contracts";
+import { getGeneratedSceneFolderDir, getCacheRootDir } from "@obscura/media-core";
 import { db } from "../db";
+
+// ─── Image download helper ──────────────────────────────────────────
+//
+// Downloads a remote image URL (TMDB, etc.) to a local cache path and
+// returns the asset URL to write into the DB. Failures are non-fatal —
+// a null return means "skip this slot, don't block the accept."
+
+async function downloadImageToCache(
+  url: string | undefined | null,
+  entityDir: string,
+  filename: string,
+): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    await mkdir(entityDir, { recursive: true });
+    const ext = url.match(/\.(jpe?g|png|webp|avif)/i)?.[1] ?? "jpg";
+    const outName = `${filename}.${ext}`;
+    await writeFile(path.join(entityDir, outName), buf);
+    return outName;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Download the selected (or default-first) image for each slot
+ * on a series accept and write the local asset URLs into the
+ * series row. Returns the patch fields to merge.
+ */
+async function downloadSeriesImages(
+  seriesId: string,
+  result: NormalizedSeriesResult,
+  selectedImages?: SelectedImages,
+): Promise<Record<string, unknown>> {
+  const dir = getGeneratedSceneFolderDir(seriesId);
+  const patch: Record<string, unknown> = {};
+  const posterUrl =
+    selectedImages?.poster ??
+    result.posterCandidates[0]?.url ??
+    null;
+  const backdropUrl =
+    selectedImages?.backdrop ??
+    result.backdropCandidates[0]?.url ??
+    null;
+  const logoUrl =
+    selectedImages?.logo ??
+    result.logoCandidates[0]?.url ??
+    null;
+  const posterFile = await downloadImageToCache(posterUrl, dir, "poster");
+  if (posterFile) {
+    patch.posterPath = `/assets/video-folders/${seriesId}/cover`;
+  }
+  const backdropFile = await downloadImageToCache(backdropUrl, dir, "backdrop");
+  if (backdropFile) {
+    patch.backdropPath = `/assets/video-folders/${seriesId}/backdrop`;
+  }
+  // Logo goes to the same dir
+  if (logoUrl) {
+    await downloadImageToCache(logoUrl, dir, "logo");
+  }
+  return patch;
+}
+
+/**
+ * Download a season poster to a cache subdir keyed on the season
+ * DB id so `toApiUrl(posterPath)` resolves correctly.
+ */
+async function downloadSeasonPoster(
+  seasonId: string,
+  url: string | null | undefined,
+): Promise<string | null> {
+  if (!url) return null;
+  const dir = path.join(getCacheRootDir(), "seasons", seasonId);
+  const file = await downloadImageToCache(url, dir, "poster");
+  return file ? `/assets/seasons/${seasonId}/poster` : null;
+}
 
 export interface AcceptFieldMask {
   title?: boolean;
@@ -230,6 +312,13 @@ export async function acceptEpisodeScrape(
 // Series cascade accept
 // ---------------------------------------------------------------------------
 
+export interface SelectedImages {
+  poster?: string;
+  backdrop?: string;
+  logo?: string;
+  still?: string;
+}
+
 export interface CascadeAcceptSpec {
   acceptAllSeasons?: boolean;
   seasonOverrides?: Record<
@@ -237,11 +326,13 @@ export interface CascadeAcceptSpec {
     {
       accepted: boolean;
       fieldMask?: AcceptFieldMask;
+      selectedImages?: SelectedImages;
       episodes?: Record<
         number,
         {
           accepted: boolean;
           fieldMask?: AcceptFieldMask;
+          selectedImages?: SelectedImages;
         }
       >;
     }
@@ -271,6 +362,17 @@ export async function acceptSeriesScrape(
   }
   patch.organized = true;
   patch.updatedAt = new Date();
+
+  // Download poster / backdrop / logo to local disk so the library
+  // is fully offline-capable. Uses the same cache dir layout as the
+  // manual cover-upload flow so the asset GET routes serve them.
+  const imagePatch = await downloadSeriesImages(
+    input.seriesId,
+    input.result,
+    // The route handler can optionally forward selectedImages from
+    // the cascade drawer; fall back to the first candidate per slot.
+  );
+  Object.assign(patch, imagePatch);
 
   if (Object.keys(patch).length > 0) {
     await db
@@ -336,6 +438,22 @@ export async function acceptSeriesScrape(
       if (seasonMask.airDate) seasonPatch.airDate = proposedSeason.airDate;
       if (seasonMask.externalIds)
         seasonPatch.externalIds = proposedSeason.externalIds;
+      // Download the season poster to local disk for offline
+      // availability. The user may have picked a specific candidate
+      // in the drawer, or we fall back to the first.
+      const seasonSelectedImages = override?.selectedImages;
+      const seasonPosterUrl =
+        seasonSelectedImages?.poster ??
+        (proposedSeason.posterCandidates.length > 0
+          ? proposedSeason.posterCandidates[0].url
+          : null);
+      const localSeasonPoster = await downloadSeasonPoster(
+        existingSeason.id,
+        seasonPosterUrl,
+      );
+      if (localSeasonPoster) {
+        seasonPatch.posterPath = localSeasonPoster;
+      }
       seasonPatch.updatedAt = new Date();
 
       await db
@@ -378,6 +496,26 @@ export async function acceptSeriesScrape(
             .update(videoEpisodes)
             .set(epPatch)
             .where(eq(videoEpisodes.id, existingEp.id));
+
+          // Link guest stars as performers on the episode row.
+          if (
+            epMask.cast &&
+            proposedEp.guestStars &&
+            proposedEp.guestStars.length > 0
+          ) {
+            for (const star of proposedEp.guestStars) {
+              const performerId = await upsertPerformerByName(star.name);
+              await db
+                .insert(videoEpisodePerformers)
+                .values({
+                  episodeId: existingEp.id,
+                  performerId,
+                  character: star.character ?? null,
+                  order: star.order ?? null,
+                })
+                .onConflictDoNothing();
+            }
+          }
           episodesUpdated += 1;
         }
       }

@@ -75,7 +75,18 @@ function VideoGridCard({
           fileSize={scene.fileSize}
           studio={scene.studio}
           performers={performersRow}
-          thumbnailOverlay={<NsfwShowModeChip isNsfw={scene.isNsfw} />}
+          thumbnailOverlay={
+            <>
+              <NsfwShowModeChip isNsfw={scene.isNsfw} />
+              {scene.episodeNumber != null && (
+                <span className="absolute left-1.5 top-1.5 bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
+                  {scene.seasonNumber != null
+                    ? `S${String(scene.seasonNumber).padStart(2, "0")}E${String(scene.episodeNumber).padStart(2, "0")}`
+                    : `E${String(scene.episodeNumber).padStart(2, "0")}`}
+                </span>
+              )}
+            </>
+          }
           tagsSlot={
             tagRow.length > 0 ? (
               <div className="flex flex-wrap gap-1">

@@ -1396,6 +1396,10 @@ export interface SceneListItemDto {
   studioId: string | null;
   sceneFolderId: string | null;
   sceneFolderTitle: string | null;
+  /** Season number for episode rows (null for movies). */
+  seasonNumber: number | null;
+  /** Episode number within the season (null for movies). */
+  episodeNumber: number | null;
   hasSubtitles: boolean;
   performers: {
     id: string;

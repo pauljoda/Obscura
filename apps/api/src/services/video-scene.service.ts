@@ -197,6 +197,8 @@ function toVideoListItem(row: VideoRow) {
     studioId: row.studioId,
     sceneFolderId: row.seriesId,
     sceneFolderTitle: row.seriesTitle,
+    seasonNumber: row.seasonNumber,
+    episodeNumber: row.episodeNumber,
     hasSubtitles: false,
     performers: [] as {
       id: string;

@@ -428,6 +428,40 @@ function SeriesCascadeBody({
   // state is reset and the picker disappears automatically.
   const [pickedCandidate, setPickedCandidate] = useState<string | null>(null);
 
+  // Existing entity name sets — used to differentiate "will create"
+  // vs "already exists" on genre and cast chips. Loaded once on
+  // mount via the standard list endpoints.
+  const [existingTagNames, setExistingTagNames] = useState<Set<string>>(
+    new Set(),
+  );
+  const [existingPerformerNames, setExistingPerformerNames] = useState<
+    Set<string>
+  >(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      import("../../lib/api").then((m) => m.fetchTags()),
+      import("../../lib/api").then((m) => m.fetchPerformers()),
+    ])
+      .then(([tagsRes, perfRes]) => {
+        if (cancelled) return;
+        setExistingTagNames(
+          new Set(tagsRes.tags.map((t: { name: string }) => t.name.toLowerCase())),
+        );
+        setExistingPerformerNames(
+          new Set(
+            perfRes.performers.map((p: { name: string }) => p.name.toLowerCase()),
+          ),
+        );
+      })
+      .catch(() => {
+        /* non-fatal */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [seriesMask, setSeriesMask] = useState<AcceptFieldMask>(() =>
     allOn(SERIES_FIELDS),
   );
@@ -646,14 +680,59 @@ function SeriesCascadeBody({
             )}
             {result.genres.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {result.genres.map((g) => (
-                  <span
-                    key={g}
-                    className="tag-chip tag-chip-default text-[0.55rem]"
-                  >
-                    {g}
-                  </span>
-                ))}
+                {result.genres.map((g) => {
+                  const isExisting = existingTagNames.has(g.toLowerCase());
+                  return (
+                    <span
+                      key={g}
+                      className={cn(
+                        "tag-chip text-[0.55rem]",
+                        isExisting ? "tag-chip-default" : "tag-chip-accent",
+                      )}
+                      title={isExisting ? "Existing tag" : "Will create new tag"}
+                    >
+                      {g}
+                      {!isExisting && (
+                        <span className="ml-0.5 text-[0.45rem] opacity-70">NEW</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {result.cast && result.cast.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-[0.6rem] uppercase tracking-[0.12em] text-text-muted">
+                  Cast ({result.cast.length})
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {result.cast.slice(0, 20).map((c) => {
+                    const isExisting = existingPerformerNames.has(c.name.toLowerCase());
+                    return (
+                      <span
+                        key={c.name}
+                        className={cn(
+                          "tag-chip text-[0.55rem]",
+                          isExisting ? "tag-chip-default" : "tag-chip-accent",
+                        )}
+                        title={isExisting ? "Existing actor" : "Will create new actor"}
+                      >
+                        {c.name}
+                        {c.character && (
+                          <span className="text-text-disabled"> ({c.character})</span>
+                        )}
+                        {!isExisting && (
+                          <span className="ml-0.5 text-[0.45rem] opacity-70">NEW</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                  {result.cast.length > 20 && (
+                    <span className="tag-chip tag-chip-default text-[0.55rem] text-text-disabled">
+                      +{result.cast.length - 20}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>

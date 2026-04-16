@@ -183,7 +183,28 @@ export function VideosPageClient({
    * Case A series (single flat season) skip this entirely — the page
    * loads episodes directly.
    */
-  const [activeSeasonNumber, setActiveSeasonNumber] = useState<number | null>(null);
+  const [activeSeasonNumber, setActiveSeasonNumberRaw] = useState<number | null>(null);
+
+  /**
+   * Set the active season AND push the `&season=N` param so the
+   * browser back button returns to the season grid instead of
+   * jumping to the root videos page. Passing null removes the param,
+   * returning to the series season grid view.
+   */
+  const setActiveSeasonNumber = useCallback(
+    (n: number | null) => {
+      setActiveSeasonNumberRaw(n);
+      if (!activeFolder) return;
+      const url = new URL(window.location.href);
+      if (n !== null) {
+        url.searchParams.set("season", String(n));
+      } else {
+        url.searchParams.delete("season");
+      }
+      window.history.pushState(null, "", url.toString());
+    },
+    [activeFolder],
+  );
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
@@ -222,10 +243,28 @@ export function VideosPageClient({
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
 
+  // Restore the active season from the URL `?season=N` param on
+  // initial mount and browser-back / popstate events so the back
+  // button returns to the season grid instead of the root page.
+  useEffect(() => {
+    function readSeason(): number | null {
+      const raw = new URLSearchParams(window.location.search).get("season");
+      if (raw == null) return null;
+      const n = Number.parseInt(raw, 10);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    }
+    setActiveSeasonNumberRaw(readSeason());
+    function onPopState() {
+      setActiveSeasonNumberRaw(readSeason());
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [initialActiveFolder]);
+
   useEffect(() => {
     setRootFolders(initialRootFolders);
     setActiveFolder(initialActiveFolder);
-    setActiveSeasonNumber(null);
+    setActiveSeasonNumberRaw(null);
     // Navigating INTO a series folder resets the sort to episode
     // order; navigating OUT (initialActiveFolder becomes null) falls
     // back to the user's saved listing preference. Keeps "episode"
@@ -877,7 +916,7 @@ export function VideosPageClient({
                 <img
                   src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover blur-2xl scale-110 opacity-40"
+                  className="absolute inset-0 h-full w-full object-cover blur-lg scale-110 opacity-50"
                 />
               ) : null}
               <div className="absolute inset-0 bg-gradient-to-t from-surface-1 via-black/60 to-black/30" />

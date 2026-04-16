@@ -12,6 +12,7 @@ import {
   getGeneratedAudioTrackDir,
   getGeneratedAudioLibraryDir,
   getGeneratedSceneFolderDir,
+  getCacheRootDir,
   extractZipMember,
   getSceneVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
@@ -383,11 +384,16 @@ export async function assetsRoutes(app: FastifyInstance) {
   // the two URL shapes are interchangeable.
   app.get("/assets/video-folders/:id/cover", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const coverPath = path.join(getGeneratedSceneFolderDir(id), "cover-custom.jpg");
-    if (existsSync(coverPath)) {
-      reply.header("Cache-Control", "no-cache");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(coverPath));
+    const dir = getGeneratedSceneFolderDir(id);
+    // Check both the manual-upload filename ("cover-custom.jpg") and the
+    // scrape-accept download names ("poster.*") so both flows resolve.
+    for (const name of ["cover-custom.jpg", "poster.jpg", "poster.png", "poster.webp"]) {
+      const p = path.join(dir, name);
+      if (existsSync(p)) {
+        reply.header("Cache-Control", "no-cache");
+        reply.header("Content-Type", name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg");
+        return reply.send(createReadStream(p));
+      }
     }
     reply.code(404);
     return { error: "Cover not found" };
@@ -396,14 +402,42 @@ export async function assetsRoutes(app: FastifyInstance) {
   // ─── Video folder backdrop: /assets/video-folders/:id/backdrop ─
   app.get("/assets/video-folders/:id/backdrop", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const backdropPath = path.join(getGeneratedSceneFolderDir(id), "backdrop-custom.jpg");
-    if (existsSync(backdropPath)) {
-      reply.header("Cache-Control", "no-cache");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(backdropPath));
+    const dir = getGeneratedSceneFolderDir(id);
+    for (const name of ["backdrop-custom.jpg", "backdrop.jpg", "backdrop.png", "backdrop.webp"]) {
+      const p = path.join(dir, name);
+      if (existsSync(p)) {
+        reply.header("Cache-Control", "no-cache");
+        reply.header("Content-Type", name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg");
+        return reply.send(createReadStream(p));
+      }
     }
     reply.code(404);
     return { error: "Backdrop not found" };
+  });
+
+  // ─── Season poster: /assets/seasons/:id/poster ─────────────────
+  app.get("/assets/seasons/:id/poster", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const dir = path.join(getCacheRootDir(), "seasons", id);
+    // Try common extensions — the download helper picks the original
+    // extension from the URL, so we check all of them.
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      const p = path.join(dir, `poster.${ext}`);
+      if (existsSync(p)) {
+        reply.header("Cache-Control", "no-cache");
+        reply.header(
+          "Content-Type",
+          ext === "png"
+            ? "image/png"
+            : ext === "webp"
+              ? "image/webp"
+              : "image/jpeg",
+        );
+        return reply.send(createReadStream(p));
+      }
+    }
+    reply.code(404);
+    return { error: "Season poster not found" };
   });
 
   // ─── Audio track waveform: /assets/audio-tracks/:id/waveform.json ─
