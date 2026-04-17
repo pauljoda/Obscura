@@ -667,7 +667,7 @@ function VideoReviewDrawer({
     >
       <div className="p-5 space-y-4">
         {row.normalized && (
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Large thumbnail on left */}
             {row.normalized.imageUrl && (
               <div

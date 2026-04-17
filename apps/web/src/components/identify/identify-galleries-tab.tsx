@@ -339,7 +339,7 @@ function GalleryReviewDrawer({
     >
       <div className="p-5 space-y-4">
         {row.result && (
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {row.result.imageUrl && (
               <img src={row.result.imageUrl} alt="" className="w-32 h-24 object-cover border border-border-subtle flex-shrink-0" />
             )}

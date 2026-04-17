@@ -639,8 +639,8 @@ function SeriesCascadeBody({
 
       {/* Series header */}
       <div className="border-b border-border-subtle p-5 space-y-4">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
-          <div className="min-w-0 space-y-2">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
               {result.title}
             </h3>
@@ -977,7 +977,7 @@ function SeasonSection({
       </button>
       {state.expanded && (
         <div className="space-y-3 border-t border-border-subtle/50 bg-surface-2/20 p-4">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+          <div className="flex flex-col sm:flex-row gap-4">
             <ImagePicker
               label="Season poster"
               aspect="poster"
@@ -1208,8 +1208,8 @@ function MovieReviewBody({
   return (
     <div className="flex flex-col">
       <div className="space-y-4 p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
-          <div className="min-w-0 space-y-2">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
               {result.title}
             </h3>
@@ -1242,26 +1242,28 @@ function MovieReviewBody({
               </div>
             )}
           </div>
-          <ImagePicker
-            label="Poster"
-            aspect="poster"
-            candidates={result.posterCandidates}
-            value={selectedImages.poster ?? undefined}
-            onSelect={(url) =>
-              setSelectedImages((p) => ({ ...p, poster: url ?? undefined }))
-            }
-            className="w-28"
-          />
-          <ImagePicker
-            label="Backdrop"
-            aspect="backdrop"
-            candidates={result.backdropCandidates}
-            value={selectedImages.backdrop ?? undefined}
-            onSelect={(url) =>
-              setSelectedImages((p) => ({ ...p, backdrop: url ?? undefined }))
-            }
-            className="w-36"
-          />
+          <div className="flex gap-3">
+            <ImagePicker
+              label="Poster"
+              aspect="poster"
+              candidates={result.posterCandidates}
+              value={selectedImages.poster ?? undefined}
+              onSelect={(url) =>
+                setSelectedImages((p) => ({ ...p, poster: url ?? undefined }))
+              }
+              className="w-28"
+            />
+            <ImagePicker
+              label="Backdrop"
+              aspect="backdrop"
+              candidates={result.backdropCandidates}
+              value={selectedImages.backdrop ?? undefined}
+              onSelect={(url) =>
+                setSelectedImages((p) => ({ ...p, backdrop: url ?? undefined }))
+              }
+              className="w-36"
+            />
+          </div>
         </div>
         <FieldMaskGrid fields={MOVIE_FIELDS} mask={mask} onToggle={toggleField} />
       </div>
@@ -1338,8 +1340,8 @@ function EpisodeReviewBody({
   return (
     <div className="flex flex-col">
       <div className="space-y-4 p-5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-          <div className="min-w-0 space-y-2">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="min-w-0 flex-1 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
               {result.title ?? <em>(no title)</em>}
             </h3>
