@@ -18,9 +18,7 @@ import {
   fetchVideoSeriesLibraryDetail,
   type VideoSeriesLibraryDetail,
 } from "../../lib/api/videos";
-import type { NormalizedScrapeResult } from "../scrape/types";
 import type { VideoSeriesRow, VideoSeriesField, NormalizedSeriesIdentifyResult } from "./types";
-import { VIDEO_FOLDER_FIELDS } from "./types";
 import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
 
@@ -79,22 +77,22 @@ export function buildLocalSeasonsInput(detail: VideoSeriesLibraryDetail):
 
 /* ─── Seek via plugin ─────────────────────────────────────────── */
 
-async function seekFolderViaPlugin(
+async function seekSeriesViaPlugin(
   row: VideoSeriesRow,
   pluginList: PluginInfo[],
 ): Promise<{
   scrapeResultId?: string;
-  folderResult?: NormalizedSeriesIdentifyResult;
+  seriesResult?: NormalizedSeriesIdentifyResult;
   matchedProvider?: string;
 }> {
   for (const plugin of pluginList) {
     try {
       let pluginInput: Record<string, unknown> = {
-        name: row.folder.displayTitle || row.folder.title,
-        title: row.folder.displayTitle || row.folder.title,
+        name: row.series.displayTitle || row.series.title,
+        title: row.series.displayTitle || row.series.title,
       };
       try {
-        const seriesLib = await fetchVideoSeriesLibraryDetail(row.folder.id);
+        const seriesLib = await fetchVideoSeriesLibraryDetail(row.series.id);
         const extra = buildLocalSeasonsInput(seriesLib);
         if (extra) pluginInput = { ...pluginInput, ...extra };
       } catch {
@@ -104,14 +102,14 @@ async function seekFolderViaPlugin(
       const res = await withTimeout(
         executePlugin(plugin.id, "folderByName", pluginInput, {
           saveResult: true,
-          entityId: row.folder.id,
+          entityId: row.series.id,
         }),
         SEEK_TIMEOUT_MS * 6,
       );
       if (res.ok && res.result && res.normalized) {
         const savedRow = res.result as Record<string, unknown>;
         const rawResult = savedRow.rawResult as Record<string, unknown> | undefined;
-        const folderResult: NormalizedSeriesIdentifyResult = {
+        const seriesResult: NormalizedSeriesIdentifyResult = {
           name: res.normalized.title,
           details: res.normalized.details,
           date: res.normalized.date,
@@ -126,7 +124,7 @@ async function seekFolderViaPlugin(
         };
         return {
           scrapeResultId: savedRow.id as string,
-          folderResult,
+          seriesResult,
           matchedProvider: plugin.name,
         };
       }
@@ -174,27 +172,27 @@ export async function runVideoSeriesIdentify({
     );
 
     try {
-      const { scrapeResultId, folderResult, matchedProvider } = await seekFolderViaPlugin(rows[i], pluginList);
-      if (scrapeResultId && folderResult) {
+      const { scrapeResultId, seriesResult, matchedProvider } = await seekSeriesViaPlugin(rows[i], pluginList);
+      if (scrapeResultId && seriesResult) {
         if (autoAccept) {
           try {
             await acceptPluginResult(scrapeResultId);
             setRows((prev) =>
               prev.map((r, idx) =>
-                idx === i ? { ...r, status: "accepted" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
+                idx === i ? { ...r, status: "accepted" as const, result: seriesResult, scrapeResultId, matchedProvider } : r,
               ),
             );
           } catch {
             setRows((prev) =>
               prev.map((r, idx) =>
-                idx === i ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
+                idx === i ? { ...r, status: "found" as const, result: seriesResult, scrapeResultId, matchedProvider } : r,
               ),
             );
           }
         } else {
           setRows((prev) =>
             prev.map((r, idx) =>
-              idx === i ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
+              idx === i ? { ...r, status: "found" as const, result: seriesResult, scrapeResultId, matchedProvider } : r,
             ),
           );
         }
@@ -230,11 +228,11 @@ export async function seekSeriesSingle(
   );
 
   try {
-    const { scrapeResultId, folderResult, matchedProvider } = await seekFolderViaPlugin(row, pluginList);
-    if (folderResult) {
+    const { scrapeResultId, seriesResult, matchedProvider } = await seekSeriesViaPlugin(row, pluginList);
+    if (seriesResult) {
       setRows((prev) =>
         prev.map((r, i) =>
-          i === idx ? { ...r, status: "found" as const, result: folderResult, scrapeResultId, matchedProvider } : r,
+          i === idx ? { ...r, status: "found" as const, result: seriesResult, scrapeResultId, matchedProvider } : r,
         ),
       );
     } else {
@@ -302,11 +300,11 @@ export function IdentifyVideoSeriesRows({
   return (
     <>
       {rows.map((row, idx) => (
-        <VideoFolderRowCard
-          key={row.folder.id}
+        <VideoSeriesRowCard
+          key={row.series.id}
           row={row}
-          expanded={expandedIds.has(row.folder.id)}
-          onToggleExpand={() => toggleExpanded(row.folder.id)}
+          expanded={expandedIds.has(row.series.id)}
+          onToggleExpand={() => toggleExpanded(row.series.id)}
           onToggleField={(field) => toggleField(idx, field)}
           onAccept={async () => {
             if (!row.scrapeResultId) return;
@@ -346,8 +344,8 @@ export function IdentifyVideoSeriesRows({
                   setReviewing({
                     idx,
                     scrapeResultId: row.scrapeResultId!,
-                    label: row.folder.displayTitle || row.folder.title,
-                    seriesId: row.folder.id,
+                    label: row.series.displayTitle || row.series.title,
+                    seriesId: row.series.id,
                   })
               : undefined
           }
@@ -380,7 +378,7 @@ export function IdentifyVideoSeriesRows({
 
 /* ─── Row card ────────────────────────────────────────────────── */
 
-function VideoFolderRowCard({
+function VideoSeriesRowCard({
   row,
   expanded,
   onToggleExpand,
@@ -421,15 +419,15 @@ function VideoFolderRowCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-[0.8rem] font-medium truncate">
-            {row.folder.displayTitle}
+            {row.series.displayTitle}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-text-disabled text-[0.65rem]">
-              {row.folder.directVideoCount} video{row.folder.directVideoCount !== 1 ? "s" : ""}
+              {row.series.directVideoCount} video{row.series.directVideoCount !== 1 ? "s" : ""}
             </span>
-            {row.folder.studioName && (
+            {row.series.studioName && (
               <span className="text-text-accent text-[0.65rem]">
-                {row.folder.studioName}
+                {row.series.studioName}
               </span>
             )}
             {row.matchedProvider && row.status !== "pending" && (

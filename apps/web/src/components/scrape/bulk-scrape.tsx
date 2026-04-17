@@ -59,7 +59,7 @@ import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
 import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
 import type { VideoSeriesRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
-import { VIDEO_FOLDER_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
+import { VIDEO_SERIES_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
 import { IdentifyVideoSeriesRows, runVideoSeriesIdentify, seekSeriesSingle, acceptAllVideoSeries } from "../identify/identify-video-series-tab";
 import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
@@ -108,7 +108,7 @@ export function BulkScrape() {
   const [tagRows, setTagRows] = useState<TagRow[]>([]);
 
   // New entity states
-  const [folderRows, setFolderRows] = useState<VideoSeriesRow[]>([]);
+  const [seriesRows, setSeriesRows] = useState<VideoSeriesRow[]>([]);
   const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
   const [imageRows, setImageRows] = useState<ImageRow[]>([]);
   const [audioLibraryRows, setAudioLibraryRows] = useState<AudioLibraryRow[]>([]);
@@ -139,7 +139,7 @@ export function BulkScrape() {
 
   function expandAll() {
     if (tab === "videos") setExpandedIds(new Set(videoRows.map((r) => r.video.id)));
-    else if (tab === "video-series") setExpandedIds(new Set(folderRows.map((r) => r.folder.id)));
+    else if (tab === "video-series") setExpandedIds(new Set(seriesRows.map((r) => r.series.id)));
     else if (tab === "galleries") setExpandedIds(new Set(galleryRows.map((r) => r.gallery.id)));
     else if (tab === "images") setExpandedIds(new Set(imageRows.map((r) => r.image.id)));
     else if (tab === "audio-libraries") setExpandedIds(new Set(audioLibraryRows.map((r) => r.library.id)));
@@ -156,7 +156,7 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [videosRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
+      const [videosRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, seriesRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
         fetchAllVideos({ sort: "created_at", nsfw: nsfwMode }),
         fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
@@ -210,35 +210,35 @@ export function BulkScrape() {
       // Store installed Obscura plugins (only enabled ones with auth OK)
       setPlugins(pluginsRes.filter((p) => p.enabled));
 
-      // Initialize new entity rows — show content-level folders for identification.
-      // A folder with relativePath "." is the library root itself (created when
-      // "use library root as folder" is enabled) — always skip those.
-      // Then show their direct children (the real content folders).
-      // When the setting is disabled, content folders have parentId=null already.
-      const allFolders = foldersRes.items;
+      // Initialize new entity rows — show content-level series for identification.
+      // A series with relativePath "." is the library root itself (created when
+      // "use library root as series" is enabled) — always skip those.
+      // Then show their direct children (the real content series).
+      // When the setting is disabled, content series have parentId=null already.
+      const allSeries = seriesRes.items;
 
-      // IDs of folders that ARE library roots (relativePath ".")
-      const libraryRootFolderIds = new Set(
-        allFolders.filter((f) => f.relativePath === ".").map((f) => f.id),
+      // IDs of series that ARE library roots (relativePath ".")
+      const libraryRootSeriesIds = new Set(
+        allSeries.filter((series) => series.relativePath === ".").map((series) => series.id),
       );
 
-      // Content folders: either children of a library root folder, or
-      // top-level folders that aren't library roots themselves
-      const contentFolders = allFolders.filter((f) => {
+      // Content series: either children of a library root series, or
+      // top-level series that aren't library roots themselves
+      const contentSeries = allSeries.filter((series) => {
         // Never show the library root itself
-        if (libraryRootFolderIds.has(f.id)) return false;
-        // Show direct children of library root folders
-        if (f.parentId && libraryRootFolderIds.has(f.parentId)) return true;
-        // Show top-level folders (when setting is off, these are content folders)
-        if (!f.parentId) return true;
-        // Skip deeper sub-folders (Season 1, etc.)
+        if (libraryRootSeriesIds.has(series.id)) return false;
+        // Show direct children of library root series
+        if (series.parentId && libraryRootSeriesIds.has(series.parentId)) return true;
+        // Show top-level series (when setting is off, these are content series)
+        if (!series.parentId) return true;
+        // Skip deeper sub-series (Season 1, etc.)
         return false;
       });
 
-      setFolderRows(contentFolders.map((folder) => ({
-        folder,
+      setSeriesRows(contentSeries.map((series) => ({
+        series,
         status: "pending" as const,
-        selectedFields: new Set(VIDEO_FOLDER_FIELDS),
+        selectedFields: new Set(VIDEO_SERIES_FIELDS),
         wizardStep: "idle" as const,
       })));
       setGalleryRows(galleriesRes.galleries.map((gallery) => ({
@@ -294,7 +294,7 @@ export function BulkScrape() {
 
   const rows =
     tab === "videos" ? videoRows
-    : tab === "video-series" ? folderRows
+    : tab === "video-series" ? seriesRows
     : tab === "galleries" ? galleryRows
     : tab === "images" ? imageRows
     : tab === "audio-libraries" ? audioLibraryRows
@@ -374,7 +374,7 @@ export function BulkScrape() {
     if (tab === "videos") {
       void runVideoScrape({ ...sharedTabProps, videoRows, setVideoRows, videoScrapers, plugins: pluginsForTab });
     } else if (tab === "video-series") {
-      void runVideoSeriesIdentify({ ...pluginRunProps, rows: folderRows, setRows: setFolderRows });
+      void runVideoSeriesIdentify({ ...pluginRunProps, rows: seriesRows, setRows: setSeriesRows });
     } else if (tab === "galleries") {
       void runGalleryIdentify({ ...pluginRunProps, rows: galleryRows, setRows: setGalleryRows });
     } else if (tab === "images") {
@@ -394,7 +394,7 @@ export function BulkScrape() {
 
   function handleAcceptAll() {
     if (tab === "videos") void acceptAllVideos(videoRows, setVideoRows);
-    else if (tab === "video-series") void acceptAllVideoSeries(folderRows, setFolderRows);
+    else if (tab === "video-series") void acceptAllVideoSeries(seriesRows, setSeriesRows);
     else if (tab === "galleries") void acceptAllGalleries(galleryRows, setGalleryRows);
     else if (tab === "images") void acceptAllImages(imageRows, setImageRows);
     else if (tab === "audio-libraries") void acceptAllAudioLibraries(audioLibraryRows, setAudioLibraryRows);
@@ -442,7 +442,7 @@ export function BulkScrape() {
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
         {([
           { key: "videos" as Tab, label: entityTerms.videos, icon: Film, count: videoRows.length },
-          { key: "video-series" as Tab, label: entityTerms.series, icon: FolderOpen, count: folderRows.length },
+          { key: "video-series" as Tab, label: entityTerms.series, icon: FolderOpen, count: seriesRows.length },
           { key: "galleries" as Tab, label: "Galleries", icon: Images, count: galleryRows.length },
           { key: "images" as Tab, label: "Images", icon: Image, count: imageRows.length },
           { key: "audio-libraries" as Tab, label: "Albums", icon: Library, count: audioLibraryRows.length },
@@ -671,15 +671,15 @@ export function BulkScrape() {
           )}
           {tab === "video-series" && (
             <IdentifyVideoSeriesRows
-              rows={folderRows}
-              setRows={setFolderRows}
+              rows={seriesRows}
+              setRows={setSeriesRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
               onSeekSingle={(idx) => {
                 const isPlugin = selectedScraperId.startsWith("plugin:");
                 const realId = selectedScraperId.replace(/^plugin:/, "");
                 const pl = isPlugin ? pluginsForTab.filter((p) => p.id === realId) : pluginsForTab;
-                void seekSeriesSingle(idx, folderRows, setFolderRows, pl);
+                void seekSeriesSingle(idx, seriesRows, setSeriesRows, pl);
               }}
             />
           )}

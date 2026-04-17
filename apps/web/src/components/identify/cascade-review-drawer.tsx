@@ -3,7 +3,7 @@
 /**
  * Cascade review drawer for the Identify tab.
  *
- * Opens from a video-folder identify row once the plugin seek has
+ * Opens from a video-series identify row once the plugin seek has
  * produced a typed `proposedResult` in `scrape_results`. The drawer
  * discriminates on the payload shape:
  *
@@ -13,7 +13,7 @@
  *     and per-episode rows with match status and per-field checkboxes.
  *   - `NormalizedMovieResult` → compact single-movie review.
  *   - `NormalizedEpisodeResult` → compact single-episode re-identify.
- *   - Legacy folder shape or empty → fallback empty state that
+ *   - Legacy series shape or empty → fallback empty state that
  *     instructs the user to re-run the seek with a cascade-capable
  *     plugin.
  *

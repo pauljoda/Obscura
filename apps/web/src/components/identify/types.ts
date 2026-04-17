@@ -27,7 +27,7 @@ export type IdentifyTab =
 
 // ─── Field definitions per entity type ─────────────────────────────
 
-export const VIDEO_FOLDER_FIELDS = [
+export const VIDEO_SERIES_FIELDS = [
   "title",
   "date",
   "details",
@@ -36,7 +36,7 @@ export const VIDEO_FOLDER_FIELDS = [
   "image",
   "seasonCount",
 ] as const;
-export type VideoSeriesField = (typeof VIDEO_FOLDER_FIELDS)[number];
+export type VideoSeriesField = (typeof VIDEO_SERIES_FIELDS)[number];
 
 export const GALLERY_FIELDS = [
   "title",
@@ -95,7 +95,7 @@ export type RowStatus =
 // ─── Row types per entity ──────────────────────────────────────────
 
 export interface VideoSeriesRow {
-  folder: VideoSeriesListItemDto;
+  series: VideoSeriesListItemDto;
   status: RowStatus;
   result?: NormalizedSeriesIdentifyResult;
   /** The scrape_result DB row ID, used for accept/reject */

@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- The Identify page's series workflow now uses `series` naming throughout its first-party state, row models, and review-drawer comments instead of carrying local `folder` aliases through the Series tab. That keeps the remaining video-series identify code aligned with the rest of the Videos/Series cleanup without changing the plugin capability names that still expect `folderByName`.
 - Video-specific fetch/mutation helpers now live in the dedicated `apps/web/src/lib/api/videos.ts` and `apps/web/src/lib/server-api/videos.ts` modules. The remaining `media.ts` files are back to galleries, images, audio, search, and collections only, which removes the duplicate `/videos` code paths the web app had been carrying.
 - First-party `/videos` list payloads now return `{ videos, total, limit, offset }`, and first-party series browsing now uses the `series` query param plus `seriesScope` naming instead of `folder`.
 - The API video surface now imports from `apps/api/src/services/videos/*` instead of the old single-file `video-scene.service.ts`. Listing, detail loading, stats, mutations, and asset helpers are exported behind a dedicated module boundary so the video stack can keep getting smaller without forcing routes and callers back through one 2,000-line service file.
