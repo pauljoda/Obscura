@@ -6,14 +6,14 @@
  * the existing scene/scene-folder DTO types.
  */
 import type {
-  SceneFolderDetailDto,
-  SceneFolderListItemDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListItemDto,
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
 import type {
   VideoDetail,
-  SceneListItem,
-  SceneStats,
+  VideoListItem,
+  VideoStats,
 } from "../api/types";
 
 export async function fetchVideos(params: {
@@ -33,7 +33,7 @@ export async function fetchVideos(params: {
   limit?: number;
   offset?: number;
   nsfw?: string;
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
   seasonNumber?: string;
@@ -62,7 +62,7 @@ export async function fetchVideos(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
-      sceneFolderId: params.sceneFolderId,
+      videoSeriesId: params.videoSeriesId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
       seasonNumber: params.seasonNumber,
@@ -72,7 +72,7 @@ export async function fetchVideos(params: {
     },
   );
 
-  return serverFetch<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }>(
+  return serverFetch<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }>(
     `/videos${qs}`,
     { tags: ["videos"] },
   );
@@ -87,45 +87,8 @@ export async function fetchVideoDetail(id: string) {
 
 export async function fetchVideoStats(nsfw?: string) {
   const qs = buildQueryString({ nsfw });
-  return serverFetch<SceneStats>(`/videos/stats${qs}`, {
+  return serverFetch<VideoStats>(`/videos/stats${qs}`, {
     tags: ["videos"],
   });
 }
 
-export async function fetchVideoFolders(params?: {
-  parent?: string;
-  root?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-}) {
-  const qs = buildQueryString({
-    parent: params?.parent,
-    root: params?.root,
-    search: params?.search,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-  });
-  return serverFetch<{
-    items: SceneFolderListItemDto[];
-    total: number;
-    limit: number;
-    offset: number;
-  }>(`/video-folders${qs}`, {
-    revalidate: 0,
-    tags: ["video-folders"],
-  });
-}
-
-export async function fetchVideoFolderDetail(
-  id: string,
-  params?: { nsfw?: string },
-) {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
-  return serverFetch<SceneFolderDetailDto>(`/video-folders/${id}${qs}`, {
-    revalidate: 0,
-    tags: ["video-folders", `video-folder-${id}`],
-  });
-}

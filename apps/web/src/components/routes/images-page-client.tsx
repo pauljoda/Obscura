@@ -625,7 +625,7 @@ export function ImagesPageClient({
                 </div>
               )}
 
-              {filterPerformers.filter((p) => p.sceneCount > 0).length > 0 && (
+              {filterPerformers.filter((p) => p.videoCount > 0).length > 0 && (
                 <div className="md:col-span-2 xl:col-span-3">
                   <div className="flex items-center gap-1.5 text-kicker mb-2">
                     <Users className="h-3 w-3 text-text-disabled" />
@@ -633,7 +633,7 @@ export function ImagesPageClient({
                   </div>
                   <div className="flex flex-wrap gap-1 max-h-36 overflow-y-auto tag-scroll-area">
                     {tagsVisibleInNsfwMode(filterPerformers, nsfwMode)
-                      .filter((p) => p.sceneCount > 0)
+                      .filter((p) => p.videoCount > 0)
                       .map((p) => (
                         <button
                           key={p.id}
@@ -647,7 +647,7 @@ export function ImagesPageClient({
                           )}
                         >
                           <NsfwTagLabel isNsfw={p.isNsfw}>{p.name}</NsfwTagLabel>
-                          <span className="text-text-disabled ml-1">{p.sceneCount}</span>
+                          <span className="text-text-disabled ml-1">{p.videoCount}</span>
                         </button>
                       ))}
                   </div>

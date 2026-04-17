@@ -47,7 +47,7 @@ export const tagsSearchProvider: SearchProvider = {
         name: tags.name,
         imagePath: tags.imagePath,
         rating: tags.rating,
-        sceneCount: sceneCountExpr,
+        videoCount: sceneCountExpr,
         score: scoreExpr,
       })
         .from(tags)
@@ -66,12 +66,12 @@ export const tagsSearchProvider: SearchProvider = {
         id: r.id,
         kind: "tag" as const,
         title: r.name,
-        subtitle: Number(r.sceneCount ?? 0) > 0 ? `${Number(r.sceneCount)} videos` : null,
+        subtitle: Number(r.videoCount ?? 0) > 0 ? `${Number(r.videoCount)} videos` : null,
         imagePath: r.imagePath ?? null,
         href: `/tags/${encodeURIComponent(r.name)}`,
         rating: r.rating,
         score: r.score,
-        meta: { sceneCount: Number(r.sceneCount ?? 0) },
+        meta: { videoCount: Number(r.videoCount ?? 0) },
       })),
     };
   },

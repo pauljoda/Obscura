@@ -173,7 +173,7 @@ export function PerformerForm({ values, onChange, allTags }: PerformerFormProps)
                     className="w-full px-3 py-1.5 text-xs text-left text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
                   >
                     <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
-                    <span className="ml-2 text-text-disabled">{tag.sceneCount}</span>
+                    <span className="ml-2 text-text-disabled">{tag.videoCount}</span>
                   </button>
                 ))}
               </div>

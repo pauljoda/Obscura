@@ -3,13 +3,13 @@
 import { useEffect, useRef } from "react";
 import { Film, Loader2 } from "lucide-react";
 import type { ViewMode } from "../lib/video-browse-types";
-import type { SceneListItem } from "../lib/api";
+import type { VideoListItem } from "../lib/api";
 import { useTerms } from "../lib/terminology";
 import { SceneCard } from "./videos/video-card";
 import { videoListItemToCardData } from "./videos/video-card-data";
 
 interface VideoGridProps {
-  scenes: SceneListItem[];
+  scenes: VideoListItem[];
   viewMode: ViewMode;
   loading?: boolean;
   hasMore?: boolean;

@@ -64,7 +64,7 @@ export function PerformerEntityCard({
             {performer.name}
           </NsfwText>
           <MediaAppearanceCounts
-            sceneCount={performer.sceneCount}
+            videoCount={performer.videoCount}
             imageAppearanceCount={performer.imageAppearanceCount}
             audioLibraryCount={performer.audioLibraryCount}
             trailing={performer.gender ?? null}
@@ -121,7 +121,7 @@ function PerformerListCard({
           </NsfwText>
           <div className="min-w-0">
             <MediaAppearanceCounts
-              sceneCount={performer.sceneCount}
+              videoCount={performer.videoCount}
               imageAppearanceCount={performer.imageAppearanceCount}
               audioLibraryCount={performer.audioLibraryCount}
               trailing={performer.gender ?? null}
@@ -165,7 +165,7 @@ function PerformerCompactCard({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{performer.name}</div>
         <MediaAppearanceCounts
-          sceneCount={performer.sceneCount}
+          videoCount={performer.videoCount}
           imageAppearanceCount={performer.imageAppearanceCount}
           audioLibraryCount={performer.audioLibraryCount}
           compact

@@ -18,7 +18,7 @@ export interface ListVideoMovieRow {
   createdAt: Date;
 }
 
-export async function listVideoMovies(
+export async function listLibraryVideoMovies(
   options: {
     limit?: number;
     offset?: number;
@@ -74,7 +74,7 @@ export interface ListVideoSeriesRow {
   episodeCount: number;
 }
 
-export async function listVideoSeries(
+export async function listLibraryVideoSeries(
   options: {
     limit?: number;
     offset?: number;
@@ -159,7 +159,7 @@ export interface SeriesDetailResponse {
   }>;
 }
 
-export async function getVideoSeriesDetail(
+export async function getLibraryVideoSeriesDetail(
   id: string,
 ): Promise<SeriesDetailResponse | null> {
   const [series] = await db
@@ -221,7 +221,7 @@ export async function getVideoSeriesDetail(
   };
 }
 
-export async function getVideoMovieDetail(id: string) {
+export async function getLibraryVideoMovieDetail(id: string) {
   const [movie] = await db
     .select()
     .from(videoMovies)
@@ -230,7 +230,7 @@ export async function getVideoMovieDetail(id: string) {
   return movie ?? null;
 }
 
-export async function getVideoEpisodeDetail(id: string) {
+export async function getLibraryVideoEpisodeDetail(id: string) {
   const [episode] = await db
     .select()
     .from(videoEpisodes)
@@ -239,7 +239,7 @@ export async function getVideoEpisodeDetail(id: string) {
   return episode ?? null;
 }
 
-export async function getVideoLibraryCounts() {
+export async function getLibraryVideoCounts() {
   const [movieCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(videoMovies);

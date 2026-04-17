@@ -68,18 +68,18 @@ export async function listTags(sfwOnly: boolean) {
       favorite: tags.favorite,
       rating: tags.rating,
       isNsfw: tags.isNsfw,
-      sceneCount: sceneCountExpr,
+      videoCount: sceneCountExpr,
     })
     .from(tags)
     .where(sfwOnly ? ne(tags.isNsfw, true) : undefined);
 
   const mapped = tagRows.map((tag) => ({
     ...tag,
-    sceneCount: Number(tag.sceneCount ?? 0),
+    videoCount: Number(tag.videoCount ?? 0),
     imageCount: imageMap.get(tag.id) ?? 0,
   }));
 
-  mapped.sort((a, b) => b.sceneCount - a.sceneCount);
+  mapped.sort((a, b) => b.videoCount - a.videoCount);
 
   return { tags: mapped };
 }
@@ -99,7 +99,7 @@ export async function getTagById(id: string, sfwOnly: boolean) {
     })
     .from(tags)
     .where(eq(tags.id, id));
-  const sceneCount = Number(cnt?.n ?? 0);
+  const videoCount = Number(cnt?.n ?? 0);
 
   return {
     id: row.id,
@@ -113,7 +113,7 @@ export async function getTagById(id: string, sfwOnly: boolean) {
     rating: row.rating,
     isNsfw: row.isNsfw,
     ignoreAutoTag: row.ignoreAutoTag,
-    sceneCount,
+    videoCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -163,7 +163,7 @@ export async function updateTag(
       rating: tags.rating,
       isNsfw: tags.isNsfw,
       ignoreAutoTag: tags.ignoreAutoTag,
-      sceneCount: tagTotalSceneCountExpr(),
+      videoCount: tagTotalSceneCountExpr(),
       createdAt: tags.createdAt,
       updatedAt: tags.updatedAt,
     })
@@ -172,7 +172,7 @@ export async function updateTag(
     .limit(1);
   return {
     ...updated,
-    sceneCount: Number(updated.sceneCount ?? 0),
+    videoCount: Number(updated.videoCount ?? 0),
   };
 }
 

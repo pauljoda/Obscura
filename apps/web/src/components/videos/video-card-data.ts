@@ -2,7 +2,7 @@
 
 import type { SearchResultItem } from "@obscura/contracts";
 import { formatDuration } from "@obscura/contracts";
-import { toApiUrl, type SceneListItem } from "../../lib/api";
+import { toApiUrl, type VideoListItem } from "../../lib/api";
 import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface VideoCardPerformer {
@@ -45,7 +45,7 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function videoListItemToCardData(scene: SceneListItem, from?: string): VideoCardData {
+export function videoListItemToCardData(scene: VideoListItem, from?: string): VideoCardData {
   const base = `/videos/${scene.id}`;
   return {
     id: scene.id,

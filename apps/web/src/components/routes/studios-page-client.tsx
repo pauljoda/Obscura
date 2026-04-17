@@ -106,7 +106,7 @@ export function StudiosPageClient({ initialStudios, initialListPrefs }: StudiosP
       list = list.filter((s) => s.name.toLowerCase().includes(term));
     }
     if (minSceneCount > 0) {
-      list = list.filter((s) => s.sceneCount >= minSceneCount);
+      list = list.filter((s) => s.videoCount >= minSceneCount);
     }
     if (minRatingStars != null) {
       list = list.filter((s) => s.rating != null && s.rating >= minRatingStars);

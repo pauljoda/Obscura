@@ -18,7 +18,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@obscura/ui/lib/utils";
-import type { AudioLibraryListItemDto, GalleryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
+import type { AudioLibraryListItemDto, GalleryListItemDto, VideoSeriesListItemDto } from "@obscura/contracts";
 import { VideoGrid } from "../../../../components/video-grid";
 import { GalleryGrid } from "../../../../components/gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../../../../components/audio/audio-library-appearance-grid";
@@ -31,7 +31,7 @@ import {
   fetchScenes,
   fetchGalleries,
   fetchAudioLibraries,
-  fetchSceneFolders,
+  fetchSeries,
   fetchTags,
   fetchTagDetail,
   deleteTag,
@@ -40,7 +40,7 @@ import {
   uploadTagImage,
   deleteTagImage,
   toApiUrl,
-  type SceneListItem,
+  type VideoListItem,
   type TagDetail,
 } from "../../../../lib/api";
 import { use } from "react";
@@ -61,13 +61,13 @@ export default function TagPage({ params }: TagPageProps) {
   const router = useRouter();
 
   const [tagDetail, setTagDetail] = useState<TagDetail | null>(null);
-  const [scenes, setScenes] = useState<SceneListItem[]>([]);
+  const [scenes, setScenes] = useState<VideoListItem[]>([]);
   const [totalScenes, setTotalScenes] = useState(0);
   const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
-  const [folders, setFolders] = useState<SceneFolderListItemDto[]>([]);
+  const [folders, setFolders] = useState<VideoSeriesListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -92,7 +92,7 @@ export default function TagPage({ params }: TagPageProps) {
           nsfw: nsfwMode,
         }),
         fetchTags({ nsfw: nsfwMode }),
-        fetchSceneFolders({ tag: tagName, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
+        fetchSeries({ tag: tagName, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
       setScenes(scenesRes.scenes);
       setTotalScenes(scenesRes.total);

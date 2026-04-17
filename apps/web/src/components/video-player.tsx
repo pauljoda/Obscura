@@ -35,7 +35,7 @@ import {
 import { FilmStrip } from "./film-strip";
 import { AssSubtitleOverlay } from "./ass-subtitle-overlay";
 import { fetchSceneSubtitleCues } from "../lib/api/media";
-import type { SceneSubtitleTrackDto, SubtitleCueDto } from "../lib/api/types";
+import type { VideoSubtitleTrackDto, SubtitleCueDto } from "../lib/api/types";
 import {
   captionClassName,
   pickPreferredSubtitleTrack,
@@ -47,7 +47,7 @@ import { SubtitleSettingsPanel } from "./subtitle-settings-panel";
 
 function isAssTrackActive(
   activeSubtitleId: string | null | undefined,
-  tracks: readonly SceneSubtitleTrackDto[],
+  tracks: readonly VideoSubtitleTrackDto[],
 ): boolean {
   if (!activeSubtitleId) return false;
   const track = tracks.find((t) => t.id === activeSubtitleId);
@@ -85,7 +85,7 @@ interface VideoPlayerProps {
   onTimeUpdate?: (time: number) => void;
   trickplaySprite?: string;
   trickplayVtt?: string;
-  subtitleTracks?: SceneSubtitleTrackDto[];
+  subtitleTracks?: VideoSubtitleTrackDto[];
   activeSubtitleTrackId?: string | null;
   onActiveSubtitleTrackIdChange?: (id: string | null) => void;
   onActiveCueChange?: (cue: ActiveCue | null) => void;

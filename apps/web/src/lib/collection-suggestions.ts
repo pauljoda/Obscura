@@ -15,7 +15,7 @@ export function buildTagSuggestions(
   return tags
     .map((t) => ({
       name: t.name,
-      count: (t.sceneCount ?? 0) + (t.imageCount ?? 0),
+      count: (t.videoCount ?? 0) + (t.imageCount ?? 0),
     }))
     .filter((s) => (s.count ?? 0) > 0)
     .sort(sortByCount);
@@ -28,7 +28,7 @@ export function buildPerformerSuggestions(
     .map((p) => ({
       name: p.name,
       count:
-        (p.sceneCount ?? 0) +
+        (p.videoCount ?? 0) +
         (p.imageAppearanceCount ?? 0) +
         (p.audioLibraryCount ?? 0),
     }))
@@ -43,7 +43,7 @@ export function buildStudioSuggestions(
     .map((s) => ({
       name: s.name,
       count:
-        (s.sceneCount ?? 0) +
+        (s.videoCount ?? 0) +
         (s.imageAppearanceCount ?? 0) +
         (s.audioLibraryCount ?? 0),
     }))

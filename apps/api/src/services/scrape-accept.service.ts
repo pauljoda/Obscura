@@ -22,7 +22,7 @@ import type {
   NormalizedEpisodeResult,
   NormalizedSeriesResult,
 } from "@obscura/contracts";
-import { getGeneratedSceneFolderDir, getGeneratedPerformerDir, getCacheRootDir } from "@obscura/media-core";
+import { getGeneratedSeriesDir, getGeneratedPerformerDir, getCacheRootDir } from "@obscura/media-core";
 import { db } from "../db";
 
 // ─── Image download helper ──────────────────────────────────────────
@@ -61,7 +61,7 @@ async function downloadSeriesImages(
   result: NormalizedSeriesResult,
   selectedImages?: SelectedImages,
 ): Promise<Record<string, unknown>> {
-  const dir = getGeneratedSceneFolderDir(seriesId);
+  const dir = getGeneratedSeriesDir(seriesId);
   const patch: Record<string, unknown> = {};
   const posterUrl =
     selectedImages?.poster ??

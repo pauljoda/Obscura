@@ -6,8 +6,8 @@ import {
   fetchPerformers,
   fetchStudios,
   fetchTags,
-  fetchVideoFolderDetail,
-  fetchVideoFolders,
+  fetchSeriesDetail,
+  fetchSeries,
   fetchVideoStats,
   fetchVideos,
 } from "../../../lib/server-api";
@@ -39,7 +39,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
     Boolean(sceneFetchParams.search) || listPrefs.activeFilters.length > 0;
   const activeFolder =
     listPrefs.viewMode === "folders" && requestedFolderId
-      ? await fetchVideoFolderDetail(requestedFolderId, { nsfw: nsfwMode }).catch(
+      ? await fetchSeriesDetail(requestedFolderId, { nsfw: nsfwMode }).catch(
           () => null,
         )
       : null;
@@ -53,7 +53,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
     performersResponse,
   ] = await Promise.all([
     listPrefs.viewMode === "folders" && !activeFolder
-      ? fetchVideoFolders({
+      ? fetchSeries({
           search: sceneFetchParams.search,
           root: sceneFetchParams.search ? "all" : undefined,
           limit: 200,
@@ -65,7 +65,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
         ? activeFolder
           ? {
               ...sceneFetchParams,
-              sceneFolderId: activeFolder.id,
+              videoSeriesId: activeFolder.id,
               folderScope: hasFolderScopedSceneQuery ? "subtree" : "direct",
             }
           : {

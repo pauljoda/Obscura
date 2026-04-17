@@ -9,8 +9,8 @@ import type {
   AudioLibraryDetailDto,
   AudioLibraryStatsDto,
   AudioTrackDetailDto,
-  SceneFolderDetailDto,
-  SceneFolderListItemDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListItemDto,
   CollectionListItemDto,
   CollectionDetailDto,
   CollectionItemDto,
@@ -22,7 +22,7 @@ import { buildQueryString, serverFetch } from "./core";
 import type {
   PerformerDetail,
   PerformerItem,
-  SceneListItem,
+  VideoListItem,
   StudioItem,
   TagItem,
 } from "../api/types";
@@ -50,7 +50,7 @@ export async function fetchScenes(params: {
   offset?: number;
   /** Pass current mode; API excludes NSFW when `off`. */
   nsfw?: string;
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
 }) {
@@ -72,7 +72,7 @@ export async function fetchScenes(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
-      sceneFolderId: params.sceneFolderId,
+      videoSeriesId: params.videoSeriesId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
     },
@@ -85,13 +85,13 @@ export async function fetchScenes(params: {
     },
   );
 
-  return serverFetch<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }>(
+  return serverFetch<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }>(
     `/videos${qs}`,
     { tags: ["scenes"] },
   );
 }
 
-export async function fetchSceneFolders(params?: {
+export async function fetchSeries(params?: {
   parent?: string;
   root?: string;
   search?: string;
@@ -108,19 +108,19 @@ export async function fetchSceneFolders(params?: {
     nsfw: params?.nsfw,
   });
   return serverFetch<{
-    items: SceneFolderListItemDto[];
+    items: VideoSeriesListItemDto[];
     total: number;
     limit: number;
     offset: number;
-  }>(`/video-folders${qs}`, {
+  }>(`/video-series${qs}`, {
     revalidate: 0,
     tags: ["scene-folders"],
   });
 }
 
-export async function fetchSceneFolderDetail(id: string, params?: { nsfw?: string }) {
+export async function fetchSeriesDetail(id: string, params?: { nsfw?: string }) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return serverFetch<SceneFolderDetailDto>(`/video-folders/${id}${qs}`, {
+  return serverFetch<VideoSeriesDetailDto>(`/video-series/${id}${qs}`, {
     revalidate: 0,
     tags: ["scene-folders", `scene-folder-${id}`],
   });

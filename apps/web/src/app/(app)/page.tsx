@@ -7,15 +7,15 @@ import {
   fetchScenes,
   fetchImages,
   fetchAudioLibraries,
-  fetchSceneFolders,
+  fetchSeries,
   fetchPerformers,
   fetchStudios,
   type GalleryListItem,
-  type SceneListItem,
+  type VideoListItem,
   type PerformerItem,
   type StudioItem,
 } from "../../lib/server-api";
-import type { ImageListItemDto, AudioLibraryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
+import type { ImageListItemDto, AudioLibraryListItemDto, VideoSeriesListItemDto } from "@obscura/contracts";
 import { parseNsfwModeCookie } from "../../lib/nsfw-cookie";
 
 export default async function DashboardPage() {
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     studiosResponse,
   ] = await Promise.all([
     fetchScenes({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }).catch(() => ({
-      scenes: [] as SceneListItem[],
+      scenes: [] as VideoListItem[],
     })),
     fetchGalleries({ limit: 12, nsfw: nsfwMode }).catch(() => ({
       galleries: [] as GalleryListItem[],
@@ -43,8 +43,8 @@ export default async function DashboardPage() {
     fetchAudioLibraries({ limit: 12, sort: "recent", order: "desc", nsfw: nsfwMode }).catch(() => ({
       items: [] as AudioLibraryListItemDto[],
     })),
-    fetchSceneFolders({ limit: 12, nsfw: nsfwMode }).catch(() => ({
-      items: [] as SceneFolderListItemDto[],
+    fetchSeries({ limit: 12, nsfw: nsfwMode }).catch(() => ({
+      items: [] as VideoSeriesListItemDto[],
     })),
     fetchPerformers({ limit: 12, sort: "recent", order: "desc", nsfw: nsfwMode }).catch(() => ({
       performers: [] as PerformerItem[],

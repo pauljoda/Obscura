@@ -1,5 +1,5 @@
 import type { SearchProvider } from "./types";
-import { sceneFoldersSearchProvider } from "./providers/scene-folders.provider";
+import { videoSeriesSearchProvider } from "./providers/video-series.provider";
 import { scenesSearchProvider } from "./providers/scenes.provider";
 import { performersSearchProvider } from "./providers/performers.provider";
 import { studiosSearchProvider } from "./providers/studios.provider";
@@ -8,7 +8,7 @@ import { galleriesSearchProvider } from "./providers/galleries.provider";
 import { imagesSearchProvider } from "./providers/images.provider";
 
 export const searchProviders = new Map<string, SearchProvider>([
-  ["video-series", sceneFoldersSearchProvider],
+  ["video-series", videoSeriesSearchProvider],
   ["video", scenesSearchProvider],
   ["performer", performersSearchProvider],
   ["studio", studiosSearchProvider],

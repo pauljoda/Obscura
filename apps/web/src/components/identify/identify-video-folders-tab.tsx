@@ -19,7 +19,7 @@ import {
   type VideoSeriesLibraryDetail,
 } from "../../lib/api/videos";
 import type { NormalizedScrapeResult } from "../scrape/types";
-import type { VideoFolderRow, VideoFolderField, NormalizedFolderIdentifyResult } from "./types";
+import type { VideoSeriesRow, VideoSeriesField, NormalizedSeriesIdentifyResult } from "./types";
 import { VIDEO_FOLDER_FIELDS } from "./types";
 import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
@@ -28,17 +28,17 @@ import { CascadeReviewDrawer } from "./cascade-review-drawer";
 
 interface PluginInfo { id: string; name: string }
 
-export interface VideoFoldersTabProps {
-  rows: VideoFolderRow[];
-  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>;
+export interface VideoSeriesTabProps {
+  rows: VideoSeriesRow[];
+  setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>;
   expandedIds: Set<string>;
   toggleExpanded: (id: string) => void;
   onSeekSingle?: (idx: number) => void;
 }
 
-export interface VideoFolderRunProps {
-  rows: VideoFolderRow[];
-  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>;
+export interface VideoSeriesRunProps {
+  rows: VideoSeriesRow[];
+  setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>;
   plugins: PluginInfo[];
   selectedProviderId: string;
   autoAccept: boolean;
@@ -80,11 +80,11 @@ export function buildLocalSeasonsInput(detail: VideoSeriesLibraryDetail):
 /* ─── Seek via plugin ─────────────────────────────────────────── */
 
 async function seekFolderViaPlugin(
-  row: VideoFolderRow,
+  row: VideoSeriesRow,
   pluginList: PluginInfo[],
 ): Promise<{
   scrapeResultId?: string;
-  folderResult?: NormalizedFolderIdentifyResult;
+  folderResult?: NormalizedSeriesIdentifyResult;
   matchedProvider?: string;
 }> {
   for (const plugin of pluginList) {
@@ -111,7 +111,7 @@ async function seekFolderViaPlugin(
       if (res.ok && res.result && res.normalized) {
         const savedRow = res.result as Record<string, unknown>;
         const rawResult = savedRow.rawResult as Record<string, unknown> | undefined;
-        const folderResult: NormalizedFolderIdentifyResult = {
+        const folderResult: NormalizedSeriesIdentifyResult = {
           name: res.normalized.title,
           details: res.normalized.details,
           date: res.normalized.date,
@@ -139,7 +139,7 @@ async function seekFolderViaPlugin(
 
 /* ─── Run identify ────────────────────────────────────────────── */
 
-export async function runVideoFolderIdentify({
+export async function runVideoSeriesIdentify({
   rows,
   setRows,
   plugins,
@@ -147,7 +147,7 @@ export async function runVideoFolderIdentify({
   autoAccept,
   abortRef,
   setRunning,
-}: VideoFolderRunProps): Promise<void> {
+}: VideoSeriesRunProps): Promise<void> {
   setRunning(true);
   abortRef.current = false;
 
@@ -218,8 +218,8 @@ export async function runVideoFolderIdentify({
 
 export async function seekFolderSingle(
   idx: number,
-  rows: VideoFolderRow[],
-  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
+  rows: VideoSeriesRow[],
+  setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>,
   pluginList: PluginInfo[],
 ) {
   const row = rows[idx];
@@ -254,8 +254,8 @@ export async function seekFolderSingle(
 /* ─── Accept all ──────────────────────────────────────────────── */
 
 export async function acceptAllVideoFolders(
-  rows: VideoFolderRow[],
-  setRows: React.Dispatch<React.SetStateAction<VideoFolderRow[]>>,
+  rows: VideoSeriesRow[],
+  setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>,
 ): Promise<void> {
   const found = rows
     .map((r, i) => ({ row: r, idx: i }))
@@ -279,7 +279,7 @@ export function IdentifyVideoFolderRows({
   expandedIds,
   toggleExpanded,
   onSeekSingle,
-}: VideoFoldersTabProps) {
+}: VideoSeriesTabProps) {
   const [reviewing, setReviewing] = useState<{
     idx: number;
     scrapeResultId: string;
@@ -287,7 +287,7 @@ export function IdentifyVideoFolderRows({
     seriesId: string;
   } | null>(null);
 
-  function toggleField(idx: number, field: VideoFolderField) {
+  function toggleField(idx: number, field: VideoSeriesField) {
     setRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
@@ -390,10 +390,10 @@ function VideoFolderRowCard({
   onReview,
   onSeekSingle,
 }: {
-  row: VideoFolderRow;
+  row: VideoSeriesRow;
   expanded: boolean;
   onToggleExpand: () => void;
-  onToggleField: (field: VideoFolderField) => void;
+  onToggleField: (field: VideoSeriesField) => void;
   onAccept: () => void;
   onDismiss: () => void;
   onReview?: () => void;
@@ -425,7 +425,7 @@ function VideoFolderRowCard({
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-text-disabled text-[0.65rem]">
-              {row.folder.directSceneCount} video{row.folder.directSceneCount !== 1 ? "s" : ""}
+              {row.folder.directVideoCount} video{row.folder.directVideoCount !== 1 ? "s" : ""}
             </span>
             {row.folder.studioName && (
               <span className="text-text-accent text-[0.65rem]">

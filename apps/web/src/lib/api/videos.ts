@@ -1,17 +1,9 @@
 /**
- * Client-side fetchers for the new /videos route stack.
- *
- * Return types deliberately reuse the scene types (`SceneListItem`,
- * `VideoDetail`, `SceneStats`, `SceneFolderListItemDto`,
- * `SceneFolderDetailDto`) so downstream components can consume both
- * data sources interchangeably.
+ * Client-side fetchers for the /videos route stack. Series list/detail
+ * and cover/backdrop uploads live in media.ts.
  */
-import type {
-  SceneFolderDetailDto,
-  SceneFolderListItemDto,
-} from "@obscura/contracts";
 import { buildQueryString, fetchApi } from "./core";
-import type { VideoDetail, SceneListItem, SceneStats } from "./types";
+import type { VideoDetail, VideoListItem, VideoStats } from "./types";
 
 export async function fetchVideos(params: {
   search?: string;
@@ -30,11 +22,11 @@ export async function fetchVideos(params: {
   limit?: number;
   offset?: number;
   nsfw?: string;
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
   seasonNumber?: string;
-}): Promise<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }> {
+}): Promise<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
       search: params.search,
@@ -52,7 +44,7 @@ export async function fetchVideos(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
-      sceneFolderId: params.sceneFolderId,
+      videoSeriesId: params.videoSeriesId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
       seasonNumber: params.seasonNumber,
@@ -68,45 +60,9 @@ export async function fetchVideoDetail(id: string): Promise<VideoDetail> {
   return fetchApi(`/videos/${id}`);
 }
 
-export async function fetchVideoStats(nsfw?: string): Promise<SceneStats> {
+export async function fetchVideoStats(nsfw?: string): Promise<VideoStats> {
   const qs = buildQueryString({ nsfw });
   return fetchApi(`/videos/stats${qs}`);
-}
-
-export async function fetchVideoFolders(params?: {
-  parent?: string;
-  root?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-  studio?: string;
-  tag?: string;
-}): Promise<{
-  items: SceneFolderListItemDto[];
-  total: number;
-  limit: number;
-  offset: number;
-}> {
-  const qs = buildQueryString({
-    parent: params?.parent,
-    root: params?.root,
-    search: params?.search,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-    studio: params?.studio,
-    tag: params?.tag,
-  });
-  return fetchApi(`/video-folders${qs}`);
-}
-
-export async function fetchVideoFolderDetail(
-  id: string,
-  params?: { nsfw?: string },
-): Promise<SceneFolderDetailDto> {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
-  return fetchApi(`/video-folders/${id}${qs}`);
 }
 
 export async function updateVideo(
@@ -138,25 +94,6 @@ export async function resetVideoMetadata(
   id: string,
 ): Promise<{ ok: true; id: string; title: string }> {
   return fetchApi(`/videos/${id}/reset-metadata`, { method: "POST" });
-}
-
-export async function updateVideoFolder(
-  id: string,
-  data: {
-    isNsfw?: boolean;
-    customName?: string | null;
-    details?: string | null;
-    studioName?: string | null;
-    performerNames?: string[];
-    tagNames?: string[];
-    rating?: number | null;
-    date?: string | null;
-  },
-): Promise<{ ok: true; id: string }> {
-  return fetchApi(`/video-folders/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
 }
 
 export async function deleteVideo(

@@ -629,8 +629,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
       if (fieldsToApply.has("tags") && result.proposedTagNames?.length) patch.tagNames = result.proposedTagNames;
 
       if (Object.keys(patch).length > 0) {
-        const { updateVideoFolder } = await import("../services/video-folder.service");
-        await updateVideoFolder(entityId, patch as Parameters<typeof updateVideoFolder>[1]);
+        const { updateVideoSeries } = await import("../services/video-series.service");
+        await updateVideoSeries(entityId, patch as Parameters<typeof updateVideoSeries>[1]);
       }
 
       // Merge scrape-result external identifiers into the jsonb
@@ -661,10 +661,10 @@ export async function pluginsRoutes(app: FastifyInstance) {
       // Download the scraped poster image and wire it onto the series.
       if (fieldsToApply.has("image") && result.proposedImageUrl) {
         try {
-          const { setVideoFolderCoverFromUrl } = await import(
-            "../services/video-folder.service"
+          const { setVideoSeriesCoverFromUrl } = await import(
+            "../services/video-series.service"
           );
-          await setVideoFolderCoverFromUrl(
+          await setVideoSeriesCoverFromUrl(
             entityId,
             "cover",
             result.proposedImageUrl,

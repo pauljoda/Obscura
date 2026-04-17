@@ -24,7 +24,7 @@ export function TagEntityCard({
   onToggleSelect,
 }: TagEntityCardProps) {
   if (variant === "cloud") {
-    const total = tag.sceneCount + tag.imageCount;
+    const total = tag.videoCount + tag.imageCount;
     const intensity = total / Math.max(1, maxCount);
 
     return (
@@ -94,10 +94,10 @@ export function TagEntityCard({
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <NsfwShowModeChip isNsfw={tag.isNsfw} compact />
         <span className="flex items-center gap-2 text-[0.65rem] font-mono text-text-disabled">
-        {tag.sceneCount > 0 && (
+        {tag.videoCount > 0 && (
           <span className="flex items-center gap-1">
             <Film className="h-2.5 w-2.5 opacity-70" />
-            {tag.sceneCount}
+            {tag.videoCount}
           </span>
         )}
         {tag.imageCount > 0 && (
@@ -106,7 +106,7 @@ export function TagEntityCard({
             {tag.imageCount}
           </span>
         )}
-        {tag.sceneCount + tag.imageCount === 0 && <span className="text-text-disabled/40">—</span>}
+        {tag.videoCount + tag.imageCount === 0 && <span className="text-text-disabled/40">—</span>}
         </span>
       </div>
     </Link>
@@ -120,7 +120,7 @@ function TagCompactCard({
   tag: TagCardData;
   onSelect?: (href: string) => void;
 }) {
-  const total = tag.sceneCount + tag.imageCount;
+  const total = tag.videoCount + tag.imageCount;
   const content = (
     <>
       <div className="shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-8 ">

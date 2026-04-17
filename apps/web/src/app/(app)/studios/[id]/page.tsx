@@ -24,11 +24,11 @@ import { StudioEdit } from "../../../../components/studio-edit";
 import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip } from "../../../../components/nsfw/nsfw-gate";
 import { useNsfw } from "../../../../components/nsfw/nsfw-context";
-import type { AudioLibraryListItemDto, GalleryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
+import type { AudioLibraryListItemDto, GalleryListItemDto, VideoSeriesListItemDto } from "@obscura/contracts";
 import {
   fetchAudioLibraries,
   fetchGalleries,
-  fetchSceneFolders,
+  fetchSeries,
   fetchScenes,
   fetchStudioDetail,
   deleteStudio,
@@ -37,7 +37,7 @@ import {
   uploadStudioImage,
   deleteStudioImage,
   toApiUrl,
-  type SceneListItem,
+  type VideoListItem,
   type StudioDetail,
 } from "../../../../lib/api";
 import { GalleryGrid } from "../../../../components/gallery-grid";
@@ -60,13 +60,13 @@ export default function StudioPage({ params }: StudioPageProps) {
   const router = useRouter();
 
   const [studio, setStudio] = useState<StudioDetail | null>(null);
-  const [scenes, setScenes] = useState<SceneListItem[]>([]);
+  const [scenes, setScenes] = useState<VideoListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
-  const [folders, setFolders] = useState<SceneFolderListItemDto[]>([]);
+  const [folders, setFolders] = useState<VideoSeriesListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -83,7 +83,7 @@ export default function StudioPage({ params }: StudioPageProps) {
         fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({ studio: id, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
-        fetchSceneFolders({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
+        fetchSeries({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
       setScenes(scenesData.scenes);
       setTotal(scenesData.total);
@@ -308,7 +308,7 @@ export default function StudioPage({ params }: StudioPageProps) {
                     </div>
                     <div className="p-2">
                       <p className="text-[0.78rem] font-medium truncate group-hover:text-text-accent transition-colors">{child.name}</p>
-                      <p className="text-[0.65rem] text-text-disabled">{formatVideoCount(child.sceneCount)}</p>
+                      <p className="text-[0.65rem] text-text-disabled">{formatVideoCount(child.videoCount)}</p>
                     </div>
                   </Link>
                 );

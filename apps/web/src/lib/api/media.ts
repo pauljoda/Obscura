@@ -11,8 +11,8 @@ import type {
   GalleryStatsDto,
   ImageDetailDto,
   ImageListItemDto,
-  SceneFolderDetailDto,
-  SceneFolderListItemDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListItemDto,
   SearchResponseDto,
   CollectionListItemDto,
   CollectionDetailDto,
@@ -28,10 +28,10 @@ import type {
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi, uploadFile } from "./core";
 import type {
-  MarkerDto,
+  VideoMarkerDto,
   VideoDetail,
-  SceneListItem,
-  SceneStats,
+  VideoListItem,
+  VideoStats,
 } from "./types";
 
 export async function fetchScenes(params: {
@@ -56,11 +56,11 @@ export async function fetchScenes(params: {
   limit?: number;
   offset?: number;
   nsfw?: string;
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
   seasonNumber?: string;
-}): Promise<{ scenes: SceneListItem[]; total: number; limit: number; offset: number }> {
+}): Promise<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
       search: params.search,
@@ -79,7 +79,7 @@ export async function fetchScenes(params: {
       limit: params.limit,
       offset: params.offset,
       nsfw: params.nsfw,
-      sceneFolderId: params.sceneFolderId,
+      videoSeriesId: params.videoSeriesId,
       folderScope: params.folderScope,
       uncategorized: params.uncategorized ? "true" : undefined,
       seasonNumber: params.seasonNumber,
@@ -101,8 +101,8 @@ const FETCH_ALL_PAGE_SIZE = 2000;
 /** Fetches every matching scene by paging until `total` is reached (Identify / bulk flows). */
 export async function fetchAllScenes(
   params: Omit<Parameters<typeof fetchScenes>[0], "limit" | "offset">,
-): Promise<{ scenes: SceneListItem[]; total: number }> {
-  const scenes: SceneListItem[] = [];
+): Promise<{ scenes: VideoListItem[]; total: number }> {
+  const scenes: VideoListItem[] = [];
   let offset = 0;
   let total = 0;
   for (;;) {
@@ -147,7 +147,7 @@ export async function uploadSceneSubtitle(
   file: File,
   language: string,
   label?: string,
-): Promise<{ track: import("@obscura/contracts").SceneSubtitleTrackDto }> {
+): Promise<{ track: import("@obscura/contracts").VideoSubtitleTrackDto }> {
   const form = new FormData();
   form.append("language", language);
   if (label) form.append("label", label);
@@ -173,7 +173,7 @@ export async function updateSceneSubtitle(
   sceneId: string,
   trackId: string,
   patch: { language?: string; label?: string | null },
-): Promise<{ track: import("@obscura/contracts").SceneSubtitleTrackDto }> {
+): Promise<{ track: import("@obscura/contracts").VideoSubtitleTrackDto }> {
   return fetchApi(`/videos/${sceneId}/subtitles/${trackId}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
@@ -241,7 +241,7 @@ export async function deleteAudioTrack(
 export async function createMarker(
   sceneId: string,
   data: { title: string; seconds: number; endSeconds?: number | null },
-): Promise<MarkerDto> {
+): Promise<VideoMarkerDto> {
   return fetchApi(`/videos/${sceneId}/markers`, {
     method: "POST",
     body: JSON.stringify(data),
@@ -270,12 +270,12 @@ export async function trackOrgasm(sceneId: string): Promise<{ ok: true; orgasmCo
   return fetchApi(`/videos/${sceneId}/orgasm`, { method: "POST" });
 }
 
-export async function fetchSceneStats(nsfw?: string): Promise<SceneStats> {
+export async function fetchSceneStats(nsfw?: string): Promise<VideoStats> {
   const qs = buildQueryString({ nsfw });
   return fetchApi(`/videos/stats${qs}`);
 }
 
-export async function fetchSceneFolders(params?: {
+export async function fetchSeries(params?: {
   parent?: string;
   root?: string;
   search?: string;
@@ -284,7 +284,7 @@ export async function fetchSceneFolders(params?: {
   nsfw?: string;
   studio?: string;
   tag?: string;
-}): Promise<{ items: SceneFolderListItemDto[]; total: number; limit: number; offset: number }> {
+}): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     parent: params?.parent,
     root: params?.root,
@@ -295,18 +295,18 @@ export async function fetchSceneFolders(params?: {
     studio: params?.studio,
     tag: params?.tag,
   });
-  return fetchApi(`/video-folders${qs}`);
+  return fetchApi(`/video-series${qs}`);
 }
 
-export async function fetchSceneFolderDetail(
+export async function fetchSeriesDetail(
   id: string,
   params?: { nsfw?: string },
-): Promise<SceneFolderDetailDto> {
+): Promise<VideoSeriesDetailDto> {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return fetchApi(`/video-folders/${id}${qs}`);
+  return fetchApi(`/video-series/${id}${qs}`);
 }
 
-export async function updateSceneFolder(
+export async function updateSeries(
   id: string,
   data: {
     isNsfw?: boolean;
@@ -319,36 +319,36 @@ export async function updateSceneFolder(
     date?: string | null;
   },
 ): Promise<{ ok: true; id: string }> {
-  return fetchApi(`/video-folders/${id}`, {
+  return fetchApi(`/video-series/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
 }
 
-export async function uploadSceneFolderCover(
+export async function uploadSeriesCover(
   id: string,
   file: File,
 ): Promise<{ ok: true; coverImagePath: string }> {
-  return uploadFile(`/video-folders/${id}/cover`, file);
+  return uploadFile(`/video-series/${id}/cover`, file);
 }
 
-export async function deleteSceneFolderCover(
+export async function deleteSeriesCover(
   id: string,
 ): Promise<{ ok: true }> {
-  return fetchApi(`/video-folders/${id}/cover`, { method: "DELETE" });
+  return fetchApi(`/video-series/${id}/cover`, { method: "DELETE" });
 }
 
-export async function uploadSceneFolderBackdrop(
+export async function uploadSeriesBackdrop(
   id: string,
   file: File,
 ): Promise<{ ok: true; backdropImagePath: string }> {
-  return uploadFile(`/video-folders/${id}/backdrop`, file);
+  return uploadFile(`/video-series/${id}/backdrop`, file);
 }
 
-export async function deleteSceneFolderBackdrop(
+export async function deleteSeriesBackdrop(
   id: string,
 ): Promise<{ ok: true }> {
-  return fetchApi(`/video-folders/${id}/backdrop`, { method: "DELETE" });
+  return fetchApi(`/video-series/${id}/backdrop`, { method: "DELETE" });
 }
 
 export async function fetchGalleries(params?: {

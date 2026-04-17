@@ -11,7 +11,7 @@ import {
   getGeneratedImageDir,
   getGeneratedAudioTrackDir,
   getGeneratedAudioLibraryDir,
-  getGeneratedSceneFolderDir,
+  getGeneratedSeriesDir,
   getCacheRootDir,
   extractZipMember,
   getSceneVideoGeneratedDiskPaths,
@@ -355,40 +355,10 @@ export async function assetsRoutes(app: FastifyInstance) {
     return { error: "Cover not found" };
   });
 
-  // ─── Scene folder cover: /assets/scene-folders/:id/cover ───────
-  // Legacy alias — new content flows through /assets/video-folders/:id/*
-  // but scene-folder URLs are preserved for any stashed references.
-  app.get("/assets/scene-folders/:id/cover", async (request, reply) => {
+  // ─── Series cover: /assets/video-series/:id/cover ──────────────
+  app.get("/assets/video-series/:id/cover", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const coverPath = path.join(getGeneratedSceneFolderDir(id), "cover-custom.jpg");
-    if (existsSync(coverPath)) {
-      reply.header("Cache-Control", "no-cache");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(coverPath));
-    }
-    reply.code(404);
-    return { error: "Cover not found" };
-  });
-
-  // ─── Scene folder backdrop: /assets/scene-folders/:id/backdrop ─
-  app.get("/assets/scene-folders/:id/backdrop", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const backdropPath = path.join(getGeneratedSceneFolderDir(id), "backdrop-custom.jpg");
-    if (existsSync(backdropPath)) {
-      reply.header("Cache-Control", "no-cache");
-      reply.header("Content-Type", "image/jpeg");
-      return reply.send(createReadStream(backdropPath));
-    }
-    reply.code(404);
-    return { error: "Backdrop not found" };
-  });
-
-  // ─── Video folder cover: /assets/video-folders/:id/cover ───────
-  // Same underlying cache dir as scene-folders (keyed by series id) so
-  // the two URL shapes are interchangeable.
-  app.get("/assets/video-folders/:id/cover", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const dir = getGeneratedSceneFolderDir(id);
+    const dir = getGeneratedSeriesDir(id);
     // Check both the manual-upload filename ("cover-custom.jpg") and the
     // scrape-accept download names ("poster.*") so both flows resolve.
     for (const name of ["cover-custom.jpg", "poster.jpg", "poster.png", "poster.webp"]) {
@@ -403,10 +373,10 @@ export async function assetsRoutes(app: FastifyInstance) {
     return { error: "Cover not found" };
   });
 
-  // ─── Video folder backdrop: /assets/video-folders/:id/backdrop ─
-  app.get("/assets/video-folders/:id/backdrop", async (request, reply) => {
+  // ─── Series backdrop: /assets/video-series/:id/backdrop ────────
+  app.get("/assets/video-series/:id/backdrop", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const dir = getGeneratedSceneFolderDir(id);
+    const dir = getGeneratedSeriesDir(id);
     for (const name of ["backdrop-custom.jpg", "backdrop.jpg", "backdrop.png", "backdrop.webp"]) {
       const p = path.join(dir, name);
       if (existsSync(p)) {

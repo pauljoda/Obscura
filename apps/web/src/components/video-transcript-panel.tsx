@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 import type {
-  SceneSubtitleTrackDto,
+  VideoSubtitleTrackDto,
   SubtitleCueDto,
 } from "@obscura/contracts";
 import {
@@ -35,7 +35,7 @@ export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
 
 interface VideoTranscriptPanelProps {
   sceneId: string;
-  tracks: SceneSubtitleTrackDto[];
+  tracks: VideoSubtitleTrackDto[];
   activeTrackId: string | null;
   onActiveTrackIdChange: (id: string | null) => void;
   currentTime: number;
@@ -237,7 +237,7 @@ export function VideoTranscriptPanel({
     }
   }
 
-  function startEditingTrack(track: SceneSubtitleTrackDto) {
+  function startEditingTrack(track: VideoSubtitleTrackDto) {
     setEditingTrackId(track.id);
     setEditDraftLabel(track.label ?? "");
     setEditDraftLanguage(track.language);

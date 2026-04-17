@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { MultipartFile } from "@fastify/multipart";
-import * as videoFolderService from "../services/video-folder.service";
+import { apiRoutes } from "@obscura/contracts";
+import * as videoSeriesService from "../services/video-series.service";
 
-export async function videoFoldersRoutes(app: FastifyInstance) {
-  app.get("/video-folders", async (request) => {
+export async function videoSeriesRoutes(app: FastifyInstance) {
+  app.get(apiRoutes.videoSeries, async (request) => {
     const query = request.query as {
       parent?: string;
       root?: string;
@@ -13,17 +14,18 @@ export async function videoFoldersRoutes(app: FastifyInstance) {
       nsfw?: string;
       studio?: string;
       tag?: string;
+      performer?: string;
     };
-    return videoFolderService.listVideoFolders(query);
+    return videoSeriesService.listVideoSeries(query);
   });
 
-  app.get("/video-folders/:id", async (request) => {
+  app.get(apiRoutes.videoSeriesDetail, async (request) => {
     const { id } = request.params as { id: string };
     const query = request.query as { nsfw?: string };
-    return videoFolderService.getVideoFolderDetail(id, query.nsfw);
+    return videoSeriesService.getVideoSeriesDetail(id, query.nsfw);
   });
 
-  app.patch("/video-folders/:id", async (request) => {
+  app.patch(apiRoutes.videoSeriesDetail, async (request) => {
     const { id } = request.params as { id: string };
     const body = request.body as {
       isNsfw?: boolean;
@@ -35,16 +37,15 @@ export async function videoFoldersRoutes(app: FastifyInstance) {
       rating?: number | null;
       date?: string | null;
     };
-    return videoFolderService.updateVideoFolder(id, body);
+    return videoSeriesService.updateVideoSeries(id, body);
   });
 
-  // ─── Cover / backdrop upload + delete ─────────────────────────
-  // Writes the uploaded image to the series' cache directory and
-  // points `video_series.posterPath` / `backdropPath` at the new
-  // `/assets/video-folders/:id/{cover|backdrop}` URL. Delete clears
-  // the on-disk file and resets the column only if it currently
-  // references the user asset (so a scraper-supplied TMDb URL in the
-  // same slot is preserved).
+  // Cover / backdrop upload + delete. Writes the uploaded image to the
+  // series' cache directory and points `video_series.posterPath` /
+  // `backdropPath` at `/assets/video-series/:id/{cover|backdrop}`.
+  // Delete clears the on-disk file and resets the column only when it
+  // currently references the user asset (so a scraper-supplied TMDb URL
+  // in the same slot is preserved).
   async function handleUpload(
     request: import("fastify").FastifyRequest,
     reply: import("fastify").FastifyReply,
@@ -63,23 +64,23 @@ export async function videoFoldersRoutes(app: FastifyInstance) {
       reply.code(400);
       return { error: "file is required" };
     }
-    return videoFolderService.uploadVideoFolderCover(id, kind, file);
+    return videoSeriesService.uploadVideoSeriesCover(id, kind, file);
   }
 
-  app.post("/video-folders/:id/cover", (request, reply) =>
+  app.post(apiRoutes.videoSeriesCover, (request, reply) =>
     handleUpload(request, reply, "cover"),
   );
-  app.post("/video-folders/:id/backdrop", (request, reply) =>
+  app.post(apiRoutes.videoSeriesBackdrop, (request, reply) =>
     handleUpload(request, reply, "backdrop"),
   );
 
-  app.delete("/video-folders/:id/cover", async (request) => {
+  app.delete(apiRoutes.videoSeriesCover, async (request) => {
     const { id } = request.params as { id: string };
-    return videoFolderService.deleteVideoFolderCover(id, "cover");
+    return videoSeriesService.deleteVideoSeriesCover(id, "cover");
   });
 
-  app.delete("/video-folders/:id/backdrop", async (request) => {
+  app.delete(apiRoutes.videoSeriesBackdrop, async (request) => {
     const { id } = request.params as { id: string };
-    return videoFolderService.deleteVideoFolderCover(id, "backdrop");
+    return videoSeriesService.deleteVideoSeriesCover(id, "backdrop");
   });
 }

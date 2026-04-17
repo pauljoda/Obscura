@@ -32,11 +32,11 @@ export interface ListQuery {
 
 // ─── Entity List Queries ────────────────────────────────────────
 
-export interface SceneListQuery extends ListQuery {
+export interface VideoListQuery extends ListQuery {
   tag?: string | string[];
   performer?: string | string[];
   studio?: string | string[];
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: boolean;
   resolution?: string | string[];
@@ -68,7 +68,7 @@ export interface GalleryListQuery extends ListQuery {
   organized?: boolean;
 }
 
-export interface SceneFolderListQuery extends ListQuery {
+export interface VideoSeriesListQuery extends ListQuery {
   parent?: string;
   root?: string;
 }

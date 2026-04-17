@@ -24,7 +24,7 @@ import { systemRoutes } from "./routes/system";
 import { videoAcceptRoutes } from "./routes/video-accept";
 import { videoLibraryRoutes } from "./routes/video-library";
 import { videosRoutes } from "./routes/videos";
-import { videoFoldersRoutes } from "./routes/video-folders";
+import { videoSeriesRoutes } from "./routes/video-series";
 import { videoStreamRoutes } from "./routes/video-stream";
 import { configureDatabase } from "./db";
 import {
@@ -90,7 +90,7 @@ export async function buildApiApp(
   await app.register(videoAcceptRoutes);
   await app.register(videoLibraryRoutes);
   await app.register(videosRoutes);
-  await app.register(videoFoldersRoutes);
+  await app.register(videoSeriesRoutes);
   await app.register(videoStreamRoutes);
 
   return app;

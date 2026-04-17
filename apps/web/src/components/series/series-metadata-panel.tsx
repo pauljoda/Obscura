@@ -12,7 +12,7 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import type { SceneFolderDetailDto } from "@obscura/contracts";
+import type { VideoSeriesDetailDto } from "@obscura/contracts";
 import { cn } from "@obscura/ui/lib/utils";
 import {
   toApiUrl,
@@ -29,7 +29,7 @@ import { ChipInput } from "../shared/chip-input";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 
 interface SeriesMetadataPanelProps {
-  folder: SceneFolderDetailDto;
+  folder: VideoSeriesDetailDto;
   coverBusy?: boolean;
   backdropBusy?: boolean;
   onSave: (patch: {
@@ -268,7 +268,7 @@ export function SeriesMetadataPanel({
               onChange={setEditPerformerNames}
               suggestions={tagsVisibleInNsfwMode(allPerformers, nsfwMode).map((p) => ({
                 name: p.name,
-                count: p.sceneCount,
+                count: p.videoCount,
               }))}
               placeholder="Type to add performers..."
             />
@@ -282,7 +282,7 @@ export function SeriesMetadataPanel({
               onChange={setEditTagNames}
               suggestions={tagsVisibleInNsfwMode(allTags, nsfwMode).map((t) => ({
                 name: t.name,
-                count: t.sceneCount,
+                count: t.videoCount,
               }))}
               placeholder="Type to add tags..."
             />
@@ -330,7 +330,7 @@ export function SeriesMetadataPanel({
             Direct
           </div>
           <div className="mt-1 text-lg font-mono text-text-primary">
-            {folder.directSceneCount}
+            {folder.directVideoCount}
           </div>
         </div>
         <div className="surface-well px-3 py-2">
@@ -338,7 +338,7 @@ export function SeriesMetadataPanel({
             Total
           </div>
           <div className="mt-1 text-lg font-mono text-text-primary">
-            {folder.totalSceneCount}
+            {folder.totalVideoCount}
           </div>
         </div>
       </div>
@@ -380,10 +380,10 @@ export function SeriesMetadataPanel({
           <FolderOpen className="h-3 w-3 mt-0.5 flex-shrink-0" />
           <span className="break-all font-mono">{folder.folderPath}</span>
         </div>
-        {folder.childFolderCount > 0 && (
+        {folder.childSeasonCount > 0 && (
           <div>
-            {folder.childFolderCount} subfolder
-            {folder.childFolderCount === 1 ? "" : "s"}
+            {folder.childSeasonCount} subfolder
+            {folder.childSeasonCount === 1 ? "" : "s"}
           </div>
         )}
         <div className="flex items-center gap-1.5">

@@ -498,7 +498,7 @@ export const scrapeResults = pgTable(
     // Video-specific
     proposedEpisodeNumber: integer("proposed_episode_number"),
     // Folder-specific (full result blob for series data)
-    proposedFolderResult: jsonb("proposed_folder_result"),
+    proposedSeriesResult: jsonb("proposed_folder_result"),
     // Audio-specific (artist, album, track info)
     proposedAudioResult: jsonb("proposed_audio_result"),
     appliedAt: timestamp("applied_at"),

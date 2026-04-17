@@ -61,12 +61,12 @@ export function GalleryMetadataPanel({
   }, [gallery, editMode]);
 
   const tagSuggestions = useMemo(
-    () => availableTags.map((t) => ({ name: t.name, count: t.sceneCount + t.imageCount })),
+    () => availableTags.map((t) => ({ name: t.name, count: t.videoCount + t.imageCount })),
     [availableTags],
   );
 
   const performerSuggestions = useMemo(
-    () => availablePerformers.map((p) => ({ name: p.name, count: p.sceneCount })),
+    () => availablePerformers.map((p) => ({ name: p.name, count: p.videoCount })),
     [availablePerformers],
   );
 

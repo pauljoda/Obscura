@@ -25,7 +25,7 @@ import {
   acceptScrapeResult,
   rejectScrapeResult,
   toApiUrl,
-  type SceneListItem,
+  type VideoListItem,
   type ScraperPackage,
   type ScrapeResult,
   type NormalizedScrapeResult,
@@ -49,7 +49,7 @@ const defaultScrapeState: ScrapeState = {
 };
 
 export function ResolveWorkflow() {
-  const [unmatchedScenes, setUnmatchedScenes] = useState<SceneListItem[]>([]);
+  const [unmatchedScenes, setUnmatchedScenes] = useState<VideoListItem[]>([]);
   const [totalUnmatched, setTotalUnmatched] = useState(0);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);

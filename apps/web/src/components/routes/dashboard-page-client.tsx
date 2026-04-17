@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Play, Image as ImageIcon, Film, Layers, Music, FolderOpen, Users, Building2 } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
-import type { GalleryListItem, SceneListItem, PerformerItem, StudioItem } from "../../lib/api";
-import type { ImageListItemDto, AudioLibraryListItemDto, SceneFolderListItemDto } from "@obscura/contracts";
+import type { GalleryListItem, VideoListItem, PerformerItem, StudioItem } from "../../lib/api";
+import type { ImageListItemDto, AudioLibraryListItemDto, VideoSeriesListItemDto } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
 
 import { SceneCard } from "../videos/video-card";
@@ -24,12 +24,12 @@ import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 
 interface DashboardPageClientProps {
-  scenes: SceneListItem[];
-  featuredScenes: SceneListItem[];
+  scenes: VideoListItem[];
+  featuredScenes: VideoListItem[];
   galleries: GalleryListItem[];
   images: ImageListItemDto[];
   audioLibraries: AudioLibraryListItemDto[];
-  sceneFolders: SceneFolderListItemDto[];
+  sceneFolders: VideoSeriesListItemDto[];
   performers: PerformerItem[];
   studios: StudioItem[];
 }

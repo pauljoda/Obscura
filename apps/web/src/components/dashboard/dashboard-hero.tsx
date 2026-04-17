@@ -2,11 +2,11 @@ import { Logo } from "../logo";
 import { Film, Clock, HardDrive, TrendingUp } from "lucide-react";
 import { DashboardStatTile } from "./dashboard-stat-tile";
 import { DASHBOARD_STAT_GRADIENTS } from "./dashboard-utils";
-import type { SceneStats } from "../../lib/api";
+import type { VideoStats } from "../../lib/api";
 import { entityTerms } from "../../lib/terminology";
 
 export interface DashboardHeroProps {
-  stats: SceneStats | null;
+  stats: VideoStats | null;
 }
 
 export function DashboardHero({ stats }: DashboardHeroProps) {

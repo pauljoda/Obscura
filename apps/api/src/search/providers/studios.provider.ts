@@ -49,7 +49,7 @@ export const studiosSearchProvider: SearchProvider = {
         name: studios.name,
         imagePath: studios.imagePath,
         rating: studios.rating,
-        sceneCount: sceneCountSelect,
+        videoCount: sceneCountSelect,
         imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
         audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
         score: scoreExpr,
@@ -67,11 +67,11 @@ export const studiosSearchProvider: SearchProvider = {
     return {
       total,
       items: rows.map((r) => {
-        const sceneCount = Number(r.sceneCount ?? 0);
+        const videoCount = Number(r.videoCount ?? 0);
         const imageAppearanceCount = Number(r.imageAppearanceCount ?? 0);
         const audioLibraryCount = Number(r.audioLibraryCount ?? 0);
         const bits = [
-          sceneCount > 0 ? `${sceneCount} videos` : null,
+          videoCount > 0 ? `${videoCount} videos` : null,
           imageAppearanceCount > 0 ? `${imageAppearanceCount} images` : null,
           audioLibraryCount > 0 ? `${audioLibraryCount} audio` : null,
         ].filter(Boolean);
@@ -84,7 +84,7 @@ export const studiosSearchProvider: SearchProvider = {
           href: `/studios/${r.id}`,
           rating: r.rating,
           score: r.score,
-          meta: { sceneCount, imageAppearanceCount, audioLibraryCount },
+          meta: { videoCount, imageAppearanceCount, audioLibraryCount },
         };
       }),
     };

@@ -35,24 +35,24 @@ import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
   fetchScenes,
   fetchSceneStats,
-  fetchSceneFolders,
-  fetchSceneFolderDetail,
+  fetchSeries,
+  fetchSeriesDetail,
   fetchPerformers,
   fetchStudios,
   fetchTags,
   updateScene,
   deleteScene,
   toApiUrl,
-  updateSceneFolder,
-  uploadSceneFolderCover,
-  deleteSceneFolderCover,
-  uploadSceneFolderBackdrop,
-  deleteSceneFolderBackdrop,
+  updateSeries,
+  uploadSeriesCover,
+  deleteSeriesCover,
+  uploadSeriesBackdrop,
+  deleteSeriesBackdrop,
   type PerformerItem,
-  type SceneFolderDetail,
-  type SceneFolderListItem,
-  type SceneListItem,
-  type SceneStats,
+  type SeriesDetail,
+  type SeriesListItem,
+  type VideoListItem,
+  type VideoStats,
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
@@ -92,15 +92,15 @@ import { HierarchyShell } from "../shared/hierarchy-shell";
 import { useCurrentPath } from "../../hooks/use-current-path";
 
 interface VideosPageClientProps {
-  initialScenes: SceneListItem[];
-  initialStats: SceneStats | null;
+  initialScenes: VideoListItem[];
+  initialStats: VideoStats | null;
   initialStudios: StudioItem[];
   initialTags: TagItem[];
   initialPerformers: PerformerItem[];
   initialTotal: number;
   initialListPrefs: VideosListPrefs;
-  initialRootFolders: SceneFolderListItem[];
-  initialActiveFolder: SceneFolderDetail | null;
+  initialRootFolders: SeriesListItem[];
+  initialActiveFolder: SeriesDetail | null;
 }
 
 export function VideosPageClient({
@@ -175,7 +175,7 @@ export function VideosPageClient({
   const [filterTags, setFilterTags] = useState(initialTags);
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
   const [rootFolders, setRootFolders] = useState(initialRootFolders);
-  const [activeFolder, setActiveFolder] = useState<SceneFolderDetail | null>(initialActiveFolder);
+  const [activeFolder, setActiveFolder] = useState<SeriesDetail | null>(initialActiveFolder);
   /**
    * When browsing a Case B series (seasons), the user can drill into a
    * specific season. `null` means "show the season grid" (no episodes
@@ -400,7 +400,7 @@ export function VideosPageClient({
           ? {
               ...buildParams(),
               limit: 50,
-              sceneFolderId: activeFolder?.id ?? undefined,
+              videoSeriesId: activeFolder?.id ?? undefined,
               folderScope:
                 activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
               uncategorized: !activeFolder?.id,
@@ -442,7 +442,7 @@ export function VideosPageClient({
               ...buildParams(),
               limit: 50,
               offset: scenes.length,
-              sceneFolderId: activeFolder?.id ?? undefined,
+              videoSeriesId: activeFolder?.id ?? undefined,
               folderScope:
                 activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
               uncategorized: !activeFolder?.id,
@@ -483,7 +483,7 @@ export function VideosPageClient({
 
     if (activeFolder?.id) {
       try {
-        const detail = await fetchSceneFolderDetail(activeFolder.id, {
+        const detail = await fetchSeriesDetail(activeFolder.id, {
           nsfw: nsfwMode,
         });
         setActiveFolder(detail);
@@ -495,7 +495,7 @@ export function VideosPageClient({
     }
 
     try {
-      const result = await fetchSceneFolders({
+      const result = await fetchSeries({
         search: folderSearch,
         root: folderSearch ? "all" : undefined,
         limit: 200,
@@ -510,7 +510,7 @@ export function VideosPageClient({
 
   const reloadFolder = useCallback(async () => {
     if (!activeFolder?.id) return;
-    const detail = await fetchSceneFolderDetail(activeFolder.id, { nsfw: nsfwMode });
+    const detail = await fetchSeriesDetail(activeFolder.id, { nsfw: nsfwMode });
     setActiveFolder(detail);
   }, [activeFolder?.id, nsfwMode]);
 
@@ -519,7 +519,7 @@ export function VideosPageClient({
       if (!activeFolder) return;
       setFolderError(null);
       try {
-        await updateSceneFolder(activeFolder.id, patch);
+        await updateSeries(activeFolder.id, patch);
         await revalidateSceneFolderCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
@@ -536,7 +536,7 @@ export function VideosPageClient({
       setFolderError(null);
       setCoverBusy(true);
       try {
-        await uploadSceneFolderCover(activeFolder.id, file);
+        await uploadSeriesCover(activeFolder.id, file);
         await revalidateSceneFolderCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
@@ -553,7 +553,7 @@ export function VideosPageClient({
     setFolderError(null);
     setCoverBusy(true);
     try {
-      await deleteSceneFolderCover(activeFolder.id);
+      await deleteSeriesCover(activeFolder.id);
       await revalidateSceneFolderCache(activeFolder.id);
       await reloadFolder();
     } catch (err) {
@@ -599,7 +599,7 @@ export function VideosPageClient({
     setFolderSaving(true);
     setFolderError(null);
     try {
-      await updateSceneFolder(activeFolder.id, {
+      await updateSeries(activeFolder.id, {
         customName: editCustomName.trim() || null,
         isNsfw: editIsNsfw,
         details: editDetails.trim() || null,
@@ -625,7 +625,7 @@ export function VideosPageClient({
       setFolderError(null);
       setBackdropBusy(true);
       try {
-        await uploadSceneFolderBackdrop(activeFolder.id, file);
+        await uploadSeriesBackdrop(activeFolder.id, file);
         await revalidateSceneFolderCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
@@ -642,7 +642,7 @@ export function VideosPageClient({
     setFolderError(null);
     setBackdropBusy(true);
     try {
-      await deleteSceneFolderBackdrop(activeFolder.id);
+      await deleteSeriesBackdrop(activeFolder.id);
       await revalidateSceneFolderCache(activeFolder.id);
       await reloadFolder();
     } catch (err) {
@@ -823,7 +823,7 @@ export function VideosPageClient({
     : terms.uncategorizedScenes;
 
   const uploadTarget = activeFolder
-    ? { kind: "video" as const, sceneFolderId: activeFolder.id }
+    ? { kind: "video" as const, videoSeriesId: activeFolder.id }
     : { kind: "video" as const };
 
   return (
@@ -1089,7 +1089,7 @@ export function VideosPageClient({
                             onChange={setEditPerformerNames}
                             suggestions={tagsVisibleInNsfwMode(folderEditPerformers, nsfwMode).map((p) => ({
                               name: p.name,
-                              count: p.sceneCount,
+                              count: p.videoCount,
                             }))}
                             placeholder={`Type to add ${terms.performers.toLowerCase()}...`}
                           />
@@ -1103,7 +1103,7 @@ export function VideosPageClient({
                             onChange={setEditTagNames}
                             suggestions={tagsVisibleInNsfwMode(folderEditTags, nsfwMode).map((t) => ({
                               name: t.name,
-                              count: t.sceneCount,
+                              count: t.videoCount,
                             }))}
                             placeholder="Type to add tags..."
                           />
@@ -1182,11 +1182,11 @@ export function VideosPageClient({
                           <StarRatingPicker value={activeFolder.rating} readOnly />
                         )}
                         <span className="text-white/40">
-                          {formatVideoCount(activeFolder.totalSceneCount)}
+                          {formatVideoCount(activeFolder.totalVideoCount)}
                         </span>
-                        {activeFolder.childFolderCount > 0 && (
+                        {activeFolder.childSeasonCount > 0 && (
                           <span className="text-white/40">
-                            {activeFolder.childFolderCount} child {activeFolder.childFolderCount !== 1 ? terms.sceneFolders.toLowerCase() : terms.sceneFolder.toLowerCase()}
+                            {activeFolder.childSeasonCount} child {activeFolder.childSeasonCount !== 1 ? terms.sceneFolders.toLowerCase() : terms.sceneFolder.toLowerCase()}
                           </span>
                         )}
                         {activeFolder.isNsfw && <NsfwChip />}

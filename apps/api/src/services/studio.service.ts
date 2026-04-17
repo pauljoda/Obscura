@@ -53,7 +53,7 @@ export async function listStudios(sfwOnly: boolean) {
       favorite: studios.favorite,
       rating: studios.rating,
       isNsfw: studios.isNsfw,
-      sceneCount: sfwOnly
+      videoCount: sfwOnly
         ? studioSfwSceneCountExpr()
         : studioTotalSceneCountExpr(),
       createdAt: studios.createdAt,
@@ -78,7 +78,7 @@ export async function listStudios(sfwOnly: boolean) {
       favorite: r.favorite,
       rating: r.rating,
       isNsfw: r.isNsfw,
-      sceneCount: Number(r.sceneCount ?? 0),
+      videoCount: Number(r.videoCount ?? 0),
       imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
       audioLibraryCount: Number(r.audioLibraryCount ?? 0),
       createdAt: r.createdAt,
@@ -139,7 +139,7 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
     sceneCountBy.set(r.studio_id, Number(r.cnt ?? 0));
   }
 
-  const sceneCount = sceneCountBy.get(row.id) ?? 0;
+  const videoCount = sceneCountBy.get(row.id) ?? 0;
 
   return {
     id: row.id,
@@ -158,14 +158,14 @@ export async function getStudioById(id: string, sfwOnly: boolean) {
         name: c.name,
         imagePath: c.imagePath,
         imageUrl: c.imageUrl,
-        sceneCount: sceneCountBy.get(c.id) ?? 0,
+        videoCount: sceneCountBy.get(c.id) ?? 0,
       })),
     imageUrl: row.imageUrl,
     imagePath: row.imagePath,
     favorite: row.favorite,
     rating: row.rating,
     isNsfw: row.isNsfw,
-    sceneCount,
+    videoCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -215,7 +215,7 @@ export async function updateStudio(
       favorite: studios.favorite,
       rating: studios.rating,
       isNsfw: studios.isNsfw,
-      sceneCount: studioTotalSceneCountExpr(),
+      videoCount: studioTotalSceneCountExpr(),
       createdAt: studios.createdAt,
       updatedAt: studios.updatedAt,
     })
@@ -224,7 +224,7 @@ export async function updateStudio(
     .limit(1);
   return {
     ...updated,
-    sceneCount: Number(updated.sceneCount ?? 0),
+    videoCount: Number(updated.videoCount ?? 0),
   };
 }
 

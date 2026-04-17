@@ -49,11 +49,11 @@ function NavTile({
   );
 }
 
-export function DashboardQuickNav({ sceneCount }: { sceneCount?: number }) {
+export function DashboardQuickNav({ videoCount }: { videoCount?: number }) {
   const terms = useTerms();
 
   const navItems = [
-    { href: "/videos", label: terms.scenes, icon: Film, count: sceneCount },
+    { href: "/videos", label: terms.scenes, icon: Film, count: videoCount },
     { href: "/performers", label: terms.performers, icon: Users },
     { href: "/studios", label: terms.studios, icon: Building2 },
     { href: "/tags", label: terms.tags, icon: Tag },

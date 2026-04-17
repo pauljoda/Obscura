@@ -50,7 +50,7 @@ export function ImageLightboxInfo({
   const [saving, setSaving] = useState(false);
 
   const performerSuggestions = useMemo(
-    () => availablePerformers.map((p) => ({ name: p.name, count: p.sceneCount })),
+    () => availablePerformers.map((p) => ({ name: p.name, count: p.videoCount })),
     [availablePerformers],
   );
 
@@ -317,7 +317,7 @@ export function ImageLightboxInfo({
                         <NsfwTagLabel isNsfw={tag.isNsfw}>{tag.name}</NsfwTagLabel>
                       </span>
                       <span className="text-text-disabled text-[0.6rem]">
-                        {tag.sceneCount + (tag.imageCount ?? 0)}
+                        {tag.videoCount + (tag.imageCount ?? 0)}
                       </span>
                     </button>
                   ))}

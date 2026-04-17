@@ -8,7 +8,7 @@ export interface TagCardData {
   id: string;
   href: string;
   name: string;
-  sceneCount: number;
+  videoCount: number;
   imageCount: number;
   imagePath?: string;
   isNsfw?: boolean;
@@ -25,7 +25,7 @@ export function tagItemToCardData(tag: TagItem, from?: string): TagCardData {
     id: tag.id,
     href: from ? buildHrefWithFrom(base, from) : base,
     name: tag.name,
-    sceneCount: tag.sceneCount,
+    videoCount: tag.videoCount,
     imageCount: tag.imageCount ?? 0,
     imagePath: toApiUrl(tag.imagePath) ?? undefined,
     isNsfw: tag.isNsfw,
@@ -39,7 +39,7 @@ export function searchTagItemToCardData(item: SearchResultItem, from?: string): 
     id: item.id,
     href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
-    sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
+    videoCount: readMetaNumber(item.meta, "videoCount") ?? 0,
     imageCount: readMetaNumber(item.meta, "imageCount") ?? 0,
     imagePath: toApiUrl(item.imagePath) ?? undefined,
   };

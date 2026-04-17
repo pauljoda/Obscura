@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FolderOpen, HardDrive, Images } from "lucide-react";
-import type { SceneFolderListItemDto } from "@obscura/contracts";
+import type { VideoSeriesListItemDto } from "@obscura/contracts";
 import { cn } from "@obscura/ui/lib/utils";
 import { toApiUrl } from "../../lib/api";
 import { EntityPreviewMedia } from "../shared/entity-preview-media";
@@ -10,7 +10,7 @@ import { NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { entityTerms, formatVideoCount } from "../../lib/terminology";
 
 interface SeriesCardProps {
-  folder: SceneFolderListItemDto;
+  folder: VideoSeriesListItemDto;
   href: string;
   compact?: boolean;
 }
@@ -36,7 +36,7 @@ export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
         />
         <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
           <Images className="h-3 w-3" />
-          {folder.visibleSfwSceneCount}
+          {folder.visibleSfwVideoCount}
         </div>
       </EntityPreviewMedia>
 
@@ -48,11 +48,11 @@ export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
           </h3>
         </div>
         <div className={cn("flex items-center gap-2 text-text-muted", compact ? "text-[0.62rem]" : "text-[0.68rem]")}>
-          <span>{formatVideoCount(folder.visibleSfwSceneCount)}</span>
-          {folder.childFolderCount > 0 ? (
+          <span>{formatVideoCount(folder.visibleSfwVideoCount)}</span>
+          {folder.childSeasonCount > 0 ? (
             <span>
-              {folder.childFolderCount} child{" "}
-              {folder.childFolderCount === 1
+              {folder.childSeasonCount} child{" "}
+              {folder.childSeasonCount === 1
                 ? entityTerms.sceneFolder.toLowerCase()
                 : entityTerms.sceneFolders.toLowerCase()}
             </span>

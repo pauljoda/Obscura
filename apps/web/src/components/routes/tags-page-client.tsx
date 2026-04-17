@@ -125,7 +125,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
         const cmp = a.name.localeCompare(b.name);
         return sortDir === "asc" ? cmp : -cmp;
       }
-      const cmp = (a.sceneCount + (a.imageCount ?? 0)) - (b.sceneCount + (b.imageCount ?? 0));
+      const cmp = (a.videoCount + (a.imageCount ?? 0)) - (b.videoCount + (b.imageCount ?? 0));
       return sortDir === "asc" ? cmp : -cmp;
     });
     return copy;
@@ -138,7 +138,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
       list = list.filter((t) => t.name.toLowerCase().includes(term));
     }
     if (minTotalUsage > 0) {
-      list = list.filter((t) => t.sceneCount + (t.imageCount ?? 0) >= minTotalUsage);
+      list = list.filter((t) => t.videoCount + (t.imageCount ?? 0) >= minTotalUsage);
     }
     if (minRatingStars != null) {
       list = list.filter((t) => t.rating != null && t.rating >= minRatingStars);
@@ -154,12 +154,12 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
     [filtered, nsfwMode],
   );
 
-  const totalCount = (t: TagItem) => t.sceneCount + (t.imageCount ?? 0);
+  const totalCount = (t: TagItem) => t.videoCount + (t.imageCount ?? 0);
   const maxCount =
     displayedTags.length > 0
       ? Math.max(...displayedTags.map(totalCount))
       : 1;
-  const totalScenes = tags.reduce((sum, t) => sum + t.sceneCount, 0);
+  const totalScenes = tags.reduce((sum, t) => sum + t.videoCount, 0);
   const totalImages = tags.reduce((sum, t) => sum + (t.imageCount ?? 0), 0);
   const tagsSafeForTopTile = tagsVisibleInNsfwMode(tags, nsfwMode);
   const topTag =

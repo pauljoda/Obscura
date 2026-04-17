@@ -199,7 +199,7 @@ describe("API integration", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
-      error: "libraryRootId or sceneFolderId field is required",
+      error: "libraryRootId or videoSeriesId field is required",
     });
   });
 

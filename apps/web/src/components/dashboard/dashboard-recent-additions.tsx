@@ -6,7 +6,7 @@ import { cn } from "@obscura/ui/lib/utils";
 import {
   toApiUrl,
   type GalleryListItem,
-  type SceneListItem,
+  type VideoListItem,
 } from "../../lib/api";
 import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
@@ -19,11 +19,11 @@ import { useTerms } from "../../lib/terminology";
 const MERGE_CAP = 11;
 
 type IngestRow =
-  | { kind: "video"; at: string; scene: SceneListItem }
+  | { kind: "video"; at: string; scene: VideoListItem }
   | { kind: "gallery"; at: string; gallery: GalleryListItem };
 
 function mergeIngest(
-  scenes: SceneListItem[],
+  scenes: VideoListItem[],
   galleries: GalleryListItem[]
 ): IngestRow[] {
   const rows: IngestRow[] = [
@@ -47,7 +47,7 @@ function SceneIngestTile({
   index,
   from,
 }: {
-  scene: SceneListItem;
+  scene: VideoListItem;
   index: number;
   from?: string;
 }) {
@@ -125,7 +125,7 @@ export function DashboardRecentAdditions({
   galleries,
 }: {
   loading: boolean;
-  scenes: SceneListItem[];
+  scenes: VideoListItem[];
   galleries: GalleryListItem[];
 }) {
   const { mode } = useNsfw();

@@ -64,7 +64,7 @@ export function StudioEntityCard({
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-disabled">
             <MediaAppearanceCounts
-              sceneCount={studio.sceneCount}
+              videoCount={studio.videoCount}
               imageAppearanceCount={studio.imageAppearanceCount}
               audioLibraryCount={studio.audioLibraryCount}
               compact
@@ -127,7 +127,7 @@ function StudioListCard({
             {studio.name}
           </span>
           <MediaAppearanceCounts
-            sceneCount={studio.sceneCount}
+            videoCount={studio.videoCount}
             imageAppearanceCount={studio.imageAppearanceCount}
             audioLibraryCount={studio.audioLibraryCount}
             className="truncate"
@@ -169,7 +169,7 @@ function StudioCompactCard({
       <div className="flex-1 min-w-0">
         <div className="text-sm text-text-primary truncate">{studio.name}</div>
         <MediaAppearanceCounts
-          sceneCount={studio.sceneCount}
+          videoCount={studio.videoCount}
           imageAppearanceCount={studio.imageAppearanceCount}
           audioLibraryCount={studio.audioLibraryCount}
           compact

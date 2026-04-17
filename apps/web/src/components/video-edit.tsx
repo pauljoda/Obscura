@@ -1068,7 +1068,7 @@ export function VideoEdit({
                 onChange={setPerformerNames}
                 suggestions={tagsVisibleInNsfwMode(allPerformers, nsfwMode).map((p) => ({
                   name: p.name,
-                  count: p.sceneCount,
+                  count: p.videoCount,
                 }))}
                 placeholder={`Type to add ${terms.performers.toLowerCase()}...`}
                 newItems={nsfwMode === "off" ? undefined : newFromScrape.performers}
@@ -1081,7 +1081,7 @@ export function VideoEdit({
                 onChange={setTagNames}
                 suggestions={tagsVisibleInNsfwMode(allTags, nsfwMode).map((t) => ({
                   name: t.name,
-                  count: t.sceneCount,
+                  count: t.videoCount,
                 }))}
                 placeholder="Type to add tags..."
                 newItems={nsfwMode === "off" ? undefined : newFromScrape.tags}

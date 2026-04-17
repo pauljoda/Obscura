@@ -309,7 +309,7 @@ export function ImageDetailClient({
             <ChipInput
               values={editPerformers}
               onChange={setEditPerformers}
-              suggestions={availablePerformers.map((p) => ({ name: p.name, count: p.sceneCount }))}
+              suggestions={availablePerformers.map((p) => ({ name: p.name, count: p.videoCount }))}
               placeholder={`Add ${terms.performer.toLowerCase()}…`}
             />
           ) : image.performers.length > 0 ? (
@@ -336,7 +336,7 @@ export function ImageDetailClient({
             <ChipInput
               values={editTags}
               onChange={setEditTags}
-              suggestions={availableTags.map((t) => ({ name: t.name, count: t.sceneCount + (t.imageCount ?? 0) }))}
+              suggestions={availableTags.map((t) => ({ name: t.name, count: t.videoCount + (t.imageCount ?? 0) }))}
               placeholder="Add tag…"
             />
           ) : imageTagsVisible.length > 0 ? (

@@ -38,7 +38,7 @@ import {
   toApiUrl,
   togglePerformerFavorite,
   type PerformerDetail,
-  type SceneListItem,
+  type VideoListItem,
 } from "../../lib/api";
 import { StashIdChips } from "../stash-id-chips";
 import {
@@ -55,7 +55,7 @@ import { useCurrentPath } from "../../hooks/use-current-path";
 interface PerformerPageClientProps {
   id: string;
   initialPerformer: PerformerDetail | null;
-  initialScenes: SceneListItem[];
+  initialScenes: VideoListItem[];
   initialTotalScenes: number;
   initialGalleries: GalleryListItemDto[];
   initialTotalGalleries: number;

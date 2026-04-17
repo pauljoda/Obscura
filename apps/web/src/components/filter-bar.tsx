@@ -117,22 +117,22 @@ export function FilterBar({
   const tagItems: AlphabeticalFilterSectionItem[] = useMemo(() => {
     const visible = tagsVisibleInNsfwMode(availableTags, nsfwMode);
     return visible
-      .filter((t) => t.sceneCount > 0)
-      .map((t) => ({ id: t.id, name: t.name, count: t.sceneCount }));
+      .filter((t) => t.videoCount > 0)
+      .map((t) => ({ id: t.id, name: t.name, count: t.videoCount }));
   }, [availableTags, nsfwMode]);
 
   const performerItems: AlphabeticalFilterSectionItem[] = useMemo(() => {
     const visible = tagsVisibleInNsfwMode(availablePerformers, nsfwMode);
     return visible
-      .filter((p) => p.sceneCount > 0)
-      .map((p) => ({ id: p.id, name: p.name, count: p.sceneCount }));
+      .filter((p) => p.videoCount > 0)
+      .map((p) => ({ id: p.id, name: p.name, count: p.videoCount }));
   }, [availablePerformers, nsfwMode]);
 
   const studioItems: AlphabeticalFilterSectionItem[] = useMemo(() => {
     const visible = tagsVisibleInNsfwMode(availableStudios, nsfwMode);
     return visible
-      .filter((s) => s.sceneCount > 0)
-      .map((s) => ({ id: s.id, name: s.name, count: s.sceneCount }));
+      .filter((s) => s.videoCount > 0)
+      .map((s) => ({ id: s.id, name: s.name, count: s.videoCount }));
   }, [availableStudios, nsfwMode]);
 
   return (

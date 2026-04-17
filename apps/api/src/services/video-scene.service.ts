@@ -2,10 +2,10 @@
  * Video (episode + movie) business logic, backed by the new typed
  * `video_episodes` / `video_movies` / `video_series` tables.
  *
- * Produces SceneListItemDto / SceneDetailDto / SceneStatsDto-shaped
+ * Produces VideoListItemDto / VideoDetailDto / VideoStatsDto-shaped
  * responses so the existing `/scenes`-style client can consume them
- * without modification. Episodes expose `sceneFolderId = seriesId`;
- * movies expose `sceneFolderId = null` and are reachable via the
+ * without modification. Episodes expose `videoSeriesId = seriesId`;
+ * movies expose `videoSeriesId = null` and are reachable via the
  * `uncategorized` scope.
  */
 import { existsSync } from "node:fs";
@@ -95,12 +95,12 @@ export interface ListVideosQuery {
   studio?: string | string[];
   codec?: string | string[];
   interactive?: string;
-  sceneFolderId?: string;
+  videoSeriesId?: string;
   folderScope?: "direct" | "subtree";
   uncategorized?: string;
   /**
    * Restrict episodes to a specific season under the parent series
-   * passed in `sceneFolderId`. Only meaningful when `sceneFolderId`
+   * passed in `videoSeriesId`. Only meaningful when `videoSeriesId`
    * is set. Values are numeric strings; "0" picks season 0 (Specials
    * or the single flat season for Case A series).
    */
@@ -195,8 +195,8 @@ function toVideoListItem(row: VideoRow) {
     playCount: row.playCount,
     orgasmCount: row.orgasmCount,
     studioId: row.studioId,
-    sceneFolderId: row.seriesId,
-    sceneFolderTitle: row.seriesTitle,
+    videoSeriesId: row.seriesId,
+    videoSeriesTitle: row.seriesTitle,
     seasonNumber: row.seasonNumber,
     episodeNumber: row.episodeNumber,
     hasSubtitles: false,
@@ -284,7 +284,7 @@ function buildCommonDateFilters<T extends "episode" | "movie">(
  * List videos, merging episodes and movies into a unified response.
  *
  * Scoping rules:
- *   - sceneFolderId set → only episodes from that series
+ *   - videoSeriesId set → only episodes from that series
  *   - uncategorized=true → only movies
  *   - neither → episodes + movies, ordered per sort
  */
@@ -296,15 +296,15 @@ export async function listVideoScenes(query: ListVideosQuery) {
     MAX_ENTITY_LIST_LIMIT,
   );
 
-  if (query.sceneFolderId && query.uncategorized === "true") {
+  if (query.videoSeriesId && query.uncategorized === "true") {
     throw new AppError(
       400,
-      "sceneFolderId and uncategorized cannot both be set",
+      "videoSeriesId and uncategorized cannot both be set",
     );
   }
 
   const wantEpisodes = query.uncategorized !== "true";
-  const wantMovies = !query.sceneFolderId;
+  const wantMovies = !query.videoSeriesId;
 
   // Shared text-search / rating / duration / played / hasFile
   // filters are built per table with the right column refs.
@@ -386,8 +386,8 @@ export async function listVideoScenes(query: ListVideosQuery) {
     }
     conds.push(...buildCommonDateFilters(query, "episode"));
 
-    if (query.sceneFolderId) {
-      conds.push(eq(videoEpisodes.seriesId, query.sceneFolderId));
+    if (query.videoSeriesId) {
+      conds.push(eq(videoEpisodes.seriesId, query.videoSeriesId));
 
       // Optional season filter — only applied when a series is scoped.
       if (query.seasonNumber != null && query.seasonNumber !== "") {
@@ -1297,8 +1297,8 @@ export async function getVideoSceneDetail(id: string) {
     playCount: row.playCount,
     orgasmCount: row.orgasmCount,
     hasSubtitles,
-    sceneFolderId: row.seriesId,
-    sceneFolderTitle: row.seriesTitle,
+    videoSeriesId: row.seriesId,
+    videoSeriesTitle: row.seriesTitle,
     seasonNumber: row.seasonNumber,
     episodeNumber: row.episodeNumber,
     absoluteEpisodeNumber: row.absoluteEpisodeNumber,
@@ -1317,7 +1317,7 @@ export async function getVideoSceneDetail(id: string) {
 
 /**
  * Bulk-fetch videos (episodes + movies) by id, returning
- * `SceneListItemDto`-shaped rows. Used by collection.service to
+ * `VideoListItemDto`-shaped rows. Used by collection.service to
  * hydrate polymorphic collection items whose entityType is "scene"
  * but whose entityIds now resolve to the new video tables.
  *

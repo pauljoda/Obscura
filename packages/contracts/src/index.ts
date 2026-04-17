@@ -6,26 +6,10 @@ export const apiRoutes = {
   jobCancelAll: "/jobs/cancel-all",
   jobRunCancel: "/jobs/:jobRunId/cancel",
   jobAcknowledgeFailed: "/jobs/acknowledge-failed",
-  sceneAssets: "/assets/scenes/:id/*",
-  sceneFolderCoverAsset: "/assets/scene-folders/:id/cover",
   libraries: "/libraries",
   libraryDetail: "/libraries/:id",
   libraryBrowse: "/libraries/browse",
   librarySettings: "/settings/library",
-  scenes: "/scenes",
-  sceneDetail: "/scenes/:id",
-  sceneStats: "/scenes/stats",
-  sceneUpload: "/scenes/upload",
-  sceneFolders: "/scene-folders",
-  sceneFolderDetail: "/scene-folders/:id",
-  sceneFolderCover: "/scene-folders/:id/cover",
-  sceneFolderBackdrop: "/scene-folders/:id/backdrop",
-  sceneFolderBackdropAsset: "/assets/scene-folders/:id/backdrop",
-  sceneSubtitles: "/scenes/:id/subtitles",
-  sceneSubtitleDetail: "/scenes/:id/subtitles/:trackId",
-  sceneSubtitleSource: "/scenes/:id/subtitles/:trackId/source",
-  sceneSubtitleCues: "/scenes/:id/subtitles/:trackId/cues",
-  sceneSubtitleExtract: "/scenes/:id/subtitles/extract",
   galleries: "/galleries",
   galleryDetail: "/galleries/:id",
   galleryStats: "/galleries/stats",
@@ -53,7 +37,6 @@ export const apiRoutes = {
   scrapeResultDetail: "/scrapers/results/:id",
   scrapeResultAccept: "/scrapers/results/:id/accept",
   scrapeResultReject: "/scrapers/results/:id/reject",
-  sceneScrape: "/scenes/:id/scrape",
   // Stash-Box endpoints
   stashBoxEndpoints: "/stashbox-endpoints",
   stashBoxEndpointDetail: "/stashbox-endpoints/:id",
@@ -108,12 +91,12 @@ export const apiRoutes = {
   videoEpisodeAcceptScrape: "/video/episodes/:id/accept-scrape",
   videoSeriesAcceptScrape: "/video/series/:id/accept-scrape",
 
-  // Video library read
+  // Typed video library (cascade-accept flow)
   videoLibraryCounts: "/video/library/counts",
   videoMovies: "/video/movies",
   videoMovieDetail: "/video/movies/:id",
-  videoSeries: "/video/series",
-  videoSeriesDetail: "/video/series/:id",
+  videoLibrarySeries: "/video/series",
+  videoLibrarySeriesDetail: "/video/series/:id",
   videoEpisodeDetail: "/video/episodes/:id",
 
   // Unified /videos route (backed by video_episodes + video_movies)
@@ -121,10 +104,23 @@ export const apiRoutes = {
   videoDetail: "/videos/:id",
   videoStats: "/videos/stats",
   videoResetMetadata: "/videos/:id/reset-metadata",
-  videoFolders: "/video-folders",
-  videoFolderDetail: "/video-folders/:id",
-  videoFolderCover: "/video-folders/:id/cover",
-  videoFolderBackdrop: "/video-folders/:id/backdrop",
+  videoSubtitles: "/videos/:id/subtitles",
+  videoSubtitleDetail: "/videos/:id/subtitles/:trackId",
+  videoSubtitleSource: "/videos/:id/subtitles/:trackId/source",
+  videoSubtitleCues: "/videos/:id/subtitles/:trackId/cues",
+  videoSubtitleExtract: "/videos/:id/subtitles/extract",
+  videoAssets: "/assets/videos/:id/*",
+  videoScrape: "/videos/:id/scrape",
+
+  // Series (UI browser; typed endpoints above live under /video/series for
+  // the cascade/accept flow and return a different shape)
+  videoSeries: "/video-series",
+  videoSeriesDetail: "/video-series/:id",
+  videoSeriesCover: "/video-series/:id/cover",
+  videoSeriesBackdrop: "/video-series/:id/backdrop",
+  videoSeriesCoverAsset: "/assets/video-series/:id/cover",
+  videoSeriesBackdropAsset: "/assets/video-series/:id/backdrop",
+
   videoStream: "/video-stream/:id",
   videoStreamSource: "/video-stream/:id/source",
   videoStreamHlsStatus: "/video-stream/:id/hls/status",
@@ -165,8 +161,8 @@ export type {
   PaginatedResponse,
   ErrorResponse,
   ListQuery,
-  SceneListQuery,
-  SceneFolderListQuery,
+  VideoListQuery,
+  VideoSeriesListQuery,
   GalleryListQuery,
   PerformerListQuery,
   ImageListQuery,
@@ -183,7 +179,7 @@ export const queueDefinitions = [
   {
     name: "library-scan",
     label: "Library Scan",
-    description: "Discovers video scenes in configured media roots",
+    description: "Discovers videos (series, seasons, episodes, and movies) in configured media roots",
     concurrency: 1,
   },
   {
@@ -195,13 +191,13 @@ export const queueDefinitions = [
   {
     name: "fingerprint",
     label: "Fingerprint",
-    description: "Generates md5 and oshash fingerprints for scenes",
+    description: "Generates md5 and oshash fingerprints for videos",
     concurrency: 1,
   },
   {
     name: "preview",
     label: "Preview Build",
-    description: "Builds scene thumbnails, preview clips, and trickplay sprites",
+    description: "Builds video thumbnails, preview clips, and trickplay sprites",
     concurrency: 1,
   },
   {
@@ -255,7 +251,7 @@ export const queueDefinitions = [
   {
     name: "library-maintenance",
     label: "Library maintenance",
-    description: "Moves scene-generated video assets between cache and media-adjacent storage",
+    description: "Moves video-derived assets between cache and media-adjacent storage",
     concurrency: 1,
   },
   {
@@ -289,7 +285,7 @@ export type SubtitleSource = "sidecar" | "upload" | "embedded";
  */
 export type SubtitleSourceFormat = "vtt" | "srt" | "ass" | "ssa";
 
-export interface SceneSubtitleTrackDto {
+export interface VideoSubtitleTrackDto {
   id: string;
   sceneId: string;
   language: string;
@@ -381,7 +377,7 @@ export interface LibraryRootSummaryDto {
   scanAudio: boolean;
 }
 
-export interface UploadSceneResponseDto {
+export interface UploadVideoResponseDto {
   id: string;
   title: string;
   filePath: string;
@@ -508,7 +504,7 @@ export interface TagEmbedDto {
 
 // ─── Scene Folder DTOs ───────────────────────────────────────────
 
-export interface SceneFolderListItemDto {
+export interface VideoSeriesListItemDto {
   id: string;
   title: string;
   customName: string | null;
@@ -524,11 +520,11 @@ export interface SceneFolderListItemDto {
   studioName: string | null;
   rating: number | null;
   date: string | null;
-  directSceneCount: number;
-  totalSceneCount: number;
-  visibleSfwSceneCount: number;
+  directVideoCount: number;
+  totalVideoCount: number;
+  visibleSfwVideoCount: number;
   containsNsfwDescendants: boolean;
-  childFolderCount: number;
+  childSeasonCount: number;
   previewThumbnailPaths: string[];
   libraryRootId: string;
   libraryRootLabel: string;
@@ -536,7 +532,7 @@ export interface SceneFolderListItemDto {
   updatedAt: string;
 }
 
-export interface SceneFolderBreadcrumbDto {
+export interface VideoSeriesBreadcrumbDto {
   id: string;
   title: string;
   displayTitle: string;
@@ -557,7 +553,7 @@ export interface VideoSeriesSeasonDto {
   previewThumbnailPath: string | null;
 }
 
-export interface SceneFolderDetailDto extends SceneFolderListItemDto {
+export interface VideoSeriesDetailDto extends VideoSeriesListItemDto {
   details: string | null;
   urls: string[];
   externalSeriesId: string | null;
@@ -570,8 +566,8 @@ export interface SceneFolderDetailDto extends SceneFolderListItemDto {
     isNsfw: boolean;
   }[];
   tags: TagEmbedDto[];
-  breadcrumbs: SceneFolderBreadcrumbDto[];
-  children: SceneFolderListItemDto[];
+  breadcrumbs: VideoSeriesBreadcrumbDto[];
+  children: VideoSeriesListItemDto[];
   /** Seasons under this series. Empty for movie-style folders. */
   seasons: VideoSeriesSeasonDto[];
   /**
@@ -583,7 +579,7 @@ export interface SceneFolderDetailDto extends SceneFolderListItemDto {
   renderingMode: "flat" | "seasons";
 }
 
-export interface SceneFolderPatchDto {
+export interface VideoSeriesPatchDto {
   isNsfw?: boolean;
   customName?: string | null;
   details?: string | null;
@@ -807,7 +803,7 @@ export interface ScrapeResultDto {
   proposedTagNames: string[] | null;
   proposedImageUrl: string | null;
   proposedEpisodeNumber: number | null;
-  proposedFolderResult: unknown | null;
+  proposedSeriesResult: unknown | null;
   proposedAudioResult: unknown | null;
   /**
    * Typed payload for the new cascade review flow (Plan C /
@@ -919,7 +915,7 @@ export interface PerformerListItemDto {
   favorite: boolean;
   rating: number | null;
   isNsfw: boolean;
-  sceneCount: number;
+  videoCount: number;
   /** Linked galleries plus standalone images (SFW mode excludes NSFW entities). */
   imageAppearanceCount: number;
   audioLibraryCount: number;
@@ -951,7 +947,7 @@ export interface PerformerDetailDto {
   favorite: boolean;
   rating: number | null;
   isNsfw: boolean;
-  sceneCount: number;
+  videoCount: number;
   tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
@@ -1319,7 +1315,7 @@ export interface CollectionItemDto {
   /**
    * Polymorphic entity embed — exactly one of these is populated based on
    * entityType. The shape matches the respective list-item endpoint response
-   * (SceneListItem, GalleryListItemDto, ImageListItemDto, AudioTrackListItemDto).
+   * (VideoListItem, GalleryListItemDto, ImageListItemDto, AudioTrackListItemDto).
    */
   entity: Record<string, unknown> | null;
 }
@@ -1366,7 +1362,7 @@ export interface CollectionRulePreviewDto {
 
 // ─── Scene DTOs ─────────────────────────────────────────────────
 
-export interface SceneListItemDto {
+export interface VideoListItemDto {
   id: string;
   title: string;
   details: string | null;
@@ -1394,8 +1390,8 @@ export interface SceneListItemDto {
   playCount: number;
   orgasmCount: number;
   studioId: string | null;
-  sceneFolderId: string | null;
-  sceneFolderTitle: string | null;
+  videoSeriesId: string | null;
+  videoSeriesTitle: string | null;
   /** Season number for episode rows (null for movies). */
   seasonNumber: number | null;
   /** Episode number within the season (null for movies). */
@@ -1416,7 +1412,7 @@ export interface SceneListItemDto {
   updatedAt: string;
 }
 
-export interface SceneDetailDto extends SceneListItemDto {
+export interface VideoDetailDto extends VideoListItemDto {
   interactive: boolean;
   frameRate: number | null;
   bitRate: number | null;
@@ -1445,18 +1441,18 @@ export interface SceneDetailDto extends SceneListItemDto {
    */
   entityKind: "video_episode" | "video_movie";
   studio: { id: string; name: string; url: string | null } | null;
-  markers: SceneMarkerDto[];
-  subtitleTracks: SceneSubtitleTrackDto[];
+  markers: VideoMarkerDto[];
+  subtitleTracks: VideoSubtitleTrackDto[];
 }
 
-export interface SceneMarkerDto {
+export interface VideoMarkerDto {
   id: string;
   title: string;
   seconds: number;
   endSeconds: number | null;
 }
 
-export interface SceneStatsDto {
+export interface VideoStatsDto {
   totalScenes: number;
   totalDuration: number;
   totalDurationFormatted: string;
@@ -1477,7 +1473,7 @@ export interface StudioListItemDto {
   favorite: boolean;
   rating: number | null;
   isNsfw: boolean;
-  sceneCount: number;
+  videoCount: number;
   /** Galleries + images with this studio (SFW mode excludes NSFW entities). */
   imageAppearanceCount: number;
   audioLibraryCount: number;
@@ -1495,7 +1491,7 @@ export interface StudioChildRefDto {
   name: string;
   imagePath: string | null;
   imageUrl: string | null;
-  sceneCount: number;
+  videoCount: number;
 }
 
 export interface StudioDetailDto {
@@ -1512,7 +1508,7 @@ export interface StudioDetailDto {
   favorite: boolean;
   rating: number | null;
   isNsfw: boolean;
-  sceneCount: number;
+  videoCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1522,7 +1518,7 @@ export interface StudioDetailDto {
 export interface TagListItemDto {
   id: string;
   name: string;
-  sceneCount: number;
+  videoCount: number;
   imageCount: number;
   imagePath: string | null;
   favorite: boolean;
@@ -1542,7 +1538,7 @@ export interface TagDetailDto {
   rating: number | null;
   isNsfw: boolean;
   ignoreAutoTag: boolean;
-  sceneCount: number;
+  videoCount: number;
   createdAt: string;
   updatedAt: string;
 }

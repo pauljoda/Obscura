@@ -1,11 +1,11 @@
 /**
  * Markers for the new video model. Writes into the polymorphic
  * `video_markers` table keyed on `entity_type` + `entity_id`. The wire
- * DTO matches the legacy `SceneMarkerDto` so existing player code
+ * DTO matches the legacy `VideoMarkerDto` so existing player code
  * consumes the response unchanged.
  */
 import { and, asc, eq } from "drizzle-orm";
-import type { SceneMarkerDto } from "@obscura/contracts";
+import type { VideoMarkerDto } from "@obscura/contracts";
 import { AppError } from "../plugins/error-handler";
 import { db, schema } from "../db";
 
@@ -31,7 +31,7 @@ async function resolveVideoKind(videoId: string): Promise<VideoEntityKind> {
 
 function markerToDto(
   row: typeof videoMarkers.$inferSelect,
-): SceneMarkerDto {
+): VideoMarkerDto {
   return {
     id: row.id,
     title: row.title,
@@ -42,7 +42,7 @@ function markerToDto(
 
 export async function listMarkers(
   videoId: string,
-): Promise<SceneMarkerDto[]> {
+): Promise<VideoMarkerDto[]> {
   // Touch the video first so bogus ids surface as 404.
   await resolveVideoKind(videoId);
   const rows = await db
@@ -62,7 +62,7 @@ export interface CreateMarkerBody {
 export async function createMarker(
   videoId: string,
   body: CreateMarkerBody,
-): Promise<SceneMarkerDto> {
+): Promise<VideoMarkerDto> {
   const kind = await resolveVideoKind(videoId);
   if (!body || typeof body.title !== "string" || body.title.trim() === "") {
     throw new AppError(400, "title is required");
@@ -110,7 +110,7 @@ async function getMarker(markerId: string) {
 export async function updateMarker(
   markerId: string,
   body: UpdateMarkerBody,
-): Promise<SceneMarkerDto> {
+): Promise<VideoMarkerDto> {
   const existing = await getMarker(markerId);
   const patch: Record<string, unknown> = { updatedAt: new Date() };
 

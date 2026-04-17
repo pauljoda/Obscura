@@ -71,9 +71,9 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
             // write into the series folder and create a video_episodes
             // row. Root-scoped upload: pass libraryRootId and create a
             // video_movies row at the root.
-            if (target.sceneFolderId) {
+            if (target.videoSeriesId) {
               await uploadFile("/videos/upload", file, {
-                seriesId: target.sceneFolderId,
+                seriesId: target.videoSeriesId,
               });
             } else {
               const libraryRootId =
@@ -143,7 +143,7 @@ export function useUploader({ target, onUploaded }: UseUploaderOptions) {
       const asArray = Array.from(fileList);
       if (asArray.length === 0) return;
 
-      if (target.kind === "video" && target.sceneFolderId) {
+      if (target.kind === "video" && target.videoSeriesId) {
         // Folder-scoped upload — skip library picker entirely, the server
         // resolves the library root from the folder.
         await runUploads(asArray);

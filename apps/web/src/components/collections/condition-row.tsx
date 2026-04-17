@@ -239,14 +239,14 @@ function ValueInput({
       case "studio":
         suggestions = availableStudios;
         break;
-      case "sceneFolderId":
+      case "videoSeriesId":
         suggestions = []; // Scene folders use IDs, handled differently
         break;
       default:
         suggestions = [];
     }
 
-    if (fieldDef.field === "sceneFolderId") {
+    if (fieldDef.field === "videoSeriesId") {
       // Scene folder uses plain text ID input for now
       return (
         <input

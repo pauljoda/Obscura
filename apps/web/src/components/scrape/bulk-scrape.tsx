@@ -29,7 +29,7 @@ import {
   fetchInstalledScrapers,
   fetchInstalledPlugins,
   fetchStashBoxEndpoints,
-  fetchSceneFolders,
+  fetchSeries,
   fetchGalleries,
   fetchImages,
   fetchAudioLibraries,
@@ -45,7 +45,7 @@ import type {
   TagRow,
   ScraperPackage,
   StashBoxEndpoint,
-  SceneListItem,
+  VideoListItem,
   PerformerItem,
   StudioItem,
   TagItem,
@@ -58,9 +58,9 @@ import { ScrapeStudioRows, runStudioScrape, acceptAllStudios } from "./scrape-st
 import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
 import { ScrapePhashesTab } from "./scrape-phashes-tab";
 
-import type { VideoFolderRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
+import type { VideoSeriesRow, GalleryRow, ImageRow, AudioLibraryRow, AudioTrackRow } from "../identify/types";
 import { VIDEO_FOLDER_FIELDS, GALLERY_FIELDS, IMAGE_FIELDS, AUDIO_LIBRARY_FIELDS, AUDIO_TRACK_FIELDS } from "../identify/types";
-import { IdentifyVideoFolderRows, runVideoFolderIdentify, seekFolderSingle, acceptAllVideoFolders } from "../identify/identify-video-folders-tab";
+import { IdentifyVideoFolderRows, runVideoSeriesIdentify, seekFolderSingle, acceptAllVideoFolders } from "../identify/identify-video-folders-tab";
 import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
@@ -94,14 +94,14 @@ export function BulkScrape() {
   const [tagRows, setTagRows] = useState<TagRow[]>([]);
 
   // New entity states
-  const [folderRows, setFolderRows] = useState<VideoFolderRow[]>([]);
+  const [folderRows, setFolderRows] = useState<VideoSeriesRow[]>([]);
   const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
   const [imageRows, setImageRows] = useState<ImageRow[]>([]);
   const [audioLibraryRows, setAudioLibraryRows] = useState<AudioLibraryRow[]>([]);
   const [audioTrackRows, setAudioTrackRows] = useState<AudioTrackRow[]>([]);
 
   // All items for show-all toggle
-  const [allScenes, setAllScenes] = useState<SceneListItem[]>([]);
+  const [allScenes, setAllScenes] = useState<VideoListItem[]>([]);
   const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
   const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
   const [allTags, setAllTags] = useState<TagItem[]>([]);
@@ -149,7 +149,7 @@ export function BulkScrape() {
         fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] })),
-        fetchSceneFolders({ root: "all", limit: 500, nsfw: nsfwMode }).catch(() => ({ items: [], total: 0, limit: 500, offset: 0 })),
+        fetchSeries({ root: "all", limit: 500, nsfw: nsfwMode }).catch(() => ({ items: [], total: 0, limit: 500, offset: 0 })),
         fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 })),
         fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 })),
         fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 })),
@@ -346,7 +346,7 @@ export function BulkScrape() {
     if (tab === "scenes") {
       void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers, plugins: pluginsForTab });
     } else if (tab === "video-folders") {
-      void runVideoFolderIdentify({
+      void runVideoSeriesIdentify({
         rows: folderRows,
         setRows: setFolderRows,
         plugins: pluginsForTab,

@@ -1,5 +1,5 @@
 import type {
-  SceneListItem,
+  VideoListItem,
   PerformerItem,
   StudioItem,
   TagItem,
@@ -16,7 +16,7 @@ import { entityTerms } from "../../lib/terminology";
 /* ─── Re-exports for convenience ─────────────────────────────── */
 
 export type {
-  SceneListItem,
+  VideoListItem,
   PerformerItem,
   StudioItem,
   TagItem,
@@ -44,7 +44,7 @@ export interface Provider {
 }
 
 export interface SceneRow {
-  scene: SceneListItem;
+  scene: VideoListItem;
   status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
   result?: ScrapeResult;
   normalized?: NormalizedScrapeResult;

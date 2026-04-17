@@ -4,7 +4,7 @@
  */
 
 import type {
-  SceneFolderListItemDto,
+  VideoSeriesListItemDto,
   GalleryListItemDto,
   ImageListItemDto,
   AudioLibraryListItemDto,
@@ -36,7 +36,7 @@ export const VIDEO_FOLDER_FIELDS = [
   "image",
   "seasonCount",
 ] as const;
-export type VideoFolderField = (typeof VIDEO_FOLDER_FIELDS)[number];
+export type VideoSeriesField = (typeof VIDEO_FOLDER_FIELDS)[number];
 
 export const GALLERY_FIELDS = [
   "title",
@@ -94,15 +94,15 @@ export type RowStatus =
 
 // ─── Row types per entity ──────────────────────────────────────────
 
-export interface VideoFolderRow {
-  folder: SceneFolderListItemDto;
+export interface VideoSeriesRow {
+  folder: VideoSeriesListItemDto;
   status: RowStatus;
-  result?: NormalizedFolderIdentifyResult;
+  result?: NormalizedSeriesIdentifyResult;
   /** The scrape_result DB row ID, used for accept/reject */
   scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
-  selectedFields: Set<VideoFolderField>;
+  selectedFields: Set<VideoSeriesField>;
   wizardStep: "idle" | "picking-series" | "mapping-episodes" | "confirmed";
   seriesCandidates?: SeriesCandidate[];
   selectedSeriesId?: string;
@@ -147,7 +147,7 @@ export interface AudioTrackRow {
 
 // ─── Normalized result types (from plugins) ────────────────────────
 
-export interface NormalizedFolderIdentifyResult {
+export interface NormalizedSeriesIdentifyResult {
   name: string | null;
   details: string | null;
   date: string | null;

@@ -356,7 +356,7 @@ export default function PluginsPage() {
     return true;
   });
 
-  const sceneCount = visibleInstalled.filter((pkg) => {
+  const videoCount = visibleInstalled.filter((pkg) => {
     const caps = pkg.capabilities as Record<string, boolean> | null;
     return caps && (caps.sceneByURL || caps.sceneByFragment || caps.sceneByName);
   }).length;
@@ -423,7 +423,7 @@ export default function PluginsPage() {
           <>
             <div className="surface-stat px-3 py-2">
               <span className="text-kicker !text-text-disabled">{entityTerms.scene} Scrapers</span>
-              <div className="text-lg font-semibold text-text-primary leading-tight">{sceneCount}</div>
+              <div className="text-lg font-semibold text-text-primary leading-tight">{videoCount}</div>
             </div>
             <div className="surface-stat px-3 py-2">
               <span className="text-kicker !text-text-disabled">{entityTerms.performer} Scrapers</span>

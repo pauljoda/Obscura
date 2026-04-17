@@ -9,7 +9,7 @@ import {
   fetchPerformerDetail,
   fetchScenes,
   type PerformerDetail,
-  type SceneListItem,
+  type VideoListItem,
 } from "../../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../../lib/nsfw-cookie";
 
@@ -25,7 +25,7 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
   const performer = await fetchPerformerDetail(id, { nsfw: nsfwMode }).catch(() => null as PerformerDetail | null);
 
   const emptyScenes = {
-    scenes: [] as SceneListItem[],
+    scenes: [] as VideoListItem[],
     total: 0,
     limit: 100,
     offset: 0,

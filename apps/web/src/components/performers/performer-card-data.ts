@@ -8,7 +8,7 @@ export interface PerformerCardData {
   id: string;
   href: string;
   name: string;
-  sceneCount: number;
+  videoCount: number;
   imageAppearanceCount: number;
   audioLibraryCount: number;
   favorite: boolean;
@@ -34,7 +34,7 @@ export function performerItemToCardData(performer: PerformerItem, from?: string)
     id: performer.id,
     href: from ? buildHrefWithFrom(base, from) : base,
     name: performer.name,
-    sceneCount: performer.sceneCount,
+    videoCount: performer.videoCount,
     imageAppearanceCount: performer.imageAppearanceCount,
     audioLibraryCount: performer.audioLibraryCount,
     favorite: performer.favorite,
@@ -52,7 +52,7 @@ export function searchPerformerItemToCardData(item: SearchResultItem, from?: str
     id: item.id,
     href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
-    sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
+    videoCount: readMetaNumber(item.meta, "videoCount") ?? 0,
     imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,
     audioLibraryCount: readMetaNumber(item.meta, "audioLibraryCount") ?? 0,
     favorite: false,

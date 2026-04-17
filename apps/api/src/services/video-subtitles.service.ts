@@ -19,7 +19,7 @@ import {
   type SubtitleFormat,
 } from "@obscura/media-core";
 import type {
-  SceneSubtitleTrackDto,
+  VideoSubtitleTrackDto,
   SubtitleCueDto,
 } from "@obscura/contracts";
 import { AppError } from "../plugins/error-handler";
@@ -48,8 +48,8 @@ async function resolveVideoKind(videoId: string): Promise<VideoEntityKind> {
 
 function trackToDto(
   row: typeof videoSubtitles.$inferSelect,
-): SceneSubtitleTrackDto {
-  const sourceFormat = (row.sourceFormat ?? "vtt") as SceneSubtitleTrackDto["sourceFormat"];
+): VideoSubtitleTrackDto {
+  const sourceFormat = (row.sourceFormat ?? "vtt") as VideoSubtitleTrackDto["sourceFormat"];
   const hasRawSource =
     (sourceFormat === "ass" || sourceFormat === "ssa") && !!row.sourcePath;
   return {
@@ -58,7 +58,7 @@ function trackToDto(
     language: row.language,
     label: row.label,
     format: "vtt",
-    source: row.source as SceneSubtitleTrackDto["source"],
+    source: row.source as VideoSubtitleTrackDto["source"],
     sourceFormat,
     isDefault: row.isDefault,
     url: `/videos/${row.entityId}/subtitles/${row.id}`,
@@ -74,7 +74,7 @@ function trackToDto(
 
 export async function listSubtitleTracks(
   videoId: string,
-): Promise<SceneSubtitleTrackDto[]> {
+): Promise<VideoSubtitleTrackDto[]> {
   // Resolve the kind so a 404 surfaces at list time if the id is bogus.
   const kind = await resolveVideoKind(videoId);
   const rows = await db
@@ -151,7 +151,7 @@ export async function updateSubtitleTrack(
   videoId: string,
   trackId: string,
   body: UpdateSubtitleBody,
-): Promise<SceneSubtitleTrackDto> {
+): Promise<VideoSubtitleTrackDto> {
   const existing = await getSubtitleTrack(videoId, trackId);
   const patch: Record<string, unknown> = {};
   if (typeof body.language === "string" && body.language.trim().length > 0) {
@@ -200,7 +200,7 @@ export async function uploadSubtitle(
   videoId: string,
   file: MultipartFile,
   fields: UploadSubtitleFields,
-): Promise<SceneSubtitleTrackDto> {
+): Promise<VideoSubtitleTrackDto> {
   const kind = await resolveVideoKind(videoId);
 
   const filename = file.filename ?? "subtitle";

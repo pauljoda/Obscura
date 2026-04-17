@@ -384,8 +384,8 @@ export function getGeneratedTagDir(tagId: string) {
   return path.join(getCacheRootDir(), "tags", tagId);
 }
 
-export function getGeneratedSceneFolderDir(sceneFolderId: string) {
-  return path.join(getCacheRootDir(), "scene-folders", sceneFolderId);
+export function getGeneratedSeriesDir(videoSeriesId: string) {
+  return path.join(getCacheRootDir(), "scene-folders", videoSeriesId);
 }
 
 /**

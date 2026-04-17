@@ -1,18 +1,17 @@
 /**
- * Video folders service — projects `video_series` rows as
- * `SceneFolderListItemDto` / `SceneFolderDetailDto`-shaped objects
- * so the existing folder-aware client can consume them.
+ * Video series service — projects `video_series` rows as
+ * `VideoSeriesListItemDto` / `VideoSeriesDetailDto` for the UI browser.
  *
- * V1 uses a flat folder model: every series is a depth-0 "folder"
- * with no parent and no children. Seasons exist as metadata on the
- * underlying episodes but are not exposed as subfolders.
+ * Series are flat (depth 0, no parent, no children). Seasons live
+ * inline on the detail payload via `fetchSeriesSeasons`, not as a
+ * separate drill level here.
  */
 import { existsSync } from "node:fs";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { MultipartFile } from "@fastify/multipart";
 import { and, asc, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
-import { getGeneratedSceneFolderDir } from "@obscura/media-core";
+import { getGeneratedSeriesDir } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import { parsePagination } from "../lib/query-helpers";
@@ -223,11 +222,11 @@ function toSeriesListItem(
     studioName,
     rating: series.rating,
     date: series.firstAirDate,
-    directSceneCount: episodeCount,
-    totalSceneCount: episodeCount,
-    visibleSfwSceneCount: episodeCount,
+    directVideoCount: episodeCount,
+    totalVideoCount: episodeCount,
+    visibleSfwVideoCount: episodeCount,
     containsNsfwDescendants: series.isNsfw,
-    childFolderCount: 0,
+    childSeasonCount: 0,
     previewThumbnailPaths,
     libraryRootId: series.libraryRootId,
     libraryRootLabel,
@@ -236,7 +235,7 @@ function toSeriesListItem(
   };
 }
 
-export async function listVideoFolders(query: {
+export async function listVideoSeries(query: {
   parent?: string;
   root?: string;
   search?: string;
@@ -245,6 +244,7 @@ export async function listVideoFolders(query: {
   nsfw?: string;
   studio?: string;
   tag?: string;
+  performer?: string;
 }) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 60, 200);
 
@@ -288,6 +288,19 @@ export async function listVideoFolders(query: {
     conds.push(inArray(videoSeries.id, tagFilterIds));
   }
 
+  if (query.performer) {
+    const performerRows = await db
+      .select({ seriesId: videoSeriesPerformers.seriesId })
+      .from(videoSeriesPerformers)
+      .innerJoin(performers, eq(videoSeriesPerformers.performerId, performers.id))
+      .where(ilike(performers.name, query.performer));
+    const performerFilterIds = performerRows.map((r) => r.seriesId);
+    if (performerFilterIds.length === 0) {
+      return { items: [], total: 0, limit, offset };
+    }
+    conds.push(inArray(videoSeries.id, performerFilterIds));
+  }
+
   const where = conds.length > 0 ? and(...conds) : undefined;
   const all = await db
     .select()
@@ -329,7 +342,7 @@ export async function listVideoFolders(query: {
   return { items, total, limit, offset };
 }
 
-export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
+export async function getVideoSeriesDetail(id: string, nsfwMode?: string) {
   const [series] = await db
     .select()
     .from(videoSeries)
@@ -337,10 +350,10 @@ export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
     .limit(1);
 
   if (!series) {
-    throw new AppError(404, "Video folder not found");
+    throw new AppError(404, "Series not found");
   }
   if (nsfwMode === "off" && series.isNsfw) {
-    throw new AppError(404, "Video folder not found");
+    throw new AppError(404, "Series not found");
   }
 
   const [rootLabels, studioNames, episodeCounts, previews, seasons] =
@@ -418,7 +431,7 @@ export async function getVideoFolderDetail(id: string, nsfwMode?: string) {
   };
 }
 
-export async function updateVideoFolder(
+export async function updateVideoSeries(
   id: string,
   patch: {
     isNsfw?: boolean;
@@ -436,7 +449,7 @@ export async function updateVideoFolder(
     .from(videoSeries)
     .where(eq(videoSeries.id, id))
     .limit(1);
-  if (!series) throw new AppError(404, "Video folder not found");
+  if (!series) throw new AppError(404, "Series not found");
 
   await db.transaction(async (tx) => {
     const updatePatch: Record<string, unknown> = { updatedAt: new Date() };
@@ -538,7 +551,7 @@ function coverFilename(kind: CoverKind) {
 }
 
 function coverAssetUrl(seriesId: string, kind: CoverKind) {
-  return `/assets/video-folders/${seriesId}/${kind}`;
+  return `/assets/video-series/${seriesId}/${kind}`;
 }
 
 async function writeSeriesImage(
@@ -551,9 +564,9 @@ async function writeSeriesImage(
     .from(videoSeries)
     .where(eq(videoSeries.id, id))
     .limit(1);
-  if (!series) throw new AppError(404, "Video folder not found");
+  if (!series) throw new AppError(404, "Series not found");
 
-  const dir = getGeneratedSceneFolderDir(id);
+  const dir = getGeneratedSeriesDir(id);
   await mkdir(dir, { recursive: true });
   const outPath = path.join(dir, coverFilename(kind));
   await writeFile(outPath, buffer);
@@ -571,12 +584,12 @@ async function writeSeriesImage(
 }
 
 /**
- * Accept a multipart upload for a folder cover or backdrop. Writes the
+ * Accept a multipart upload for a series cover or backdrop. Writes the
  * image to the series' cache directory and points `posterPath` /
  * `backdropPath` at the new asset URL so the list + detail views
  * immediately reflect it.
  */
-export async function uploadVideoFolderCover(
+export async function uploadVideoSeriesCover(
   id: string,
   kind: CoverKind,
   file: MultipartFile,
@@ -594,7 +607,7 @@ export async function uploadVideoFolderCover(
  * backdrop. Used by scrape-accept flows so a plugin can hand in a URL
  * without having to pre-download the bytes.
  */
-export async function setVideoFolderCoverFromUrl(
+export async function setVideoSeriesCoverFromUrl(
   id: string,
   kind: CoverKind,
   imageUrl: string,
@@ -615,8 +628,8 @@ export async function setVideoFolderCoverFromUrl(
   return { ok: true as const, url };
 }
 
-/** Delete the user-uploaded cover / backdrop for a folder. */
-export async function deleteVideoFolderCover(
+/** Delete the user-uploaded cover / backdrop for a series. */
+export async function deleteVideoSeriesCover(
   id: string,
   kind: CoverKind,
 ) {
@@ -629,9 +642,9 @@ export async function deleteVideoFolderCover(
     .from(videoSeries)
     .where(eq(videoSeries.id, id))
     .limit(1);
-  if (!series) throw new AppError(404, "Video folder not found");
+  if (!series) throw new AppError(404, "Series not found");
 
-  const dir = getGeneratedSceneFolderDir(id);
+  const dir = getGeneratedSeriesDir(id);
   const onDisk = path.join(dir, coverFilename(kind));
   if (existsSync(onDisk)) {
     await unlink(onDisk).catch(() => undefined);

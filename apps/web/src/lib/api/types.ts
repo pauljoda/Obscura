@@ -20,13 +20,13 @@ import type {
   NormalizedTagScrapeResultDto,
   PerformerDetailDto,
   PerformerListItemDto,
-  SceneDetailDto,
-  SceneFolderDetailDto,
-  SceneFolderListItemDto,
-  SceneListItemDto,
-  SceneMarkerDto,
-  SceneStatsDto,
-  SceneSubtitleTrackDto,
+  VideoDetailDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListItemDto,
+  VideoListItemDto,
+  VideoMarkerDto,
+  VideoStatsDto,
+  VideoSubtitleTrackDto,
   ScrapeResultDto,
   ScraperPackageDto,
   StashBoxEndpointDto,
@@ -46,25 +46,15 @@ import type {
   CommunityIndexEntryDto,
 } from "@obscura/contracts";
 
-// ─── Video aliases (wire types still named Scene*Dto in contracts) ─
-export type VideoListItem = SceneListItemDto;
-export type VideoDetail = SceneDetailDto;
-export type VideoStats = SceneStatsDto;
-export type VideoMarkerDto = SceneMarkerDto;
-export type VideoSubtitleTrackDto = SceneSubtitleTrackDto;
-export type { SubtitleCueDto };
-// Legacy aliases — keep until every call site reads the new names.
-export type SceneListItem = VideoListItem;
-export type SceneStats = VideoStats;
-export type MarkerDto = VideoMarkerDto;
-export type { SceneSubtitleTrackDto };
+// ─── Video aliases ──────────────────────────────────────────────
+export type VideoListItem = VideoListItemDto;
+export type VideoDetail = VideoDetailDto;
+export type VideoStats = VideoStatsDto;
+export type { VideoMarkerDto, VideoSubtitleTrackDto, SubtitleCueDto };
 
 // ─── Series (video_series) aliases ──────────────────────────────
-export type SeriesListItem = SceneFolderListItemDto;
-export type SeriesDetail = SceneFolderDetailDto;
-// Legacy aliases
-export type SceneFolderListItem = SeriesListItem;
-export type SceneFolderDetail = SeriesDetail;
+export type SeriesListItem = VideoSeriesListItemDto;
+export type SeriesDetail = VideoSeriesDetailDto;
 
 // ─── Performer aliases ──────────────────────────────────────────
 export type PerformerItem = PerformerListItemDto;

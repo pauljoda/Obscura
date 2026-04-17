@@ -257,7 +257,7 @@ export async function listPerformers(query: ListPerformersQuery) {
         favorite: performers.favorite,
         rating: performers.rating,
         isNsfw: performers.isNsfw,
-        sceneCount: sceneCountSelect,
+        videoCount: sceneCountSelect,
         imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
         audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
         country: performers.country,
@@ -277,7 +277,7 @@ export async function listPerformers(query: ListPerformersQuery) {
   return {
     performers: rows.map((r) => ({
       ...r,
-      sceneCount: Number(r.sceneCount ?? 0),
+      videoCount: Number(r.videoCount ?? 0),
       imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
       audioLibraryCount: Number(r.audioLibraryCount ?? 0),
       createdAt: r.createdAt.toISOString(),
@@ -315,7 +315,7 @@ export async function getPerformerById(id: string, sfwOnly: boolean) {
     })
     .from(performers)
     .where(eq(performers.id, id));
-  const sceneCount = Number(cnt?.n ?? 0);
+  const videoCount = Number(cnt?.n ?? 0);
 
   return {
     id: row.id,
@@ -341,7 +341,7 @@ export async function getPerformerById(id: string, sfwOnly: boolean) {
     favorite: row.favorite,
     rating: row.rating,
     isNsfw: row.isNsfw,
-    sceneCount,
+    videoCount,
     tags: row.performerTags.map((pt) => ({
       id: pt.tag.id,
       name: pt.tag.name,

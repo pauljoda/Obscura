@@ -4,7 +4,7 @@ import { Film, Images, Music } from "lucide-react";
 import { cn } from "@obscura/ui/lib/utils";
 
 interface MediaAppearanceCountsProps {
-  sceneCount: number;
+  videoCount: number;
   imageAppearanceCount: number;
   audioLibraryCount: number;
   className?: string;
@@ -15,7 +15,7 @@ interface MediaAppearanceCountsProps {
 }
 
 export function MediaAppearanceCounts({
-  sceneCount,
+  videoCount,
   imageAppearanceCount,
   audioLibraryCount,
   className,
@@ -35,7 +35,7 @@ export function MediaAppearanceCounts({
     >
       <span className="inline-flex items-center gap-1" title="Videos">
         <Film className={cn(iconClass)} aria-hidden />
-        <span>{sceneCount}</span>
+        <span>{videoCount}</span>
       </span>
       <span className="inline-flex items-center gap-1" title="Galleries and images">
         <Images className={cn(iconClass)} aria-hidden />

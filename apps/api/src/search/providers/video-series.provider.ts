@@ -13,7 +13,7 @@ const { videoSeries } = schema;
  * `kind: "video-series"` and links at `/videos?folder=:id` which the
  * /videos list already routes through the video-folder service.
  */
-export const sceneFoldersSearchProvider: SearchProvider = {
+export const videoSeriesSearchProvider: SearchProvider = {
   kind: "video-series",
   label: "Folders",
   defaultPreviewLimit: 2,
@@ -89,7 +89,7 @@ export const sceneFoldersSearchProvider: SearchProvider = {
           href: `/videos?folder=${r.id}`,
           rating: r.rating,
           score: Number(r.score ?? 0),
-          meta: { sceneCount: episodeCount },
+          meta: { videoCount: episodeCount },
         };
       }),
     };

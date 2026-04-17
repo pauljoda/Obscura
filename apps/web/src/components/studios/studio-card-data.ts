@@ -8,7 +8,7 @@ export interface StudioCardData {
   id: string;
   href: string;
   name: string;
-  sceneCount: number;
+  videoCount: number;
   imageAppearanceCount: number;
   audioLibraryCount: number;
   favorite: boolean;
@@ -28,7 +28,7 @@ export function studioItemToCardData(studio: StudioItem, from?: string): StudioC
     id: studio.id,
     href: from ? buildHrefWithFrom(base, from) : base,
     name: studio.name,
-    sceneCount: studio.sceneCount,
+    videoCount: studio.videoCount,
     imageAppearanceCount: studio.imageAppearanceCount,
     audioLibraryCount: studio.audioLibraryCount,
     favorite: studio.favorite,
@@ -45,7 +45,7 @@ export function searchStudioItemToCardData(item: SearchResultItem, from?: string
     id: item.id,
     href: from ? buildHrefWithFrom(item.href, from) : item.href,
     name: item.title,
-    sceneCount: readMetaNumber(item.meta, "sceneCount") ?? 0,
+    videoCount: readMetaNumber(item.meta, "videoCount") ?? 0,
     imageAppearanceCount: readMetaNumber(item.meta, "imageAppearanceCount") ?? 0,
     audioLibraryCount: readMetaNumber(item.meta, "audioLibraryCount") ?? 0,
     favorite: false,
