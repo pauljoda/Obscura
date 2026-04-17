@@ -6,8 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- **StashBox endpoints (StashDB, FansDB, ThePornDB, MetadataAPI, etc.) are now hidden in SFW mode.** Previously, even with NSFW mode turned off, configured StashBox endpoints still showed up in the Identify and Bulk Scrape provider pickers because they were never checked against the NSFW filter. They're now treated as NSFW-by-default like the community Stash scrapers, so SFW mode hides them everywhere they're offered as a metadata source.
+- **YouTube identify now works without an API key.** The plugin's primary lookup path is YouTube's oEmbed endpoint (no auth, returns title / channel / thumbnail) — a Data API key is now optional and only upgrades results with description, duration, tags. The expensive (and frequently key-restricted) `search.list`-based "video by title" capability has been removed; YouTube identify is URL-only, which fits how the plugin is actually used. **Update the YouTube plugin to v0.3.0** to pick up the change.
+
 ### Changed
 
+- StashBox endpoints (StashDB / FansDB / ThePornDB / MetadataAPI / any other endpoint reachable via the StashBox protocol) now carry `isNsfw: true` on every API response and the Bulk Scrape / Identify provider picker filters them through `useNsfwAwareProviders` like all other providers. Previously they bypassed the NSFW filter entirely. The flag is unconditional at the API layer — there is no per-endpoint toggle to mark a StashBox endpoint SFW because the protocol is, by design, a porn metadata exchange.
 - Videos page now defaults to **Series** view on first load instead of the flat grid of every video. Existing users with a saved view-mode preference keep their choice; only users with no cookie (fresh installs, new devices, or users who had previously chosen the old default) see the new landing. The grid / list / series toggle in the filter bar still writes to the same cookie, so any explicit choice continues to round-trip across reloads and browser sessions.
 - `/plugins/obscura-index` now defaults to the public GitHub-hosted plugin registry (`https://raw.githubusercontent.com/pauljoda/obscura-community-plugins/main`) in production when no `OBSCURA_PLUGIN_INDEX_URL` / `_PATH` is configured, so `latest` installs have a working registry out of the box. The route also resolves each entry's relative `path` (e.g. `plugins/tmdb/tmdb.zip`) to an absolute URL against the registry base, and appends `/index.yml` automatically if the configured URL points at the repo root.
 - `fetchPluginIndex()` in `@obscura/plugins` exports new helpers `resolveIndexUrl()` and `resolveEntryZipUrl()`, and appends `/index.yml` to base URLs automatically. Error messages now include the resolved URL so broken configs are easier to debug.

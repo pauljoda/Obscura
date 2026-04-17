@@ -884,6 +884,12 @@ export interface StashBoxEndpointDto {
   /** Masked — only last 4 chars shown */
   apiKeyPreview: string;
   enabled: boolean;
+  /**
+   * Always true. Every StashBox-protocol endpoint (StashDB, FansDB,
+   * ThePornDB, MetadataAPI, etc.) is treated as NSFW so the SFW mode
+   * filter hides them from the identify / bulk-scrape provider list.
+   */
+  isNsfw: boolean;
   createdAt: string;
   updatedAt: string;
 }

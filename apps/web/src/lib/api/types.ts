@@ -98,6 +98,8 @@ export interface StashBoxEndpoint {
   endpoint: string;
   apiKeyPreview: string;
   enabled: boolean;
+  /** Always true — see StashBoxEndpointDto. */
+  isNsfw: boolean;
   createdAt: string;
   updatedAt: string;
 }

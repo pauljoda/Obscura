@@ -305,6 +305,11 @@ export function BulkScrape() {
   // as a seek source for a SFW run. The hook filters against the
   // current NsfwContext mode.
   const nsfwAwarePlugins = useNsfwAwareProviders(plugins);
+  // StashBox endpoints (StashDB / FansDB / ThePornDB / MetadataAPI /
+  // …) are always NSFW — the API stamps `isNsfw: true` on every
+  // returned endpoint. Run them through the same SFW filter so the
+  // provider picker hides them in SFW mode.
+  const nsfwAwareStashBoxEndpoints = useNsfwAwareProviders(stashBoxEndpoints);
 
   // Filter Obscura plugins by capabilities relevant to the current tab
   const pluginsForTab = nsfwAwarePlugins.filter((p) => {
@@ -323,7 +328,7 @@ export function BulkScrape() {
 
   // Build unified provider list: StashBox first, then Obscura plugins, then stash scrapers
   const providersForTab: Provider[] = [
-    ...stashBoxEndpoints.map((ep) => ({ id: `stashbox:${ep.id}`, name: ep.name, type: "stashbox" as const })),
+    ...nsfwAwareStashBoxEndpoints.map((ep) => ({ id: `stashbox:${ep.id}`, name: ep.name, type: "stashbox" as const })),
     ...pluginsForTab.map((p) => ({ id: `plugin:${p.id}`, name: p.name, type: "scraper" as const })),
     ...scrapersForTab.map((s) => ({ id: `scraper:${s.id}`, name: s.name, type: "scraper" as const })),
   ];
@@ -490,9 +495,9 @@ export function BulkScrape() {
                   ))}
                 </optgroup>
               )}
-              {stashBoxEndpoints.length > 0 && (
+              {nsfwAwareStashBoxEndpoints.length > 0 && (
                 <optgroup label="Stash-Box">
-                  {stashBoxEndpoints.map((ep) => (
+                  {nsfwAwareStashBoxEndpoints.map((ep) => (
                     <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
                   ))}
                 </optgroup>

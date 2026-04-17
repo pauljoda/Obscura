@@ -96,6 +96,11 @@ export async function stashboxRoutes(app: FastifyInstance) {
         endpoint: r.endpoint,
         apiKeyPreview: maskApiKey(r.apiKey),
         enabled: r.enabled,
+        // StashBox is the porn-metadata-exchange protocol used by
+        // StashDB, FansDB, ThePornDB, MetadataAPI, etc. Every endpoint
+        // reachable via this interface is treated as NSFW so the SFW
+        // mode filter hides them from identify / bulk-scrape pickers.
+        isNsfw: true,
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
       })),
@@ -145,6 +150,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       endpoint: created.endpoint,
       apiKeyPreview: maskApiKey(created.apiKey),
       enabled: created.enabled,
+      isNsfw: true,
       createdAt: created.createdAt.toISOString(),
       updatedAt: created.updatedAt.toISOString(),
     });
@@ -203,6 +209,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       endpoint: updated.endpoint,
       apiKeyPreview: maskApiKey(updated.apiKey),
       enabled: updated.enabled,
+      isNsfw: true,
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString(),
     };
