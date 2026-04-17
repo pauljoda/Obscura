@@ -25,6 +25,7 @@ import yaml from "js-yaml";
 
 const {
   scraperPackages,
+  pluginPackages,
   scrapeResults,
   performers,
   tags,
@@ -938,6 +939,30 @@ export async function scrapersRoutes(app: FastifyInstance) {
     const videoKind = entityType as VideoEntityKind;
     const videoId = entityId;
 
+    // Derive NSFW default from the provider that produced this result.
+    // StashBox endpoints and stash-compat community scrapers are porn-
+    // metadata sources by design, so their matches flag content NSFW.
+    // Obscura plugins (YouTube, TMDB, MusicBrainz, …) are general-purpose
+    // — honor the plugin manifest's `isNsfw` flag instead of assuming true.
+    let resultIsNsfw = false;
+    if (result.stashBoxEndpointId) {
+      resultIsNsfw = true;
+    } else if (result.scraperPackageId) {
+      const [pkg] = await db
+        .select({ isNsfw: scraperPackages.isNsfw })
+        .from(scraperPackages)
+        .where(eq(scraperPackages.id, result.scraperPackageId))
+        .limit(1);
+      resultIsNsfw = pkg?.isNsfw ?? true;
+    } else if (result.pluginPackageId) {
+      const [pkg] = await db
+        .select({ isNsfw: pluginPackages.isNsfw })
+        .from(pluginPackages)
+        .where(eq(pluginPackages.id, result.pluginPackageId))
+        .limit(1);
+      resultIsNsfw = pkg?.isNsfw ?? false;
+    }
+
     // Determine which fields to apply (all if not specified)
     const fieldsToApply = new Set(
       body.fields ?? [
@@ -1029,7 +1054,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
               url: studioUrl,
               imageUrl: studioImage,
               parentId,
-              isNsfw: true,
+              isNsfw: resultIsNsfw,
             })
             .returning({ id: studios.id });
           return created.id;
@@ -1055,9 +1080,11 @@ export async function scrapersRoutes(app: FastifyInstance) {
         }
       }
 
-      // Mark organized and NSFW (identify flow always treats content as NSFW)
+      // Mark organized. NSFW defaults to the provider's flag: NSFW for
+      // stash-based sources, off for general-purpose Obscura plugins like
+      // YouTube. The user can still flip this manually on the video.
       videoUpdate.organized = true;
-      videoUpdate.isNsfw = true;
+      videoUpdate.isNsfw = resultIsNsfw;
 
       // Update the correct video table
       if (videoKind === "video_episode") {
@@ -1096,7 +1123,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const performerId = existing?.id ?? (
             await tx
               .insert(performers)
-              .values({ name, isNsfw: true })
+              .values({ name, isNsfw: resultIsNsfw })
               .returning({ id: performers.id })
           )[0].id;
 
@@ -1185,7 +1212,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const tagId = existing?.id ?? (
             await tx
               .insert(tags)
-              .values({ name, isNsfw: true })
+              .values({ name, isNsfw: resultIsNsfw })
               .returning({ id: tags.id })
           )[0].id;
 
