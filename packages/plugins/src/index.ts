@@ -82,6 +82,8 @@ export {
 export {
   fetchPluginIndex,
   clearPluginIndexCache,
+  resolveIndexUrl,
+  resolveEntryZipUrl,
 } from "./index-fetcher";
 
 export * from "./external-ids";

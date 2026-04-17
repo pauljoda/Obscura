@@ -33,6 +33,7 @@ import {
   fetchStashBoxEndpoints,
   fetchObscuraPluginIndex,
   fetchInstalledPlugins,
+  fetchPluginUpdates,
   installObscuraPlugin,
   installScraper,
   uninstallScraper,
@@ -49,6 +50,7 @@ import {
   type StashBoxEndpoint,
   type ObscuraPluginIndexEntry,
   type InstalledPlugin,
+  type PluginUpdateStatus,
 } from "../../../lib/api";
 import { entityTerms } from "../../../lib/terminology";
 import { useNsfw } from "../../../components/nsfw/nsfw-context";
@@ -90,6 +92,9 @@ export default function PluginsPage() {
   // Installed state (stash scrapers + obscura plugins)
   const [installed, setInstalled] = useState<ScraperPackage[]>([]);
   const [installedPlugins, setInstalledPlugins] = useState<InstalledPlugin[]>([]);
+  const [pluginUpdates, setPluginUpdates] = useState<Record<string, PluginUpdateStatus>>({});
+  const [updatingPluginId, setUpdatingPluginId] = useState<string | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
   const [loading, setLoading] = useState(true);
   const [capFilter, setCapFilter] = useState<CapFilter>("all");
   const [installedSearch, setInstalledSearch] = useState("");
@@ -139,6 +144,24 @@ export default function PluginsPage() {
 
   /* ─── Data loading ────────────────────────────────────────── */
 
+  const loadPluginUpdates = useCallback(
+    async (refresh = false) => {
+      setCheckingUpdates(true);
+      try {
+        const rows = await fetchPluginUpdates({ refresh });
+        const map: Record<string, PluginUpdateStatus> = {};
+        for (const row of rows) map[row.pluginId] = row;
+        setPluginUpdates(map);
+      } catch {
+        // Registry unreachable — silently leave update info empty.
+        // Users can still manage plugins without update checks.
+      } finally {
+        setCheckingUpdates(false);
+      }
+    },
+    [],
+  );
+
   const loadInstalled = useCallback(async () => {
     try {
       const [scrapersRes, endpointsRes, pluginsRes] = await Promise.all([
@@ -149,12 +172,35 @@ export default function PluginsPage() {
       setInstalled(scrapersRes.packages);
       setStashBoxEndpoints(endpointsRes.endpoints);
       setInstalledPlugins(pluginsRes);
+      if (pluginsRes.length > 0) void loadPluginUpdates(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load plugins");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadPluginUpdates]);
+
+  async function handlePluginUpdate(plugin: InstalledPlugin) {
+    const update = pluginUpdates[plugin.pluginId];
+    if (!update || !update.updateAvailable || !update.zipUrl) return;
+    setUpdatingPluginId(plugin.id);
+    setError(null);
+    try {
+      await installObscuraPlugin(plugin.pluginId, {
+        zipUrl: update.zipUrl,
+        sha256: update.sha256 || undefined,
+      });
+      flashMessage(
+        `Updated ${plugin.name} → v${update.availableVersion}`,
+      );
+      await loadInstalled();
+      await loadPluginUpdates(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update plugin");
+    } finally {
+      setUpdatingPluginId(null);
+    }
+  }
 
   useEffect(() => {
     void loadInstalled();
@@ -512,6 +558,23 @@ export default function PluginsPage() {
               </>
             )}
             <div className="flex-1" />
+            {installedPlugins.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void loadPluginUpdates(true)}
+                disabled={checkingUpdates}
+                className="h-auto gap-1.5 px-2.5 py-1.5 text-xs"
+                title="Check community registry for plugin updates"
+              >
+                {checkingUpdates ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Check for updates
+              </Button>
+            )}
             <span className="text-mono-sm text-text-disabled">{filteredInstalled.length} shown</span>
           </div>
 
@@ -532,6 +595,9 @@ export default function PluginsPage() {
                 <InstalledPluginCard
                   key={plugin.id}
                   plugin={plugin}
+                  update={pluginUpdates[plugin.pluginId]}
+                  updating={updatingPluginId === plugin.id}
+                  onUpdate={() => void handlePluginUpdate(plugin)}
                   onToggle={async () => {
                     try {
                       await togglePlugin(plugin.id, !plugin.enabled);
@@ -862,6 +928,9 @@ export default function PluginsPage() {
 
 function InstalledPluginCard({
   plugin,
+  update,
+  updating,
+  onUpdate,
   onToggle,
   onRemove,
   onAuthSaved,
@@ -869,6 +938,9 @@ function InstalledPluginCard({
   setError: setErr,
 }: {
   plugin: InstalledPlugin;
+  update?: PluginUpdateStatus;
+  updating?: boolean;
+  onUpdate?: () => void;
   onToggle: () => void;
   onRemove: () => void;
   onAuthSaved: () => void;
@@ -915,6 +987,15 @@ function InstalledPluginCard({
               <span className="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
               {plugin.isNsfw && <span className="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>}
               <Badge variant={plugin.enabled ? "accent" : "default"} className="text-[0.55rem]">{plugin.enabled ? "Enabled" : "Disabled"}</Badge>
+              {update?.updateAvailable && (
+                <span
+                  className="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20"
+                  title={`v${update.installedVersion} → v${update.availableVersion}`}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  Update available
+                </span>
+              )}
               {hasAuth && (
                 <span className={cn(
                   "inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5",
@@ -938,6 +1019,21 @@ function InstalledPluginCard({
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {update?.updateAvailable && onUpdate && (
+              <button
+                onClick={onUpdate}
+                disabled={updating}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-status-success-text hover:text-text-primary transition-colors duration-fast disabled:opacity-40"
+                title={`Install v${update.availableVersion}`}
+              >
+                {updating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Update
+              </button>
+            )}
             {hasAuth && (
               <button onClick={() => setAuthExpanded((v) => !v)}
                 className={cn("flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast",

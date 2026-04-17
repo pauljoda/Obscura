@@ -289,11 +289,31 @@ export interface ObscuraPluginIndexEntry {
   requires?: string[];
   installed?: boolean;
   installedVersion?: string | null;
+  updateAvailable?: boolean;
   localPath?: string;
 }
 
-export async function fetchObscuraPluginIndex(): Promise<ObscuraPluginIndexEntry[]> {
-  return fetchApi("/plugins/obscura-index");
+export async function fetchObscuraPluginIndex(
+  options: { refresh?: boolean } = {},
+): Promise<ObscuraPluginIndexEntry[]> {
+  const qs = options.refresh ? "?refresh=1" : "";
+  return fetchApi(`/plugins/obscura-index${qs}`);
+}
+
+export interface PluginUpdateStatus {
+  pluginId: string;
+  installedVersion: string;
+  availableVersion: string | null;
+  updateAvailable: boolean;
+  zipUrl: string | null;
+  sha256: string | null;
+}
+
+export async function fetchPluginUpdates(
+  options: { refresh?: boolean } = {},
+): Promise<PluginUpdateStatus[]> {
+  const qs = options.refresh ? "?refresh=1" : "";
+  return fetchApi(`/plugins/check-updates${qs}`);
 }
 
 export async function installObscuraPlugin(

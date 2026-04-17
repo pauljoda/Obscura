@@ -9,6 +9,31 @@ let indexCache: { data: PluginIndexEntry[]; fetchedAt: number } | null = null;
 const INDEX_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
+ * Resolve a user-supplied registry URL to the concrete `index.yml`
+ * location. Callers may pass the base directory (e.g. the
+ * `raw.githubusercontent.com/.../main` URL from `.env.example`) or the
+ * full file URL; both should work.
+ */
+export function resolveIndexUrl(base: string): string {
+  if (/\.(ya?ml)(\?|#|$)/i.test(base)) return base;
+  return base.replace(/\/+$/, "") + "/index.yml";
+}
+
+/**
+ * Resolve a plugin entry's relative `path` field (e.g.
+ * `plugins/tmdb/tmdb.zip`) against the registry base URL so callers
+ * get an absolute URL they can pass to `fetch`.
+ */
+export function resolveEntryZipUrl(
+  base: string,
+  entryPath: string,
+): string {
+  if (/^https?:\/\//i.test(entryPath)) return entryPath;
+  const root = base.replace(/\/index\.ya?ml(\?.*)?$/i, "").replace(/\/+$/, "");
+  return `${root}/${entryPath.replace(/^\/+/, "")}`;
+}
+
+/**
  * Fetch the community plugin index from the given URL.
  * Returns cached data if still fresh.
  */
@@ -24,10 +49,11 @@ export async function fetchPluginIndex(
     return indexCache.data;
   }
 
-  const res = await fetch(indexUrl);
+  const resolved = resolveIndexUrl(indexUrl);
+  const res = await fetch(resolved);
   if (!res.ok) {
     throw new Error(
-      `Failed to fetch plugin index: ${res.status} ${res.statusText}`,
+      `Failed to fetch plugin index (${resolved}): ${res.status} ${res.statusText}`,
     );
   }
 

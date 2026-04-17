@@ -17,6 +17,7 @@ import {
   PluginExecutionError,
   fetchPluginIndex,
   clearPluginIndexCache,
+  resolveEntryZipUrl,
   type PluginIndexEntry,
   type InstalledPluginDto,
   type OscuraPluginManifest,
@@ -703,10 +704,19 @@ export async function pluginsRoutes(app: FastifyInstance) {
   });
 
   // ─── Obscura community plugin index ─────────────────────────
-  app.get("/plugins/obscura-index", async (_req, reply) => {
-    // In dev, read from local disk path; in production, fetch from remote URL
+  app.get<{ Querystring: { refresh?: string } }>(
+    "/plugins/obscura-index",
+    async (req, reply) => {
+    const forceRefresh = req.query.refresh === "1" || req.query.refresh === "true";
+    // In dev, read from local disk path; in production, fetch from remote URL.
+    // When no env var is set and we're not in dev, default to the public
+    // Obscura community repo on GitHub so `latest` installs Just Work.
     let localPath = process.env.OBSCURA_PLUGIN_INDEX_PATH;
-    const remoteUrl = process.env.OBSCURA_PLUGIN_INDEX_URL;
+    const remoteUrl =
+      process.env.OBSCURA_PLUGIN_INDEX_URL ??
+      (process.env.NODE_ENV === "production"
+        ? "https://raw.githubusercontent.com/pauljoda/obscura-community-plugins/main"
+        : undefined);
 
     // Dev fallback: walk up from cwd looking for the sibling repo
     if (!localPath && !remoteUrl && process.env.NODE_ENV !== "production") {
@@ -741,13 +751,21 @@ export async function pluginsRoutes(app: FastifyInstance) {
           .from(pluginPackages);
         const installedMap = new Map(installedPlugins.map((p) => [p.pluginId, p.version]));
 
-        return entries.map((e: Record<string, unknown>) => ({
-          ...e,
-          installed: installedMap.has(String(e.id)),
-          installedVersion: installedMap.get(String(e.id)) ?? null,
-          // Include local path so the frontend can install from disk
-          localPath: path.join(localPath, "plugins", String(e.id)),
-        }));
+        return entries.map((e: Record<string, unknown>) => {
+          const id = String(e.id);
+          const installedVersion = installedMap.get(id) ?? null;
+          const updateAvailable =
+            installedVersion !== null &&
+            compareSemver(String(e.version ?? "0.0.0"), installedVersion) > 0;
+          return {
+            ...e,
+            installed: installedMap.has(id),
+            installedVersion,
+            updateAvailable,
+            // Include local path so the frontend can install from disk
+            localPath: path.join(localPath!, "plugins", id),
+          };
+        });
       } catch (err) {
         return reply.code(500).send({
           error: `Failed to read plugin index: ${err instanceof Error ? err.message : String(err)}`,
@@ -757,7 +775,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
 
     if (remoteUrl) {
       try {
-        const entries = await fetchPluginIndex(remoteUrl);
+        if (forceRefresh) clearPluginIndexCache();
+        const entries = await fetchPluginIndex(remoteUrl, forceRefresh);
 
         const installedPlugins = await db
           .select({ pluginId: pluginPackages.pluginId, version: pluginPackages.version })
@@ -766,8 +785,15 @@ export async function pluginsRoutes(app: FastifyInstance) {
 
         return entries.map((e) => ({
           ...e,
+          // Resolve relative zip paths (e.g. `plugins/tmdb/tmdb.zip`)
+          // against the registry base URL so the frontend can pass the
+          // resulting absolute URL straight to `POST /plugins/packages`.
+          path: resolveEntryZipUrl(remoteUrl, e.path),
           installed: installedMap.has(e.id),
           installedVersion: installedMap.get(e.id) ?? null,
+          updateAvailable:
+            installedMap.has(e.id) &&
+            compareSemver(e.version, installedMap.get(e.id) ?? "0.0.0") > 0,
         }));
       } catch (err) {
         return reply.code(502).send({
@@ -779,5 +805,76 @@ export async function pluginsRoutes(app: FastifyInstance) {
     return reply.code(404).send({
       error: "No plugin index configured. Set OBSCURA_PLUGIN_INDEX_PATH (dev) or OBSCURA_PLUGIN_INDEX_URL (production).",
     });
-  });
+    },
+  );
+
+  // ─── Plugin update check ─────────────────────────────────────
+  // Returns one entry per installed plugin with {installedVersion,
+  // availableVersion, updateAvailable, zipUrl, sha256} so the UI can
+  // show "Update available" badges without re-fetching the full index
+  // on every render.
+  app.get<{ Querystring: { refresh?: string } }>(
+    "/plugins/check-updates",
+    async (req, reply) => {
+      const forceRefresh =
+        req.query.refresh === "1" || req.query.refresh === "true";
+      const remoteUrl =
+        process.env.OBSCURA_PLUGIN_INDEX_URL ??
+        "https://raw.githubusercontent.com/pauljoda/obscura-community-plugins/main";
+
+      const installedPlugins = await db
+        .select({ pluginId: pluginPackages.pluginId, version: pluginPackages.version })
+        .from(pluginPackages);
+
+      let entries: PluginIndexEntry[];
+      try {
+        if (forceRefresh) clearPluginIndexCache();
+        entries = await fetchPluginIndex(remoteUrl, forceRefresh);
+      } catch (err) {
+        return reply.code(502).send({
+          error: `Failed to fetch remote plugin index: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+
+      const byId = new Map(entries.map((e) => [e.id, e]));
+      return installedPlugins.map((p) => {
+        const remote = byId.get(p.pluginId);
+        const availableVersion = remote?.version ?? null;
+        const updateAvailable =
+          !!availableVersion &&
+          compareSemver(availableVersion, p.version) > 0;
+        return {
+          pluginId: p.pluginId,
+          installedVersion: p.version,
+          availableVersion,
+          updateAvailable,
+          zipUrl: remote ? resolveEntryZipUrl(remoteUrl, remote.path) : null,
+          sha256: remote?.sha256 || null,
+        };
+      });
+    },
+  );
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────
+
+/**
+ * Compare two dotted version strings ("0.3.1" vs "0.3.10"). Returns
+ * a negative number if a < b, zero if equal, positive if a > b. Any
+ * non-numeric suffix (e.g. "0.3.1-beta") is stripped before comparing.
+ */
+function compareSemver(a: string, b: string): number {
+  const parse = (v: string) =>
+    v
+      .split(/[-+]/)[0]
+      .split(".")
+      .map((s) => Number.parseInt(s, 10) || 0);
+  const pa = parse(a);
+  const pb = parse(b);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
 }
