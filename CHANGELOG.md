@@ -8,8 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Identify now works on the non-video tabs.** Previously the Galleries, Images, Albums, and Tracks tabs of the Identify page rendered their row lists but the "Identify" button was a no-op, and every row was missing the per-row "identify this one" action the Videos tab has. Every one of those tabs now runs plugins end-to-end: pressing **Identify** walks the rows through MusicBrainz (for Albums/Tracks) or any other plugin that advertises the matching capability, and each row grew a one-click **Scan** / **Accept** / **Dismiss** action bar so you can drive single rows without a bulk run. Gallery and Image tabs are wired the same way; they'll light up automatically the moment a gallery- or image-capable plugin is installed.
 - **StashBox endpoints (StashDB, FansDB, ThePornDB, MetadataAPI, etc.) are now hidden in SFW mode.** Previously, even with NSFW mode turned off, configured StashBox endpoints still showed up in the Identify and Bulk Scrape provider pickers because they were never checked against the NSFW filter. They're now treated as NSFW-by-default like the community Stash scrapers, so SFW mode hides them everywhere they're offered as a metadata source.
 - **YouTube identify now works without an API key.** The plugin's primary lookup path is YouTube's oEmbed endpoint (no auth, returns title / channel / thumbnail) — a Data API key is now optional and only upgrades results with description, duration, tags. The expensive (and frequently key-restricted) `search.list`-based "video by title" capability has been removed; YouTube identify is URL-only, which fits how the plugin is actually used. **Update the YouTube plugin to v0.3.0** to pick up the change.
+
+### Added
+
+- `runAudioLibraryIdentify`, `runAudioTrackIdentify`, `runGalleryIdentify`, `runImageIdentify` and their paired `acceptAll*` / `seek*Single` helpers in `apps/web/src/components/identify/identify-runners.ts`. Each one mirrors the video-series pattern: walks rows through eligible plugins, respects the abort flag for mid-run "Stop", auto-accepts when the user opts in, and saves a `scrape_result` row so the per-row Accept/Dismiss buttons and the Accept-All pass can reuse the same DB state. The four placeholder `export async function runXIdentify(): Promise<void> {}` lines in the corresponding tab files are gone — the tabs now import from the runners module instead.
+
+### Fixed
+
+- The `/plugins/results/:id/accept` route previously only knew how to apply results when the entity type was `video_series`; for any other entity type it just marked the row applied without actually patching the target entity, so accepts on Albums / Tracks / Galleries / Images silently did nothing. The route now dispatches to `updateAudioLibrary`, `updateAudioTrack`, `updateGallery`, or `updateImage` depending on the entity type and applies the title / date / details / studio / performers / tags field mask the user selected.
+- Plugin executions that returned an `audioLibraryByName` result were being saved as `entityType: "audio_track"` because the entity-type mapping collapsed every `audio*` action into the same bucket. Accepts against those rows patched the wrong table. Fixed by splitting `audioLibraryByName` → `audio_library` and leaving the rest as `audio_track`.
+- Plugin scrape results for audio (MusicBrainz) were not populating `proposedPerformerNames` because the plugin emits a comma-joined `artist` string rather than a `performerNames` array. The accept path now splits the `artist` field on comma / feat. / & / x so the performer list lands in the database as individual rows and the "Artist" field toggle on the Accept drawer does the right thing.
 
 ### Changed
 

@@ -65,6 +65,20 @@ import { IdentifyGalleryRows } from "../identify/identify-galleries-tab";
 import { IdentifyImageRows } from "../identify/identify-images-tab";
 import { IdentifyAudioLibraryRows } from "../identify/identify-audio-libraries-tab";
 import { IdentifyAudioTrackRows } from "../identify/identify-audio-tracks-tab";
+import {
+  runAudioLibraryIdentify,
+  seekAudioLibrarySingle,
+  acceptAllAudioLibraries,
+  runAudioTrackIdentify,
+  seekAudioTrackSingle,
+  acceptAllAudioTracks,
+  runGalleryIdentify,
+  seekGallerySingle,
+  acceptAllGalleries,
+  runImageIdentify,
+  seekImageSingle,
+  acceptAllImages,
+} from "../identify/identify-runners";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 
@@ -348,18 +362,27 @@ export function BulkScrape() {
   };
 
   function handleRun() {
+    // Every plugin-backed tab shares the same run-props shape. Building it
+    // once here keeps the per-tab branches tidy.
+    const pluginRunProps = {
+      plugins: pluginsForTab,
+      selectedProviderId: selectedScraperId,
+      autoAccept,
+      abortRef,
+      setRunning,
+    };
     if (tab === "scenes") {
       void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers, plugins: pluginsForTab });
     } else if (tab === "video-series") {
-      void runVideoSeriesIdentify({
-        rows: folderRows,
-        setRows: setFolderRows,
-        plugins: pluginsForTab,
-        selectedProviderId: selectedScraperId,
-        autoAccept,
-        abortRef,
-        setRunning,
-      });
+      void runVideoSeriesIdentify({ ...pluginRunProps, rows: folderRows, setRows: setFolderRows });
+    } else if (tab === "galleries") {
+      void runGalleryIdentify({ ...pluginRunProps, rows: galleryRows, setRows: setGalleryRows });
+    } else if (tab === "images") {
+      void runImageIdentify({ ...pluginRunProps, rows: imageRows, setRows: setImageRows });
+    } else if (tab === "audio-libraries") {
+      void runAudioLibraryIdentify({ ...pluginRunProps, rows: audioLibraryRows, setRows: setAudioLibraryRows });
+    } else if (tab === "audio-tracks") {
+      void runAudioTrackIdentify({ ...pluginRunProps, rows: audioTrackRows, setRows: setAudioTrackRows });
     } else if (tab === "performers") {
       void runPerformerScrape({ ...sharedTabProps, perfRows, setPerfRows, perfScrapers });
     } else if (tab === "studios") {
@@ -372,9 +395,22 @@ export function BulkScrape() {
   function handleAcceptAll() {
     if (tab === "scenes") void acceptAllScenes(sceneRows, setSceneRows);
     else if (tab === "video-series") void acceptAllVideoSeries(folderRows, setFolderRows);
+    else if (tab === "galleries") void acceptAllGalleries(galleryRows, setGalleryRows);
+    else if (tab === "images") void acceptAllImages(imageRows, setImageRows);
+    else if (tab === "audio-libraries") void acceptAllAudioLibraries(audioLibraryRows, setAudioLibraryRows);
+    else if (tab === "audio-tracks") void acceptAllAudioTracks(audioTrackRows, setAudioTrackRows);
     else if (tab === "performers") void acceptAllPerformers(perfRows, setPerfRows);
     else if (tab === "studios") void acceptAllStudios(studioRows, setStudioRows);
     else if (tab === "tags") void acceptAllTags(tagRows, setTagRows);
+  }
+
+  /** Resolve the plugin sub-list for per-row seek (honors provider picker). */
+  function pluginListForSeek() {
+    if (selectedScraperId.startsWith("plugin:")) {
+      const realId = selectedScraperId.replace(/^plugin:/, "");
+      return pluginsForTab.filter((p) => p.id === realId);
+    }
+    return pluginsForTab;
   }
 
   /* ─── Render ─────────────────────────────────────────────────── */
@@ -653,6 +689,7 @@ export function BulkScrape() {
               setRows={setGalleryRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) => void seekGallerySingle(idx, galleryRows, setGalleryRows, pluginListForSeek())}
             />
           )}
           {tab === "images" && (
@@ -661,6 +698,7 @@ export function BulkScrape() {
               setRows={setImageRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) => void seekImageSingle(idx, imageRows, setImageRows, pluginListForSeek())}
             />
           )}
           {tab === "audio-libraries" && (
@@ -669,6 +707,9 @@ export function BulkScrape() {
               setRows={setAudioLibraryRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) =>
+                void seekAudioLibrarySingle(idx, audioLibraryRows, setAudioLibraryRows, pluginListForSeek())
+              }
             />
           )}
           {tab === "audio-tracks" && (
@@ -677,6 +718,9 @@ export function BulkScrape() {
               setRows={setAudioTrackRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
+              onSeekSingle={(idx) =>
+                void seekAudioTrackSingle(idx, audioTrackRows, setAudioTrackRows, pluginListForSeek())
+              }
             />
           )}
           {tab === "performers" && (

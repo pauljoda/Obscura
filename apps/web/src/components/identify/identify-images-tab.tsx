@@ -3,9 +3,9 @@
 import { Badge } from "@obscura/ui/primitives/badge";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
-import { ChevronDown, Image as ImageIcon } from "lucide-react";
+import { Check, ChevronDown, Image as ImageIcon, Loader2, ScanSearch, X } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
-import { toApiUrl } from "../../lib/api";
+import { toApiUrl, acceptPluginResult } from "../../lib/api";
 import type { ImageRow, ImageField } from "./types";
 
 /* ─── Props ───────────────────────────────────────────────────── */
@@ -15,6 +15,7 @@ export interface ImagesTabProps {
   setRows: React.Dispatch<React.SetStateAction<ImageRow[]>>;
   expandedIds: Set<string>;
   toggleExpanded: (id: string) => void;
+  onSeekSingle?: (idx: number) => void;
 }
 
 /* ─── Rows renderer ───────────────────────────────────────────── */
@@ -24,6 +25,7 @@ export function IdentifyImageRows({
   setRows,
   expandedIds,
   toggleExpanded,
+  onSeekSingle,
 }: ImagesTabProps) {
   function toggleField(idx: number, field: ImageField) {
     setRows((prev) =>
@@ -37,6 +39,36 @@ export function IdentifyImageRows({
     );
   }
 
+  async function acceptRow(idx: number) {
+    const row = rows[idx];
+    if (!row?.scrapeResultId) return;
+    try {
+      await acceptPluginResult(row.scrapeResultId, Array.from(row.selectedFields));
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
+      );
+    } catch {
+      /* leave as found */
+    }
+  }
+
+  function dismissRow(idx: number) {
+    setRows((prev) =>
+      prev.map((r, i) =>
+        i === idx
+          ? {
+              ...r,
+              status: "pending",
+              result: undefined,
+              scrapeResultId: undefined,
+              matchedProvider: undefined,
+              error: undefined,
+            }
+          : r,
+      ),
+    );
+  }
+
   return rows.map((row, idx) => (
     <ImageRowCard
       key={row.image.id}
@@ -44,6 +76,9 @@ export function IdentifyImageRows({
       expanded={expandedIds.has(row.image.id)}
       onToggleExpand={() => toggleExpanded(row.image.id)}
       onToggleField={(field) => toggleField(idx, field)}
+      onAccept={() => acceptRow(idx)}
+      onDismiss={() => dismissRow(idx)}
+      onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
     />
   ));
 }
@@ -55,11 +90,17 @@ function ImageRowCard({
   expanded,
   onToggleExpand,
   onToggleField,
+  onAccept,
+  onDismiss,
+  onSeekSingle,
 }: {
   row: ImageRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleField: (field: ImageField) => void;
+  onAccept: () => void;
+  onDismiss: () => void;
+  onSeekSingle?: () => void;
 }) {
   return (
     <div>
@@ -98,9 +139,41 @@ function ImageRowCard({
           </div>
         </div>
 
-        {row.status === "accepted" && (
-          <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">Applied</Badge>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {(row.status === "pending" || row.status === "no-result" || row.status === "error") && onSeekSingle && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSeekSingle(); }}
+              className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
+              title="Identify this image"
+            >
+              <ScanSearch className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {row.status === "scraping" && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-accent" />
+          )}
+          {row.status === "found" && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
+                title="Accept"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+                title="Dismiss result"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+          {row.status === "accepted" && (
+            <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>
+          )}
+        </div>
 
         <ChevronDown
           className={cn(
@@ -148,7 +221,6 @@ function ImageRowCard({
   );
 }
 
-/* ─── Scrape runner (placeholder) ─────────────────────────────── */
-
-export async function runImageIdentify(): Promise<void> {}
-export async function acceptAllImages(): Promise<void> {}
+// Runners live in ./identify-runners.ts (runImageIdentify,
+// acceptAllImages, seekImageSingle). They short-circuit to
+// "no-result" until an image-capable plugin is installed.

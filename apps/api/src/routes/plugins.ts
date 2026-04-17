@@ -463,11 +463,22 @@ export async function pluginsRoutes(app: FastifyInstance) {
       // Optionally save as a scrape_result row
       if (req.body.saveResult && req.body.entityId && result && typeof result === "object") {
         const r = result as Record<string, unknown>;
-        const entityType = action.startsWith("folder") ? "video_series"
-          : action.startsWith("audio") ? "audio_track"
-          : action.startsWith("gallery") ? "gallery"
-          : action.startsWith("image") ? "image"
-          : "video";
+        // Map plugin action → entity type. `audioLibraryByName` targets
+        // an album (audio_library); every other audio action targets a
+        // single track. Mapping matters because accept dispatches to
+        // the matching update service below.
+        const entityType =
+          action.startsWith("folder") || action.startsWith("series")
+            ? "video_series"
+            : action === "audioLibraryByName"
+              ? "audio_library"
+              : action.startsWith("audio")
+                ? "audio_track"
+                : action.startsWith("gallery")
+                  ? "gallery"
+                  : action.startsWith("image")
+                    ? "image"
+                    : "video";
 
         const proposedResult = deriveProposedResultFromPluginOutput(result);
         const pr = proposedResult as Record<string, unknown> | null;
@@ -480,7 +491,20 @@ export async function pluginsRoutes(app: FastifyInstance) {
 
         const castNames = (): string[] | null => {
           if (Array.isArray(r.performerNames)) return r.performerNames as string[];
-          if (!pr || !Array.isArray(pr.cast)) return null;
+          if (!pr || !Array.isArray(pr.cast)) {
+            // Audio plugins emit a single "artist" string (e.g. MusicBrainz
+            // joins multiple artist-credit rows with ", "). Split it into
+            // individual performer names so the accept path can upsert
+            // real rows in the performers table.
+            if (typeof r.artist === "string" && r.artist.trim()) {
+              const parts = (r.artist as string)
+                .split(/\s*,\s*|\s+(?:feat\.?|featuring|&|x)\s+/i)
+                .map((s) => s.trim())
+                .filter(Boolean);
+              return parts.length ? parts : null;
+            }
+            return null;
+          }
           const out: string[] = [];
           for (const c of pr.cast as { name?: string }[]) {
             if (typeof c?.name === "string" && c.name.trim()) out.push(c.name.trim());
@@ -686,6 +710,68 @@ export async function pluginsRoutes(app: FastifyInstance) {
       return reply.code(400).send({
         error: "Use /scrapers/results/:id/accept for video results",
       });
+    } else if (
+      result.entityType === "audio_library" ||
+      result.entityType === "audio_track" ||
+      result.entityType === "gallery" ||
+      result.entityType === "image"
+    ) {
+      // Shared patch builder for the non-video entity types. Each of
+      // their update services happens to take the same {title, date,
+      // details, studioName, performerNames, tagNames} shape, so we
+      // build one patch and dispatch to the right service.
+      const patch: Record<string, unknown> = {};
+      if (fieldsToApply.has("title") && result.proposedTitle) patch.title = result.proposedTitle;
+      if (fieldsToApply.has("details") && result.proposedDetails) patch.details = result.proposedDetails;
+      if (fieldsToApply.has("date") && result.proposedDate) patch.date = result.proposedDate;
+      if (fieldsToApply.has("studio") && result.proposedStudioName) patch.studioName = result.proposedStudioName;
+      if (fieldsToApply.has("performers") && result.proposedPerformerNames?.length) {
+        patch.performerNames = result.proposedPerformerNames;
+      }
+      if (fieldsToApply.has("tags") && result.proposedTagNames?.length) {
+        patch.tagNames = result.proposedTagNames;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        try {
+          if (result.entityType === "audio_library") {
+            const { updateAudioLibrary } = await import("../services/audio-library.service");
+            await updateAudioLibrary(
+              entityId,
+              patch as Parameters<typeof updateAudioLibrary>[1],
+            );
+          } else if (result.entityType === "audio_track") {
+            const { updateAudioTrack } = await import("../services/audio-track.service");
+            await updateAudioTrack(
+              entityId,
+              patch as Parameters<typeof updateAudioTrack>[1],
+            );
+          } else if (result.entityType === "gallery") {
+            const { updateGallery } = await import("../services/gallery.service");
+            await updateGallery(
+              entityId,
+              patch as Parameters<typeof updateGallery>[1],
+            );
+          } else if (result.entityType === "image") {
+            const { updateImage } = await import("../services/image.service");
+            await updateImage(
+              entityId,
+              patch as Parameters<typeof updateImage>[1],
+            );
+          }
+        } catch (err) {
+          return reply.code(500).send({
+            error: `Failed to apply scrape patch: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          });
+        }
+      }
+
+      // Image download is deferred to a follow-up — audio libraries
+      // and galleries both accept cover images but they go through
+      // entity-specific upload endpoints rather than a URL-download
+      // pipeline. For now the URL-based fields land without the image.
     }
 
     // Mark as applied

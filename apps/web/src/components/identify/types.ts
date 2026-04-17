@@ -113,6 +113,8 @@ export interface GalleryRow {
   gallery: GalleryListItemDto;
   status: RowStatus;
   result?: NormalizedGalleryIdentifyResult;
+  /** DB id of the saved scrape_result row, used by accept/reject. */
+  scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
   selectedFields: Set<GalleryField>;
@@ -122,6 +124,7 @@ export interface ImageRow {
   image: ImageListItemDto;
   status: RowStatus;
   result?: NormalizedImageIdentifyResult;
+  scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
   selectedFields: Set<ImageField>;
@@ -131,6 +134,7 @@ export interface AudioLibraryRow {
   library: AudioLibraryListItemDto;
   status: RowStatus;
   result?: NormalizedAudioLibraryIdentifyResult;
+  scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
   selectedFields: Set<AudioLibraryField>;
@@ -140,6 +144,7 @@ export interface AudioTrackRow {
   track: AudioTrackListItemDto;
   status: RowStatus;
   result?: NormalizedAudioTrackIdentifyResult;
+  scrapeResultId?: string;
   error?: string;
   matchedProvider?: string;
   selectedFields: Set<AudioTrackField>;

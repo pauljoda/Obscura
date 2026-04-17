@@ -3,11 +3,11 @@
 import { Badge } from "@obscura/ui/primitives/badge";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
-import { Check, ChevronDown, X, Images } from "lucide-react";
+import { Check, ChevronDown, Images, Loader2, ScanSearch, X } from "lucide-react";
 import { StatusDot, ToggleableField } from "../scrape/shared-components";
 import { entityTerms } from "../../lib/terminology";
+import { acceptPluginResult } from "../../lib/api";
 import type { GalleryRow, GalleryField } from "./types";
-import { GALLERY_FIELDS } from "./types";
 
 /* ─── Props ───────────────────────────────────────────────────── */
 
@@ -16,6 +16,7 @@ export interface GalleriesTabProps {
   setRows: React.Dispatch<React.SetStateAction<GalleryRow[]>>;
   expandedIds: Set<string>;
   toggleExpanded: (id: string) => void;
+  onSeekSingle?: (idx: number) => void;
 }
 
 /* ─── Rows renderer ───────────────────────────────────────────── */
@@ -25,6 +26,7 @@ export function IdentifyGalleryRows({
   setRows,
   expandedIds,
   toggleExpanded,
+  onSeekSingle,
 }: GalleriesTabProps) {
   function toggleField(idx: number, field: GalleryField) {
     setRows((prev) =>
@@ -38,6 +40,36 @@ export function IdentifyGalleryRows({
     );
   }
 
+  async function acceptRow(idx: number) {
+    const row = rows[idx];
+    if (!row?.scrapeResultId) return;
+    try {
+      await acceptPluginResult(row.scrapeResultId, Array.from(row.selectedFields));
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
+      );
+    } catch {
+      /* leave as found */
+    }
+  }
+
+  function dismissRow(idx: number) {
+    setRows((prev) =>
+      prev.map((r, i) =>
+        i === idx
+          ? {
+              ...r,
+              status: "pending",
+              result: undefined,
+              scrapeResultId: undefined,
+              matchedProvider: undefined,
+              error: undefined,
+            }
+          : r,
+      ),
+    );
+  }
+
   return rows.map((row, idx) => (
     <GalleryRowCard
       key={row.gallery.id}
@@ -45,6 +77,9 @@ export function IdentifyGalleryRows({
       expanded={expandedIds.has(row.gallery.id)}
       onToggleExpand={() => toggleExpanded(row.gallery.id)}
       onToggleField={(field) => toggleField(idx, field)}
+      onAccept={() => acceptRow(idx)}
+      onDismiss={() => dismissRow(idx)}
+      onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
     />
   ));
 }
@@ -56,11 +91,17 @@ function GalleryRowCard({
   expanded,
   onToggleExpand,
   onToggleField,
+  onAccept,
+  onDismiss,
+  onSeekSingle,
 }: {
   row: GalleryRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleField: (field: GalleryField) => void;
+  onAccept: () => void;
+  onDismiss: () => void;
+  onSeekSingle?: () => void;
 }) {
   return (
     <div>
@@ -97,9 +138,41 @@ function GalleryRowCard({
           </div>
         </div>
 
-        {row.status === "accepted" && (
-          <Badge variant="accent" className="text-[0.55rem] flex-shrink-0">Applied</Badge>
-        )}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {(row.status === "pending" || row.status === "no-result" || row.status === "error") && onSeekSingle && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSeekSingle(); }}
+              className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
+              title="Identify this gallery"
+            >
+              <ScanSearch className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {row.status === "scraping" && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-accent" />
+          )}
+          {row.status === "found" && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccept(); }}
+                className="p-1.5 hover:bg-status-success/15 text-status-success-text transition-colors"
+                title="Accept"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                className="p-1.5 hover:bg-status-error/10 text-text-disabled hover:text-status-error-text transition-colors"
+                title="Dismiss result"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+          {row.status === "accepted" && (
+            <Badge variant="accent" className="text-[0.55rem]">Applied</Badge>
+          )}
+        </div>
 
         <ChevronDown
           className={cn(
@@ -167,7 +240,6 @@ function GalleryRowCard({
   );
 }
 
-/* ─── Scrape runner (placeholder) ─────────────────────────────── */
-
-export async function runGalleryIdentify(): Promise<void> {}
-export async function acceptAllGalleries(): Promise<void> {}
+// Runners live in ./identify-runners.ts (runGalleryIdentify,
+// acceptAllGalleries, seekGallerySingle). They short-circuit to
+// "no-result" until a gallery-capable plugin is installed.
