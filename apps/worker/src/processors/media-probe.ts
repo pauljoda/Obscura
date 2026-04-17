@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { probeVideoFile } from "@obscura/media-core";
+import { CorruptMediaError, probeVideoFile } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 
@@ -62,6 +62,19 @@ export async function processMediaProbe(job: Job) {
     label: row.title ?? undefined,
   });
 
-  await applyVideoProbeToVideoEntity(entityKind, row.id, row.filePath);
+  try {
+    await applyVideoProbeToVideoEntity(entityKind, row.id, row.filePath);
+  } catch (err) {
+    if (err instanceof CorruptMediaError) {
+      // Source file is broken on disk (truncated, missing moov atom, etc.).
+      // Retrying won't help — log a warning and let the job complete so the
+      // Operations dashboard isn't permanently red for unplayable media.
+      console.warn(
+        `[media-probe] Skipping corrupt ${entityKind} ${row.id}: ${err.message}`,
+      );
+    } else {
+      throw err;
+    }
+  }
   await markJobProgress(job, "media-probe", 100);
 }

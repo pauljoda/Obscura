@@ -151,6 +151,44 @@ export async function runProcess(
   });
 }
 
+/**
+ * Error thrown when ffprobe/ffmpeg can't read a source file because it is
+ * truncated, has no valid container header, or otherwise has no decodable
+ * streams. These files are genuinely broken on disk — retrying won't help,
+ * so processors should log a warning and skip rather than fail the job.
+ */
+export class CorruptMediaError extends Error {
+  filePath: string;
+  cause?: Error;
+  constructor(filePath: string, cause?: Error) {
+    super(
+      `Media file is corrupt or unreadable: ${filePath}${
+        cause?.message ? ` — ${cause.message}` : ""
+      }`,
+    );
+    this.name = "CorruptMediaError";
+    this.filePath = filePath;
+    this.cause = cause;
+  }
+}
+
+/**
+ * Recognize ffprobe/ffmpeg error output that indicates the source file is
+ * structurally broken (missing moov atom, truncated, unreadable streams, etc.).
+ * We treat these as non-retryable and skip the affected processor step.
+ */
+export function isCorruptMediaError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const message = err.message ?? "";
+  return (
+    /moov atom not found/i.test(message) ||
+    /Invalid data found when processing input/i.test(message) ||
+    /Invalid argument/i.test(message) && /ffprobe|ffmpeg/i.test(message) ||
+    /End of file/i.test(message) && /ffprobe|ffmpeg/i.test(message) ||
+    /could not find codec parameters/i.test(message)
+  );
+}
+
 export function parseFrameRate(value?: string): number | null {
   if (!value) return null;
   const [numerator, denominator] = value.split("/").map(Number);
@@ -162,15 +200,23 @@ export function parseFrameRate(value?: string): number | null {
 }
 
 export async function probeVideoFile(filePath: string): Promise<ProbeVideoMetadata> {
-  const { stdout } = await runProcess("ffprobe", [
-    "-v",
-    "error",
-    "-show_entries",
-    "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,sample_rate,channels",
-    "-of",
-    "json",
-    filePath,
-  ]);
+  let stdout: string;
+  try {
+    ({ stdout } = await runProcess("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration,size,bit_rate,format_name:stream=index,codec_type,codec_name,width,height,avg_frame_rate,sample_rate,channels",
+      "-of",
+      "json",
+      filePath,
+    ]));
+  } catch (err) {
+    if (isCorruptMediaError(err)) {
+      throw new CorruptMediaError(filePath, err instanceof Error ? err : undefined);
+    }
+    throw err;
+  }
 
   const parsed = JSON.parse(stdout) as FfprobeResult;
   const videoStream = parsed.streams?.find((stream) => stream.codec_type === "video");

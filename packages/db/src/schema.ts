@@ -551,8 +551,13 @@ export const galleries = pgTable(
     // Zip-based galleries (.zip/.cbz/.cbr)
     zipFilePath: text("zip_file_path"),
 
-    // Hierarchy (sub-galleries)
-    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => galleries.id),
+    // Hierarchy (sub-galleries). `set null` so deleting a stale parent
+    // (folder removed from disk) doesn't fail when children still exist —
+    // the next scan will either recreate the tree or also reap the leaves.
+    parentId: uuid("parent_id").references(
+      /* drizzle requires any for self-referential FKs */ (): any => galleries.id,
+      { onDelete: "set null" },
+    ),
 
     // Explicit cover image (plain UUID — no FK to avoid circular dep with images)
     coverImageId: uuid("cover_image_id"),

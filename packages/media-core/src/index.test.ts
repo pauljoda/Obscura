@@ -14,6 +14,8 @@ import {
   isAnimatedFormat,
   computePhash,
   runProcess,
+  isCorruptMediaError,
+  CorruptMediaError,
 } from "./index";
 
 async function hasBinary(name: string): Promise<boolean> {
@@ -235,6 +237,37 @@ describe("computePhash", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("isCorruptMediaError", () => {
+  it("matches ffprobe errors for structurally broken MP4 containers", () => {
+    const err = new Error(
+      "ffprobe exited with code 1: [mov,mp4,m4a,3gp,3g2,mj2 @ 0x7abe30452600] moov atom not found\n" +
+        "/media/broken.mp4: Invalid data found when processing input",
+    );
+    expect(isCorruptMediaError(err)).toBe(true);
+  });
+
+  it("matches ffprobe 'could not find codec parameters'", () => {
+    const err = new Error(
+      "ffprobe exited with code 1: Could not find codec parameters for stream 0",
+    );
+    expect(isCorruptMediaError(err)).toBe(true);
+  });
+
+  it("rejects unrelated errors", () => {
+    expect(isCorruptMediaError(new Error("ENOENT: no such file"))).toBe(false);
+    expect(isCorruptMediaError("not even an Error")).toBe(false);
+    expect(isCorruptMediaError(null)).toBe(false);
+  });
+
+  it("CorruptMediaError carries the offending path", () => {
+    const err = new CorruptMediaError("/media/broken.mp4", new Error("moov atom not found"));
+    expect(err.filePath).toBe("/media/broken.mp4");
+    expect(err.message).toContain("/media/broken.mp4");
+    expect(err.message).toContain("moov atom not found");
+    expect(err instanceof Error).toBe(true);
   });
 });
 

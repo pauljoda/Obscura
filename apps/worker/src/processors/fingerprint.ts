@@ -4,6 +4,25 @@ import { computeMd5, computeOsHash, computePhash } from "@obscura/media-core";
 import { db, librarySettings, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 
+/**
+ * Recognize obscura-phash helper output that means a frame could not be
+ * decoded (corrupt source frame, ffmpeg returning garbage on seek, etc.).
+ * These files still have a valid MD5 / oshash — only the perceptual hash
+ * needs to be skipped.
+ */
+function isPhashSkipError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message ?? "";
+  return (
+    /obscura-phash/i.test(msg) &&
+    (/decode bmp/i.test(msg) ||
+      /unknown format/i.test(msg) ||
+      /extract frames/i.test(msg) ||
+      /ffmpeg:/i.test(msg) ||
+      /unexpected output/i.test(msg))
+  );
+}
+
 type VideoEntityKind = "video_episode" | "video_movie";
 
 export async function processFingerprint(job: Job) {
@@ -54,8 +73,20 @@ export async function processFingerprint(job: Job) {
     await markJobProgress(job, "fingerprint", phashEnabled ? 66 : 100);
   }
   if (phashEnabled || phashOnly) {
-    const phash = await computePhash(row.filePath, row.duration);
-    if (phash) update.phash = phash;
+    try {
+      const phash = await computePhash(row.filePath, row.duration);
+      if (phash) update.phash = phash;
+    } catch (err) {
+      if (isPhashSkipError(err)) {
+        console.warn(
+          `[fingerprint] Skipping phash for ${entityKind} ${row.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      } else {
+        throw err;
+      }
+    }
     await markJobProgress(job, "fingerprint", 100);
   }
   await db.update(table).set(update).where(eq(table.id, row.id));

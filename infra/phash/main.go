@@ -79,13 +79,66 @@ func extractFrames(filePath string, duration float64) ([]image.Image, error) {
 	stepSize := (0.9 * duration) / float64(chunkCount)
 
 	frames := make([]image.Image, chunkCount)
+
+	// Offsets (in seconds) to retry at when the primary seek returns
+	// garbage BMP output. This happens on files with occasional corrupt
+	// frames or when the seek lands on a non-decodable packet. We keep
+	// the retry window small so the overall hash stays representative of
+	// the original time points.
+	retryDeltas := []float64{0, -0.25, 0.25, -1.0, 1.0}
+
+	var lastGood image.Image
+	var lastErr error
 	for i := 0; i < chunkCount; i++ {
-		t := offset + float64(i)*stepSize
-		img, err := seekFrame(filePath, t)
+		base := offset + float64(i)*stepSize
+		var img image.Image
+		var err error
+		for _, delta := range retryDeltas {
+			t := base + delta
+			if t < 0 {
+				continue
+			}
+			if t >= duration {
+				continue
+			}
+			img, err = seekFrame(filePath, t)
+			if err == nil {
+				break
+			}
+		}
 		if err != nil {
-			return nil, fmt.Errorf("frame %d at t=%.3f: %w", i, t, err)
+			lastErr = fmt.Errorf("frame %d at t=%.3f: %w", i, base, err)
+			// Fall back to the previous good frame so the montage stays
+			// well-formed. If no good frame exists yet we leave a nil slot
+			// and patch it on a second pass.
+			if lastGood != nil {
+				frames[i] = lastGood
+			}
+			continue
 		}
 		frames[i] = img
+		lastGood = img
+	}
+
+	// Backfill any leading nil frames with the first successful frame.
+	var first image.Image
+	for _, f := range frames {
+		if f != nil {
+			first = f
+			break
+		}
+	}
+	if first == nil {
+		// Every frame failed — the file is almost certainly corrupt.
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, fmt.Errorf("no frames decoded")
+	}
+	for i, f := range frames {
+		if f == nil {
+			frames[i] = first
+		}
 	}
 	return frames, nil
 }
