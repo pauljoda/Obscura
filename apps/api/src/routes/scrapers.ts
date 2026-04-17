@@ -20,7 +20,7 @@ import {
   type StashScrapedScene,
   type StashScrapedPerformer,
 } from "@obscura/stash-import";
-import { getGeneratedPerformerDir, getGeneratedSceneDir } from "@obscura/media-core";
+import { getGeneratedPerformerDir, getGeneratedVideoDir } from "@obscura/media-core";
 import yaml from "js-yaml";
 
 const {
@@ -1220,7 +1220,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
             if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
             buffer = Buffer.from(await imgRes.arrayBuffer());
           }
-          const genDir = getGeneratedSceneDir(videoId);
+          const genDir = getGeneratedVideoDir(videoId);
           await mkdir(genDir, { recursive: true });
           await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
           const assetUrl = `/assets/videos/${videoId}/thumb-custom`;

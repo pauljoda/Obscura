@@ -5,10 +5,10 @@ import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
-  getSceneVideoGeneratedDiskPaths,
+  getVideoGeneratedDiskPaths,
   probeVideoFile,
   runProcess,
-  sceneVideoGeneratedLayoutFromDedicated,
+  videoGeneratedLayoutFromDedicated,
 } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
@@ -133,7 +133,7 @@ export async function processPreview(job: Job) {
   if (!row?.filePath) {
     throw new Error("Video file not found");
   }
-  const scene: {
+  const video: {
     id: string;
     title: string | null;
     filePath: string | null;
@@ -145,29 +145,29 @@ export async function processPreview(job: Job) {
 
   await markJobActive(job, "preview", {
     type: targetType,
-    id: scene.id,
-    label: scene.title ?? undefined,
+    id: video.id,
+    label: video.title ?? undefined,
   });
 
   const payload = job.data as JobPayload;
   const settings = await ensureLibrarySettingsRow();
 
-  const filePath = scene.filePath!;
+  const filePath = video.filePath!;
   const metadata =
     payload.jobKind === "force-rebuild"
-      ? await applyVideoProbeToVideoEntity(entityKind, scene.id, filePath)
-      : scene.duration && scene.width && scene.height
-        ? scene
+      ? await applyVideoProbeToVideoEntity(entityKind, video.id, filePath)
+      : video.duration && video.width && video.height
+        ? video
         : await probeVideoFile(filePath);
 
   if (payload.jobKind === "force-rebuild") {
     await markJobProgress(job, "preview", 12);
   }
 
-  const layout = sceneVideoGeneratedLayoutFromDedicated(
+  const layout = videoGeneratedLayoutFromDedicated(
     settings.metadataStorageDedicated ?? true
   );
-  const genPaths = getSceneVideoGeneratedDiskPaths(scene.id, filePath, layout);
+  const genPaths = getVideoGeneratedDiskPaths(video.id, filePath, layout);
 
   const thumbnailFile = genPaths.thumb;
   const previewFile = genPaths.preview;
@@ -286,7 +286,7 @@ export async function processPreview(job: Job) {
 
   // Extract individual frames via separate ffmpeg calls (robust against
   // mid-stream format changes), then stitch into a sprite with sharp.
-  const tmpFrameDir = path.join(tmpdir(), `obscura-sprite-${scene.id}-${Date.now()}`);
+  const tmpFrameDir = path.join(tmpdir(), `obscura-sprite-${video.id}-${Date.now()}`);
   await mkdir(tmpFrameDir, { recursive: true });
 
   try {
@@ -368,7 +368,7 @@ export async function processPreview(job: Job) {
 
       vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
       vttLines.push(
-        `${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
+        `${sceneAssetUrl(video.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
       );
       vttLines.push("");
     }
@@ -379,17 +379,17 @@ export async function processPreview(job: Job) {
   }
 
   const assetPatch = {
-    thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
-    cardThumbnailPath: sceneAssetUrl(scene.id, "card"),
-    previewPath: sceneAssetUrl(scene.id, "preview"),
-    spritePath: sceneAssetUrl(scene.id, "sprite"),
-    trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),
+    thumbnailPath: sceneAssetUrl(video.id, "thumb"),
+    cardThumbnailPath: sceneAssetUrl(video.id, "card"),
+    previewPath: sceneAssetUrl(video.id, "preview"),
+    spritePath: sceneAssetUrl(video.id, "sprite"),
+    trickplayVttPath: sceneAssetUrl(video.id, "trickplay"),
     updatedAt: new Date(),
   };
 
   if (entityKind === "video_episode") {
-    await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, scene.id));
+    await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, video.id));
   } else {
-    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, scene.id));
+    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, video.id));
   }
 }

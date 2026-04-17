@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { eq, inArray } from "drizzle-orm";
-import { getGeneratedImageDir, getGeneratedSceneDir } from "@obscura/media-core";
+import { getGeneratedImageDir, getGeneratedVideoDir } from "@obscura/media-core";
 import type { AppDb } from "../types";
 import * as schema from "../schema";
 
@@ -30,12 +30,10 @@ function isPathWithinAnyRoot(filePath: string, rootPaths: string[]) {
   return rootPaths.some((rootPath) => isPathWithinRoot(filePath, rootPath));
 }
 
-/** Generated asset directories for video entities use the same naming
- * convention as the old scene asset dirs — keyed by the entity id.
- */
+/** Generated asset directories for video entities are keyed by the entity id. */
 export async function removeGeneratedVideoDirs(entityIds: string[]) {
   for (const id of entityIds) {
-    await rm(getGeneratedSceneDir(id), { recursive: true, force: true });
+    await rm(getGeneratedVideoDir(id), { recursive: true, force: true });
   }
 }
 

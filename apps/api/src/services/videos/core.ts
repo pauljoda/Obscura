@@ -12,10 +12,10 @@ import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
 import path from "node:path";
 import type { MultipartFile } from "@fastify/multipart";
 import {
-  getGeneratedSceneDir,
+  getGeneratedVideoDir,
   fileNameToTitle,
   runProcess,
-  allSceneVideoGeneratedDiskPaths,
+  allVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
 import { enqueueQueueJob } from "../../lib/job-enqueue";
 import {
@@ -1725,7 +1725,7 @@ export async function deleteVideo(id: string, deleteFile?: boolean) {
   // the id/path combination is stable, but the unlink is
   // idempotent so a missing file is fine.
   if (filePath) {
-    for (const derivative of allSceneVideoGeneratedDiskPaths(id, filePath)) {
+    for (const derivative of allVideoGeneratedDiskPaths(id, filePath)) {
       try {
         if (existsSync(derivative)) await unlink(derivative);
       } catch {
@@ -1803,7 +1803,7 @@ async function saveCustomVideoThumbnail(
   id: string,
   buffer: Buffer,
 ): Promise<{ thumbnailPath: string }> {
-  const genDir = getGeneratedSceneDir(id);
+  const genDir = getGeneratedVideoDir(id);
   await mkdir(genDir, { recursive: true });
   const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
   await writeFile(thumbPath, buffer);
@@ -1878,7 +1878,7 @@ export async function setCustomVideoThumbnailFromFrame(
       ? Math.min(Math.max(0, requestedSeconds), maxSeconds)
       : Math.max(0, requestedSeconds);
 
-  const genDir = getGeneratedSceneDir(id);
+  const genDir = getGeneratedVideoDir(id);
   await mkdir(genDir, { recursive: true });
   const thumbPath = path.join(genDir, "thumbnail-custom.jpg");
 
@@ -1920,7 +1920,7 @@ export async function resetVideoThumbnail(id: string) {
   if (!entity) throw new AppError(404, "Video not found");
 
   const customPath = path.join(
-    getGeneratedSceneDir(id),
+    getGeneratedVideoDir(id),
     "thumbnail-custom.jpg",
   );
   try {
@@ -1985,7 +1985,7 @@ export async function rebuildVideoPreview(id: string) {
 
   // Best-effort: remove existing derivative files so the rebuild
   // actually replaces rather than reuses.
-  for (const p of allSceneVideoGeneratedDiskPaths(id, entity.filePath)) {
+  for (const p of allVideoGeneratedDiskPaths(id, entity.filePath)) {
     try {
       if (existsSync(p)) await unlink(p);
     } catch {

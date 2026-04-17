@@ -3,7 +3,7 @@ import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
-  getSceneSubtitlesDir,
+  getVideoSubtitlesDir,
   runProcess,
 } from "@obscura/media-core";
 import {
@@ -100,7 +100,7 @@ export async function processExtractSubtitles(job: Job) {
     return;
   }
 
-  const outDir = getSceneSubtitlesDir(row.id);
+  const outDir = getVideoSubtitlesDir(row.id);
   await mkdir(outDir, { recursive: true });
 
   for (const [idx, stream] of streams.entries()) {

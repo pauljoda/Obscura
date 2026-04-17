@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db";
 import { eq, asc } from "drizzle-orm";
 import {
-  getGeneratedSceneDir,
+  getGeneratedVideoDir,
   getGeneratedPerformerDir,
   getGeneratedStudioDir,
   getGeneratedTagDir,
@@ -14,7 +14,7 @@ import {
   getGeneratedSeriesDir,
   getCacheRootDir,
   extractZipMember,
-  getSceneVideoGeneratedDiskPaths,
+  getVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
 import { ensureLibrarySettingsRow } from "../lib/library";
 
@@ -149,7 +149,7 @@ export async function assetsRoutes(app: FastifyInstance) {
 
     // Custom thumbnail lives in generated dir, not sidecar
     if (kind === "thumb-custom") {
-      const customPath = path.join(getGeneratedSceneDir(id), "thumbnail-custom.jpg");
+      const customPath = path.join(getGeneratedVideoDir(id), "thumbnail-custom.jpg");
       if (existsSync(customPath)) {
         reply.header("Cache-Control", "no-cache");
         reply.header("Content-Type", "image/jpeg");
@@ -177,8 +177,8 @@ export async function assetsRoutes(app: FastifyInstance) {
     const libraryRow = await ensureLibrarySettingsRow();
     const dedicatedPrimary = libraryRow.metadataStorageDedicated ?? true;
 
-    const pathsDedicated = getSceneVideoGeneratedDiskPaths(id, filePath, "dedicated");
-    const pathsSidecar = getSceneVideoGeneratedDiskPaths(id, filePath, "sidecar");
+    const pathsDedicated = getVideoGeneratedDiskPaths(id, filePath, "dedicated");
+    const pathsSidecar = getVideoGeneratedDiskPaths(id, filePath, "sidecar");
     const primary = dedicatedPrimary ? pathsDedicated : pathsSidecar;
     const secondary = dedicatedPrimary ? pathsSidecar : pathsDedicated;
 

@@ -8,9 +8,9 @@ import {
   fileNameToTitle,
   normalizeNfoRating,
   getSidecarPaths,
-  getSceneVideoGeneratedDiskPaths,
-  allSceneVideoGeneratedDiskPaths,
-  sceneVideoGeneratedLayoutFromDedicated,
+  getVideoGeneratedDiskPaths,
+  allVideoGeneratedDiskPaths,
+  videoGeneratedLayoutFromDedicated,
   isAnimatedFormat,
   computePhash,
   runProcess,
@@ -139,25 +139,25 @@ describe("getSidecarPaths", () => {
   });
 });
 
-describe("getSceneVideoGeneratedDiskPaths", () => {
-  const sceneId = "550e8400-e29b-41d4-a716-446655440000";
-  const videoPath = "/media/videos/scene.mp4";
+describe("getVideoGeneratedDiskPaths", () => {
+  const videoId = "550e8400-e29b-41d4-a716-446655440000";
+  const videoPath = "/media/videos/video.mp4";
 
   it("sidecar layout matches getSidecarPaths stems", () => {
-    const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "sidecar");
-    expect(p.thumb).toBe("/media/videos/scene-thumb.jpg");
-    expect(p.card).toBe("/media/videos/scene-card.jpg");
-    expect(p.preview).toBe("/media/videos/scene-preview.mp4");
-    expect(p.sprite).toBe("/media/videos/scene-sprite.jpg");
-    expect(p.trickplay).toBe("/media/videos/scene-trickplay.vtt");
+    const p = getVideoGeneratedDiskPaths(videoId, videoPath, "sidecar");
+    expect(p.thumb).toBe("/media/videos/video-thumb.jpg");
+    expect(p.card).toBe("/media/videos/video-card.jpg");
+    expect(p.preview).toBe("/media/videos/video-preview.mp4");
+    expect(p.sprite).toBe("/media/videos/video-sprite.jpg");
+    expect(p.trickplay).toBe("/media/videos/video-trickplay.vtt");
   });
 
-  it("dedicated layout uses cache root scenes/<id>/ and fixed filenames", () => {
+  it("dedicated layout uses cache root videos/<id>/ and fixed filenames", () => {
     const prev = process.env.OBSCURA_CACHE_DIR;
     process.env.OBSCURA_CACHE_DIR = "/data/cache";
     try {
-      const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "dedicated");
-      const base = `/data/cache/scenes/${sceneId}`;
+      const p = getVideoGeneratedDiskPaths(videoId, videoPath, "dedicated");
+      const base = `/data/cache/videos/${videoId}`;
       expect(p.thumb).toBe(`${base}/thumbnail.jpg`);
       expect(p.card).toBe(`${base}/card.jpg`);
       expect(p.preview).toBe(`${base}/preview.mp4`);
@@ -169,11 +169,11 @@ describe("getSceneVideoGeneratedDiskPaths", () => {
     }
   });
 
-  it("allSceneVideoGeneratedDiskPaths dedupes across layouts", () => {
+  it("allVideoGeneratedDiskPaths dedupes across layouts", () => {
     const prev = process.env.OBSCURA_CACHE_DIR;
     process.env.OBSCURA_CACHE_DIR = "/c";
     try {
-      const all = allSceneVideoGeneratedDiskPaths(sceneId, videoPath);
+      const all = allVideoGeneratedDiskPaths(videoId, videoPath);
       expect(all.length).toBe(10);
       expect(new Set(all).size).toBe(10);
     } finally {
@@ -182,9 +182,9 @@ describe("getSceneVideoGeneratedDiskPaths", () => {
     }
   });
 
-  it("sceneVideoGeneratedLayoutFromDedicated maps booleans", () => {
-    expect(sceneVideoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
-    expect(sceneVideoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
+  it("videoGeneratedLayoutFromDedicated maps booleans", () => {
+    expect(videoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
+    expect(videoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
   });
 });
 

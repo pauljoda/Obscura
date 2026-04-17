@@ -9,7 +9,7 @@ import path from "node:path";
 import { and, asc, eq } from "drizzle-orm";
 import type { MultipartFile } from "@fastify/multipart";
 import {
-  getSceneSubtitlesDir,
+  getVideoSubtitlesDir,
   getSubtitleFormat,
   normalizeSubtitleToVtt,
   parseVttCues,
@@ -216,7 +216,7 @@ export async function uploadSubtitle(
   const language = (fields.language ?? "und").toLowerCase();
   const label = fields.label ?? null;
 
-  const outDir = getSceneSubtitlesDir(videoId);
+  const outDir = getVideoSubtitlesDir(videoId);
   await mkdir(outDir, { recursive: true });
 
   // Unique per (entityId, language, source="upload") — overwrite existing.

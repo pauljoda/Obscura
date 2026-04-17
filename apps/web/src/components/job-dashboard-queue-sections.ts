@@ -26,7 +26,7 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
     queueNames: ["library-maintenance"],
   },
   {
-    id: "scene-media",
+    id: "video-media",
     title: "Video media pipeline",
     description: "Technical metadata, fingerprints, and previews for videos.",
     queueNames: ["media-probe", "fingerprint", "preview"],

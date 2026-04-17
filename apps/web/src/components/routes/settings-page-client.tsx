@@ -48,7 +48,7 @@ import {
   deleteLibraryRoot,
   fetchInstalledScrapers,
   fetchLibraryConfig,
-  migrateSceneAssetStorage,
+  migrateVideoAssetStorage,
   backfillPhashes,
   rebuildPreviews,
   runQueue,
@@ -303,7 +303,7 @@ export function SettingsPageClient({
       const normalized = normalizeSettings(updated);
       setSettings(normalized);
       savedSettings.current = normalized;
-      await migrateSceneAssetStorage(targetDedicated, nsfwMode);
+      await migrateVideoAssetStorage(targetDedicated, nsfwMode);
       setMetadataStorageDialogOpen(false);
       setMessage(
         "Setting saved. Moving files in the background — open Jobs to watch progress.",

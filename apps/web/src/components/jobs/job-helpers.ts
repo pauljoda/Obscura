@@ -110,7 +110,7 @@ export function maintenanceJobLogRedacted(job: JobRun, nsfwMode: string) {
 }
 
 export function displayJobHeading(job: JobRun, nsfwMode: string) {
-  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Relocate scene generated files";
+  if (maintenanceJobLogRedacted(job, nsfwMode)) return "Relocate video generated files";
   return jobHeading(job);
 }
 

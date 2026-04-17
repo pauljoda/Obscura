@@ -8,7 +8,7 @@ import {
   type JobTriggerKind,
   type QueueName,
 } from "@obscura/contracts";
-import { allSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
+import { allVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, schema } from "../db";
 import { ensureLibrarySettingsRow } from "../lib/library";
 import { pruneUntrackedLibraryReferences } from "../lib/library-prune";
@@ -189,7 +189,7 @@ async function enqueueQueueJob(input: {
   return { id: jobId };
 }
 
-/** One job relocates all video-entity generated assets; deduped by target id `video-asset-layout`. */
+/** One job relocates all generated video assets; deduped by target id `video-asset-layout`. */
 async function queueVideoAssetStorageMigration(
   targetDedicated: boolean,
   trigger: QueueTrigger,
@@ -741,9 +741,9 @@ export async function jobsRoutes(app: FastifyInstance) {
     } else if (queueName === "library-maintenance") {
       const settings = await ensureLibrarySettingsRow();
       const targetDedicated = settings.metadataStorageDedicated ?? true;
-      // Always migrate every scene on disk; SFW request only affects job labels (no file paths in UI).
+      // Always migrate every video on disk; SFW request only affects job labels (no file paths in UI).
       const targetLabel = sfwOnly
-        ? "Relocate scene generated files"
+        ? "Relocate video generated files"
         : targetDedicated
           ? "Video assets to dedicated cache"
           : "Video assets beside media files";
@@ -952,7 +952,7 @@ export async function jobsRoutes(app: FastifyInstance) {
 
     // Delete existing derivative files (dedicated cache and/or sidecar) so stale assets aren't served.
     if (row.filePath) {
-      for (const file of allSceneVideoGeneratedDiskPaths(row.id, row.filePath)) {
+      for (const file of allVideoGeneratedDiskPaths(row.id, row.filePath)) {
         try {
           if (existsSync(file)) unlinkSync(file);
         } catch {
@@ -1040,7 +1040,7 @@ export async function jobsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post("/jobs/migrate-scene-asset-storage", async (request, reply) => {
+  app.post("/jobs/migrate-video-asset-storage", async (request, reply) => {
     const body = (request.body ?? {}) as { targetDedicated?: unknown };
     if (typeof body.targetDedicated !== "boolean") {
       reply.code(400);

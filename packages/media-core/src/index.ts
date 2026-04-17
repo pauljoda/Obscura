@@ -408,12 +408,12 @@ export function getCacheRootDir() {
   return sharedCache;
 }
 
-export function getGeneratedSceneDir(sceneId: string) {
-  return path.join(getCacheRootDir(), "scenes", sceneId);
+export function getGeneratedVideoDir(videoId: string) {
+  return path.join(getCacheRootDir(), "videos", videoId);
 }
 
-export function getSceneSubtitlesDir(sceneId: string) {
-  return path.join(getGeneratedSceneDir(sceneId), "subtitles");
+export function getVideoSubtitlesDir(videoId: string) {
+  return path.join(getGeneratedVideoDir(videoId), "subtitles");
 }
 
 export * from "./subtitles";
@@ -431,7 +431,7 @@ export function getGeneratedTagDir(tagId: string) {
 }
 
 export function getGeneratedSeriesDir(videoSeriesId: string) {
-  return path.join(getCacheRootDir(), "scene-folders", videoSeriesId);
+  return path.join(getCacheRootDir(), "video-series", videoSeriesId);
 }
 
 /**
@@ -453,8 +453,8 @@ export function getSidecarPaths(videoFilePath: string) {
   };
 }
 
-/** Filenames under `getGeneratedSceneDir(sceneId)` for scene video derivatives (matches API asset legacy names). */
-export const SCENE_VIDEO_GENERATED_FILENAMES = {
+/** Filenames under `getGeneratedVideoDir(videoId)` for dedicated video derivatives. */
+export const VIDEO_GENERATED_FILENAMES = {
   thumb: "thumbnail.jpg",
   card: "card.jpg",
   sprite: "sprite.jpg",
@@ -462,9 +462,9 @@ export const SCENE_VIDEO_GENERATED_FILENAMES = {
   trickplay: "trickplay.vtt",
 } as const;
 
-export type SceneVideoGeneratedLayout = "dedicated" | "sidecar";
+export type VideoGeneratedLayout = "dedicated" | "sidecar";
 
-export interface SceneVideoGeneratedDiskPaths {
+export interface VideoGeneratedDiskPaths {
   thumb: string;
   card: string;
   preview: string;
@@ -472,27 +472,27 @@ export interface SceneVideoGeneratedDiskPaths {
   trickplay: string;
 }
 
-export function sceneVideoGeneratedLayoutFromDedicated(dedicated: boolean): SceneVideoGeneratedLayout {
+export function videoGeneratedLayoutFromDedicated(dedicated: boolean): VideoGeneratedLayout {
   return dedicated ? "dedicated" : "sidecar";
 }
 
 /**
- * Absolute disk paths for generated scene video assets (thumb, card, preview, sprite, trickplay VTT).
- * Dedicated layout uses `OBSCURA_CACHE_DIR/scenes/<sceneId>/`; sidecar uses names next to the video file.
+ * Absolute disk paths for generated video assets (thumb, card, preview, sprite, trickplay VTT).
+ * Dedicated layout uses `OBSCURA_CACHE_DIR/videos/<videoId>/`; sidecar uses names next to the video file.
  */
-export function getSceneVideoGeneratedDiskPaths(
-  sceneId: string,
+export function getVideoGeneratedDiskPaths(
+  videoId: string,
   videoFilePath: string,
-  layout: SceneVideoGeneratedLayout
-): SceneVideoGeneratedDiskPaths {
+  layout: VideoGeneratedLayout
+): VideoGeneratedDiskPaths {
   if (layout === "dedicated") {
-    const base = getGeneratedSceneDir(sceneId);
+    const base = getGeneratedVideoDir(videoId);
     return {
-      thumb: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.thumb),
-      card: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.card),
-      preview: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.preview),
-      sprite: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.sprite),
-      trickplay: path.join(base, SCENE_VIDEO_GENERATED_FILENAMES.trickplay),
+      thumb: path.join(base, VIDEO_GENERATED_FILENAMES.thumb),
+      card: path.join(base, VIDEO_GENERATED_FILENAMES.card),
+      preview: path.join(base, VIDEO_GENERATED_FILENAMES.preview),
+      sprite: path.join(base, VIDEO_GENERATED_FILENAMES.sprite),
+      trickplay: path.join(base, VIDEO_GENERATED_FILENAMES.trickplay),
     };
   }
 
@@ -506,10 +506,10 @@ export function getSceneVideoGeneratedDiskPaths(
   };
 }
 
-/** Every absolute path where scene video derivatives may exist (both layouts). */
-export function allSceneVideoGeneratedDiskPaths(sceneId: string, videoFilePath: string): string[] {
-  const dedicated = getSceneVideoGeneratedDiskPaths(sceneId, videoFilePath, "dedicated");
-  const sidecar = getSceneVideoGeneratedDiskPaths(sceneId, videoFilePath, "sidecar");
+/** Every absolute path where video derivatives may exist across both layouts. */
+export function allVideoGeneratedDiskPaths(videoId: string, videoFilePath: string): string[] {
+  const dedicated = getVideoGeneratedDiskPaths(videoId, videoFilePath, "dedicated");
+  const sidecar = getVideoGeneratedDiskPaths(videoId, videoFilePath, "sidecar");
   return [...new Set([...Object.values(dedicated), ...Object.values(sidecar)])];
 }
 
