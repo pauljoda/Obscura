@@ -297,7 +297,7 @@ export async function uploadSubtitle(
 
 /**
  * Enqueue an embedded-subtitle extraction job for the given video
- * entity. Mirrors the legacy `enqueueEmbeddedExtraction(sceneId)` but
+ * entity. Mirrors the legacy `enqueueEmbeddedExtraction(videoId)` but
  * passes the new `entityKind` + `entityId` payload the ported worker
  * processor reads.
  */

@@ -22,7 +22,7 @@ const {
  * distinguish between an episode row and a movie row — both render as
  * "video"-kind cards.
  */
-export const scenesSearchProvider: SearchProvider = {
+export const videosSearchProvider: SearchProvider = {
   kind: "video",
   label: "Videos",
   defaultPreviewLimit: 3,

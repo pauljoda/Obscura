@@ -29,8 +29,8 @@ const {
 } = schema;
 
 /**
- * Season summary projected onto the folder detail response. The web
- * folder view uses this to render the series → season → episode
+ * Season summary projected onto the series detail response. The web
+ * series view uses this to render the series → season → episode
  * hierarchy (per spec §5.2). Case A series (flat, only season 0) will
  * have exactly one row here with episodeCount = the total.
  */
@@ -603,7 +603,7 @@ export async function uploadVideoSeriesCover(
 }
 
 /**
- * Download a remote image and persist it as the folder's cover or
+ * Download a remote image and persist it as the series' cover or
  * backdrop. Used by scrape-accept flows so a plugin can hand in a URL
  * without having to pre-download the bytes.
  */

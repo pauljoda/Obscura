@@ -459,7 +459,7 @@ export async function updateAudioLibrary(
     if (body.organized !== undefined) updates.organized = body.organized;
     if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
 
-    // Studio: find or create by name (same behavior as scene updates)
+    // Studio: find or create by name (same behavior as video updates)
     if (body.studioName !== undefined) {
       const trimmed = body.studioName?.trim() ?? "";
       if (!trimmed) {
