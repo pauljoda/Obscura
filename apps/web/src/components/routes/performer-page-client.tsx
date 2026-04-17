@@ -28,18 +28,21 @@ import { VideoGrid } from "../video-grid";
 import { GalleryGrid } from "../gallery-grid";
 import { AudioLibraryAppearanceGrid } from "../audio/audio-library-appearance-grid";
 import { PerformerEdit } from "../performer-edit";
+import { SeriesCard } from "../series/series-card";
 import {
   deletePerformer,
   fetchAudioLibraries,
   fetchGalleries,
   fetchPerformerDetail,
   fetchScenes,
+  fetchSeries,
   setPerformerRating,
   toApiUrl,
   togglePerformerFavorite,
   type PerformerDetail,
   type VideoListItem,
 } from "../../lib/api";
+import type { VideoSeriesListItemDto } from "@obscura/contracts";
 import { StashIdChips } from "../stash-id-chips";
 import {
   NsfwBlur,
@@ -57,6 +60,8 @@ interface PerformerPageClientProps {
   initialPerformer: PerformerDetail | null;
   initialScenes: VideoListItem[];
   initialTotalScenes: number;
+  initialSeries: VideoSeriesListItemDto[];
+  initialTotalSeries: number;
   initialGalleries: GalleryListItemDto[];
   initialTotalGalleries: number;
   initialAudioLibraries: AudioLibraryListItemDto[];
@@ -68,6 +73,8 @@ export function PerformerPageClient({
   initialPerformer,
   initialScenes,
   initialTotalScenes,
+  initialSeries,
+  initialTotalSeries,
   initialGalleries,
   initialTotalGalleries,
   initialAudioLibraries,
@@ -81,6 +88,8 @@ export function PerformerPageClient({
   const [performer, setPerformer] = useState(initialPerformer);
   const [scenes, setScenes] = useState(initialScenes);
   const [totalScenes, setTotalScenes] = useState(initialTotalScenes);
+  const [series, setSeries] = useState(initialSeries);
+  const [totalSeries, setTotalSeries] = useState(initialTotalSeries);
   const [galleries, setGalleries] = useState(initialGalleries);
   const [totalGalleries, setTotalGalleries] = useState(initialTotalGalleries);
   const [audioLibraries, setAudioLibraries] = useState(initialAudioLibraries);
@@ -98,8 +107,9 @@ export function PerformerPageClient({
       setPerformer(performerResponse);
 
       const name = performerResponse.name;
-      const [scenesResponse, galleriesResponse, audioResponse] = await Promise.all([
+      const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = await Promise.all([
         fetchScenes({ performer: [name], limit: 100, nsfw: nsfwMode }),
+        fetchSeries({ performer: name, limit: 50, nsfw: nsfwMode }),
         fetchGalleries({
           performer: [name],
           root: "all",
@@ -116,6 +126,8 @@ export function PerformerPageClient({
 
       setScenes(scenesResponse.scenes);
       setTotalScenes(scenesResponse.total);
+      setSeries(seriesResponse.items);
+      setTotalSeries(seriesResponse.total);
       setGalleries(galleriesResponse.galleries);
       setTotalGalleries(galleriesResponse.total);
       setAudioLibraries(audioResponse.items);
@@ -134,6 +146,8 @@ export function PerformerPageClient({
     setPerformer(initialPerformer);
     setScenes(initialScenes);
     setTotalScenes(initialTotalScenes);
+    setSeries(initialSeries);
+    setTotalSeries(initialTotalSeries);
     setGalleries(initialGalleries);
     setTotalGalleries(initialTotalGalleries);
     setAudioLibraries(initialAudioLibraries);
@@ -144,6 +158,8 @@ export function PerformerPageClient({
     initialPerformer,
     initialScenes,
     initialTotalScenes,
+    initialSeries,
+    initialTotalSeries,
     initialGalleries,
     initialTotalGalleries,
     initialAudioLibraries,
@@ -495,15 +511,33 @@ export function PerformerPageClient({
 
           <div className="separator" />
 
+          {totalSeries > 0 ? (
+            <>
+              <section>
+                <h4 className="mb-3 text-kicker">{terms.series}</h4>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {series.map((s) => (
+                    <SeriesCard
+                      key={s.id}
+                      folder={s}
+                      href={`/videos?folder=${s.id}&from=${encodeURIComponent(currentPath)}`}
+                    />
+                  ))}
+                </div>
+              </section>
+              <div className="separator" />
+            </>
+          ) : null}
+
           <section>
-            <h4 className="mb-3 text-kicker">{terms.scenes}</h4>
+            <h4 className="mb-3 text-kicker">{terms.videos}</h4>
             {totalScenes > 0 ? (
               <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />
                 <p className="text-sm text-text-muted">
-                  No {terms.scenes.toLowerCase()} with this {terms.performer.toLowerCase()}.
+                  No {terms.videos.toLowerCase()} with this {terms.performer.toLowerCase()}.
                 </p>
               </div>
             )}

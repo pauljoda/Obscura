@@ -216,7 +216,7 @@ export async function runVideoSeriesIdentify({
 
 /* ─── Single-row seek ─────────────────────────────────────────── */
 
-export async function seekFolderSingle(
+export async function seekSeriesSingle(
   idx: number,
   rows: VideoSeriesRow[],
   setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>,
@@ -253,7 +253,7 @@ export async function seekFolderSingle(
 
 /* ─── Accept all ──────────────────────────────────────────────── */
 
-export async function acceptAllVideoFolders(
+export async function acceptAllVideoSeries(
   rows: VideoSeriesRow[],
   setRows: React.Dispatch<React.SetStateAction<VideoSeriesRow[]>>,
 ): Promise<void> {
@@ -273,7 +273,7 @@ export async function acceptAllVideoFolders(
 
 /* ─── Rows renderer ───────────────────────────────────────────── */
 
-export function IdentifyVideoFolderRows({
+export function IdentifyVideoSeriesRows({
   rows,
   setRows,
   expandedIds,
@@ -446,7 +446,7 @@ function VideoFolderRowCard({
             <button
               onClick={(e) => { e.stopPropagation(); onSeekSingle(); }}
               className="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
-              title="Identify this folder"
+              title="Identify this series"
             >
               <ScanSearch className="h-3.5 w-3.5" />
             </button>

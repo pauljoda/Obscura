@@ -56,7 +56,7 @@ import {
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
-import { revalidateSceneFolderCache } from "../../app/actions/revalidate-scene-folder";
+import { revalidateSeriesCache } from "../../app/actions/revalidate-series";
 import { InfoRow } from "../shared/metadata-panel";
 import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { ChipInput } from "../shared/chip-input";
@@ -380,7 +380,7 @@ export function VideosPageClient({
   // season grid? True only for Case B series (seasons rendering mode)
   // when the user hasn't drilled into a specific season yet.
   const showSeasonGrid =
-    viewMode === "folders" &&
+    viewMode === "series" &&
     activeFolder?.renderingMode === "seasons" &&
     activeSeasonNumber === null &&
     !hasFolderScopedSceneQuery;
@@ -396,7 +396,7 @@ export function VideosPageClient({
 
     try {
       const result = await fetchScenes(
-        viewMode === "folders"
+        viewMode === "series"
           ? {
               ...buildParams(),
               limit: 50,
@@ -437,7 +437,7 @@ export function VideosPageClient({
 
     try {
       const result = await fetchScenes(
-        viewMode === "folders"
+        viewMode === "series"
           ? {
               ...buildParams(),
               limit: 50,
@@ -479,7 +479,7 @@ export function VideosPageClient({
   ]);
 
   const loadFolderContext = useCallback(async () => {
-    if (viewMode !== "folders") return;
+    if (viewMode !== "series") return;
 
     if (activeFolder?.id) {
       try {
@@ -520,7 +520,7 @@ export function VideosPageClient({
       setFolderError(null);
       try {
         await updateSeries(activeFolder.id, patch);
-        await revalidateSceneFolderCache(activeFolder.id);
+        await revalidateSeriesCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to update folder");
@@ -537,7 +537,7 @@ export function VideosPageClient({
       setCoverBusy(true);
       try {
         await uploadSeriesCover(activeFolder.id, file);
-        await revalidateSceneFolderCache(activeFolder.id);
+        await revalidateSeriesCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to upload cover");
@@ -554,7 +554,7 @@ export function VideosPageClient({
     setCoverBusy(true);
     try {
       await deleteSeriesCover(activeFolder.id);
-      await revalidateSceneFolderCache(activeFolder.id);
+      await revalidateSeriesCache(activeFolder.id);
       await reloadFolder();
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Failed to delete cover");
@@ -609,7 +609,7 @@ export function VideosPageClient({
         rating: editRating,
         date: editDate.trim() || null,
       });
-      await revalidateSceneFolderCache(activeFolder.id);
+      await revalidateSeriesCache(activeFolder.id);
       await reloadFolder();
       setFolderEditMode(false);
     } catch (err) {
@@ -626,7 +626,7 @@ export function VideosPageClient({
       setBackdropBusy(true);
       try {
         await uploadSeriesBackdrop(activeFolder.id, file);
-        await revalidateSceneFolderCache(activeFolder.id);
+        await revalidateSeriesCache(activeFolder.id);
         await reloadFolder();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to upload backdrop");
@@ -643,7 +643,7 @@ export function VideosPageClient({
     setBackdropBusy(true);
     try {
       await deleteSeriesBackdrop(activeFolder.id);
-      await revalidateSceneFolderCache(activeFolder.id);
+      await revalidateSeriesCache(activeFolder.id);
       await reloadFolder();
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Failed to delete backdrop");
@@ -812,15 +812,15 @@ export function VideosPageClient({
   }, [activeFolder]);
 
   const folderSectionTitle = activeFolder
-    ? `Child ${terms.sceneFolders.toLowerCase()}`
+    ? `Child ${terms.series.toLowerCase()}`
     : folderSearch
-      ? `Matching ${terms.sceneFolders.toLowerCase()}`
-      : terms.sceneFolders;
+      ? `Matching ${terms.series.toLowerCase()}`
+      : terms.series;
   const sceneSectionTitle = activeFolder
     ? hasFolderScopedSceneQuery
-      ? `Matching ${terms.scenes.toLowerCase()} in this ${terms.sceneFolder.toLowerCase()}`
-      : `${terms.scenes} in this ${terms.sceneFolder.toLowerCase()}`
-    : terms.uncategorizedScenes;
+      ? `Matching ${terms.videos.toLowerCase()} in this ${terms.seriesSingular.toLowerCase()}`
+      : `${terms.videos} in this ${terms.seriesSingular.toLowerCase()}`
+    : terms.movies;
 
   const uploadTarget = activeFolder
     ? { kind: "video" as const, videoSeriesId: activeFolder.id }
@@ -832,7 +832,7 @@ export function VideosPageClient({
         <div>
           <h1 className="flex items-center gap-2.5">
             <Film className="h-5 w-5 text-text-accent" />
-            {terms.scenes}
+            {terms.videos}
           </h1>
           <p className="mt-1 text-[0.78rem] text-text-muted">
             Browse and manage your media library
@@ -902,13 +902,13 @@ export function VideosPageClient({
         target={uploadTarget}
         onUploaded={() => router.refresh()}
       >
-      {viewMode === "folders" ? (
+      {viewMode === "series" ? (
         activeFolder ? (
           <div className="space-y-5">
             {/* ── Breadcrumbs ──────────────────────────────────── */}
             <HierarchyBreadcrumbs
               items={[
-                { id: "root", title: terms.scenes, href: "/videos" },
+                { id: "root", title: terms.videos, href: "/videos" },
                 ...activeFolder.breadcrumbs.map((crumb) => ({
                   id: crumb.id,
                   title: crumb.displayTitle,
@@ -1186,7 +1186,7 @@ export function VideosPageClient({
                         </span>
                         {activeFolder.childSeasonCount > 0 && (
                           <span className="text-white/40">
-                            {activeFolder.childSeasonCount} child {activeFolder.childSeasonCount !== 1 ? terms.sceneFolders.toLowerCase() : terms.sceneFolder.toLowerCase()}
+                            {activeFolder.childSeasonCount} child {activeFolder.childSeasonCount !== 1 ? terms.series.toLowerCase() : terms.seriesSingular.toLowerCase()}
                           </span>
                         )}
                         {activeFolder.isNsfw && <NsfwChip />}
@@ -1251,7 +1251,7 @@ export function VideosPageClient({
 
             {/* ── Child series ──────────────────────────────────── */}
             {folderCards.length > 0 && (
-              <HierarchySection title={`Child ${terms.sceneFolders.toLowerCase()}`}>
+              <HierarchySection title={`Child ${terms.series.toLowerCase()}`}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {folderCards.map((folder) => (
                     <SeriesCard
@@ -1360,12 +1360,12 @@ export function VideosPageClient({
             title={
               <div>
                 <h2 className="text-2xl font-semibold text-text-primary">
-                  {terms.sceneFolders}
+                  {terms.series}
                 </h2>
                 <p className="mt-1 text-[0.78rem] text-text-muted">
-                  Browse {terms.sceneFolders.toLowerCase()} and{" "}
-                  {terms.uncategorizedScenes.toLowerCase()} from disk, then
-                  drill down into individual {terms.scenes.toLowerCase()}.
+                  Browse {terms.series.toLowerCase()} and{" "}
+                  {terms.movies.toLowerCase()} from disk, then
+                  drill down into individual {terms.videos.toLowerCase()}.
                 </p>
               </div>
             }
@@ -1440,7 +1440,7 @@ export function VideosPageClient({
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatCard
               icon={<Film className="h-4 w-4" />}
-              label={`Total ${terms.scenes}`}
+              label={`Total ${terms.videos}`}
               value={String(stats.totalScenes)}
               gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
             />

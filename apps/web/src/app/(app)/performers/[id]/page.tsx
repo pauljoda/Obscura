@@ -2,12 +2,17 @@ export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
 import { PerformerPageClient } from "../../../../components/routes/performer-page-client";
-import type { AudioLibraryListItemDto, GalleryListItemDto } from "@obscura/contracts";
+import type {
+  AudioLibraryListItemDto,
+  GalleryListItemDto,
+  VideoSeriesListItemDto,
+} from "@obscura/contracts";
 import {
   fetchAudioLibraries,
   fetchGalleries,
   fetchPerformerDetail,
   fetchScenes,
+  fetchSeries,
   type PerformerDetail,
   type VideoListItem,
 } from "../../../../lib/server-api";
@@ -30,6 +35,12 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
     limit: 100,
     offset: 0,
   };
+  const emptySeries = {
+    items: [] as VideoSeriesListItemDto[],
+    total: 0,
+    limit: 100,
+    offset: 0,
+  };
   const emptyGalleries = {
     galleries: [] as GalleryListItemDto[],
     total: 0,
@@ -38,9 +49,10 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
   };
   const emptyAudio = { items: [] as AudioLibraryListItemDto[], total: 0 };
 
-  const [scenesResponse, galleriesResponse, audioResponse] = performer
+  const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = performer
     ? await Promise.all([
         fetchScenes({ performer: [performer.name], limit: 100, nsfw: nsfwMode }).catch(() => emptyScenes),
+        fetchSeries({ performer: performer.name, limit: 50, nsfw: nsfwMode }).catch(() => emptySeries),
         fetchGalleries({
           performer: [performer.name],
           root: "all",
@@ -54,7 +66,7 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
           nsfw: nsfwMode,
         }).catch(() => emptyAudio),
       ])
-    : [emptyScenes, emptyGalleries, emptyAudio];
+    : [emptyScenes, emptySeries, emptyGalleries, emptyAudio];
 
   return (
     <PerformerPageClient
@@ -62,6 +74,8 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
       initialPerformer={performer}
       initialScenes={scenesResponse.scenes}
       initialTotalScenes={scenesResponse.total}
+      initialSeries={seriesResponse.items}
+      initialTotalSeries={seriesResponse.total}
       initialGalleries={galleriesResponse.galleries}
       initialTotalGalleries={galleriesResponse.total}
       initialAudioLibraries={audioResponse.items}

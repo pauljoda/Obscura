@@ -13,8 +13,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** Map route segments to user-facing labels (paths stay /videos, /performers). */
 const SEGMENT_LABELS: Record<string, string> = {
-  scenes: entityTerms.scenes,
-  videos: entityTerms.scenes,
+  scenes: entityTerms.videos,
+  videos: entityTerms.videos,
   performers: entityTerms.performers,
 };
 

@@ -54,7 +54,7 @@ import {
   type SelectedImages,
 } from "../../lib/api/scrapers";
 import { fetchVideoSeriesLibraryDetail } from "../../lib/api/videos";
-import { buildLocalSeasonsInput } from "./identify-video-folders-tab";
+import { buildLocalSeasonsInput } from "./identify-video-series-tab";
 import { ImagePicker } from "./image-picker";
 
 /* ─── Shape discrimination ───────────────────────────────────────── */

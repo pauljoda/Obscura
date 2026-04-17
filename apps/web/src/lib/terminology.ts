@@ -1,15 +1,20 @@
 /**
- * User-facing names for library entities. URLs and API types still use
- * scene/performer; this module is the single source for UI copy.
+ * User-facing names for library entities. Single source of truth for
+ * UI copy so the same labels can be shifted centrally if we ever
+ * rename again.
  */
 export const entityTerms = {
-  scenes: "Videos",
-  scene: "Video",
-  /** Containers of videos. In the new model, these are series rows. */
-  sceneFolders: "Series",
-  sceneFolder: "Series",
+  videos: "Videos",
+  video: "Video",
+  /** Grouped videos with seasons + episodes (video_series rows). */
+  series: "Series",
+  seriesSingular: "Series",
+  /** Sub-grouping of episodes under a series (video_seasons rows). */
+  seasons: "Seasons",
+  season: "Season",
   /** Videos that live outside a series (the video_movies rows). */
-  uncategorizedScenes: "Movies",
+  movies: "Movies",
+  movie: "Movie",
   performers: "Actors",
   performer: "Actor",
   studios: "Studios",
@@ -24,8 +29,8 @@ export type EntityTerms = typeof entityTerms;
 export function formatVideoCount(count: number): string {
   const w =
     count === 1
-      ? entityTerms.scene.toLowerCase()
-      : entityTerms.scenes.toLowerCase();
+      ? entityTerms.video.toLowerCase()
+      : entityTerms.videos.toLowerCase();
   return `${count} ${w}`;
 }
 

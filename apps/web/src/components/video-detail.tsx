@@ -443,9 +443,9 @@ export function VideoDetail({
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <p className="text-text-muted text-sm">
-          {error ?? `${terms.scene} not found`}
+          {error ?? `${terms.video} not found`}
         </p>
-        <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={`Back to ${terms.scenes}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
+        <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={`Back to ${terms.videos}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
       </div>
     );
   }
@@ -464,7 +464,7 @@ export function VideoDetail({
   return (
     <div className="space-y-5">
       {/* Back link */}
-      <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={terms.scenes} className="py-1.5 font-medium hover:border-border-accent w-fit" />
+      <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={terms.videos} className="py-1.5 font-medium hover:border-border-accent w-fit" />
 
       {/* Video Player — optionally side-by-side with a docked transcript
           on desktop widths (>= lg). On smaller viewports the player stays

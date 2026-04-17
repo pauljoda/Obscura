@@ -53,8 +53,8 @@ export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
             <span>
               {folder.childSeasonCount} child{" "}
               {folder.childSeasonCount === 1
-                ? entityTerms.sceneFolder.toLowerCase()
-                : entityTerms.sceneFolders.toLowerCase()}
+                ? entityTerms.seriesSingular.toLowerCase()
+                : entityTerms.series.toLowerCase()}
             </span>
           ) : null}
         </div>
@@ -66,7 +66,7 @@ export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
         ) : null}
         {!compact && folder.containsNsfwDescendants && !folder.isNsfw ? (
           <div className="text-[0.65rem] text-text-disabled">
-            Mixed-content {entityTerms.sceneFolder.toLowerCase()}
+            Mixed-content {entityTerms.seriesSingular.toLowerCase()}
           </div>
         ) : null}
       </div>

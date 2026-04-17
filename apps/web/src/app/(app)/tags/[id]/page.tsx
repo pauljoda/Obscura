@@ -299,10 +299,10 @@ export default function TagPage({ params }: TagPageProps) {
 
       <div className="separator" />
 
-      {/* Folders associated with this tag */}
+      {/* Series associated with this tag */}
       {folders.length > 0 && (
         <section>
-          <h4 className="text-kicker mb-3">Folders</h4>
+          <h4 className="text-kicker mb-3">{terms.series}</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
             {folders.map((f) => (
               <SeriesCard
@@ -317,7 +317,7 @@ export default function TagPage({ params }: TagPageProps) {
       )}
 
       <section>
-        <h4 className="text-kicker mb-3">Tagged {terms.scenes}</h4>
+        <h4 className="text-kicker mb-3">Tagged {terms.videos}</h4>
         {loading ? (
           <div className="surface-well p-12 flex items-center justify-center">
             <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
@@ -325,7 +325,7 @@ export default function TagPage({ params }: TagPageProps) {
         ) : totalScenes === 0 ? (
           <div className="surface-well p-12 text-center">
             <Film className="h-10 w-10 text-text-disabled mx-auto mb-3" />
-            <p className="text-text-muted text-sm">No {terms.scenes.toLowerCase()} with this tag.</p>
+            <p className="text-text-muted text-sm">No {terms.videos.toLowerCase()} with this tag.</p>
           </div>
         ) : (
           <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />

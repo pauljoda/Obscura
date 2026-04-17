@@ -435,7 +435,7 @@ export function SettingsPageClient({
                   className="control-input w-full max-w-md py-1.5 text-sm"
                   value={newRootLabel}
                   onChange={(event) => setNewRootLabel(event.target.value)}
-                  placeholder={`Primary ${entityTerms.scenes.toLowerCase()}`}
+                  placeholder={`Primary ${entityTerms.videos.toLowerCase()}`}
                 />
               </div>
 

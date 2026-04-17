@@ -31,7 +31,7 @@ export type {
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
-export type Tab = "scenes" | "video-folders" | "galleries" | "images" | "audio-libraries" | "audio-tracks" | "performers" | "studios" | "tags" | "phashes";
+export type Tab = "scenes" | "video-series" | "galleries" | "images" | "audio-libraries" | "audio-tracks" | "performers" | "studios" | "tags" | "phashes";
 
 export const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image", "episodeNumber"] as const;
 export type SceneField = typeof SCENE_FIELDS[number];
@@ -101,7 +101,7 @@ export function perfFieldsFromResult(result: NormalizedPerformerScrapeResult): S
 }
 
 export function tabEntityLabel(t: Tab): string {
-  if (t === "scenes") return entityTerms.scenes.toLowerCase();
+  if (t === "scenes") return entityTerms.videos.toLowerCase();
   if (t === "performers") return entityTerms.performers.toLowerCase();
   if (t === "studios") return "studios";
   return "tags";

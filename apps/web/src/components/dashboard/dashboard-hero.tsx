@@ -20,7 +20,7 @@ export function DashboardHero({ stats }: DashboardHeroProps) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
-            label={entityTerms.scenes}
+            label={entityTerms.videos}
             value={String(stats?.totalScenes ?? 0)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />

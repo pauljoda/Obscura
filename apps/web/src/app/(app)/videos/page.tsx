@@ -38,7 +38,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
   const hasFolderScopedSceneQuery =
     Boolean(sceneFetchParams.search) || listPrefs.activeFilters.length > 0;
   const activeFolder =
-    listPrefs.viewMode === "folders" && requestedFolderId
+    listPrefs.viewMode === "series" && requestedFolderId
       ? await fetchSeriesDetail(requestedFolderId, { nsfw: nsfwMode }).catch(
           () => null,
         )
@@ -52,7 +52,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
     tagsResponse,
     performersResponse,
   ] = await Promise.all([
-    listPrefs.viewMode === "folders" && !activeFolder
+    listPrefs.viewMode === "series" && !activeFolder
       ? fetchSeries({
           search: sceneFetchParams.search,
           root: sceneFetchParams.search ? "all" : undefined,
@@ -61,7 +61,7 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
         }).catch(() => ({ items: [], total: 0, limit: 200, offset: 0 }))
       : Promise.resolve({ items: [], total: 0, limit: 0, offset: 0 }),
     fetchVideos(
-      listPrefs.viewMode === "folders"
+      listPrefs.viewMode === "series"
         ? activeFolder
           ? {
               ...sceneFetchParams,

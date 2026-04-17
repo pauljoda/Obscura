@@ -382,7 +382,7 @@ export function SeriesMetadataPanel({
         </div>
         {folder.childSeasonCount > 0 && (
           <div>
-            {folder.childSeasonCount} subfolder
+            {folder.childSeasonCount} season
             {folder.childSeasonCount === 1 ? "" : "s"}
           </div>
         )}

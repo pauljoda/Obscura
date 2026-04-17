@@ -60,7 +60,7 @@ export function DiagnosticsSection() {
             </p>
             <p className="text-[0.68rem] text-text-muted">
               Re-probe each file on disk (resolution, duration, codecs, size), then clear and regenerate thumbnails, preview
-              clips, and trickplay sprites for every {entityTerms.scene.toLowerCase()}. Use this after replacing a source file
+              clips, and trickplay sprites for every {entityTerms.video.toLowerCase()}. Use this after replacing a source file
               with a different resolution, after quality setting changes, or to fix corrupt sprites. Heavy maintenance job.
             </p>
           </div>
@@ -89,9 +89,9 @@ export function DiagnosticsSection() {
               Backfill perceptual hashes
             </p>
             <p className="text-[0.68rem] text-text-muted">
-              Queue a Stash-compatible pHash generation job for every {entityTerms.scene.toLowerCase()} that has a
+              Queue a Stash-compatible pHash generation job for every {entityTerms.video.toLowerCase()} that has a
               known duration but no stored phash. Required before you can contribute those hashes to StashDB /
-              ThePornDB from the Identify → pHashes tab. CPU-heavy (25 ffmpeg frame extractions per {entityTerms.scene.toLowerCase()}).
+              ThePornDB from the Identify → pHashes tab. CPU-heavy (25 ffmpeg frame extractions per {entityTerms.video.toLowerCase()}).
             </p>
           </div>
           <div className="flex items-center gap-3">

@@ -224,7 +224,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
-            label={`Tagged ${terms.scenes}`}
+            label={`Tagged ${terms.videos}`}
             value={String(totalScenes)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />

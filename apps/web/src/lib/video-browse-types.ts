@@ -1,4 +1,4 @@
-export type ViewMode = "grid" | "list" | "folders";
+export type ViewMode = "grid" | "list" | "series";
 export type SortOption =
   | "recent"
   | "title"

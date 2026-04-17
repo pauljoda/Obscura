@@ -15,7 +15,7 @@ import type {
 
 export type IdentifyTab =
   | "scenes"
-  | "video-folders"
+  | "video-series"
   | "galleries"
   | "images"
   | "audio-libraries"

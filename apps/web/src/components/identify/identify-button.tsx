@@ -38,7 +38,7 @@ import {
 import { fetchVideoSeriesLibraryDetail } from "../../lib/api/videos";
 import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
-import { buildLocalSeasonsInput } from "./identify-video-folders-tab";
+import { buildLocalSeasonsInput } from "./identify-video-series-tab";
 
 type EntityKind = "video_series" | "video_movie" | "video_episode";
 

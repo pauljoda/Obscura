@@ -320,10 +320,10 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       <div className="separator" />
 
-      {/* Folders associated with this studio */}
+      {/* Series associated with this studio */}
       {folders.length > 0 && (
         <section>
-          <h4 className="text-kicker mb-3">Folders</h4>
+          <h4 className="text-kicker mb-3">{terms.series}</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
             {folders.map((f) => (
               <SeriesCard
@@ -338,7 +338,7 @@ export default function StudioPage({ params }: StudioPageProps) {
       )}
 
       <section>
-        <h4 className="text-kicker mb-3">{terms.scenes}</h4>
+        <h4 className="text-kicker mb-3">{terms.videos}</h4>
         <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
       </section>
 

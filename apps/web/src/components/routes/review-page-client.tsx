@@ -132,7 +132,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
           <GitCompareArrows className="h-12 w-12 text-text-disabled mb-3" />
           <p className="text-text-muted text-sm">No pending results to review.</p>
           <p className="text-text-disabled text-xs mt-1">
-            Scrape {entityTerms.scenes.toLowerCase()} from the{" "}
+            Scrape {entityTerms.videos.toLowerCase()} from the{" "}
             <a href="/resolve" className="text-text-accent hover:underline">
               Resolve queue
             </a>{" "}
@@ -146,7 +146,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-text-disabled">
-                    {entityTerms.scene} {(result.sceneId ?? result.entityId ?? "").slice(0, 8)}... · {result.action}
+                    {entityTerms.video} {(result.sceneId ?? result.entityId ?? "").slice(0, 8)}... · {result.action}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

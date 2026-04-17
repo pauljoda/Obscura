@@ -422,7 +422,7 @@ export default function PluginsPage() {
         {!isSfw && (
           <>
             <div className="surface-stat px-3 py-2">
-              <span className="text-kicker !text-text-disabled">{entityTerms.scene} Scrapers</span>
+              <span className="text-kicker !text-text-disabled">{entityTerms.video} Scrapers</span>
               <div className="text-lg font-semibold text-text-primary leading-tight">{videoCount}</div>
             </div>
             <div className="surface-stat px-3 py-2">
@@ -506,7 +506,7 @@ export default function PluginsPage() {
                     {filter === "all" && <Package className="h-3 w-3" />}
                     {filter === "scene" && <Film className="h-3 w-3" />}
                     {filter === "performer" && <Users className="h-3 w-3" />}
-                    {filter === "all" ? "All" : filter === "scene" ? entityTerms.scenes : entityTerms.performers}
+                    {filter === "all" ? "All" : filter === "scene" ? entityTerms.videos : entityTerms.performers}
                   </button>
                 ))}
               </>

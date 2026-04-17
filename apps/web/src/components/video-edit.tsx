@@ -568,7 +568,7 @@ export function VideoEdit({
   if (!scene) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
-        <p className="text-text-muted text-sm">{error ?? `${terms.scene} not found`}</p>
+        <p className="text-text-muted text-sm">{error ?? `${terms.video} not found`}</p>
       </div>
     );
   }
@@ -600,7 +600,7 @@ export function VideoEdit({
             className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to {terms.scene}
+            Back to {terms.video}
           </Link>
         )}
 
@@ -615,7 +615,7 @@ export function VideoEdit({
         <div className="flex items-center justify-between">
           <h3 className="text-kicker flex items-center gap-2">
             <FileText className="h-3.5 w-3.5" />
-            {terms.scene} Metadata
+            {terms.video} Metadata
           </h3>
           <Button variant="secondary" size="sm" onClick={enterEditMode}>
             <Pencil className="h-3.5 w-3.5" />
@@ -815,7 +815,7 @@ export function VideoEdit({
           className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to {terms.scene}
+          Back to {terms.video}
         </Link>
       )}
 
@@ -1051,7 +1051,7 @@ export function VideoEdit({
                 <NsfwEditToggle value={isNsfw} onChange={setIsNsfw} />
                 {isNsfw && (
                   <span className="text-[0.68rem] text-text-muted">
-                    This {terms.scene.toLowerCase()} will be hidden in SFW mode
+                    This {terms.video.toLowerCase()} will be hidden in SFW mode
                   </span>
                 )}
               </div>

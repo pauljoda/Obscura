@@ -151,7 +151,7 @@ export function DashboardRecentAdditions({
           >
             <span className="inline-flex items-center gap-1.5">
               <Film className="h-3 w-3 opacity-70" />
-              {terms.scenes}
+              {terms.videos}
             </span>
           </Link>
           <Link

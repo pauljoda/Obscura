@@ -62,7 +62,7 @@ const scenesPrefs = createListPrefs<VideosListPrefs>({
     const search = parsed.search;
     const activeFilters = parseActiveFilters(parsed.activeFilters);
 
-    if (viewMode !== "grid" && viewMode !== "list" && viewMode !== "folders") return null;
+    if (viewMode !== "grid" && viewMode !== "list" && viewMode !== "series") return null;
     if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SortOption)) return null;
     if (sortDir !== "asc" && sortDir !== "desc") return null;
     if (typeof search !== "string" || search.length > 500) return null;

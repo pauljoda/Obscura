@@ -292,10 +292,10 @@ export function FilterBar({
           <button
             title="Series view"
             aria-label="Series view"
-            onClick={() => onViewModeChange("folders")}
+            onClick={() => onViewModeChange("series")}
             className={cn(
               "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
-              viewMode === "folders"
+              viewMode === "series"
                 ? "text-text-accent bg-accent-950"
                 : "text-text-muted hover:text-text-primary hover:bg-surface-2",
             )}

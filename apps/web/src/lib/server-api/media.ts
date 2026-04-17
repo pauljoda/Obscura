@@ -98,6 +98,9 @@ export async function fetchSeries(params?: {
   limit?: number;
   offset?: number;
   nsfw?: string;
+  studio?: string;
+  tag?: string;
+  performer?: string;
 }) {
   const qs = buildQueryString({
     parent: params?.parent,
@@ -106,6 +109,9 @@ export async function fetchSeries(params?: {
     limit: params?.limit,
     offset: params?.offset,
     nsfw: params?.nsfw,
+    studio: params?.studio,
+    tag: params?.tag,
+    performer: params?.performer,
   });
   return serverFetch<{
     items: VideoSeriesListItemDto[];
@@ -114,7 +120,7 @@ export async function fetchSeries(params?: {
     offset: number;
   }>(`/video-series${qs}`, {
     revalidate: 0,
-    tags: ["scene-folders"],
+    tags: ["video-series"],
   });
 }
 

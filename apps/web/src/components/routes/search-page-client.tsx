@@ -91,7 +91,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
   }, [query, minRating, dateFrom, dateTo]);
 
   const kindLabel = (kind: string, baseLabel: string) => {
-    if (kind === "video") return terms.scenes;
+    if (kind === "video") return terms.videos;
     if (kind === "performer") return terms.performers;
     return baseLabel;
   };

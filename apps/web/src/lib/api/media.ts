@@ -284,6 +284,7 @@ export async function fetchSeries(params?: {
   nsfw?: string;
   studio?: string;
   tag?: string;
+  performer?: string;
 }): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     parent: params?.parent,
@@ -294,6 +295,7 @@ export async function fetchSeries(params?: {
     nsfw: params?.nsfw,
     studio: params?.studio,
     tag: params?.tag,
+    performer: params?.performer,
   });
   return fetchApi(`/video-series${qs}`);
 }
