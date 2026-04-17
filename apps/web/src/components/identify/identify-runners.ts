@@ -316,8 +316,11 @@ export async function acceptAllAudioLibraries(
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
-    } catch {
-      /* skip row */
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)),
+      );
     }
   }
 }
@@ -496,8 +499,11 @@ export async function acceptAllAudioTracks(
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
-    } catch {
-      /* skip row */
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)),
+      );
     }
   }
 }
@@ -670,8 +676,11 @@ export async function acceptAllGalleries(
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
-    } catch {
-      /* skip row */
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)),
+      );
     }
   }
 }
@@ -838,8 +847,11 @@ export async function acceptAllImages(
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
-    } catch {
-      /* skip row */
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)),
+      );
     }
   }
 }

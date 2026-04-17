@@ -176,7 +176,10 @@ async function acceptTagRow(
     await updateTag(row.tag.id, data);
     if (row.endpointId && row.remoteId) await autoSaveStashId("tag", row.tag.id, row.endpointId, row.remoteId);
     setTagRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
-  } catch { /* keep as found */ }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Accept failed";
+    setTagRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)));
+  }
 }
 
 function rejectTagRow(

@@ -50,8 +50,11 @@ export function IdentifyAudioTrackRows({
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
-    } catch {
-      /* leave as found */
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)),
+      );
     }
   }
 

@@ -175,7 +175,10 @@ async function acceptStudioRow(
     }
     if (row.endpointId && row.remoteId) await autoSaveStashId("studio", row.studio.id, row.endpointId, row.remoteId);
     setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)));
-  } catch { /* keep as found */ }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Accept failed";
+    setStudioRows((prev) => prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r)));
+  }
 }
 
 function rejectStudioRow(

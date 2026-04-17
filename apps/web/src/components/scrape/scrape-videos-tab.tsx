@@ -348,7 +348,12 @@ async function acceptVideoRow(
     setVideoRows((prev) =>
       prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
     );
-  } catch { /* keep as found */ }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Accept failed";
+    setVideoRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r))
+    );
+  }
 }
 
 async function rejectVideoRow(
@@ -373,11 +378,19 @@ export async function acceptAllVideos(
   const found = videoRows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.status === "found" && row.result);
   for (const { row, idx } of found) {
     try {
-      await acceptScrapeResult(row.result!.id);
+      await acceptScrapeResult(row.result!.id, Array.from(row.selectedFields), {
+        excludePerformers: Array.from(row.excludedPerformers),
+        excludeTags: Array.from(row.excludedTags),
+      });
       setVideoRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
       );
-    } catch { /* skip */ }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setVideoRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r))
+      );
+    }
   }
 }
 

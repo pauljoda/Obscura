@@ -229,7 +229,12 @@ async function acceptPerformerRow(
     setPerfRows((prev) =>
       prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
     );
-  } catch { /* keep as found */ }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Accept failed";
+    setPerfRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, status: "error", error: message } : r))
+    );
+  }
 }
 
 function rejectPerformerRow(

@@ -265,7 +265,12 @@ export async function acceptAllVideoSeries(
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" as const } : r)),
       );
-    } catch { /* skip */ }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Accept failed";
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, status: "error" as const, error: message } : r)),
+      );
+    }
   }
 }
 
@@ -318,8 +323,13 @@ export function IdentifyVideoSeriesRows({
                   i === idx ? { ...r, status: "accepted" as const } : r,
                 ),
               );
-            } catch {
-              /* keep as found */
+            } catch (err) {
+              const message = err instanceof Error ? err.message : "Accept failed";
+              setRows((prev) =>
+                prev.map((r, i) =>
+                  i === idx ? { ...r, status: "error" as const, error: message } : r,
+                ),
+              );
             }
           }}
           onDismiss={() => {

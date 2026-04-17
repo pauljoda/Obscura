@@ -467,18 +467,39 @@ export async function pluginsRoutes(app: FastifyInstance) {
         // an album (audio_library); every other audio action targets a
         // single track. Mapping matters because accept dispatches to
         // the matching update service below.
-        const entityType =
-          action.startsWith("folder") || action.startsWith("series")
-            ? "video_series"
-            : action === "audioLibraryByName"
-              ? "audio_library"
-              : action.startsWith("audio")
-                ? "audio_track"
-                : action.startsWith("gallery")
-                  ? "gallery"
-                  : action.startsWith("image")
-                    ? "image"
-                    : "video";
+        // Video actions target either video_episodes or video_movies
+        // depending on what table the entityId lives in — probe both so
+        // the scrape result carries the concrete kind expected by
+        // /scrapers/results/:id/accept. Saving a bare "video" here would
+        // leave the row stranded (neither accept endpoint handles it).
+        let entityType: string;
+        if (action.startsWith("folder") || action.startsWith("series")) {
+          entityType = "video_series";
+        } else if (action === "audioLibraryByName") {
+          entityType = "audio_library";
+        } else if (action.startsWith("audio")) {
+          entityType = "audio_track";
+        } else if (action.startsWith("gallery")) {
+          entityType = "gallery";
+        } else if (action.startsWith("image")) {
+          entityType = "image";
+        } else {
+          const [ep] = await db
+            .select({ id: schema.videoEpisodes.id })
+            .from(schema.videoEpisodes)
+            .where(eq(schema.videoEpisodes.id, req.body.entityId))
+            .limit(1);
+          if (ep) {
+            entityType = "video_episode";
+          } else {
+            const [mv] = await db
+              .select({ id: schema.videoMovies.id })
+              .from(schema.videoMovies)
+              .where(eq(schema.videoMovies.id, req.body.entityId))
+              .limit(1);
+            entityType = mv ? "video_movie" : "video";
+          }
+        }
 
         const proposedResult = deriveProposedResultFromPluginOutput(result);
         const pr = proposedResult as Record<string, unknown> | null;
