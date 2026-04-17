@@ -81,6 +81,9 @@ export function IdentifyAudioTrackRows({
     );
   }
 
+  const nextIdx = reviewingIdx !== null ? rows.findIndex((r, i) => i > reviewingIdx && r.status === "found") : -1;
+  const prevIdx = reviewingIdx !== null ? rows.findLastIndex((r, i) => i < reviewingIdx && r.status === "found") : -1;
+
   return (
     <>
       {rows.map((row, idx) => (
@@ -98,6 +101,7 @@ export function IdentifyAudioTrackRows({
       ))}
       {reviewingIdx !== null && (
         <AudioTrackReviewDrawer
+          key={rows[reviewingIdx].track.id}
           row={rows[reviewingIdx]}
           onClose={() => setReviewingIdx(null)}
           onToggleField={(field) => toggleField(reviewingIdx, field)}
@@ -106,40 +110,21 @@ export function IdentifyAudioTrackRows({
             setReviewingIdx(null);
           }}
           onNext={
-            reviewingIdx < rows.length - 1
-              ? () => {
-                  const nextIdx = reviewingIdx + 1;
-                  if (rows[nextIdx].status === "found") {
-                    setReviewingIdx(nextIdx);
-                  } else {
-                    setReviewingIdx(null);
-                  }
-                }
+            nextIdx !== -1
+              ? () => setReviewingIdx(nextIdx)
               : undefined
           }
           onPrev={
-            reviewingIdx > 0
-              ? () => {
-                  const prevIdx = reviewingIdx - 1;
-                  if (rows[prevIdx].status === "found") {
-                    setReviewingIdx(prevIdx);
-                  } else {
-                    setReviewingIdx(null);
-                  }
-                }
+            prevIdx !== -1
+              ? () => setReviewingIdx(prevIdx)
               : undefined
           }
-          hasNext={reviewingIdx < rows.length - 1 && rows[reviewingIdx + 1].status === "found"}
-          hasPrev={reviewingIdx > 0 && rows[reviewingIdx - 1].status === "found"}
+          hasNext={nextIdx !== -1}
+          hasPrev={prevIdx !== -1}
           onAcceptAndNext={async () => {
             await acceptRow(reviewingIdx);
-            if (reviewingIdx < rows.length - 1) {
-              const nextIdx = reviewingIdx + 1;
-              if (rows[nextIdx].status === "found") {
-                setReviewingIdx(nextIdx);
-              } else {
-                setReviewingIdx(null);
-              }
+            if (nextIdx !== -1) {
+              setReviewingIdx(nextIdx);
             } else {
               setReviewingIdx(null);
             }

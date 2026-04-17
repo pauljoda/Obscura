@@ -305,6 +305,9 @@ export function IdentifyVideoSeriesRows({
     );
   }
 
+  const nextIdx = reviewing ? rows.findIndex((r, i) => i > reviewing.idx && r.status === "found" && r.scrapeResultId) : -1;
+  const prevIdx = reviewing ? rows.findLastIndex((r, i) => i < reviewing.idx && r.status === "found" && r.scrapeResultId) : -1;
+
   return (
     <>
       {rows.map((row, idx) => (
@@ -369,6 +372,7 @@ export function IdentifyVideoSeriesRows({
 
       {reviewing && (
         <CascadeReviewDrawer
+          key={reviewing.scrapeResultId}
           scrapeResultId={reviewing.scrapeResultId}
           entityKind="video_series"
           entityId={reviewing.seriesId}
@@ -385,43 +389,33 @@ export function IdentifyVideoSeriesRows({
           }}
           onClose={() => setReviewing(null)}
           onNext={
-            reviewing.idx < rows.length - 1
+            nextIdx !== -1
               ? () => {
-                  const nextIdx = reviewing.idx + 1;
                   const nextRow = rows[nextIdx];
-                  if (nextRow.scrapeResultId) {
-                    setReviewing({
-                      idx: nextIdx,
-                      scrapeResultId: nextRow.scrapeResultId,
-                      label: nextRow.series.displayTitle || nextRow.series.title,
-                      seriesId: nextRow.series.id,
-                    });
-                  } else {
-                    setReviewing(null);
-                  }
+                  setReviewing({
+                    idx: nextIdx,
+                    scrapeResultId: nextRow.scrapeResultId!,
+                    label: nextRow.series.displayTitle || nextRow.series.title,
+                    seriesId: nextRow.series.id,
+                  });
                 }
               : undefined
           }
           onPrev={
-            reviewing.idx > 0
+            prevIdx !== -1
               ? () => {
-                  const prevIdx = reviewing.idx - 1;
                   const prevRow = rows[prevIdx];
-                  if (prevRow.scrapeResultId) {
-                    setReviewing({
-                      idx: prevIdx,
-                      scrapeResultId: prevRow.scrapeResultId,
-                      label: prevRow.series.displayTitle || prevRow.series.title,
-                      seriesId: prevRow.series.id,
-                    });
-                  } else {
-                    setReviewing(null);
-                  }
+                  setReviewing({
+                    idx: prevIdx,
+                    scrapeResultId: prevRow.scrapeResultId!,
+                    label: prevRow.series.displayTitle || prevRow.series.title,
+                    seriesId: prevRow.series.id,
+                  });
                 }
               : undefined
           }
-          hasNext={reviewing.idx < rows.length - 1 && !!rows[reviewing.idx + 1].scrapeResultId}
-          hasPrev={reviewing.idx > 0 && !!rows[reviewing.idx - 1].scrapeResultId}
+          hasNext={nextIdx !== -1}
+          hasPrev={prevIdx !== -1}
           onAcceptAndNext={() => {
             setRows((prev) =>
               prev.map((r, i) =>
@@ -430,19 +424,14 @@ export function IdentifyVideoSeriesRows({
                   : r,
               ),
             );
-            if (reviewing.idx < rows.length - 1) {
-              const nextIdx = reviewing.idx + 1;
+            if (nextIdx !== -1) {
               const nextRow = rows[nextIdx];
-              if (nextRow.scrapeResultId) {
-                setReviewing({
-                  idx: nextIdx,
-                  scrapeResultId: nextRow.scrapeResultId,
-                  label: nextRow.series.displayTitle || nextRow.series.title,
-                  seriesId: nextRow.series.id,
-                });
-              } else {
-                setReviewing(null);
-              }
+              setReviewing({
+                idx: nextIdx,
+                scrapeResultId: nextRow.scrapeResultId!,
+                label: nextRow.series.displayTitle || nextRow.series.title,
+                seriesId: nextRow.series.id,
+              });
             } else {
               setReviewing(null);
             }

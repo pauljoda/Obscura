@@ -188,6 +188,9 @@ export function ScrapeVideoRows({
     );
   }
 
+  const nextIdx = reviewingIdx !== null ? videoRows.findIndex((r, i) => i > reviewingIdx && r.status === "found") : -1;
+  const prevIdx = reviewingIdx !== null ? videoRows.findLastIndex((r, i) => i < reviewingIdx && r.status === "found") : -1;
+
   return (
     <>
       {videoRows.map((row, idx) => (
@@ -212,6 +215,7 @@ export function ScrapeVideoRows({
       ))}
       {reviewingIdx !== null && (
         <VideoReviewDrawer
+          key={videoRows[reviewingIdx].video.id}
           row={videoRows[reviewingIdx]}
           onClose={() => setReviewingIdx(null)}
           onToggleField={(field) => toggleVideoField(reviewingIdx, field)}
@@ -222,40 +226,21 @@ export function ScrapeVideoRows({
             setReviewingIdx(null);
           }}
           onNext={
-            reviewingIdx < videoRows.length - 1
-              ? () => {
-                  const nextIdx = reviewingIdx + 1;
-                  if (videoRows[nextIdx].status === "found") {
-                    setReviewingIdx(nextIdx);
-                  } else {
-                    setReviewingIdx(null);
-                  }
-                }
+            nextIdx !== -1
+              ? () => setReviewingIdx(nextIdx)
               : undefined
           }
           onPrev={
-            reviewingIdx > 0
-              ? () => {
-                  const prevIdx = reviewingIdx - 1;
-                  if (videoRows[prevIdx].status === "found") {
-                    setReviewingIdx(prevIdx);
-                  } else {
-                    setReviewingIdx(null);
-                  }
-                }
+            prevIdx !== -1
+              ? () => setReviewingIdx(prevIdx)
               : undefined
           }
-          hasNext={reviewingIdx < videoRows.length - 1 && videoRows[reviewingIdx + 1].status === "found"}
-          hasPrev={reviewingIdx > 0 && videoRows[reviewingIdx - 1].status === "found"}
+          hasNext={nextIdx !== -1}
+          hasPrev={prevIdx !== -1}
           onAcceptAndNext={async () => {
             await acceptVideoRow(videoRows, reviewingIdx, setVideoRows);
-            if (reviewingIdx < videoRows.length - 1) {
-              const nextIdx = reviewingIdx + 1;
-              if (videoRows[nextIdx].status === "found") {
-                setReviewingIdx(nextIdx);
-              } else {
-                setReviewingIdx(null);
-              }
+            if (nextIdx !== -1) {
+              setReviewingIdx(nextIdx);
             } else {
               setReviewingIdx(null);
             }
