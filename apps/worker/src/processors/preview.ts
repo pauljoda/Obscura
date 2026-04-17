@@ -13,7 +13,7 @@ import {
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
-import { sceneAssetUrl } from "../lib/helpers.js";
+import { videoAssetUrl } from "../lib/helpers.js";
 import { applyVideoProbeToVideoEntity } from "./media-probe.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -368,7 +368,7 @@ export async function processPreview(job: Job) {
 
       vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
       vttLines.push(
-        `${sceneAssetUrl(video.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
+        `${videoAssetUrl(video.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
       );
       vttLines.push("");
     }
@@ -379,11 +379,11 @@ export async function processPreview(job: Job) {
   }
 
   const assetPatch = {
-    thumbnailPath: sceneAssetUrl(video.id, "thumb"),
-    cardThumbnailPath: sceneAssetUrl(video.id, "card"),
-    previewPath: sceneAssetUrl(video.id, "preview"),
-    spritePath: sceneAssetUrl(video.id, "sprite"),
-    trickplayVttPath: sceneAssetUrl(video.id, "trickplay"),
+    thumbnailPath: videoAssetUrl(video.id, "thumb"),
+    cardThumbnailPath: videoAssetUrl(video.id, "card"),
+    previewPath: videoAssetUrl(video.id, "preview"),
+    spritePath: videoAssetUrl(video.id, "sprite"),
+    trickplayVttPath: videoAssetUrl(video.id, "trickplay"),
     updatedAt: new Date(),
   };
 

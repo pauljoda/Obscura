@@ -28,8 +28,8 @@ interface ConfirmDeleteDialogProps {
   onDeleteFromDisk?: () => void;
   /**
    * Explicitly opts into showing the secondary "Delete from disk"
-   * button. Scenes have historically shown this by default — pass
-   * `true` at the scene call sites to keep that behavior. Defaults to
+   * button. Videos have historically shown this by default — pass
+   * `true` at the video call sites to keep that behavior. Defaults to
    * `false` so new entity types show only the primary delete button
    * unless the caller wants the disk-wipe affordance.
    */

@@ -910,7 +910,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
     // In progressive HLS the EVENT playlist only lists segments ffmpeg has
     // written so far, so `video.duration` on first load is a partial value
-    // that grows over time. `propDuration` is the scene's real total from
+    // that grows over time. `propDuration` is the video's real total from
     // the DB, which is always correct — prefer the larger of the two so
     // the film strip and seek bar are sized for the whole video from the
     // very first frame. We still listen to `durationchange` for the

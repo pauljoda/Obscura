@@ -49,9 +49,9 @@ const defaultScrapeState: ScrapeState = {
 };
 
 export function ResolveWorkflow() {
-  const [unmatchedScenes, setUnmatchedScenes] = useState<VideoListItem[]>([]);
+  const [unmatchedVideos, setUnmatchedVideos] = useState<VideoListItem[]>([]);
   const [totalUnmatched, setTotalUnmatched] = useState(0);
-  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
   const [selectedScraperId, setSelectedScraperId] = useState<string | null>(null);
   const [scrapeUrl, setScrapeUrl] = useState("");
@@ -63,7 +63,7 @@ export function ResolveWorkflow() {
     new Set(["title", "date", "details", "url", "studio", "performers", "tags"])
   );
 
-  const selectedScene = unmatchedScenes.find((s) => s.id === selectedSceneId);
+  const selectedVideo = unmatchedVideos.find((video) => video.id === selectedVideoId);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -73,14 +73,14 @@ export function ResolveWorkflow() {
         fetchInstalledScrapers(),
       ]);
 
-      // Filter to unorganized scenes
+      // Filter to unorganized videos.
       const unorganized = videosRes.videos.filter((video) => !video.organized);
-      setUnmatchedScenes(unorganized);
+      setUnmatchedVideos(unorganized);
       setTotalUnmatched(unorganized.length);
       setScrapers(scrapersRes.packages.filter((s) => s.enabled));
 
-      if (!selectedSceneId && unorganized.length > 0) {
-        setSelectedSceneId(unorganized[0].id);
+      if (!selectedVideoId && unorganized.length > 0) {
+        setSelectedVideoId(unorganized[0].id);
       }
       if (!selectedScraperId && scrapersRes.packages.length > 0) {
         setSelectedScraperId(scrapersRes.packages.filter((s) => s.enabled)[0]?.id ?? null);
@@ -88,14 +88,14 @@ export function ResolveWorkflow() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSceneId, selectedScraperId]);
+  }, [selectedVideoId, selectedScraperId]);
 
   useEffect(() => {
     void loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleScrape() {
-    if (!selectedScraperId || !selectedSceneId) return;
+    if (!selectedScraperId || !selectedVideoId) return;
 
     setScrapeState({ ...defaultScrapeState, scraping: true });
     setMessage(null);
@@ -103,7 +103,7 @@ export function ResolveWorkflow() {
     try {
       const res = await scrapeVideo(
         selectedScraperId,
-        selectedSceneId,
+        selectedVideoId,
         "auto",
         { url: scrapeUrl || undefined }
       );
@@ -155,13 +155,13 @@ export function ResolveWorkflow() {
       setMessage("Metadata applied successfully.");
       setScrapeState(defaultScrapeState);
 
-      // Remove the scene from the unmatched list
-      setUnmatchedScenes((prev) => prev.filter((s) => s.id !== selectedSceneId));
+      // Remove the video from the unmatched list.
+      setUnmatchedVideos((prev) => prev.filter((video) => video.id !== selectedVideoId));
       setTotalUnmatched((prev) => prev - 1);
 
-      // Select next scene
-      const remaining = unmatchedScenes.filter((s) => s.id !== selectedSceneId);
-      setSelectedSceneId(remaining[0]?.id ?? null);
+      // Select the next video.
+      const remaining = unmatchedVideos.filter((video) => video.id !== selectedVideoId);
+      setSelectedVideoId(remaining[0]?.id ?? null);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to apply");
     } finally {
@@ -246,29 +246,29 @@ export function ResolveWorkflow() {
         <div className="space-y-2">
           <h4 className="text-kicker mb-3">Unmatched Queue</h4>
           <div className="space-y-1 max-h-[calc(100vh-260px)] overflow-y-auto scrollbar-hidden">
-            {unmatchedScenes.length === 0 ? (
+            {unmatchedVideos.length === 0 ? (
               <div className="surface-well p-6 text-center">
                 <Check className="h-8 w-8 text-success-text mx-auto mb-2" />
                 <p className="text-text-muted text-sm">All {entityTerms.videos.toLowerCase()} matched!</p>
               </div>
             ) : (
-              unmatchedScenes.map((scene) => (
+              unmatchedVideos.map((video) => (
                 <button
-                  key={scene.id}
+                  key={video.id}
                   onClick={() => {
-                    setSelectedSceneId(scene.id);
+                    setSelectedVideoId(video.id);
                     setScrapeState(defaultScrapeState);
                     setMessage(null);
                   }}
                   className={cn(
                     "w-full text-left surface-card p-3 flex items-center gap-3 transition-colors duration-fast",
-                    selectedSceneId === scene.id &&
+                    selectedVideoId === video.id &&
                       "border-border-accent bg-accent-950/30"
                   )}
                 >
-                  {scene.thumbnailPath ? (
+                  {video.thumbnailPath ? (
                     <img
-                      src={toApiUrl(scene.thumbnailPath)}
+                      src={toApiUrl(video.thumbnailPath)}
                       alt=""
                       className="w-16 h-10 object-cover flex-shrink-0"
                     />
@@ -276,11 +276,11 @@ export function ResolveWorkflow() {
                     <div className="w-16 h-10 bg-surface-3 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{scene.title}</p>
+                    <p className="text-sm truncate">{video.title}</p>
                     <p className="text-text-disabled text-xs mt-0.5">
-                      {scene.durationFormatted ?? "—"}{" "}
-                      {scene.resolution && (
-                        <span className="text-text-muted">{scene.resolution}</span>
+                      {video.durationFormatted ?? "—"}{" "}
+                      {video.resolution && (
+                        <span className="text-text-muted">{video.resolution}</span>
                       )}
                     </p>
                   </div>
@@ -293,14 +293,14 @@ export function ResolveWorkflow() {
 
         {/* Right panel: Scraper controls + results */}
         <div className="lg:col-span-2 space-y-4">
-          {selectedScene ? (
+          {selectedVideo ? (
             <>
-              {/* Scene info header */}
+              {/* Video info header */}
               <div className="surface-panel p-4">
                 <div className="flex items-start gap-4">
-                  {selectedScene.thumbnailPath ? (
+                  {selectedVideo.thumbnailPath ? (
                     <img
-                      src={toApiUrl(selectedScene.thumbnailPath)}
+                      src={toApiUrl(selectedVideo.thumbnailPath)}
                       alt=""
                       className="w-40 h-24 object-cover flex-shrink-0"
                     />
@@ -308,19 +308,19 @@ export function ResolveWorkflow() {
                     <div className="w-40 h-24 bg-surface-3 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold">{selectedScene.title}</h3>
+                    <h3 className="text-sm font-semibold">{selectedVideo.title}</h3>
                     <p className="text-mono-sm text-text-muted mt-1 truncate">
-                      {selectedScene.filePath}
+                      {selectedVideo.filePath}
                     </p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-text-disabled">
-                      {selectedScene.durationFormatted && (
-                        <span>{selectedScene.durationFormatted}</span>
+                      {selectedVideo.durationFormatted && (
+                        <span>{selectedVideo.durationFormatted}</span>
                       )}
-                      {selectedScene.resolution && (
-                        <span>{selectedScene.resolution}</span>
+                      {selectedVideo.resolution && (
+                        <span>{selectedVideo.resolution}</span>
                       )}
-                      {selectedScene.fileSizeFormatted && (
-                        <span>{selectedScene.fileSizeFormatted}</span>
+                      {selectedVideo.fileSizeFormatted && (
+                        <span>{selectedVideo.fileSizeFormatted}</span>
                       )}
                     </div>
                   </div>
@@ -348,7 +348,7 @@ export function ResolveWorkflow() {
                     <label className="control-label">{entityTerms.video} URL (optional)</label>
                     <input
                       className="control-input"
-                      placeholder="https://example.com/scene/12345"
+                      placeholder="https://example.com/video/12345"
                       value={scrapeUrl}
                       onChange={(e) => setScrapeUrl(e.target.value)}
                     />
@@ -450,7 +450,7 @@ export function ResolveWorkflow() {
                   <div className="surface-well p-3 space-y-0">
                     <DiffField
                       field="Title"
-                      current={selectedScene.title}
+                      current={selectedVideo.title}
                       proposed={scrapeState.normalized.title}
                       enabled={enabledFields.has("title")}
                       onToggle={() => toggleField("title")}
@@ -458,7 +458,7 @@ export function ResolveWorkflow() {
                     <div className="separator" />
                     <DiffField
                       field="Date"
-                      current={selectedScene.date}
+                      current={selectedVideo.date}
                       proposed={scrapeState.normalized.date}
                       enabled={enabledFields.has("date")}
                       onToggle={() => toggleField("date")}
@@ -475,8 +475,8 @@ export function ResolveWorkflow() {
                     <DiffField
                       field={entityTerms.performers}
                       current={
-                        selectedScene.performers.length > 0
-                          ? selectedScene.performers.map((p) => p.name).join(", ")
+                        selectedVideo.performers.length > 0
+                          ? selectedVideo.performers.map((p) => p.name).join(", ")
                           : null
                       }
                       proposed={
@@ -491,8 +491,8 @@ export function ResolveWorkflow() {
                     <DiffField
                       field="Tags"
                       current={
-                        selectedScene.tags.length > 0
-                          ? selectedScene.tags.map((t) => t.name).join(", ")
+                        selectedVideo.tags.length > 0
+                          ? selectedVideo.tags.map((t) => t.name).join(", ")
                           : null
                       }
                       proposed={
@@ -514,7 +514,7 @@ export function ResolveWorkflow() {
                     <div className="separator" />
                     <DiffField
                       field="Details"
-                      current={selectedScene.details}
+                      current={selectedVideo.details}
                       proposed={scrapeState.normalized.details}
                       enabled={enabledFields.has("details")}
                       onToggle={() => toggleField("details")}

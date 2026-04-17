@@ -5,8 +5,8 @@ import {
   removeGeneratedVideoDirs as removeGeneratedVideoDirsImpl,
 } from "@obscura/db/src/lib/library-prune";
 
-export function sceneAssetUrl(sceneId: string, fileName: string) {
-  return `/assets/scenes/${sceneId}/${fileName}`;
+export function videoAssetUrl(videoId: string, fileName: string) {
+  return `/assets/videos/${videoId}/${fileName}`;
 }
 
 export async function removeGeneratedVideoDirs(entityIds: string[]) {

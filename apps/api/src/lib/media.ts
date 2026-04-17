@@ -10,9 +10,9 @@ import {
   type HlsRendition,
 } from "@obscura/contracts/media";
 
-export const MEDIA_SCENES_DIR = path.resolve(
+export const MEDIA_VIDEOS_DIR = path.resolve(
   import.meta.dirname,
-  "../../../../apps/web/public/media/scenes"
+  "../../../../apps/web/public/media/videos"
 );
 
 export {

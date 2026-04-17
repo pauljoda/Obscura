@@ -394,7 +394,7 @@ export function AudioPlayer({
     <div className={cn("surface-panel border border-border-subtle", className)}>
       <audio ref={audioRef} preload="auto" />
 
-      {/* ─── Now playing + timeline (scene-style) + waveform film strip ─ */}
+      {/* ─── Now playing + timeline (video-style) + waveform film strip ─ */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-3 mb-3">
           {/* Album art — fallback icon always visible underneath in case the image 404s */}

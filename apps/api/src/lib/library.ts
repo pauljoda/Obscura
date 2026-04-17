@@ -45,7 +45,7 @@ export async function browseDirectories(rawPath?: string) {
 }
 
 export async function getStorageStats() {
-  const rootPath = path.join(getCacheRootDir(), "scenes");
+  const rootPath = path.join(getCacheRootDir(), "videos");
   let thumbnailsBytes = 0;
   let previewsBytes = 0;
   let trickplayBytes = 0;

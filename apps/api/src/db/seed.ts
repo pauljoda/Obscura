@@ -1,7 +1,7 @@
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { db, schema } from "./index";
-import { MEDIA_SCENES_DIR, probeVideoFile } from "../lib/media";
+import { MEDIA_VIDEOS_DIR, probeVideoFile } from "../lib/media";
 
 const {
   libraryRoots,
@@ -115,7 +115,7 @@ async function seed() {
     [root] = await db
       .insert(libraryRoots)
       .values({
-        path: MEDIA_SCENES_DIR,
+        path: MEDIA_VIDEOS_DIR,
         label: "Seed fixture",
         enabled: true,
         recursive: true,
@@ -136,7 +136,7 @@ async function seed() {
   const tagMap = Object.fromEntries(insertedTags.map((tag) => [tag.name, tag.id]));
 
   for (const descriptor of movieDescriptors) {
-    const filePath = path.join(MEDIA_SCENES_DIR, descriptor.fileName);
+    const filePath = path.join(MEDIA_VIDEOS_DIR, descriptor.fileName);
     if (!existsSync(filePath)) {
       throw new Error(`Missing expected media file: ${filePath}`);
     }
