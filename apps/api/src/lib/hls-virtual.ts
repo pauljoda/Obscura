@@ -1,7 +1,7 @@
 // Virtual HLS: serve a full-length VOD playlist upfront, transcode segments
 // on demand. This is the approach Jellyfin / Plex / Emby use so scrubbing
 // anywhere in the timeline is instant: the player always sees a complete
-// playlist covering the whole scene, and each segment is synthesized by a
+// playlist covering the whole video, and each segment is synthesized by a
 // short (~1s) ffmpeg invocation the first time it's requested, then cached
 // to disk.
 //
@@ -28,31 +28,31 @@ interface VirtualHlsCacheMeta {
   renditions: HlsRendition[];
 }
 
-function getCacheDir(sceneId: string) {
-  return path.join(getCacheRootDir(), "hls2", sceneId);
+function getCacheDir(videoId: string) {
+  return path.join(getCacheRootDir(), "hls2", videoId);
 }
 
-function getVariantDir(sceneId: string, renditionName: string) {
-  return path.join(getCacheDir(sceneId), renditionName);
+function getVariantDir(videoId: string, renditionName: string) {
+  return path.join(getCacheDir(videoId), renditionName);
 }
 
-function getSegmentPath(sceneId: string, renditionName: string, segIndex: number) {
+function getSegmentPath(videoId: string, renditionName: string, segIndex: number) {
   return path.join(
-    getVariantDir(sceneId, renditionName),
+    getVariantDir(videoId, renditionName),
     `seg_${String(segIndex).padStart(5, "0")}.ts`,
   );
 }
 
-function getMetaPath(sceneId: string) {
-  return path.join(getCacheDir(sceneId), "meta.json");
+function getMetaPath(videoId: string) {
+  return path.join(getCacheDir(videoId), "meta.json");
 }
 
-function log(sceneId: string, message: string) {
+function log(videoId: string, message: string) {
   // eslint-disable-next-line no-console
-  console.log(`[hls2 ${sceneId.slice(0, 8)}] ${message}`);
+  console.log(`[hls2 ${videoId.slice(0, 8)}] ${message}`);
 }
 
-/** Returns the total segment count for a scene of `duration` seconds. */
+/** Returns the total segment count for a video of `duration` seconds. */
 export function segmentCount(duration: number): number {
   if (!Number.isFinite(duration) || duration <= 0) return 0;
   return Math.ceil(duration / SEGMENT_DURATION);
@@ -113,7 +113,7 @@ export function buildMasterPlaylist(opts: {
   return lines.join("\n");
 }
 
-/** Build the variant playlist listing every segment of the scene upfront.
+/** Build the variant playlist listing every segment of the video upfront.
  *  Because `#EXT-X-ENDLIST` is emitted the player treats the stream as VOD
  *  from the first request — `video.seekable` covers the whole duration and
  *  scrubbing is a plain byte-range-like seek from the player's perspective. */
@@ -137,8 +137,8 @@ export function buildVariantPlaylist(duration: number): string {
   return lines.join("\n");
 }
 
-async function isCacheFresh(sceneId: string, sourcePath: string): Promise<boolean> {
-  const metaPath = getMetaPath(sceneId);
+async function isCacheFresh(videoId: string, sourcePath: string): Promise<boolean> {
+  const metaPath = getMetaPath(videoId);
   if (!existsSync(metaPath)) return false;
   try {
     const meta = JSON.parse(await readFile(metaPath, "utf8")) as VirtualHlsCacheMeta;
@@ -154,14 +154,14 @@ async function isCacheFresh(sceneId: string, sourcePath: string): Promise<boolea
 }
 
 async function ensureCacheDir(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   duration: number,
   renditions: readonly HlsRendition[],
 ): Promise<void> {
-  const cacheDir = getCacheDir(sceneId);
-  const metaPath = getMetaPath(sceneId);
-  if (!(await isCacheFresh(sceneId, sourcePath))) {
+  const cacheDir = getCacheDir(videoId);
+  const metaPath = getMetaPath(videoId);
+  if (!(await isCacheFresh(videoId, sourcePath))) {
     // Source changed (replaced or re-scanned) — wipe any stale segments.
     await rm(cacheDir, { recursive: true, force: true });
   }
@@ -181,16 +181,16 @@ async function ensureCacheDir(
 
 /** Promise cache so concurrent requests for the same segment share one
  *  ffmpeg invocation instead of racing to write the same file. Key:
- *  `${sceneId}/${segIndex}`. */
+ *  `${videoId}/${segIndex}`. */
 const inflight = new Map<string, Promise<string>>();
 
 async function encodeSegment(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   rendition: HlsRendition,
   segIndex: number,
 ): Promise<string> {
-  const outputPath = getSegmentPath(sceneId, rendition.name, segIndex);
+  const outputPath = getSegmentPath(videoId, rendition.name, segIndex);
   const tmpPath = `${outputPath}.${randomUUID()}.tmp`;
   const segStart = segIndex * SEGMENT_DURATION;
   await mkdir(path.dirname(outputPath), { recursive: true });
@@ -202,7 +202,7 @@ async function encodeSegment(
   // Each segment is a fresh libx264 encode so frame 0 is naturally an IDR.
   //
   // `-output_ts_offset segStart` (without `-copyts`) shifts the output's
-  // zero-based PTS to the segment's absolute position in the scene, so
+  // zero-based PTS to the segment's absolute position in the video, so
   // adjacent segments carry continuous global PTS and MSE can stitch them
   // without needing EXT-X-DISCONTINUITY markers. We deliberately do NOT
   // use `-copyts` here: combined with an MKV/HEVC source and input-side
@@ -316,7 +316,7 @@ async function encodeSegment(
  *  it isn't already cached. Concurrent requests for the same segment share
  *  one ffmpeg invocation via the `inflight` map. */
 export async function getSegment(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   duration: number,
   rendition: HlsRendition,
@@ -327,17 +327,17 @@ export async function getSegment(
     throw new Error(`segment index ${segIndex} out of range (0..${total - 1})`);
   }
 
-  await ensureCacheDir(sceneId, sourcePath, duration, [rendition]);
+  await ensureCacheDir(videoId, sourcePath, duration, [rendition]);
 
-  const outputPath = getSegmentPath(sceneId, rendition.name, segIndex);
+  const outputPath = getSegmentPath(videoId, rendition.name, segIndex);
   if (existsSync(outputPath)) return outputPath;
 
-  const key = `${sceneId}/${rendition.name}/${segIndex}`;
+  const key = `${videoId}/${rendition.name}/${segIndex}`;
   const existing = inflight.get(key);
   if (existing) return existing;
 
-  log(sceneId, `encode ${rendition.name} segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
-  const promise = encodeSegment(sceneId, sourcePath, rendition, segIndex).finally(() => {
+  log(videoId, `encode ${rendition.name} segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
+  const promise = encodeSegment(videoId, sourcePath, rendition, segIndex).finally(() => {
     inflight.delete(key);
   });
   inflight.set(key, promise);

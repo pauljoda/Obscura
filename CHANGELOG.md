@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Internal API HLS helpers and tests now use `videoId` naming instead of `sceneId`. This is an internal cleanup only — the `/video-stream/*` route surface is unchanged — but it removes another obsolete scene-era alias from the video playback stack.
 - Shared first-party comments, examples, and local dashboard props now use `video` / `series` wording instead of lingering `scene` / `folder` labels. This includes the subtitle preview copy, current-path examples, dashboard recent-additions helper props, and shared contract comments for video-series DTOs.
 - Performer and tag usage-count sorting now uses `videos` naming end to end in the first-party app and performer API. Performer list filters also send `videoCountMin` instead of `sceneCountMin`, and the series/image/gallery/audio detail screens now request performer suggestions with the same `videos` sort key.
 - The Identify page's series workflow now uses `series` naming throughout its first-party state, row models, and review-drawer comments instead of carrying local `folder` aliases through the Series tab. That keeps the remaining video-series identify code aligned with the rest of the Videos/Series cleanup without changing the plugin capability names that still expect `folderByName`.

@@ -38,13 +38,13 @@ export interface HlsTrackerEntry {
 
 const trackerState = new Map<string, HlsTrackerEntry>();
 
-function log(sceneId: string, message: string) {
+function log(videoId: string, message: string) {
   // eslint-disable-next-line no-console
-  console.log(`[hls ${sceneId.slice(0, 8)}] ${message}`);
+  console.log(`[hls ${videoId.slice(0, 8)}] ${message}`);
 }
 
-function getSceneCacheDir(sceneId: string) {
-  return path.join(getHlsCacheDir(), sceneId);
+function getVideoCacheDir(videoId: string) {
+  return path.join(getHlsCacheDir(), videoId);
 }
 
 async function readMetadata(cacheDir: string) {
@@ -80,14 +80,14 @@ async function isPackageFresh(
 }
 
 export type HlsBuilder = (
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   renditions: HlsRendition[],
   cacheDir: string
 ) => Promise<void>;
 
 async function ffmpegHlsBuilder(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   renditions: HlsRendition[],
   cacheDir: string
@@ -181,9 +181,9 @@ async function ffmpegHlsBuilder(
     path.join(cacheDir, "%v", "index.m3u8")
   );
 
-  log(sceneId, `ffmpeg start (${variantCount} renditions, preset=veryfast)`);
+  log(videoId, `ffmpeg start (${variantCount} renditions, preset=veryfast)`);
   await runProcess("ffmpeg", args);
-  log(sceneId, "ffmpeg exit ok");
+  log(videoId, "ffmpeg exit ok");
 }
 
 let activeBuilder: HlsBuilder = ffmpegHlsBuilder;
@@ -224,11 +224,11 @@ async function waitForPartialHlsPackage(
 }
 
 async function buildHlsPackage(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   sourceHeight: number | null
 ): Promise<HlsPackage> {
-  const cacheDir = getSceneCacheDir(sceneId);
+  const cacheDir = getVideoCacheDir(videoId);
   const renditions = getHlsRenditions(sourceHeight);
   const masterManifestPath = path.join(cacheDir, "master.m3u8");
 
@@ -239,7 +239,7 @@ async function buildHlsPackage(
   await rm(cacheDir, { recursive: true, force: true });
   await mkdir(cacheDir, { recursive: true });
 
-  await activeBuilder(sceneId, sourcePath, renditions, cacheDir);
+  await activeBuilder(videoId, sourcePath, renditions, cacheDir);
 
   const sourceStats = await stat(sourcePath);
   const metadata: HlsCacheMetadata = {
@@ -264,14 +264,14 @@ async function buildHlsPackage(
  * Never awaits the build. Routes should call this and respond immediately.
  */
 export async function getHlsStatus(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   sourceHeight: number | null
 ): Promise<HlsStatus> {
   const renditions = getHlsRenditions(sourceHeight);
-  const cacheDir = getSceneCacheDir(sceneId);
+  const cacheDir = getVideoCacheDir(videoId);
 
-  const existing = trackerState.get(sceneId);
+  const existing = trackerState.get(videoId);
   if (existing && existing.state === "ready") {
     return { state: "ready", renditions: existing.renditions };
   }
@@ -281,7 +281,7 @@ export async function getHlsStatus(
 
   // Disk may have been populated by a previous process — probe cheaply.
   if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
-    trackerState.set(sceneId, { state: "ready", renditions, isEncodeActive: false });
+    trackerState.set(videoId, { state: "ready", renditions, isEncodeActive: false });
     return { state: "ready", renditions };
   }
 
@@ -290,7 +290,7 @@ export async function getHlsStatus(
   }
 
   // Nothing on disk and no active build — start one in the background.
-  startHlsGeneration(sceneId, sourcePath, sourceHeight);
+  startHlsGeneration(videoId, sourcePath, sourceHeight);
   return { state: "pending", renditions };
 }
 
@@ -302,11 +302,11 @@ export async function getHlsStatus(
  * ffmpeg continues writing later segments in the background.
  */
 export function startHlsGeneration(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   sourceHeight: number | null
 ): Promise<HlsPackage> {
-  const existing = trackerState.get(sceneId);
+  const existing = trackerState.get(videoId);
   if (existing?.promise && existing.state === "pending") {
     return existing.promise;
   }
@@ -315,20 +315,20 @@ export function startHlsGeneration(
   }
 
   const renditions = getHlsRenditions(sourceHeight);
-  const cacheDir = getSceneCacheDir(sceneId);
+  const cacheDir = getVideoCacheDir(videoId);
 
   let watcherAborted = false;
   const markReadyEarly = () => {
-    const current = trackerState.get(sceneId);
+    const current = trackerState.get(videoId);
     if (!current || current.state === "error") return;
     if (current.state === "ready") return;
-    trackerState.set(sceneId, {
+    trackerState.set(videoId, {
       ...current,
       state: "ready",
       renditions,
       isEncodeActive: true,
     });
-    log(sceneId, "partial package ready (master + first segments) — playback can start");
+    log(videoId, "partial package ready (master + first segments) — playback can start");
   };
 
   void (async () => {
@@ -336,41 +336,41 @@ export function startHlsGeneration(
     if (found) markReadyEarly();
   })();
 
-  log(sceneId, "build kicked off");
-  const promise = buildHlsPackage(sceneId, sourcePath, sourceHeight)
+  log(videoId, "build kicked off");
+  const promise = buildHlsPackage(videoId, sourcePath, sourceHeight)
     .then((pkg) => {
       watcherAborted = true;
-      trackerState.set(sceneId, {
+      trackerState.set(videoId, {
         state: "ready",
         renditions: pkg.renditions,
         isEncodeActive: false,
       });
-      log(sceneId, "encode complete, package fully ready");
+      log(videoId, "encode complete, package fully ready");
       return pkg;
     })
     .catch((error: unknown) => {
       watcherAborted = true;
       const message = error instanceof Error ? error.message : String(error);
-      const current = trackerState.get(sceneId);
+      const current = trackerState.get(videoId);
       if (current?.state === "ready") {
         // Already playing from a partial package — keep serving what exists
         // but mark the encode as dead so the segment route can 404 instead
         // of 503 on missing files.
-        trackerState.set(sceneId, { ...current, isEncodeActive: false });
-        log(sceneId, `encode failed after partial ready: ${message}`);
+        trackerState.set(videoId, { ...current, isEncodeActive: false });
+        log(videoId, `encode failed after partial ready: ${message}`);
       } else {
-        trackerState.set(sceneId, {
+        trackerState.set(videoId, {
           state: "error",
           renditions,
           isEncodeActive: false,
           error: message,
         });
-        log(sceneId, `encode failed: ${message}`);
+        log(videoId, `encode failed: ${message}`);
       }
       throw error;
     });
 
-  trackerState.set(sceneId, {
+  trackerState.set(videoId, {
     state: "pending",
     renditions,
     isEncodeActive: true,
@@ -385,17 +385,17 @@ export function startHlsGeneration(
  * getHlsStatus + 503 so clients can poll.
  */
 export async function ensureHlsPackage(
-  sceneId: string,
+  videoId: string,
   sourcePath: string,
   sourceHeight: number | null
 ): Promise<HlsPackage> {
-  const existing = trackerState.get(sceneId);
+  const existing = trackerState.get(videoId);
   if (existing?.promise && existing.state === "pending") {
     return existing.promise;
   }
 
   if (existing?.state === "ready" && !existing.isEncodeActive) {
-    const cacheDir = getSceneCacheDir(sceneId);
+    const cacheDir = getVideoCacheDir(videoId);
     const renditions = getHlsRenditions(sourceHeight);
     if (await isPackageFresh(cacheDir, sourcePath, renditions)) {
       return {
@@ -406,10 +406,10 @@ export async function ensureHlsPackage(
     }
   }
 
-  return startHlsGeneration(sceneId, sourcePath, sourceHeight);
+  return startHlsGeneration(videoId, sourcePath, sourceHeight);
 }
 
 /** Read tracker state without side effects — for tests and diagnostics. */
-export function peekHlsTracker(sceneId: string): HlsTrackerEntry | undefined {
-  return trackerState.get(sceneId);
+export function peekHlsTracker(videoId: string): HlsTrackerEntry | undefined {
+  return trackerState.get(videoId);
 }

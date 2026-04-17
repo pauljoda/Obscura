@@ -81,11 +81,11 @@ describe("hls-virtual playlist fabrication", () => {
       audioBitrate: "160k",
       crf: 19,
     };
-    await expect(getSegment("scene-x", fakeSource, 20, fakeRendition, -1)).rejects.toThrow(
+    await expect(getSegment("video-x", fakeSource, 20, fakeRendition, -1)).rejects.toThrow(
       /out of range/,
     );
     // 20s → 4 segments (0..3) → index 4 is past the end
-    await expect(getSegment("scene-x", fakeSource, 20, fakeRendition, 4)).rejects.toThrow(
+    await expect(getSegment("video-x", fakeSource, 20, fakeRendition, 4)).rejects.toThrow(
       /out of range/,
     );
   });

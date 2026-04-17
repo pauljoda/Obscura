@@ -24,7 +24,7 @@ function makeSource(name: string, content = "fake video bytes") {
 
 async function stubBuilderWritesManifest() {
   const { setHlsBuilder } = await hlsModulePromise;
-  setHlsBuilder(async (_sceneId, _sourcePath, renditions, cacheDir) => {
+  setHlsBuilder(async (_videoId, _sourcePath, renditions, cacheDir) => {
     const masterLines = ["#EXTM3U", "#EXT-X-VERSION:3"];
     for (const r of renditions) {
       const variantDir = path.join(cacheDir, r.name);
@@ -52,7 +52,7 @@ async function stubBuilderPending() {
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  setHlsBuilder(async (_sceneId, _sourcePath, renditions, cacheDir) => {
+  setHlsBuilder(async (_videoId, _sourcePath, renditions, cacheDir) => {
     await gate;
     const masterLines = ["#EXTM3U"];
     for (const r of renditions) {
@@ -86,7 +86,7 @@ describe("getHlsStatus", () => {
     const release = await stubBuilderPending();
 
     const source = makeSource("first.mp4");
-    const status = await getHlsStatus("scene-1", source, 720);
+    const status = await getHlsStatus("video-1", source, 720);
 
     expect(status.state).toBe("pending");
     expect(status.renditions.map((r) => r.name)).toEqual([
@@ -97,13 +97,13 @@ describe("getHlsStatus", () => {
       "180p",
     ]);
 
-    const entry = peekHlsTracker("scene-1");
+    const entry = peekHlsTracker("video-1");
     expect(entry?.state).toBe("pending");
 
     release();
     await entry?.promise;
 
-    expect(peekHlsTracker("scene-1")?.state).toBe("ready");
+    expect(peekHlsTracker("video-1")?.state).toBe("ready");
   });
 
   it("returns ready without rebuilding when the disk cache is fresh", async () => {
@@ -112,9 +112,9 @@ describe("getHlsStatus", () => {
     await stubBuilderWritesManifest();
 
     const source = makeSource("fresh.mp4");
-    await startHlsGeneration("scene-fresh", source, 720);
+    await startHlsGeneration("video-fresh", source, 720);
     // Wait until build resolves
-    await peekAndWait("scene-fresh");
+    await peekAndWait("video-fresh");
 
     // Simulate a fresh process — tracker cleared, but files still on disk.
     resetHlsTracker();
@@ -123,7 +123,7 @@ describe("getHlsStatus", () => {
       builderCalls += 1;
     });
 
-    const status = await getHlsStatus("scene-fresh", source, 720);
+    const status = await getHlsStatus("video-fresh", source, 720);
     expect(status.state).toBe("ready");
     expect(builderCalls).toBe(0);
   });
@@ -134,10 +134,10 @@ describe("getHlsStatus", () => {
 
     const source = makeSource("bad.mp4");
     await expect(
-      startHlsGeneration("scene-bad", source, 720),
+      startHlsGeneration("video-bad", source, 720),
     ).rejects.toThrow("no ffmpeg");
 
-    const status = await getHlsStatus("scene-bad", source, 720);
+    const status = await getHlsStatus("video-bad", source, 720);
     expect(status.state).toBe("error");
     expect(status.error).toContain("no ffmpeg");
   });
@@ -150,7 +150,7 @@ describe("getHlsStatus", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    setHlsBuilder(async (_sceneId, _sourcePath, renditions, cacheDir) => {
+    setHlsBuilder(async (_videoId, _sourcePath, renditions, cacheDir) => {
       builderCalls += 1;
       await gate;
       await writeFile(path.join(cacheDir, "master.m3u8"), "#EXTM3U");
@@ -162,9 +162,9 @@ describe("getHlsStatus", () => {
     });
 
     const source = makeSource("concurrent.mp4");
-    const p1 = startHlsGeneration("scene-concurrent", source, 720);
-    const p2 = startHlsGeneration("scene-concurrent", source, 720);
-    const p3 = startHlsGeneration("scene-concurrent", source, 720);
+    const p1 = startHlsGeneration("video-concurrent", source, 720);
+    const p2 = startHlsGeneration("video-concurrent", source, 720);
+    const p3 = startHlsGeneration("video-concurrent", source, 720);
 
     expect(p1).toBe(p2);
     expect(p2).toBe(p3);
@@ -183,7 +183,7 @@ describe("getHlsStatus", () => {
     });
     // Builder writes the "partial" package up front, then blocks on a gate
     // simulating ffmpeg still encoding later segments.
-    setHlsBuilder(async (_sceneId, _sourcePath, renditions, cacheDir) => {
+    setHlsBuilder(async (_videoId, _sourcePath, renditions, cacheDir) => {
       for (const r of renditions) {
         const variantDir = path.join(cacheDir, r.name);
         await mkdir(variantDir, { recursive: true });
@@ -199,13 +199,13 @@ describe("getHlsStatus", () => {
     });
 
     const source = makeSource("partial-ready.mp4");
-    const promise = startHlsGeneration("scene-partial", source, 480);
+    const promise = startHlsGeneration("video-partial", source, 480);
 
     // Poll for early-ready for up to ~2s. The watcher flips the tracker
     // on its own polling cadence (250ms).
     let earlyReady = false;
     for (let i = 0; i < 20; i += 1) {
-      const entry = peekHlsTracker("scene-partial");
+      const entry = peekHlsTracker("video-partial");
       if (entry?.state === "ready" && entry.isEncodeActive) {
         earlyReady = true;
         break;
@@ -217,7 +217,7 @@ describe("getHlsStatus", () => {
 
     release();
     await promise;
-    const entry = peekHlsTracker("scene-partial");
+    const entry = peekHlsTracker("video-partial");
     expect(entry?.state).toBe("ready");
     expect(entry?.isEncodeActive).toBe(false);
   });
@@ -227,7 +227,7 @@ describe("getHlsStatus", () => {
     await stubBuilderPending();
 
     const source = makeSource("pending-renditions.mp4");
-    const status = await getHlsStatus("scene-pending-r", source, 1080);
+    const status = await getHlsStatus("video-pending-r", source, 1080);
 
     expect(status.state).toBe("pending");
     expect(status.renditions).toHaveLength(6);
@@ -235,9 +235,9 @@ describe("getHlsStatus", () => {
   });
 });
 
-async function peekAndWait(sceneId: string) {
+async function peekAndWait(videoId: string) {
   const { peekHlsTracker } = await hlsModulePromise;
-  const entry = peekHlsTracker(sceneId);
+  const entry = peekHlsTracker(videoId);
   if (entry?.promise) {
     await entry.promise.catch(() => {});
   }
