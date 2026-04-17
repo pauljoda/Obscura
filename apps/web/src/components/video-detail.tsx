@@ -7,10 +7,27 @@ import {
   useRef,
   useState,
 } from "react";
-import { VideoEdit } from "./video-edit";
-import { VideoTranscriptPanel } from "./video-transcript-panel";
+import dynamic from "next/dynamic";
 import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
-import { IdentifyButton } from "./identify/identify-button";
+
+const VideoEdit = dynamic(
+  () => import("./video-edit").then((m) => ({ default: m.VideoEdit })),
+  { ssr: false },
+);
+const VideoTranscriptPanel = dynamic(
+  () =>
+    import("./video-transcript-panel").then((m) => ({
+      default: m.VideoTranscriptPanel,
+    })),
+  { ssr: false },
+);
+const IdentifyButton = dynamic(
+  () =>
+    import("./identify/identify-button").then((m) => ({
+      default: m.IdentifyButton,
+    })),
+  { ssr: false },
+);
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Star,
