@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "node scripts/copy-jassub-assets.mjs",
-    "dev": "next dev --port 8008",
+    "dev": "next dev --turbopack --port 8008",
     "prebuild": "node scripts/copy-jassub-assets.mjs",
     "build": "next build",
     "start": "next start --port 8008",
