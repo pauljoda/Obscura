@@ -1080,7 +1080,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     let cancelled = false;
-    fetchVideoSubtitleCues(track.sceneId, track.id)
+    fetchVideoSubtitleCues(track.videoId, track.id)
       .then(({ cues }) => {
         if (cancelled) return;
         setActiveTrackCues(cues);
@@ -1363,7 +1363,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           <AssSubtitleOverlay
             key={track.id}
             videoRef={videoRef}
-            sceneId={track.sceneId}
+            videoId={track.videoId}
             trackId={track.id}
             opacity={appearance.opacity}
           />

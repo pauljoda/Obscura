@@ -47,7 +47,7 @@ describe("fetchVideos", () => {
       offset: 100,
       nsfw: "off",
       videoSeriesId: "series-1",
-      folderScope: "subtree",
+      seriesScope: "subtree",
       uncategorized: true,
       seasonNumber: "2",
     });
@@ -66,7 +66,7 @@ describe("fetchVideos", () => {
     expect(path).toContain("codec=h264");
     expect(path).toContain("interactive=false");
     expect(path).toContain("videoSeriesId=series-1");
-    expect(path).toContain("folderScope=subtree");
+    expect(path).toContain("seriesScope=subtree");
     expect(path).toContain("seasonNumber=2");
     expect(path).toContain("uncategorized=true");
   });

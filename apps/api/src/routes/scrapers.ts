@@ -846,7 +846,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
   app.get("/scrapers/results", async (request) => {
     const query = request.query as {
       status?: string;
-      sceneId?: string;
+      videoId?: string;
       limit?: string;
       offset?: string;
     };
@@ -858,8 +858,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
     if (query.status) {
       conditions.push(eq(scrapeResults.status, query.status));
     }
-    if (query.sceneId) {
-      conditions.push(eq(scrapeResults.sceneId, query.sceneId));
+    if (query.videoId) {
+      conditions.push(eq(scrapeResults.entityId, query.videoId));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -1204,7 +1204,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
         }
       }
 
-      // Download video thumbnail if available. The /assets/scenes/:id/*
+      // Download video thumbnail if available. The /assets/videos/:id/*
       // URL format is preserved — the assets route already looks up the
       // id against video_episodes / video_movies first.
       if (fieldsToApply.has("image") && result.proposedImageUrl) {
@@ -1223,7 +1223,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
           const genDir = getGeneratedSceneDir(videoId);
           await mkdir(genDir, { recursive: true });
           await writeFile(path.join(genDir, "thumbnail-custom.jpg"), buffer);
-          const assetUrl = `/assets/scenes/${videoId}/thumb-custom`;
+          const assetUrl = `/assets/videos/${videoId}/thumb-custom`;
           if (videoKind === "video_episode") {
             await tx
               .update(videoEpisodes)

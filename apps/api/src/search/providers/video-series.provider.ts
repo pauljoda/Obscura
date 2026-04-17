@@ -9,13 +9,12 @@ import type {
 const { videoSeries } = schema;
 
 /**
- * Folders/series search provider backed by `video_series`. Returns results as
- * `kind: "video-series"` and links at `/videos?folder=:id` which the
- * /videos list already routes through the video-folder service.
+ * Series search provider backed by `video_series`. Returns results as
+ * `kind: "video-series"` and links at `/videos?series=:id`.
  */
 export const videoSeriesSearchProvider: SearchProvider = {
   kind: "video-series",
-  label: "Folders",
+  label: "Series",
   defaultPreviewLimit: 2,
 
   async query({
@@ -86,7 +85,7 @@ export const videoSeriesSearchProvider: SearchProvider = {
               ? `${episodeCount} episode${episodeCount !== 1 ? "s" : ""}`
               : null,
           imagePath: r.posterPath ?? r.backdropPath ?? null,
-          href: `/videos?folder=${r.id}`,
+          href: `/videos?series=${r.id}`,
           rating: r.rating,
           score: Number(r.score ?? 0),
           meta: { videoCount: episodeCount },

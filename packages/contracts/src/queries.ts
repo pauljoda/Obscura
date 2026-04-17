@@ -37,7 +37,7 @@ export interface VideoListQuery extends ListQuery {
   performer?: string | string[];
   studio?: string | string[];
   videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
+  seriesScope?: "direct" | "subtree";
   uncategorized?: boolean;
   resolution?: string | string[];
   codec?: string | string[];

@@ -53,11 +53,11 @@ describe("toApiUrl", () => {
   });
 
   it("prefixes relative API paths and applies cache busting", () => {
-    expect(toApiUrl("/assets/scenes/1/thumb")).toBe(
-      "http://localhost:4000/assets/scenes/1/thumb",
+    expect(toApiUrl("/assets/videos/1/thumb")).toBe(
+      "http://localhost:4000/assets/videos/1/thumb",
     );
-    expect(toApiUrl("/assets/scenes/1/thumb", "etag")).toBe(
-      "http://localhost:4000/assets/scenes/1/thumb?v=etag",
+    expect(toApiUrl("/assets/videos/1/thumb", "etag")).toBe(
+      "http://localhost:4000/assets/videos/1/thumb?v=etag",
     );
   });
 });

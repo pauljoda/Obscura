@@ -5,7 +5,7 @@ import { fetchVideoSubtitleSource } from "../lib/api/videos";
 
 interface AssSubtitleOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
-  sceneId: string;
+  videoId: string;
   trackId: string;
   /** 0..1. We fade JASSUB's canvas so it matches the surrounding UI. */
   opacity?: number;
@@ -25,7 +25,7 @@ interface AssSubtitleOverlayProps {
  */
 export function AssSubtitleOverlay({
   videoRef,
-  sceneId,
+  videoId,
   trackId,
   opacity = 1,
 }: AssSubtitleOverlayProps) {
@@ -41,7 +41,7 @@ export function AssSubtitleOverlay({
 
       let subContent: string;
       try {
-        subContent = await fetchVideoSubtitleSource(sceneId, trackId);
+        subContent = await fetchVideoSubtitleSource(videoId, trackId);
       } catch (err) {
         console.warn("[ass-overlay] failed to fetch subtitle source", err);
         return;
@@ -88,7 +88,7 @@ export function AssSubtitleOverlay({
       }
       instanceRef.current = null;
     };
-  }, [sceneId, trackId, videoRef]);
+  }, [videoId, trackId, videoRef]);
 
   // JASSUB mounts its own canvas in the DOM — we only need to propagate
   // opacity. It tags its wrapper with `.JASSUB`, so one targeted selector

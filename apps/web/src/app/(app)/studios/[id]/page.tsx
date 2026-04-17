@@ -79,19 +79,19 @@ export default function StudioPage({ params }: StudioPageProps) {
     try {
       const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
-      const [scenesData, galleriesData, audioData, foldersData] = await Promise.all([
+      const [videosData, galleriesData, audioData, seriesData] = await Promise.all([
         fetchVideos({ studio: [id], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({ studio: id, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchSeries({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
-      setScenes(scenesData.scenes);
-      setTotal(scenesData.total);
+      setScenes(videosData.videos);
+      setTotal(videosData.total);
       setGalleries(galleriesData.galleries);
       setTotalGalleries(galleriesData.total);
       setAudioLibraries(audioData.items);
       setTotalAudioLibraries(audioData.total);
-      setFolders(foldersData.items);
+      setFolders(seriesData.items);
       setNotFound(false);
     } catch {
       setNotFound(true);
@@ -328,8 +328,8 @@ export default function StudioPage({ params }: StudioPageProps) {
             {folders.map((f) => (
               <SeriesCard
                 key={f.id}
-                folder={f}
-                href={`/videos?folder=${f.id}`}
+                series={f}
+                href={`/videos?series=${f.id}`}
                 compact
               />
             ))}
@@ -339,7 +339,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       <section>
         <h4 className="text-kicker mb-3">{terms.videos}</h4>
-        <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+        <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
       </section>
 
       <div className="separator" />

@@ -96,7 +96,7 @@ export interface ListVideosQuery {
   codec?: string | string[];
   interactive?: string;
   videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
+  seriesScope?: "direct" | "subtree";
   uncategorized?: string;
   /**
    * Restrict episodes to a specific season under the parent series
@@ -912,7 +912,7 @@ export async function listVideoScenes(query: ListVideosQuery) {
   }
 
   return {
-    scenes: items,
+    videos: items,
     total: episodeCount + movieCount,
     limit,
     offset,
@@ -1240,7 +1240,7 @@ export async function getVideoSceneDetail(id: string) {
       (sourceFormat === "ass" || sourceFormat === "ssa") && !!r.sourcePath;
     return {
       id: r.id,
-      sceneId: r.entityId,
+      videoId: r.entityId,
       language: r.language,
       label: r.label,
       format: "vtt" as const,
@@ -1811,7 +1811,7 @@ async function saveCustomVideoThumbnail(
 
   const entity = await findVideoEntity(id);
   if (!entity) throw new AppError(404, "Video not found");
-  const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+  const assetUrl = `/assets/videos/${id}/thumb-custom`;
   const table = videoEntityTable(entity.kind);
   await db
     .update(table)
@@ -1903,7 +1903,7 @@ export async function setCustomVideoThumbnailFromFrame(
     throw new AppError(500, "Failed to generate thumbnail from frame");
   }
 
-  const assetUrl = `/assets/scenes/${id}/thumb-custom`;
+  const assetUrl = `/assets/videos/${id}/thumb-custom`;
   await db
     .update(table)
     .set({
@@ -1930,8 +1930,8 @@ export async function resetVideoThumbnail(id: string) {
     // non-fatal
   }
 
-  const defaultUrl = `/assets/scenes/${id}/thumb`;
-  const defaultCardUrl = `/assets/scenes/${id}/card`;
+  const defaultUrl = `/assets/videos/${id}/thumb`;
+  const defaultCardUrl = `/assets/videos/${id}/card`;
   const table = videoEntityTable(entity.kind);
   await db
     .update(table)

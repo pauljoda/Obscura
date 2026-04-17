@@ -16,7 +16,7 @@ import {
 import type { VideoDetail, VideoListItem, VideoStats } from "./types";
 
 export interface FetchVideosResponse {
-  scenes: VideoListItem[];
+  videos: VideoListItem[];
   total: number;
   limit: number;
   offset: number;
@@ -40,8 +40,8 @@ export async function fetchAllVideos(
   for (;;) {
     const res = await fetchVideos({ ...params, limit: FETCH_ALL_PAGE_SIZE, offset });
     total = res.total;
-    videos.push(...res.scenes);
-    if (res.scenes.length < FETCH_ALL_PAGE_SIZE || videos.length >= total) break;
+    videos.push(...res.videos);
+    if (res.videos.length < FETCH_ALL_PAGE_SIZE || videos.length >= total) break;
     offset += FETCH_ALL_PAGE_SIZE;
   }
   return { videos, total };

@@ -9,7 +9,7 @@ import { SceneCard } from "./videos/video-card";
 import { videoListItemToCardData } from "./videos/video-card-data";
 
 interface VideoGridProps {
-  scenes: VideoListItem[];
+  videos: VideoListItem[];
   viewMode: ViewMode;
   loading?: boolean;
   hasMore?: boolean;
@@ -21,7 +21,7 @@ interface VideoGridProps {
   from?: string;
 }
 
-export function VideoGrid({ scenes, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: VideoGridProps) {
+export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: VideoGridProps) {
   const terms = useTerms();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +64,7 @@ export function VideoGrid({ scenes, viewMode, loading, hasMore = false, loadingM
     );
   }
 
-  if (scenes.length === 0) {
+  if (videos.length === 0) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <Film className="h-12 w-12 text-text-disabled mb-3" />
@@ -80,13 +80,13 @@ export function VideoGrid({ scenes, viewMode, loading, hasMore = false, loadingM
     return (
       <>
         <div className="space-y-1">
-          {scenes.map((scene, i) => (
+          {videos.map((video, i) => (
             <SceneCard
-              key={scene.id}
-              scene={videoListItemToCardData(scene, from)}
+              key={video.id}
+              scene={videoListItemToCardData(video, from)}
               variant="list"
               index={i}
-              selected={selectedIds?.has(scene.id)}
+              selected={selectedIds?.has(video.id)}
               onToggleSelect={onToggleSelect}
             />
           ))}
@@ -99,10 +99,10 @@ export function VideoGrid({ scenes, viewMode, loading, hasMore = false, loadingM
   return (
     <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-      {scenes.map((scene, i) => (
+      {videos.map((video, i) => (
         <SceneCard
-          key={scene.id}
-          scene={videoListItemToCardData(scene, from)}
+          key={video.id}
+          scene={videoListItemToCardData(video, from)}
           index={i}
           imageLoading={i < 8 ? "eager" : "lazy"}
         />

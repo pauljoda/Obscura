@@ -20,7 +20,7 @@ import {
 } from "../../../lib/videos-list-prefs";
 
 interface VideosPageProps {
-  searchParams?: Promise<{ folder?: string }>;
+  searchParams?: Promise<{ series?: string }>;
 }
 
 export default async function VideosPage({ searchParams }: VideosPageProps) {
@@ -29,50 +29,50 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
   const listPrefs =
     parseVideosListPrefs(cookieStore.get(VIDEOS_LIST_PREFS_COOKIE)?.value) ??
     defaultVideosListPrefs();
-  const sceneFetchParams = videosListPrefsToFetchParams(listPrefs, nsfwMode);
+  const videoFetchParams = videosListPrefsToFetchParams(listPrefs, nsfwMode);
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const requestedFolderId =
-    typeof resolvedSearchParams.folder === "string"
-      ? resolvedSearchParams.folder
+  const requestedSeriesId =
+    typeof resolvedSearchParams.series === "string"
+      ? resolvedSearchParams.series
       : undefined;
-  const hasFolderScopedSceneQuery =
-    Boolean(sceneFetchParams.search) || listPrefs.activeFilters.length > 0;
-  const activeFolder =
-    listPrefs.viewMode === "series" && requestedFolderId
-      ? await fetchSeriesDetail(requestedFolderId, { nsfw: nsfwMode }).catch(
+  const hasSeriesScopedVideoQuery =
+    Boolean(videoFetchParams.search) || listPrefs.activeFilters.length > 0;
+  const activeSeries =
+    listPrefs.viewMode === "series" && requestedSeriesId
+      ? await fetchSeriesDetail(requestedSeriesId, { nsfw: nsfwMode }).catch(
           () => null,
         )
       : null;
 
   const [
-    rootFoldersResponse,
+    rootSeriesResponse,
     videosResponse,
     stats,
     studiosResponse,
     tagsResponse,
     performersResponse,
   ] = await Promise.all([
-    listPrefs.viewMode === "series" && !activeFolder
+    listPrefs.viewMode === "series" && !activeSeries
       ? fetchSeries({
-          search: sceneFetchParams.search,
-          root: sceneFetchParams.search ? "all" : undefined,
+          search: videoFetchParams.search,
+          root: videoFetchParams.search ? "all" : undefined,
           limit: 200,
           nsfw: nsfwMode,
         }).catch(() => ({ items: [], total: 0, limit: 200, offset: 0 }))
       : Promise.resolve({ items: [], total: 0, limit: 0, offset: 0 }),
     fetchVideos(
       listPrefs.viewMode === "series"
-        ? activeFolder
+        ? activeSeries
           ? {
-              ...sceneFetchParams,
-              videoSeriesId: activeFolder.id,
-              folderScope: hasFolderScopedSceneQuery ? "subtree" : "direct",
+              ...videoFetchParams,
+              videoSeriesId: activeSeries.id,
+              seriesScope: hasSeriesScopedVideoQuery ? "subtree" : "direct",
             }
           : {
-              ...sceneFetchParams,
+              ...videoFetchParams,
               uncategorized: true,
             }
-        : sceneFetchParams,
+        : videoFetchParams,
     ),
     fetchVideoStats(nsfwMode).catch(() => null),
     fetchStudios({ nsfw: nsfwMode }).catch(() => ({ studios: [] })),
@@ -87,15 +87,15 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
 
   return (
     <VideosPageClient
-      initialScenes={videosResponse.scenes}
+      initialVideos={videosResponse.videos}
       initialStats={stats}
       initialStudios={studiosResponse.studios}
       initialTags={tagsResponse.tags}
       initialPerformers={performersResponse.performers}
       initialTotal={videosResponse.total}
       initialListPrefs={listPrefs}
-      initialRootFolders={rootFoldersResponse.items}
-      initialActiveFolder={activeFolder}
+      initialRootSeries={rootSeriesResponse.items}
+      initialActiveSeries={activeSeries}
     />
   );
 }

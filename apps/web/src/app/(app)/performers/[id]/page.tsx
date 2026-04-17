@@ -29,8 +29,8 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
 
   const performer = await fetchPerformerDetail(id, { nsfw: nsfwMode }).catch(() => null as PerformerDetail | null);
 
-  const emptyScenes = {
-    scenes: [] as VideoListItem[],
+  const emptyVideos = {
+    videos: [] as VideoListItem[],
     total: 0,
     limit: 100,
     offset: 0,
@@ -49,9 +49,9 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
   };
   const emptyAudio = { items: [] as AudioLibraryListItemDto[], total: 0 };
 
-  const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = performer
+  const [videosResponse, seriesResponse, galleriesResponse, audioResponse] = performer
     ? await Promise.all([
-        fetchVideos({ performer: [performer.name], limit: 100, nsfw: nsfwMode }).catch(() => emptyScenes),
+        fetchVideos({ performer: [performer.name], limit: 100, nsfw: nsfwMode }).catch(() => emptyVideos),
         fetchSeries({ performer: performer.name, limit: 50, nsfw: nsfwMode }).catch(() => emptySeries),
         fetchGalleries({
           performer: [performer.name],
@@ -66,14 +66,14 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
           nsfw: nsfwMode,
         }).catch(() => emptyAudio),
       ])
-    : [emptyScenes, emptySeries, emptyGalleries, emptyAudio];
+    : [emptyVideos, emptySeries, emptyGalleries, emptyAudio];
 
   return (
     <PerformerPageClient
       id={id}
       initialPerformer={performer}
-      initialScenes={scenesResponse.scenes}
-      initialTotalScenes={scenesResponse.total}
+      initialScenes={videosResponse.videos}
+      initialTotalScenes={videosResponse.total}
       initialSeries={seriesResponse.items}
       initialTotalSeries={seriesResponse.total}
       initialGalleries={galleriesResponse.galleries}

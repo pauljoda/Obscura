@@ -143,8 +143,8 @@ function mimeForFile(extOrFileName: string) {
 }
 
 export async function assetsRoutes(app: FastifyInstance) {
-  // New sidecar pattern: /assets/scenes/:id/:kind
-  app.get("/assets/scenes/:id/:kind", async (request, reply) => {
+  // Video sidecar assets: /assets/videos/:id/:kind
+  app.get("/assets/videos/:id/:kind", async (request, reply) => {
     const { id, kind } = request.params as { id: string; kind: string };
 
     // Custom thumbnail lives in generated dir, not sidecar
@@ -186,7 +186,7 @@ export async function assetsRoutes(app: FastifyInstance) {
     const primaryPath = primary[diskKey];
     const secondaryPath = secondary[diskKey];
 
-    // Generated scene assets are versioned on the client with `?v=<updatedAt>`,
+    // Generated video assets are versioned on the client with `?v=<updatedAt>`,
     // so they can be cached aggressively without serving stale rebuilds.
     const cacheHeader = "public, max-age=31536000, immutable";
 

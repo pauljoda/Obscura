@@ -92,27 +92,27 @@ import { HierarchyShell } from "../shared/hierarchy-shell";
 import { useCurrentPath } from "../../hooks/use-current-path";
 
 interface VideosPageClientProps {
-  initialScenes: VideoListItem[];
+  initialVideos: VideoListItem[];
   initialStats: VideoStats | null;
   initialStudios: StudioItem[];
   initialTags: TagItem[];
   initialPerformers: PerformerItem[];
   initialTotal: number;
   initialListPrefs: VideosListPrefs;
-  initialRootFolders: SeriesListItem[];
-  initialActiveFolder: SeriesDetail | null;
+  initialRootSeries: SeriesListItem[];
+  initialActiveSeries: SeriesDetail | null;
 }
 
 export function VideosPageClient({
-  initialScenes,
+  initialVideos,
   initialStats,
   initialStudios,
   initialTags,
   initialPerformers,
   initialTotal,
   initialListPrefs,
-  initialRootFolders,
-  initialActiveFolder,
+  initialRootSeries,
+  initialActiveSeries,
 }: VideosPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
@@ -154,28 +154,28 @@ export function VideosPageClient({
   }, [nsfwMode]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(initialListPrefs.viewMode);
-  // When the page lands inside a series folder (activeFolder set),
+  // When the page lands inside a series folder (activeSeries set),
   // default to episode-order sort per spec §5.x — the natural way to
   // view a show is season 1 ep 1, 2, 3… Otherwise the user's saved
-  // prefs win. `loadScenes` re-reads `sortBy` from state, so this
+  // prefs win. `loadVideos` re-reads `sortBy` from state, so this
   // initial override flows through the first fetch.
   const [sortBy, setSortBy] = useState<SortOption>(
-    initialActiveFolder ? "episode" : initialListPrefs.sortBy,
+    initialActiveSeries ? "episode" : initialListPrefs.sortBy,
   );
   const [sortDir, setSortDir] = useState<SortDir>(
-    initialActiveFolder ? "asc" : initialListPrefs.sortDir,
+    initialActiveSeries ? "asc" : initialListPrefs.sortDir,
   );
   const [searchQuery, setSearchQuery] = useState(initialListPrefs.search);
   const [activeFilters, setActiveFilters] = useState<VideosListPrefsActiveFilter[]>(
     initialListPrefs.activeFilters,
   );
-  const [scenes, setScenes] = useState(initialScenes);
+  const [videos, setVideos] = useState(initialVideos);
   const [total, setTotal] = useState(initialTotal);
   const [filterStudios, setFilterStudios] = useState(initialStudios);
   const [filterTags, setFilterTags] = useState(initialTags);
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
-  const [rootFolders, setRootFolders] = useState(initialRootFolders);
-  const [activeFolder, setActiveFolder] = useState<SeriesDetail | null>(initialActiveFolder);
+  const [rootSeries, setRootFolders] = useState(initialRootSeries);
+  const [activeSeries, setActiveFolder] = useState<SeriesDetail | null>(initialActiveSeries);
   /**
    * When browsing a Case B series (seasons), the user can drill into a
    * specific season. `null` means "show the season grid" (no episodes
@@ -216,7 +216,7 @@ export function VideosPageClient({
   const setActiveSeasonNumber = useCallback(
     (n: number | null) => {
       setActiveSeasonNumberRaw(n);
-      if (!activeFolder) return;
+      if (!activeSeries) return;
       const url = new URL(window.location.href);
       if (n !== null) {
         url.searchParams.set("season", String(n));
@@ -225,7 +225,7 @@ export function VideosPageClient({
       }
       window.history.pushState(null, "", url.toString());
     },
-    [activeFolder],
+    [activeSeries],
   );
 
   // useCurrentPath reads from useSearchParams which doesn't see
@@ -241,8 +241,8 @@ export function VideosPageClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
   const [backdropBusy, setBackdropBusy] = useState(false);
-  const [folderError, setFolderError] = useState<string | null>(null);
-  const [folderEditMode, setFolderEditMode] = useState(false);
+  const [seriesError, setFolderError] = useState<string | null>(null);
+  const [seriesEditMode, setFolderEditMode] = useState(false);
   const [editCustomName, setEditCustomName] = useState("");
   const [editIsNsfw, setEditIsNsfw] = useState(false);
   const [editDetails, setEditDetails] = useState("");
@@ -252,10 +252,10 @@ export function VideosPageClient({
   const [editTagNames, setEditTagNames] = useState<string[]>([]);
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
-  const [folderSaving, setFolderSaving] = useState(false);
-  const [folderEditStudios, setFolderEditStudios] = useState<StudioItem[]>([]);
-  const [folderEditPerformers, setFolderEditPerformers] = useState<PerformerItem[]>([]);
-  const [folderEditTags, setFolderEditTags] = useState<TagItem[]>([]);
+  const [seriesSaving, setFolderSaving] = useState(false);
+  const [seriesEditStudios, setFolderEditStudios] = useState<StudioItem[]>([]);
+  const [seriesEditPerformers, setFolderEditPerformers] = useState<PerformerItem[]>([]);
+  const [seriesEditTags, setFolderEditTags] = useState<TagItem[]>([]);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const backdropInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,23 +276,23 @@ export function VideosPageClient({
   const hydratedRef = useRef(false);
 
   useEffect(() => {
-    setRootFolders(initialRootFolders);
-    setActiveFolder(initialActiveFolder);
+    setRootFolders(initialRootSeries);
+    setActiveFolder(initialActiveSeries);
     // Don't reset season to null here — seasonFromUrl above handles
     // reading the initial ?season= param from the URL.
     // Navigating INTO a series folder resets the sort to episode
-    // order; navigating OUT (initialActiveFolder becomes null) falls
+    // order; navigating OUT (initialActiveSeries becomes null) falls
     // back to the user's saved listing preference. Keeps "episode"
     // meaningful only where it makes sense and never bleeds into the
     // flat video feed.
-    if (initialActiveFolder) {
+    if (initialActiveSeries) {
       setSortBy("episode");
       setSortDir("asc");
     } else {
       setSortBy(initialListPrefs.sortBy);
       setSortDir(initialListPrefs.sortDir);
     }
-  }, [initialRootFolders, initialActiveFolder, initialListPrefs]);
+  }, [initialRootSeries, initialActiveSeries, initialListPrefs]);
 
   useEffect(() => {
     const prefs: VideosListPrefs = {
@@ -332,9 +332,9 @@ export function VideosPageClient({
     );
   }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode, viewMode]);
 
-  const folderSearch = deferredSearchQuery.trim() || undefined;
+  const seriesSearch = deferredSearchQuery.trim() || undefined;
   const hasFolderScopedSceneQuery =
-    Boolean(folderSearch) || activeFilters.length > 0;
+    Boolean(seriesSearch) || activeFilters.length > 0;
 
   const filterBarDisplayFilters = useMemo(() => {
     const durationLabels: Record<string, string> = {
@@ -381,13 +381,13 @@ export function VideosPageClient({
   // when the user hasn't drilled into a specific season yet.
   const showSeasonGrid =
     viewMode === "series" &&
-    activeFolder?.renderingMode === "seasons" &&
+    activeSeries?.renderingMode === "seasons" &&
     activeSeasonNumber === null &&
     !hasFolderScopedSceneQuery;
 
-  const loadScenes = useCallback(async () => {
+  const loadVideos = useCallback(async () => {
     if (showSeasonGrid) {
-      setScenes([]);
+      setVideos([]);
       setTotal(0);
       setLoading(false);
       return;
@@ -400,12 +400,12 @@ export function VideosPageClient({
           ? {
               ...buildParams(),
               limit: 50,
-              videoSeriesId: activeFolder?.id ?? undefined,
-              folderScope:
-                activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
-              uncategorized: !activeFolder?.id,
+              videoSeriesId: activeSeries?.id ?? undefined,
+              seriesScope:
+                activeSeries?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+              uncategorized: !activeSeries?.id,
               seasonNumber:
-                activeFolder?.id && activeSeasonNumber !== null
+                activeSeries?.id && activeSeasonNumber !== null
                   ? String(activeSeasonNumber)
                   : undefined,
             }
@@ -415,15 +415,15 @@ export function VideosPageClient({
             },
       );
 
-      setScenes(result.scenes);
+      setVideos(result.videos);
       setTotal(result.total);
     } catch (error) {
-      console.error("Failed to load scenes:", error);
+      console.error("Failed to load videos:", error);
     } finally {
       setLoading(false);
     }
   }, [
-    activeFolder?.id,
+    activeSeries?.id,
     activeSeasonNumber,
     buildParams,
     hasFolderScopedSceneQuery,
@@ -432,7 +432,7 @@ export function VideosPageClient({
   ]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || scenes.length >= total) return;
+    if (loadingMore || videos.length >= total) return;
     setLoadingMore(true);
 
     try {
@@ -441,49 +441,49 @@ export function VideosPageClient({
           ? {
               ...buildParams(),
               limit: 50,
-              offset: scenes.length,
-              videoSeriesId: activeFolder?.id ?? undefined,
-              folderScope:
-                activeFolder?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
-              uncategorized: !activeFolder?.id,
+              offset: videos.length,
+              videoSeriesId: activeSeries?.id ?? undefined,
+              seriesScope:
+                activeSeries?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+              uncategorized: !activeSeries?.id,
               seasonNumber:
-                activeFolder?.id && activeSeasonNumber !== null
+                activeSeries?.id && activeSeasonNumber !== null
                   ? String(activeSeasonNumber)
                   : undefined,
             }
           : {
               ...buildParams(),
               limit: 50,
-              offset: scenes.length,
+              offset: videos.length,
             },
       );
 
-      setScenes((prev) => {
+      setVideos((prev) => {
         const existingIds = new Set(prev.map((s) => s.id));
-        const newItems = result.scenes.filter((s) => !existingIds.has(s.id));
+        const newItems = result.videos.filter((s) => !existingIds.has(s.id));
         return [...prev, ...newItems];
       });
     } catch (error) {
-      console.error("Failed to load more scenes:", error);
+      console.error("Failed to load more videos:", error);
     } finally {
       setLoadingMore(false);
     }
   }, [
-    activeFolder?.id,
+    activeSeries?.id,
     buildParams,
     hasFolderScopedSceneQuery,
     loadingMore,
-    scenes.length,
+    videos.length,
     total,
     viewMode,
   ]);
 
-  const loadFolderContext = useCallback(async () => {
+  const loadSeriesContext = useCallback(async () => {
     if (viewMode !== "series") return;
 
-    if (activeFolder?.id) {
+    if (activeSeries?.id) {
       try {
-        const detail = await fetchSeriesDetail(activeFolder.id, {
+        const detail = await fetchSeriesDetail(activeSeries.id, {
           nsfw: nsfwMode,
         });
         setActiveFolder(detail);
@@ -496,8 +496,8 @@ export function VideosPageClient({
 
     try {
       const result = await fetchSeries({
-        search: folderSearch,
-        root: folderSearch ? "all" : undefined,
+        search: seriesSearch,
+        root: seriesSearch ? "all" : undefined,
         limit: 200,
         nsfw: nsfwMode,
       });
@@ -506,77 +506,77 @@ export function VideosPageClient({
       console.error("Failed to load scene folders:", error);
       setRootFolders([]);
     }
-  }, [activeFolder?.id, folderSearch, nsfwMode, viewMode]);
+  }, [activeSeries?.id, seriesSearch, nsfwMode, viewMode]);
 
-  const reloadFolder = useCallback(async () => {
-    if (!activeFolder?.id) return;
-    const detail = await fetchSeriesDetail(activeFolder.id, { nsfw: nsfwMode });
+  const reloadSeries = useCallback(async () => {
+    if (!activeSeries?.id) return;
+    const detail = await fetchSeriesDetail(activeSeries.id, { nsfw: nsfwMode });
     setActiveFolder(detail);
-  }, [activeFolder?.id, nsfwMode]);
+  }, [activeSeries?.id, nsfwMode]);
 
-  const handleFolderSave = useCallback(
+  const handleSeriesSave = useCallback(
     async (patch: { customName?: string | null; isNsfw?: boolean }) => {
-      if (!activeFolder) return;
+      if (!activeSeries) return;
       setFolderError(null);
       try {
-        await updateSeries(activeFolder.id, patch);
-        await revalidateSeriesCache(activeFolder.id);
-        await reloadFolder();
+        await updateSeries(activeSeries.id, patch);
+        await revalidateSeriesCache(activeSeries.id);
+        await reloadSeries();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to update folder");
         throw err;
       }
     },
-    [activeFolder, reloadFolder],
+    [activeSeries, reloadSeries],
   );
 
-  const handleFolderUploadCover = useCallback(
+  const handleSeriesUploadCover = useCallback(
     async (file: File | undefined) => {
-      if (!file || !activeFolder) return;
+      if (!file || !activeSeries) return;
       setFolderError(null);
       setCoverBusy(true);
       try {
-        await uploadSeriesCover(activeFolder.id, file);
-        await revalidateSeriesCache(activeFolder.id);
-        await reloadFolder();
+        await uploadSeriesCover(activeSeries.id, file);
+        await revalidateSeriesCache(activeSeries.id);
+        await reloadSeries();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to upload cover");
       } finally {
         setCoverBusy(false);
       }
     },
-    [activeFolder, reloadFolder],
+    [activeSeries, reloadSeries],
   );
 
-  const handleFolderDeleteCover = useCallback(async () => {
-    if (!activeFolder) return;
+  const handleSeriesDeleteCover = useCallback(async () => {
+    if (!activeSeries) return;
     setFolderError(null);
     setCoverBusy(true);
     try {
-      await deleteSeriesCover(activeFolder.id);
-      await revalidateSeriesCache(activeFolder.id);
-      await reloadFolder();
+      await deleteSeriesCover(activeSeries.id);
+      await revalidateSeriesCache(activeSeries.id);
+      await reloadSeries();
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Failed to delete cover");
     } finally {
       setCoverBusy(false);
     }
-  }, [activeFolder, reloadFolder]);
+  }, [activeSeries, reloadSeries]);
 
-  const beginFolderEdit = useCallback(() => {
-    if (!activeFolder) return;
-    setEditCustomName(activeFolder.customName ?? "");
-    setEditIsNsfw(activeFolder.isNsfw);
-    setEditDetails(activeFolder.details ?? "");
-    setEditStudioName(activeFolder.studio?.name ?? activeFolder.studioName ?? "");
+  const beginSeriesEdit = useCallback(() => {
+    if (!activeSeries) return;
+    setEditCustomName(activeSeries.customName ?? "");
+    setEditIsNsfw(activeSeries.isNsfw);
+    setEditDetails(activeSeries.details ?? "");
+    setEditStudioName(activeSeries.studio?.name ?? activeSeries.studioName ?? "");
     setEditPerformerNames(
-      activeFolder.performers ? activeFolder.performers.map((p) => p.name) : [],
+      activeSeries.performers ? activeSeries.performers.map((p) => p.name) : [],
     );
     setEditTagNames(
-      activeFolder.tags ? activeFolder.tags.map((t) => t.name) : [],
+      activeSeries.tags ? activeSeries.tags.map((t) => t.name) : [],
     );
-    setEditRating(activeFolder.rating);
-    setEditDate(activeFolder.date ?? "");
+    setEditRating(activeSeries.rating);
+    setEditDate(activeSeries.date ?? "");
     setFolderEditMode(true);
     // Fetch suggestion data for chip inputs
     void Promise.all([
@@ -588,18 +588,18 @@ export function VideosPageClient({
       setFolderEditPerformers(p.performers);
       setFolderEditTags(t.tags);
     }).catch(() => {});
-  }, [activeFolder, nsfwMode]);
+  }, [activeSeries, nsfwMode]);
 
-  const cancelFolderEdit = useCallback(() => {
+  const cancelSeriesEdit = useCallback(() => {
     setFolderEditMode(false);
   }, []);
 
-  const saveFolderEdit = useCallback(async () => {
-    if (!activeFolder) return;
+  const saveSeriesEdit = useCallback(async () => {
+    if (!activeSeries) return;
     setFolderSaving(true);
     setFolderError(null);
     try {
-      await updateSeries(activeFolder.id, {
+      await updateSeries(activeSeries.id, {
         customName: editCustomName.trim() || null,
         isNsfw: editIsNsfw,
         details: editDetails.trim() || null,
@@ -609,57 +609,57 @@ export function VideosPageClient({
         rating: editRating,
         date: editDate.trim() || null,
       });
-      await revalidateSeriesCache(activeFolder.id);
-      await reloadFolder();
+      await revalidateSeriesCache(activeSeries.id);
+      await reloadSeries();
       setFolderEditMode(false);
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Failed to update folder");
     } finally {
       setFolderSaving(false);
     }
-  }, [activeFolder, editCustomName, editIsNsfw, editDetails, editStudioName, editPerformerNames, editTagNames, editRating, editDate, reloadFolder]);
+  }, [activeSeries, editCustomName, editIsNsfw, editDetails, editStudioName, editPerformerNames, editTagNames, editRating, editDate, reloadSeries]);
 
-  const handleFolderUploadBackdrop = useCallback(
+  const handleSeriesUploadBackdrop = useCallback(
     async (file: File | undefined) => {
-      if (!file || !activeFolder) return;
+      if (!file || !activeSeries) return;
       setFolderError(null);
       setBackdropBusy(true);
       try {
-        await uploadSeriesBackdrop(activeFolder.id, file);
-        await revalidateSeriesCache(activeFolder.id);
-        await reloadFolder();
+        await uploadSeriesBackdrop(activeSeries.id, file);
+        await revalidateSeriesCache(activeSeries.id);
+        await reloadSeries();
       } catch (err) {
         setFolderError(err instanceof Error ? err.message : "Failed to upload backdrop");
       } finally {
         setBackdropBusy(false);
       }
     },
-    [activeFolder, reloadFolder],
+    [activeSeries, reloadSeries],
   );
 
-  const handleFolderDeleteBackdrop = useCallback(async () => {
-    if (!activeFolder) return;
+  const handleSeriesDeleteBackdrop = useCallback(async () => {
+    if (!activeSeries) return;
     setFolderError(null);
     setBackdropBusy(true);
     try {
-      await deleteSeriesBackdrop(activeFolder.id);
-      await revalidateSeriesCache(activeFolder.id);
-      await reloadFolder();
+      await deleteSeriesBackdrop(activeSeries.id);
+      await revalidateSeriesCache(activeSeries.id);
+      await reloadSeries();
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Failed to delete backdrop");
     } finally {
       setBackdropBusy(false);
     }
-  }, [activeFolder, reloadFolder]);
+  }, [activeSeries, reloadSeries]);
 
-  const filteredFolderStudios = editStudioFocused
+  const filteredSeriesStudios = editStudioFocused
     ? (editStudioName.trim()
-        ? folderEditStudios.filter(
+        ? seriesEditStudios.filter(
             (s) =>
               s.name.toLowerCase().includes(editStudioName.toLowerCase()) &&
               s.name.toLowerCase() !== editStudioName.toLowerCase()
           )
-        : folderEditStudios)
+        : seriesEditStudios)
     : [];
 
   useEffect(() => {
@@ -669,10 +669,10 @@ export function VideosPageClient({
     }
 
     const timer = window.setTimeout(() => {
-      void Promise.all([loadScenes(), loadFolderContext()]);
+      void Promise.all([loadVideos(), loadSeriesContext()]);
     }, deferredSearchQuery ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [deferredSearchQuery, loadFolderContext, loadScenes]);
+  }, [deferredSearchQuery, loadSeriesContext, loadVideos]);
 
   function removeFilter(index: number) {
     startTransition(() => {
@@ -768,7 +768,7 @@ export function VideosPageClient({
         Array.from(selection.selectedIds).map((id) => updateVideo(id, { isNsfw })),
       );
       selection.deselectAll();
-      await loadScenes();
+      await loadVideos();
     } finally {
       setBulkLoading(false);
     }
@@ -782,48 +782,48 @@ export function VideosPageClient({
       );
       selection.deselectAll();
       setDeleteDialogOpen(false);
-      await loadScenes();
+      await loadVideos();
     } finally {
       setBulkLoading(false);
     }
   }
 
-  const visibleIds = scenes.map((s) => s.id);
-  const folderCards = useMemo(() => {
-    if (!activeFolder) return rootFolders;
-    if (!folderSearch) return activeFolder.children;
-    const lowered = folderSearch.toLowerCase();
-    return activeFolder.children.filter(
+  const visibleIds = videos.map((s) => s.id);
+  const seriesCards = useMemo(() => {
+    if (!activeSeries) return rootSeries;
+    if (!seriesSearch) return activeSeries.children;
+    const lowered = seriesSearch.toLowerCase();
+    return activeSeries.children.filter(
       (folder) =>
         folder.displayTitle.toLowerCase().includes(lowered) ||
         folder.title.toLowerCase().includes(lowered) ||
         folder.relativePath.toLowerCase().includes(lowered),
     );
-  }, [activeFolder, folderSearch, rootFolders]);
+  }, [activeSeries, seriesSearch, rootSeries]);
 
   /** Library label + on-disk folder titles (breadcrumb `title` values), for the folder hero. */
-  const folderHeroDiskPath = useMemo(() => {
-    if (!activeFolder) return null;
-    const root = activeFolder.libraryRootLabel?.trim();
-    const crumbs = activeFolder.breadcrumbs.map((c) => c.title.trim()).filter(Boolean);
+  const seriesHeroDiskPath = useMemo(() => {
+    if (!activeSeries) return null;
+    const root = activeSeries.libraryRootLabel?.trim();
+    const crumbs = activeSeries.breadcrumbs.map((c) => c.title.trim()).filter(Boolean);
     const parts = [root, ...crumbs].filter((s): s is string => Boolean(s));
     if (parts.length === 0) return null;
     return parts.join(" > ");
-  }, [activeFolder]);
+  }, [activeSeries]);
 
-  const folderSectionTitle = activeFolder
+  const seriesSectionTitle = activeSeries
     ? `Child ${terms.series.toLowerCase()}`
-    : folderSearch
+    : seriesSearch
       ? `Matching ${terms.series.toLowerCase()}`
       : terms.series;
-  const sceneSectionTitle = activeFolder
+  const videoSectionTitle = activeSeries
     ? hasFolderScopedSceneQuery
       ? `Matching ${terms.videos.toLowerCase()} in this ${terms.seriesSingular.toLowerCase()}`
       : `${terms.videos} in this ${terms.seriesSingular.toLowerCase()}`
     : terms.movies;
 
-  const uploadTarget = activeFolder
-    ? { kind: "video" as const, videoSeriesId: activeFolder.id }
+  const uploadTarget = activeSeries
+    ? { kind: "video" as const, videoSeriesId: activeSeries.id }
     : { kind: "video" as const };
 
   return (
@@ -886,7 +886,7 @@ export function VideosPageClient({
         onDeletePreset={handleDeletePreset}
       />
 
-      {viewMode === "list" && !loading && scenes.length > 0 && (
+      {viewMode === "list" && !loading && videos.length > 0 && (
         <SelectAllHeader
           allSelected={selection.isAllSelected(visibleIds)}
           onToggle={() =>
@@ -895,7 +895,7 @@ export function VideosPageClient({
               : selection.selectAll(visibleIds)
           }
           selectedCount={selection.count}
-          totalVisible={scenes.length}
+          totalVisible={videos.length}
         />
       )}
       <UploadDropZone
@@ -903,16 +903,16 @@ export function VideosPageClient({
         onUploaded={() => router.refresh()}
       >
       {viewMode === "series" ? (
-        activeFolder ? (
+        activeSeries ? (
           <div className="space-y-5">
             {/* ── Breadcrumbs ──────────────────────────────────── */}
             <HierarchyBreadcrumbs
               items={[
                 { id: "root", title: terms.videos, href: "/videos" },
-                ...activeFolder.breadcrumbs.map((crumb) => ({
+                ...activeSeries.breadcrumbs.map((crumb) => ({
                   id: crumb.id,
                   title: crumb.displayTitle,
-                  href: `/videos?folder=${crumb.id}`,
+                  href: `/videos?series=${crumb.id}`,
                 })),
               ]}
             />
@@ -920,15 +920,15 @@ export function VideosPageClient({
             {/* ── Jellyfin-style Hero Header ─────────────────── */}
             <div className="relative min-h-[200px] sm:min-h-[280px] overflow-hidden border border-border-subtle">
               {/* Backdrop image or blurred poster fallback */}
-              {toApiUrl(activeFolder.backdropImagePath, activeFolder.updatedAt) ? (
+              {toApiUrl(activeSeries.backdropImagePath, activeSeries.updatedAt) ? (
                 <img
-                  src={toApiUrl(activeFolder.backdropImagePath, activeFolder.updatedAt)!}
+                  src={toApiUrl(activeSeries.backdropImagePath, activeSeries.updatedAt)!}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                 />
-              ) : toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) ? (
+              ) : toApiUrl(activeSeries.coverImagePath, activeSeries.updatedAt) ? (
                 <img
-                  src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
+                  src={toApiUrl(activeSeries.coverImagePath, activeSeries.updatedAt)!}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover blur-lg scale-110 opacity-50"
                 />
@@ -939,29 +939,29 @@ export function VideosPageClient({
               <div className="relative flex min-h-[200px] sm:min-h-[280px] items-end gap-4 p-4 sm:gap-6 sm:p-6">
                 {/* Folder edit / save — top-right of hero so it stays out of the bottom-aligned title block */}
                 <div className="absolute right-6 top-6 z-10 flex items-center gap-1">
-                  {folderEditMode ? (
+                  {seriesEditMode ? (
                     <>
                       <button
                         type="button"
-                        onClick={cancelFolderEdit}
-                        disabled={folderSaving}
+                        onClick={cancelSeriesEdit}
+                        disabled={seriesSaving}
                         className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
                       >
                         <XCircle className="h-4 w-4" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => void saveFolderEdit()}
-                        disabled={folderSaving}
+                        onClick={() => void saveSeriesEdit()}
+                        disabled={seriesSaving}
                         className="p-1.5 text-accent-400 hover:text-accent-300 hover:bg-white/10 transition-colors disabled:opacity-50"
                       >
-                        {folderSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {seriesSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                       </button>
                     </>
                   ) : (
                     <button
                       type="button"
-                      onClick={beginFolderEdit}
+                      onClick={beginSeriesEdit}
                       className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -970,11 +970,11 @@ export function VideosPageClient({
                 </div>
 
                 {/* Poster — compact on mobile, full on desktop */}
-                {toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt) && (
+                {toApiUrl(activeSeries.coverImagePath, activeSeries.updatedAt) && (
                   <div className="flex-shrink-0 w-[72px] sm:w-[160px]">
                     <img
-                      src={toApiUrl(activeFolder.coverImagePath, activeFolder.updatedAt)!}
-                      alt={activeFolder.displayTitle}
+                      src={toApiUrl(activeSeries.coverImagePath, activeSeries.updatedAt)!}
+                      alt={activeSeries.displayTitle}
                       className="aspect-[2/3] w-full object-cover border border-white/10 shadow-lg"
                     />
                   </div>
@@ -982,15 +982,15 @@ export function VideosPageClient({
 
                 {/* Metadata */}
                 <div className="flex-1 min-w-0">
-                  {folderHeroDiskPath ? (
+                  {seriesHeroDiskPath ? (
                     <div className="mb-1 flex min-w-0 items-start gap-1.5 text-[0.68rem] text-white/50">
                       <HardDrive className="mt-0.5 h-3 w-3 flex-shrink-0" />
-                      <span className="min-w-0 break-words">{folderHeroDiskPath}</span>
+                      <span className="min-w-0 break-words">{seriesHeroDiskPath}</span>
                     </div>
                   ) : null}
 
                   <div className="mt-1.5">
-                    {folderEditMode ? (
+                    {seriesEditMode ? (
                       <div className="min-w-0 space-y-2.5">
                         {/* Hidden file inputs for image uploads */}
                         <input
@@ -999,7 +999,7 @@ export function VideosPageClient({
                           accept="image/*"
                           className="sr-only"
                           onChange={(e) => {
-                            void handleFolderUploadCover(e.target.files?.[0]);
+                            void handleSeriesUploadCover(e.target.files?.[0]);
                             e.target.value = "";
                           }}
                         />
@@ -1009,7 +1009,7 @@ export function VideosPageClient({
                           accept="image/*"
                           className="sr-only"
                           onChange={(e) => {
-                            void handleFolderUploadBackdrop(e.target.files?.[0]);
+                            void handleSeriesUploadBackdrop(e.target.files?.[0]);
                             e.target.value = "";
                           }}
                         />
@@ -1019,7 +1019,7 @@ export function VideosPageClient({
                           <input
                             value={editCustomName}
                             onChange={(e) => setEditCustomName(e.target.value)}
-                            placeholder={activeFolder.title}
+                            placeholder={activeSeries.title}
                             className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-xl font-heading font-semibold text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
                           />
                           <p className="text-[0.65rem] text-text-disabled mt-0.5">
@@ -1047,9 +1047,9 @@ export function VideosPageClient({
                               placeholder="Studio name"
                               className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.82rem] text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
                             />
-                            {filteredFolderStudios.length > 0 && (
+                            {filteredSeriesStudios.length > 0 && (
                               <div className="autocomplete-dropdown">
-                                {filteredFolderStudios.slice(0, 8).map((s) => (
+                                {filteredSeriesStudios.slice(0, 8).map((s) => (
                                   <div
                                     key={s.name}
                                     className="autocomplete-item"
@@ -1065,7 +1065,7 @@ export function VideosPageClient({
                               </div>
                             )}
                             {editStudioName.trim() &&
-                              !folderEditStudios.some(
+                              !seriesEditStudios.some(
                                 (s) => s.name.toLowerCase() === editStudioName.trim().toLowerCase()
                               ) && (
                                 <span className="text-[0.6rem] text-info-text mt-0.5 block">
@@ -1087,7 +1087,7 @@ export function VideosPageClient({
                           <ChipInput
                             values={editPerformerNames}
                             onChange={setEditPerformerNames}
-                            suggestions={tagsVisibleInNsfwMode(folderEditPerformers, nsfwMode).map((p) => ({
+                            suggestions={tagsVisibleInNsfwMode(seriesEditPerformers, nsfwMode).map((p) => ({
                               name: p.name,
                               count: p.videoCount,
                             }))}
@@ -1101,7 +1101,7 @@ export function VideosPageClient({
                           <ChipInput
                             values={editTagNames}
                             onChange={setEditTagNames}
-                            suggestions={tagsVisibleInNsfwMode(folderEditTags, nsfwMode).map((t) => ({
+                            suggestions={tagsVisibleInNsfwMode(seriesEditTags, nsfwMode).map((t) => ({
                               name: t.name,
                               count: t.videoCount,
                             }))}
@@ -1129,11 +1129,11 @@ export function VideosPageClient({
                               {coverBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                               Poster
                             </button>
-                            {activeFolder.coverImagePath && (
+                            {activeSeries.coverImagePath && (
                               <button
                                 type="button"
                                 disabled={coverBusy}
-                                onClick={() => void handleFolderDeleteCover()}
+                                onClick={() => void handleSeriesDeleteCover()}
                                 className="inline-flex items-center gap-1 px-2 py-1 text-[0.68rem] text-text-muted border border-border-subtle hover:border-red-400/50 hover:text-red-200 transition-colors disabled:opacity-50"
                               >
                                 <Trash2 className="h-3 w-3" />
@@ -1148,11 +1148,11 @@ export function VideosPageClient({
                               {backdropBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                               Backdrop
                             </button>
-                            {activeFolder.backdropImagePath && (
+                            {activeSeries.backdropImagePath && (
                               <button
                                 type="button"
                                 disabled={backdropBusy}
-                                onClick={() => void handleFolderDeleteBackdrop()}
+                                onClick={() => void handleSeriesDeleteBackdrop()}
                                 className="inline-flex items-center gap-1 px-2 py-1 text-[0.68rem] text-text-muted border border-border-subtle hover:border-red-400/50 hover:text-red-200 transition-colors disabled:opacity-50"
                               >
                                 <Trash2 className="h-3 w-3" />
@@ -1163,63 +1163,63 @@ export function VideosPageClient({
                       </div>
                     ) : (
                       <h1 className="min-w-0 text-xl sm:text-3xl font-heading font-semibold text-white leading-tight">
-                        {activeFolder.displayTitle}
+                        {activeSeries.displayTitle}
                       </h1>
                     )}
                   </div>
 
-                  {!folderEditMode && (
+                  {!seriesEditMode && (
                     <>
                       {/* Metadata row: studio, date, rating, scene count */}
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.82rem] text-white/70">
-                        {activeFolder.studioName && (
-                          <span>{activeFolder.studioName}</span>
+                        {activeSeries.studioName && (
+                          <span>{activeSeries.studioName}</span>
                         )}
-                        {activeFolder.date && (
-                          <span>{activeFolder.date}</span>
+                        {activeSeries.date && (
+                          <span>{activeSeries.date}</span>
                         )}
-                        {activeFolder.rating != null && (
-                          <StarRatingPicker value={activeFolder.rating} readOnly />
+                        {activeSeries.rating != null && (
+                          <StarRatingPicker value={activeSeries.rating} readOnly />
                         )}
                         <span className="text-white/40">
-                          {formatVideoCount(activeFolder.totalVideoCount)}
+                          {formatVideoCount(activeSeries.totalVideoCount)}
                         </span>
-                        {activeFolder.childSeasonCount > 0 && (
+                        {activeSeries.childSeasonCount > 0 && (
                           <span className="text-white/40">
-                            {activeFolder.childSeasonCount} child {activeFolder.childSeasonCount !== 1 ? terms.series.toLowerCase() : terms.seriesSingular.toLowerCase()}
+                            {activeSeries.childSeasonCount} child {activeSeries.childSeasonCount !== 1 ? terms.series.toLowerCase() : terms.seriesSingular.toLowerCase()}
                           </span>
                         )}
-                        {activeFolder.isNsfw && <NsfwChip />}
+                        {activeSeries.isNsfw && <NsfwChip />}
                       </div>
 
                       {/* Identify (plugin-driven cascade review) */}
                       <div className="mt-3">
                         <IdentifyButton
                           entityKind="video_series"
-                          entityId={activeFolder.id}
-                          title={activeFolder.displayTitle}
+                          entityId={activeSeries.id}
+                          title={activeSeries.displayTitle}
                           label="Identify Series"
                         />
                       </div>
 
                       {/* Description */}
-                      {activeFolder.details && (
+                      {activeSeries.details && (
                         <p className="mt-3 max-w-[700px] text-[0.82rem] leading-relaxed text-white/60 line-clamp-3">
-                          {activeFolder.details}
+                          {activeSeries.details}
                         </p>
                       )}
 
                       {/* Tags */}
                       {(() => {
-                        const folderTagsVisible = tagsVisibleInNsfwMode(
-                          activeFolder.tags ?? [],
+                        const seriesTagsVisible = tagsVisibleInNsfwMode(
+                          activeSeries.tags ?? [],
                           nsfwMode,
                         );
-                        if (folderTagsVisible.length === 0) return null;
+                        if (seriesTagsVisible.length === 0) return null;
                         return (
                           <div className="mt-3 flex flex-wrap items-center gap-1.5">
                             <span className="mr-1 self-center text-[0.72rem] text-white/40">Tags:</span>
-                            {folderTagsVisible.map((tag) => (
+                            {seriesTagsVisible.map((tag) => (
                               <Link
                                 key={tag.id}
                                 href={`/tags/${encodeURIComponent(tag.name)}`}
@@ -1238,26 +1238,26 @@ export function VideosPageClient({
             </div>
 
             {/* ── Error banner ─────────────────────────────────── */}
-            {folderError && (
+            {seriesError && (
               <div className="surface-well border border-red-500/30 px-3 py-2 text-[0.78rem] text-red-200">
-                {folderError}
+                {seriesError}
               </div>
             )}
 
             {/* ── Cast & Crew ─────────────────────────────────── */}
-            {activeFolder.performers && activeFolder.performers.length > 0 && (
-              <FolderCastStrip performers={activeFolder.performers} />
+            {activeSeries.performers && activeSeries.performers.length > 0 && (
+              <SeriesCastStrip performers={activeSeries.performers} />
             )}
 
             {/* ── Child series ──────────────────────────────────── */}
-            {folderCards.length > 0 && (
+            {seriesCards.length > 0 && (
               <HierarchySection title={`Child ${terms.series.toLowerCase()}`}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {folderCards.map((folder) => (
+                  {seriesCards.map((folder) => (
                     <SeriesCard
                       key={folder.id}
-                      folder={folder}
-                      href={`/videos?folder=${folder.id}`}
+                      series={folder}
+                      href={`/videos?series=${folder.id}`}
                       compact
                     />
                   ))}
@@ -1266,12 +1266,12 @@ export function VideosPageClient({
             )}
 
             {/* ── Seasons (Case B) ─────────────────────────────── */}
-            {activeFolder.renderingMode === "seasons" &&
-              activeFolder.seasons.length > 0 &&
+            {activeSeries.renderingMode === "seasons" &&
+              activeSeries.seasons.length > 0 &&
               activeSeasonNumber === null && (
                 <HierarchySection title="Seasons">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                    {activeFolder.seasons.map((season) => {
+                    {activeSeries.seasons.map((season) => {
                       const label =
                         season.seasonNumber === 0
                           ? "Specials"
@@ -1329,7 +1329,7 @@ export function VideosPageClient({
                     ? activeSeasonNumber === 0
                       ? "Specials"
                       : `Season ${activeSeasonNumber}`
-                    : sceneSectionTitle
+                    : videoSectionTitle
                 }
                 action={
                   activeSeasonNumber !== null ? (
@@ -1344,10 +1344,10 @@ export function VideosPageClient({
                 }
               >
                 <VideoGrid
-                  scenes={scenes}
+                  videos={videos}
                   viewMode="grid"
                   loading={loading}
-                  hasMore={scenes.length < total}
+                  hasMore={videos.length < total}
                   loadingMore={loadingMore}
                   onLoadMore={loadMore}
                   from={currentPath}
@@ -1370,14 +1370,14 @@ export function VideosPageClient({
               </div>
             }
           >
-            {folderCards.length > 0 && (
-              <HierarchySection title={folderSectionTitle}>
+            {seriesCards.length > 0 && (
+              <HierarchySection title={seriesSectionTitle}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {folderCards.map((folder) => (
+                  {seriesCards.map((folder) => (
                     <SeriesCard
                       key={folder.id}
-                      folder={folder}
-                      href={`/videos?folder=${folder.id}`}
+                      series={folder}
+                      href={`/videos?series=${folder.id}`}
                       compact
                     />
                   ))}
@@ -1385,12 +1385,12 @@ export function VideosPageClient({
               </HierarchySection>
             )}
 
-            <HierarchySection title={sceneSectionTitle}>
+            <HierarchySection title={videoSectionTitle}>
               <VideoGrid
-                scenes={scenes}
+                videos={videos}
                 viewMode="grid"
                 loading={loading}
-                hasMore={scenes.length < total}
+                hasMore={videos.length < total}
                 loadingMore={loadingMore}
                 onLoadMore={loadMore}
                 from={currentPath}
@@ -1401,10 +1401,10 @@ export function VideosPageClient({
       ) : (
         <>
           <VideoGrid
-            scenes={scenes}
+            videos={videos}
             viewMode={viewMode}
             loading={loading}
-            hasMore={scenes.length < total}
+            hasMore={videos.length < total}
             loadingMore={loadingMore}
             onLoadMore={loadMore}
             selectedIds={viewMode === "list" ? selection.selectedIds : undefined}
@@ -1518,7 +1518,7 @@ function StatCard({
 
 /* ── Cast & Crew horizontal scroll strip ──────────────────── */
 
-function FolderCastStrip({
+function SeriesCastStrip({
   performers,
 }: {
   performers: {

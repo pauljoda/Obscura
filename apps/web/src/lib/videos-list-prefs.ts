@@ -2,7 +2,7 @@ import { createListPrefs, isRecord } from "./list-prefs";
 import type { SortDir, SortOption, ViewMode } from "./video-browse-types";
 
 export const VIDEOS_LIST_PREFS_COOKIE = "obscura-videos-list";
-export const SCENES_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
+export const VIDEOS_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
 const PAGE_SIZE = 50;
 
@@ -47,7 +47,7 @@ function parseActiveFilters(raw: unknown): VideosListPrefsActiveFilter[] | null 
 
 const scenesPrefs = createListPrefs<VideosListPrefs>({
   cookieName: VIDEOS_LIST_PREFS_COOKIE,
-  maxAge: SCENES_LIST_PREFS_MAX_AGE,
+  maxAge: VIDEOS_LIST_PREFS_MAX_AGE,
   defaults: () => ({
     viewMode: "series",
     sortBy: "recent",

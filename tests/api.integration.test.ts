@@ -129,8 +129,8 @@ describe("API integration", () => {
 
     const listed = await context.app.inject({ method: "GET", url: "/videos" });
     expect(listed.statusCode).toBe(200);
-    const listBody = listed.json() as { scenes: Array<{ id: string }>; total: number };
-    expect(listBody.scenes).toHaveLength(1);
+    const listBody = listed.json() as { videos: Array<{ id: string }>; total: number };
+    expect(listBody.videos).toHaveLength(1);
     expect(listBody.total).toBe(1);
 
     const patch = await injectJson<{ ok: true; id: string }>(context.app, {

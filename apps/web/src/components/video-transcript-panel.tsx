@@ -34,7 +34,7 @@ import {
 export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
 
 interface VideoTranscriptPanelProps {
-  sceneId: string;
+  videoId: string;
   tracks: VideoSubtitleTrackDto[];
   activeTrackId: string | null;
   onActiveTrackIdChange: (id: string | null) => void;
@@ -71,7 +71,7 @@ function languageLabel(language: string): string {
 }
 
 export function VideoTranscriptPanel({
-  sceneId,
+  videoId,
   tracks,
   activeTrackId,
   onActiveTrackIdChange,
@@ -116,7 +116,7 @@ export function VideoTranscriptPanel({
     let cancelled = false;
     setLoadingCues(true);
     setCuesError(null);
-    fetchVideoSubtitleCues(sceneId, activeTrackId)
+    fetchVideoSubtitleCues(videoId, activeTrackId)
       .then((res) => {
         if (cancelled) return;
         setCues(res.cues);
@@ -132,7 +132,7 @@ export function VideoTranscriptPanel({
     return () => {
       cancelled = true;
     };
-  }, [sceneId, activeTrackId]);
+  }, [videoId, activeTrackId]);
 
   // Find the index of the current cue based on playback time.
   const currentIndex = useMemo(() => {
@@ -201,7 +201,7 @@ export function VideoTranscriptPanel({
     if (!file) return;
     setUploading(true);
     try {
-      await uploadVideoSubtitle(sceneId, file, uploadLanguage);
+      await uploadVideoSubtitle(videoId, file, uploadLanguage);
       onTracksChanged();
     } catch (err) {
       setCuesError((err as Error).message);
@@ -215,7 +215,7 @@ export function VideoTranscriptPanel({
     if (extractState !== "idle") return;
     setExtractState("queued");
     try {
-      await extractVideoSubtitles(sceneId);
+      await extractVideoSubtitles(videoId);
     } catch (err) {
       setCuesError((err as Error).message);
     }
@@ -227,7 +227,7 @@ export function VideoTranscriptPanel({
 
   async function handleDelete(trackId: string) {
     try {
-      await deleteVideoSubtitle(sceneId, trackId);
+      await deleteVideoSubtitle(videoId, trackId);
       if (activeTrackId === trackId) {
         onActiveTrackIdChange(null);
       }
@@ -257,7 +257,7 @@ export function VideoTranscriptPanel({
     };
     if (editDraftLanguage.trim()) patch.language = editDraftLanguage.trim();
     try {
-      await updateVideoSubtitle(sceneId, trackId, patch);
+      await updateVideoSubtitle(videoId, trackId, patch);
       cancelEditingTrack();
       onTracksChanged();
     } catch (err) {

@@ -542,7 +542,7 @@ export function VideoDetail({
                 }
               >
                 <VideoTranscriptPanel
-                  sceneId={scene.id}
+                  videoId={scene.id}
                   tracks={scene.subtitleTracks ?? []}
                   activeTrackId={activeSubtitleId}
                   onActiveTrackIdChange={handleActiveSubtitleChange}
@@ -852,7 +852,7 @@ export function VideoDetail({
               </button>
             </div>
             <VideoTranscriptPanel
-              sceneId={scene.id}
+              videoId={scene.id}
               tracks={scene.subtitleTracks ?? []}
               activeTrackId={activeSubtitleId}
               onActiveTrackIdChange={handleActiveSubtitleChange}
@@ -866,7 +866,7 @@ export function VideoDetail({
           </div>
         ) : (
           <VideoTranscriptPanel
-            sceneId={scene.id}
+            videoId={scene.id}
             tracks={scene.subtitleTracks ?? []}
             activeTrackId={activeSubtitleId}
             onActiveTrackIdChange={handleActiveSubtitleChange}

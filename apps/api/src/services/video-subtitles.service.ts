@@ -3,9 +3,6 @@
  * `video_subtitles` table keyed on `entity_type` + `entity_id`, where
  * `entity_type` is `"video_episode"` or `"video_movie"`.
  *
- * The wire DTO keeps the legacy `sceneId` field name for compatibility
- * with the existing web player; callers populate it with the video
- * entity id.
  */
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -54,7 +51,7 @@ function trackToDto(
     (sourceFormat === "ass" || sourceFormat === "ssa") && !!row.sourcePath;
   return {
     id: row.id,
-    sceneId: row.entityId,
+    videoId: row.entityId,
     language: row.language,
     label: row.label,
     format: "vtt",

@@ -527,7 +527,6 @@ export async function pluginsRoutes(app: FastifyInstance) {
         const [saved] = await db
           .insert(scrapeResults)
           .values({
-            sceneId: entityType === "video" ? req.body.entityId : null,
             entityType,
             entityId: req.body.entityId,
             pluginPackageId: pkg.id,
@@ -704,7 +703,12 @@ export async function pluginsRoutes(app: FastifyInstance) {
           );
         }
       }
-    } else if (result.entityType === "video" && result.sceneId) {
+    } else if (
+      (result.entityType === "video" ||
+        result.entityType === "video_episode" ||
+        result.entityType === "video_movie") &&
+      result.entityId
+    ) {
       // For videos, delegate to the existing accept logic
       // (this path is a fallback — videos normally use /scrapers/results/:id/accept)
       return reply.code(400).send({

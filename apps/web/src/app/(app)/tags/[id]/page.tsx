@@ -77,7 +77,7 @@ export default function TagPage({ params }: TagPageProps) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, galleriesRes, audioRes, tagsRes, foldersRes] = await Promise.all([
+      const [videosRes, galleriesRes, audioRes, tagsRes, seriesRes] = await Promise.all([
         fetchVideos({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({
           tag: [tagName],
@@ -94,13 +94,13 @@ export default function TagPage({ params }: TagPageProps) {
         fetchTags({ nsfw: nsfwMode }),
         fetchSeries({ tag: tagName, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
-      setScenes(scenesRes.scenes);
-      setTotalScenes(scenesRes.total);
+      setScenes(videosRes.videos);
+      setTotalScenes(videosRes.total);
       setGalleries(galleriesRes.galleries);
       setTotalGalleries(galleriesRes.total);
       setAudioLibraries(audioRes.items);
       setTotalAudioLibraries(audioRes.total);
-      setFolders(foldersRes.items);
+      setFolders(seriesRes.items);
 
       const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
       if (match) {
@@ -307,8 +307,8 @@ export default function TagPage({ params }: TagPageProps) {
             {folders.map((f) => (
               <SeriesCard
                 key={f.id}
-                folder={f}
-                href={`/videos?folder=${f.id}`}
+                series={f}
+                href={`/videos?series=${f.id}`}
                 compact
               />
             ))}
@@ -328,7 +328,7 @@ export default function TagPage({ params }: TagPageProps) {
             <p className="text-text-muted text-sm">No {terms.videos.toLowerCase()} with this tag.</p>
           </div>
         ) : (
-          <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+          <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
         )}
       </section>
 

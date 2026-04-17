@@ -22,7 +22,7 @@ import type {
 export async function fetchVideos(params: FetchVideosParams) {
   const qs = buildFetchVideosQuery(params);
 
-  return serverFetch<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }>(
+  return serverFetch<{ videos: VideoListItem[]; total: number; limit: number; offset: number }>(
     `/videos${qs}`,
     { tags: ["videos"] },
   );

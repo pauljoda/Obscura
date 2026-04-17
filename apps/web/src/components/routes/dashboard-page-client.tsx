@@ -353,7 +353,7 @@ export function DashboardPageClient({
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
               {sceneFolders.map((folder) => (
                 <div key={folder.id} className="flex-none w-64 md:w-72 snap-start">
-                  <SeriesCard folder={folder} href={`/videos?folder=${folder.id}`} />
+                  <SeriesCard series={folder} href={`/videos?series=${folder.id}`} />
                 </div>
               ))}
             </div>

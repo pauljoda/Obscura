@@ -107,7 +107,7 @@ export function PerformerPageClient({
       setPerformer(performerResponse);
 
       const name = performerResponse.name;
-      const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = await Promise.all([
+      const [videosResponse, seriesResponse, galleriesResponse, audioResponse] = await Promise.all([
         fetchVideos({ performer: [name], limit: 100, nsfw: nsfwMode }),
         fetchSeries({ performer: name, limit: 50, nsfw: nsfwMode }),
         fetchGalleries({
@@ -124,8 +124,8 @@ export function PerformerPageClient({
         }),
       ]);
 
-      setScenes(scenesResponse.scenes);
-      setTotalScenes(scenesResponse.total);
+      setScenes(videosResponse.videos);
+      setTotalScenes(videosResponse.total);
       setSeries(seriesResponse.items);
       setTotalSeries(seriesResponse.total);
       setGalleries(galleriesResponse.galleries);
@@ -519,8 +519,8 @@ export function PerformerPageClient({
                   {series.map((s) => (
                     <SeriesCard
                       key={s.id}
-                      folder={s}
-                      href={`/videos?folder=${s.id}&from=${encodeURIComponent(currentPath)}`}
+                      series={s}
+                      href={`/videos?series=${s.id}&from=${encodeURIComponent(currentPath)}`}
                     />
                   ))}
                 </div>
@@ -532,7 +532,7 @@ export function PerformerPageClient({
           <section>
             <h4 className="mb-3 text-kicker">{terms.videos}</h4>
             {totalScenes > 0 ? (
-              <VideoGrid scenes={scenes} viewMode="grid" loading={false} from={currentPath} />
+              <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />

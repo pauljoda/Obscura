@@ -23,16 +23,16 @@ export default async function DashboardPage() {
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
 
   const [
-    scenesResponse,
+    videosResponse,
     galleriesResponse,
     imagesResponse,
     audioResponse,
-    foldersResponse,
+    seriesResponse,
     performersResponse,
     studiosResponse,
   ] = await Promise.all([
     fetchVideos({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }).catch(() => ({
-      scenes: [] as VideoListItem[],
+      videos: [] as VideoListItem[],
     })),
     fetchGalleries({ limit: 12, nsfw: nsfwMode }).catch(() => ({
       galleries: [] as GalleryListItem[],
@@ -54,20 +54,20 @@ export default async function DashboardPage() {
     })),
   ]);
 
-      const allScenes = scenesResponse.scenes;
+      const allVideos = videosResponse.videos;
       
-      const scoredScenes = [...allScenes].map(scene => {
+      const scoredVideos = [...allVideos].map(scene => {
         let score = Math.random() * 20;
         if (scene.playCount === 0) score += 50;
         if (scene.rating) score += scene.rating;
         return { scene, score };
       });
       
-      scoredScenes.sort((a, b) => b.score - a.score);
-      const featuredScenes = scoredScenes.slice(0, 5).map(s => s.scene);
+      scoredVideos.sort((a, b) => b.score - a.score);
+      const featuredScenes = scoredVideos.slice(0, 5).map(s => s.scene);
       
       const featuredIds = new Set(featuredScenes.map(s => s.id));
-      const recentScenes = allScenes.filter(s => !featuredIds.has(s.id)).slice(0, 15);
+      const recentScenes = allVideos.filter(s => !featuredIds.has(s.id)).slice(0, 15);
 
   return (
     <DashboardPageClient
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
       galleries={galleriesResponse.galleries}
       images={imagesResponse.images}
       audioLibraries={audioResponse.items}
-      sceneFolders={foldersResponse.items}
+      sceneFolders={seriesResponse.items}
       performers={performersResponse.performers}
       studios={studiosResponse.studios.slice(0, 12)}
     />

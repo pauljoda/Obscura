@@ -10,33 +10,33 @@ import { NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { entityTerms, formatVideoCount } from "../../lib/terminology";
 
 interface SeriesCardProps {
-  folder: VideoSeriesListItemDto;
+  series: VideoSeriesListItemDto;
   href: string;
   compact?: boolean;
 }
 
-export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
+export function SeriesCard({ series, href, compact }: SeriesCardProps) {
   return (
     <Link
       href={href}
       className="group surface-card overflow-hidden transition-colors duration-fast hover:border-border-accent"
     >
       <EntityPreviewMedia
-        title={folder.displayTitle}
+        title={series.displayTitle}
         mode="cover-or-cycle"
-        coverImage={toApiUrl(folder.coverImagePath, folder.updatedAt)}
-        previewImages={folder.previewThumbnailPaths
-          .map((path) => toApiUrl(path, folder.updatedAt))
+        coverImage={toApiUrl(series.coverImagePath, series.updatedAt)}
+        previewImages={series.previewThumbnailPaths
+          .map((path) => toApiUrl(path, series.updatedAt))
           .filter(Boolean) as string[]}
         className="aspect-[2/3]"
       >
         <NsfwShowModeChip
-          isNsfw={folder.isNsfw}
+          isNsfw={series.isNsfw}
           className="absolute bottom-2 right-2 z-10 pointer-events-none"
         />
         <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm">
           <Images className="h-3 w-3" />
-          {folder.visibleSfwVideoCount}
+          {series.visibleSfwVideoCount}
         </div>
       </EntityPreviewMedia>
 
@@ -44,27 +44,27 @@ export function SeriesCard({ folder, href, compact }: SeriesCardProps) {
         <div className="flex items-center gap-2">
           <FolderOpen className={cn("flex-shrink-0 text-text-accent", compact ? "h-3 w-3" : "h-3.5 w-3.5")} />
           <h3 className={cn("truncate font-medium text-text-primary", compact ? "text-[0.75rem]" : "text-[0.82rem]")}>
-            {folder.displayTitle}
+            {series.displayTitle}
           </h3>
         </div>
         <div className={cn("flex items-center gap-2 text-text-muted", compact ? "text-[0.62rem]" : "text-[0.68rem]")}>
-          <span>{formatVideoCount(folder.visibleSfwVideoCount)}</span>
-          {folder.childSeasonCount > 0 ? (
+          <span>{formatVideoCount(series.visibleSfwVideoCount)}</span>
+          {series.childSeasonCount > 0 ? (
             <span>
-              {folder.childSeasonCount} child{" "}
-              {folder.childSeasonCount === 1
+              {series.childSeasonCount} child{" "}
+              {series.childSeasonCount === 1
                 ? entityTerms.seriesSingular.toLowerCase()
                 : entityTerms.series.toLowerCase()}
             </span>
           ) : null}
         </div>
-        {folder.libraryRootLabel ? (
+        {series.libraryRootLabel ? (
           <div className={cn("flex items-center gap-1.5 text-text-disabled", compact ? "text-[0.6rem]" : "text-[0.65rem]")}>
             <HardDrive className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">{folder.libraryRootLabel}</span>
+            <span className="truncate">{series.libraryRootLabel}</span>
           </div>
         ) : null}
-        {!compact && folder.containsNsfwDescendants && !folder.isNsfw ? (
+        {!compact && series.containsNsfwDescendants && !series.isNsfw ? (
           <div className="text-[0.65rem] text-text-disabled">
             Mixed-content {entityTerms.seriesSingular.toLowerCase()}
           </div>

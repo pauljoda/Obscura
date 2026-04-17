@@ -189,7 +189,7 @@ async function enqueueQueueJob(input: {
   return { id: jobId };
 }
 
-/** One job relocates all video-entity generated assets; deduped by target id `scene-asset-layout`. */
+/** One job relocates all video-entity generated assets; deduped by target id `video-asset-layout`. */
 async function queueVideoAssetStorageMigration(
   targetDedicated: boolean,
   trigger: QueueTrigger,
@@ -205,7 +205,7 @@ async function queueVideoAssetStorageMigration(
     },
     target: {
       type: "library",
-      id: "scene-asset-layout",
+      id: "video-asset-layout",
       label: targetLabel,
     },
     trigger,

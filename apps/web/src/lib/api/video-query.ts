@@ -23,7 +23,7 @@ export interface FetchVideosParams {
   offset?: number;
   nsfw?: string;
   videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
+  seriesScope?: "direct" | "subtree";
   uncategorized?: boolean;
   seasonNumber?: string;
 }
@@ -48,7 +48,7 @@ export function buildFetchVideosQuery(params: FetchVideosParams): string {
       offset: params.offset,
       nsfw: params.nsfw,
       videoSeriesId: params.videoSeriesId,
-      folderScope: params.folderScope,
+      seriesScope: params.seriesScope,
       uncategorized: params.uncategorized ? "true" : undefined,
       seasonNumber: params.seasonNumber,
     },

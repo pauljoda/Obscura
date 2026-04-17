@@ -287,7 +287,7 @@ export type SubtitleSourceFormat = "vtt" | "srt" | "ass" | "ssa";
 
 export interface VideoSubtitleTrackDto {
   id: string;
-  sceneId: string;
+  videoId: string;
   language: string;
   label: string | null;
   format: "vtt";
@@ -783,7 +783,6 @@ export interface CommunityIndexEntryDto {
 
 export interface ScrapeResultDto {
   id: string;
-  sceneId: string | null;
   entityType: string;
   entityId: string | null;
   scraperPackageId: string | null;
@@ -1613,4 +1612,3 @@ export type {
   NormalizedSeasonResult,
   NormalizedEpisodeResult,
 } from "./normalized-video";
-
