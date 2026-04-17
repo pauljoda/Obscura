@@ -575,7 +575,7 @@ function SeriesCascadeBody({
   }
 
   /** Build the cascade spec from local state and submit. */
-  async function submit() {
+  async function submit(andNext: boolean) {
     setBusy(true);
     setSubmitError(null);
     try {
@@ -609,8 +609,11 @@ function SeriesCascadeBody({
         selectedImages,
         cascade: { acceptAllSeasons: false, seasonOverrides },
       });
-      onAccepted();
-      if (onAcceptAndNext) onAcceptAndNext();
+      if (andNext && onAcceptAndNext) {
+        onAcceptAndNext();
+      } else {
+        onAccepted();
+      }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Accept failed");
     } finally {
@@ -791,32 +794,47 @@ function SeriesCascadeBody({
           disabled={busy}
           className="text-[0.7rem] text-text-accent hover:text-text-accent-bright disabled:opacity-50"
         >
-          Accept all
+          Select all
         </button>
         {submitError && (
-          <p className="flex-1 text-[0.68rem] text-status-error-text">
+          <p className="flex-1 text-[0.68rem] text-status-error-text text-right mr-2">
             {submitError}
           </p>
         )}
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className={cn(
-            "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
-            busy && "opacity-50 cursor-not-allowed",
+        <div className="flex items-center gap-2">
+          {onAcceptAndNext && (
+            <button
+              type="button"
+              onClick={() => submit(false)}
+              disabled={busy}
+              className={cn(
+                "px-4 py-1.5 text-[0.72rem] font-medium text-text-muted hover:text-text-primary transition-colors",
+                busy && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Apply all
+            </button>
           )}
-        >
-          {busy ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Applying…
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3 w-3" /> Apply cascade
-            </span>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => submit(!!onAcceptAndNext)}
+            disabled={busy}
+            className={cn(
+              "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
+              busy && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            {busy ? (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> Applying…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3 w-3" /> {onAcceptAndNext ? "Apply all & next" : "Apply all"}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1269,27 +1287,42 @@ function MovieReviewBody({
       </div>
       <div className="sticky bottom-0 z-20 flex items-center justify-end gap-3 border-t border-border-subtle bg-bg px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
         {error && (
-          <p className="flex-1 text-[0.68rem] text-status-error-text">{error}</p>
+          <p className="flex-1 text-[0.68rem] text-status-error-text text-right mr-2">{error}</p>
         )}
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className={cn(
-            "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
-            busy && "opacity-50 cursor-not-allowed",
+        <div className="flex items-center gap-2">
+          {onAcceptAndNext && (
+            <button
+              type="button"
+              onClick={() => submit(false)}
+              disabled={busy}
+              className={cn(
+                "px-4 py-1.5 text-[0.72rem] font-medium text-text-muted hover:text-text-primary transition-colors",
+                busy && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Apply
+            </button>
           )}
-        >
-          {busy ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Applying…
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3 w-3" /> Apply
-            </span>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => submit(!!onAcceptAndNext)}
+            disabled={busy}
+            className={cn(
+              "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
+              busy && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            {busy ? (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> Applying…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3 w-3" /> {onAcceptAndNext ? "Apply & next" : "Apply"}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1380,27 +1413,42 @@ function EpisodeReviewBody({
       </div>
       <div className="sticky bottom-0 z-20 flex items-center justify-end gap-3 border-t border-border-subtle bg-bg px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
         {error && (
-          <p className="flex-1 text-[0.68rem] text-status-error-text">{error}</p>
+          <p className="flex-1 text-[0.68rem] text-status-error-text text-right mr-2">{error}</p>
         )}
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className={cn(
-            "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
-            busy && "opacity-50 cursor-not-allowed",
+        <div className="flex items-center gap-2">
+          {onAcceptAndNext && (
+            <button
+              type="button"
+              onClick={() => submit(false)}
+              disabled={busy}
+              className={cn(
+                "px-4 py-1.5 text-[0.72rem] font-medium text-text-muted hover:text-text-primary transition-colors",
+                busy && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Apply
+            </button>
           )}
-        >
-          {busy ? (
-            <span className="flex items-center gap-1.5">
-              <Loader2 className="h-3 w-3 animate-spin" /> Applying…
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Check className="h-3 w-3" /> Apply
-            </span>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => submit(!!onAcceptAndNext)}
+            disabled={busy}
+            className={cn(
+              "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
+              busy && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            {busy ? (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" /> Applying…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Check className="h-3 w-3" /> {onAcceptAndNext ? "Apply & next" : "Apply"}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

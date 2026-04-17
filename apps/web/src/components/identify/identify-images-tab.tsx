@@ -298,6 +298,26 @@ function ImageReviewDrawer({
 
   const footer = (
     <div className="flex items-center justify-end gap-3">
+      {onAcceptAndNext && (
+        <button
+          type="button"
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await onAccept();
+            } finally {
+              setBusy(false);
+            }
+          }}
+          disabled={busy}
+          className={cn(
+            "px-4 py-1.5 text-[0.72rem] font-medium text-text-muted hover:text-text-primary transition-colors",
+            busy && "opacity-50 cursor-not-allowed",
+          )}
+        >
+          Accept
+        </button>
+      )}
       <button
         type="button"
         onClick={async () => {
@@ -321,7 +341,7 @@ function ImageReviewDrawer({
           </span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <Check className="h-3 w-3" /> {onAcceptAndNext ? "Accept & Next" : "Accept"}
+            <Check className="h-3 w-3" /> {onAcceptAndNext ? "Accept & next" : "Accept"}
           </span>
         )}
       </button>
