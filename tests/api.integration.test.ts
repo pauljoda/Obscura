@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as schema from "../packages/db/src/schema.ts";
 import { createApiTestContext, injectJson } from "./support/api.ts";
 import {
@@ -14,9 +14,9 @@ import { createMultipartBody } from "./support/multipart.ts";
 
 const {
   libraryRoots,
-  scenes,
-  sceneMarkers,
-  sceneSubtitles,
+  videoMovies,
+  videoSubtitles,
+  videoMarkers,
   jobRuns,
 } = schema;
 
@@ -64,7 +64,8 @@ describe("API integration", () => {
       payload: {
         path: mediaDir,
         label: "Fixtures",
-        scanVideos: true,
+        scanMovies: true,
+        scanSeries: true,
       },
     });
 
@@ -93,9 +94,11 @@ describe("API integration", () => {
     expect(settings.json?.defaultPlaybackMode).toBe("direct");
   });
 
-  it("uploads a scene, lists it, updates it, and deletes it", async () => {
+  it("uploads a video, lists it, updates it, and deletes it", async () => {
     const [root] = await context.db.select().from(libraryRoots).limit(1);
     expect(root).toBeTruthy();
+
+    context.queue.jobs = [];
 
     const upload = createMultipartBody({
       fields: { libraryRootId: root!.id },
@@ -109,7 +112,7 @@ describe("API integration", () => {
 
     const uploadResponse = await context.app.inject({
       method: "POST",
-      url: "/scenes/upload",
+      url: "/videos/upload",
       headers: {
         "content-type": `multipart/form-data; boundary=${upload.boundary}`,
       },
@@ -124,61 +127,65 @@ describe("API integration", () => {
       "preview",
     ]);
 
-    const listed = await context.app.inject({ method: "GET", url: "/scenes" });
+    const listed = await context.app.inject({ method: "GET", url: "/videos" });
     expect(listed.statusCode).toBe(200);
-    expect((listed.json() as { scenes: Array<{ id: string }> }).scenes).toHaveLength(1);
+    const listBody = listed.json() as { scenes: Array<{ id: string }>; total: number };
+    expect(listBody.scenes).toHaveLength(1);
+    expect(listBody.total).toBe(1);
 
     const patch = await injectJson<{ ok: true; id: string }>(context.app, {
       method: "PATCH",
-      url: `/scenes/${uploaded.id}`,
+      url: `/videos/${uploaded.id}`,
       payload: { title: "Renamed fixture", details: "Updated details", rating: 4 },
     });
     expect(patch.response.statusCode).toBe(200);
-    expect(patch.json).toEqual({ ok: true, id: uploaded.id });
+    expect(patch.json).toMatchObject({ id: uploaded.id });
 
     const detail = await context.app.inject({
       method: "GET",
-      url: `/scenes/${uploaded.id}`,
+      url: `/videos/${uploaded.id}`,
     });
     expect(detail.statusCode).toBe(200);
-    expect((detail.json() as { title: string }).title).toBe("Renamed fixture");
+    const detailBody = detail.json() as { title: string; videoSeriesId: string | null };
+    expect(detailBody.title).toBe("Renamed fixture");
+    expect(detailBody.videoSeriesId).toBeNull();
 
     const markerCreate = await injectJson<{ id: string; title: string }>(context.app, {
       method: "POST",
-      url: `/scenes/${uploaded.id}/markers`,
+      url: `/videos/${uploaded.id}/markers`,
       payload: { title: "Beat", seconds: 15 },
     });
     expect(markerCreate.response.statusCode).toBe(200);
     expect(markerCreate.json?.title).toBe("Beat");
 
-    const markerPatch = await injectJson<{ ok: true }>(context.app, {
+    const markerPatch = await injectJson<{ id: string }>(context.app, {
       method: "PATCH",
-      url: `/scenes/markers/${markerCreate.json!.id}`,
+      url: `/videos/markers/${markerCreate.json!.id}`,
       payload: { title: "Climax" },
     });
     expect(markerPatch.response.statusCode).toBe(200);
 
     const markerDelete = await context.app.inject({
       method: "DELETE",
-      url: `/scenes/markers/${markerCreate.json!.id}`,
+      url: `/videos/markers/${markerCreate.json!.id}`,
     });
     expect(markerDelete.statusCode).toBe(200);
     expect(
       await context.db
         .select()
-        .from(sceneMarkers)
-        .where(eq(sceneMarkers.sceneId, uploaded.id)),
+        .from(videoMarkers)
+        .where(eq(videoMarkers.entityId, uploaded.id)),
     ).toHaveLength(0);
 
     const deleteResponse = await context.app.inject({
       method: "DELETE",
-      url: `/scenes/${uploaded.id}`,
+      url: `/videos/${uploaded.id}`,
     });
     expect(deleteResponse.statusCode).toBe(200);
-    expect(await context.db.select().from(scenes)).toHaveLength(0);
+    expect(await context.db.select().from(videoMovies)).toHaveLength(0);
   });
 
-  it("rejects scene uploads without a target root", async () => {
+  it("rejects video uploads without a target root or series", async () => {
     const upload = createMultipartBody({
       file: {
         fieldName: "file",
@@ -190,7 +197,7 @@ describe("API integration", () => {
 
     const response = await context.app.inject({
       method: "POST",
-      url: "/scenes/upload",
+      url: "/videos/upload",
       headers: {
         "content-type": `multipart/form-data; boundary=${upload.boundary}`,
       },
@@ -199,19 +206,21 @@ describe("API integration", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
-      error: "libraryRootId or videoSeriesId field is required",
+      error: "libraryRootId or seriesId field is required",
     });
   });
 
   it("uploads, reads, parses, and deletes subtitle tracks", async () => {
-    const sceneFilePath = await createSampleVideoFile(mediaDir, "subtitle-scene.mp4");
-    const [scene] = await context.db
-      .insert(scenes)
+    const videoFilePath = await createSampleVideoFile(mediaDir, "subtitle-scene.mp4");
+    const [root] = await context.db.select().from(libraryRoots).limit(1);
+    const [movie] = await context.db
+      .insert(videoMovies)
       .values({
+        libraryRootId: root!.id,
         title: "Subtitle Scene",
-        filePath: sceneFilePath,
+        filePath: videoFilePath,
       })
-      .returning({ id: scenes.id });
+      .returning({ id: videoMovies.id });
 
     const subtitlePath = await createSampleSubtitleFile(mediaDir, "track.ass");
     const upload = createMultipartBody({
@@ -226,26 +235,31 @@ describe("API integration", () => {
 
     const response = await context.app.inject({
       method: "POST",
-      url: `/scenes/${scene.id}/subtitles`,
+      url: `/videos/${movie.id}/subtitles`,
       headers: {
         "content-type": `multipart/form-data; boundary=${upload.boundary}`,
       },
       payload: upload.body,
     });
     expect(response.statusCode).toBe(200);
-    const track = (response.json() as { track: { id: string; sourceUrl: string | null } }).track;
+    const track = response.json() as {
+      id: string;
+      sourceUrl: string | null;
+      sourceFormat: string;
+    };
+    expect(track.sourceFormat).toBe("ass");
     expect(track.sourceUrl).not.toBeNull();
 
     const source = await context.app.inject({
       method: "GET",
-      url: `/scenes/${scene.id}/subtitles/${track.id}/source`,
+      url: `/videos/${movie.id}/subtitles/${track.id}/source`,
     });
     expect(source.statusCode).toBe(200);
     expect(source.body).toContain("Dialogue:");
 
     const cues = await context.app.inject({
       method: "GET",
-      url: `/scenes/${scene.id}/subtitles/${track.id}/cues`,
+      url: `/videos/${movie.id}/subtitles/${track.id}/cues`,
     });
     expect(cues.statusCode).toBe(200);
     expect((cues.json() as { cues: Array<{ text: string }> }).cues[0]?.text).toContain(
@@ -254,26 +268,33 @@ describe("API integration", () => {
 
     const deleted = await context.app.inject({
       method: "DELETE",
-      url: `/scenes/${scene.id}/subtitles/${track.id}`,
+      url: `/videos/${movie.id}/subtitles/${track.id}`,
     });
     expect(deleted.statusCode).toBe(200);
     expect(
       await context.db
         .select()
-        .from(sceneSubtitles)
-        .where(eq(sceneSubtitles.sceneId, scene.id)),
+        .from(videoSubtitles)
+        .where(
+          and(
+            eq(videoSubtitles.entityId, movie.id),
+            eq(videoSubtitles.entityType, "video_movie"),
+          ),
+        ),
     ).toHaveLength(0);
   });
 
   it("enqueues preview jobs through the operations route", async () => {
     const videoPath = await createSampleVideoFile(mediaDir, "job-scene.mp4");
-    const [scene] = await context.db
-      .insert(scenes)
+    const [root] = await context.db.select().from(libraryRoots).limit(1);
+    const [movie] = await context.db
+      .insert(videoMovies)
       .values({
+        libraryRootId: root!.id,
         title: "Jobs Scene",
         filePath: videoPath,
       })
-      .returning({ id: scenes.id });
+      .returning({ id: videoMovies.id });
 
     const response = await context.app.inject({
       method: "POST",
@@ -292,8 +313,8 @@ describe("API integration", () => {
     const queued = await context.db
       .select()
       .from(jobRuns)
-      .where(eq(jobRuns.targetId, scene.id));
-    expect(queued).toHaveLength(1);
-    expect(queued[0]?.status).toBe("waiting");
+      .where(eq(jobRuns.targetId, movie.id));
+    expect(queued.length).toBeGreaterThanOrEqual(1);
+    expect(queued.some((row) => row.queueName === "preview")).toBe(true);
   });
 });

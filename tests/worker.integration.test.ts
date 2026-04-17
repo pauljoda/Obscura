@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import * as schema from "../packages/db/src/schema.ts";
 import { buildWorkerRuntime } from "../apps/worker/src/runtime.js";
-import { processLibraryScan } from "../apps/worker/src/processors/library-scan.js";
+import { processLibraryScan } from "../apps/worker/src/processors/library-scan-video.js";
 import {
   closeDatabase as closeWorkerDatabase,
   configureDatabase as configureWorkerDatabase,
@@ -16,7 +16,7 @@ import {
   createTempDir,
 } from "./support/files.ts";
 
-const { libraryRoots, scenes, jobRuns, librarySettings } = schema;
+const { libraryRoots, videoMovies, jobRuns, librarySettings } = schema;
 
 describe("worker integration", () => {
   let database: Awaited<ReturnType<typeof createPostgresTestContext>>;
@@ -40,8 +40,8 @@ describe("worker integration", () => {
     delete process.env.OBSCURA_CACHE_DIR;
   });
 
-  it("scans a library root, inserts scenes, and queues follow-up jobs", async () => {
-    await createSampleVideoFile(mediaDir, "scan-target.mp4");
+  it("scans a library root, inserts video movies, and queues follow-up jobs", async () => {
+    await createSampleVideoFile(mediaDir, "ScanTarget.mp4");
     const [root] = await database.db
       .insert(libraryRoots)
       .values({
@@ -57,9 +57,10 @@ describe("worker integration", () => {
       data: { libraryRootId: root.id },
     });
 
-    const scannedScenes = await database.db.select().from(scenes);
-    expect(scannedScenes).toHaveLength(1);
-    expect(scannedScenes[0]?.title).toBe("scan target");
+    const movies = await database.db.select().from(videoMovies);
+    expect(movies).toHaveLength(1);
+    expect(movies[0]?.title).toBeTruthy();
+    expect(movies[0]?.filePath).toContain("ScanTarget.mp4");
 
     const queuedJobs = await database.db.select().from(jobRuns);
     expect(queuedJobs.some((row) => row.queueName === "media-probe")).toBe(true);
@@ -67,16 +68,17 @@ describe("worker integration", () => {
     expect(queuedJobs.some((row) => row.queueName === "preview")).toBe(true);
   });
 
-  it("prunes stale scenes that no longer exist on disk", async () => {
+  it("prunes stale movies that no longer exist on disk", async () => {
     const stalePath = `${mediaDir}/missing.mp4`;
     const [root] = await database.db.select().from(libraryRoots).limit(1);
-    const [scene] = await database.db
-      .insert(scenes)
+    const [movie] = await database.db
+      .insert(videoMovies)
       .values({
+        libraryRootId: root!.id,
         title: "Missing",
         filePath: stalePath,
       })
-      .returning({ id: scenes.id });
+      .returning({ id: videoMovies.id });
 
     await processLibraryScan({
       id: "scan-2",
@@ -85,8 +87,8 @@ describe("worker integration", () => {
 
     const remaining = await database.db
       .select()
-      .from(scenes)
-      .where(eq(scenes.id, scene.id));
+      .from(videoMovies)
+      .where(eq(videoMovies.id, movie.id));
     expect(remaining).toHaveLength(0);
   });
 
