@@ -33,6 +33,34 @@ export function deriveProposedResultFromPluginOutput(
     return n ? { kind: "episode", episode: n } : null;
   }
 
+  // Bare-shape routing. `normalizeSeriesResult` only requires `title`
+  // to succeed, so a bare TMDB movie payload (which emits `releaseDate`
+  // / `runtime` but no `seasons`) would land here as a series with an
+  // empty `seasons: []` array. The cascade drawer then classifies by
+  // presence of `seasons` and shows a "movie vs series" mismatch.
+  // Route to movie first when the payload carries movie-specific
+  // signatures, and to episode when per-episode placement is set, so
+  // the drawer's classifier and this derivation agree.
+  const hasMovieSignature =
+    typeof result.releaseDate === "string" ||
+    typeof result.runtime === "number";
+  const hasEpisodeSignature =
+    typeof result.seasonNumber === "number" &&
+    typeof result.episodeNumber === "number";
+  const hasSeriesSignature =
+    Array.isArray(result.seasons) ||
+    typeof result.firstAirDate === "string" ||
+    Array.isArray(result.candidates);
+
+  if (hasEpisodeSignature && !hasSeriesSignature) {
+    const episode = normalizeEpisodeResult(result);
+    if (episode) return { kind: "episode", episode };
+  }
+  if (hasMovieSignature && !hasSeriesSignature) {
+    const movie = normalizeMovieResult(result);
+    if (movie) return { ...movie };
+  }
+
   const series = normalizeSeriesResult(result);
   if (series) return { ...series };
 
