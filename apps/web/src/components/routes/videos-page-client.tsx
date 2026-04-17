@@ -33,15 +33,15 @@ import { ImportButton, UploadDropZone } from "../upload";
 import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
-  fetchScenes,
-  fetchSceneStats,
+  fetchVideos,
+  fetchVideoStats,
   fetchSeries,
   fetchSeriesDetail,
   fetchPerformers,
   fetchStudios,
   fetchTags,
-  updateScene,
-  deleteScene,
+  updateVideo,
+  deleteVideo,
   toApiUrl,
   updateSeries,
   uploadSeriesCover,
@@ -124,7 +124,7 @@ export function VideosPageClient({
   }, [initialStats]);
 
   useEffect(() => {
-    void fetchSceneStats(nsfwMode)
+    void fetchVideoStats(nsfwMode)
       .then(setStats)
       .catch(() => {});
   }, [nsfwMode]);
@@ -395,7 +395,7 @@ export function VideosPageClient({
     setLoading(true);
 
     try {
-      const result = await fetchScenes(
+      const result = await fetchVideos(
         viewMode === "series"
           ? {
               ...buildParams(),
@@ -436,7 +436,7 @@ export function VideosPageClient({
     setLoadingMore(true);
 
     try {
-      const result = await fetchScenes(
+      const result = await fetchVideos(
         viewMode === "series"
           ? {
               ...buildParams(),
@@ -765,7 +765,7 @@ export function VideosPageClient({
     setBulkLoading(true);
     try {
       await Promise.all(
-        Array.from(selection.selectedIds).map((id) => updateScene(id, { isNsfw })),
+        Array.from(selection.selectedIds).map((id) => updateVideo(id, { isNsfw })),
       );
       selection.deselectAll();
       await loadScenes();
@@ -778,7 +778,7 @@ export function VideosPageClient({
     setBulkLoading(true);
     try {
       await Promise.all(
-        Array.from(selection.selectedIds).map((id) => deleteScene(id, deleteFile)),
+        Array.from(selection.selectedIds).map((id) => deleteVideo(id, deleteFile)),
       );
       selection.deselectAll();
       setDeleteDialogOpen(false);

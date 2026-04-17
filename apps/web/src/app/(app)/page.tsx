@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { DashboardPageClient } from "../../components/routes/dashboard-page-client";
 import {
   fetchGalleries,
-  fetchScenes,
+  fetchVideos,
   fetchImages,
   fetchAudioLibraries,
   fetchSeries,
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     performersResponse,
     studiosResponse,
   ] = await Promise.all([
-    fetchScenes({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }).catch(() => ({
+    fetchVideos({ sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode }).catch(() => ({
       scenes: [] as VideoListItem[],
     })),
     fetchGalleries({ limit: 12, nsfw: nsfwMode }).catch(() => ({

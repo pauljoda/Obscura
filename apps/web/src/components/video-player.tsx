@@ -34,7 +34,7 @@ import {
 } from "../lib/fullscreen";
 import { FilmStrip } from "./film-strip";
 import { AssSubtitleOverlay } from "./ass-subtitle-overlay";
-import { fetchSceneSubtitleCues } from "../lib/api/media";
+import { fetchVideoSubtitleCues } from "../lib/api/videos";
 import type { VideoSubtitleTrackDto, SubtitleCueDto } from "../lib/api/types";
 import {
   captionClassName,
@@ -1080,7 +1080,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
 
     let cancelled = false;
-    fetchSceneSubtitleCues(track.sceneId, track.id)
+    fetchVideoSubtitleCues(track.sceneId, track.id)
       .then(({ cues }) => {
         if (cancelled) return;
         setActiveTrackCues(cues);

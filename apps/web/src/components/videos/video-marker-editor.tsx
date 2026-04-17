@@ -4,9 +4,9 @@ import { useState } from "react";
 import { Button } from "@obscura/ui/primitives/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
-  createMarker,
-  updateMarker,
-  deleteMarker,
+  createVideoMarker,
+  updateVideoMarker,
+  deleteVideoMarker,
   type VideoDetail as VideoDetailType,
 } from "../../lib/api";
 import {
@@ -59,13 +59,13 @@ export function VideoMarkerEditor({
     setSavingMarker(true);
     try {
       if (editingMarker === "new") {
-        await createMarker(scene.id, {
+        await createVideoMarker(scene.id, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
         });
       } else if (editingMarker) {
-        await updateMarker(editingMarker, {
+        await updateVideoMarker(editingMarker, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
@@ -82,7 +82,7 @@ export function VideoMarkerEditor({
 
   async function handleDeleteMarker(markerId: string) {
     try {
-      await deleteMarker(markerId);
+      await deleteVideoMarker(markerId);
       onRefresh();
     } catch {
       // silent

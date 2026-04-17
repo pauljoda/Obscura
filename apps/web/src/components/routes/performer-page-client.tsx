@@ -34,7 +34,7 @@ import {
   fetchAudioLibraries,
   fetchGalleries,
   fetchPerformerDetail,
-  fetchScenes,
+  fetchVideos,
   fetchSeries,
   setPerformerRating,
   toApiUrl,
@@ -108,7 +108,7 @@ export function PerformerPageClient({
 
       const name = performerResponse.name;
       const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = await Promise.all([
-        fetchScenes({ performer: [name], limit: 100, nsfw: nsfwMode }),
+        fetchVideos({ performer: [name], limit: 100, nsfw: nsfwMode }),
         fetchSeries({ performer: name, limit: 50, nsfw: nsfwMode }),
         fetchGalleries({
           performer: [name],

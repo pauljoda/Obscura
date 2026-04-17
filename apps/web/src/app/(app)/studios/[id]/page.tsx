@@ -29,7 +29,7 @@ import {
   fetchAudioLibraries,
   fetchGalleries,
   fetchSeries,
-  fetchScenes,
+  fetchVideos,
   fetchStudioDetail,
   deleteStudio,
   toggleStudioFavorite,
@@ -80,7 +80,7 @@ export default function StudioPage({ params }: StudioPageProps) {
       const data = await fetchStudioDetail(id, { nsfw: nsfwMode });
       setStudio(data);
       const [scenesData, galleriesData, audioData, foldersData] = await Promise.all([
-        fetchScenes({ studio: [id], limit: 100, nsfw: nsfwMode }),
+        fetchVideos({ studio: [id], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({ studio: id, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchSeries({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),

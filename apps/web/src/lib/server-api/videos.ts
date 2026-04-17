@@ -1,9 +1,8 @@
 /**
  * Server-side fetchers for the new /videos route stack.
  *
- * Mirrors the shape of the scene fetchers in ./media.ts so the new
- * videos page can drop-in replace its imports. Return types reuse
- * the existing scene/scene-folder DTO types.
+ * Holds all server-side video and series fetchers so media.ts can stay
+ * focused on non-video entities.
  */
 import type {
   VideoSeriesDetailDto,
@@ -27,6 +26,47 @@ export async function fetchVideos(params: FetchVideosParams) {
     `/videos${qs}`,
     { tags: ["videos"] },
   );
+}
+
+export async function fetchSeries(params?: {
+  parent?: string;
+  root?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  nsfw?: string;
+  studio?: string;
+  tag?: string;
+  performer?: string;
+}) {
+  const qs = buildQueryString({
+    parent: params?.parent,
+    root: params?.root,
+    search: params?.search,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+    studio: params?.studio,
+    tag: params?.tag,
+    performer: params?.performer,
+  });
+  return serverFetch<{
+    items: VideoSeriesListItemDto[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/video-series${qs}`, {
+    revalidate: 0,
+    tags: ["video-series"],
+  });
+}
+
+export async function fetchSeriesDetail(id: string, params?: { nsfw?: string }) {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return serverFetch<VideoSeriesDetailDto>(`/video-series/${id}${qs}`, {
+    revalidate: 0,
+    tags: ["video-series", `video-series-${id}`],
+  });
 }
 
 export async function fetchVideoDetail(id: string) {

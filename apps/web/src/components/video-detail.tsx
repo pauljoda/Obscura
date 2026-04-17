@@ -31,13 +31,11 @@ import {
   fetchLibraryConfig,
   fetchVideoDetail,
   fetchTags,
-  updateScene,
   updateVideo,
   rebuildScenePreview,
-  resetSceneMetadata,
   resetVideoMetadata,
-  trackPlay,
-  trackOrgasm,
+  recordVideoPlay,
+  recordVideoOrgasm,
   toApiUrl,
   type LibrarySettings,
   type VideoDetail as VideoDetailType,
@@ -75,17 +73,16 @@ export function VideoDetail({
 }) {
   const isVideoSource = source === "videos";
   const loadDetail = useCallback(
-    () => (isVideoSource ? fetchVideoDetail(id) : fetchVideoDetail(id)),
-    [id, isVideoSource],
+    () => fetchVideoDetail(id),
+    [id],
   );
   const saveDetail = useCallback(
-    (data: Parameters<typeof updateScene>[1]) =>
-      isVideoSource ? updateVideo(id, data) : updateScene(id, data),
-    [id, isVideoSource],
+    (data: Parameters<typeof updateVideo>[1]) => updateVideo(id, data),
+    [id],
   );
   const resetMetadata = useCallback(
-    () => (isVideoSource ? resetVideoMetadata(id) : resetSceneMetadata(id)),
-    [id, isVideoSource],
+    () => resetVideoMetadata(id),
+    [id],
   );
   const playlist = usePlaylistContext();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
@@ -316,7 +313,7 @@ export function VideoDetail({
     // Play tracking only exists on the legacy /scenes endpoint today; the
     // new /videos stack has no equivalent yet, so no-op there.
     if (isVideoSource) return;
-    trackPlay(id).catch(() => {});
+    recordVideoPlay(id).catch(() => {});
   }, [id, isVideoSource]);
 
   const [displayTime, setDisplayTime] = useState(0);
@@ -346,7 +343,7 @@ export function VideoDetail({
     // The /videos stack has no orgasm tracking endpoint yet; no-op there.
     if (isVideoSource) return;
     try {
-      const res = await trackOrgasm(id);
+      const res = await recordVideoOrgasm(id);
       setScene((prev) =>
         prev ? { ...prev, orgasmCount: res.orgasmCount } : prev,
       );

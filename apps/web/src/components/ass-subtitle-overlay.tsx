@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { fetchSceneSubtitleSource } from "../lib/api/media";
+import { fetchVideoSubtitleSource } from "../lib/api/videos";
 
 interface AssSubtitleOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -41,7 +41,7 @@ export function AssSubtitleOverlay({
 
       let subContent: string;
       try {
-        subContent = await fetchSceneSubtitleSource(sceneId, trackId);
+        subContent = await fetchVideoSubtitleSource(sceneId, trackId);
       } catch (err) {
         console.warn("[ass-overlay] failed to fetch subtitle source", err);
         return;

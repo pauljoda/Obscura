@@ -11,7 +11,7 @@ import {
   fetchAudioLibraries,
   fetchGalleries,
   fetchPerformerDetail,
-  fetchScenes,
+  fetchVideos,
   fetchSeries,
   type PerformerDetail,
   type VideoListItem,
@@ -51,7 +51,7 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
 
   const [scenesResponse, seriesResponse, galleriesResponse, audioResponse] = performer
     ? await Promise.all([
-        fetchScenes({ performer: [performer.name], limit: 100, nsfw: nsfwMode }).catch(() => emptyScenes),
+        fetchVideos({ performer: [performer.name], limit: 100, nsfw: nsfwMode }).catch(() => emptyScenes),
         fetchSeries({ performer: performer.name, limit: 50, nsfw: nsfwMode }).catch(() => emptySeries),
         fetchGalleries({
           performer: [performer.name],

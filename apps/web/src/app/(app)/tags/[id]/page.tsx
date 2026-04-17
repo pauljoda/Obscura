@@ -28,7 +28,7 @@ import { StashIdChips } from "../../../../components/stash-id-chips";
 import { NsfwChip, NsfwTagLabel } from "../../../../components/nsfw/nsfw-gate";
 import { useNsfw } from "../../../../components/nsfw/nsfw-context";
 import {
-  fetchScenes,
+  fetchVideos,
   fetchGalleries,
   fetchAudioLibraries,
   fetchSeries,
@@ -78,7 +78,7 @@ export default function TagPage({ params }: TagPageProps) {
     setLoading(true);
     try {
       const [scenesRes, galleriesRes, audioRes, tagsRes, foldersRes] = await Promise.all([
-        fetchScenes({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
+        fetchVideos({ tag: [tagName], limit: 100, nsfw: nsfwMode }),
         fetchGalleries({
           tag: [tagName],
           root: "all",

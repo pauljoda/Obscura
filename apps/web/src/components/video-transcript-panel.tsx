@@ -24,11 +24,11 @@ import type {
   SubtitleCueDto,
 } from "@obscura/contracts";
 import {
-  deleteSceneSubtitle,
-  extractSceneSubtitles,
-  fetchSceneSubtitleCues,
-  updateSceneSubtitle,
-  uploadSceneSubtitle,
+  deleteVideoSubtitle,
+  extractVideoSubtitles,
+  fetchVideoSubtitleCues,
+  updateVideoSubtitle,
+  uploadVideoSubtitle,
 } from "../lib/api";
 
 export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
@@ -116,7 +116,7 @@ export function VideoTranscriptPanel({
     let cancelled = false;
     setLoadingCues(true);
     setCuesError(null);
-    fetchSceneSubtitleCues(sceneId, activeTrackId)
+    fetchVideoSubtitleCues(sceneId, activeTrackId)
       .then((res) => {
         if (cancelled) return;
         setCues(res.cues);
@@ -201,7 +201,7 @@ export function VideoTranscriptPanel({
     if (!file) return;
     setUploading(true);
     try {
-      await uploadSceneSubtitle(sceneId, file, uploadLanguage);
+      await uploadVideoSubtitle(sceneId, file, uploadLanguage);
       onTracksChanged();
     } catch (err) {
       setCuesError((err as Error).message);
@@ -215,7 +215,7 @@ export function VideoTranscriptPanel({
     if (extractState !== "idle") return;
     setExtractState("queued");
     try {
-      await extractSceneSubtitles(sceneId);
+      await extractVideoSubtitles(sceneId);
     } catch (err) {
       setCuesError((err as Error).message);
     }
@@ -227,7 +227,7 @@ export function VideoTranscriptPanel({
 
   async function handleDelete(trackId: string) {
     try {
-      await deleteSceneSubtitle(sceneId, trackId);
+      await deleteVideoSubtitle(sceneId, trackId);
       if (activeTrackId === trackId) {
         onActiveTrackIdChange(null);
       }
@@ -257,7 +257,7 @@ export function VideoTranscriptPanel({
     };
     if (editDraftLanguage.trim()) patch.language = editDraftLanguage.trim();
     try {
-      await updateSceneSubtitle(sceneId, trackId, patch);
+      await updateVideoSubtitle(sceneId, trackId, patch);
       cancelEditingTrack();
       onTracksChanged();
     } catch (err) {

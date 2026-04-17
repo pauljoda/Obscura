@@ -9,7 +9,7 @@ export interface FilterPreset {
   sortDir: SortDir;
 }
 
-const STORAGE_KEY = "obscura-scenes-filter-presets";
+const STORAGE_KEY = "obscura-videos-filter-presets";
 const MAX_PRESETS = 20;
 
 function isRecord(v: unknown): v is Record<string, unknown> {

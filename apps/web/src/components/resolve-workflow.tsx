@@ -19,7 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import {
-  fetchAllScenes,
+  fetchAllVideos,
   fetchInstalledScrapers,
   scrapeScene,
   acceptScrapeResult,
@@ -68,13 +68,13 @@ export function ResolveWorkflow() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, scrapersRes] = await Promise.all([
-        fetchAllScenes({ sort: "created_at" }),
+      const [videosRes, scrapersRes] = await Promise.all([
+        fetchAllVideos({ sort: "created_at" }),
         fetchInstalledScrapers(),
       ]);
 
       // Filter to unorganized scenes
-      const unorganized = scenesRes.scenes.filter((s) => !s.organized);
+      const unorganized = videosRes.videos.filter((video) => !video.organized);
       setUnmatchedScenes(unorganized);
       setTotalUnmatched(unorganized.length);
       setScrapers(scrapersRes.packages.filter((s) => s.enabled));

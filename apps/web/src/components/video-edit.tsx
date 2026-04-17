@@ -35,17 +35,16 @@ import { useSearchParams } from "next/navigation";
 import { buildHrefWithFrom } from "../lib/back-navigation";
 import {
   fetchVideoDetail,
-  updateScene,
   updateVideo,
   fetchInstalledScrapers,
   fetchTags,
   fetchPerformers,
   fetchStudios,
   scrapeScene,
-  uploadThumbnail,
-  uploadThumbnailFromUrl,
-  generateThumbnailFromFrame,
-  deleteThumbnail,
+  uploadVideoThumbnail,
+  uploadVideoThumbnailFromUrl,
+  generateVideoThumbnailFromFrame,
+  deleteVideoThumbnail,
   toApiUrl,
   type VideoDetail,
   type ScraperPackage,
@@ -96,10 +95,9 @@ export function VideoEdit({
   const isVideoSource = source === "videos";
   const detailBaseHref = isVideoSource ? `/videos/${id}` : `/scenes/${id}`;
   const backToScene = fromParam ? buildHrefWithFrom(detailBaseHref, fromParam) : detailBaseHref;
-  const loadDetail = (): Promise<VideoDetail> =>
-    isVideoSource ? fetchVideoDetail(id) : fetchVideoDetail(id);
-  const saveDetail = (data: Parameters<typeof updateScene>[1]) =>
-    isVideoSource ? updateVideo(id, data) : updateScene(id, data);
+  const loadDetail = (): Promise<VideoDetail> => fetchVideoDetail(id);
+  const saveDetail = (data: Parameters<typeof updateVideo>[1]) =>
+    updateVideo(id, data);
   const explicitCounterLabels = nsfwMode === "show";
   const [scene, setScene] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -358,7 +356,7 @@ export function VideoEdit({
           result.imageUrl.startsWith("https://"))
       ) {
         try {
-          await uploadThumbnailFromUrl(id, result.imageUrl);
+          await uploadVideoThumbnailFromUrl(id, result.imageUrl);
           const updated = await loadDetail();
           setScene(updated);
           onSaved?.();
@@ -463,7 +461,7 @@ export function VideoEdit({
             (result.imageUrl.startsWith("http://") || result.imageUrl.startsWith("https://"))
           ) {
             try {
-              await uploadThumbnailFromUrl(id, result.imageUrl);
+              await uploadVideoThumbnailFromUrl(id, result.imageUrl);
               const updated = await loadDetail();
               setScene(updated);
               onSaved?.();
@@ -495,7 +493,7 @@ export function VideoEdit({
     setUploadingThumb(true);
     setError(null);
     try {
-      await uploadThumbnail(id, file);
+      await uploadVideoThumbnail(id, file);
       const updated = await loadDetail();
       setScene(updated);
       onSaved?.();
@@ -519,7 +517,7 @@ export function VideoEdit({
     setUploadingThumb(true);
     setError(null);
     try {
-      await deleteThumbnail(id);
+      await deleteVideoThumbnail(id);
       const updated = await loadDetail();
       setScene(updated);
       onSaved?.();
@@ -541,7 +539,7 @@ export function VideoEdit({
     setGeneratingFrameThumb(true);
     setError(null);
     try {
-      await generateThumbnailFromFrame(id, seconds);
+      await generateVideoThumbnailFromFrame(id, seconds);
       const updated = await loadDetail();
       setScene(updated);
       onSaved?.();

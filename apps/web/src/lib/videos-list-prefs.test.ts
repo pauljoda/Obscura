@@ -4,9 +4,14 @@ import {
   parseVideosListPrefs,
   videosListPrefsToFetchParams,
   serializeVideosListPrefs,
+  VIDEOS_LIST_PREFS_COOKIE,
 } from "./videos-list-prefs";
 
-describe("scenes list preferences", () => {
+describe("videos list preferences", () => {
+  it("uses the videos cookie key", () => {
+    expect(VIDEOS_LIST_PREFS_COOKIE).toBe("obscura-videos-list");
+  });
+
   it("serializes and parses valid prefs", () => {
     const prefs = {
       ...defaultVideosListPrefs(),

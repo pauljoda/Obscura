@@ -2,8 +2,8 @@
 
 import { revalidateTag } from "next/cache";
 
-export async function revalidateSeriesCache(folderId: string) {
-  revalidateTag("scene-folders");
-  revalidateTag(`scene-folder-${folderId}`);
-  revalidateTag("scenes");
+export async function revalidateSeriesCache(seriesId: string) {
+  revalidateTag("video-series");
+  revalidateTag(`video-series-${seriesId}`);
+  revalidateTag("videos");
 }

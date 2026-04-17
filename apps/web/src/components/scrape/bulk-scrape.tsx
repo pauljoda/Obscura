@@ -22,7 +22,7 @@ import {
   Tag,
 } from "lucide-react";
 import {
-  fetchAllScenes,
+  fetchAllVideos,
   fetchAllPerformers,
   fetchStudios,
   fetchTags,
@@ -156,8 +156,8 @@ export function BulkScrape() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [scenesRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
-        fetchAllScenes({ sort: "created_at", nsfw: nsfwMode }),
+      const [videosRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, foldersRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
+        fetchAllVideos({ sort: "created_at", nsfw: nsfwMode }),
         fetchAllPerformers({ sort: "name", order: "asc" }),
         fetchStudios(),
         fetchTags(),
@@ -172,7 +172,7 @@ export function BulkScrape() {
 
       setStashBoxEndpoints(stashBoxRes.endpoints.filter((e) => e.enabled));
 
-      const unorganized = scenesRes.scenes.filter((s) => !s.organized);
+      const unorganized = videosRes.videos.filter((video) => !video.organized);
       setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() })));
 
       const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
@@ -187,7 +187,7 @@ export function BulkScrape() {
       setTagRows(sparseTags.map((tag) => ({ tag, status: "pending", selectedFields: new Set() })));
 
       // Store all for show-all toggle
-      setAllScenes(scenesRes.scenes);
+      setAllScenes(videosRes.videos);
       setAllPerformers(perfRes.performers);
       setAllStudios(studiosRes.studios);
       setAllTags(tagsRes.tags);
