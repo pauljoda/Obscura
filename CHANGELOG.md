@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Video URLs now save.** The URL field on the video metadata edit form previously showed a "Saved" confirmation but the value was silently dropped — there was no database column behind it. The video tables now carry a `url` column, and edits are persisted and displayed on the detail page.
+- **Long unbroken text in the Details field now wraps inside the card instead of overflowing.** Strings with no natural word boundaries (e.g. semicolon-separated tokens like `a;b;c;d;...`) were running off the right of the page header and the Metadata card. They now break at any character when needed.
+
 - **Videos page filters now match on first load.** The server-rendered `/videos` request now uses the same filter set as the hydrated client, so tag / performer / studio / codec / interactive filters no longer disappear until the page finishes booting in the browser.
 - **Saved Videos-page view/filter preferences reset once after this update.** The browser storage keys for the video browser and its saved filter presets now use `videos` naming instead of the old `scenes` labels, so the first load after upgrading starts from the default Videos view state and then saves back under the new names going forward.
 - **Videos and Series now use consistent names across the first-party app.** Video lists now return `videos`, subtitle tracks expose `videoId`, and Series links use `/videos?series=...`, which removes the remaining first-party `scene` / `folder` naming from the main video browser flow.
@@ -20,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `runAudioLibraryIdentify`, `runAudioTrackIdentify`, `runGalleryIdentify`, `runImageIdentify` and their paired `acceptAll*` / `seek*Single` helpers in `apps/web/src/components/identify/identify-runners.ts`. Each one mirrors the video-series pattern: walks rows through eligible plugins, respects the abort flag for mid-run "Stop", auto-accepts when the user opts in, and saves a `scrape_result` row so the per-row Accept/Dismiss buttons and the Accept-All pass can reuse the same DB state. The four placeholder `export async function runXIdentify(): Promise<void> {}` lines in the corresponding tab files are gone — the tabs now import from the runners module instead.
 
 ### Fixed
+
+- Video metadata edit form URL field now persists. Added a `url` column to `video_movies` and `video_episodes` (migration `0020_mighty_scarlet_witch`), wired the read path to surface it in `VideoDetailDto` / `urls`, and wired the write path in `updateVideo` to apply `body.url`. Previously the DTO had the field and the save endpoint accepted it, but neither end touched the database.
+- Video Details text now wraps inside the card and page header when the value contains long unbroken token sequences. Added `overflow-wrap: anywhere` to the description paragraphs in `video-detail.tsx` and `video-edit.tsx`; `break-words` alone was insufficient for strings with zero word-boundary characters.
 
 - Server-rendered and client-rendered video list requests now share the same query builder, so `/videos` applies tag, performer, studio, codec, and interactive filters consistently in both code paths.
 - Video subtitle tracks now expose `videoId` instead of the legacy `sceneId`, and the player/transcript surfaces follow the new field end to end.

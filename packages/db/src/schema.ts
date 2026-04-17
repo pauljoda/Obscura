@@ -1210,6 +1210,7 @@ export const videoEpisodes = pgTable(
     airDate: text("air_date"),
     stillPath: text("still_path"),
     runtime: integer("runtime"),
+    url: text("url"),
     externalIds: jsonb("external_ids")
       .$type<Record<string, string>>()
       .default({})
@@ -1267,6 +1268,7 @@ export const videoMovies = pgTable(
     posterPath: text("poster_path"),
     backdropPath: text("backdrop_path"),
     logoPath: text("logo_path"),
+    url: text("url"),
     studioId: uuid("studio_id").references(() => studios.id, {
       onDelete: "set null",
     }),

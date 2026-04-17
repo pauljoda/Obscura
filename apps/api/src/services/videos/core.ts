@@ -139,6 +139,7 @@ interface VideoRow {
   details: string | null;
   date: string | null;
   rating: number | null;
+  url: string | null;
   organized: boolean;
   isNsfw: boolean;
   duration: number | null;
@@ -514,6 +515,7 @@ export async function listVideos(query: ListVideosQuery) {
         overview: videoEpisodes.overview,
         airDate: videoEpisodes.airDate,
         rating: videoEpisodes.rating,
+        url: videoEpisodes.url,
         organized: videoEpisodes.organized,
         isNsfw: videoEpisodes.isNsfw,
         duration: videoEpisodes.duration,
@@ -552,6 +554,7 @@ export async function listVideos(query: ListVideosQuery) {
       details: r.overview,
       date: r.airDate,
       rating: r.rating,
+      url: r.url,
       organized: r.organized,
       isNsfw: r.isNsfw,
       duration: r.duration,
@@ -749,6 +752,7 @@ export async function listVideos(query: ListVideosQuery) {
       details: r.overview,
       date: r.releaseDate,
       rating: r.rating,
+      url: r.url,
       organized: r.organized,
       isNsfw: r.isNsfw,
       duration: r.duration,
@@ -1007,6 +1011,7 @@ async function loadEpisodeRow(id: string): Promise<VideoSourceRow | null> {
     details: ep.overview,
     date: ep.airDate,
     rating: ep.rating,
+    url: ep.url,
     organized: ep.organized,
     isNsfw: ep.isNsfw,
     duration: ep.duration,
@@ -1054,6 +1059,7 @@ async function loadMovieRow(id: string): Promise<VideoSourceRow | null> {
     details: mv.overview,
     date: mv.releaseDate,
     rating: mv.rating,
+    url: mv.url,
     organized: mv.organized,
     isNsfw: mv.isNsfw,
     duration: mv.duration,
@@ -1268,8 +1274,8 @@ export async function getVideoDetail(id: string) {
     details: row.details,
     date: row.date,
     rating: row.rating,
-    url: null,
-    urls: [],
+    url: row.url,
+    urls: row.url ? [row.url] : [],
     organized: row.organized,
     isNsfw: row.isNsfw,
     interactive: row.interactive,
@@ -1443,6 +1449,7 @@ export async function getVideosByIds(ids: string[]) {
       details: ep.overview,
       date: ep.airDate,
       rating: ep.rating,
+      url: ep.url,
       organized: ep.organized,
       isNsfw: ep.isNsfw,
       duration: ep.duration,
@@ -1481,6 +1488,7 @@ export async function getVideosByIds(ids: string[]) {
       details: mv.overview,
       date: mv.releaseDate,
       rating: mv.rating,
+      url: mv.url,
       organized: mv.organized,
       isNsfw: mv.isNsfw,
       duration: mv.duration,
@@ -1544,6 +1552,7 @@ export async function updateVideo(id: string, body: UpdateVideoBody) {
       patch[kind === "episode" ? "airDate" : "releaseDate"] = body.date;
     }
     if (body.rating !== undefined) patch.rating = body.rating;
+    if (body.url !== undefined) patch.url = body.url;
     if (body.organized !== undefined) patch.organized = body.organized;
     if (body.isNsfw !== undefined) patch.isNsfw = body.isNsfw;
     if (body.orgasmCount !== undefined) patch.orgasmCount = body.orgasmCount;

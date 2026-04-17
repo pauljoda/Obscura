@@ -684,7 +684,7 @@ export function VideoEdit({
 
             <MetadataRow label="Details" icon={FileText}>
               {video.details ? (
-                <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
+                <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
                   {video.details}
                 </p>
               ) : (

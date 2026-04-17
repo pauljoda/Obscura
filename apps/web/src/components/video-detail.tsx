@@ -757,7 +757,7 @@ export function VideoDetail({
 
       {/* Description */}
       {video.details && (
-        <p className="text-text-secondary text-[0.85rem] leading-relaxed w-full max-w-full min-w-0 break-words">
+        <p className="text-text-secondary text-[0.85rem] leading-relaxed w-full max-w-full min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
           {video.details}
         </p>
       )}
