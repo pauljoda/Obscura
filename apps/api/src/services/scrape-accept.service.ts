@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import {
@@ -142,10 +142,16 @@ async function upsertPerformerByName(
   name: string,
   profileUrl?: string | null,
 ): Promise<string> {
+  // Match case-insensitively so "Tom Hanks" and "tom hanks" collapse
+  // to the same row. Plugin results (TMDB especially) often disagree
+  // with user-entered casing and aliases, and duplicating performers
+  // per casing variant is worse than the very rare collision between
+  // two real performers who happen to spell their names identically.
+  const trimmed = name.trim();
   const [existing] = await db
     .select({ id: performers.id, imagePath: performers.imagePath })
     .from(performers)
-    .where(eq(performers.name, name))
+    .where(sql`lower(${performers.name}) = lower(${trimmed})`)
     .limit(1);
 
   const id = existing
@@ -153,7 +159,7 @@ async function upsertPerformerByName(
     : (
         await db
           .insert(performers)
-          .values({ name })
+          .values({ name: trimmed })
           .returning({ id: performers.id })
       )[0].id;
 
