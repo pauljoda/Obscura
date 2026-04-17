@@ -12,7 +12,7 @@ import { ImageEntityCard } from "../images/image-entity-card";
 import { searchPerformerItemToCardData } from "../performers/performer-card-data";
 import { PerformerEntityCard } from "../performers/performer-entity-card";
 import { searchVideoItemToCardData } from "../videos/video-card-data";
-import { SceneCard } from "../videos/video-card";
+import { VideoCard } from "../videos/video-card";
 import { searchStudioItemToCardData } from "../studios/studio-card-data";
 import { StudioEntityCard } from "../studios/studio-entity-card";
 import { SEARCH_KIND_CONFIG } from "./search-kind-config";
@@ -33,12 +33,12 @@ export function SearchResultCard({
   from,
 }: SearchResultCardProps) {
   if (item.kind === "video") {
-    const scene = searchVideoItemToCardData(item, from);
+    const video = searchVideoItemToCardData(item, from);
 
-    if (scene) {
+    if (video) {
       return (
-        <SceneCard
-          scene={scene}
+        <VideoCard
+          video={video}
           variant={variant === "compact" ? "compact" : "grid"}
           onSelect={onSelect}
         />

@@ -29,7 +29,7 @@ import { ChipInput } from "../shared/chip-input";
 import { StarRatingPicker } from "../shared/star-rating-picker";
 
 interface SeriesMetadataPanelProps {
-  folder: VideoSeriesDetailDto;
+  series: VideoSeriesDetailDto;
   coverBusy?: boolean;
   backdropBusy?: boolean;
   onSave: (patch: {
@@ -49,7 +49,7 @@ interface SeriesMetadataPanelProps {
 }
 
 export function SeriesMetadataPanel({
-  folder,
+  series,
   coverBusy = false,
   backdropBusy = false,
   onSave,
@@ -59,23 +59,23 @@ export function SeriesMetadataPanel({
   onDeleteBackdrop,
 }: SeriesMetadataPanelProps) {
   const { mode: nsfwMode } = useNsfw();
-  const coverUrl = toApiUrl(folder.coverImagePath, folder.updatedAt);
-  const backdropUrl = toApiUrl(folder.backdropImagePath, folder.updatedAt);
+  const coverUrl = toApiUrl(series.coverImagePath, series.updatedAt);
+  const backdropUrl = toApiUrl(series.backdropImagePath, series.updatedAt);
 
   const [editMode, setEditMode] = useState(false);
-  const [editCustomName, setEditCustomName] = useState(folder.customName ?? "");
-  const [editIsNsfw, setEditIsNsfw] = useState(folder.isNsfw);
-  const [editDetails, setEditDetails] = useState(folder.details ?? "");
-  const [editStudioName, setEditStudioName] = useState(folder.studio?.name ?? "");
+  const [editCustomName, setEditCustomName] = useState(series.customName ?? "");
+  const [editIsNsfw, setEditIsNsfw] = useState(series.isNsfw);
+  const [editDetails, setEditDetails] = useState(series.details ?? "");
+  const [editStudioName, setEditStudioName] = useState(series.studio?.name ?? "");
   const [editStudioFocused, setEditStudioFocused] = useState(false);
   const [editPerformerNames, setEditPerformerNames] = useState<string[]>(
-    folder.performers.map((p) => p.name),
+    series.performers.map((p) => p.name),
   );
   const [editTagNames, setEditTagNames] = useState<string[]>(
-    folder.tags.map((t) => t.name),
+    series.tags.map((t) => t.name),
   );
-  const [editRating, setEditRating] = useState<number | null>(folder.rating);
-  const [editDate, setEditDate] = useState(folder.date ?? "");
+  const [editRating, setEditRating] = useState<number | null>(series.rating);
+  const [editDate, setEditDate] = useState(series.date ?? "");
   const [saving, setSaving] = useState(false);
 
   // Suggestion data for chip inputs
@@ -84,14 +84,14 @@ export function SeriesMetadataPanel({
   const [allTags, setAllTags] = useState<TagItem[]>([]);
 
   const beginEdit = () => {
-    setEditCustomName(folder.customName ?? "");
-    setEditIsNsfw(folder.isNsfw);
-    setEditDetails(folder.details ?? "");
-    setEditStudioName(folder.studio?.name ?? "");
-    setEditPerformerNames(folder.performers.map((p) => p.name));
-    setEditTagNames(folder.tags.map((t) => t.name));
-    setEditRating(folder.rating);
-    setEditDate(folder.date ?? "");
+    setEditCustomName(series.customName ?? "");
+    setEditIsNsfw(series.isNsfw);
+    setEditDetails(series.details ?? "");
+    setEditStudioName(series.studio?.name ?? "");
+    setEditPerformerNames(series.performers.map((p) => p.name));
+    setEditTagNames(series.tags.map((t) => t.name));
+    setEditRating(series.rating);
+    setEditDate(series.date ?? "");
     setEditMode(true);
     // Fetch suggestions
     void Promise.all([
@@ -148,7 +148,7 @@ export function SeriesMetadataPanel({
             <input
               value={editCustomName}
               onChange={(e) => setEditCustomName(e.target.value)}
-              placeholder={folder.title}
+              placeholder={series.title}
               className="w-full bg-surface-2 border border-border-subtle px-2 py-1.5 text-[0.85rem] font-heading text-text-primary focus:outline-none focus:border-accent-500 placeholder:text-text-disabled"
             />
             <p className="text-[0.65rem] text-text-disabled">
@@ -158,14 +158,14 @@ export function SeriesMetadataPanel({
         ) : (
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-heading font-medium text-text-primary truncate">
-              {folder.displayTitle}
+              {series.displayTitle}
             </h2>
-            {folder.customName && (
+            {series.customName && (
               <p className="mt-0.5 text-[0.68rem] text-text-disabled truncate">
-                {folder.title}
+                {series.title}
               </p>
             )}
-            {folder.isNsfw && (
+            {series.isNsfw && (
               <div className="mt-1.5">
                 <NsfwChip />
               </div>
@@ -185,10 +185,10 @@ export function SeriesMetadataPanel({
       </div>
 
       {/* ── Library root ────────────────────────────────────── */}
-      {folder.libraryRootLabel && (
+      {series.libraryRootLabel && (
         <div className="flex items-center gap-2 text-[0.78rem] text-text-muted">
           <HardDrive className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="truncate">{folder.libraryRootLabel}</span>
+          <span className="truncate">{series.libraryRootLabel}</span>
         </div>
       )}
 
@@ -330,7 +330,7 @@ export function SeriesMetadataPanel({
             Direct
           </div>
           <div className="mt-1 text-lg font-mono text-text-primary">
-            {folder.directVideoCount}
+            {series.directVideoCount}
           </div>
         </div>
         <div className="surface-well px-3 py-2">
@@ -338,7 +338,7 @@ export function SeriesMetadataPanel({
             Total
           </div>
           <div className="mt-1 text-lg font-mono text-text-primary">
-            {folder.totalVideoCount}
+            {series.totalVideoCount}
           </div>
         </div>
       </div>
@@ -349,9 +349,9 @@ export function SeriesMetadataPanel({
       <ImageUploadSection
         label="Poster image"
         imageUrl={coverUrl}
-        hasImage={Boolean(folder.coverImagePath)}
+        hasImage={Boolean(series.coverImagePath)}
         busy={coverBusy}
-        displayTitle={folder.displayTitle}
+        displayTitle={series.displayTitle}
         onUpload={onUploadCover}
         onDelete={onDeleteCover}
         fallbackText="Using auto preview fallback"
@@ -363,9 +363,9 @@ export function SeriesMetadataPanel({
       <ImageUploadSection
         label="Backdrop image"
         imageUrl={backdropUrl}
-        hasImage={Boolean(folder.backdropImagePath)}
+        hasImage={Boolean(series.backdropImagePath)}
         busy={backdropBusy}
-        displayTitle={folder.displayTitle}
+        displayTitle={series.displayTitle}
         onUpload={onUploadBackdrop}
         onDelete={onDeleteBackdrop}
         fallbackText="No backdrop set"
@@ -378,17 +378,17 @@ export function SeriesMetadataPanel({
       <div className="space-y-1.5 text-[0.65rem] text-text-disabled">
         <div className="flex items-start gap-2">
           <FolderOpen className="h-3 w-3 mt-0.5 flex-shrink-0" />
-          <span className="break-all font-mono">{folder.folderPath}</span>
+          <span className="break-all font-mono">{series.folderPath}</span>
         </div>
-        {folder.childSeasonCount > 0 && (
+        {series.childSeasonCount > 0 && (
           <div>
-            {folder.childSeasonCount} season
-            {folder.childSeasonCount === 1 ? "" : "s"}
+            {series.childSeasonCount} season
+            {series.childSeasonCount === 1 ? "" : "s"}
           </div>
         )}
         <div className="flex items-center gap-1.5">
           <Calendar className="h-3 w-3" />
-          Added {new Date(folder.createdAt).toLocaleDateString()}
+          Added {new Date(series.createdAt).toLocaleDateString()}
         </div>
       </div>
     </div>

@@ -154,7 +154,7 @@ export function VideosPageClient({
   }, [nsfwMode]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(initialListPrefs.viewMode);
-  // When the page lands inside a series folder (activeSeries set),
+  // When the page lands inside a series (activeSeries set),
   // default to episode-order sort per spec §5.x — the natural way to
   // view a show is season 1 ep 1, 2, 3… Otherwise the user's saved
   // prefs win. `loadVideos` re-reads `sortBy` from state, so this
@@ -174,8 +174,8 @@ export function VideosPageClient({
   const [filterStudios, setFilterStudios] = useState(initialStudios);
   const [filterTags, setFilterTags] = useState(initialTags);
   const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
-  const [rootSeries, setRootFolders] = useState(initialRootSeries);
-  const [activeSeries, setActiveFolder] = useState<SeriesDetail | null>(initialActiveSeries);
+  const [rootSeries, setRootSeries] = useState(initialRootSeries);
+  const [activeSeries, setActiveSeries] = useState<SeriesDetail | null>(initialActiveSeries);
   /**
    * When browsing a Case B series (seasons), the user can drill into a
    * specific season. `null` means "show the season grid" (no episodes
@@ -241,8 +241,8 @@ export function VideosPageClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
   const [backdropBusy, setBackdropBusy] = useState(false);
-  const [seriesError, setFolderError] = useState<string | null>(null);
-  const [seriesEditMode, setFolderEditMode] = useState(false);
+  const [seriesError, setSeriesError] = useState<string | null>(null);
+  const [seriesEditMode, setSeriesEditMode] = useState(false);
   const [editCustomName, setEditCustomName] = useState("");
   const [editIsNsfw, setEditIsNsfw] = useState(false);
   const [editDetails, setEditDetails] = useState("");
@@ -252,10 +252,10 @@ export function VideosPageClient({
   const [editTagNames, setEditTagNames] = useState<string[]>([]);
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editDate, setEditDate] = useState("");
-  const [seriesSaving, setFolderSaving] = useState(false);
-  const [seriesEditStudios, setFolderEditStudios] = useState<StudioItem[]>([]);
-  const [seriesEditPerformers, setFolderEditPerformers] = useState<PerformerItem[]>([]);
-  const [seriesEditTags, setFolderEditTags] = useState<TagItem[]>([]);
+  const [seriesSaving, setSeriesSaving] = useState(false);
+  const [seriesEditStudios, setSeriesEditStudios] = useState<StudioItem[]>([]);
+  const [seriesEditPerformers, setSeriesEditPerformers] = useState<PerformerItem[]>([]);
+  const [seriesEditTags, setSeriesEditTags] = useState<TagItem[]>([]);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const backdropInputRef = useRef<HTMLInputElement>(null);
 
@@ -276,8 +276,8 @@ export function VideosPageClient({
   const hydratedRef = useRef(false);
 
   useEffect(() => {
-    setRootFolders(initialRootSeries);
-    setActiveFolder(initialActiveSeries);
+    setRootSeries(initialRootSeries);
+    setActiveSeries(initialActiveSeries);
     // Don't reset season to null here — seasonFromUrl above handles
     // reading the initial ?season= param from the URL.
     // Navigating INTO a series folder resets the sort to episode
@@ -333,7 +333,7 @@ export function VideosPageClient({
   }, [activeFilters, deferredSearchQuery, sortBy, sortDir, nsfwMode, viewMode]);
 
   const seriesSearch = deferredSearchQuery.trim() || undefined;
-  const hasFolderScopedSceneQuery =
+  const hasSeriesScopedVideoQuery =
     Boolean(seriesSearch) || activeFilters.length > 0;
 
   const filterBarDisplayFilters = useMemo(() => {
@@ -383,7 +383,7 @@ export function VideosPageClient({
     viewMode === "series" &&
     activeSeries?.renderingMode === "seasons" &&
     activeSeasonNumber === null &&
-    !hasFolderScopedSceneQuery;
+    !hasSeriesScopedVideoQuery;
 
   const loadVideos = useCallback(async () => {
     if (showSeasonGrid) {
@@ -402,7 +402,7 @@ export function VideosPageClient({
               limit: 50,
               videoSeriesId: activeSeries?.id ?? undefined,
               seriesScope:
-                activeSeries?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+                activeSeries?.id && hasSeriesScopedVideoQuery ? "subtree" : "direct",
               uncategorized: !activeSeries?.id,
               seasonNumber:
                 activeSeries?.id && activeSeasonNumber !== null
@@ -426,7 +426,7 @@ export function VideosPageClient({
     activeSeries?.id,
     activeSeasonNumber,
     buildParams,
-    hasFolderScopedSceneQuery,
+    hasSeriesScopedVideoQuery,
     showSeasonGrid,
     viewMode,
   ]);
@@ -444,7 +444,7 @@ export function VideosPageClient({
               offset: videos.length,
               videoSeriesId: activeSeries?.id ?? undefined,
               seriesScope:
-                activeSeries?.id && hasFolderScopedSceneQuery ? "subtree" : "direct",
+                activeSeries?.id && hasSeriesScopedVideoQuery ? "subtree" : "direct",
               uncategorized: !activeSeries?.id,
               seasonNumber:
                 activeSeries?.id && activeSeasonNumber !== null
@@ -471,7 +471,7 @@ export function VideosPageClient({
   }, [
     activeSeries?.id,
     buildParams,
-    hasFolderScopedSceneQuery,
+    hasSeriesScopedVideoQuery,
     loadingMore,
     videos.length,
     total,
@@ -486,10 +486,10 @@ export function VideosPageClient({
         const detail = await fetchSeriesDetail(activeSeries.id, {
           nsfw: nsfwMode,
         });
-        setActiveFolder(detail);
+        setActiveSeries(detail);
       } catch (error) {
-        console.error("Failed to load scene folder detail:", error);
-        setActiveFolder(null);
+        console.error("Failed to load series detail:", error);
+        setActiveSeries(null);
       }
       return;
     }
@@ -501,29 +501,29 @@ export function VideosPageClient({
         limit: 200,
         nsfw: nsfwMode,
       });
-      setRootFolders(result.items);
+      setRootSeries(result.items);
     } catch (error) {
-      console.error("Failed to load scene folders:", error);
-      setRootFolders([]);
+      console.error("Failed to load series:", error);
+      setRootSeries([]);
     }
   }, [activeSeries?.id, seriesSearch, nsfwMode, viewMode]);
 
   const reloadSeries = useCallback(async () => {
     if (!activeSeries?.id) return;
     const detail = await fetchSeriesDetail(activeSeries.id, { nsfw: nsfwMode });
-    setActiveFolder(detail);
+    setActiveSeries(detail);
   }, [activeSeries?.id, nsfwMode]);
 
   const handleSeriesSave = useCallback(
     async (patch: { customName?: string | null; isNsfw?: boolean }) => {
       if (!activeSeries) return;
-      setFolderError(null);
+      setSeriesError(null);
       try {
         await updateSeries(activeSeries.id, patch);
         await revalidateSeriesCache(activeSeries.id);
         await reloadSeries();
       } catch (err) {
-        setFolderError(err instanceof Error ? err.message : "Failed to update folder");
+        setSeriesError(err instanceof Error ? err.message : "Failed to update series");
         throw err;
       }
     },
@@ -533,14 +533,14 @@ export function VideosPageClient({
   const handleSeriesUploadCover = useCallback(
     async (file: File | undefined) => {
       if (!file || !activeSeries) return;
-      setFolderError(null);
+      setSeriesError(null);
       setCoverBusy(true);
       try {
         await uploadSeriesCover(activeSeries.id, file);
         await revalidateSeriesCache(activeSeries.id);
         await reloadSeries();
       } catch (err) {
-        setFolderError(err instanceof Error ? err.message : "Failed to upload cover");
+        setSeriesError(err instanceof Error ? err.message : "Failed to upload cover");
       } finally {
         setCoverBusy(false);
       }
@@ -550,14 +550,14 @@ export function VideosPageClient({
 
   const handleSeriesDeleteCover = useCallback(async () => {
     if (!activeSeries) return;
-    setFolderError(null);
+    setSeriesError(null);
     setCoverBusy(true);
     try {
       await deleteSeriesCover(activeSeries.id);
       await revalidateSeriesCache(activeSeries.id);
       await reloadSeries();
     } catch (err) {
-      setFolderError(err instanceof Error ? err.message : "Failed to delete cover");
+      setSeriesError(err instanceof Error ? err.message : "Failed to delete cover");
     } finally {
       setCoverBusy(false);
     }
@@ -577,27 +577,27 @@ export function VideosPageClient({
     );
     setEditRating(activeSeries.rating);
     setEditDate(activeSeries.date ?? "");
-    setFolderEditMode(true);
+    setSeriesEditMode(true);
     // Fetch suggestion data for chip inputs
     void Promise.all([
       fetchStudios({ nsfw: nsfwMode }),
       fetchPerformers({ nsfw: nsfwMode, sort: "scenes", order: "desc", limit: 400 }),
       fetchTags({ nsfw: nsfwMode }),
     ]).then(([s, p, t]) => {
-      setFolderEditStudios(s.studios);
-      setFolderEditPerformers(p.performers);
-      setFolderEditTags(t.tags);
+      setSeriesEditStudios(s.studios);
+      setSeriesEditPerformers(p.performers);
+      setSeriesEditTags(t.tags);
     }).catch(() => {});
   }, [activeSeries, nsfwMode]);
 
   const cancelSeriesEdit = useCallback(() => {
-    setFolderEditMode(false);
+    setSeriesEditMode(false);
   }, []);
 
   const saveSeriesEdit = useCallback(async () => {
     if (!activeSeries) return;
-    setFolderSaving(true);
-    setFolderError(null);
+    setSeriesSaving(true);
+    setSeriesError(null);
     try {
       await updateSeries(activeSeries.id, {
         customName: editCustomName.trim() || null,
@@ -611,25 +611,25 @@ export function VideosPageClient({
       });
       await revalidateSeriesCache(activeSeries.id);
       await reloadSeries();
-      setFolderEditMode(false);
+      setSeriesEditMode(false);
     } catch (err) {
-      setFolderError(err instanceof Error ? err.message : "Failed to update folder");
+      setSeriesError(err instanceof Error ? err.message : "Failed to update series");
     } finally {
-      setFolderSaving(false);
+      setSeriesSaving(false);
     }
   }, [activeSeries, editCustomName, editIsNsfw, editDetails, editStudioName, editPerformerNames, editTagNames, editRating, editDate, reloadSeries]);
 
   const handleSeriesUploadBackdrop = useCallback(
     async (file: File | undefined) => {
       if (!file || !activeSeries) return;
-      setFolderError(null);
+      setSeriesError(null);
       setBackdropBusy(true);
       try {
         await uploadSeriesBackdrop(activeSeries.id, file);
         await revalidateSeriesCache(activeSeries.id);
         await reloadSeries();
       } catch (err) {
-        setFolderError(err instanceof Error ? err.message : "Failed to upload backdrop");
+        setSeriesError(err instanceof Error ? err.message : "Failed to upload backdrop");
       } finally {
         setBackdropBusy(false);
       }
@@ -639,14 +639,14 @@ export function VideosPageClient({
 
   const handleSeriesDeleteBackdrop = useCallback(async () => {
     if (!activeSeries) return;
-    setFolderError(null);
+    setSeriesError(null);
     setBackdropBusy(true);
     try {
       await deleteSeriesBackdrop(activeSeries.id);
       await revalidateSeriesCache(activeSeries.id);
       await reloadSeries();
     } catch (err) {
-      setFolderError(err instanceof Error ? err.message : "Failed to delete backdrop");
+      setSeriesError(err instanceof Error ? err.message : "Failed to delete backdrop");
     } finally {
       setBackdropBusy(false);
     }
@@ -794,14 +794,14 @@ export function VideosPageClient({
     if (!seriesSearch) return activeSeries.children;
     const lowered = seriesSearch.toLowerCase();
     return activeSeries.children.filter(
-      (folder) =>
-        folder.displayTitle.toLowerCase().includes(lowered) ||
-        folder.title.toLowerCase().includes(lowered) ||
-        folder.relativePath.toLowerCase().includes(lowered),
+      (series) =>
+        series.displayTitle.toLowerCase().includes(lowered) ||
+        series.title.toLowerCase().includes(lowered) ||
+        series.relativePath.toLowerCase().includes(lowered),
     );
   }, [activeSeries, seriesSearch, rootSeries]);
 
-  /** Library label + on-disk folder titles (breadcrumb `title` values), for the folder hero. */
+  /** Library label + on-disk series titles (breadcrumb `title` values), for the series hero. */
   const seriesHeroDiskPath = useMemo(() => {
     if (!activeSeries) return null;
     const root = activeSeries.libraryRootLabel?.trim();
@@ -817,7 +817,7 @@ export function VideosPageClient({
       ? `Matching ${terms.series.toLowerCase()}`
       : terms.series;
   const videoSectionTitle = activeSeries
-    ? hasFolderScopedSceneQuery
+    ? hasSeriesScopedVideoQuery
       ? `Matching ${terms.videos.toLowerCase()} in this ${terms.seriesSingular.toLowerCase()}`
       : `${terms.videos} in this ${terms.seriesSingular.toLowerCase()}`
     : terms.movies;
@@ -1170,7 +1170,7 @@ export function VideosPageClient({
 
                   {!seriesEditMode && (
                     <>
-                      {/* Metadata row: studio, date, rating, scene count */}
+                      {/* Metadata row: studio, date, rating, video count */}
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.82rem] text-white/70">
                         {activeSeries.studioName && (
                           <span>{activeSeries.studioName}</span>
@@ -1253,11 +1253,11 @@ export function VideosPageClient({
             {seriesCards.length > 0 && (
               <HierarchySection title={`Child ${terms.series.toLowerCase()}`}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {seriesCards.map((folder) => (
+                  {seriesCards.map((series) => (
                     <SeriesCard
-                      key={folder.id}
-                      series={folder}
-                      href={`/videos?series=${folder.id}`}
+                      key={series.id}
+                      series={series}
+                      href={`/videos?series=${series.id}`}
                       compact
                     />
                   ))}
@@ -1373,11 +1373,11 @@ export function VideosPageClient({
             {seriesCards.length > 0 && (
               <HierarchySection title={seriesSectionTitle}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {seriesCards.map((folder) => (
+                  {seriesCards.map((series) => (
                     <SeriesCard
-                      key={folder.id}
-                      series={folder}
-                      href={`/videos?series=${folder.id}`}
+                      key={series.id}
+                      series={series}
+                      href={`/videos?series=${series.id}`}
                       compact
                     />
                   ))}

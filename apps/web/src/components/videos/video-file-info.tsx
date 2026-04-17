@@ -3,7 +3,7 @@
 import { type VideoDetail as VideoDetailType } from "../../lib/api";
 
 export interface VideoFileInfoProps {
-  scene: VideoDetailType;
+  video: VideoDetailType;
 }
 
 function formatBitRate(bps: number | null): string {
@@ -21,28 +21,28 @@ function FileInfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function VideoFileInfo({ scene }: VideoFileInfoProps) {
+export function VideoFileInfo({ video }: VideoFileInfoProps) {
   return (
     <div className="surface-well p-4">
       <div className="space-y-2 text-mono-sm">
-        <FileInfoRow label="Path" value={scene.filePath ?? "\u2014"} />
+        <FileInfoRow label="Path" value={video.filePath ?? "\u2014"} />
         <div className="separator" />
         <FileInfoRow
           label="Adaptive Stream"
-          value={scene.streamUrl ?? "\u2014"}
+          value={video.streamUrl ?? "\u2014"}
         />
         <div className="separator" />
         <FileInfoRow
           label="Direct Stream"
-          value={scene.directStreamUrl ?? "\u2014"}
+          value={video.directStreamUrl ?? "\u2014"}
         />
         <div className="separator" />
-        <FileInfoRow label="Size" value={scene.fileSizeFormatted ?? "\u2014"} />
+        <FileInfoRow label="Size" value={video.fileSizeFormatted ?? "\u2014"} />
         <div className="separator" />
         <FileInfoRow
           label="Codec"
           value={
-            [scene.codec, scene.container?.toUpperCase()]
+            [video.codec, video.container?.toUpperCase()]
               .filter(Boolean)
               .join(" / ") || "\u2014"
           }
@@ -51,22 +51,22 @@ export function VideoFileInfo({ scene }: VideoFileInfoProps) {
         <FileInfoRow
           label="Resolution"
           value={
-            scene.width && scene.height
-              ? `${scene.width}x${scene.height}`
+            video.width && video.height
+              ? `${video.width}x${video.height}`
               : "\u2014"
           }
         />
         <div className="separator" />
         <FileInfoRow
           label="Duration"
-          value={scene.durationFormatted ?? "\u2014"}
+          value={video.durationFormatted ?? "\u2014"}
         />
         <div className="separator" />
-        <FileInfoRow label="Bitrate" value={formatBitRate(scene.bitRate)} />
+        <FileInfoRow label="Bitrate" value={formatBitRate(video.bitRate)} />
         <div className="separator" />
         <FileInfoRow
           label="Frame Rate"
-          value={scene.frameRate ? `${scene.frameRate} fps` : "\u2014"}
+          value={video.frameRate ? `${video.frameRate} fps` : "\u2014"}
         />
       </div>
     </div>

@@ -72,8 +72,8 @@ export default async function PerformerPage({ params }: PerformerPageProps) {
     <PerformerPageClient
       id={id}
       initialPerformer={performer}
-      initialScenes={videosResponse.videos}
-      initialTotalScenes={videosResponse.total}
+      initialVideos={videosResponse.videos}
+      initialTotalVideos={videosResponse.total}
       initialSeries={seriesResponse.items}
       initialTotalSeries={seriesResponse.total}
       initialGalleries={galleriesResponse.galleries}

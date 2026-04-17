@@ -15,14 +15,14 @@ import {
 } from "../shared/time-marker-form";
 
 export interface VideoMarkerEditorProps {
-  scene: VideoDetailType;
+  video: VideoDetailType;
   currentTimeRef: React.RefObject<number>;
   displayTime: number;
   onRefresh: () => void;
 }
 
 export function VideoMarkerEditor({
-  scene,
+  video,
   currentTimeRef,
   displayTime,
   onRefresh,
@@ -59,7 +59,7 @@ export function VideoMarkerEditor({
     setSavingMarker(true);
     try {
       if (editingMarker === "new") {
-        await createVideoMarker(scene.id, {
+        await createVideoMarker(video.id, {
           title: markerTitle.trim(),
           seconds: payload.seconds,
           endSeconds: payload.endSeconds,
@@ -117,12 +117,12 @@ export function VideoMarkerEditor({
 
       {editingMarker === "new" && <TimeMarkerForm {...markerFormProps} />}
 
-      {scene.markers.length === 0 && editingMarker !== "new" && (
+      {video.markers.length === 0 && editingMarker !== "new" && (
         <div className="surface-well p-8 text-center">
           <p className="text-text-muted text-sm">No markers yet</p>
         </div>
       )}
-      {scene.markers.map((marker) => {
+      {video.markers.map((marker) => {
         if (editingMarker === marker.id) {
           return <TimeMarkerForm key={marker.id} {...markerFormProps} />;
         }

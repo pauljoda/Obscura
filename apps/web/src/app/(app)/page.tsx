@@ -55,28 +55,28 @@ export default async function DashboardPage() {
   ]);
 
       const allVideos = videosResponse.videos;
-      
-      const scoredVideos = [...allVideos].map(scene => {
+
+      const scoredVideos = [...allVideos].map((video) => {
         let score = Math.random() * 20;
-        if (scene.playCount === 0) score += 50;
-        if (scene.rating) score += scene.rating;
-        return { scene, score };
+        if (video.playCount === 0) score += 50;
+        if (video.rating) score += video.rating;
+        return { video, score };
       });
-      
+
       scoredVideos.sort((a, b) => b.score - a.score);
-      const featuredScenes = scoredVideos.slice(0, 5).map(s => s.scene);
-      
-      const featuredIds = new Set(featuredScenes.map(s => s.id));
-      const recentScenes = allVideos.filter(s => !featuredIds.has(s.id)).slice(0, 15);
+      const featuredVideos = scoredVideos.slice(0, 5).map((item) => item.video);
+
+      const featuredIds = new Set(featuredVideos.map((video) => video.id));
+      const recentVideos = allVideos.filter((video) => !featuredIds.has(video.id)).slice(0, 15);
 
   return (
     <DashboardPageClient
-      scenes={recentScenes}
-      featuredScenes={featuredScenes}
+      videos={recentVideos}
+      featuredVideos={featuredVideos}
       galleries={galleriesResponse.galleries}
       images={imagesResponse.images}
       audioLibraries={audioResponse.items}
-      sceneFolders={seriesResponse.items}
+      series={seriesResponse.items}
       performers={performersResponse.performers}
       studios={studiosResponse.studios.slice(0, 12)}
     />

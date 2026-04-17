@@ -5,7 +5,7 @@ import { Film, Loader2 } from "lucide-react";
 import type { ViewMode } from "../lib/video-browse-types";
 import type { VideoListItem } from "../lib/api";
 import { useTerms } from "../lib/terminology";
-import { SceneCard } from "./videos/video-card";
+import { VideoCard } from "./videos/video-card";
 import { videoListItemToCardData } from "./videos/video-card-data";
 
 interface VideoGridProps {
@@ -17,7 +17,7 @@ interface VideoGridProps {
   onLoadMore?: () => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
-  /** Current page path — when provided, scene cards include a `from` query param so the detail back button returns here. */
+  /** Current page path — when provided, video cards include a `from` query param so the detail back button returns here. */
   from?: string;
 }
 
@@ -81,9 +81,9 @@ export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingM
       <>
         <div className="space-y-1">
           {videos.map((video, i) => (
-            <SceneCard
+            <VideoCard
               key={video.id}
-              scene={videoListItemToCardData(video, from)}
+              video={videoListItemToCardData(video, from)}
               variant="list"
               index={i}
               selected={selectedIds?.has(video.id)}
@@ -100,9 +100,9 @@ export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingM
     <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
       {videos.map((video, i) => (
-        <SceneCard
+        <VideoCard
           key={video.id}
-          scene={videoListItemToCardData(video, from)}
+          video={videoListItemToCardData(video, from)}
           index={i}
           imageLoading={i < 8 ? "eager" : "lazy"}
         />

@@ -61,13 +61,13 @@ export default function TagPage({ params }: TagPageProps) {
   const router = useRouter();
 
   const [tagDetail, setTagDetail] = useState<TagDetail | null>(null);
-  const [scenes, setScenes] = useState<VideoListItem[]>([]);
-  const [totalScenes, setTotalScenes] = useState(0);
+  const [videos, setVideos] = useState<VideoListItem[]>([]);
+  const [totalVideos, setTotalVideos] = useState(0);
   const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
-  const [folders, setFolders] = useState<VideoSeriesListItemDto[]>([]);
+  const [series, setSeries] = useState<VideoSeriesListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,13 +94,13 @@ export default function TagPage({ params }: TagPageProps) {
         fetchTags({ nsfw: nsfwMode }),
         fetchSeries({ tag: tagName, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
-      setScenes(videosRes.videos);
-      setTotalScenes(videosRes.total);
+      setVideos(videosRes.videos);
+      setTotalVideos(videosRes.total);
       setGalleries(galleriesRes.galleries);
       setTotalGalleries(galleriesRes.total);
       setAudioLibraries(audioRes.items);
       setTotalAudioLibraries(audioRes.total);
-      setFolders(seriesRes.items);
+      setSeries(seriesRes.items);
 
       const match = tagsRes.tags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
       if (match) {
@@ -167,7 +167,7 @@ export default function TagPage({ params }: TagPageProps) {
     finally { setUploadingImage(false); }
   }
 
-  const totalDuration = scenes.reduce((sum, s) => sum + (s.duration ?? 0), 0);
+  const totalDuration = videos.reduce((sum, video) => sum + (video.duration ?? 0), 0);
   const durationFormatted = formatDuration(totalDuration);
 
   if (editing && tagDetail) {
@@ -252,7 +252,7 @@ export default function TagPage({ params }: TagPageProps) {
         {!loading && (
           <>
             <span className="flex items-center gap-1.5 text-sm text-text-muted">
-              <Film className="h-3.5 w-3.5" /> {formatVideoCount(totalScenes)}
+              <Film className="h-3.5 w-3.5" /> {formatVideoCount(totalVideos)}
             </span>
             <span className="flex items-center gap-1.5 text-sm text-text-muted">
               <Images className="h-3.5 w-3.5" />
@@ -300,11 +300,11 @@ export default function TagPage({ params }: TagPageProps) {
       <div className="separator" />
 
       {/* Series associated with this tag */}
-      {folders.length > 0 && (
+      {series.length > 0 && (
         <section>
           <h4 className="text-kicker mb-3">{terms.series}</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
-            {folders.map((f) => (
+            {series.map((f) => (
               <SeriesCard
                 key={f.id}
                 series={f}
@@ -322,13 +322,13 @@ export default function TagPage({ params }: TagPageProps) {
           <div className="surface-well p-12 flex items-center justify-center">
             <Loader2 className="h-6 w-6 text-text-disabled animate-spin" />
           </div>
-        ) : totalScenes === 0 ? (
+        ) : totalVideos === 0 ? (
           <div className="surface-well p-12 text-center">
             <Film className="h-10 w-10 text-text-disabled mx-auto mb-3" />
             <p className="text-text-muted text-sm">No {terms.videos.toLowerCase()} with this tag.</p>
           </div>
         ) : (
-          <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
+          <VideoGrid videos={videos} viewMode="grid" loading={false} from={currentPath} />
         )}
       </section>
 

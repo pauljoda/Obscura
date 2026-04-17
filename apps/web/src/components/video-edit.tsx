@@ -71,12 +71,6 @@ interface VideoEditProps {
   inline?: boolean;
   onSaved?: () => void;
   currentPlaybackTime?: number;
-  /**
-   * Selects the backend this editor reads/writes. The DTO shapes are
-   * identical between `/scenes/:id` and `/videos/:id`, so the rest of
-   * the form is unchanged. Defaults to `"scenes"` for backward compat.
-   */
-  source?: "scenes" | "videos";
 }
 
 // ─── Main Component ────────────────────────────────────────────
@@ -86,20 +80,18 @@ export function VideoEdit({
   inline,
   onSaved,
   currentPlaybackTime,
-  source = "videos",
 }: VideoEditProps) {
   const terms = useTerms();
   const { mode: nsfwMode } = useNsfw();
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from");
-  const isVideoSource = source === "videos";
-  const detailBaseHref = isVideoSource ? `/videos/${id}` : `/scenes/${id}`;
-  const backToScene = fromParam ? buildHrefWithFrom(detailBaseHref, fromParam) : detailBaseHref;
+  const detailBaseHref = `/videos/${id}`;
+  const backToVideo = fromParam ? buildHrefWithFrom(detailBaseHref, fromParam) : detailBaseHref;
   const loadDetail = (): Promise<VideoDetail> => fetchVideoDetail(id);
   const saveDetail = (data: Parameters<typeof updateVideo>[1]) =>
     updateVideo(id, data);
   const explicitCounterLabels = nsfwMode === "show";
-  const [scene, setScene] = useState<VideoDetail | null>(null);
+  const [video, setVideo] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,9 +146,9 @@ export function VideoEdit({
       fetchPerformers({ nsfw: nsfwMode, limit: 100 }),
       fetchStudios({ nsfw: nsfwMode }),
     ])
-      .then(([sceneData, scrapersData, tagsData, performersData, studiosData]) => {
-        setScene(sceneData);
-        populateForm(sceneData);
+      .then(([videoData, scrapersData, tagsData, performersData, studiosData]) => {
+        setVideo(videoData);
+        populateForm(videoData);
 
         const enabled = scrapersData.packages.filter((p) => p.enabled);
         setScrapers(enabled);
@@ -193,7 +185,7 @@ export function VideoEdit({
   }
 
   function enterEditMode() {
-    if (scene) populateForm(scene);
+    if (video) populateForm(video);
     setNewFromScrape({ tags: new Set(), performers: new Set(), studio: false });
     setError(null);
     setMessage(null);
@@ -201,7 +193,7 @@ export function VideoEdit({
   }
 
   function cancelEdit() {
-    if (scene) populateForm(scene);
+    if (video) populateForm(video);
     setNewFromScrape({ tags: new Set(), performers: new Set(), studio: false });
     setError(null);
     setMessage(null);
@@ -237,7 +229,7 @@ export function VideoEdit({
         studioName: studioName.trim() || null,
         performerNames: performerNames,
         tagNames: tagNames,
-        ...(scene?.entityKind === "video_episode"
+        ...(video?.entityKind === "video_episode"
           ? {
               seasonNumber: seasonPatch,
               episodeNumber: episodePatch,
@@ -248,7 +240,7 @@ export function VideoEdit({
 
       setMessage("Saved");
       const updated = await loadDetail();
-      setScene(updated);
+      setVideo(updated);
       populateForm(updated);
       setEditing(false);
 
@@ -358,7 +350,7 @@ export function VideoEdit({
         try {
           await uploadVideoThumbnailFromUrl(id, result.imageUrl);
           const updated = await loadDetail();
-          setScene(updated);
+          setVideo(updated);
           onSaved?.();
         } catch {
           // Non-fatal — scraped image may be unreachable
@@ -463,7 +455,7 @@ export function VideoEdit({
             try {
               await uploadVideoThumbnailFromUrl(id, result.imageUrl);
               const updated = await loadDetail();
-              setScene(updated);
+              setVideo(updated);
               onSaved?.();
             } catch {
               // Non-fatal
@@ -495,7 +487,7 @@ export function VideoEdit({
     try {
       await uploadVideoThumbnail(id, file);
       const updated = await loadDetail();
-      setScene(updated);
+      setVideo(updated);
       onSaved?.();
       setMessage("Thumbnail updated");
     } catch (err) {
@@ -505,7 +497,7 @@ export function VideoEdit({
     }
   }
 
-  const hasCustomThumbnail = scene?.thumbnailPath?.includes("thumb-custom") ?? false;
+  const hasCustomThumbnail = video?.thumbnailPath?.includes("thumb-custom") ?? false;
   const hasPlaybackFrameTime =
     typeof currentPlaybackTime === "number" &&
     Number.isFinite(currentPlaybackTime);
@@ -519,7 +511,7 @@ export function VideoEdit({
     try {
       await deleteVideoThumbnail(id);
       const updated = await loadDetail();
-      setScene(updated);
+      setVideo(updated);
       onSaved?.();
       setMessage("Reverted to generated thumbnail");
     } catch (err) {
@@ -541,7 +533,7 @@ export function VideoEdit({
     try {
       await generateVideoThumbnailFromFrame(id, seconds);
       const updated = await loadDetail();
-      setScene(updated);
+      setVideo(updated);
       onSaved?.();
       setMessage(`Thumbnail captured at ${formatSecondsLabel(seconds)}`);
     } catch (err) {
@@ -563,7 +555,7 @@ export function VideoEdit({
     );
   }
 
-  if (!scene) {
+  if (!video) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <p className="text-text-muted text-sm">{error ?? `${terms.video} not found`}</p>
@@ -585,7 +577,7 @@ export function VideoEdit({
         : studioSuggestions)
     : [];
 
-  const sceneTagsVisibleInViewMode = tagsVisibleInNsfwMode(scene.tags, nsfwMode);
+  const sceneTagsVisibleInViewMode = tagsVisibleInNsfwMode(video.tags, nsfwMode);
 
   // ─── VIEW MODE ─────────────────────────────────────────────────
 
@@ -594,7 +586,7 @@ export function VideoEdit({
       <div className={cn("space-y-4", inline ? "" : "max-w-4xl")}>
         {!inline && (
           <Link
-            href={backToScene}
+            href={backToVideo}
             className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -625,13 +617,13 @@ export function VideoEdit({
           {/* Metadata readout */}
           <div className="lg:col-span-2 surface-card-sharp no-lift p-4">
             <MetadataRow label="Title" icon={FileText}>
-              <p className="text-sm font-medium">{scene.title}</p>
+              <p className="text-sm font-medium">{video.title}</p>
             </MetadataRow>
 
             <MetadataRow label="Studio" icon={Building2}>
-              {scene.studio ? (
+              {video.studio ? (
                 <span className="text-sm text-text-accent font-medium">
-                  {scene.studio.name}
+                  {video.studio.name}
                 </span>
               ) : (
                 <span className="text-sm text-text-disabled">--</span>
@@ -640,35 +632,35 @@ export function VideoEdit({
 
             <MetadataRow label="Date" icon={Calendar}>
               <span className="text-sm text-text-secondary">
-                {scene.date ?? <span className="text-text-disabled">--</span>}
+                {video.date ?? <span className="text-text-disabled">--</span>}
               </span>
             </MetadataRow>
 
-            {scene.entityKind === "video_episode" && (
+            {video.entityKind === "video_episode" && (
               <MetadataRow label="Episode" icon={Tv}>
                 <span className="text-sm text-text-secondary font-mono">
-                  {scene.seasonNumber != null
-                    ? scene.seasonNumber === 0
+                  {video.seasonNumber != null
+                    ? video.seasonNumber === 0
                       ? "Specials"
-                      : `S${String(scene.seasonNumber).padStart(2, "0")}`
+                      : `S${String(video.seasonNumber).padStart(2, "0")}`
                     : null}
-                  {scene.seasonNumber != null && scene.episodeNumber != null
+                  {video.seasonNumber != null && video.episodeNumber != null
                     ? " "
                     : ""}
-                  {scene.episodeNumber != null
-                    ? `E${String(scene.episodeNumber).padStart(2, "0")}`
+                  {video.episodeNumber != null
+                    ? `E${String(video.episodeNumber).padStart(2, "0")}`
                     : null}
-                  {scene.absoluteEpisodeNumber != null ? (
+                  {video.absoluteEpisodeNumber != null ? (
                     <span className="text-text-muted">
-                      {scene.episodeNumber != null || scene.seasonNumber != null
+                      {video.episodeNumber != null || video.seasonNumber != null
                         ? " · "
                         : ""}
-                      Abs {scene.absoluteEpisodeNumber}
+                      Abs {video.absoluteEpisodeNumber}
                     </span>
                   ) : null}
-                  {scene.seasonNumber == null &&
-                    scene.episodeNumber == null &&
-                    scene.absoluteEpisodeNumber == null && (
+                  {video.seasonNumber == null &&
+                    video.episodeNumber == null &&
+                    video.absoluteEpisodeNumber == null && (
                       <span className="text-text-disabled">--</span>
                     )}
                 </span>
@@ -676,18 +668,18 @@ export function VideoEdit({
             )}
 
             <MetadataRow label="Rating" icon={Star}>
-              <StarRatingPicker value={scene.rating} readOnly />
+              <StarRatingPicker value={video.rating} readOnly />
             </MetadataRow>
 
             <MetadataRow label="URL" icon={Link2}>
-              {scene.url ? (
+              {video.url ? (
                 <a
-                  href={scene.url}
+                  href={video.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-text-accent hover:text-text-accent-bright truncate block"
                 >
-                  {scene.url}
+                  {video.url}
                 </a>
               ) : (
                 <span className="text-sm text-text-disabled">--</span>
@@ -695,9 +687,9 @@ export function VideoEdit({
             </MetadataRow>
 
             <MetadataRow label="Details" icon={FileText}>
-              {scene.details ? (
+              {video.details ? (
                 <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap">
-                  {scene.details}
+                  {video.details}
                 </p>
               ) : (
                 <span className="text-sm text-text-disabled">--</span>
@@ -705,11 +697,11 @@ export function VideoEdit({
             </MetadataRow>
 
             <MetadataRow label={terms.performers} icon={User}>
-              {scene.performers.length === 0 ? (
+              {video.performers.length === 0 ? (
                 <span className="text-sm text-text-disabled">--</span>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {scene.performers.map((p) => {
+                  {video.performers.map((p) => {
                     const imgUrl = toApiUrl(p.imagePath);
                     return (
                       <Link
@@ -751,7 +743,7 @@ export function VideoEdit({
               icon={explicitCounterLabels ? Droplets : Heart}
             >
               <span className="text-mono-sm">
-                {scene.orgasmCount || 0}
+                {video.orgasmCount || 0}
               </span>
             </MetadataRow>
 
@@ -759,10 +751,10 @@ export function VideoEdit({
               <span
                 className={cn(
                   "text-mono-sm",
-                  scene.organized ? "text-success-text" : "text-text-disabled"
+                  video.organized ? "text-success-text" : "text-text-disabled"
                 )}
               >
-                {scene.organized ? "Yes" : "No"}
+                {video.organized ? "Yes" : "No"}
               </span>
             </MetadataRow>
           </div>
@@ -774,10 +766,10 @@ export function VideoEdit({
               Thumbnail
             </h4>
             <div className="relative group aspect-video surface-well overflow-hidden ">
-              {scene.thumbnailPath ? (
+              {video.thumbnailPath ? (
                 <img
-                  src={toApiUrl(scene.thumbnailPath)}
-                  alt={scene.title}
+                  src={toApiUrl(video.thumbnailPath)}
+                  alt={video.title}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -809,7 +801,7 @@ export function VideoEdit({
     <div className={cn("space-y-4", inline ? "" : "max-w-4xl")}>
       {!inline && (
         <Link
-          href={backToScene}
+          href={backToVideo}
           className="inline-flex items-center gap-1.5 text-text-muted text-[0.78rem] hover:text-text-accent transition-colors duration-fast"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -987,7 +979,7 @@ export function VideoEdit({
                 />
               </FormField>
 
-              {scene.entityKind === "video_episode" && (
+              {video.entityKind === "video_episode" && (
                 <>
                   <FormField label="Season">
                     <input
@@ -1095,10 +1087,10 @@ export function VideoEdit({
             Thumbnail
           </h4>
           <div className="relative group aspect-video surface-well overflow-hidden ">
-            {scene.thumbnailPath ? (
+            {video.thumbnailPath ? (
               <img
-                src={toApiUrl(scene.thumbnailPath)}
-                alt={scene.title}
+                src={toApiUrl(video.thumbnailPath)}
+                alt={video.title}
                 className="w-full h-full object-cover"
               />
             ) : (

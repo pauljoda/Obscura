@@ -19,7 +19,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const cookieStore = await cookies();
   const nsfwMode = parseNsfwModeCookie(cookieStore.get("obscura-nsfw-mode")?.value);
 
-  const [scene, tagsResponse] = await Promise.all([
+  const [video, tagsResponse] = await Promise.all([
     fetchVideoDetail(id).catch(() => null as VideoDetailType | null),
     fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] as TagItem[] })),
   ]);
@@ -27,9 +27,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
   return (
     <VideoDetail
       id={id}
-      initialScene={scene}
+      initialVideo={video}
       initialTags={tagsResponse.tags}
-      source="videos"
+      
     />
   );
 }

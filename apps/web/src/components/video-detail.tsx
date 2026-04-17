@@ -32,7 +32,7 @@ import {
   fetchVideoDetail,
   fetchTags,
   updateVideo,
-  rebuildScenePreview,
+  rebuildVideoPreview,
   resetVideoMetadata,
   recordVideoPlay,
   recordVideoOrgasm,
@@ -57,21 +57,13 @@ type Tab = (typeof tabs)[number];
 
 export function VideoDetail({
   id,
-  initialScene = null,
+  initialVideo = null,
   initialTags = [],
-  source = "videos",
 }: {
   id: string;
-  initialScene?: VideoDetailType | null;
+  initialVideo?: VideoDetailType | null;
   initialTags?: TagItem[];
-  /**
-   * Selects which backend to read/write for this entity. The DTO shapes
-   * are identical between `/scenes/:id` and `/videos/:id`, so the rest of
-   * the component is unchanged. Defaults to `"scenes"` for backward compat.
-   */
-  source?: "scenes" | "videos";
 }) {
-  const isVideoSource = source === "videos";
   const loadDetail = useCallback(
     () => fetchVideoDetail(id),
     [id],
@@ -86,8 +78,8 @@ export function VideoDetail({
   );
   const playlist = usePlaylistContext();
   const [activeTab, setActiveTab] = useState<Tab>("Details");
-  const [scene, setScene] = useState<VideoDetailType | null>(initialScene);
-  const [loading, setLoading] = useState(initialScene == null);
+  const [video, setVideo] = useState<VideoDetailType | null>(initialVideo);
+  const [loading, setLoading] = useState(initialVideo == null);
   const [error, setError] = useState<string | null>(null);
   const [ratingHover, setRatingHover] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
@@ -103,7 +95,7 @@ export function VideoDetail({
     null,
   );
   /** User's persisted preference. The actual docked state also requires
-   *  the current scene to have at least one subtitle track AND a desktop-
+   *  the current video to have at least one subtitle track AND a desktop-
    *  sized viewport — below the `lg` breakpoint the transcript always
    *  falls back into the tab, since a split layout would crowd the
    *  video into uselessness on a phone. */
@@ -254,7 +246,7 @@ export function VideoDetail({
   const defaultPlaybackMode: "direct" | "hls" =
     librarySettings?.defaultPlaybackMode === "hls" ? "hls" : "direct";
 
-  // Persist selected subtitle track per-scene in localStorage.
+  // Persist selected subtitle track per-video in localStorage.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(`obscura:subtitle-lang:${id}`);
@@ -288,33 +280,30 @@ export function VideoDetail({
   const explicitCounterLabels = nsfwMode === "show";
   const terms = useTerms();
 
-  const refreshScene = useCallback(() => {
+  const refreshVideo = useCallback(() => {
     loadDetail()
-      .then(setScene)
+      .then(setVideo)
       .catch((err) => setError(err.message));
   }, [loadDetail]);
 
   useEffect(() => {
-    if (initialScene?.id === id) {
+    if (initialVideo?.id === id) {
       return;
     }
 
     setLoading(true);
     Promise.all([loadDetail(), fetchTags({ nsfw: nsfwMode })])
-      .then(([sceneData, tagsData]) => {
-        setScene(sceneData);
+      .then(([videoData, tagsData]) => {
+        setVideo(videoData);
         setAllTags(tagsData.tags);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id, initialScene, nsfwMode, loadDetail]);
+  }, [id, initialVideo, nsfwMode, loadDetail]);
 
   const handlePlayStarted = useCallback(() => {
-    // Play tracking only exists on the legacy /scenes endpoint today; the
-    // new /videos stack has no equivalent yet, so no-op there.
-    if (isVideoSource) return;
     recordVideoPlay(id).catch(() => {});
-  }, [id, isVideoSource]);
+  }, [id]);
 
   const [displayTime, setDisplayTime] = useState(0);
   const handleTimeUpdate = useCallback((time: number) => {
@@ -323,28 +312,26 @@ export function VideoDetail({
   }, []);
 
   async function handleRatingClick(starIdx: number) {
-    if (!scene || savingRating) return;
-    const currentStars = scene.rating ? Math.round(scene.rating / 20) : 0;
+    if (!video || savingRating) return;
+    const currentStars = video.rating ? Math.round(video.rating / 20) : 0;
     const newRating = starIdx === currentStars ? null : starIdx * 20;
-    const previousRating = scene.rating;
-    setScene((prev) => (prev ? { ...prev, rating: newRating } : prev));
+    const previousRating = video.rating;
+    setVideo((prev) => (prev ? { ...prev, rating: newRating } : prev));
     setSavingRating(true);
     try {
       await saveDetail({ rating: newRating });
     } catch {
-      setScene((prev) => (prev ? { ...prev, rating: previousRating } : prev));
+      setVideo((prev) => (prev ? { ...prev, rating: previousRating } : prev));
     } finally {
       setSavingRating(false);
     }
   }
 
   async function handleOrgasm() {
-    if (!scene) return;
-    // The /videos stack has no orgasm tracking endpoint yet; no-op there.
-    if (isVideoSource) return;
+    if (!video) return;
     try {
       const res = await recordVideoOrgasm(id);
-      setScene((prev) =>
+      setVideo((prev) =>
         prev ? { ...prev, orgasmCount: res.orgasmCount } : prev,
       );
     } catch {
@@ -353,11 +340,11 @@ export function VideoDetail({
   }
 
   async function handleToggleOrganized() {
-    if (!scene) return;
-    const newVal = !scene.organized;
+    if (!video) return;
+    const newVal = !video.organized;
     try {
       await saveDetail({ organized: newVal });
-      setScene((prev) => (prev ? { ...prev, organized: newVal } : prev));
+      setVideo((prev) => (prev ? { ...prev, organized: newVal } : prev));
     } catch {
       // silent
     }
@@ -367,23 +354,11 @@ export function VideoDetail({
     "idle" | "queued" | "done"
   >("idle");
 
-  const rebuildPreviewWarnedRef = useRef(false);
   async function handleRebuildPreview() {
     if (rebuildPreviewState !== "idle") return;
-    // No /videos equivalent for preview rebuild yet — no-op with a one-time
-    // warning so the button click is observable in dev without spamming.
-    if (isVideoSource) {
-      if (!rebuildPreviewWarnedRef.current) {
-        rebuildPreviewWarnedRef.current = true;
-        console.warn(
-          "[VideoDetail] rebuildScenePreview has no /videos equivalent yet; ignoring.",
-        );
-      }
-      return;
-    }
     setRebuildPreviewState("queued");
     try {
-      await rebuildScenePreview(id, nsfwMode);
+      await rebuildVideoPreview(id);
     } catch {
       setRebuildPreviewState("idle");
       return;
@@ -417,7 +392,7 @@ export function VideoDetail({
     }
     try {
       const fresh = await loadDetail();
-      setScene(fresh);
+      setVideo(fresh);
     } catch {
       // non-fatal — reset succeeded, refresh failed
     }
@@ -436,21 +411,21 @@ export function VideoDetail({
     );
   }
 
-  if (error || !scene) {
+  if (error || !video) {
     return (
       <div className="surface-well flex flex-col items-center justify-center py-16">
         <p className="text-text-muted text-sm">
           {error ?? `${terms.video} not found`}
         </p>
-        <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={`Back to ${terms.videos}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
+        <BackLink fallback="/videos" label={`Back to ${terms.videos}`} variant="text" className="text-text-accent text-sm mt-2 hover:text-text-accent-bright" />
       </div>
     );
   }
 
-  const ratingStars = scene.rating ? Math.round(scene.rating / 20) : 0;
+  const ratingStars = video.rating ? Math.round(video.rating / 20) : 0;
   const activeStars = ratingHover > 0 ? ratingHover : ratingStars;
 
-  const hasSubtitles = (scene.subtitleTracks?.length ?? 0) > 0;
+  const hasSubtitles = (video.subtitleTracks?.length ?? 0) > 0;
   // The docked transcript is only meaningful while subtitles are actually
   // enabled for playback — if the user turns captions off, collapse the
   // sidecar and let the video take the full width again.
@@ -461,12 +436,12 @@ export function VideoDetail({
   return (
     <div className="space-y-5">
       {/* Back link */}
-      <BackLink fallback={isVideoSource ? "/videos" : "/scenes"} label={terms.videos} className="py-1.5 font-medium hover:border-border-accent w-fit" />
+      <BackLink fallback="/videos" label={terms.videos} className="py-1.5 font-medium hover:border-border-accent w-fit" />
 
       {/* Video Player — optionally side-by-side with a docked transcript
           on desktop widths (>= lg). On smaller viewports the player stays
           full-width and the dock sidecar collapses automatically. */}
-      <NsfwBlur isNsfw={scene.isNsfw ?? false}>
+      <NsfwBlur isNsfw={video.isNsfw ?? false}>
         <div
           ref={dockContainerRef}
           className={cn(
@@ -492,27 +467,27 @@ export function VideoDetail({
           >
             <VideoPlayer
               ref={playerRef}
-              src={toApiUrl(scene.streamUrl)}
-              directSrc={toApiUrl(scene.directStreamUrl)}
-              poster={toApiUrl(scene.thumbnailPath)}
-              markers={scene.markers.map((m) => ({
+              src={toApiUrl(video.streamUrl)}
+              directSrc={toApiUrl(video.directStreamUrl)}
+              poster={toApiUrl(video.thumbnailPath)}
+              markers={video.markers.map((m) => ({
                 id: m.id,
                 time: m.seconds,
                 title: m.title,
               }))}
-              duration={scene.duration ?? undefined}
+              duration={video.duration ?? undefined}
               onPlayStarted={handlePlayStarted}
               onTimeUpdate={handleTimeUpdate}
-              trickplaySprite={toApiUrl(scene.spritePath, scene.updatedAt)}
-              trickplayVtt={toApiUrl(scene.trickplayVttPath, scene.updatedAt)}
-              subtitleTracks={scene.subtitleTracks ?? []}
+              trickplaySprite={toApiUrl(video.spritePath, video.updatedAt)}
+              trickplayVtt={toApiUrl(video.trickplayVttPath, video.updatedAt)}
+              subtitleTracks={video.subtitleTracks ?? []}
               activeSubtitleTrackId={activeSubtitleId}
               onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
               subtitleChoiceLocked={subtitleChoiceLocked}
               subtitleDefaults={subtitleDefaults}
               defaultPlaybackMode={defaultPlaybackMode}
-              autoPlay={playlist.isActive && playlist.isPlaylistItem("video", scene.id)}
-              onEnded={() => playlist.reportContentEnded("video", scene.id)}
+              autoPlay={playlist.isActive && playlist.isPlaylistItem("video", video.id)}
+              onEnded={() => playlist.reportContentEnded("video", video.id)}
             />
           </div>
           {isTranscriptDocked && (
@@ -542,13 +517,13 @@ export function VideoDetail({
                 }
               >
                 <VideoTranscriptPanel
-                  videoId={scene.id}
-                  tracks={scene.subtitleTracks ?? []}
+                  videoId={video.id}
+                  tracks={video.subtitleTracks ?? []}
                   activeTrackId={activeSubtitleId}
                   onActiveTrackIdChange={handleActiveSubtitleChange}
                   currentTime={displayTime}
                   onSeek={handleSeek}
-                  onTracksChanged={refreshScene}
+                  onTracksChanged={refreshVideo}
                   variant="list-only"
                   isDocked
                   onDockToggle={toggleTranscriptDock}
@@ -559,42 +534,42 @@ export function VideoDetail({
         </div>
       </NsfwBlur>
 
-      {/* Scene header */}
+      {/* Video header */}
       <div className="surface-card-sharp p-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl font-semibold">
-              {scene.title}
+              {video.title}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[0.78rem] text-text-muted">
-              {scene.studio && (
+              {video.studio && (
                 <Link
-                  href={`/studios/${scene.studio.id}`}
+                  href={`/studios/${video.studio.id}`}
                   className="text-text-accent font-medium hover:text-text-accent-bright transition-colors"
                 >
-                  {scene.studio.name}
+                  {video.studio.name}
                 </Link>
               )}
-              {scene.date && (
+              {video.date && (
                 <span className="flex items-center gap-1 text-ephemeral">
                   <Calendar className="h-3.5 w-3.5" />
-                  {scene.date}
+                  {video.date}
                 </span>
               )}
               <span className="flex items-center gap-1 text-ephemeral">
                 <Clock className="h-3.5 w-3.5" />
-                {scene.durationFormatted}
+                {video.durationFormatted}
               </span>
               <span className="flex items-center gap-1 text-ephemeral">
                 <Eye className="h-3.5 w-3.5" />
-                {scene.playCount} plays
+                {video.playCount} plays
               </span>
-              {scene.resolution && (
+              {video.resolution && (
                 <span className="pill-accent px-1.5 py-0.5 text-[0.65rem] font-semibold">
-                  {scene.resolution}
+                  {video.resolution}
                 </span>
               )}
-              {scene.isNsfw && <NsfwChip />}
+              {video.isNsfw && <NsfwChip />}
             </div>
           </div>
 
@@ -644,8 +619,8 @@ export function VideoDetail({
               ) : (
                 <Heart className="h-4 w-4" />
               )}
-              {scene.orgasmCount > 0 && (
-                <span className="text-mono-sm">{scene.orgasmCount}</span>
+              {video.orgasmCount > 0 && (
+                <span className="text-mono-sm">{video.orgasmCount}</span>
               )}
             </button>
 
@@ -655,25 +630,25 @@ export function VideoDetail({
               onClick={() => void handleToggleOrganized()}
               className={cn(
                 "flex items-center gap-1.5 h-8 px-2.5 transition-colors duration-fast",
-                scene.organized
+                video.organized
                   ? "text-success-text hover:bg-surface-2"
                   : "text-text-disabled hover:text-text-muted hover:bg-surface-2",
               )}
               title={
-                scene.organized ? "Marked as organized" : "Mark as organized"
+                video.organized ? "Marked as organized" : "Mark as organized"
               }
             >
               <CheckCircle2 className="h-4 w-4" />
             </button>
 
             {/* Identify (plugin-driven cascade/movie/episode review) */}
-            {scene.entityKind && (
+            {video.entityKind && (
               <IdentifyButton
-                entityKind={scene.entityKind}
-                entityId={scene.id}
-                title={scene.title}
+                entityKind={video.entityKind}
+                entityId={video.id}
+                title={video.title}
                 label={
-                  scene.entityKind === "video_movie"
+                  video.entityKind === "video_movie"
                     ? "Identify"
                     : "Re-identify"
                 }
@@ -781,9 +756,9 @@ export function VideoDetail({
       </div>
 
       {/* Description */}
-      {scene.details && (
+      {video.details && (
         <p className="text-text-secondary text-[0.85rem] leading-relaxed w-full max-w-full min-w-0 break-words">
-          {scene.details}
+          {video.details}
         </p>
       )}
 
@@ -801,15 +776,15 @@ export function VideoDetail({
             )}
           >
             {tab}
-            {tab === "Markers" && scene.markers.length > 0 && (
+            {tab === "Markers" && video.markers.length > 0 && (
               <span className="ml-1.5 text-[0.6rem] text-text-disabled">
-                {scene.markers.length}
+                {video.markers.length}
               </span>
             )}
             {tab === "Transcript" &&
-              (scene.subtitleTracks?.length ?? 0) > 0 && (
+              (video.subtitleTracks?.length ?? 0) > 0 && (
                 <span className="ml-1.5 text-[0.6rem] text-text-disabled">
-                  {scene.subtitleTracks!.length}
+                  {video.subtitleTracks!.length}
                 </span>
               )}
           </button>
@@ -817,24 +792,23 @@ export function VideoDetail({
       </div>
 
       {/* Tab content */}
-      {activeTab === "Details" && <VideoMetadataPanel scene={scene} />}
+      {activeTab === "Details" && <VideoMetadataPanel video={video} />}
 
       {activeTab === "Metadata" && (
         <VideoEdit
-          id={scene.id}
+          id={video.id}
           inline
-          onSaved={refreshScene}
+          onSaved={refreshVideo}
           currentPlaybackTime={displayTime}
-          source={source}
         />
       )}
 
       {activeTab === "Markers" && (
         <VideoMarkerEditor
-          scene={scene}
+          video={video}
           currentTimeRef={currentTimeRef}
           displayTime={displayTime}
-          onRefresh={refreshScene}
+          onRefresh={refreshVideo}
         />
       )}
 
@@ -852,13 +826,13 @@ export function VideoDetail({
               </button>
             </div>
             <VideoTranscriptPanel
-              videoId={scene.id}
-              tracks={scene.subtitleTracks ?? []}
+              videoId={video.id}
+              tracks={video.subtitleTracks ?? []}
               activeTrackId={activeSubtitleId}
               onActiveTrackIdChange={handleActiveSubtitleChange}
               currentTime={displayTime}
               onSeek={handleSeek}
-              onTracksChanged={refreshScene}
+              onTracksChanged={refreshVideo}
               variant="tracks-only"
               isDocked
               onDockToggle={toggleTranscriptDock}
@@ -866,27 +840,27 @@ export function VideoDetail({
           </div>
         ) : (
           <VideoTranscriptPanel
-            videoId={scene.id}
-            tracks={scene.subtitleTracks ?? []}
+            videoId={video.id}
+            tracks={video.subtitleTracks ?? []}
             activeTrackId={activeSubtitleId}
             onActiveTrackIdChange={handleActiveSubtitleChange}
             currentTime={displayTime}
             onSeek={handleSeek}
-            onTracksChanged={refreshScene}
+            onTracksChanged={refreshVideo}
             onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
             isDocked={false}
           />
         )
       )}
 
-      {activeTab === "Files" && <VideoFileInfo scene={scene} />}
+      {activeTab === "Files" && <VideoFileInfo video={video} />}
 
       <AddToCollectionModal
         open={collectionModalOpen}
         onClose={() => setCollectionModalOpen(false)}
         entityType="video"
         entityId={id}
-        entityTitle={scene.title}
+        entityTitle={video.title}
       />
     </div>
   );

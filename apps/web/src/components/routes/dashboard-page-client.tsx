@@ -8,7 +8,7 @@ import type { GalleryListItem, VideoListItem, PerformerItem, StudioItem } from "
 import type { ImageListItemDto, AudioLibraryListItemDto, VideoSeriesListItemDto } from "@obscura/contracts";
 import { toApiUrl } from "../../lib/api";
 
-import { SceneCard } from "../videos/video-card";
+import { VideoCard } from "../videos/video-card";
 import { videoListItemToCardData } from "../videos/video-card-data";
 import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
@@ -24,12 +24,12 @@ import { NsfwBlur, NsfwShowModeChip } from "../nsfw/nsfw-gate";
 import { VIDEO_CARD_GRADIENTS } from "../videos/video-card-gradients";
 
 interface DashboardPageClientProps {
-  scenes: VideoListItem[];
-  featuredScenes: VideoListItem[];
+  videos: VideoListItem[];
+  featuredVideos: VideoListItem[];
   galleries: GalleryListItem[];
   images: ImageListItemDto[];
   audioLibraries: AudioLibraryListItemDto[];
-  sceneFolders: VideoSeriesListItemDto[];
+  series: VideoSeriesListItemDto[];
   performers: PerformerItem[];
   studios: StudioItem[];
 }
@@ -84,43 +84,43 @@ function AudioLibraryCard({
 import { useNsfw } from "../nsfw/nsfw-context";
 
 export function DashboardPageClient({
-  scenes: initialRecent,
-  featuredScenes: initialFeatured,
+  videos: initialRecentVideos,
+  featuredVideos: initialFeaturedVideos,
   galleries: initialGalleries,
   images: initialImages,
   audioLibraries: initialAudio,
-  sceneFolders: initialFolders,
+  series: initialSeries,
   performers: initialPerformers,
   studios: initialStudios,
 }: DashboardPageClientProps) {
   const { mode: nsfwMode } = useNsfw();
 
-  const featuredScenes = initialFeatured.filter(s => nsfwMode === "show" || !s.isNsfw);
-  const recentScenes = initialRecent.filter(s => nsfwMode === "show" || !s.isNsfw);
+  const featuredVideos = initialFeaturedVideos.filter((video) => nsfwMode === "show" || !video.isNsfw);
+  const recentVideos = initialRecentVideos.filter((video) => nsfwMode === "show" || !video.isNsfw);
   const galleries = initialGalleries.filter(g => nsfwMode === "show" || !g.isNsfw);
   const images = initialImages.filter(i => nsfwMode === "show" || !i.isNsfw);
   const audioLibraries = initialAudio.filter(a => nsfwMode === "show" || !a.isNsfw);
-  const sceneFolders = initialFolders.filter(f => nsfwMode === "show" || !f.isNsfw);
+  const series = initialSeries.filter((item) => nsfwMode === "show" || !item.isNsfw);
   const performers = initialPerformers.filter(p => nsfwMode === "show" || !p.isNsfw);
   const studios = initialStudios.filter(s => nsfwMode === "show" || !s.isNsfw);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (featuredScenes.length <= 1) return;
+    if (featuredVideos.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % featuredScenes.length);
+      setCurrentIndex((prev) => (prev + 1) % featuredVideos.length);
     }, 8000);
     return () => clearInterval(interval);
-  }, [featuredScenes.length, currentIndex]);
+  }, [featuredVideos.length, currentIndex]);
 
   const hasAnyContent = 
-    featuredScenes.length > 0 || 
-    recentScenes.length > 0 || 
+    featuredVideos.length > 0 || 
+    recentVideos.length > 0 || 
     galleries.length > 0 || 
     images.length > 0 || 
     audioLibraries.length > 0 || 
-    sceneFolders.length > 0 || 
+    series.length > 0 || 
     performers.length > 0 || 
     studios.length > 0;
 
@@ -148,22 +148,22 @@ export function DashboardPageClient({
   return (
     <div className="min-h-screen bg-bg text-text-primary pb-24">
       {/* Hero Section */}
-      {featuredScenes.length > 0 && (
+      {featuredVideos.length > 0 && (
         <div className="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden bg-surface-1">
           {/* Background Images with Crossfade and Ken Burns */}
-          {featuredScenes.map((scene, index) => {
+          {featuredVideos.map((video, index) => {
             const isActive = index === currentIndex;
             return (
               <div
-                key={scene.id}
+                key={video.id}
                 className={cn(
                   "absolute inset-0 transition-opacity duration-[1500ms] ease-in-out",
                   isActive ? "opacity-100 z-10" : "opacity-0 z-0"
                 )}
               >
                 <img
-                  src={toApiUrl(scene.cardThumbnailPath || scene.thumbnailPath) || ""}
-                  alt={scene.title}
+                  src={toApiUrl(video.cardThumbnailPath || video.thumbnailPath) || ""}
+                  alt={video.title}
                   className={cn(
                     "w-full h-full object-cover transform-gpu transition-transform duration-[10000ms] ease-out",
                     isActive ? "scale-105" : "scale-100"
@@ -180,11 +180,11 @@ export function DashboardPageClient({
           {/* Hero Content */}
           <div className="absolute bottom-0 left-0 w-full p-8 md:p-16 z-30 flex flex-col justify-end">
             <div className="max-w-3xl grid [grid-template-areas:'stack']">
-              {featuredScenes.map((scene, index) => {
+              {featuredVideos.map((video, index) => {
                 const isActive = index === currentIndex;
                 return (
                   <div
-                    key={`info-${scene.id}`}
+                    key={`info-${video.id}`}
                     className={cn(
                       "[grid-area:stack] transition-all duration-normal flex flex-col justify-end",
                       isActive ? "opacity-100 translate-y-0 pointer-events-auto z-10" : "opacity-0 translate-y-4 pointer-events-none z-0"
@@ -195,36 +195,36 @@ export function DashboardPageClient({
                         <Film className="w-4 h-4" />
                         Featured
                       </span>
-                      {scene.isNsfw && (
+                      {video.isNsfw && (
                         <>
                           <span className="text-text-muted">•</span>
-                          <NsfwShowModeChip isNsfw={scene.isNsfw} />
+                          <NsfwShowModeChip isNsfw={video.isNsfw} />
                         </>
                       )}
-                      {scene.durationFormatted && (
+                      {video.durationFormatted && (
                         <>
                           <span className="text-text-muted">•</span>
-                          <span>{scene.durationFormatted}</span>
+                          <span>{video.durationFormatted}</span>
                         </>
                       )}
-                      {scene.resolution && (
+                      {video.resolution && (
                         <>
                           <span className="text-text-muted">•</span>
-                          <span>{scene.resolution}</span>
+                          <span>{video.resolution}</span>
                         </>
                       )}
                     </div>
                     <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white drop-shadow-lg line-clamp-2">
-                      {scene.title}
+                      {video.title}
                     </h1>
-                    {scene.details && (
+                    {video.details && (
                       <p className="text-lg text-text-secondary line-clamp-2 max-w-2xl drop-shadow-md mt-4">
-                        {scene.details}
+                        {video.details}
                       </p>
                     )}
                     <div className="pt-6 flex items-center gap-4">
                       <Link
-                        href={`/videos/${scene.id}`}
+                        href={`/videos/${video.id}`}
                         className="flex items-center gap-2 bg-accent-500 hover:bg-accent-400 text-accent-950 px-8 py-3 font-semibold transition-all duration-normal hover:shadow-[0_0_24px_rgba(196,154,90,0.4)]"
                       >
                         <Play className="w-5 h-5 fill-current" />
@@ -237,9 +237,9 @@ export function DashboardPageClient({
             </div>
 
             {/* Hero Indicators */}
-            {featuredScenes.length > 1 && (
+            {featuredVideos.length > 1 && (
               <div className="absolute bottom-8 right-8 md:bottom-16 md:right-16 flex items-center gap-1">
-                {featuredScenes.map((_, index) => (
+                {featuredVideos.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}
@@ -264,18 +264,18 @@ export function DashboardPageClient({
 
       {/* Horizontal Rows */}
       <div className="space-y-12 mt-12 px-4 md:px-8">
-        {/* Scenes Row */}
-        {recentScenes.length > 0 && (
+        {/* Videos Row */}
+        {recentVideos.length > 0 && (
           <section>
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <Film className="w-5 h-5 text-accent-500" />
               Recent Videos
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
-              {recentScenes.map((scene, i) => (
-                <div key={scene.id} className="flex-none w-72 md:w-80 snap-start">
-                  <SceneCard
-                    scene={videoListItemToCardData(scene, "/")}
+              {recentVideos.map((video, i) => (
+                <div key={video.id} className="flex-none w-72 md:w-80 snap-start">
+                  <VideoCard
+                    video={videoListItemToCardData(video, "/")}
                     variant="grid"
                     index={i}
                   />
@@ -344,16 +344,16 @@ export function DashboardPageClient({
         )}
 
         {/* Series row (video_series) */}
-        {sceneFolders.length > 0 && (
+        {series.length > 0 && (
           <section>
             <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
               <FolderOpen className="w-5 h-5 text-accent-500" />
               Recent Series
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide">
-              {sceneFolders.map((folder) => (
-                <div key={folder.id} className="flex-none w-64 md:w-72 snap-start">
-                  <SeriesCard series={folder} href={`/videos?series=${folder.id}`} />
+              {series.map((item) => (
+                <div key={item.id} className="flex-none w-64 md:w-72 snap-start">
+                  <SeriesCard series={item} href={`/videos?series=${item.id}`} />
                 </div>
               ))}
             </div>

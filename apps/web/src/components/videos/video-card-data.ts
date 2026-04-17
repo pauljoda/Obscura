@@ -45,35 +45,35 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function videoListItemToCardData(scene: VideoListItem, from?: string): VideoCardData {
-  const base = `/videos/${scene.id}`;
+export function videoListItemToCardData(video: VideoListItem, from?: string): VideoCardData {
+  const base = `/videos/${video.id}`;
   return {
-    id: scene.id,
+    id: video.id,
     href: from ? buildHrefWithFrom(base, from) : base,
-    title: scene.title,
-    thumbnail: toApiUrl(scene.thumbnailPath, scene.updatedAt),
-    cardThumbnail: scene.thumbnailPath?.includes("thumb-custom")
+    title: video.title,
+    thumbnail: toApiUrl(video.thumbnailPath, video.updatedAt),
+    cardThumbnail: video.thumbnailPath?.includes("thumb-custom")
       ? undefined
-      : toApiUrl(scene.cardThumbnailPath, scene.updatedAt),
-    trickplaySprite: toApiUrl(scene.spritePath, scene.updatedAt),
-    trickplayVtt: toApiUrl(scene.trickplayVttPath, scene.updatedAt),
-    scrubDurationSeconds: scene.duration ?? undefined,
-    duration: scene.durationFormatted ?? undefined,
-    resolution: scene.resolution ?? undefined,
-    codec: scene.codec ?? undefined,
-    fileSize: scene.fileSizeFormatted ?? undefined,
-    performers: scene.performers.map((performer) => ({
+      : toApiUrl(video.cardThumbnailPath, video.updatedAt),
+    trickplaySprite: toApiUrl(video.spritePath, video.updatedAt),
+    trickplayVtt: toApiUrl(video.trickplayVttPath, video.updatedAt),
+    scrubDurationSeconds: video.duration ?? undefined,
+    duration: video.durationFormatted ?? undefined,
+    resolution: video.resolution ?? undefined,
+    codec: video.codec ?? undefined,
+    fileSize: video.fileSizeFormatted ?? undefined,
+    performers: video.performers.map((performer) => ({
       name: performer.name,
       imagePath: toApiUrl(performer.imagePath) ?? undefined,
       isNsfw: performer.isNsfw,
     })),
-    tags: scene.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
-    rating: scene.rating ?? undefined,
-    views: scene.playCount,
-    isNsfw: scene.isNsfw,
-    hasSubtitles: scene.hasSubtitles ?? false,
-    seasonNumber: scene.seasonNumber ?? undefined,
-    episodeNumber: scene.episodeNumber ?? undefined,
+    tags: video.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
+    rating: video.rating ?? undefined,
+    views: video.playCount,
+    isNsfw: video.isNsfw,
+    hasSubtitles: video.hasSubtitles ?? false,
+    seasonNumber: video.seasonNumber ?? undefined,
+    episodeNumber: video.episodeNumber ?? undefined,
   };
 }
 

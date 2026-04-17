@@ -58,8 +58,8 @@ import { useCurrentPath } from "../../hooks/use-current-path";
 interface PerformerPageClientProps {
   id: string;
   initialPerformer: PerformerDetail | null;
-  initialScenes: VideoListItem[];
-  initialTotalScenes: number;
+  initialVideos: VideoListItem[];
+  initialTotalVideos: number;
   initialSeries: VideoSeriesListItemDto[];
   initialTotalSeries: number;
   initialGalleries: GalleryListItemDto[];
@@ -71,8 +71,8 @@ interface PerformerPageClientProps {
 export function PerformerPageClient({
   id,
   initialPerformer,
-  initialScenes,
-  initialTotalScenes,
+  initialVideos,
+  initialTotalVideos,
   initialSeries,
   initialTotalSeries,
   initialGalleries,
@@ -86,8 +86,8 @@ export function PerformerPageClient({
   const currentPath = useCurrentPath();
 
   const [performer, setPerformer] = useState(initialPerformer);
-  const [scenes, setScenes] = useState(initialScenes);
-  const [totalScenes, setTotalScenes] = useState(initialTotalScenes);
+  const [videos, setVideos] = useState(initialVideos);
+  const [totalVideos, setTotalVideos] = useState(initialTotalVideos);
   const [series, setSeries] = useState(initialSeries);
   const [totalSeries, setTotalSeries] = useState(initialTotalSeries);
   const [galleries, setGalleries] = useState(initialGalleries);
@@ -124,8 +124,8 @@ export function PerformerPageClient({
         }),
       ]);
 
-      setScenes(videosResponse.videos);
-      setTotalScenes(videosResponse.total);
+      setVideos(videosResponse.videos);
+      setTotalVideos(videosResponse.total);
       setSeries(seriesResponse.items);
       setTotalSeries(seriesResponse.total);
       setGalleries(galleriesResponse.galleries);
@@ -144,8 +144,8 @@ export function PerformerPageClient({
   const prevNsfwForRefetch = useRef(nsfwMode);
   useEffect(() => {
     setPerformer(initialPerformer);
-    setScenes(initialScenes);
-    setTotalScenes(initialTotalScenes);
+    setVideos(initialVideos);
+    setTotalVideos(initialTotalVideos);
     setSeries(initialSeries);
     setTotalSeries(initialTotalSeries);
     setGalleries(initialGalleries);
@@ -156,8 +156,8 @@ export function PerformerPageClient({
   }, [
     id,
     initialPerformer,
-    initialScenes,
-    initialTotalScenes,
+    initialVideos,
+    initialTotalVideos,
     initialSeries,
     initialTotalSeries,
     initialGalleries,
@@ -448,7 +448,7 @@ export function PerformerPageClient({
             <div className="mt-3 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5 text-sm text-text-muted">
                 <Film className="h-4 w-4" />
-                <span className="text-mono-sm">{formatVideoCount(totalScenes)}</span>
+                <span className="text-mono-sm">{formatVideoCount(totalVideos)}</span>
               </div>
               <div className="flex items-center gap-1.5 text-sm text-text-muted">
                 <Images className="h-4 w-4" />
@@ -531,8 +531,8 @@ export function PerformerPageClient({
 
           <section>
             <h4 className="mb-3 text-kicker">{terms.videos}</h4>
-            {totalScenes > 0 ? (
-              <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
+            {totalVideos > 0 ? (
+              <VideoGrid videos={videos} viewMode="grid" loading={false} from={currentPath} />
             ) : (
               <div className="surface-well p-8 text-center">
                 <Film className="mx-auto mb-2 h-8 w-8 text-text-disabled" />

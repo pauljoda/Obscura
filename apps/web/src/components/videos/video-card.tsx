@@ -12,7 +12,7 @@ import { NsfwBlur, NsfwShowModeChip, NsfwTagLabel, NsfwText, tagsVisibleInNsfwMo
 import { useNsfw } from "../nsfw/nsfw-context";
 
 interface VideoCardProps {
-  scene: VideoCardData;
+  video: VideoCardData;
   variant?: "grid" | "list" | "compact";
   index?: number;
   imageLoading?: "eager" | "lazy";
@@ -21,8 +21,8 @@ interface VideoCardProps {
   onToggleSelect?: (id: string) => void;
 }
 
-export function SceneCard({
-  scene,
+export function VideoCard({
+  video,
   variant = "grid",
   index = 0,
   imageLoading = "lazy",
@@ -31,57 +31,57 @@ export function SceneCard({
   onToggleSelect,
 }: VideoCardProps) {
   if (variant === "list") {
-    return <SceneListCard scene={scene} index={index} selected={selected} onToggleSelect={onToggleSelect} />;
+    return <VideoListCard video={video} index={index} selected={selected} onToggleSelect={onToggleSelect} />;
   }
 
   if (variant === "compact") {
-    return <SceneCompactCard scene={scene} onSelect={onSelect} />;
+    return <VideoCompactCard video={video} onSelect={onSelect} />;
   }
 
-  return <VideoGridCard scene={scene} imageLoading={imageLoading} index={index} />;
+  return <VideoGridCard video={video} imageLoading={imageLoading} index={index} />;
 }
 
 function VideoGridCard({
-  scene,
+  video,
   imageLoading,
   index,
 }: {
-  scene: VideoCardData;
+  video: VideoCardData;
   imageLoading: "eager" | "lazy";
   index: number;
 }) {
   const { mode } = useNsfw();
-  const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
-  const performersRow = tagsVisibleInNsfwMode(scene.performers ?? [], mode).map((p) => ({
+  const tagRow = tagsVisibleInNsfwMode(video.tags, mode);
+  const performersRow = tagsVisibleInNsfwMode(video.performers ?? [], mode).map((p) => ({
     name: p.name,
     imagePath: p.imagePath,
   }));
 
   return (
-    <NsfwBlur isNsfw={scene.isNsfw ?? false} className="h-full">
-      <Link href={scene.href} className="block h-full">
+    <NsfwBlur isNsfw={video.isNsfw ?? false} className="h-full">
+      <Link href={video.href} className="block h-full">
         <MediaCard
-          title={scene.title}
-          thumbnail={scene.thumbnail}
-          cardThumbnail={scene.cardThumbnail}
+          title={video.title}
+          thumbnail={video.thumbnail}
+          cardThumbnail={video.cardThumbnail}
           imageLoading={imageLoading}
-          trickplaySprite={scene.trickplaySprite}
-          trickplayVtt={scene.trickplayVtt}
-          scrubDurationSeconds={scene.scrubDurationSeconds}
-          duration={scene.duration}
-          resolution={scene.resolution}
-          codec={scene.codec}
-          hasSubtitles={scene.hasSubtitles}
-          fileSize={scene.fileSize}
-          studio={scene.studio}
+          trickplaySprite={video.trickplaySprite}
+          trickplayVtt={video.trickplayVtt}
+          scrubDurationSeconds={video.scrubDurationSeconds}
+          duration={video.duration}
+          resolution={video.resolution}
+          codec={video.codec}
+          hasSubtitles={video.hasSubtitles}
+          fileSize={video.fileSize}
+          studio={video.studio}
           performers={performersRow}
-          thumbnailOverlay={<NsfwShowModeChip isNsfw={scene.isNsfw} />}
+          thumbnailOverlay={<NsfwShowModeChip isNsfw={video.isNsfw} />}
           topLeftBadge={
-            scene.episodeNumber != null ? (
+            video.episodeNumber != null ? (
               <span className="bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
-                {scene.seasonNumber != null
-                  ? `S${String(scene.seasonNumber).padStart(2, "0")}E${String(scene.episodeNumber).padStart(2, "0")}`
-                  : `E${String(scene.episodeNumber).padStart(2, "0")}`}
+                {video.seasonNumber != null
+                  ? `S${String(video.seasonNumber).padStart(2, "0")}E${String(video.episodeNumber).padStart(2, "0")}`
+                  : `E${String(video.episodeNumber).padStart(2, "0")}`}
               </span>
             ) : undefined
           }
@@ -105,8 +105,8 @@ function VideoGridCard({
             ) : null
           }
           tagColors={VIDEO_TAG_COLORS}
-          rating={scene.rating}
-          views={scene.views}
+          rating={video.rating}
+          views={video.views}
           gradientClass={VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
         />
       </Link>
@@ -114,23 +114,23 @@ function VideoGridCard({
   );
 }
 
-function SceneListCard({
-  scene,
+function VideoListCard({
+  video,
   index,
   selected,
   onToggleSelect,
 }: {
-  scene: VideoCardData;
+  video: VideoCardData;
   index: number;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
   const { mode } = useNsfw();
-  const tagRow = tagsVisibleInNsfwMode(scene.tags, mode);
-  const performersRow = tagsVisibleInNsfwMode(scene.performers ?? [], mode);
+  const tagRow = tagsVisibleInNsfwMode(video.tags, mode);
+  const performersRow = tagsVisibleInNsfwMode(video.performers ?? [], mode);
 
   return (
-    <Link href={scene.href}>
+    <Link href={video.href}>
       <div className="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
         {onToggleSelect && (
           <Checkbox
@@ -138,30 +138,30 @@ function SceneListCard({
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               e.preventDefault();
-              onToggleSelect(scene.id);
+              onToggleSelect(video.id);
             }}
             className="flex-shrink-0"
           />
         )}
-        <NsfwBlur isNsfw={scene.isNsfw ?? false}>
+        <NsfwBlur isNsfw={video.isNsfw ?? false}>
           <div
             className={cn(
               "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
               VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length],
             )}
           >
-            {scene.thumbnail && (
+            {video.thumbnail && (
               <img
-                src={scene.cardThumbnail || scene.thumbnail}
-                alt={scene.title}
+                src={video.cardThumbnail || video.thumbnail}
+                alt={video.title}
                 loading={index < 6 ? "eager" : "lazy"}
                 decoding="async"
                 className="h-full w-full object-cover"
               />
             )}
             <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5">
-              <NsfwShowModeChip isNsfw={scene.isNsfw} />
-              {scene.hasSubtitles && (
+              <NsfwShowModeChip isNsfw={video.isNsfw} />
+              {video.hasSubtitles && (
                 <span
                   className="inline-flex items-center gap-0.5 bg-black/70 text-accent-100 border border-accent-500/40 px-1 py-px text-[0.5rem] font-mono uppercase tracking-[0.12em]"
                   title="Closed captions available"
@@ -170,9 +170,9 @@ function SceneListCard({
                   CC
                 </span>
               )}
-              {scene.duration ? (
+              {video.duration ? (
                 <span className="text-[0.55rem] font-mono bg-black/70 text-white/80 px-1">
-                  {scene.duration}
+                  {video.duration}
                 </span>
               ) : null}
             </div>
@@ -181,17 +181,17 @@ function SceneListCard({
 
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2 min-w-0">
-            <NsfwText isNsfw={scene.isNsfw ?? false} className="truncate text-[0.8rem] font-medium text-text-primary block">
-              {scene.title}
+            <NsfwText isNsfw={video.isNsfw ?? false} className="truncate text-[0.8rem] font-medium text-text-primary block">
+              {video.title}
             </NsfwText>
-            {scene.resolution && (
+            {video.resolution && (
               <span className="pill-accent px-1 py-0 text-[0.55rem] font-semibold flex-shrink-0">
-                {scene.resolution}
+                {video.resolution}
               </span>
             )}
-            {scene.codec && (
+            {video.codec && (
               <span className="text-[0.55rem] font-mono text-text-disabled flex-shrink-0">
-                {scene.codec}
+                {video.codec}
               </span>
             )}
           </div>
@@ -237,28 +237,28 @@ function SceneListCard({
         </div>
 
         <div className="hidden md:flex items-center gap-4 text-[0.65rem] text-text-disabled flex-shrink-0">
-          {scene.rating != null && scene.rating > 0 && (
+          {video.rating != null && video.rating > 0 && (
             <span className="flex items-center gap-0.5 text-glow-accent">
               <Star className="h-3 w-3 fill-current" />
-              {Math.round(scene.rating / 20)}
+              {Math.round(video.rating / 20)}
             </span>
           )}
-          {scene.fileSize && (
+          {video.fileSize && (
             <span className="flex items-center gap-1 text-ephemeral">
               <HardDrive className="h-3 w-3" />
-              {scene.fileSize}
+              {video.fileSize}
             </span>
           )}
-          {scene.views != null && scene.views > 0 && (
+          {video.views != null && video.views > 0 && (
             <span className="flex items-center gap-1 text-ephemeral">
               <Eye className="h-3 w-3" />
-              {scene.views}
+              {video.views}
             </span>
           )}
-          {scene.duration && (
+          {video.duration && (
             <span className="flex items-center gap-1 text-ephemeral">
               <Clock className="h-3 w-3" />
-              {scene.duration}
+              {video.duration}
             </span>
           )}
         </div>
@@ -267,11 +267,11 @@ function SceneListCard({
   );
 }
 
-function SceneCompactCard({
-  scene,
+function VideoCompactCard({
+  video,
   onSelect,
 }: {
-  scene: VideoCardData;
+  video: VideoCardData;
   onSelect?: (href: string) => void;
 }) {
   const content = (
@@ -279,12 +279,12 @@ function SceneCompactCard({
       <div
         className={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12 ",
-          !scene.thumbnail && VIDEO_CARD_GRADIENTS[0],
+          !video.thumbnail && VIDEO_CARD_GRADIENTS[0],
         )}
       >
-        {scene.cardThumbnail || scene.thumbnail ? (
+        {video.cardThumbnail || video.thumbnail ? (
           <img
-            src={scene.cardThumbnail || scene.thumbnail}
+            src={video.cardThumbnail || video.thumbnail}
             alt=""
             className="h-full w-full object-cover"
           />
@@ -294,14 +294,14 @@ function SceneCompactCard({
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-text-primary truncate">{scene.title}</div>
+        <div className="text-sm text-text-primary truncate">{video.title}</div>
         <div className="text-[0.68rem] text-text-muted truncate">
-          {[scene.studio, scene.duration].filter(Boolean).join(" · ") || "Video"}
+          {[video.studio, video.duration].filter(Boolean).join(" · ") || "Video"}
         </div>
       </div>
 
       <span className="shrink-0 tag-chip tag-chip-default text-[0.6rem]">
-        scene
+        video
       </span>
     </>
   );
@@ -309,7 +309,7 @@ function SceneCompactCard({
   if (onSelect) {
     return (
       <button
-        onClick={() => onSelect(scene.href)}
+        onClick={() => onSelect(video.href)}
         className="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
       >
         {content}
@@ -319,7 +319,7 @@ function SceneCompactCard({
 
   return (
     <Link
-      href={scene.href}
+      href={video.href}
       className="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
     >
       {content}

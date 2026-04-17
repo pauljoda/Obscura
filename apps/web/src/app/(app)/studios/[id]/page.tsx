@@ -60,13 +60,13 @@ export default function StudioPage({ params }: StudioPageProps) {
   const router = useRouter();
 
   const [studio, setStudio] = useState<StudioDetail | null>(null);
-  const [scenes, setScenes] = useState<VideoListItem[]>([]);
+  const [videos, setVideos] = useState<VideoListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [galleries, setGalleries] = useState<GalleryListItemDto[]>([]);
   const [totalGalleries, setTotalGalleries] = useState(0);
   const [audioLibraries, setAudioLibraries] = useState<AudioLibraryListItemDto[]>([]);
   const [totalAudioLibraries, setTotalAudioLibraries] = useState(0);
-  const [folders, setFolders] = useState<VideoSeriesListItemDto[]>([]);
+  const [series, setSeries] = useState<VideoSeriesListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -85,13 +85,13 @@ export default function StudioPage({ params }: StudioPageProps) {
         fetchAudioLibraries({ studio: data.name, root: "all", limit: 100, nsfw: nsfwMode }),
         fetchSeries({ studio: id, nsfw: nsfwMode, limit: 50 }).catch(() => ({ items: [] })),
       ]);
-      setScenes(videosData.videos);
+      setVideos(videosData.videos);
       setTotal(videosData.total);
       setGalleries(galleriesData.galleries);
       setTotalGalleries(galleriesData.total);
       setAudioLibraries(audioData.items);
       setTotalAudioLibraries(audioData.total);
-      setFolders(seriesData.items);
+      setSeries(seriesData.items);
       setNotFound(false);
     } catch {
       setNotFound(true);
@@ -321,11 +321,11 @@ export default function StudioPage({ params }: StudioPageProps) {
       <div className="separator" />
 
       {/* Series associated with this studio */}
-      {folders.length > 0 && (
+      {series.length > 0 && (
         <section>
           <h4 className="text-kicker mb-3">{terms.series}</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 mb-5">
-            {folders.map((f) => (
+            {series.map((f) => (
               <SeriesCard
                 key={f.id}
                 series={f}
@@ -339,7 +339,7 @@ export default function StudioPage({ params }: StudioPageProps) {
 
       <section>
         <h4 className="text-kicker mb-3">{terms.videos}</h4>
-        <VideoGrid videos={scenes} viewMode="grid" loading={false} from={currentPath} />
+        <VideoGrid videos={videos} viewMode="grid" loading={false} from={currentPath} />
       </section>
 
       <div className="separator" />

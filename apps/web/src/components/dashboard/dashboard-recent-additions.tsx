@@ -10,7 +10,7 @@ import {
 } from "../../lib/api";
 import { GalleryEntityCard } from "../galleries/gallery-entity-card";
 import { galleryListItemToCardData } from "../galleries/gallery-card-data";
-import { SceneCard } from "../videos/video-card";
+import { VideoCard } from "../videos/video-card";
 import { videoListItemToCardData } from "../videos/video-card-data";
 import { DASHBOARD_STAT_GRADIENTS, formatIngestStamp } from "./dashboard-utils";
 import { useNsfw } from "../nsfw/nsfw-context";
@@ -19,7 +19,7 @@ import { useTerms } from "../../lib/terminology";
 const MERGE_CAP = 11;
 
 type IngestRow =
-  | { kind: "video"; at: string; scene: VideoListItem }
+  | { kind: "video"; at: string; video: VideoListItem }
   | { kind: "gallery"; at: string; gallery: GalleryListItem };
 
 function mergeIngest(
@@ -27,10 +27,10 @@ function mergeIngest(
   galleries: GalleryListItem[]
 ): IngestRow[] {
   const rows: IngestRow[] = [
-    ...scenes.map((scene) => ({
+    ...scenes.map((video) => ({
       kind: "video" as const,
-      at: scene.createdAt,
-      scene,
+      at: video.createdAt,
+      video,
     })),
     ...galleries.map((gallery) => ({
       kind: "gallery" as const,
@@ -42,26 +42,26 @@ function mergeIngest(
   return rows.slice(0, MERGE_CAP);
 }
 
-function SceneIngestTile({
-  scene,
+function VideoIngestTile({
+  video,
   index,
   from,
 }: {
-  scene: VideoListItem;
+  video: VideoListItem;
   index: number;
   from?: string;
 }) {
   return (
     <div className="snap-start shrink-0 w-[min(78vw,280px)] sm:w-[240px]">
       <div className="focus-within:ring-2 focus-within:ring-border-accent-strong focus-within:ring-offset-2 focus-within:ring-offset-bg">
-        <SceneCard
-          scene={videoListItemToCardData(scene, from)}
+        <VideoCard
+          video={videoListItemToCardData(video, from)}
           index={index}
           imageLoading="lazy"
         />
       </div>
       <p className="text-mono-sm text-text-disabled mt-1.5 px-0.5">
-        {formatIngestStamp(scene.createdAt)}
+        {formatIngestStamp(video.createdAt)}
       </p>
     </div>
   );
@@ -134,7 +134,7 @@ export function DashboardRecentAdditions({
   const allMerged = mergeIngest(scenes, galleries);
   // In SFW mode, filter out NSFW items entirely so they leave no blank space
   const merged = mode === "off"
-    ? allMerged.filter((r) => r.kind === "video" ? !r.scene.isNsfw : !r.gallery.isNsfw)
+    ? allMerged.filter((r) => r.kind === "video" ? !r.video.isNsfw : !r.gallery.isNsfw)
     : allMerged;
 
   const showStillsSlot =
@@ -187,9 +187,9 @@ export function DashboardRecentAdditions({
             {merged.map((row, i) => {
               if (row.kind === "video") {
                 return (
-                  <SceneIngestTile
-                    key={`s-${row.scene.id}`}
-                    scene={row.scene}
+                  <VideoIngestTile
+                    key={`s-${row.video.id}`}
+                    video={row.video}
                     index={i}
                     from="/"
                   />

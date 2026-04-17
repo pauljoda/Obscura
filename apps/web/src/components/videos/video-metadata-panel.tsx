@@ -22,7 +22,7 @@ import {
 } from "../shared/metadata-panel";
 
 export interface VideoMetadataPanelProps {
-  scene: VideoDetailType;
+  video: VideoDetailType;
 }
 
 function formatBitRate(bps: number | null): string {
@@ -57,13 +57,13 @@ function formatEpisodeLabel(
   return parts.length > 0 ? parts.join(" ") : "\u2014";
 }
 
-export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
-  const isEpisode = scene.entityKind === "video_episode";
+export function VideoMetadataPanel({ video }: VideoMetadataPanelProps) {
+  const isEpisode = video.entityKind === "video_episode";
   const hasEpisodeMeta =
     isEpisode &&
-    (scene.seasonNumber != null ||
-      scene.episodeNumber != null ||
-      scene.absoluteEpisodeNumber != null);
+    (video.seasonNumber != null ||
+      video.episodeNumber != null ||
+      video.absoluteEpisodeNumber != null);
   return (
     <MetadataPanel
       sidebar={
@@ -75,9 +75,9 @@ export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
                 icon={Tv}
                 label="Episode"
                 value={formatEpisodeLabel(
-                  scene.seasonNumber,
-                  scene.episodeNumber,
-                  scene.absoluteEpisodeNumber,
+                  video.seasonNumber,
+                  video.episodeNumber,
+                  video.absoluteEpisodeNumber,
                 )}
               />
             )}
@@ -85,8 +85,8 @@ export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
               icon={Monitor}
               label="Resolution"
               value={
-                scene.width && scene.height
-                  ? `${scene.width}x${scene.height}`
+                video.width && video.height
+                  ? `${video.width}x${video.height}`
                   : "\u2014"
               }
             />
@@ -94,7 +94,7 @@ export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
               icon={FileVideo}
               label="Codec"
               value={
-                [scene.codec, scene.container?.toUpperCase()]
+                [video.codec, video.container?.toUpperCase()]
                   .filter(Boolean)
                   .join(" / ") || "\u2014"
               }
@@ -102,39 +102,39 @@ export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
             <InfoRow
               icon={HardDrive}
               label="Size"
-              value={scene.fileSizeFormatted ?? "\u2014"}
+              value={video.fileSizeFormatted ?? "\u2014"}
             />
             <InfoRow
               icon={Link2}
               label="Bitrate"
-              value={formatBitRate(scene.bitRate)}
+              value={formatBitRate(video.bitRate)}
             />
             <InfoRow
               icon={Zap}
               label="Framerate"
-              value={scene.frameRate ? `${scene.frameRate} fps` : "\u2014"}
+              value={video.frameRate ? `${video.frameRate} fps` : "\u2014"}
             />
             <InfoRow
               icon={Play}
               label="Play Count"
-              value={String(scene.playCount)}
+              value={String(video.playCount)}
             />
           </div>
 
           <NsfwGate>
             <div className="pt-2 border-t border-border-subtle">
               <h4 className="text-kicker mb-2">StashBox IDs</h4>
-              <StashIdChips entityType="video" entityId={scene.id} compact />
+              <StashIdChips entityType="video" entityId={video.id} compact />
             </div>
           </NsfwGate>
         </>
       }
     >
       <PerformersSection
-        performers={scene.performers}
-        parentIsNsfw={scene.isNsfw}
+        performers={video.performers}
+        parentIsNsfw={video.isNsfw}
       />
-      <TagsSection tags={scene.tags} />
+      <TagsSection tags={video.tags} />
     </MetadataPanel>
   );
 }
