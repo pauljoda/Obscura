@@ -285,6 +285,7 @@ Obscura works out of the box with zero configuration. These environment variable
 |----------|---------|-------------|
 | `OBSCURA_CACHE_DIR` | `/data/cache` | Directory for HLS cache, thumbnails, sprites, previews |
 | `OBSCURA_MAX_VIDEO_UPLOAD` | `21474836480` | Max bytes for a single upload (default ~21 GiB) |
+| `OBSCURA_SECRET` | auto-generated at `/data/.obscura-secret` | Secret key used to encrypt plugin credentials (e.g. TMDB API keys) at rest. Auto-generated on first boot and persisted in the data volume. Override only if you want to manage it externally; changing it invalidates all previously saved plugin credentials. |
 
 ### Multiple Media Directories
 

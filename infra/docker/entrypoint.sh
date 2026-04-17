@@ -3,10 +3,29 @@ set -e
 
 PGDATA="${PGDATA:-/data/postgres}"
 CACHE_DIR="/data/cache"
+SECRET_FILE="/data/.obscura-secret"
 
 # ── Ensure directories exist ──────────────────────────────────────
 mkdir -p "$PGDATA" "$CACHE_DIR" /run/postgresql
 chown -R postgres:postgres "$PGDATA" /run/postgresql
+
+# ── Resolve or generate OBSCURA_SECRET ────────────────────────────
+# Used by the API to encrypt plugin credentials (e.g. TMDB API keys) at rest.
+# Prefer an explicit env var; otherwise persist a randomly generated secret in
+# the data volume so plugin auth survives container recreation without making
+# users provision one by hand.
+if [ -z "$OBSCURA_SECRET" ]; then
+  if [ -f "$SECRET_FILE" ]; then
+    OBSCURA_SECRET="$(cat "$SECRET_FILE")"
+  else
+    echo "[obscura] Generating new OBSCURA_SECRET for plugin credential encryption..."
+    OBSCURA_SECRET="$(head -c 48 /dev/urandom | base64 | tr -d '\n/+=' | head -c 48)"
+    umask 077
+    printf '%s' "$OBSCURA_SECRET" > "$SECRET_FILE"
+    chmod 600 "$SECRET_FILE"
+  fi
+fi
+export OBSCURA_SECRET
 
 # ── Initialize PostgreSQL if fresh ────────────────────────────────
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
@@ -57,6 +76,7 @@ cd /app/apps/api
 DATABASE_URL="postgresql://postgres@127.0.0.1:5432/obscura" \
 OBSCURA_CACHE_DIR="$CACHE_DIR" \
 OBSCURA_DATA_DIR="/data" \
+OBSCURA_SECRET="$OBSCURA_SECRET" \
 PORT=4000 \
 HOST=127.0.0.1 \
 NODE_ENV=production \
