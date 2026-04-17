@@ -745,8 +745,8 @@ export async function jobsRoutes(app: FastifyInstance) {
       const targetLabel = sfwOnly
         ? "Relocate scene generated files"
         : targetDedicated
-          ? "Scene assets to dedicated cache"
-          : "Scene assets beside media files";
+          ? "Video assets to dedicated cache"
+          : "Video assets beside media files";
       const job = await queueVideoAssetStorageMigration(
         targetDedicated,
         manualTrigger,

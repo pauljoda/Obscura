@@ -37,9 +37,9 @@ import type {
   CollectionListQuery,
 } from "@obscura/contracts";
 
-// We import the scene list item builder from the scene service
-// to construct polymorphic entity embeds
-import * as videoSceneService from "./video-scene.service";
+// We import the video list item builder from the videos service
+// to construct polymorphic entity embeds.
+import * as videoService from "./videos";
 import * as galleryService from "./gallery.service";
 import * as imageService from "./image.service";
 import * as audioTrackService from "./audio-track.service";
@@ -277,7 +277,7 @@ async function loadEntitiesForItems(
   // Fetch each type. Collection items with entityType "video" resolve
   // against the video_episodes / video_movies tables.
   if (idsByType.video?.length) {
-    const videos = await videoSceneService.getVideosByIds(idsByType.video);
+    const videos = await videoService.getVideosByIds(idsByType.video);
     for (const video of videos) {
       entityMap.set(`video:${video.id}`, video as Record<string, unknown>);
     }

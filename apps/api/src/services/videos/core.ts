@@ -3,10 +3,9 @@
  * `video_episodes` / `video_movies` / `video_series` tables.
  *
  * Produces VideoListItemDto / VideoDetailDto / VideoStatsDto-shaped
- * responses so the existing `/scenes`-style client can consume them
- * without modification. Episodes expose `videoSeriesId = seriesId`;
- * movies expose `videoSeriesId = null` and are reachable via the
- * `uncategorized` scope.
+ * responses across the unified `/videos` API. Episodes expose
+ * `videoSeriesId = seriesId`; movies expose `videoSeriesId = null`
+ * and are reachable via the `uncategorized` scope.
  */
 import { existsSync } from "node:fs";
 import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
@@ -18,13 +17,13 @@ import {
   runProcess,
   allSceneVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
-import { enqueueQueueJob } from "../lib/job-enqueue";
+import { enqueueQueueJob } from "../../lib/job-enqueue";
 import {
   assertDirExists,
   resolveCollisionSafePath,
   streamToFile,
   validateUpload,
-} from "../lib/upload";
+} from "../../lib/upload";
 import {
   eq,
   ilike,
@@ -48,15 +47,15 @@ import {
   formatFileSize,
   getResolutionLabel,
 } from "@obscura/contracts";
-import { db, schema } from "../db";
-import { AppError } from "../plugins/error-handler";
+import { db, schema } from "../../db";
+import { AppError } from "../../plugins/error-handler";
 import {
   MAX_ENTITY_LIST_LIMIT,
   parsePagination,
   toArray,
   buildResolutionConditions,
   type SortConfig,
-} from "../lib/query-helpers";
+} from "../../lib/query-helpers";
 
 const {
   videoEpisodes,
@@ -288,7 +287,7 @@ function buildCommonDateFilters<T extends "episode" | "movie">(
  *   - uncategorized=true → only movies
  *   - neither → episodes + movies, ordered per sort
  */
-export async function listVideoScenes(query: ListVideosQuery) {
+export async function listVideos(query: ListVideosQuery) {
   const { limit, offset } = parsePagination(
     query.limit,
     query.offset,
@@ -922,7 +921,7 @@ export async function listVideoScenes(query: ListVideosQuery) {
 /**
  * Aggregate stats across episodes + movies.
  */
-export async function getVideoSceneStats(sfwOnly: boolean) {
+export async function getVideoStats(sfwOnly: boolean) {
   const epWhere = sfwOnly ? ne(videoEpisodes.isNsfw, true) : undefined;
   const mvWhere = sfwOnly ? ne(videoMovies.isNsfw, true) : undefined;
 
@@ -1094,7 +1093,7 @@ export async function loadVideoRow(
   return (await loadEpisodeRow(id)) ?? (await loadMovieRow(id));
 }
 
-export async function getVideoSceneDetail(id: string) {
+export async function getVideoDetail(id: string) {
   const row = await loadVideoRow(id);
   if (!row) {
     throw new AppError(404, "Video not found");
@@ -1517,7 +1516,7 @@ export async function getVideosByIds(ids: string[]) {
 
 // ─── Mutations ────────────────────────────────────────────────
 
-export async function updateVideoScene(id: string, body: UpdateVideoBody) {
+export async function updateVideo(id: string, body: UpdateVideoBody) {
   // Figure out which table owns the row
   const [ep] = await db
     .select({ id: videoEpisodes.id })
@@ -1688,7 +1687,7 @@ export async function updateVideoScene(id: string, body: UpdateVideoBody) {
   return { ok: true as const, id };
 }
 
-export async function deleteVideoScene(id: string, deleteFile?: boolean) {
+export async function deleteVideo(id: string, deleteFile?: boolean) {
   // Look up the row first so we know where the source file and
   // the derivative cache files live. We keep a local copy of the
   // file path because the DELETE below removes the row and we
@@ -2234,7 +2233,7 @@ export async function uploadVideoEpisode(
   };
 }
 
-export async function resetVideoSceneMetadata(id: string) {
+export async function resetVideoMetadata(id: string) {
   const row = await loadVideoRow(id);
   if (!row) throw new AppError(404, "Video not found");
   const table = row.kind === "episode" ? videoEpisodes : videoMovies;

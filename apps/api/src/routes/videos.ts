@@ -1,64 +1,64 @@
 import type { FastifyInstance } from "fastify";
 import type { MultipartFile } from "@fastify/multipart";
-import * as videoSceneService from "../services/video-scene.service";
+import * as videoService from "../services/videos";
 import * as videoSubtitlesService from "../services/video-subtitles.service";
 import * as videoMarkersService from "../services/video-markers.service";
 
 export async function videosRoutes(app: FastifyInstance) {
   // ─── GET /videos ──────────────────────────────────────────────
   app.get("/videos", async (request) => {
-    const query = request.query as videoSceneService.ListVideosQuery;
-    return videoSceneService.listVideoScenes(query);
+    const query = request.query as videoService.ListVideosQuery;
+    return videoService.listVideos(query);
   });
 
   // ─── GET /videos/stats ────────────────────────────────────────
   app.get("/videos/stats", async (request) => {
     const query = request.query as { nsfw?: string };
-    return videoSceneService.getVideoSceneStats(query.nsfw === "off");
+    return videoService.getVideoStats(query.nsfw === "off");
   });
 
   // ─── GET /videos/:id ──────────────────────────────────────────
   app.get("/videos/:id", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.getVideoSceneDetail(id);
+    return videoService.getVideoDetail(id);
   });
 
   // ─── PATCH /videos/:id ────────────────────────────────────────
   app.patch("/videos/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const body = request.body as videoSceneService.UpdateVideoBody;
-    return videoSceneService.updateVideoScene(id, body);
+    const body = request.body as videoService.UpdateVideoBody;
+    return videoService.updateVideo(id, body);
   });
 
   // ─── DELETE /videos/:id ───────────────────────────────────────
   app.delete("/videos/:id", async (request) => {
     const { id } = request.params as { id: string };
     const query = request.query as { deleteFile?: string };
-    return videoSceneService.deleteVideoScene(id, query.deleteFile === "true");
+    return videoService.deleteVideo(id, query.deleteFile === "true");
   });
 
   // ─── POST /videos/:id/reset-metadata ──────────────────────────
   app.post("/videos/:id/reset-metadata", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.resetVideoSceneMetadata(id);
+    return videoService.resetVideoMetadata(id);
   });
 
   // ─── POST /videos/:id/play ────────────────────────────────────
   app.post("/videos/:id/play", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.recordVideoPlay(id);
+    return videoService.recordVideoPlay(id);
   });
 
   // ─── POST /videos/:id/orgasm ──────────────────────────────────
   app.post("/videos/:id/orgasm", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.recordVideoOrgasm(id);
+    return videoService.recordVideoOrgasm(id);
   });
 
   // ─── POST /videos/:id/preview/rebuild ─────────────────────────
   app.post("/videos/:id/preview/rebuild", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.rebuildVideoPreview(id);
+    return videoService.rebuildVideoPreview(id);
   });
 
   // ─── Thumbnails ───────────────────────────────────────────────
@@ -70,24 +70,24 @@ export async function videosRoutes(app: FastifyInstance) {
       return { error: "No file uploaded" };
     }
     const buffer = await file.toBuffer();
-    return videoSceneService.setCustomVideoThumbnail(id, buffer);
+    return videoService.setCustomVideoThumbnail(id, buffer);
   });
 
   app.delete("/videos/:id/thumbnail", async (request) => {
     const { id } = request.params as { id: string };
-    return videoSceneService.resetVideoThumbnail(id);
+    return videoService.resetVideoThumbnail(id);
   });
 
   app.post("/videos/:id/thumbnail/from-url", async (request) => {
     const { id } = request.params as { id: string };
     const { imageUrl } = request.body as { imageUrl: string };
-    return videoSceneService.setCustomVideoThumbnailFromUrl(id, imageUrl);
+    return videoService.setCustomVideoThumbnailFromUrl(id, imageUrl);
   });
 
   app.post("/videos/:id/thumbnail/from-frame", async (request) => {
     const { id } = request.params as { id: string };
     const body = request.body as { seconds?: number };
-    return videoSceneService.setCustomVideoThumbnailFromFrame(
+    return videoService.setCustomVideoThumbnailFromFrame(
       id,
       Number(body?.seconds),
     );
@@ -144,13 +144,13 @@ export async function videosRoutes(app: FastifyInstance) {
     }
 
     if (seriesId) {
-      return videoSceneService.uploadVideoEpisode(seriesId, file);
+      return videoService.uploadVideoEpisode(seriesId, file);
     }
     if (!libraryRootId) {
       reply.code(400);
       return { error: "libraryRootId or seriesId field is required" };
     }
-    return videoSceneService.uploadVideoMovie(libraryRootId, file);
+    return videoService.uploadVideoMovie(libraryRootId, file);
   });
 
   // ─── Subtitles ────────────────────────────────────────────────
