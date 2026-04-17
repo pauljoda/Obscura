@@ -1005,7 +1005,7 @@ export interface NormalizedPerformerResult {
 
 // ─── Search DTOs ────────────────────────────────────────────────
 
-export type EntityKind = "scene" | "scene-folder" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
+export type EntityKind = "video" | "video-series" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
 
 export interface SearchResultItem {
   id: string;
@@ -1181,7 +1181,7 @@ export interface AudioTrackMarkerDto {
 
 export type CollectionMode = "manual" | "dynamic" | "hybrid";
 export type CollectionCoverMode = "mosaic" | "custom" | "item";
-export type CollectionEntityType = "scene" | "gallery" | "image" | "audio-track";
+export type CollectionEntityType = "video" | "gallery" | "image" | "audio-track";
 export type CollectionItemSource = "manual" | "dynamic";
 
 // ─── Collection Rule Tree ──────────────────────────────────────
@@ -1259,15 +1259,15 @@ export const COLLECTION_RULE_FIELDS: CollectionRuleFieldDef[] = [
   { field: "performers", label: "Performers", fieldType: "relation", entityTypes: [], operators: ["in", "not_in"] },
   { field: "studio", label: "Studio", fieldType: "relation", entityTypes: [], operators: ["in", "not_in", "is_null", "is_not_null"] },
   { field: "createdAt", label: "Added Date", fieldType: "date", entityTypes: [], operators: ["greater_than", "less_than", "between"] },
-  { field: "fileSize", label: "File Size", fieldType: "number", entityTypes: ["scene", "image", "audio-track"], operators: ["greater_than", "less_than", "between"] },
+  { field: "fileSize", label: "File Size", fieldType: "number", entityTypes: ["video", "image", "audio-track"], operators: ["greater_than", "less_than", "between"] },
 
-  // Scene-specific
-  { field: "duration", label: "Duration", fieldType: "number", entityTypes: ["scene", "audio-track"], operators: ["greater_than", "less_than", "between", "is_null", "is_not_null"] },
-  { field: "resolution", label: "Resolution", fieldType: "enum", entityTypes: ["scene"], operators: ["in", "not_in"], enumValues: ["4K", "1080p", "720p", "480p"] },
-  { field: "codec", label: "Codec", fieldType: "text", entityTypes: ["scene"], operators: ["equals", "not_equals", "in", "not_in"] },
-  { field: "interactive", label: "Interactive", fieldType: "boolean", entityTypes: ["scene"], operators: ["is_true", "is_false"] },
-  { field: "playCount", label: "Play Count", fieldType: "number", entityTypes: ["scene", "audio-track"], operators: ["equals", "greater_than", "less_than", "greater_equal", "less_equal", "between"] },
-  { field: "sceneFolderId", label: "Scene Folder", fieldType: "relation", entityTypes: ["scene"], operators: ["equals", "in", "not_in"] },
+  // Video-specific
+  { field: "duration", label: "Duration", fieldType: "number", entityTypes: ["video", "audio-track"], operators: ["greater_than", "less_than", "between", "is_null", "is_not_null"] },
+  { field: "resolution", label: "Resolution", fieldType: "enum", entityTypes: ["video"], operators: ["in", "not_in"], enumValues: ["4K", "1080p", "720p", "480p"] },
+  { field: "codec", label: "Codec", fieldType: "text", entityTypes: ["video"], operators: ["equals", "not_equals", "in", "not_in"] },
+  { field: "interactive", label: "Interactive", fieldType: "boolean", entityTypes: ["video"], operators: ["is_true", "is_false"] },
+  { field: "playCount", label: "Play Count", fieldType: "number", entityTypes: ["video", "audio-track"], operators: ["equals", "greater_than", "less_than", "greater_equal", "less_equal", "between"] },
+  { field: "videoSeriesId", label: "Series", fieldType: "relation", entityTypes: ["video"], operators: ["equals", "in", "not_in"] },
 
   // Gallery-specific
   { field: "galleryType", label: "Gallery Type", fieldType: "enum", entityTypes: ["gallery"], operators: ["equals", "not_equals", "in"], enumValues: ["folder", "zip", "virtual"] },

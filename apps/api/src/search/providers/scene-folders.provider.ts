@@ -10,12 +10,11 @@ const { videoSeries } = schema;
 
 /**
  * Folders/series search provider backed by `video_series`. Returns results as
- * `kind: "scene-folder"` for wire compatibility with the existing UI grid,
- * and links at `/videos?folder=:id` which the /videos list already routes
- * through the video-folder service.
+ * `kind: "video-series"` and links at `/videos?folder=:id` which the
+ * /videos list already routes through the video-folder service.
  */
 export const sceneFoldersSearchProvider: SearchProvider = {
-  kind: "scene-folder",
+  kind: "video-series",
   label: "Folders",
   defaultPreviewLimit: 2,
 
@@ -80,7 +79,7 @@ export const sceneFoldersSearchProvider: SearchProvider = {
         const episodeCount = Number(r.totalEpisodeCount ?? 0);
         return {
           id: r.id,
-          kind: "scene-folder" as const,
+          kind: "video-series" as const,
           title: r.title,
           subtitle:
             episodeCount > 0

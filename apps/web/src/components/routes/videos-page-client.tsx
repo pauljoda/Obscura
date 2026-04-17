@@ -823,8 +823,8 @@ export function VideosPageClient({
     : terms.uncategorizedScenes;
 
   const uploadTarget = activeFolder
-    ? { kind: "scene" as const, sceneFolderId: activeFolder.id }
-    : { kind: "scene" as const };
+    ? { kind: "video" as const, sceneFolderId: activeFolder.id }
+    : { kind: "video" as const };
 
   return (
     <div className="relative space-y-4">
@@ -1424,7 +1424,7 @@ export function VideosPageClient({
           <ConfirmDeleteDialog
             open={deleteDialogOpen}
             onClose={() => setDeleteDialogOpen(false)}
-            entityType="scene"
+            entityType="video"
             count={selection.count}
             allowDeleteFromDisk
             onDeleteFromLibrary={() => void handleBulkDelete(false)}

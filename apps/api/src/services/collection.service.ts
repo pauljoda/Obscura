@@ -79,7 +79,7 @@ async function computeTypeCounts(
     .groupBy(collectionItems.entityType);
 
   const typeCounts: Record<CollectionEntityType, number> = {
-    scene: 0,
+    video: 0,
     gallery: 0,
     image: 0,
     "audio-track": 0,
@@ -274,16 +274,12 @@ async function loadEntitiesForItems(
     idsByType[row.entityType].push(row.entityId);
   }
 
-  // Fetch each type. Collection items stored with entityType "scene"
-  // now resolve against the new video_episodes / video_movies tables;
-  // the string tag stays "scene" for backward compatibility with
-  // existing collection_items rows, but the lookup hits the video
-  // tables. Legacy scene IDs that were never migrated will be absent
-  // from the resolved set and surface as "missing" in the UI.
-  if (idsByType.scene?.length) {
-    const scenes = await videoSceneService.getVideosByIds(idsByType.scene);
-    for (const scene of scenes) {
-      entityMap.set(`scene:${scene.id}`, scene as Record<string, unknown>);
+  // Fetch each type. Collection items with entityType "video" resolve
+  // against the video_episodes / video_movies tables.
+  if (idsByType.video?.length) {
+    const videos = await videoSceneService.getVideosByIds(idsByType.video);
+    for (const video of videos) {
+      entityMap.set(`video:${video.id}`, video as Record<string, unknown>);
     }
   }
 

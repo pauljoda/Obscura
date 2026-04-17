@@ -38,7 +38,7 @@ describe("UploadDropZone", () => {
 
   it("shows the overlay during file drags and uploads dropped files", () => {
     render(
-      <UploadDropZone target={{ kind: "scene", libraryRootId: "root-1" }}>
+      <UploadDropZone target={{ kind: "video", libraryRootId: "root-1" }}>
         <div>content</div>
       </UploadDropZone>,
     );

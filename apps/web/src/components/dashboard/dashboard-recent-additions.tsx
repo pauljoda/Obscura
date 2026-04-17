@@ -19,7 +19,7 @@ import { useTerms } from "../../lib/terminology";
 const MERGE_CAP = 11;
 
 type IngestRow =
-  | { kind: "scene"; at: string; scene: SceneListItem }
+  | { kind: "video"; at: string; scene: SceneListItem }
   | { kind: "gallery"; at: string; gallery: GalleryListItem };
 
 function mergeIngest(
@@ -28,7 +28,7 @@ function mergeIngest(
 ): IngestRow[] {
   const rows: IngestRow[] = [
     ...scenes.map((scene) => ({
-      kind: "scene" as const,
+      kind: "video" as const,
       at: scene.createdAt,
       scene,
     })),
@@ -134,11 +134,11 @@ export function DashboardRecentAdditions({
   const allMerged = mergeIngest(scenes, galleries);
   // In SFW mode, filter out NSFW items entirely so they leave no blank space
   const merged = mode === "off"
-    ? allMerged.filter((r) => r.kind === "scene" ? !r.scene.isNsfw : !r.gallery.isNsfw)
+    ? allMerged.filter((r) => r.kind === "video" ? !r.scene.isNsfw : !r.gallery.isNsfw)
     : allMerged;
 
   const showStillsSlot =
-    !loading && galleries.length === 0 && merged.some((r) => r.kind === "scene");
+    !loading && galleries.length === 0 && merged.some((r) => r.kind === "video");
 
   return (
     <section>
@@ -185,7 +185,7 @@ export function DashboardRecentAdditions({
         ) : (
           <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-hidden snap-x snap-mandatory">
             {merged.map((row, i) => {
-              if (row.kind === "scene") {
+              if (row.kind === "video") {
                 return (
                   <SceneIngestTile
                     key={`s-${row.scene.id}`}

@@ -14,7 +14,7 @@ import {
 import { useNsfw } from "./nsfw/nsfw-context";
 
 interface StashIdChipsProps {
-  entityType: "scene" | "performer" | "studio" | "tag";
+  entityType: "video" | "performer" | "studio" | "tag";
   entityId: string;
   /** Pre-loaded stash IDs (avoids initial fetch) */
   initialStashIds?: StashIdEntry[];
@@ -197,7 +197,7 @@ export function StashIdChips({
 
 /** Helper to auto-save a stash ID after identification. Returns the created entry. */
 export async function autoSaveStashId(
-  entityType: "scene" | "performer" | "studio" | "tag",
+  entityType: "video" | "performer" | "studio" | "tag",
   entityId: string,
   stashBoxEndpointId: string,
   remoteStashId: string | undefined | null,

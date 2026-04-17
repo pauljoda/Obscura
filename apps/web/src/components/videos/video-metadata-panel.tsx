@@ -124,7 +124,7 @@ export function VideoMetadataPanel({ scene }: VideoMetadataPanelProps) {
           <NsfwGate>
             <div className="pt-2 border-t border-border-subtle">
               <h4 className="text-kicker mb-2">StashBox IDs</h4>
-              <StashIdChips entityType="scene" entityId={scene.id} compact />
+              <StashIdChips entityType="video" entityId={scene.id} compact />
             </div>
           </NsfwGate>
         </>

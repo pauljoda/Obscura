@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- Renamed remaining `"scene"` entity-type string literals to `"video"` across collection components, condition builder, playlist controller, and confirm-delete dialog.
+- Renamed all `entityType` / `kind` string values from `"scene"` → `"video"` and `"scene-folder"` → `"video-series"` across the entire codebase — contracts, DB schema, API services, search providers, routes, and all web components. A data migration (0017) rewrites existing rows in `collection_items`, `stash_ids`, `external_ids`, and `scrape_results` so no manual intervention is needed on upgrade.
 
 ### Removed
 

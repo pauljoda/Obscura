@@ -10,7 +10,7 @@ describe("ConfirmDeleteDialog", () => {
     render(
       <ConfirmDeleteDialog
         open
-        entityType="scene"
+        entityType="video"
         count={2}
         onClose={() => {}}
         onDeleteFromLibrary={onDeleteFromLibrary}

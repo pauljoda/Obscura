@@ -32,7 +32,7 @@ export function SearchResultCard({
   onSelect,
   from,
 }: SearchResultCardProps) {
-  if (item.kind === "scene") {
+  if (item.kind === "video") {
     const scene = searchVideoItemToCardData(item, from);
 
     if (scene) {

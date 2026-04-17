@@ -219,7 +219,7 @@ export function ScrapePhashesTab() {
       if (!trimmed || !endpointId) return;
       try {
         const created = await createStashId({
-          entityType: "scene",
+          entityType: "video",
           entityId: sceneId,
           stashBoxEndpointId: endpointId,
           stashId: trimmed,

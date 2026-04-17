@@ -91,7 +91,7 @@ export function SearchPageClient({ initialQuery, initialKinds }: SearchPageClien
   }, [query, minRating, dateFrom, dateTo]);
 
   const kindLabel = (kind: string, baseLabel: string) => {
-    if (kind === "scene") return terms.scenes;
+    if (kind === "video") return terms.scenes;
     if (kind === "performer") return terms.performers;
     return baseLabel;
   };
@@ -374,7 +374,7 @@ function SearchSection({
       <div
         className={cn(
           "grid gap-2",
-          kind === "scene"
+          kind === "video"
             ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             : kind === "gallery"
             ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"

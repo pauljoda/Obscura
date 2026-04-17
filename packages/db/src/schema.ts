@@ -648,7 +648,7 @@ export const stashIds = pgTable(
   "stash_ids",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    entityType: text("entity_type").notNull(), // "scene" | "performer" | "studio" | "tag"
+    entityType: text("entity_type").notNull(), // "video" | "performer" | "studio" | "tag"
     entityId: uuid("entity_id").notNull(),
     stashBoxEndpointId: uuid("stash_box_endpoint_id")
       .notNull()
@@ -733,7 +733,7 @@ export const externalIds = pgTable(
   "external_ids",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    entityType: text("entity_type").notNull(), // "scene" | "folder" | "gallery" | "audio_library" | "audio_track" | "image"
+    entityType: text("entity_type").notNull(), // "video" | "video_series" | "gallery" | "audio_library" | "audio_track" | "image"
     entityId: uuid("entity_id").notNull(),
     provider: text("provider").notNull(), // "tvdb" | "tmdb" | "youtube" | "musicbrainz"
     externalId: text("external_id").notNull(),
@@ -812,7 +812,7 @@ export const scrapeResults = pgTable(
     // removed so the DROP TABLE in finalize() can run cleanly.
     sceneId: uuid("scene_id"),
     // Generic entity reference
-    entityType: text("entity_type").notNull().default("scene"),
+    entityType: text("entity_type").notNull().default("video"),
     entityId: uuid("entity_id"),
     // Source: one of scraper, stashbox, or plugin
     scraperPackageId: uuid("scraper_package_id")
@@ -1421,7 +1421,7 @@ export const collectionItems = pgTable(
     collectionId: uuid("collection_id")
       .notNull()
       .references(() => collections.id, { onDelete: "cascade" }),
-    entityType: text("entity_type").notNull(), // "scene" | "gallery" | "image" | "audio-track"
+    entityType: text("entity_type").notNull(), // "video" | "gallery" | "image" | "audio-track"
     entityId: uuid("entity_id").notNull(),
     source: text("source").notNull().default("manual"), // "manual" | "dynamic"
     sortOrder: integer("sort_order").default(0).notNull(),

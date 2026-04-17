@@ -8,8 +8,8 @@ import { galleriesSearchProvider } from "./providers/galleries.provider";
 import { imagesSearchProvider } from "./providers/images.provider";
 
 export const searchProviders = new Map<string, SearchProvider>([
-  ["scene-folder", sceneFoldersSearchProvider],
-  ["scene", scenesSearchProvider],
+  ["video-series", sceneFoldersSearchProvider],
+  ["video", scenesSearchProvider],
   ["performer", performersSearchProvider],
   ["studio", studiosSearchProvider],
   ["tag", tagsSearchProvider],

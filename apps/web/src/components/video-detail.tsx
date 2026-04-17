@@ -514,8 +514,8 @@ export function VideoDetail({
               subtitleChoiceLocked={subtitleChoiceLocked}
               subtitleDefaults={subtitleDefaults}
               defaultPlaybackMode={defaultPlaybackMode}
-              autoPlay={playlist.isActive && playlist.isPlaylistItem("scene", scene.id)}
-              onEnded={() => playlist.reportContentEnded("scene", scene.id)}
+              autoPlay={playlist.isActive && playlist.isPlaylistItem("video", scene.id)}
+              onEnded={() => playlist.reportContentEnded("video", scene.id)}
             />
           </div>
           {isTranscriptDocked && (
@@ -887,7 +887,7 @@ export function VideoDetail({
       <AddToCollectionModal
         open={collectionModalOpen}
         onClose={() => setCollectionModalOpen(false)}
-        entityType="scene"
+        entityType="video"
         entityId={id}
         entityTitle={scene.title}
       />

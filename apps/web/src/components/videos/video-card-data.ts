@@ -78,7 +78,7 @@ export function videoListItemToCardData(scene: SceneListItem, from?: string): Vi
 }
 
 export function searchVideoItemToCardData(item: SearchResultItem, from?: string): VideoCardData | null {
-  if (item.kind !== "scene") return null;
+  if (item.kind !== "video") return null;
 
   const thumbnailPath = toApiUrl(item.imagePath);
   const rawCardThumbnailPath = readMetaString(item.meta, "cardThumbnailPath");

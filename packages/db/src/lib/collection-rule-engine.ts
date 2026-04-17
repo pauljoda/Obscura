@@ -7,10 +7,8 @@
  * All functions accept a `db` parameter so the engine works with any
  * Drizzle connection (API or worker).
  *
- * Video-scene rules now evaluate against `video_episodes` and
- * `video_movies` (not the retired `scenes` table). For wire-compat with
- * existing `collection_items.entityType = 'scene'` rows, both sources
- * are still surfaced under the external entity type `"scene"` — the
+ * Video rules evaluate against `video_episodes` and `video_movies`.
+ * Both sources are surfaced under the entity type `"video"` — the
  * collection hydration service resolves each id against either
  * `video_episodes` or `video_movies` at read time.
  */
@@ -151,7 +149,7 @@ const VIDEO_MOVIE_META: EntityTableMeta = {
 };
 
 const ENTITY_META: Record<
-  Exclude<CollectionEntityType, "scene">,
+  Exclude<CollectionEntityType, "video">,
   EntityTableMeta
 > = {
   gallery: {
@@ -360,9 +358,9 @@ async function translateCondition(
     return null;
   }
 
-  if (field === "sceneFolderId") {
-    // The legacy `scene_folder_id` mapped to the folder a scene lived
-    // in; its new-model equivalent is `video_episodes.series_id`.
+  if (field === "videoSeriesId") {
+    // Maps to `video_episodes.series_id` — filters episodes by their
+    // parent series.
     if (meta.table === videoEpisodes) {
       const col = videoEpisodes.seriesId;
       if (operator === "equals") return eq(col, value as string);
@@ -506,13 +504,13 @@ export interface ResolvedItem {
   entityId: string;
 }
 
-async function evaluateSceneRules(
+async function evaluateVideoRules(
   db: AppDb,
   ruleTree: CollectionRuleGroup,
 ): Promise<string[]> {
   const [episodeSql, movieSql] = await Promise.all([
-    translateNode(db, ruleTree, "scene", VIDEO_EPISODE_META),
-    translateNode(db, ruleTree, "scene", VIDEO_MOVIE_META),
+    translateNode(db, ruleTree, "video", VIDEO_EPISODE_META),
+    translateNode(db, ruleTree, "video", VIDEO_MOVIE_META),
   ]);
 
   const ids: string[] = [];
@@ -542,12 +540,12 @@ export async function evaluateRuleTree(
 ): Promise<ResolvedItem[]> {
   const allItems: ResolvedItem[] = [];
 
-  // Scenes first — union of episode + movie ids, surfaced as "scene" type.
-  for (const id of await evaluateSceneRules(db, ruleTree)) {
-    allItems.push({ entityType: "scene", entityId: id });
+  // Videos first — union of episode + movie ids, surfaced as "video" type.
+  for (const id of await evaluateVideoRules(db, ruleTree)) {
+    allItems.push({ entityType: "video", entityId: id });
   }
 
-  const otherTypes: Array<Exclude<CollectionEntityType, "scene">> = [
+  const otherTypes: Array<Exclude<CollectionEntityType, "video">> = [
     "gallery",
     "image",
     "audio-track",
@@ -582,7 +580,7 @@ export async function previewRuleTree(
   items: ResolvedItem[];
 }> {
   const byType: Record<CollectionEntityType, number> = {
-    scene: 0,
+    video: 0,
     gallery: 0,
     image: 0,
     "audio-track": 0,
@@ -591,16 +589,16 @@ export async function previewRuleTree(
   const sampleItems: ResolvedItem[] = [];
   let total = 0;
 
-  // Scenes (episode + movie union)
-  const sceneIds = await evaluateSceneRules(db, ruleTree);
-  byType.scene = sceneIds.length;
-  total += sceneIds.length;
-  for (const id of sceneIds) {
+  // Videos (episode + movie union)
+  const videoIds = await evaluateVideoRules(db, ruleTree);
+  byType.video = videoIds.length;
+  total += videoIds.length;
+  for (const id of videoIds) {
     if (sampleItems.length >= sampleLimit) break;
-    sampleItems.push({ entityType: "scene", entityId: id });
+    sampleItems.push({ entityType: "video", entityId: id });
   }
 
-  const otherTypes: Array<Exclude<CollectionEntityType, "scene">> = [
+  const otherTypes: Array<Exclude<CollectionEntityType, "video">> = [
     "gallery",
     "image",
     "audio-track",

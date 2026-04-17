@@ -5,7 +5,7 @@ import type {
 
 /** Describes where an upload should land. */
 export type UploadTarget =
-  | { kind: "scene"; libraryRootId?: string; sceneFolderId?: string }
+  | { kind: "video"; libraryRootId?: string; sceneFolderId?: string }
   | { kind: "image"; galleryId: string }
   | { kind: "audio"; audioLibraryId?: string };
 
@@ -13,7 +13,7 @@ export type UploadCategory = "video" | "image" | "audio";
 
 export function categoryForTarget(target: UploadTarget): UploadCategory {
   switch (target.kind) {
-    case "scene":
+    case "video":
       return "video";
     case "image":
       return "image";

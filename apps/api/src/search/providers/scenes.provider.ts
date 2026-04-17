@@ -20,10 +20,10 @@ const {
  * Videos search provider backed by the typed video_episodes + video_movies
  * tables. Returns a merged, score-sorted result set so the UI never needs to
  * distinguish between an episode row and a movie row — both render as
- * "scene"-kind cards.
+ * "video"-kind cards.
  */
 export const scenesSearchProvider: SearchProvider = {
-  kind: "scene",
+  kind: "video",
   label: "Videos",
   defaultPreviewLimit: 3,
 
@@ -218,7 +218,7 @@ export const scenesSearchProvider: SearchProvider = {
       total,
       items: paged.map((r) => ({
         id: r.id,
-        kind: "scene" as const,
+        kind: "video" as const,
         title: r.title ?? "Untitled",
         subtitle: r.studioName ?? null,
         imagePath: r.thumbnailPath ?? null,

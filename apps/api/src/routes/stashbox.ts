@@ -842,10 +842,8 @@ export async function stashboxRoutes(app: FastifyInstance) {
     );
     const offset = (page - 1) * pageSize;
 
-    // Pull all stash-id rows that point at a video entity (episode or
-    // movie). The legacy `entityType = 'scene'` string is queried too so
-    // pre-port rows continue to show up until the post-finalize data
-    // migration rewrites them.
+    // Pull all stash-id rows that point at a video entity (episode,
+    // movie, or the generic "video" tag used for new rows).
     const stashIdRows = await db
       .selectDistinct({
         entityId: stashIds.entityId,
@@ -853,7 +851,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       })
       .from(stashIds)
       .where(
-        inArray(stashIds.entityType, ["video_episode", "video_movie", "scene"]),
+        inArray(stashIds.entityType, ["video_episode", "video_movie", "video"]),
       )
       .orderBy(stashIds.entityId);
 

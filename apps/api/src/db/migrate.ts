@@ -182,6 +182,19 @@ const LEGACY_SCHEMA_SENTINELS: Record<
     // 0016 drops library_settings.use_library_root_as_folder. "Applied"
     // == "column is gone".
     !(await columnExists(c, "library_settings", "use_library_root_as_folder")),
+  "0017_robust_menace": async (c) => {
+    // 0017 rewrites entity_type strings from "scene" → "video" and
+    // "folder" → "video_series" across collection_items, stash_ids,
+    // and external_ids. Sentinel: scrape_results default flipped to
+    // 'video'. Check the column default in the catalog.
+    const rows = await c<{ column_default: string | null }[]>`
+      SELECT column_default FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'scrape_results'
+        AND column_name = 'entity_type'
+    `;
+    return rows[0]?.column_default === "'video'::text";
+  },
 };
 
 /**

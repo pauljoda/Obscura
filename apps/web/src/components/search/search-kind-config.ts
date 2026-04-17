@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 
 export const ALL_SEARCH_KINDS: EntityKind[] = [
-  "scene-folder",
-  "scene",
+  "video-series",
+  "video",
   "performer",
   "studio",
   "tag",
@@ -30,8 +30,8 @@ interface SearchKindConfig {
 }
 
 export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
-  "scene-folder": { label: "Folders", icon: FolderOpen, href: "/videos" },
-  scene: { label: "Videos", icon: Film, href: "/videos" },
+  "video-series": { label: "Folders", icon: FolderOpen, href: "/videos" },
+  video: { label: "Videos", icon: Film, href: "/videos" },
   performer: { label: "Actors", icon: Users, href: "/performers" },
   studio: { label: "Studios", icon: Building2, href: "/studios" },
   tag: { label: "Tags", icon: Tag, href: "/tags" },

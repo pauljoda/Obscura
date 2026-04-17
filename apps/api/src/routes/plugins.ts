@@ -462,11 +462,11 @@ export async function pluginsRoutes(app: FastifyInstance) {
       // Optionally save as a scrape_result row
       if (req.body.saveResult && req.body.entityId && result && typeof result === "object") {
         const r = result as Record<string, unknown>;
-        const entityType = action.startsWith("folder") ? "folder"
+        const entityType = action.startsWith("folder") ? "video_series"
           : action.startsWith("audio") ? "audio_track"
           : action.startsWith("gallery") ? "gallery"
           : action.startsWith("image") ? "image"
-          : "scene";
+          : "video";
 
         const proposedResult = deriveProposedResultFromPluginOutput(result);
         const pr = proposedResult as Record<string, unknown> | null;
@@ -502,7 +502,7 @@ export async function pluginsRoutes(app: FastifyInstance) {
         const [saved] = await db
           .insert(scrapeResults)
           .values({
-            sceneId: entityType === "scene" ? req.body.entityId : null,
+            sceneId: entityType === "video" ? req.body.entityId : null,
             entityType,
             entityId: req.body.entityId,
             pluginPackageId: pkg.id,
@@ -614,10 +614,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
       "title", "date", "details", "url", "studio", "tags", "image",
     ]);
 
-    if (result.entityType === "folder") {
-      // Apply to a video_series row. The entityType tag stays "folder"
-      // for backward compat with existing scrape_results rows, but the
-      // entityId now resolves to a video_series id.
+    if (result.entityType === "video_series") {
+      // Apply to a video_series row.
       const patch: Record<string, unknown> = {};
       if (fieldsToApply.has("title") && result.proposedTitle) {
         // Scraped title lands in customName so the user's original
@@ -681,11 +679,11 @@ export async function pluginsRoutes(app: FastifyInstance) {
           );
         }
       }
-    } else if (result.entityType === "scene" && result.sceneId) {
-      // For scenes, delegate to the existing accept logic
-      // (this path is a fallback — scenes normally use /scrapers/results/:id/accept)
+    } else if (result.entityType === "video" && result.sceneId) {
+      // For videos, delegate to the existing accept logic
+      // (this path is a fallback — videos normally use /scrapers/results/:id/accept)
       return reply.code(400).send({
-        error: "Use /scrapers/results/:id/accept for scene results",
+        error: "Use /scrapers/results/:id/accept for video results",
       });
     }
 
