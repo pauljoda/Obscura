@@ -847,10 +847,10 @@ export function VideoEdit({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 relative z-20">
           <NsfwGate>
             {scrapers.length > 0 && (
-              <section className="surface-well px-4 py-3 flex flex-wrap items-center gap-3">
+              <section className="surface-well px-4 py-3 flex flex-wrap items-center gap-3 relative z-20">
                 <Wand2 className="h-4 w-4 text-text-accent flex-shrink-0" />
                 <ProviderSelector
                   value={selectedScraper}

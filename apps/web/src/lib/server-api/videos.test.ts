@@ -74,4 +74,25 @@ describe("server fetchVideos", () => {
     expect(path).toContain("seasonNumber=2");
     expect(path).toContain("uncategorized=true");
   });
+
+  it("supports the lightweight card view query", async () => {
+    const serverFetchMock = vi.mocked(serverFetch);
+    serverFetchMock.mockResolvedValue({
+      videos: [],
+      total: 0,
+      limit: 0,
+      offset: 0,
+    });
+
+    await fetchVideos({
+      limit: 24,
+      offset: 0,
+      sort: "recent",
+      order: "desc",
+      view: "card",
+    } as any);
+
+    const path = serverFetchMock.mock.calls[0]?.[0] as string;
+    expect(path).toContain("view=card");
+  });
 });

@@ -294,7 +294,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image + scraper panel */}
-        <div className="flex-shrink-0 lg:w-72 space-y-3">
+        <div className="flex-shrink-0 lg:w-72 space-y-3 relative z-20">
           {/* Image */}
           {(() => {
             const displayUrl = tag?.imagePath ? toApiUrl(tag.imagePath) : tag?.imageUrl;
@@ -344,7 +344,7 @@ export function TagEdit({ id, onSaved, onCancel }: TagEditProps) {
 
           <NsfwGate>
             {endpoints.length > 0 && (
-              <div className="surface-well p-3 space-y-2">
+              <div className="surface-well p-3 space-y-2 relative z-20">
                 <div className="text-kicker">Identify via StashBox</div>
                 <ProviderSelector
                   value={selectedEndpoint}

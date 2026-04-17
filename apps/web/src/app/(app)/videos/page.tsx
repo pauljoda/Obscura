@@ -1,15 +1,9 @@
-export const dynamic = "force-dynamic";
-
 import { cookies } from "next/headers";
 import { VideosPageClient } from "../../../components/routes/videos-page-client";
 import {
-  fetchPerformers,
-  fetchStudios,
-  fetchTags,
+  fetchVideoCards,
   fetchSeriesDetail,
   fetchSeries,
-  fetchVideoStats,
-  fetchVideos,
 } from "../../../lib/server-api";
 import { parseNsfwModeCookie } from "../../../lib/nsfw-cookie";
 import {
@@ -37,61 +31,49 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
       : undefined;
   const hasSeriesScopedVideoQuery =
     Boolean(videoFetchParams.search) || listPrefs.activeFilters.length > 0;
-  const activeSeries =
+  const activeSeriesPromise =
     listPrefs.viewMode === "series" && requestedSeriesId
-      ? await fetchSeriesDetail(requestedSeriesId, { nsfw: nsfwMode }).catch(
+      ? fetchSeriesDetail(requestedSeriesId, { nsfw: nsfwMode }).catch(
           () => null,
         )
-      : null;
-
-  const [
-    rootSeriesResponse,
-    videosResponse,
-    stats,
-    studiosResponse,
-    tagsResponse,
-    performersResponse,
-  ] = await Promise.all([
-    listPrefs.viewMode === "series" && !activeSeries
+      : Promise.resolve(null);
+  const rootSeriesPromise =
+    listPrefs.viewMode === "series" && !requestedSeriesId
       ? fetchSeries({
           search: videoFetchParams.search,
           root: videoFetchParams.search ? "all" : undefined,
           limit: 200,
           nsfw: nsfwMode,
         }).catch(() => ({ items: [], total: 0, limit: 200, offset: 0 }))
-      : Promise.resolve({ items: [], total: 0, limit: 0, offset: 0 }),
-    fetchVideos(
-      listPrefs.viewMode === "series"
-        ? activeSeries
-          ? {
-              ...videoFetchParams,
-              videoSeriesId: activeSeries.id,
-              seriesScope: hasSeriesScopedVideoQuery ? "subtree" : "direct",
-            }
-          : {
-              ...videoFetchParams,
-              uncategorized: true,
-            }
-        : videoFetchParams,
-    ),
-    fetchVideoStats(nsfwMode).catch(() => null),
-    fetchStudios({ nsfw: nsfwMode }).catch(() => ({ studios: [] })),
-    fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] })),
-    fetchPerformers({
-      nsfw: nsfwMode,
-      sort: "videos",
-      order: "desc",
-      limit: 400,
-    }).catch(() => ({ performers: [], total: 0, limit: 400, offset: 0 })),
+      : Promise.resolve({ items: [], total: 0, limit: 0, offset: 0 });
+  const videosPromise = fetchVideoCards(
+    listPrefs.viewMode === "series"
+      ? requestedSeriesId
+        ? {
+            ...videoFetchParams,
+            videoSeriesId: requestedSeriesId,
+            seriesScope: hasSeriesScopedVideoQuery ? "subtree" : "direct",
+          }
+        : {
+            ...videoFetchParams,
+            uncategorized: true,
+          }
+      : videoFetchParams,
+  );
+  const activeSeries = await activeSeriesPromise;
+
+  const [rootSeriesResponse, videosResponse] = await Promise.all([
+    rootSeriesPromise,
+    videosPromise,
   ]);
 
   return (
     <VideosPageClient
       initialVideos={videosResponse.videos}
-      initialStats={stats}
-      initialStudios={studiosResponse.studios}
-      initialTags={tagsResponse.tags}
-      initialPerformers={performersResponse.performers}
+      initialStats={null}
+      initialStudios={[]}
+      initialTags={[]}
+      initialPerformers={[]}
       initialTotal={videosResponse.total}
       initialListPrefs={listPrefs}
       initialRootSeries={rootSeriesResponse.items}

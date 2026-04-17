@@ -1417,6 +1417,35 @@ export interface VideoListItemDto {
   updatedAt: string;
 }
 
+export interface VideoCardListItemDto {
+  id: string;
+  title: string;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  duration: number | null;
+  durationFormatted: string | null;
+  resolution: string | null;
+  codec: string | null;
+  fileSizeFormatted: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  playCount: number;
+  videoSeriesId: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  hasSubtitles: boolean;
+  performers: {
+    id: string;
+    name: string;
+    imagePath?: string | null;
+    isNsfw?: boolean;
+  }[];
+  tags: TagEmbedDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface VideoDetailDto extends VideoListItemDto {
   interactive: boolean;
   frameRate: number | null;

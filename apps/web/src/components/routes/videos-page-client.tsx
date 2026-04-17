@@ -27,13 +27,13 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { VideoGrid } from "../video-grid";
 import { ImportButton, UploadDropZone } from "../upload";
-import { FilterBar } from "../filter-bar";
 import type { SortDir, SortOption, ViewMode } from "../filter-bar";
 import {
-  fetchVideos,
+  fetchVideoCards,
   fetchVideoStats,
   fetchSeries,
   fetchSeriesDetail,
@@ -51,12 +51,13 @@ import {
   type PerformerItem,
   type SeriesDetail,
   type SeriesListItem,
-  type VideoListItem,
+  type VideoCardListItem,
   type VideoStats,
   type StudioItem,
   type TagItem,
 } from "../../lib/api";
 import { revalidateSeriesCache } from "../../app/actions/revalidate-series";
+import { revalidateVideosCache } from "../../app/actions/revalidate-videos";
 import { InfoRow } from "../shared/metadata-panel";
 import { NsfwChip, NsfwEditToggle, NsfwTagLabel, tagsVisibleInNsfwMode } from "../nsfw/nsfw-gate";
 import { ChipInput } from "../shared/chip-input";
@@ -91,8 +92,17 @@ import { IdentifyButton } from "../identify/identify-button";
 import { HierarchyShell } from "../shared/hierarchy-shell";
 import { useCurrentPath } from "../../hooks/use-current-path";
 
+const LazyFilterBar = dynamic(
+  () => import("../filter-bar").then((mod) => mod.FilterBar),
+  {
+    loading: () => (
+      <div className="surface-panel min-h-[120px] animate-pulse border border-border-subtle" />
+    ),
+  },
+);
+
 interface VideosPageClientProps {
-  initialVideos: VideoListItem[];
+  initialVideos: VideoCardListItem[];
   initialStats: VideoStats | null;
   initialStudios: StudioItem[];
   initialTags: TagItem[];
@@ -117,6 +127,12 @@ export function VideosPageClient({
   const { mode: nsfwMode } = useNsfw();
   const terms = useTerms();
   const _currentPath = useCurrentPath();
+  const safeInitialVideos = initialVideos ?? [];
+  const safeInitialStudios = initialStudios ?? [];
+  const safeInitialTags = initialTags ?? [];
+  const safeInitialPerformers = initialPerformers ?? [];
+  const safeInitialTotal = initialTotal ?? 0;
+  const safeInitialRootSeries = initialRootSeries ?? [];
   const [stats, setStats] = useState(initialStats);
 
   useEffect(() => {
@@ -129,12 +145,7 @@ export function VideosPageClient({
       .catch(() => {});
   }, [nsfwMode]);
 
-  const skipFirstFilterRefetch = useRef(true);
   useEffect(() => {
-    if (skipFirstFilterRefetch.current) {
-      skipFirstFilterRefetch.current = false;
-      return;
-    }
     void Promise.all([
       fetchStudios({ nsfw: nsfwMode }),
       fetchTags({ nsfw: nsfwMode }),
@@ -142,7 +153,7 @@ export function VideosPageClient({
         nsfw: nsfwMode,
         sort: "videos",
         order: "desc",
-        limit: 400,
+        limit: 200,
       }),
     ])
       .then(([s, t, perf]) => {
@@ -169,12 +180,12 @@ export function VideosPageClient({
   const [activeFilters, setActiveFilters] = useState<VideosListPrefsActiveFilter[]>(
     initialListPrefs.activeFilters,
   );
-  const [videos, setVideos] = useState(initialVideos);
-  const [total, setTotal] = useState(initialTotal);
-  const [filterStudios, setFilterStudios] = useState(initialStudios);
-  const [filterTags, setFilterTags] = useState(initialTags);
-  const [filterPerformers, setFilterPerformers] = useState(initialPerformers);
-  const [rootSeries, setRootSeries] = useState(initialRootSeries);
+  const [videos, setVideos] = useState(safeInitialVideos);
+  const [total, setTotal] = useState(safeInitialTotal);
+  const [filterStudios, setFilterStudios] = useState(safeInitialStudios);
+  const [filterTags, setFilterTags] = useState(safeInitialTags);
+  const [filterPerformers, setFilterPerformers] = useState(safeInitialPerformers);
+  const [rootSeries, setRootSeries] = useState(safeInitialRootSeries);
   const [activeSeries, setActiveSeries] = useState<SeriesDetail | null>(initialActiveSeries);
   /**
    * When browsing a Case B series (seasons), the user can drill into a
@@ -271,12 +282,22 @@ export function VideosPageClient({
   const selection = useSelection();
   const [bulkLoading, setBulkLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const videosLengthRef = useRef(safeInitialVideos.length);
+  const totalRef = useRef(safeInitialTotal);
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const hydratedRef = useRef(false);
 
   useEffect(() => {
-    setRootSeries(initialRootSeries);
+    videosLengthRef.current = videos.length;
+  }, [videos.length]);
+
+  useEffect(() => {
+    totalRef.current = total;
+  }, [total]);
+
+  useEffect(() => {
+    setRootSeries(safeInitialRootSeries);
     setActiveSeries(initialActiveSeries);
     // Don't reset season to null here — seasonFromUrl above handles
     // reading the initial ?season= param from the URL.
@@ -292,7 +313,7 @@ export function VideosPageClient({
       setSortBy(initialListPrefs.sortBy);
       setSortDir(initialListPrefs.sortDir);
     }
-  }, [initialRootSeries, initialActiveSeries, initialListPrefs]);
+  }, [safeInitialRootSeries, initialActiveSeries, initialListPrefs]);
 
   useEffect(() => {
     const prefs: VideosListPrefs = {
@@ -395,7 +416,7 @@ export function VideosPageClient({
     setLoading(true);
 
     try {
-      const result = await fetchVideos(
+      const result = await fetchVideoCards(
         viewMode === "series"
           ? {
               ...buildParams(),
@@ -415,8 +436,10 @@ export function VideosPageClient({
             },
       );
 
-      setVideos(result.videos);
-      setTotal(result.total);
+      startTransition(() => {
+        setVideos(result.videos);
+        setTotal(result.total);
+      });
     } catch (error) {
       console.error("Failed to load videos:", error);
     } finally {
@@ -432,16 +455,17 @@ export function VideosPageClient({
   ]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || videos.length >= total) return;
+    const offset = videosLengthRef.current;
+    if (loadingMore || offset >= totalRef.current) return;
     setLoadingMore(true);
 
     try {
-      const result = await fetchVideos(
+      const result = await fetchVideoCards(
         viewMode === "series"
           ? {
               ...buildParams(),
               limit: 50,
-              offset: videos.length,
+              offset,
               videoSeriesId: activeSeries?.id ?? undefined,
               seriesScope:
                 activeSeries?.id && hasSeriesScopedVideoQuery ? "subtree" : "direct",
@@ -454,14 +478,16 @@ export function VideosPageClient({
           : {
               ...buildParams(),
               limit: 50,
-              offset: videos.length,
+              offset,
             },
       );
 
-      setVideos((prev) => {
-        const existingIds = new Set(prev.map((s) => s.id));
-        const newItems = result.videos.filter((s) => !existingIds.has(s.id));
-        return [...prev, ...newItems];
+      startTransition(() => {
+        setVideos((prev) => {
+          const existingIds = new Set(prev.map((s) => s.id));
+          const newItems = result.videos.filter((s) => !existingIds.has(s.id));
+          return [...prev, ...newItems];
+        });
       });
     } catch (error) {
       console.error("Failed to load more videos:", error);
@@ -473,8 +499,6 @@ export function VideosPageClient({
     buildParams,
     hasSeriesScopedVideoQuery,
     loadingMore,
-    videos.length,
-    total,
     viewMode,
   ]);
 
@@ -767,6 +791,7 @@ export function VideosPageClient({
       await Promise.all(
         Array.from(selection.selectedIds).map((id) => updateVideo(id, { isNsfw })),
       );
+      await revalidateVideosCache();
       selection.deselectAll();
       await loadVideos();
     } finally {
@@ -780,6 +805,7 @@ export function VideosPageClient({
       await Promise.all(
         Array.from(selection.selectedIds).map((id) => deleteVideo(id, deleteFile)),
       );
+      await revalidateVideosCache();
       selection.deselectAll();
       setDeleteDialogOpen(false);
       await loadVideos();
@@ -788,7 +814,7 @@ export function VideosPageClient({
     }
   }
 
-  const visibleIds = videos.map((s) => s.id);
+  const visibleIds = useMemo(() => videos.map((s) => s.id), [videos]);
   const seriesCards = useMemo(() => {
     if (!activeSeries) return rootSeries;
     if (!seriesSearch) return activeSeries.children;
@@ -846,7 +872,7 @@ export function VideosPageClient({
         </div>
       </div>
 
-      <FilterBar
+      <LazyFilterBar
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         sortBy={sortBy}

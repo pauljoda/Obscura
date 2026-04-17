@@ -334,7 +334,7 @@ export function ResolveWorkflow() {
         </div>
 
         {/* Right panel: Scraper controls + results */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 relative z-20">
           {selectedVideo ? (
             <>
               {/* Video info header */}
@@ -370,7 +370,7 @@ export function ResolveWorkflow() {
               </div>
 
               {/* Scraper controls */}
-              <div className="surface-panel p-4 space-y-3">
+              <div className="surface-panel p-4 space-y-3 relative z-20">
                 <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                   <div>
                     <label className="control-label">Scraper</label>

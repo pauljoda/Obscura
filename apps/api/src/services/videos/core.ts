@@ -73,6 +73,7 @@ const {
 // ─── Query Types ───────────────────────────────────────────────
 
 export interface ListVideosQuery {
+  view?: "full" | "card";
   search?: string;
   sort?: string;
   order?: string;
@@ -212,6 +213,37 @@ function toVideoListItem(row: VideoRow) {
   };
 }
 
+function toVideoCardListItem(row: VideoRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    rating: row.rating,
+    organized: row.organized,
+    isNsfw: row.isNsfw,
+    duration: row.duration,
+    durationFormatted: formatDuration(row.duration),
+    resolution: getResolutionLabel(row.height),
+    codec: row.codec?.toUpperCase() ?? null,
+    fileSizeFormatted: formatFileSize(row.fileSize),
+    thumbnailPath: row.thumbnailPath,
+    cardThumbnailPath: row.cardThumbnailPath,
+    playCount: row.playCount,
+    videoSeriesId: row.seriesId,
+    seasonNumber: row.seasonNumber,
+    episodeNumber: row.episodeNumber,
+    hasSubtitles: false,
+    performers: [] as {
+      id: string;
+      name: string;
+      imagePath?: string | null;
+      isNsfw?: boolean;
+    }[],
+    tags: [] as { id: string; name: string; isNsfw: boolean }[],
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function parseSort(query: ListVideosQuery, kind: "episode" | "movie") {
   const table = kind === "episode" ? videoEpisodes : videoMovies;
   const dateColumn =
@@ -289,6 +321,7 @@ function buildCommonDateFilters<T extends "episode" | "movie">(
  *   - neither → episodes + movies, ordered per sort
  */
 export async function listVideos(query: ListVideosQuery) {
+  const cardView = query.view === "card";
   const { limit, offset } = parsePagination(
     query.limit,
     query.offset,
@@ -792,6 +825,14 @@ export async function listVideos(query: ListVideosQuery) {
     });
   }
   const sliced = merged.slice(0, limit);
+  if (cardView) {
+    return {
+      videos: sliced.map(toVideoCardListItem),
+      total: episodeCount + movieCount,
+      limit,
+      offset,
+    };
+  }
   const items = sliced.map(toVideoListItem);
 
   // Batch-load performer and tag joins for the visible slice in two

@@ -20,6 +20,7 @@ import type {
   NormalizedTagScrapeResultDto,
   PerformerDetailDto,
   PerformerListItemDto,
+  VideoCardListItemDto,
   VideoDetailDto,
   VideoSeriesDetailDto,
   VideoSeriesListItemDto,
@@ -48,6 +49,7 @@ import type {
 
 // ─── Video aliases ──────────────────────────────────────────────
 export type VideoListItem = VideoListItemDto;
+export type VideoCardListItem = VideoCardListItemDto;
 export type VideoDetail = VideoDetailDto;
 export type VideoStats = VideoStatsDto;
 export type { VideoMarkerDto, VideoSubtitleTrackDto, SubtitleCueDto };

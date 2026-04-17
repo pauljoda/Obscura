@@ -5,6 +5,7 @@
  * focused on non-video entities.
  */
 import type {
+  VideoCardListItemDto,
   VideoSeriesDetailDto,
   VideoSeriesListItemDto,
 } from "@obscura/contracts";
@@ -19,6 +20,8 @@ import type {
   VideoStats,
 } from "../api/types";
 
+const SHORT_REVALIDATE_SECONDS = 5;
+
 export async function fetchVideos(params: FetchVideosParams) {
   const qs = buildFetchVideosQuery(params);
 
@@ -26,6 +29,17 @@ export async function fetchVideos(params: FetchVideosParams) {
     `/videos${qs}`,
     { tags: ["videos"] },
   );
+}
+
+export async function fetchVideoCards(params: Omit<FetchVideosParams, "view">) {
+  const qs = buildFetchVideosQuery({ ...params, view: "card" });
+
+  return serverFetch<{
+    videos: VideoCardListItemDto[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/videos${qs}`, { tags: ["videos"] });
 }
 
 export async function fetchSeries(params?: {
@@ -56,7 +70,7 @@ export async function fetchSeries(params?: {
     limit: number;
     offset: number;
   }>(`/video-series${qs}`, {
-    revalidate: 0,
+    revalidate: SHORT_REVALIDATE_SECONDS,
     tags: ["video-series"],
   });
 }
@@ -64,7 +78,7 @@ export async function fetchSeries(params?: {
 export async function fetchSeriesDetail(id: string, params?: { nsfw?: string }) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
   return serverFetch<VideoSeriesDetailDto>(`/video-series/${id}${qs}`, {
-    revalidate: 0,
+    revalidate: SHORT_REVALIDATE_SECONDS,
     tags: ["video-series", `video-series-${id}`],
   });
 }

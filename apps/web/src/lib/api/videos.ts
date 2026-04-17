@@ -13,10 +13,22 @@ import {
   buildFetchVideosQuery,
   type FetchVideosParams,
 } from "./video-query";
-import type { VideoDetail, VideoListItem, VideoStats } from "./types";
+import type {
+  VideoCardListItem,
+  VideoDetail,
+  VideoListItem,
+  VideoStats,
+} from "./types";
 
 export interface FetchVideosResponse {
   videos: VideoListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface FetchVideoCardsResponse {
+  videos: VideoCardListItem[];
   total: number;
   limit: number;
   offset: number;
@@ -26,6 +38,13 @@ export async function fetchVideos(
   params: FetchVideosParams,
 ): Promise<FetchVideosResponse> {
   const qs = buildFetchVideosQuery(params);
+  return fetchApi(`/videos${qs}`);
+}
+
+export async function fetchVideoCards(
+  params: Omit<FetchVideosParams, "view">,
+): Promise<FetchVideoCardsResponse> {
+  const qs = buildFetchVideosQuery({ ...params, view: "card" });
   return fetchApi(`/videos${qs}`);
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { memo } from "react";
 import { Captions, Clock, Eye, Film, HardDrive, Star } from "lucide-react";
-import { MediaCard } from "@obscura/ui/composed/media-card";
 import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import { VIDEO_TAG_COLORS } from "../video-tag-colors";
@@ -21,7 +21,7 @@ interface VideoCardProps {
   onToggleSelect?: (id: string) => void;
 }
 
-export function VideoCard({
+export const VideoCard = memo(function VideoCard({
   video,
   variant = "grid",
   index = 0,
@@ -39,7 +39,7 @@ export function VideoCard({
   }
 
   return <VideoGridCard video={video} imageLoading={imageLoading} index={index} />;
-}
+});
 
 function VideoGridCard({
   video,
@@ -60,33 +60,108 @@ function VideoGridCard({
   return (
     <NsfwBlur isNsfw={video.isNsfw ?? false} className="h-full">
       <Link href={video.href} className="block h-full">
-        <MediaCard
-          title={video.title}
-          thumbnail={video.thumbnail}
-          cardThumbnail={video.cardThumbnail}
-          imageLoading={imageLoading}
-          trickplaySprite={video.trickplaySprite}
-          trickplayVtt={video.trickplayVtt}
-          scrubDurationSeconds={video.scrubDurationSeconds}
-          duration={video.duration}
-          resolution={video.resolution}
-          codec={video.codec}
-          hasSubtitles={video.hasSubtitles}
-          fileSize={video.fileSize}
-          studio={video.studio}
-          performers={performersRow}
-          thumbnailOverlay={<NsfwShowModeChip isNsfw={video.isNsfw} />}
-          topLeftBadge={
-            video.episodeNumber != null ? (
-              <span className="bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
-                {video.seasonNumber != null
-                  ? `S${String(video.seasonNumber).padStart(2, "0")}E${String(video.episodeNumber).padStart(2, "0")}`
-                  : `E${String(video.episodeNumber).padStart(2, "0")}`}
+        <article className="surface-card-sharp media-card-shell group h-full overflow-hidden">
+          <div
+            className={cn(
+              "relative aspect-video overflow-hidden bg-surface-1",
+              !video.thumbnail && VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length],
+            )}
+          >
+            {video.thumbnail ? (
+              <img
+                src={video.cardThumbnail || video.thumbnail}
+                alt={video.title}
+                loading={imageLoading}
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Film className="h-7 w-7 text-white/10" />
+              </div>
+            )}
+
+            <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+
+            {video.duration && (
+              <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 media-chip px-1.5 py-0.5 text-[0.65rem] font-mono text-white/90">
+                <Clock className="h-2.5 w-2.5 text-white/60" />
+                {video.duration}
               </span>
-            ) : undefined
-          }
-          tagsSlot={
-            tagRow.length > 0 ? (
+            )}
+
+            <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+              {video.hasSubtitles && (
+                <span
+                  className="media-chip flex items-center gap-0.5 px-1.5 py-0.5 text-[0.58rem] font-mono text-accent-100 border-accent-500/40"
+                  title="Closed captions available"
+                >
+                  <Captions className="h-2.5 w-2.5" />
+                  CC
+                </span>
+              )}
+              {video.resolution && (
+                <span className="pill-accent px-1.5 py-0.5 text-[0.58rem] font-semibold tracking-wide">
+                  {video.resolution}
+                </span>
+              )}
+              {video.codec && (
+                <span className="media-chip px-1.5 py-0.5 text-[0.58rem] font-mono text-white/70">
+                  {video.codec}
+                </span>
+              )}
+            </div>
+
+            <div className="pointer-events-none absolute right-2 bottom-2 z-[25]">
+              <NsfwShowModeChip isNsfw={video.isNsfw} />
+            </div>
+
+            {video.episodeNumber != null ? (
+              <div className="pointer-events-none absolute left-1.5 top-1.5 z-[25]">
+                <span className="bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
+                  {video.seasonNumber != null
+                    ? `S${String(video.seasonNumber).padStart(2, "0")}E${String(video.episodeNumber).padStart(2, "0")}`
+                    : `E${String(video.episodeNumber).padStart(2, "0")}`}
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="p-2.5 space-y-1.5">
+            <NsfwText
+              isNsfw={video.isNsfw ?? false}
+              className="truncate text-[0.8rem] font-medium text-text-primary leading-tight block"
+            >
+              {video.title}
+            </NsfwText>
+
+            {(video.studio || performersRow.length > 0) && (
+              <div className="flex items-center gap-1.5 text-text-muted min-w-0">
+                {video.studio && (
+                  <span className="text-[0.7rem] text-text-accent truncate flex-shrink-0">
+                    {video.studio}
+                  </span>
+                )}
+                {video.studio && performersRow.length ? (
+                  <span className="text-text-disabled text-[0.6rem]">/</span>
+                ) : null}
+                {performersRow.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[0.7rem] truncate">
+                    {performersRow.slice(0, 2).map((performer, performerIndex) => (
+                      <span key={performer.name} className="inline-flex items-center gap-1">
+                        {performerIndex > 0 && <span className="text-text-disabled">,</span>}
+                        <span>{performer.name}</span>
+                      </span>
+                    ))}
+                    {performersRow.length > 2 && (
+                      <span className="text-text-disabled"> +{performersRow.length - 2}</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {tagRow.length > 0 ? (
               <div className="flex flex-wrap gap-1">
                 {tagRow.slice(0, 3).map((tag) => (
                   <span
@@ -102,13 +177,32 @@ function VideoGridCard({
                   </span>
                 )}
               </div>
-            ) : null
-          }
-          tagColors={VIDEO_TAG_COLORS}
-          rating={video.rating}
-          views={video.views}
-          gradientClass={VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
-        />
+            ) : null}
+
+            {(video.fileSize || video.views !== undefined || (video.rating != null && video.rating > 0)) && (
+              <div className="flex items-center gap-3 pt-1 border-t border-border-subtle">
+                {video.rating != null && video.rating > 0 && (
+                  <span className="flex items-center gap-0.5 text-[0.62rem] text-glow-accent">
+                    <Star className="h-2.5 w-2.5 fill-current" />
+                    {Math.round(video.rating / 20)}
+                  </span>
+                )}
+                {video.fileSize && (
+                  <span className="flex items-center gap-1 text-ephemeral">
+                    <HardDrive className="h-2.5 w-2.5" />
+                    {video.fileSize}
+                  </span>
+                )}
+                {video.views !== undefined && (
+                  <span className="flex items-center gap-1 text-ephemeral">
+                    <Eye className="h-2.5 w-2.5" />
+                    {video.views}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </article>
       </Link>
     </NsfwBlur>
   );

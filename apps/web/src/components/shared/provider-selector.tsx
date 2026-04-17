@@ -66,7 +66,7 @@ export function ProviderSelector({
     (!search || allOption.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className={cn("relative", className)} ref={containerRef}>
+    <div className={cn("relative", open && "z-50", className)} ref={containerRef}>
       <button
         type="button"
         disabled={disabled}
@@ -93,7 +93,7 @@ export function ProviderSelector({
               className="w-full bg-transparent text-xs text-text-primary placeholder:text-text-disabled focus:outline-none"
             />
           </div>
-          <div className="max-h-[300px] overflow-y-auto p-1">
+          <div className="max-h-[50vh] overflow-y-auto p-1">
             {showAllOption && (
               <button
                 type="button"

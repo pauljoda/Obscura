@@ -56,6 +56,7 @@ import {
 import { fetchVideoSeriesLibraryDetail } from "../../lib/api/videos";
 import { buildLocalSeasonsInput } from "./identify-video-series-tab";
 import { ImagePicker } from "./image-picker";
+import { ReviewDrawer } from "./review-drawer";
 
 /* ─── Shape discrimination ───────────────────────────────────────── */
 
@@ -130,6 +131,11 @@ export interface CascadeReviewDrawerProps {
   /** Called after a successful accept to refresh the parent row. */
   onAccepted: () => void;
   onClose: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+  hasNext?: boolean;
+  hasPrev?: boolean;
+  onAcceptAndNext?: () => void;
 }
 
 /* ─── Drawer shell ───────────────────────────────────────────────── */
@@ -141,6 +147,11 @@ export function CascadeReviewDrawer({
   label,
   onAccepted,
   onClose,
+  onNext,
+  onPrev,
+  hasNext,
+  hasPrev,
+  onAcceptAndNext,
 }: CascadeReviewDrawerProps) {
   // The user can re-run the plugin from inside the drawer (e.g. to
   // disambiguate a series match). Each re-run persists a new scrape
@@ -247,98 +258,66 @@ export function CascadeReviewDrawer({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex justify-end bg-bg/70 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <ReviewDrawer
+      label={label}
+      onClose={onClose}
+      onNext={onNext}
+      onPrev={onPrev}
+      hasNext={hasNext}
+      hasPrev={hasPrev}
+      loading={loading}
+      error={error}
     >
-      <div className="glass-1 flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
-              Review scrape
-            </div>
-            <h2 className="truncate text-base font-semibold text-text-primary">
-              {label}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 text-text-muted hover:text-text-primary transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      {mode.kind === "empty" && (
+        <div className="m-5 flex items-start gap-2 border border-border-subtle bg-surface-2/50 px-3 py-3 text-[0.72rem] text-text-muted">
+          <ScanSearch className="h-4 w-4 flex-shrink-0 text-text-disabled" />
+          <p>{mode.reason}</p>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto">
-          {loading && (
-            <div className="flex h-32 items-center justify-center text-text-muted">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading scrape
-              result…
-            </div>
-          )}
-          {!loading && error && (
-            <div className="m-5 flex items-center gap-2 border border-status-error/30 bg-status-error/10 px-3 py-2 text-[0.72rem] text-status-error-text">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
-            </div>
-          )}
-          {!loading && !error && mode.kind === "empty" && (
-            <div className="m-5 flex items-start gap-2 border border-border-subtle bg-surface-2/50 px-3 py-3 text-[0.72rem] text-text-muted">
-              <ScanSearch className="h-4 w-4 flex-shrink-0 text-text-disabled" />
-              <p>{mode.reason}</p>
-            </div>
-          )}
-          {!loading && !error && mode.kind === "series" && entityKind === "video_series" && (
-            <SeriesCascadeBody
-              key={currentScrapeResultId}
-              result={mode.result}
-              scrapeResultId={currentScrapeResultId}
-              seriesId={entityId}
-              rerunning={rerunning}
-              onPickCandidate={(id) => void reRunWithExternalId(id)}
-              onAccepted={onAccepted}
-            />
-          )}
-          {!loading && !error && mode.kind === "movie" && entityKind === "video_movie" && (
-            <MovieReviewBody
-              key={currentScrapeResultId}
-              result={mode.result}
-              scrapeResultId={currentScrapeResultId}
-              movieId={entityId}
-              onAccepted={onAccepted}
-            />
-          )}
-          {!loading &&
-            !error &&
-            mode.kind === "episode" &&
-            entityKind === "video_episode" && (
-              <EpisodeReviewBody
-                key={currentScrapeResultId}
-                result={mode.result}
-                scrapeResultId={currentScrapeResultId}
-                episodeId={entityId}
-                onAccepted={onAccepted}
-              />
-            )}
-          {!loading && !error && mode.kind !== "empty" && mode.kind !== entityKindToModeKind(entityKind) && (
-            <div className="m-5 flex items-start gap-2 border border-status-warn/30 bg-status-warn/10 px-3 py-3 text-[0.72rem] text-status-warn-text">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <p>
-                This scrape result contains a <strong>{mode.kind}</strong>{" "}
-                payload, but the drawer was opened for a{" "}
-                <strong>{entityKindToModeKind(entityKind)}</strong>. Re-run the
-                identify from the correct entity.
-              </p>
-            </div>
-          )}
+      )}
+      {mode.kind === "series" && entityKind === "video_series" && (
+        <SeriesCascadeBody
+          key={currentScrapeResultId}
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          seriesId={entityId}
+          rerunning={rerunning}
+          onPickCandidate={(id) => void reRunWithExternalId(id)}
+          onAccepted={onAccepted}
+          onAcceptAndNext={onAcceptAndNext}
+        />
+      )}
+      {mode.kind === "movie" && entityKind === "video_movie" && (
+        <MovieReviewBody
+          key={currentScrapeResultId}
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          movieId={entityId}
+          onAccepted={onAccepted}
+          onAcceptAndNext={onAcceptAndNext}
+        />
+      )}
+      {mode.kind === "episode" && entityKind === "video_episode" && (
+        <EpisodeReviewBody
+          key={currentScrapeResultId}
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          episodeId={entityId}
+          onAccepted={onAccepted}
+          onAcceptAndNext={onAcceptAndNext}
+        />
+      )}
+      {mode.kind !== "empty" && mode.kind !== entityKindToModeKind(entityKind) && (
+        <div className="m-5 flex items-start gap-2 border border-status-warn/30 bg-status-warn/10 px-3 py-3 text-[0.72rem] text-status-warn-text">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <p>
+            This scrape result contains a <strong>{mode.kind}</strong>{" "}
+            payload, but the drawer was opened for a{" "}
+            <strong>{entityKindToModeKind(entityKind)}</strong>. Re-run the
+            identify from the correct entity.
+          </p>
         </div>
-      </div>
-    </div>
+      )}
+    </ReviewDrawer>
   );
 }
 
@@ -412,6 +391,7 @@ function SeriesCascadeBody({
   rerunning,
   onPickCandidate,
   onAccepted,
+  onAcceptAndNext,
 }: {
   result: NormalizedSeriesResult;
   scrapeResultId: string;
@@ -419,6 +399,7 @@ function SeriesCascadeBody({
   rerunning: boolean;
   onPickCandidate: (tmdbId: string) => void;
   onAccepted: () => void;
+  onAcceptAndNext?: () => void;
 }) {
   // Disambiguation: if the plugin returned multiple candidates the
   // user picks one first. Picking a candidate triggers a plugin
@@ -629,6 +610,7 @@ function SeriesCascadeBody({
         cascade: { acceptAllSeasons: false, seasonOverrides },
       });
       onAccepted();
+      if (onAcceptAndNext) onAcceptAndNext();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Accept failed");
     } finally {
@@ -641,7 +623,7 @@ function SeriesCascadeBody({
   const isFlat = nonZeroSeasons.length === 0;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col">
       {/* Disambiguation candidates */}
       {result.candidates && result.candidates.length > 0 && (
         <CandidatePicker
@@ -766,7 +748,7 @@ function SeriesCascadeBody({
       </div>
 
       {/* Seasons */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         <div className="sticky top-0 z-10 bg-bg px-5 py-2 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
           {isFlat ? "Episodes" : `Seasons (${result.seasons.length})`}
         </div>
@@ -802,7 +784,7 @@ function SeriesCascadeBody({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-5 py-3">
+      <div className="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-border-subtle bg-bg px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
         <button
           type="button"
           onClick={acceptAll}
@@ -1188,11 +1170,13 @@ function MovieReviewBody({
   scrapeResultId,
   movieId,
   onAccepted,
+  onAcceptAndNext,
 }: {
   result: NormalizedMovieResult;
   scrapeResultId: string;
   movieId: string;
   onAccepted: () => void;
+  onAcceptAndNext?: () => void;
 }) {
   const [mask, setMask] = useState<AcceptFieldMask>(() => allOn(MOVIE_FIELDS));
   const [selectedImages, setSelectedImages] = useState<SelectedImages>({});
@@ -1213,6 +1197,7 @@ function MovieReviewBody({
         selectedImages,
       });
       onAccepted();
+      if (onAcceptAndNext) onAcceptAndNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Accept failed");
     } finally {
@@ -1221,8 +1206,8 @@ function MovieReviewBody({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-4 p-5">
+    <div className="flex flex-col">
+      <div className="space-y-4 p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3">
           <div className="min-w-0 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
@@ -1280,7 +1265,7 @@ function MovieReviewBody({
         </div>
         <FieldMaskGrid fields={MOVIE_FIELDS} mask={mask} onToggle={toggleField} />
       </div>
-      <div className="flex items-center justify-end gap-3 border-t border-border-subtle px-5 py-3">
+      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-3 border-t border-border-subtle bg-bg px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
         {error && (
           <p className="flex-1 text-[0.68rem] text-status-error-text">{error}</p>
         )}
@@ -1315,11 +1300,13 @@ function EpisodeReviewBody({
   scrapeResultId,
   episodeId,
   onAccepted,
+  onAcceptAndNext,
 }: {
   result: NormalizedEpisodeResult;
   scrapeResultId: string;
   episodeId: string;
   onAccepted: () => void;
+  onAcceptAndNext?: () => void;
 }) {
   const [mask, setMask] = useState<AcceptFieldMask>(() => allOn(EPISODE_FIELDS));
   const [selectedImages, setSelectedImages] = useState<SelectedImages>({});
@@ -1340,6 +1327,7 @@ function EpisodeReviewBody({
         selectedImages,
       });
       onAccepted();
+      if (onAcceptAndNext) onAcceptAndNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Accept failed");
     } finally {
@@ -1348,8 +1336,8 @@ function EpisodeReviewBody({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-4 p-5">
+    <div className="flex flex-col">
+      <div className="space-y-4 p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
           <div className="min-w-0 space-y-2">
             <h3 className="text-lg font-semibold text-text-primary">
@@ -1388,7 +1376,7 @@ function EpisodeReviewBody({
           onToggle={toggleField}
         />
       </div>
-      <div className="flex items-center justify-end gap-3 border-t border-border-subtle px-5 py-3">
+      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-3 border-t border-border-subtle bg-bg px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
         {error && (
           <p className="flex-1 text-[0.68rem] text-status-error-text">{error}</p>
         )}

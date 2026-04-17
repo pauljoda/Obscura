@@ -206,7 +206,7 @@ export function BulkPerformerScrape() {
       </div>
 
       {/* Controls */}
-      <div className="surface-well p-3 flex items-center gap-3 flex-wrap">
+      <div className="surface-well p-3 flex items-center gap-3 flex-wrap relative z-20">
         <ProviderSelector
           value={selectedScraperId ?? ""}
           onChange={setSelectedScraperId}

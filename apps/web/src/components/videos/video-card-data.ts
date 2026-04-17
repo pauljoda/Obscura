@@ -2,7 +2,11 @@
 
 import type { SearchResultItem } from "@obscura/contracts";
 import { formatDuration } from "@obscura/contracts";
-import { toApiUrl, type VideoListItem } from "../../lib/api";
+import {
+  toApiUrl,
+  type VideoCardListItem,
+  type VideoListItem,
+} from "../../lib/api";
 import { buildHrefWithFrom } from "../../lib/back-navigation";
 
 export interface VideoCardPerformer {
@@ -45,8 +49,16 @@ function readMetaNumber(meta: SearchResultItem["meta"], key: string): number | u
   return typeof value === "number" ? value : undefined;
 }
 
-export function videoListItemToCardData(video: VideoListItem, from?: string): VideoCardData {
+export function videoListItemToCardData(
+  video: VideoListItem | VideoCardListItem,
+  from?: string,
+): VideoCardData {
   const base = `/videos/${video.id}`;
+  const performers = video.performers ?? [];
+  const tags = video.tags ?? [];
+  const spritePath = "spritePath" in video ? video.spritePath : undefined;
+  const trickplayVttPath =
+    "trickplayVttPath" in video ? video.trickplayVttPath : undefined;
   return {
     id: video.id,
     href: from ? buildHrefWithFrom(base, from) : base,
@@ -55,19 +67,19 @@ export function videoListItemToCardData(video: VideoListItem, from?: string): Vi
     cardThumbnail: video.thumbnailPath?.includes("thumb-custom")
       ? undefined
       : toApiUrl(video.cardThumbnailPath, video.updatedAt),
-    trickplaySprite: toApiUrl(video.spritePath, video.updatedAt),
-    trickplayVtt: toApiUrl(video.trickplayVttPath, video.updatedAt),
+    trickplaySprite: toApiUrl(spritePath, video.updatedAt),
+    trickplayVtt: toApiUrl(trickplayVttPath, video.updatedAt),
     scrubDurationSeconds: video.duration ?? undefined,
     duration: video.durationFormatted ?? undefined,
     resolution: video.resolution ?? undefined,
     codec: video.codec ?? undefined,
     fileSize: video.fileSizeFormatted ?? undefined,
-    performers: video.performers.map((performer) => ({
+    performers: performers.map((performer) => ({
       name: performer.name,
       imagePath: toApiUrl(performer.imagePath) ?? undefined,
       isNsfw: performer.isNsfw,
     })),
-    tags: video.tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
+    tags: tags.map((tag) => ({ name: tag.name, isNsfw: tag.isNsfw })),
     rating: video.rating ?? undefined,
     views: video.playCount,
     isNsfw: video.isNsfw,

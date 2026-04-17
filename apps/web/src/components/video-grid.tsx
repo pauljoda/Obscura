@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Film, Loader2 } from "lucide-react";
 import type { ViewMode } from "../lib/video-browse-types";
-import type { VideoListItem } from "../lib/api";
+import type { VideoCardListItem, VideoListItem } from "../lib/api";
 import { useTerms } from "../lib/terminology";
 import { VideoCard } from "./videos/video-card";
 import { videoListItemToCardData } from "./videos/video-card-data";
 
 interface VideoGridProps {
-  videos: VideoListItem[];
+  videos: Array<VideoListItem | VideoCardListItem>;
   viewMode: ViewMode;
   loading?: boolean;
   hasMore?: boolean;
@@ -24,6 +24,10 @@ interface VideoGridProps {
 export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingMore = false, onLoadMore, selectedIds, onToggleSelect, from }: VideoGridProps) {
   const terms = useTerms();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const cardVideos = useMemo(
+    () => videos.map((video) => videoListItemToCardData(video, from)),
+    [videos, from],
+  );
 
   useEffect(() => {
     if (!hasMore || loadingMore || !onLoadMore || !sentinelRef.current) return;
@@ -80,16 +84,23 @@ export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingM
     return (
       <>
         <div className="space-y-1">
-          {videos.map((video, i) => (
-            <VideoCard
-              key={video.id}
-              video={videoListItemToCardData(video, from)}
-              variant="list"
-              index={i}
-              selected={selectedIds?.has(video.id)}
-              onToggleSelect={onToggleSelect}
-            />
-          ))}
+          {cardVideos.map((video, i) => {
+            const isSelected = selectedIds?.has(video.id);
+            return (
+              <div
+                key={video.id}
+                style={{ contentVisibility: "auto", containIntrinsicSize: "88px" }}
+              >
+                <VideoCard
+                  video={video}
+                  variant="list"
+                  index={i}
+                  selected={isSelected}
+                  onToggleSelect={onToggleSelect}
+                />
+              </div>
+            );
+          })}
         </div>
         {loadMoreSentinel}
       </>
@@ -99,13 +110,17 @@ export function VideoGrid({ videos, viewMode, loading, hasMore = false, loadingM
   return (
     <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-      {videos.map((video, i) => (
-        <VideoCard
+      {cardVideos.map((video, i) => (
+        <div
           key={video.id}
-          video={videoListItemToCardData(video, from)}
-          index={i}
-          imageLoading={i < 8 ? "eager" : "lazy"}
-        />
+          style={{ contentVisibility: "auto", containIntrinsicSize: "420px" }}
+        >
+          <VideoCard
+            video={video}
+            index={i}
+            imageLoading={i < 8 ? "eager" : "lazy"}
+          />
+        </div>
       ))}
     </div>
     {loadMoreSentinel}

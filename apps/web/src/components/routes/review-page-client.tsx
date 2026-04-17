@@ -18,6 +18,7 @@ import {
   type ScrapeResult,
 } from "../../lib/api";
 import { entityTerms } from "../../lib/terminology";
+import { revalidateLibraryCaches } from "../../app/actions/revalidate-library";
 
 interface ReviewPageClientProps {
   initialResults: ScrapeResult[];
@@ -44,6 +45,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
     setMessage(null);
     try {
       await acceptScrapeResult(result.id);
+      await revalidateLibraryCaches(["videos", "video-series", "performers", "studios", "tags", "galleries", "images", "audio-libraries"]);
       setResults((prev) => prev.filter((r) => r.id !== result.id));
       setMessage("Metadata applied successfully.");
     } catch (err) {
@@ -73,6 +75,7 @@ export function ReviewPageClient({ initialResults }: ReviewPageClientProps) {
     for (const result of results) {
       try {
         await acceptScrapeResult(result.id);
+        await revalidateLibraryCaches(["videos", "video-series", "performers", "studios", "tags", "galleries", "images", "audio-libraries"]);
         applied.push(result.id);
       } catch {
         failed.push(result.id);

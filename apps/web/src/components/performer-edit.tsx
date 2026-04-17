@@ -465,7 +465,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image */}
-        <div className="flex-shrink-0 lg:w-72 space-y-3">
+        <div className="flex-shrink-0 lg:w-72 space-y-3 relative z-20">
           {/* Portrait image */}
           <div className="relative aspect-[3/4] overflow-hidden bg-surface-3">
             {imageUrl ? (
@@ -511,7 +511,7 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
 
           <NsfwGate>
             {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
-              <div className="surface-well p-3 space-y-2">
+              <div className="surface-well p-3 space-y-2 relative z-20">
                 <div className="text-kicker">Identify / Scrape</div>
                 <ProviderSelector
                   value={selectedProvider}

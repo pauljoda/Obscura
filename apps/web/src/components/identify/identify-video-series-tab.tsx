@@ -21,6 +21,7 @@ import {
 import type { VideoSeriesRow, VideoSeriesField, NormalizedSeriesIdentifyResult } from "./types";
 import { SEEK_TIMEOUT_MS, withTimeout } from "../scrape/types";
 import { CascadeReviewDrawer } from "./cascade-review-drawer";
+import { revalidateLibraryCaches } from "../../app/actions/revalidate-library";
 
 /* ─── Props ───────────────────────────────────────────────────── */
 
@@ -177,6 +178,7 @@ export async function runVideoSeriesIdentify({
         if (autoAccept) {
           try {
             await acceptPluginResult(scrapeResultId);
+            await revalidateLibraryCaches(["video-series", "videos"]);
             setRows((prev) =>
               prev.map((r, idx) =>
                 idx === i ? { ...r, status: "accepted" as const, result: seriesResult, scrapeResultId, matchedProvider } : r,
@@ -262,6 +264,7 @@ export async function acceptAllVideoSeries(
   for (const { row, idx } of found) {
     try {
       await acceptPluginResult(row.scrapeResultId!, Array.from(row.selectedFields));
+      await revalidateLibraryCaches(["video-series", "videos"]);
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" as const } : r)),
       );
@@ -318,6 +321,7 @@ export function IdentifyVideoSeriesRows({
                 row.scrapeResultId,
                 Array.from(row.selectedFields),
               );
+              await revalidateLibraryCaches(["video-series", "videos"]);
               setRows((prev) =>
                 prev.map((r, i) =>
                   i === idx ? { ...r, status: "accepted" as const } : r,
@@ -380,6 +384,69 @@ export function IdentifyVideoSeriesRows({
             setReviewing(null);
           }}
           onClose={() => setReviewing(null)}
+          onNext={
+            reviewing.idx < rows.length - 1
+              ? () => {
+                  const nextIdx = reviewing.idx + 1;
+                  const nextRow = rows[nextIdx];
+                  if (nextRow.scrapeResultId) {
+                    setReviewing({
+                      idx: nextIdx,
+                      scrapeResultId: nextRow.scrapeResultId,
+                      label: nextRow.series.displayTitle || nextRow.series.title,
+                      seriesId: nextRow.series.id,
+                    });
+                  } else {
+                    setReviewing(null);
+                  }
+                }
+              : undefined
+          }
+          onPrev={
+            reviewing.idx > 0
+              ? () => {
+                  const prevIdx = reviewing.idx - 1;
+                  const prevRow = rows[prevIdx];
+                  if (prevRow.scrapeResultId) {
+                    setReviewing({
+                      idx: prevIdx,
+                      scrapeResultId: prevRow.scrapeResultId,
+                      label: prevRow.series.displayTitle || prevRow.series.title,
+                      seriesId: prevRow.series.id,
+                    });
+                  } else {
+                    setReviewing(null);
+                  }
+                }
+              : undefined
+          }
+          hasNext={reviewing.idx < rows.length - 1 && !!rows[reviewing.idx + 1].scrapeResultId}
+          hasPrev={reviewing.idx > 0 && !!rows[reviewing.idx - 1].scrapeResultId}
+          onAcceptAndNext={() => {
+            setRows((prev) =>
+              prev.map((r, i) =>
+                i === reviewing.idx
+                  ? { ...r, status: "accepted" as const }
+                  : r,
+              ),
+            );
+            if (reviewing.idx < rows.length - 1) {
+              const nextIdx = reviewing.idx + 1;
+              const nextRow = rows[nextIdx];
+              if (nextRow.scrapeResultId) {
+                setReviewing({
+                  idx: nextIdx,
+                  scrapeResultId: nextRow.scrapeResultId,
+                  label: nextRow.series.displayTitle || nextRow.series.title,
+                  seriesId: nextRow.series.id,
+                });
+              } else {
+                setReviewing(null);
+              }
+            } else {
+              setReviewing(null);
+            }
+          }}
         />
       )}
     </>
@@ -410,11 +477,14 @@ function VideoSeriesRowCard({
   return (
     <div>
       <div
-        onClick={onToggleExpand}
+        onClick={onReview || onToggleExpand}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") onToggleExpand();
+          if (e.key === "Enter" || e.key === " ") {
+            if (onReview) onReview();
+            else onToggleExpand();
+          }
         }}
         className={cn(
           "w-full text-left surface-card no-lift p-3 flex items-center gap-3 transition-all duration-fast cursor-pointer",
@@ -504,84 +574,6 @@ function VideoSeriesRowCard({
           )}
         />
       </div>
-
-      {expanded && row.result && (
-        <div className="surface-card no-lift ml-1 mr-1 mb-1 p-4 border-border-accent/20">
-          <div className="flex gap-4">
-            {row.result.imageUrl && (
-              <div className="flex-shrink-0">
-                <img
-                  src={row.result.imageUrl}
-                  alt=""
-                  className="w-28 h-40 object-cover border border-border-subtle"
-                />
-              </div>
-            )}
-            <div className="flex-1 min-w-0 space-y-3">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {row.result.name && (
-                  <ToggleableField
-                    field="title"
-                    label="Series Title"
-                    value={row.result.name}
-                    enabled={row.selectedFields.has("title")}
-                    onToggle={() => onToggleField("title")}
-                  />
-                )}
-                {row.result.date && (
-                  <ToggleableField
-                    field="date"
-                    label="First Aired"
-                    value={row.result.date}
-                    enabled={row.selectedFields.has("date")}
-                    onToggle={() => onToggleField("date")}
-                  />
-                )}
-                {row.result.studioName && (
-                  <ToggleableField
-                    field="studio"
-                    label="Network"
-                    value={row.result.studioName}
-                    enabled={row.selectedFields.has("studio")}
-                    onToggle={() => onToggleField("studio")}
-                  />
-                )}
-                {row.result.urls.length > 0 && (
-                  <ToggleableField
-                    field="url"
-                    label="URL"
-                    value={row.result.urls[0]}
-                    enabled={row.selectedFields.has("url")}
-                    onToggle={() => onToggleField("url")}
-                  />
-                )}
-              </div>
-              {row.result.details && (
-                <div className="text-[0.72rem] text-text-muted line-clamp-3">
-                  {row.result.details}
-                </div>
-              )}
-              {row.result.tagNames.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {row.result.tagNames.map((tag) => (
-                    <span key={tag} className="tag-chip tag-chip-default text-[0.55rem]">{tag}</span>
-                  ))}
-                </div>
-              )}
-
-              {/* Series info */}
-              {row.result.seriesExternalId && (
-                <div className="flex items-center gap-2 pt-1 text-[0.65rem] text-text-disabled font-mono">
-                  {row.result.seriesExternalId}
-                  {row.result.totalEpisodes != null && (
-                    <span> · {row.result.totalEpisodes} episodes</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {expanded && row.error && (
         <div className="surface-card no-lift ml-6 mr-1 mb-1 p-3 border-status-error/20">

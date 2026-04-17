@@ -1,6 +1,7 @@
 import { buildQueryString } from "../query-string";
 
 export interface FetchVideosParams {
+  view?: "full" | "card";
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
@@ -32,6 +33,7 @@ export function buildFetchVideosQuery(params: FetchVideosParams): string {
   return buildQueryString(
     {
       search: params.search,
+      view: params.view,
       sort: params.sort,
       order: params.order,
       ratingMin: params.ratingMin,

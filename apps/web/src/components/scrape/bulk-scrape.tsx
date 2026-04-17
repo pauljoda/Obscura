@@ -600,7 +600,7 @@ export function BulkScrape() {
       )}
 
       {/* Controls */}
-      <div className="surface-card no-lift p-3 space-y-2.5">
+      <div className="surface-card no-lift p-3 space-y-2.5 relative z-20">
         <div className="flex flex-wrap items-center gap-3">
           {/* Scraper selector */}
           <div className="flex items-center gap-2">

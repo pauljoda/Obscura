@@ -322,7 +322,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left column — image + scraper */}
-        <div className="flex-shrink-0 lg:w-72 space-y-3">
+        <div className="flex-shrink-0 lg:w-72 space-y-3 relative z-20">
           {(() => {
             const displayUrl = studio?.imagePath ? toApiUrl(studio.imagePath) : studio?.imageUrl;
             return (
@@ -371,7 +371,7 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
 
           <NsfwGate>
             {endpoints.length > 0 && (
-              <div className="surface-well p-3 space-y-2">
+              <div className="surface-well p-3 space-y-2 relative z-20">
                 <div className="text-kicker">Identify via StashBox</div>
                 <ProviderSelector
                   value={selectedEndpoint}
