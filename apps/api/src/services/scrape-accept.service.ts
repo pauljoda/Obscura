@@ -31,14 +31,20 @@ import { db } from "../db";
 // returns the asset URL to write into the DB. Failures are non-fatal —
 // a null return means "skip this slot, don't block the accept."
 
+// Upper bound on a single image fetch. Prevents one slow/hung TMDB
+// response from holding the accept open past nginx's proxy_read_timeout.
+const IMAGE_FETCH_TIMEOUT_MS = 20_000;
+
 async function downloadImageToCache(
   url: string | undefined | null,
   entityDir: string,
   filename: string,
 ): Promise<string | null> {
   if (!url) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     await mkdir(entityDir, { recursive: true });
@@ -48,6 +54,8 @@ async function downloadImageToCache(
     return outName;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -75,17 +83,18 @@ async function downloadSeriesImages(
     selectedImages?.logo ??
     result.logoCandidates[0]?.url ??
     null;
-  const posterFile = await downloadImageToCache(posterUrl, dir, "poster");
+  // Run the three slot downloads concurrently so a slow TMDB response
+  // for (say) the logo doesn't serialize the other two.
+  const [posterFile, backdropFile] = await Promise.all([
+    downloadImageToCache(posterUrl, dir, "poster"),
+    downloadImageToCache(backdropUrl, dir, "backdrop"),
+    downloadImageToCache(logoUrl, dir, "logo"),
+  ]);
   if (posterFile) {
     patch.posterPath = `/assets/video-folders/${seriesId}/cover`;
   }
-  const backdropFile = await downloadImageToCache(backdropUrl, dir, "backdrop");
   if (backdropFile) {
     patch.backdropPath = `/assets/video-folders/${seriesId}/backdrop`;
-  }
-  // Logo goes to the same dir
-  if (logoUrl) {
-    await downloadImageToCache(logoUrl, dir, "logo");
   }
   return patch;
 }
