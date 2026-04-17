@@ -139,7 +139,7 @@ export function ImagesPageClient({
       fetchStudios({ nsfw: nsfwMode }),
       fetchPerformers({
         nsfw: nsfwMode,
-        sort: "scenes",
+        sort: "videos",
         order: "desc",
         limit: 300,
       }),

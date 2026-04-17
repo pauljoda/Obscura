@@ -44,12 +44,12 @@ import {
 type SortDir = "asc" | "desc";
 
 const defaultSortDir: Record<TagsSortKey, SortDir> = {
-  scenes: "desc",
+  videos: "desc",
   name: "asc",
 };
 
 const sortOptions: { value: TagsSortKey; label: string }[] = [
-  { value: "scenes", label: "Usage Count" },
+  { value: "videos", label: "Usage Count" },
   { value: "name", label: "Name A-Z" },
 ];
 
@@ -159,7 +159,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
     displayedTags.length > 0
       ? Math.max(...displayedTags.map(totalCount))
       : 1;
-  const totalScenes = tags.reduce((sum, t) => sum + t.videoCount, 0);
+  const totalVideos = tags.reduce((sum, t) => sum + t.videoCount, 0);
   const totalImages = tags.reduce((sum, t) => sum + (t.imageCount ?? 0), 0);
   const tagsSafeForTopTile = tagsVisibleInNsfwMode(tags, nsfwMode);
   const topTag =
@@ -225,7 +225,7 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
           <DashboardStatTile
             icon={<Film className="h-4 w-4" />}
             label={`Tagged ${terms.videos}`}
-            value={String(totalScenes)}
+            value={String(totalVideos)}
             gradientClass={DASHBOARD_STAT_GRADIENTS[0]}
           />
           <DashboardStatTile
@@ -577,4 +577,3 @@ export function TagsPageClient({ initialTags, initialListPrefs }: TagsPageClient
     </div>
   );
 }
-

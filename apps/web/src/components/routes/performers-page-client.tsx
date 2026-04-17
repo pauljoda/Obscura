@@ -58,14 +58,14 @@ type SortDir = "asc" | "desc";
 
 const defaultSortDir: Record<PerformersSortKey, SortDir> = {
   name: "asc",
-  scenes: "desc",
+  videos: "desc",
   rating: "desc",
   recent: "desc",
 };
 
 const sortOptions: { value: PerformersSortKey; label: string }[] = [
   { value: "name", label: "Name A-Z" },
-  { value: "scenes", label: "Video count" },
+  { value: "videos", label: "Video count" },
   { value: "rating", label: "Rating" },
   { value: "recent", label: "Recently Added" },
 ];
@@ -108,7 +108,7 @@ export function PerformersPageClient({
   const [minRating, setMinRating] = useState<number | null>(initialListPrefs.minRating);
   const [maxRating, setMaxRating] = useState<number | null>(initialListPrefs.maxRating);
   const [photoFilter, setPhotoFilter] = useState<PerformersPhotoFilter>(initialListPrefs.photoFilter);
-  const [minSceneCount, setMinSceneCount] = useState<number | null>(initialListPrefs.minSceneCount);
+  const [minVideoCount, setMinVideoCount] = useState<number | null>(initialListPrefs.minVideoCount);
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -134,7 +134,7 @@ export function PerformersPageClient({
       minRating,
       maxRating,
       photoFilter,
-      minSceneCount,
+      minVideoCount,
     }),
     [
       viewMode,
@@ -146,7 +146,7 @@ export function PerformersPageClient({
       minRating,
       maxRating,
       photoFilter,
-      minSceneCount,
+      minVideoCount,
     ],
   );
 
@@ -220,7 +220,7 @@ export function PerformersPageClient({
     setMinRating(d.minRating);
     setMaxRating(d.maxRating);
     setPhotoFilter(d.photoFilter);
-    setMinSceneCount(d.minSceneCount);
+    setMinVideoCount(d.minVideoCount);
     setFilterOpen(false);
   }, []);
 
@@ -248,7 +248,7 @@ export function PerformersPageClient({
     minRating != null ||
     maxRating != null ||
     photoFilter !== "all" ||
-    minSceneCount != null;
+    minVideoCount != null;
   const favoriteCount = performers.filter((performer) => performer.favorite).length;
   const visibleIds = performers.map((p) => p.id);
 
@@ -415,13 +415,13 @@ export function PerformersPageClient({
                   </button>
                 </span>
               ) : null}
-              {minSceneCount != null ? (
+              {minVideoCount != null ? (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap pill-accent px-2 py-0.5 text-[0.68rem]">
                   <span className="text-accent-400/70">Videos:</span>
-                  <span className="text-accent-200">{minSceneCount}+</span>
+                  <span className="text-accent-200">{minVideoCount}+</span>
                   <button
                     type="button"
-                    onClick={() => setMinSceneCount(null)}
+                    onClick={() => setMinVideoCount(null)}
                     className="ml-0.5 text-accent-400/50 hover:text-accent-200 transition-colors duration-fast"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -634,10 +634,10 @@ export function PerformersPageClient({
                     <button
                       key={`psc-${n}`}
                       type="button"
-                      onClick={() => setMinSceneCount(minSceneCount === n ? null : n)}
+                      onClick={() => setMinVideoCount(minVideoCount === n ? null : n)}
                       className={cn(
                         "tag-chip cursor-pointer transition-colors duration-fast",
-                        minSceneCount === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
+                        minVideoCount === n ? "tag-chip-accent" : "tag-chip-default hover:tag-chip-accent",
                       )}
                     >
                       {n}+

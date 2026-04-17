@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Performer and tag usage-count sorting now uses `videos` naming end to end in the first-party app and performer API. Performer list filters also send `videoCountMin` instead of `sceneCountMin`, and the series/image/gallery/audio detail screens now request performer suggestions with the same `videos` sort key.
 - The Identify page's series workflow now uses `series` naming throughout its first-party state, row models, and review-drawer comments instead of carrying local `folder` aliases through the Series tab. That keeps the remaining video-series identify code aligned with the rest of the Videos/Series cleanup without changing the plugin capability names that still expect `folderByName`.
 - Video-specific fetch/mutation helpers now live in the dedicated `apps/web/src/lib/api/videos.ts` and `apps/web/src/lib/server-api/videos.ts` modules. The remaining `media.ts` files are back to galleries, images, audio, search, and collections only, which removes the duplicate `/videos` code paths the web app had been carrying.
 - First-party `/videos` list payloads now return `{ videos, total, limit, offset }`, and first-party series browsing now uses the `series` query param plus `seriesScope` naming instead of `folder`.

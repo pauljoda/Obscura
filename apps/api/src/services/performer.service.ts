@@ -54,7 +54,7 @@ export interface ListPerformersQuery {
   ratingMin?: string;
   ratingMax?: string;
   hasImage?: string;
-  sceneCountMin?: string;
+  videoCountMin?: string;
 }
 
 export interface CreatePerformerBody {
@@ -210,11 +210,11 @@ export async function listPerformers(query: ListPerformersQuery) {
     conditions.push(isNull(performers.imagePath));
   }
 
-  const scm =
-    query.sceneCountMin !== undefined ? Number(query.sceneCountMin) : NaN;
-  if (Number.isInteger(scm) && scm >= 1) {
+  const vcm =
+    query.videoCountMin !== undefined ? Number(query.videoCountMin) : NaN;
+  if (Number.isInteger(vcm) && vcm >= 1) {
     conditions.push(
-      gte(sfwOnly ? sfwPerformerSceneCountExpr : totalPerformerSceneCountExpr, scm),
+      gte(sfwOnly ? sfwPerformerSceneCountExpr : totalPerformerSceneCountExpr, vcm),
     );
   }
 
@@ -232,7 +232,7 @@ export async function listPerformers(query: ListPerformersQuery) {
     case "name":
       orderBy = (sortAsc ?? asc)(performers.name);
       break;
-    case "scenes":
+    case "videos":
       orderBy = query.order === "asc"
         ? asc(sceneCountSelect)
         : desc(sceneCountSelect);

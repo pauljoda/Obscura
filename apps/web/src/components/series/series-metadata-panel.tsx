@@ -96,7 +96,7 @@ export function SeriesMetadataPanel({
     // Fetch suggestions
     void Promise.all([
       fetchStudios({ nsfw: nsfwMode }),
-      fetchPerformers({ nsfw: nsfwMode, sort: "scenes", order: "desc", limit: 400 }),
+      fetchPerformers({ nsfw: nsfwMode, sort: "videos", order: "desc", limit: 400 }),
       fetchTags({ nsfw: nsfwMode }),
     ]).then(([s, p, t]) => {
       setAllStudios(s.studios);

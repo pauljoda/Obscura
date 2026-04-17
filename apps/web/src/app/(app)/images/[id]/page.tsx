@@ -23,7 +23,7 @@ export default async function ImageDetailPage({ params }: ImageDetailPageProps) 
     fetchTags({ nsfw: nsfwMode }).catch(() => ({ tags: [] })),
     fetchPerformers({
       nsfw: nsfwMode,
-      sort: "scenes",
+      sort: "videos",
       order: "desc",
       limit: 400,
     }).catch(() => ({ performers: [], total: 0, limit: 400, offset: 0 })),

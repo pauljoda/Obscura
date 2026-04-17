@@ -3,7 +3,7 @@ import { createListPrefs } from "./list-prefs";
 export const TAGS_LIST_PREFS_COOKIE = "obscura-tags-list";
 export const TAGS_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 
-export type TagsSortKey = "scenes" | "name";
+export type TagsSortKey = "videos" | "name";
 export type TagsViewMode = "list" | "cloud";
 
 export interface TagsListPrefs {
@@ -11,21 +11,21 @@ export interface TagsListPrefs {
   sortKey: TagsSortKey;
   sortDir: "asc" | "desc";
   viewMode: TagsViewMode;
-  /** Minimum combined scene + image usage; 0 disables. */
+  /** Minimum combined video + image usage; 0 disables. */
   minTotalUsage: number;
   /** Minimum star rating when set (1-5). */
   minRatingStars: number | null;
   favoritesOnly: boolean;
 }
 
-const SORT_KEYS: readonly TagsSortKey[] = ["scenes", "name"];
+const SORT_KEYS: readonly TagsSortKey[] = ["videos", "name"];
 
 const tagsPrefs = createListPrefs<TagsListPrefs>({
   cookieName: TAGS_LIST_PREFS_COOKIE,
   maxAge: TAGS_LIST_PREFS_MAX_AGE,
   defaults: () => ({
     search: "",
-    sortKey: "scenes",
+    sortKey: "videos",
     sortDir: "desc",
     viewMode: "list",
     minTotalUsage: 0,
@@ -39,7 +39,6 @@ const tagsPrefs = createListPrefs<TagsListPrefs>({
     const viewMode = parsed.viewMode;
 
     if (typeof search !== "string" || search.length > 500) return null;
-    if (sortKey === "recent") sortKey = "scenes";
     if (typeof sortKey !== "string" || !SORT_KEYS.includes(sortKey as TagsSortKey)) return null;
     if (sortDir !== "asc" && sortDir !== "desc") return null;
     if (viewMode !== "list" && viewMode !== "cloud") return null;

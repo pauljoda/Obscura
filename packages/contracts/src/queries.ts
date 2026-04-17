@@ -80,7 +80,7 @@ export interface PerformerListQuery extends ListQuery {
   ratingMin?: number;
   ratingMax?: number;
   hasImage?: boolean;
-  sceneCountMin?: number;
+  videoCountMin?: number;
 }
 
 export interface ImageListQuery extends ListQuery {
@@ -100,13 +100,13 @@ export interface StudioListQuery extends ListQuery {
   favorite?: boolean;
   ratingMin?: number;
   ratingMax?: number;
-  sceneCountMin?: number;
+  videoCountMin?: number;
   hasImage?: boolean;
 }
 
 export interface TagListQuery extends ListQuery {
   letter?: string;
-  sceneCountMin?: number;
+  videoCountMin?: number;
 }
 
 // ─── Audio Queries ──────────────────────────────────────────────

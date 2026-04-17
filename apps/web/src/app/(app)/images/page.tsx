@@ -29,7 +29,7 @@ export default async function ImagesPage() {
     fetchStudios({ nsfw: nsfwMode }).catch(() => ({ studios: [] })),
     fetchPerformers({
       nsfw: nsfwMode,
-      sort: "scenes",
+      sort: "videos",
       order: "desc",
       limit: 300,
     }).catch(() => ({ performers: [], total: 0, limit: 300, offset: 0 })),

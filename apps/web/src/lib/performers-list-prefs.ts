@@ -6,7 +6,7 @@ export const PERFORMERS_LIST_PREFS_MAX_AGE = 60 * 60 * 24 * 365;
 const PAGE_SIZE = 50;
 
 export type PerformersViewMode = "grid" | "list";
-export type PerformersSortKey = "name" | "scenes" | "rating" | "recent";
+export type PerformersSortKey = "name" | "videos" | "rating" | "recent";
 export type PerformersPhotoFilter = "all" | "with" | "without";
 
 export interface PerformersListPrefs {
@@ -19,10 +19,10 @@ export interface PerformersListPrefs {
   minRating: number | null;
   maxRating: number | null;
   photoFilter: PerformersPhotoFilter;
-  minSceneCount: number | null;
+  minVideoCount: number | null;
 }
 
-const SORT_KEYS: readonly PerformersSortKey[] = ["name", "scenes", "rating", "recent"];
+const SORT_KEYS: readonly PerformersSortKey[] = ["name", "videos", "rating", "recent"];
 
 const ALLOWED_GENDER = new Set([
   "",
@@ -39,7 +39,7 @@ function parseRating(v: unknown): number | null {
   return v;
 }
 
-function parseSceneCountMin(v: unknown): number | null {
+function parseVideoCountMin(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   if (typeof v !== "number" || !Number.isInteger(v) || v < 1) return null;
   return v;
@@ -51,14 +51,14 @@ const performersPrefs = createListPrefs<PerformersListPrefs>({
   defaults: () => ({
     viewMode: "grid",
     search: "",
-    sortKey: "scenes",
+    sortKey: "videos",
     sortDir: "desc",
     gender: "",
     favoriteOnly: false,
     minRating: null,
     maxRating: null,
     photoFilter: "all",
-    minSceneCount: null,
+    minVideoCount: null,
   }),
   validate: (parsed) => {
     const viewMode = parsed.viewMode;
@@ -87,11 +87,11 @@ const performersPrefs = createListPrefs<PerformersListPrefs>({
       return null;
     }
 
-    const minSceneCount = parseSceneCountMin(parsed.minSceneCount);
+    const minVideoCount = parseVideoCountMin(parsed.minVideoCount);
     if (
-      parsed.minSceneCount !== undefined &&
-      parsed.minSceneCount !== null &&
-      minSceneCount === null
+      parsed.minVideoCount !== undefined &&
+      parsed.minVideoCount !== null &&
+      minVideoCount === null
     ) {
       return null;
     }
@@ -106,7 +106,7 @@ const performersPrefs = createListPrefs<PerformersListPrefs>({
       minRating: minRating ?? null,
       maxRating: maxRating ?? null,
       photoFilter,
-      minSceneCount: minSceneCount ?? null,
+      minVideoCount: minVideoCount ?? null,
     };
   },
 });
@@ -131,7 +131,7 @@ export function performersListPrefsToFetchParams(
   ratingMin?: number;
   ratingMax?: number;
   hasImage?: string;
-  sceneCountMin?: number;
+  videoCountMin?: number;
   limit: number;
   offset: number;
   nsfw: string;
@@ -146,7 +146,7 @@ export function performersListPrefsToFetchParams(
     ratingMax: p.maxRating ?? undefined,
     hasImage:
       p.photoFilter === "with" ? "true" : p.photoFilter === "without" ? "false" : undefined,
-    sceneCountMin: p.minSceneCount ?? undefined,
+    videoCountMin: p.minVideoCount ?? undefined,
     limit: PAGE_SIZE,
     offset: 0,
     nsfw,
