@@ -4,7 +4,7 @@ import { useState } from "react";
 import { cn } from "@obscura/ui/lib/utils";
 import { Sidebar } from "./sidebar";
 import { CanvasHeader } from "./canvas-header";
-import { MigrationBanner } from "./system/migration-banner";
+import { BreakingUpgradeGate } from "./system/breaking-upgrade-gate";
 import { MobileNav } from "./mobile-nav";
 import { SearchProvider } from "./search/search-context";
 import { CommandPalette } from "./search/command-palette";
@@ -46,7 +46,6 @@ function AppShellMain({
       )}
       style={{ transitionTimingFunction: "var(--ease-mechanical)" }}
     >
-      <MigrationBanner />
       <CanvasHeader />
       <div className="flex-1 p-5">{children}</div>
     </main>
@@ -63,29 +62,31 @@ export function AppShell({ children, initialCollapsed = false, lanAutoEnable = f
   };
 
   return (
-    <NsfwProvider lanAutoEnable={lanAutoEnable} initialMode={initialNsfwMode}>
-      <AppChromeProvider sidebarCollapsed={collapsed}>
-        <PlaylistProvider>
-          <SearchProvider>
-            <div className="flex min-h-dvh">
-              {/* Desktop sidebar */}
-              <div className="hidden md:block">
-                <Sidebar collapsed={collapsed} onToggle={toggle} />
+    <BreakingUpgradeGate>
+      <NsfwProvider lanAutoEnable={lanAutoEnable} initialMode={initialNsfwMode}>
+        <AppChromeProvider sidebarCollapsed={collapsed}>
+          <PlaylistProvider>
+            <SearchProvider>
+              <div className="flex min-h-dvh">
+                {/* Desktop sidebar */}
+                <div className="hidden md:block">
+                  <Sidebar collapsed={collapsed} onToggle={toggle} />
+                </div>
+
+                <AppShellMain collapsed={collapsed}>
+                  {children}
+                </AppShellMain>
+
+                {/* Mobile bottom nav */}
+                <MobileNav />
               </div>
 
-              <AppShellMain collapsed={collapsed}>
-                {children}
-              </AppShellMain>
-
-              {/* Mobile bottom nav */}
-              <MobileNav />
-            </div>
-
-            <CommandPalette />
-            <PlaylistController />
-          </SearchProvider>
-        </PlaylistProvider>
-      </AppChromeProvider>
-    </NsfwProvider>
+              <CommandPalette />
+              <PlaylistController />
+            </SearchProvider>
+          </PlaylistProvider>
+        </AppChromeProvider>
+      </NsfwProvider>
+    </BreakingUpgradeGate>
   );
 }

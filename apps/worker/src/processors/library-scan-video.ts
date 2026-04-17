@@ -36,14 +36,7 @@ const {
   videoMovieTags,
 } = schema;
 
-// ---------------------------------------------------------------------------
-// Inlined buildSeriesTree — the migration module's `series-tree.ts` lives in
-// `apps/api` and is not reachable from the worker's tsconfig. This is a pure
-// ~30-line function, so we inline it rather than introducing a cross-app
-// import. If the logic ever needs to change, keep this and the copy in
-// `apps/api/src/db/data-migrations/videos_to_series_model_v1/series-tree.ts`
-// in sync.
-// ---------------------------------------------------------------------------
+// Inlined buildSeriesTree — pure ~30-line function used by the scanner.
 
 interface SeriesTreeNode {
   libraryRootPath: string;

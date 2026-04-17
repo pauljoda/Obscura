@@ -4,6 +4,7 @@ import {
   type QueueName,
 } from "@obscura/contracts";
 import { runMigrations } from "../../api/src/db/migrate.js";
+import { BreakingGateAwaitingConsentError } from "../../api/src/db/breaking-gate.js";
 import {
   closeDatabase,
   configureDatabase,
@@ -119,7 +120,17 @@ export function buildWorkerRuntime(deps: WorkerTestDeps = {}) {
       }
 
       if (deps.runMigrations !== false) {
-        await runMigrations(getDatabaseUrl());
+        try {
+          await runMigrations(getDatabaseUrl());
+        } catch (err) {
+          if (err instanceof BreakingGateAwaitingConsentError) {
+            logger.log(
+              "[obscura worker] Breaking-upgrade gate active; worker staying idle until the user consents via the API.",
+            );
+            return;
+          }
+          throw err;
+        }
       }
 
       await initQueues();

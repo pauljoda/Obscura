@@ -40,12 +40,10 @@ export const studios = pgTable(
 );
 
 export const studiosRelations = relations(studios, ({ many, one }) => ({
-  scenes: many(scenes),
   galleries: many(galleries),
   images: many(images),
   audioLibraries: many(audioLibraries),
   audioTracks: many(audioTracks),
-  sceneFolders: many(sceneFolders),
   parent: one(studios, {
     fields: [studios.parentId],
     references: [studios.id],
@@ -95,13 +93,11 @@ export const performers = pgTable(
 );
 
 export const performersRelations = relations(performers, ({ many }) => ({
-  scenePerformers: many(scenePerformers),
   performerTags: many(performerTags),
   galleryPerformers: many(galleryPerformers),
   imagePerformers: many(imagePerformers),
   audioLibraryPerformers: many(audioLibraryPerformers),
   audioTrackPerformers: many(audioTrackPerformers),
-  sceneFolderPerformers: many(sceneFolderPerformers),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -131,13 +127,11 @@ export const tags = pgTable(
 );
 
 export const tagsRelations = relations(tags, ({ many, one }) => ({
-  sceneTags: many(sceneTags),
   performerTags: many(performerTags),
   galleryTags: many(galleryTags),
   imageTags: many(imageTags),
   audioLibraryTags: many(audioLibraryTags),
   audioTrackTags: many(audioTrackTags),
-  sceneFolderTags: many(sceneFolderTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -234,182 +228,6 @@ export const jobRuns = pgTable(
   ]
 );
 
-// ─── Scene Folders ────────────────────────────────────────────────
-export const sceneFolders = pgTable(
-  "scene_folders",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    libraryRootId: uuid("library_root_id")
-      .notNull()
-      .references(() => libraryRoots.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    customName: text("custom_name"),
-    folderPath: text("folder_path").notNull(),
-    relativePath: text("relative_path").notNull(),
-    parentId: uuid("parent_id").references(/* drizzle requires any for self-referential FKs */ (): any => sceneFolders.id, {
-      onDelete: "cascade",
-    }),
-    depth: integer("depth").notNull(),
-    isNsfw: boolean("is_nsfw").default(false).notNull(),
-    coverImagePath: text("cover_image_path"),
-    backdropImagePath: text("backdrop_image_path"),
-    details: text("details"),
-    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
-    externalSeriesId: text("external_series_id"),
-    studioId: uuid("studio_id").references(() => studios.id, {
-      onDelete: "set null",
-    }),
-    rating: integer("rating"),
-    date: text("date"),
-    directSceneCount: integer("direct_scene_count").default(0).notNull(),
-    totalSceneCount: integer("total_scene_count").default(0).notNull(),
-    visibleSfwSceneCount: integer("visible_sfw_scene_count")
-      .default(0)
-      .notNull(),
-    containsNsfwDescendants: boolean("contains_nsfw_descendants")
-      .default(false)
-      .notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    uniqueIndex("scene_folders_folder_path_idx").on(table.folderPath),
-    index("scene_folders_library_root_idx").on(table.libraryRootId),
-    index("scene_folders_parent_idx").on(table.parentId),
-    index("scene_folders_depth_idx").on(table.depth),
-    index("scene_folders_nsfw_idx").on(table.isNsfw),
-  ]
-);
-
-export const sceneFoldersRelations = relations(sceneFolders, ({ one, many }) => ({
-  libraryRoot: one(libraryRoots, {
-    fields: [sceneFolders.libraryRootId],
-    references: [libraryRoots.id],
-  }),
-  parent: one(sceneFolders, {
-    fields: [sceneFolders.parentId],
-    references: [sceneFolders.id],
-  }),
-  studio: one(studios, {
-    fields: [sceneFolders.studioId],
-    references: [studios.id],
-  }),
-  children: many(sceneFolders),
-  scenes: many(scenes),
-  sceneFolderPerformers: many(sceneFolderPerformers),
-  sceneFolderTags: many(sceneFolderTags),
-}));
-
-// ─── Scenes ─────────────────────────────────────────────────────────
-export const scenes = pgTable(
-  "scenes",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    title: text("title").notNull(),
-    details: text("details"),
-    url: text("url"),
-    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
-    date: text("date"),
-    rating: integer("rating"),
-    organized: boolean("organized").default(false).notNull(),
-    isNsfw: boolean("is_nsfw").default(false).notNull(),
-    interactive: boolean("interactive").default(false).notNull(),
-    episodeNumber: integer("episode_number"),
-
-    // File info
-    filePath: text("file_path"),
-    fileSize: real("file_size"),
-    duration: real("duration"),
-    width: integer("width"),
-    height: integer("height"),
-    frameRate: real("frame_rate"),
-    bitRate: integer("bit_rate"),
-    codec: text("codec"),
-    container: text("container"),
-
-    // Generated media paths
-    thumbnailPath: text("thumbnail_path"),
-    cardThumbnailPath: text("card_thumbnail_path"),
-    previewPath: text("preview_path"),
-    spritePath: text("sprite_path"),
-    trickplayVttPath: text("trickplay_vtt_path"),
-
-    // Fingerprints
-    checksumMd5: text("checksum_md5"),
-    oshash: text("oshash"),
-    phash: text("phash"),
-
-    // Playback tracking
-    playCount: integer("play_count").default(0).notNull(),
-    orgasmCount: integer("orgasm_count").default(0).notNull(),
-    playDuration: real("play_duration").default(0).notNull(),
-    resumeTime: real("resume_time").default(0).notNull(),
-    lastPlayedAt: timestamp("last_played_at"),
-
-    // Relations
-    studioId: uuid("studio_id").references(() => studios.id),
-    sceneFolderId: uuid("scene_folder_id").references(() => sceneFolders.id, {
-      onDelete: "set null",
-    }),
-
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("scenes_studio_idx").on(table.studioId),
-    index("scenes_scene_folder_idx").on(table.sceneFolderId),
-    index("scenes_date_idx").on(table.date),
-    index("scenes_rating_idx").on(table.rating),
-    index("scenes_created_at_idx").on(table.createdAt),
-  ]
-);
-
-export const scenesRelations = relations(scenes, ({ one, many }) => ({
-  studio: one(studios, {
-    fields: [scenes.studioId],
-    references: [studios.id],
-  }),
-  sceneFolder: one(sceneFolders, {
-    fields: [scenes.sceneFolderId],
-    references: [sceneFolders.id],
-  }),
-  scenePerformers: many(scenePerformers),
-  sceneTags: many(sceneTags),
-  markers: many(sceneMarkers),
-  subtitles: many(sceneSubtitles),
-}));
-
-// ─── Scene ↔ Performer join ─────────────────────────────────────────
-export const scenePerformers = pgTable(
-  "scene_performers",
-  {
-    sceneId: uuid("scene_id")
-      .notNull()
-      .references(() => scenes.id, { onDelete: "cascade" }),
-    performerId: uuid("performer_id")
-      .notNull()
-      .references(() => performers.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    uniqueIndex("scene_performers_pk").on(table.sceneId, table.performerId),
-    index("scene_performers_performer_idx").on(table.performerId),
-  ]
-);
-
-export const scenePerformersRelations = relations(
-  scenePerformers,
-  ({ one }) => ({
-    scene: one(scenes, {
-      fields: [scenePerformers.sceneId],
-      references: [scenes.id],
-    }),
-    performer: one(performers, {
-      fields: [scenePerformers.performerId],
-      references: [performers.id],
-    }),
-  })
-);
-
 // ─── Performer ↔ Tag join ───────────────────────────────────────────
 export const performerTags = pgTable(
   "performer_tags",
@@ -435,163 +253,6 @@ export const performerTagsRelations = relations(performerTags, ({ one }) => ({
   tag: one(tags, {
     fields: [performerTags.tagId],
     references: [tags.id],
-  }),
-}));
-
-// ─── Scene ↔ Tag join ───────────────────────────────────────────────
-export const sceneTags = pgTable(
-  "scene_tags",
-  {
-    sceneId: uuid("scene_id")
-      .notNull()
-      .references(() => scenes.id, { onDelete: "cascade" }),
-    tagId: uuid("tag_id")
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    uniqueIndex("scene_tags_pk").on(table.sceneId, table.tagId),
-    index("scene_tags_tag_idx").on(table.tagId),
-  ]
-);
-
-export const sceneTagsRelations = relations(sceneTags, ({ one }) => ({
-  scene: one(scenes, {
-    fields: [sceneTags.sceneId],
-    references: [scenes.id],
-  }),
-  tag: one(tags, {
-    fields: [sceneTags.tagId],
-    references: [tags.id],
-  }),
-}));
-
-// ─── Scene Folder ↔ Performer join ─────────────────────────────────
-export const sceneFolderPerformers = pgTable(
-  "scene_folder_performers",
-  {
-    sceneFolderId: uuid("scene_folder_id")
-      .notNull()
-      .references(() => sceneFolders.id, { onDelete: "cascade" }),
-    performerId: uuid("performer_id")
-      .notNull()
-      .references(() => performers.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    uniqueIndex("scene_folder_performers_pk").on(
-      table.sceneFolderId,
-      table.performerId
-    ),
-    index("scene_folder_performers_performer_idx").on(table.performerId),
-  ]
-);
-
-export const sceneFolderPerformersRelations = relations(
-  sceneFolderPerformers,
-  ({ one }) => ({
-    sceneFolder: one(sceneFolders, {
-      fields: [sceneFolderPerformers.sceneFolderId],
-      references: [sceneFolders.id],
-    }),
-    performer: one(performers, {
-      fields: [sceneFolderPerformers.performerId],
-      references: [performers.id],
-    }),
-  })
-);
-
-// ─── Scene Folder ↔ Tag join ───────────────────────────────────────
-export const sceneFolderTags = pgTable(
-  "scene_folder_tags",
-  {
-    sceneFolderId: uuid("scene_folder_id")
-      .notNull()
-      .references(() => sceneFolders.id, { onDelete: "cascade" }),
-    tagId: uuid("tag_id")
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    uniqueIndex("scene_folder_tags_pk").on(table.sceneFolderId, table.tagId),
-    index("scene_folder_tags_tag_idx").on(table.tagId),
-  ]
-);
-
-export const sceneFolderTagsRelations = relations(
-  sceneFolderTags,
-  ({ one }) => ({
-    sceneFolder: one(sceneFolders, {
-      fields: [sceneFolderTags.sceneFolderId],
-      references: [sceneFolders.id],
-    }),
-    tag: one(tags, {
-      fields: [sceneFolderTags.tagId],
-      references: [tags.id],
-    }),
-  })
-);
-
-// ─── Scene Markers ──────────────────────────────────────────────────
-export const sceneMarkers = pgTable(
-  "scene_markers",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    sceneId: uuid("scene_id")
-      .notNull()
-      .references(() => scenes.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    seconds: real("seconds").notNull(),
-    endSeconds: real("end_seconds"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("scene_markers_scene_idx").on(table.sceneId),
-  ]
-);
-
-export const sceneMarkersRelations = relations(sceneMarkers, ({ one }) => ({
-  scene: one(scenes, {
-    fields: [sceneMarkers.sceneId],
-    references: [scenes.id],
-  }),
-}));
-
-// ─── Scene Subtitles ────────────────────────────────────────────────
-export const sceneSubtitles = pgTable(
-  "scene_subtitles",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    sceneId: uuid("scene_id")
-      .notNull()
-      .references(() => scenes.id, { onDelete: "cascade" }),
-    language: text("language").notNull(),
-    label: text("label"),
-    format: text("format").notNull(),
-    source: text("source").notNull(),
-    storagePath: text("storage_path").notNull(),
-    // Original on-disk format ("vtt" | "srt" | "ass" | "ssa"). When "ass"/"ssa"
-    // we also keep the raw file at `sourcePath` so the player can render it
-    // with full libass fidelity.
-    sourceFormat: text("source_format").notNull().default("vtt"),
-    sourcePath: text("source_path"),
-    isDefault: boolean("is_default").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("scene_subtitles_scene_idx").on(table.sceneId),
-    uniqueIndex("scene_subtitles_scene_lang_source_idx").on(
-      table.sceneId,
-      table.language,
-      table.source
-    ),
-  ]
-);
-
-export const sceneSubtitlesRelations = relations(sceneSubtitles, ({ one }) => ({
-  scene: one(scenes, {
-    fields: [sceneSubtitles.sceneId],
-    references: [scenes.id],
   }),
 }));
 
@@ -760,10 +421,8 @@ export const fingerprintSubmissions = pgTable(
   "fingerprint_submissions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    // Legacy scene id column, retained nullable after the videos-to-series
-    // finalize phase drops the scenes table. New submissions are keyed via
-    // entity_type + entity_id. The FK to scenes has been removed so the
-    // DROP TABLE in finalize() can run cleanly.
+    // Legacy nullable scene id. No longer written; kept as a nullable
+    // column so existing rows from pre-videos installs still load.
     sceneId: uuid("scene_id"),
     entityType: text("entity_type"), // "video_episode" | "video_movie"
     entityId: uuid("entity_id"),
@@ -807,9 +466,8 @@ export const scrapeResults = pgTable(
   "scrape_results",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    // Legacy scene reference — retained nullable after the videos-to-series
-    // finalize phase drops the scenes table. The FK to scenes has been
-    // removed so the DROP TABLE in finalize() can run cleanly.
+    // Legacy nullable scene id. No longer written; kept nullable so
+    // existing rows from pre-videos installs still load.
     sceneId: uuid("scene_id"),
     // Generic entity reference
     entityType: text("entity_type").notNull().default("video"),
@@ -1449,10 +1107,8 @@ export const collectionItemsRelations = relations(
   })
 );
 
-// ─── Video Series Model (Plan A) ────────────────────────────────────
-// New typed tables for the Series → Season → Episode / Movie reshape.
-// These coexist with scenes/scene_folders until the data migration in
-// Plan B populates them and the finalize step drops the old tables.
+// ─── Video Series Model ─────────────────────────────────────────────
+// Typed tables for the Series → Season → Episode / Movie reshape.
 
 export const videoSeries = pgTable(
   "video_series",
@@ -1762,11 +1418,10 @@ export const videoEpisodeTags = pgTable(
 );
 
 /**
- * Polymorphic subtitle store for the new video model. Each row belongs
- * to either a video_episode or a video_movie — the discriminator is
+ * Polymorphic subtitle store for the video model. Each row belongs to
+ * either a video_episode or a video_movie — the discriminator is
  * `entity_type`. There's no FK to the underlying table; the video-scene
- * service cleans up on delete. Replaces the legacy `scene_subtitles`
- * table that used to hard-reference scenes.id.
+ * service cleans up on delete.
  */
 export const videoSubtitles = pgTable(
   "video_subtitles",
@@ -1816,18 +1471,3 @@ export const videoMarkers = pgTable(
     index("video_markers_entity_idx").on(table.entityType, table.entityId),
   ],
 );
-
-export const dataMigrations = pgTable("data_migrations", {
-  name: text("name").primaryKey(),
-  status: text("status").notNull().default("pending"),
-  stagedAt: timestamp("staged_at"),
-  finalizedAt: timestamp("finalized_at"),
-  failedAt: timestamp("failed_at"),
-  lastError: text("last_error"),
-  metrics: jsonb("metrics")
-    .$type<Record<string, unknown>>()
-    .default({})
-    .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});

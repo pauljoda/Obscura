@@ -133,7 +133,7 @@ export const apiRoutes = {
 
   // System
   systemStatus: "/system/status",
-  systemMigrationFinalize: "/system/migrations/:name/finalize",
+  systemBreakingGateAccept: "/system/breaking-gate/accept",
 } as const;
 
 export const API_BASE_URL =

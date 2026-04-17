@@ -94,21 +94,26 @@ docs/              — Architecture and design language docs
 ## Database
 
 - PostgreSQL 16 via `postgres` driver and `drizzle-orm`.
-- Schema defined in `apps/api/src/db/schema.ts`.
-- Core entities: scenes, performers, studios, tags, fingerprints, library_roots, settings.
-- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `apps/api/drizzle/` and are applied by `apps/api/src/db/migrate.ts` (runs from both `pnpm --filter @obscura/api db:migrate` and the production Docker entrypoint). Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
+- Schema defined in `packages/db/src/schema.ts` and re-exported from `apps/api/src/db/schema.ts`.
+- Core entities: videos (series/seasons/episodes/movies), performers, studios, tags, fingerprints, library_roots, settings.
+- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `apps/api/drizzle/` and are applied by `apps/api/src/db/migrate.ts`, which runs automatically inside the API server at boot (`apps/api/src/server.ts`). Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
 - **Adding a schema change:**
-  1. Edit `apps/api/src/db/schema.ts`.
+  1. Edit `packages/db/src/schema.ts`.
   2. Run `pnpm --filter @obscura/api db:generate` to produce a new `drizzle/NNNN_<name>.sql` file.
-  3. **Open the file and read it.** drizzle-kit is conservative but will emit destructive SQL (drops, column renames seen as drop+add) when it can't tell your intent — fix it by hand before committing.
-  4. Commit both the `.sql` file and the updated `drizzle/meta/_journal.json` alongside the schema edit.
-  5. Apply locally with `pnpm --filter @obscura/api db:migrate` and verify data is intact.
-- **Never run `db:push` against a deployment you care about.** It bypasses the migration ledger, applies every inferred diff in one shot, and — with `--force` — has no veto for destructive drops. `db:push` is only appropriate for throwaway/fresh dev databases. The production Docker entrypoint used to run `drizzle-kit push --force` on every boot and nearly wiped real data on an upgrade — that's why this repo now ships migrations instead.
-- **Legacy install bridge.** `apps/api/src/db/migrate.ts` detects deployments that were originally provisioned with `drizzle-kit push` (core tables exist, `drizzle.__drizzle_migrations` does not). For those it:
-  1. Applies pre-baseline deltas that align the live schema with migration 0000. These are push-only tweaks that no migration file captures — the only two that belong here today are `library_settings.default_playback_mode` and dropping the unused `scene_markers.primary_tag_id` column. **Do not add a pre-baseline delta for anything that belongs to a specific later migration.** `scene_folders.custom_name` used to live here by mistake and crashed every install that predated migration 0004 — the correct fix is to ship the change as a migration file and let the smart probe below run it.
-  2. Probes each journal entry's sentinel (`LEGACY_SCHEMA_SENTINELS` in `migrate.ts`) against the live schema to find the highest migration the install has actually reached, and seeds *only that prefix* into `__drizzle_migrations`. Anything beyond is left unseeded so the drizzle migrator runs those files normally on the next step, which is how older push installs pick up any migrations they never saw.
-  3. Runs `reconcileSchema` after the migrator to self-heal installs that were bridged under the *previous* (whole-journal-seeded) bridge and may still have holes. It's idempotent and a no-op for healthy DBs.
-- **Whenever you add a new `drizzle/NNNN_*.sql` file, add a matching entry to `LEGACY_SCHEMA_SENTINELS` in the same commit** so the smart bridge can detect the new migration on legacy installs. Pick a sentinel the migration unambiguously creates (a new table or column).
+  3. **Open the file and read it.** drizzle-kit is conservative but will emit destructive SQL (drops, column renames seen as drop+add) when it can't tell your intent — fix it by hand before committing. Use `DROP TABLE IF EXISTS` when the drop needs to be safe on installs that may already lack the table.
+  4. Commit the `.sql` file, the new `drizzle/meta/NNNN_snapshot.json`, and the updated `drizzle/meta/_journal.json` alongside the schema edit.
+  5. Apply locally by restarting the API (or running `pnpm --filter @obscura/api db:migrate`) and verify.
+- **Never run `db:push` against a deployment you care about.** It bypasses the migration ledger and can apply destructive drops silently.
+
+### Breaking-change policy
+
+Obscura is pre-1.0. We do not maintain a staging/finalize data-migration framework or a push-era legacy-install bridge. When a schema change would destroy user data (e.g. dropping a populated table), do this instead:
+
+1. Ship the change as a normal drizzle migration with `DROP TABLE IF EXISTS` / idempotent SQL.
+2. Call out the break in `CHANGELOG.md` under `### What's New` — describe what breaks, what the user should do (usually "rescan your library roots"), and why.
+3. If the data loss is severe enough that we want explicit consent before it happens, add a single-purpose one-time break-gate next to the migration. See `apps/api/src/db/breaking-gate.ts` (the v0.20 scenes→videos gate) for the pattern: marker file on disk, gate check runs before the migrator, a consent UI (`apps/web/src/components/system/breaking-upgrade-gate.tsx`) takes over the app shell until the user clicks through. Don't abstract this into a framework — copy the pattern if a future break needs it, or delete the old gate when it's no longer relevant.
+
+No bridges, no staging tables, no legacy-schema snapshots. Early users expect breakage; make it loud and move on.
 
 ## Design System Rules
 
