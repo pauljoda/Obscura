@@ -389,6 +389,41 @@ export async function assetsRoutes(app: FastifyInstance) {
     return { error: "Backdrop not found" };
   });
 
+  // ─── Legacy alias: /assets/video-folders/:id/{cover,backdrop} ──
+  // Pre-rename cascade accepts wrote `/assets/video-folders/:id/...`
+  // URLs into videoSeries.posterPath / backdropPath. Keep the alias
+  // so already-saved DB rows keep rendering after the rename; the
+  // downloaded files on disk are the same.
+  app.get("/assets/video-folders/:id/cover", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const dir = getGeneratedSeriesDir(id);
+    for (const name of ["cover-custom.jpg", "poster.jpg", "poster.png", "poster.webp"]) {
+      const p = path.join(dir, name);
+      if (existsSync(p)) {
+        reply.header("Cache-Control", "no-cache");
+        reply.header("Content-Type", name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg");
+        return reply.send(createReadStream(p));
+      }
+    }
+    reply.code(404);
+    return { error: "Cover not found" };
+  });
+
+  app.get("/assets/video-folders/:id/backdrop", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const dir = getGeneratedSeriesDir(id);
+    for (const name of ["backdrop-custom.jpg", "backdrop.jpg", "backdrop.png", "backdrop.webp"]) {
+      const p = path.join(dir, name);
+      if (existsSync(p)) {
+        reply.header("Cache-Control", "no-cache");
+        reply.header("Content-Type", name.endsWith(".png") ? "image/png" : name.endsWith(".webp") ? "image/webp" : "image/jpeg");
+        return reply.send(createReadStream(p));
+      }
+    }
+    reply.code(404);
+    return { error: "Backdrop not found" };
+  });
+
   // ─── Season poster: /assets/seasons/:id/poster ─────────────────
   app.get("/assets/seasons/:id/poster", async (request, reply) => {
     const { id } = request.params as { id: string };

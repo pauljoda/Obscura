@@ -91,10 +91,10 @@ async function downloadSeriesImages(
     downloadImageToCache(logoUrl, dir, "logo"),
   ]);
   if (posterFile) {
-    patch.posterPath = `/assets/video-folders/${seriesId}/cover`;
+    patch.posterPath = `/assets/video-series/${seriesId}/cover`;
   }
   if (backdropFile) {
-    patch.backdropPath = `/assets/video-folders/${seriesId}/backdrop`;
+    patch.backdropPath = `/assets/video-series/${seriesId}/backdrop`;
   }
   return patch;
 }
