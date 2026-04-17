@@ -29,7 +29,7 @@ export async function uploadFile<T>(
   const form = new FormData();
   // Extra fields are appended BEFORE the file so the server can read
   // them off file.fields / via iterative parts() before consuming the
-  // file stream (critical for routes like /scenes/upload that need
+  // file stream (critical for routes like /videos uploads that need
   // libraryRootId before accepting the payload).
   if (extraFields) {
     for (const [key, value] of Object.entries(extraFields)) {

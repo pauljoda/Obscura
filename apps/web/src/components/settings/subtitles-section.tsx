@@ -227,7 +227,7 @@ export function SubtitlesSection({
           <div>
             <label className="control-label">Preview</label>
             <p className="text-[0.68rem] text-text-muted mt-1">
-              Shows how captions will render on top of a scene.
+              Shows how captions will render on top of a video.
             </p>
           </div>
           <div className="relative mt-3 aspect-video w-full overflow-hidden border border-border-subtle bg-black">

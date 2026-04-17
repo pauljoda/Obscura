@@ -9,7 +9,7 @@
  *   3. Respect the abort flag so "Stop" mid-run works.
  *
  * These runners are kept outside the tab components so the tabs stay
- * focused on rendering, matching the scene / video-series split.
+ * focused on rendering, matching the video / video-series split.
  */
 
 import { executePlugin, acceptPluginResult } from "../../lib/api";

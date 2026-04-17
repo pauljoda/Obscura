@@ -1,4 +1,4 @@
-/** Tag name → chip class for gallery / dashboard cards (shared with scene grid). */
+/** Tag name → chip class for gallery / dashboard cards (shared with video grid). */
 export const VIDEO_TAG_COLORS: Record<string, string> = {
   Outdoor: "tag-chip-success",
   Indoor: "tag-chip-default",

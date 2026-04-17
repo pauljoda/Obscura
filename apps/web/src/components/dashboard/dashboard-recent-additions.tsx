@@ -23,11 +23,11 @@ type IngestRow =
   | { kind: "gallery"; at: string; gallery: GalleryListItem };
 
 function mergeIngest(
-  scenes: VideoListItem[],
+  videos: VideoListItem[],
   galleries: GalleryListItem[]
 ): IngestRow[] {
   const rows: IngestRow[] = [
-    ...scenes.map((video) => ({
+    ...videos.map((video) => ({
       kind: "video" as const,
       at: video.createdAt,
       video,
@@ -121,17 +121,17 @@ function IngestSkeleton() {
 
 export function DashboardRecentAdditions({
   loading,
-  scenes,
+  videos,
   galleries,
 }: {
   loading: boolean;
-  scenes: VideoListItem[];
+  videos: VideoListItem[];
   galleries: GalleryListItem[];
 }) {
   const { mode } = useNsfw();
   const terms = useTerms();
 
-  const allMerged = mergeIngest(scenes, galleries);
+  const allMerged = mergeIngest(videos, galleries);
   // In SFW mode, filter out NSFW items entirely so they leave no blank space
   const merged = mode === "off"
     ? allMerged.filter((r) => r.kind === "video" ? !r.video.isNsfw : !r.gallery.isNsfw)

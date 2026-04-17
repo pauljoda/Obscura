@@ -1,7 +1,7 @@
 /**
  * Generic factory for cookie-backed list preference objects.
  *
- * Each entity (scenes, galleries, performers, etc.) defines its own prefs
+ * Each entity (videos, galleries, performers, etc.) defines its own prefs
  * type and validation logic.  The factory provides the shared boilerplate:
  * JSON parse/encode with URI encoding, cookie read/write/clear, and
  * default-comparison helpers.

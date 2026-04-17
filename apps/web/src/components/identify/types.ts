@@ -14,7 +14,7 @@ import type {
 // ─── Tab type ──────────────────────────────────────────────────────
 
 export type IdentifyTab =
-  | "scenes"
+  | "videos"
   | "video-series"
   | "galleries"
   | "images"

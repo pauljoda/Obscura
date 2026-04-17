@@ -495,14 +495,14 @@ export interface StorageStatsDto {
   totalBytes: number;
 }
 
-/** Tag embedded on scenes, images, galleries, and performers in list/detail payloads. */
+/** Tag embedded on videos, images, galleries, and performers in list/detail payloads. */
 export interface TagEmbedDto {
   id: string;
   name: string;
   isNsfw: boolean;
 }
 
-// ─── Scene Folder DTOs ───────────────────────────────────────────
+// ─── Video Series DTOs ───────────────────────────────────────────
 
 export interface VideoSeriesListItemDto {
   id: string;
@@ -568,7 +568,7 @@ export interface VideoSeriesDetailDto extends VideoSeriesListItemDto {
   tags: TagEmbedDto[];
   breadcrumbs: VideoSeriesBreadcrumbDto[];
   children: VideoSeriesListItemDto[];
-  /** Seasons under this series. Empty for movie-style folders. */
+  /** Seasons under this series. Empty for movie-style series. */
   seasons: VideoSeriesSeasonDto[];
   /**
    * `"flat"` when the UI should render the series as a single

@@ -33,7 +33,7 @@ export interface TagEmbed {
 /* ─── Compound layout ────────────────────────────────────────── */
 
 /**
- * MetadataPanel — two-column grid layout used by scene, gallery, and audio
+ * MetadataPanel — two-column grid layout used by video, gallery, and audio
  * metadata views. Left column is the main content (performers, tags, etc.),
  * right column is an optional sidebar (file info, etc.).
  */

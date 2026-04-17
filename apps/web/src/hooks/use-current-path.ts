@@ -4,7 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 /**
  * Returns the current page location as a string suitable for the `from`
- * query parameter (e.g. `/scenes?folder=abc`).
+ * query parameter (e.g. `/videos?series=abc`).
  */
 export function useCurrentPath(): string {
   const pathname = usePathname();
