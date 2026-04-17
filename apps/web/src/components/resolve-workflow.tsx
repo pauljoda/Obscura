@@ -19,7 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import {
-  fetchAllVideos,
+  fetchVideos,
   fetchInstalledScrapers,
   scrapeVideo,
   acceptScrapeResult,
@@ -31,6 +31,8 @@ import {
   type NormalizedScrapeResult,
 } from "../lib/api";
 import { entityTerms } from "../lib/terminology";
+import { revalidateLibraryCaches } from "../app/actions/revalidate-library";
+import { ProviderSelector } from "./shared/provider-selector";
 
 interface ScrapeState {
   scraping: boolean;
@@ -51,6 +53,9 @@ const defaultScrapeState: ScrapeState = {
 export function ResolveWorkflow() {
   const [unmatchedVideos, setUnmatchedVideos] = useState<VideoListItem[]>([]);
   const [totalUnmatched, setTotalUnmatched] = useState(0);
+  const [totalVideosAvailable, setTotalVideosAvailable] = useState(0);
+  const [loadedVideoCount, setLoadedVideoCount] = useState(0);
+  const [loadingMoreQueue, setLoadingMoreQueue] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [scrapers, setScrapers] = useState<ScraperPackage[]>([]);
   const [selectedScraperId, setSelectedScraperId] = useState<string | null>(null);
@@ -69,7 +74,7 @@ export function ResolveWorkflow() {
     setLoading(true);
     try {
       const [videosRes, scrapersRes] = await Promise.all([
-        fetchAllVideos({ sort: "created_at" }),
+        fetchVideos({ sort: "created_at", limit: 500, offset: 0 }),
         fetchInstalledScrapers(),
       ]);
 
@@ -77,6 +82,8 @@ export function ResolveWorkflow() {
       const unorganized = videosRes.videos.filter((video) => !video.organized);
       setUnmatchedVideos(unorganized);
       setTotalUnmatched(unorganized.length);
+      setTotalVideosAvailable(videosRes.total);
+      setLoadedVideoCount(videosRes.videos.length);
       setScrapers(scrapersRes.packages.filter((s) => s.enabled));
 
       if (!selectedVideoId && unorganized.length > 0) {
@@ -89,6 +96,29 @@ export function ResolveWorkflow() {
       setLoading(false);
     }
   }, [selectedVideoId, selectedScraperId]);
+
+  const loadMoreQueue = useCallback(async () => {
+    if (loadingMoreQueue || loadedVideoCount >= totalVideosAvailable) return;
+    setLoadingMoreQueue(true);
+    try {
+      const res = await fetchVideos({
+        sort: "created_at",
+        limit: 500,
+        offset: loadedVideoCount,
+      });
+      const unorganized = res.videos.filter((video) => !video.organized);
+      if (unorganized.length === 0) return;
+      setUnmatchedVideos((prev) => {
+        const seen = new Set(prev.map((video) => video.id));
+        const appended = unorganized.filter((video) => !seen.has(video.id));
+        return [...prev, ...appended];
+      });
+      setLoadedVideoCount((prev) => prev + res.videos.length);
+      setTotalVideosAvailable(res.total);
+    } finally {
+      setLoadingMoreQueue(false);
+    }
+  }, [loadedVideoCount, loadingMoreQueue, totalVideosAvailable]);
 
   useEffect(() => {
     void loadData();
@@ -151,6 +181,7 @@ export function ResolveWorkflow() {
         scrapeState.result.id,
         Array.from(enabledFields)
       );
+      await revalidateLibraryCaches(["videos", "video-series", "performers", "studios", "tags"]);
 
       setMessage("Metadata applied successfully.");
       setScrapeState(defaultScrapeState);
@@ -232,6 +263,17 @@ export function ResolveWorkflow() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="accent">{totalUnmatched} unmatched</Badge>
+          {loadedVideoCount < totalVideosAvailable && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadMoreQueue()}
+              disabled={loadingMoreQueue}
+            >
+              {loadingMoreQueue ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              Load More Queue
+            </Button>
+          )}
         </div>
       </div>
 
@@ -332,17 +374,11 @@ export function ResolveWorkflow() {
                 <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                   <div>
                     <label className="control-label">Scraper</label>
-                    <select
-                      className="control-input"
+                    <ProviderSelector
                       value={selectedScraperId ?? ""}
-                      onChange={(e) => setSelectedScraperId(e.target.value)}
-                    >
-                      {scrapers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedScraperId}
+                      groups={[{ options: scrapers.map((s) => ({ value: s.id, label: s.name })) }]}
+                    />
                   </div>
                   <div>
                     <label className="control-label">{entityTerms.video} URL (optional)</label>

@@ -38,6 +38,7 @@ import { StudioForm } from "./studio-form";
 import { entityTerms } from "../lib/terminology";
 import { ScrapeField } from "./shared/scrape-field";
 import { StatusMessage } from "./shared/status-message";
+import { ProviderSelector } from "./shared/provider-selector";
 
 interface StudioEditProps {
   id: string;
@@ -372,15 +373,11 @@ export function StudioEdit({ id, onSaved, onCancel }: StudioEditProps) {
             {endpoints.length > 0 && (
               <div className="surface-well p-3 space-y-2">
                 <div className="text-kicker">Identify via StashBox</div>
-                <select
+                <ProviderSelector
                   value={selectedEndpoint}
-                  onChange={(e) => setSelectedEndpoint(e.target.value)}
-                  className="control-input w-full py-1.5 text-xs"
-                >
-                  {endpoints.map((ep) => (
-                    <option key={ep.id} value={ep.id}>{ep.name}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedEndpoint}
+                  groups={[{ options: endpoints.map((ep) => ({ value: ep.id, label: ep.name })) }]}
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleScrape}

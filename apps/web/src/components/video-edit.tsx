@@ -65,6 +65,7 @@ import { useTerms } from "../lib/terminology";
 import { ChipInput } from "./shared/chip-input";
 import { StarRatingPicker } from "./shared/star-rating-picker";
 import { MetadataRow } from "./shared/metadata-row";
+import { ProviderSelector } from "./shared/provider-selector";
 
 interface VideoEditProps {
   id: string;
@@ -851,20 +852,15 @@ export function VideoEdit({
             {scrapers.length > 0 && (
               <section className="surface-well px-4 py-3 flex flex-wrap items-center gap-3">
                 <Wand2 className="h-4 w-4 text-text-accent flex-shrink-0" />
-                <select
-                  className="control-input text-sm py-1.5 w-auto min-w-[140px]"
+                <ProviderSelector
                   value={selectedScraper}
-                  onChange={(e) => {
-                    setSelectedScraper(e.target.value);
-                    setSeekIndex(scrapers.findIndex((s) => s.id === e.target.value));
+                  onChange={(val) => {
+                    setSelectedScraper(val);
+                    setSeekIndex(scrapers.findIndex((s) => s.id === val));
                   }}
-                >
-                  {scrapers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  className="w-[240px]"
+                  groups={[{ options: scrapers.map((s) => ({ value: s.id, label: s.name })) }]}
+                />
                 <Button
                   variant="primary"
                   size="sm"

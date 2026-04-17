@@ -22,8 +22,8 @@ import {
   Tag,
 } from "lucide-react";
 import {
-  fetchAllVideos,
-  fetchAllPerformers,
+  fetchVideos,
+  fetchPerformers,
   fetchStudios,
   fetchTags,
   fetchInstalledScrapers,
@@ -81,6 +81,8 @@ import {
 } from "../identify/identify-runners";
 import { useNsfw } from "../nsfw/nsfw-context";
 import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
+import { ProviderSelector } from "../shared/provider-selector";
+import { revalidateLibraryCaches } from "../../app/actions/revalidate-library";
 
 /* ─── Component ─────────────────────────────────────────────────── */
 
@@ -117,6 +119,10 @@ export function BulkScrape() {
   // All items for show-all toggle
   const [allVideos, setAllVideos] = useState<VideoListItem[]>([]);
   const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
+  const [videoTotalAvailable, setVideoTotalAvailable] = useState(0);
+  const [performerTotalAvailable, setPerformerTotalAvailable] = useState(0);
+  const [loadingMoreVideos, setLoadingMoreVideos] = useState(false);
+  const [loadingMorePerformers, setLoadingMorePerformers] = useState(false);
   const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
   const [allTags, setAllTags] = useState<TagItem[]>([]);
 
@@ -157,8 +163,8 @@ export function BulkScrape() {
     setLoading(true);
     try {
       const [videosRes, perfRes, studiosRes, tagsRes, scrapersRes, stashBoxRes, seriesRes, galleriesRes, imagesRes, audioRes, pluginsRes] = await Promise.all([
-        fetchAllVideos({ sort: "created_at", nsfw: nsfwMode }),
-        fetchAllPerformers({ sort: "name", order: "asc" }),
+        fetchVideos({ sort: "created_at", nsfw: nsfwMode, limit: 500, offset: 0 }),
+        fetchPerformers({ sort: "name", order: "asc", limit: 500, offset: 0 }),
         fetchStudios(),
         fetchTags(),
         fetchInstalledScrapers(),
@@ -188,7 +194,9 @@ export function BulkScrape() {
 
       // Store all for show-all toggle
       setAllVideos(videosRes.videos);
+      setVideoTotalAvailable(videosRes.total);
       setAllPerformers(perfRes.performers);
+      setPerformerTotalAvailable(perfRes.total);
       setAllStudios(studiosRes.studios);
       setAllTags(tagsRes.tags);
 
@@ -259,7 +267,51 @@ export function BulkScrape() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [nsfwMode]);
+
+  const loadMoreVideos = useCallback(async () => {
+    if (loadingMoreVideos || allVideos.length >= videoTotalAvailable) return;
+    setLoadingMoreVideos(true);
+    try {
+      const res = await fetchVideos({
+        sort: "created_at",
+        nsfw: nsfwMode,
+        limit: 500,
+        offset: allVideos.length,
+      });
+      if (res.videos.length === 0) return;
+      setAllVideos((prev) => {
+        const seen = new Set(prev.map((video) => video.id));
+        const appended = res.videos.filter((video) => !seen.has(video.id));
+        return [...prev, ...appended];
+      });
+      setVideoTotalAvailable(res.total);
+    } finally {
+      setLoadingMoreVideos(false);
+    }
+  }, [allVideos.length, loadingMoreVideos, nsfwMode, videoTotalAvailable]);
+
+  const loadMorePerformers = useCallback(async () => {
+    if (loadingMorePerformers || allPerformers.length >= performerTotalAvailable) return;
+    setLoadingMorePerformers(true);
+    try {
+      const res = await fetchPerformers({
+        sort: "name",
+        order: "asc",
+        limit: 500,
+        offset: allPerformers.length,
+      });
+      if (res.performers.length === 0) return;
+      setAllPerformers((prev) => {
+        const seen = new Set(prev.map((performer) => performer.id));
+        const appended = res.performers.filter((performer) => !seen.has(performer.id));
+        return [...prev, ...appended];
+      });
+      setPerformerTotalAvailable(res.total);
+    } finally {
+      setLoadingMorePerformers(false);
+    }
+  }, [allPerformers.length, loadingMorePerformers, performerTotalAvailable]);
 
   useEffect(() => {
     void loadData();
@@ -392,16 +444,51 @@ export function BulkScrape() {
     }
   }
 
-  function handleAcceptAll() {
-    if (tab === "videos") void acceptAllVideos(videoRows, setVideoRows);
-    else if (tab === "video-series") void acceptAllVideoSeries(seriesRows, setSeriesRows);
-    else if (tab === "galleries") void acceptAllGalleries(galleryRows, setGalleryRows);
-    else if (tab === "images") void acceptAllImages(imageRows, setImageRows);
-    else if (tab === "audio-libraries") void acceptAllAudioLibraries(audioLibraryRows, setAudioLibraryRows);
-    else if (tab === "audio-tracks") void acceptAllAudioTracks(audioTrackRows, setAudioTrackRows);
-    else if (tab === "performers") void acceptAllPerformers(perfRows, setPerfRows);
-    else if (tab === "studios") void acceptAllStudios(studioRows, setStudioRows);
-    else if (tab === "tags") void acceptAllTags(tagRows, setTagRows);
+  async function handleAcceptAll() {
+    if (tab === "videos") {
+      await acceptAllVideos(videoRows, setVideoRows);
+      await revalidateLibraryCaches(["videos"]);
+      return;
+    }
+    if (tab === "video-series") {
+      await acceptAllVideoSeries(seriesRows, setSeriesRows);
+      await revalidateLibraryCaches(["video-series", "videos"]);
+      return;
+    }
+    if (tab === "galleries") {
+      await acceptAllGalleries(galleryRows, setGalleryRows);
+      await revalidateLibraryCaches(["galleries"]);
+      return;
+    }
+    if (tab === "images") {
+      await acceptAllImages(imageRows, setImageRows);
+      await revalidateLibraryCaches(["images"]);
+      return;
+    }
+    if (tab === "audio-libraries") {
+      await acceptAllAudioLibraries(audioLibraryRows, setAudioLibraryRows);
+      await revalidateLibraryCaches(["audio-libraries"]);
+      return;
+    }
+    if (tab === "audio-tracks") {
+      await acceptAllAudioTracks(audioTrackRows, setAudioTrackRows);
+      await revalidateLibraryCaches(["audio-libraries"]);
+      return;
+    }
+    if (tab === "performers") {
+      await acceptAllPerformers(perfRows, setPerfRows);
+      await revalidateLibraryCaches(["performers"]);
+      return;
+    }
+    if (tab === "studios") {
+      await acceptAllStudios(studioRows, setStudioRows);
+      await revalidateLibraryCaches(["studios"]);
+      return;
+    }
+    if (tab === "tags") {
+      await acceptAllTags(tagRows, setTagRows);
+      await revalidateLibraryCaches(["tags"]);
+    }
   }
 
   /** Resolve the plugin sub-list for per-row seek (honors provider picker). */
@@ -517,35 +604,27 @@ export function BulkScrape() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Scraper selector */}
           <div className="flex items-center gap-2">
-            <select
+            <ProviderSelector
               value={selectedScraperId}
-              onChange={(e) => setSelectedScraperId(e.target.value)}
-              className="control-input py-1.5 text-xs min-w-[200px]"
+              onChange={setSelectedScraperId}
               disabled={running}
-            >
-              <option value="">Seek all ({totalProviderCount} sources)</option>
-              {pluginsForTab.length > 0 && (
-                <optgroup label="Obscura Plugins">
-                  {pluginsForTab.map((p) => (
-                    <option key={`plugin:${p.id}`} value={`plugin:${p.id}`}>{p.name}</option>
-                  ))}
-                </optgroup>
-              )}
-              {nsfwAwareStashBoxEndpoints.length > 0 && (
-                <optgroup label="Stash-Box">
-                  {nsfwAwareStashBoxEndpoints.map((ep) => (
-                    <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
-                  ))}
-                </optgroup>
-              )}
-              {scrapersForTab.length > 0 && (
-                <optgroup label="Community Scrapers">
-                  {scrapersForTab.map((s) => (
-                    <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
+              className="w-[240px]"
+              allOption={{ value: "", label: `Seek all (${totalProviderCount} sources)` }}
+              groups={[
+                ...(pluginsForTab.length > 0 ? [{
+                  label: "Obscura Plugins",
+                  options: pluginsForTab.map((p) => ({ value: `plugin:${p.id}`, label: p.name }))
+                }] : []),
+                ...(nsfwAwareStashBoxEndpoints.length > 0 ? [{
+                  label: "Stash-Box",
+                  options: nsfwAwareStashBoxEndpoints.map((ep) => ({ value: `stashbox:${ep.id}`, label: ep.name }))
+                }] : []),
+                ...(scrapersForTab.length > 0 ? [{
+                  label: "Community Scrapers",
+                  options: scrapersForTab.map((s) => ({ value: `scraper:${s.id}`, label: s.name }))
+                }] : [])
+              ]}
+            />
           </div>
 
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
@@ -566,13 +645,51 @@ export function BulkScrape() {
             Show all
           </label>
 
+          {tab === "videos" && (
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              <span>
+                Loaded {allVideos.length.toLocaleString()} / {videoTotalAvailable.toLocaleString()} videos
+              </span>
+              {allVideos.length < videoTotalAvailable && (
+                <button
+                  type="button"
+                  onClick={() => void loadMoreVideos()}
+                  disabled={running || loadingMoreVideos}
+                  className="inline-flex items-center gap-1 border border-border-subtle px-2 py-1 text-[0.65rem] hover:border-border-accent hover:text-text-primary disabled:opacity-50"
+                >
+                  {loadingMoreVideos ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  Load more
+                </button>
+              )}
+            </div>
+          )}
+
+          {tab === "performers" && (
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              <span>
+                Loaded {allPerformers.length.toLocaleString()} / {performerTotalAvailable.toLocaleString()} performers
+              </span>
+              {allPerformers.length < performerTotalAvailable && (
+                <button
+                  type="button"
+                  onClick={() => void loadMorePerformers()}
+                  disabled={running || loadingMorePerformers}
+                  className="inline-flex items-center gap-1 border border-border-subtle px-2 py-1 text-[0.65rem] hover:border-border-accent hover:text-text-primary disabled:opacity-50"
+                >
+                  {loadingMorePerformers ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  Load more
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex-1" />
 
           {!running ? (
             <div className="flex items-center gap-2">
               {foundCount > 0 && (
                 <button
-                  onClick={handleAcceptAll}
+                  onClick={() => void handleAcceptAll()}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-status-success-text border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
                 >
                   <Check className="h-3 w-3" />

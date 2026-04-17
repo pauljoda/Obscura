@@ -24,6 +24,7 @@ import {
   type NormalizedPerformerScrapeResult,
 } from "../lib/api";
 import { entityTerms } from "../lib/terminology";
+import { ProviderSelector } from "./shared/provider-selector";
 
 interface PerformerRow {
   performer: PerformerItem;
@@ -206,16 +207,13 @@ export function BulkPerformerScrape() {
 
       {/* Controls */}
       <div className="surface-well p-3 flex items-center gap-3 flex-wrap">
-        <select
+        <ProviderSelector
           value={selectedScraperId ?? ""}
-          onChange={(e) => setSelectedScraperId(e.target.value)}
-          className="control-input py-1.5 text-xs flex-1 min-w-[200px]"
+          onChange={setSelectedScraperId}
           disabled={running}
-        >
-          {scrapers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+          className="flex-1 min-w-[200px]"
+          groups={[{ options: scrapers.map((s) => ({ value: s.id, label: s.name })) }]}
+        />
 
         <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
           <Checkbox

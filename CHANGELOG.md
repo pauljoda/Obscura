@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Plugin and scraper dropdowns are now searchable.** The metadata provider selection dropdowns on the Identify page and on individual edit pages (Video, Studio, Performer, Tag) have been upgraded from native system selects to a custom searchable dropdown. This makes it much easier to find and select a specific plugin, StashBox endpoint, or community scraper when you have many installed.
+
 - **Video URLs now save.** The URL field on the video metadata edit form previously showed a "Saved" confirmation but the value was silently dropped — there was no database column behind it. The video tables now carry a `url` column, and edits are persisted and displayed on the detail page.
 - **Long unbroken text in the Details field now wraps inside the card instead of overflowing.** Strings with no natural word boundaries (e.g. semicolon-separated tokens like `a;b;c;d;...`) were running off the right of the page header and the Metadata card. They now break at any character when needed.
 

@@ -39,6 +39,7 @@ import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
 import { PerformerForm } from "./performer-form";
 import { StatusMessage } from "./shared/status-message";
+import { ProviderSelector } from "./shared/provider-selector";
 
 interface PerformerEditProps {
   id: string;
@@ -512,32 +513,26 @@ export function PerformerEdit({ id, onSaved, onCancel }: PerformerEditProps) {
             {(scrapers.length > 0 || stashBoxEndpoints.length > 0) && (
               <div className="surface-well p-3 space-y-2">
                 <div className="text-kicker">Identify / Scrape</div>
-                <select
+                <ProviderSelector
                   value={selectedProvider}
-                  onChange={(e) => {
-                    setSelectedProvider(e.target.value);
-                    if (e.target.value.startsWith("scraper:")) {
-                      const scraperId = e.target.value.replace("scraper:", "");
+                  onChange={(val) => {
+                    setSelectedProvider(val);
+                    if (val.startsWith("scraper:")) {
+                      const scraperId = val.replace("scraper:", "");
                       setSeekIndex(scrapers.findIndex((s) => s.id === scraperId));
                     }
                   }}
-                  className="control-input w-full py-1.5 text-xs"
-                >
-                  {stashBoxEndpoints.length > 0 && (
-                    <optgroup label="Stash-Box">
-                      {stashBoxEndpoints.map((ep) => (
-                        <option key={`stashbox:${ep.id}`} value={`stashbox:${ep.id}`}>{ep.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {scrapers.length > 0 && (
-                    <optgroup label="Community Scrapers">
-                      {scrapers.map((s) => (
-                        <option key={`scraper:${s.id}`} value={`scraper:${s.id}`}>{s.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
+                  groups={[
+                    ...(stashBoxEndpoints.length > 0 ? [{
+                      label: "Stash-Box",
+                      options: stashBoxEndpoints.map((ep) => ({ value: `stashbox:${ep.id}`, label: ep.name }))
+                    }] : []),
+                    ...(scrapers.length > 0 ? [{
+                      label: "Community Scrapers",
+                      options: scrapers.map((s) => ({ value: `scraper:${s.id}`, label: s.name }))
+                    }] : [])
+                  ]}
+                />
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleScrape}
