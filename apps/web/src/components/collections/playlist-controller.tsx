@@ -21,7 +21,7 @@ import { PlaylistQueueSheet } from "./playlist-queue-sheet";
 import { getEntityHref } from "./collection-item-helpers";
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
-  scene: Film,
+  video: Film,
   gallery: Images,
   image: Layers,
   "audio-track": Music,

@@ -15,14 +15,14 @@ import {
 } from "./collection-item-helpers";
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
-  scene: Film,
+  video: Film,
   gallery: Images,
   image: Layers,
   "audio-track": Music,
 };
 
 const typeColors: Record<CollectionEntityType, string> = {
-  scene: "bg-blue-500/20 text-blue-300",
+  video: "bg-blue-500/20 text-blue-300",
   gallery: "bg-green-500/20 text-green-300",
   image: "bg-purple-500/20 text-purple-300",
   "audio-track": "bg-amber-500/20 text-amber-300",

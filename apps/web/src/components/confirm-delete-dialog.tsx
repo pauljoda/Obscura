@@ -5,7 +5,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@obscura/ui/primitives/button";
 
 export type DeletableEntity =
-  | "scene"
+  | "video"
   | "performer"
   | "studio"
   | "tag"
@@ -38,7 +38,7 @@ interface ConfirmDeleteDialogProps {
 }
 
 const entityLabels: Record<DeletableEntity, { singular: string; plural: string }> = {
-  scene: { singular: "video", plural: "videos" },
+  video: { singular: "video", plural: "videos" },
   performer: { singular: "actor", plural: "actors" },
   studio: { singular: "studio", plural: "studios" },
   tag: { singular: "tag", plural: "tags" },
@@ -77,11 +77,11 @@ export function ConfirmDeleteDialog({
   const noun = count === 1 ? label.singular : label.plural;
   // Show the two-button "library vs disk" layout whenever the caller
   // explicitly enabled it AND provided an onDeleteFromDisk callback.
-  // Scene call sites get this by default to preserve their legacy UX
+  // Video call sites get this by default to preserve their UX
   // when they pass `allowDeleteFromDisk` alongside the existing
   // onDeleteFromDisk prop.
   const showDiskOption =
-    (allowDeleteFromDisk ?? entityType === "scene") &&
+    (allowDeleteFromDisk ?? entityType === "video") &&
     typeof onDeleteFromDisk === "function";
 
   return (

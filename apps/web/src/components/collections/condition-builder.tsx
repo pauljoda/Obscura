@@ -39,14 +39,14 @@ function emptyRuleTree(): CollectionRuleGroup {
 }
 
 const typeLabels: Record<CollectionEntityType, string> = {
-  scene: "scenes",
+  video: "videos",
   gallery: "galleries",
   image: "images",
   "audio-track": "audio tracks",
 };
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
-  scene: Film,
+  video: Film,
   gallery: Images,
   image: Layers,
   "audio-track": Music,

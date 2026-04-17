@@ -106,7 +106,7 @@ export function AddToCollectionModal({
       await addCollectionItems(coll.id, { items: itemsToAdd });
 
       // Build type counts from the items being added
-      const counts = { scene: 0, gallery: 0, image: 0, "audio-track": 0 };
+      const counts = { video: 0, gallery: 0, image: 0, "audio-track": 0 };
       for (const item of itemsToAdd) {
         counts[item.entityType] = (counts[item.entityType] ?? 0) + 1;
       }

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed remaining `"scene"` entity-type string literals to `"video"` across collection components, condition builder, playlist controller, and confirm-delete dialog.
+
 ### Removed
 
 - Deleted frozen `legacy-schema.ts` and `read.ts` from the videos-to-series migration module — dead code after the destructive finalize dropped the legacy scene tables.

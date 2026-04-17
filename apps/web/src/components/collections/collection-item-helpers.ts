@@ -4,7 +4,7 @@ import { buildHrefWithFrom } from "../../lib/back-navigation";
 export function getEntityHref(item: CollectionItemDto, from?: string): string {
   let base: string;
   switch (item.entityType) {
-    case "scene":
+    case "video":
       base = `/videos/${item.entityId}`;
       break;
     case "gallery":
@@ -33,7 +33,7 @@ export function getEntityThumbnail(item: CollectionItemDto): string | null {
   if (!entity) return null;
 
   switch (item.entityType) {
-    case "scene":
+    case "video":
       return (entity.cardThumbnailPath ?? entity.thumbnailPath) as
         | string
         | null;
@@ -53,7 +53,7 @@ export function getEntityMeta(item: CollectionItemDto): string | null {
   if (!entity) return null;
 
   switch (item.entityType) {
-    case "scene": {
+    case "video": {
       const duration = entity.durationFormatted as string | null;
       const resolution = entity.resolution as string | null;
       return [duration, resolution].filter(Boolean).join(" · ");

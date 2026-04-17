@@ -60,14 +60,14 @@ const modeLabels = {
 };
 
 const typeLabels: Record<CollectionEntityType, string> = {
-  scene: "Videos",
+  video: "Videos",
   gallery: "Galleries",
   image: "Images",
   "audio-track": "Audio",
 };
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
-  scene: Film,
+  video: Film,
   gallery: Images,
   image: Layers,
   "audio-track": Music,

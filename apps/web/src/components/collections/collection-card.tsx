@@ -33,7 +33,7 @@ const modeLabels = {
 } as const;
 
 const typeIcons: Record<CollectionEntityType, typeof Film> = {
-  scene: Film,
+  video: Film,
   gallery: Images,
   image: Layers,
   "audio-track": Music,
