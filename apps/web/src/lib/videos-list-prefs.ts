@@ -49,7 +49,7 @@ const scenesPrefs = createListPrefs<VideosListPrefs>({
   cookieName: VIDEOS_LIST_PREFS_COOKIE,
   maxAge: SCENES_LIST_PREFS_MAX_AGE,
   defaults: () => ({
-    viewMode: "grid",
+    viewMode: "series",
     sortBy: "recent",
     sortDir: "desc",
     search: "",
