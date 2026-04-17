@@ -3,56 +3,16 @@
  * and cover/backdrop uploads live in media.ts.
  */
 import { buildQueryString, fetchApi } from "./core";
+import {
+  buildFetchVideosQuery,
+  type FetchVideosParams,
+} from "./video-query";
 import type { VideoDetail, VideoListItem, VideoStats } from "./types";
 
-export async function fetchVideos(params: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  resolution?: string[];
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  durationMin?: number;
-  durationMax?: number;
-  organized?: string;
-  hasFile?: string;
-  played?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-  videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
-  uncategorized?: boolean;
-  seasonNumber?: string;
-}): Promise<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString(
-    {
-      search: params.search,
-      sort: params.sort,
-      order: params.order,
-      ratingMin: params.ratingMin,
-      ratingMax: params.ratingMax,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
-      durationMin: params.durationMin,
-      durationMax: params.durationMax,
-      organized: params.organized,
-      hasFile: params.hasFile,
-      played: params.played,
-      limit: params.limit,
-      offset: params.offset,
-      nsfw: params.nsfw,
-      videoSeriesId: params.videoSeriesId,
-      folderScope: params.folderScope,
-      uncategorized: params.uncategorized ? "true" : undefined,
-      seasonNumber: params.seasonNumber,
-    },
-    {
-      resolution: params.resolution,
-    },
-  );
+export async function fetchVideos(
+  params: FetchVideosParams,
+): Promise<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }> {
+  const qs = buildFetchVideosQuery(params);
   return fetchApi(`/videos${qs}`);
 }
 

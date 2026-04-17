@@ -10,67 +10,18 @@ import type {
   VideoSeriesListItemDto,
 } from "@obscura/contracts";
 import { buildQueryString, serverFetch } from "./core";
+import {
+  buildFetchVideosQuery,
+  type FetchVideosParams,
+} from "../api/video-query";
 import type {
   VideoDetail,
   VideoListItem,
   VideoStats,
 } from "../api/types";
 
-export async function fetchVideos(params: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  resolution?: string[];
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  durationMin?: number;
-  durationMax?: number;
-  organized?: string;
-  hasFile?: string;
-  played?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-  videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
-  uncategorized?: boolean;
-  seasonNumber?: string;
-  // Accepted for spread-compatibility with videosListPrefsToFetchParams.
-  // The /videos backend does not yet filter on these; they are ignored.
-  tag?: string[];
-  performer?: string[];
-  studio?: string[];
-  codec?: string[];
-  interactive?: string;
-}) {
-  const qs = buildQueryString(
-    {
-      search: params.search,
-      sort: params.sort,
-      order: params.order,
-      ratingMin: params.ratingMin,
-      ratingMax: params.ratingMax,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
-      durationMin: params.durationMin,
-      durationMax: params.durationMax,
-      organized: params.organized,
-      hasFile: params.hasFile,
-      played: params.played,
-      limit: params.limit,
-      offset: params.offset,
-      nsfw: params.nsfw,
-      videoSeriesId: params.videoSeriesId,
-      folderScope: params.folderScope,
-      uncategorized: params.uncategorized ? "true" : undefined,
-      seasonNumber: params.seasonNumber,
-    },
-    {
-      resolution: params.resolution,
-    },
-  );
+export async function fetchVideos(params: FetchVideosParams) {
+  const qs = buildFetchVideosQuery(params);
 
   return serverFetch<{ scenes: VideoListItem[]; total: number; limit: number; offset: number }>(
     `/videos${qs}`,
@@ -91,4 +42,3 @@ export async function fetchVideoStats(nsfw?: string) {
     tags: ["videos"],
   });
 }
-
