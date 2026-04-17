@@ -402,18 +402,18 @@ export async function scrapersRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /scrapers/:id/scrape ──────────────────────────────────
-  // Run a scraper against a scene (synchronous, interactive)
+  // Run a scraper against a video (synchronous, interactive)
   // Supports auto-cascade: tries actions in order URL → Name → Fragment
   app.post("/scrapers/:id/scrape", async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as {
-      sceneId: string;
+      videoId: string;
       action?: string;
       url?: string;
       query?: string;
     };
 
-    if (!body.sceneId) {
+    if (!body.videoId) {
       return reply.code(400).send({ error: "Video id is required" });
     }
 
@@ -431,15 +431,14 @@ export async function scrapersRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Scraper is disabled" });
     }
 
-    // Resolve the video entity (episode or movie) that the scraper is
-    // running against. The body parameter is still called `sceneId` for
-    // wire compatibility with existing web clients.
-    const sceneOrNull = await loadVideoSource(body.sceneId);
+    // Resolve the target video entity (episode or movie) that the scraper is
+    // running against.
+    const videoOrNull = await loadVideoSource(body.videoId);
 
-    if (!sceneOrNull) {
+    if (!videoOrNull) {
       return reply.code(404).send({ error: "Video not found" });
     }
-    const scene: VideoSceneSource = sceneOrNull;
+    const video: VideoSceneSource = videoOrNull;
 
     // Find the YAML definition
     const files = await readdir(pkg.installPath);
@@ -460,16 +459,16 @@ export async function scrapersRoutes(app: FastifyInstance) {
     if (explicitAction) {
       actionsToTry.push(explicitAction);
     } else {
-      // 1. URL first (if a URL was provided or scene has one)
-      if ((body.url || scene.url) && capabilities.sceneByURL) {
+      // 1. URL first (if a URL was provided or the video has one)
+      if ((body.url || video.url) && capabilities.sceneByURL) {
         actionsToTry.push("sceneByURL");
       }
       // 2. Name/title search
-      if ((body.query || scene.title) && capabilities.sceneByName) {
+      if ((body.query || video.title) && capabilities.sceneByName) {
         actionsToTry.push("sceneByName");
       }
       // 3. Fragment (hash-based)
-      if (capabilities.sceneByFragment && (scene.oshash || scene.checksumMd5 || scene.phash)) {
+      if (capabilities.sceneByFragment && (video.oshash || video.checksumMd5 || video.phash)) {
         actionsToTry.push("sceneByFragment");
       }
       // 4. Query fragment
@@ -489,20 +488,20 @@ export async function scrapersRoutes(app: FastifyInstance) {
     // Helper to build input for a given action
     function buildInput(action: SceneAction): ScraperSceneFragment | { name: string } {
       if (action === "sceneByURL") {
-        return { url: body.url || scene.url || "" };
+        return { url: body.url || video.url || "" };
       } else if (action === "sceneByName") {
-        return { name: body.query || scene.title || "" };
+        return { name: body.query || video.title || "" };
       } else {
         return {
-          title: scene.title ?? undefined,
-          url: scene.url ?? undefined,
-          date: scene.date ?? undefined,
-          details: scene.details ?? undefined,
-          oshash: scene.oshash ?? undefined,
-          checksum: scene.checksumMd5 ?? undefined,
-          phash: scene.phash ?? undefined,
-          duration: scene.duration ?? undefined,
-          file_path: scene.filePath ?? undefined,
+          title: video.title ?? undefined,
+          url: video.url ?? undefined,
+          date: video.date ?? undefined,
+          details: video.details ?? undefined,
+          oshash: video.oshash ?? undefined,
+          checksum: video.checksumMd5 ?? undefined,
+          phash: video.phash ?? undefined,
+          duration: video.duration ?? undefined,
+          file_path: video.filePath ?? undefined,
         };
       }
     }
@@ -558,8 +557,8 @@ export async function scrapersRoutes(app: FastifyInstance) {
         const [result] = await db
           .insert(scrapeResults)
           .values({
-            entityType: scene.kind,
-            entityId: scene.id,
+            entityType: video.kind,
+            entityId: video.id,
             scraperPackageId: pkg.id,
             action,
             status: "pending",
@@ -588,7 +587,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
     }
 
     // All actions exhausted
-    app.log.warn(`[scrape] ${definition.name} exhausted all actions for scene ${scene.id}. Tried: ${triedActions.join(" → ")}`);
+    app.log.warn(`[scrape] ${definition.name} exhausted all actions for video ${video.id}. Tried: ${triedActions.join(" → ")}`);
     return {
       result: null,
       message: `No results found. Tried: ${triedActions.join(" → ")}`,
@@ -596,11 +595,11 @@ export async function scrapersRoutes(app: FastifyInstance) {
       errors,
       debug: {
         scraperName: definition.name,
-        sceneTitle: scene.title,
-        sceneUrl: scene.url,
-        hasOshash: !!scene.oshash,
-        hasMd5: !!scene.checksumMd5,
-        hasPhash: !!scene.phash,
+        videoTitle: video.title,
+        videoUrl: video.url,
+        hasOshash: !!video.oshash,
+        hasMd5: !!video.checksumMd5,
+        hasPhash: !!video.phash,
       },
     };
   });
@@ -899,7 +898,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /scrapers/results/:id/accept ──────────────────────────
-  // Apply a scrape result to the scene
+  // Apply a scrape result to the target video
   app.post("/scrapers/results/:id/accept", async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as {
@@ -924,7 +923,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
     // Resolve the target video entity. Post–videos-to-series cutover the
     // scrape result is keyed by `entityType` + `entityId`; legacy rows
-    // that still only carry `sceneId` cannot be applied because scenes
+    // that still only carry `sceneId` cannot be applied because videos
     // are gone.
     const entityType = result.entityType;
     const entityId = result.entityId;
@@ -957,27 +956,27 @@ export async function scrapersRoutes(app: FastifyInstance) {
       // Build video update. Episodes and movies share title / overview /
       // isNsfw / organized columns but disagree on the date field name
       // (`airDate` vs `releaseDate`) — pick the right key up front.
-      const sceneUpdate: Record<string, unknown> = { updatedAt: new Date() };
+      const videoUpdate: Record<string, unknown> = { updatedAt: new Date() };
 
       if (fieldsToApply.has("title") && result.proposedTitle) {
-        sceneUpdate.title = result.proposedTitle;
+        videoUpdate.title = result.proposedTitle;
       }
       if (fieldsToApply.has("date") && result.proposedDate) {
         if (videoKind === "video_episode") {
-          sceneUpdate.airDate = result.proposedDate;
+          videoUpdate.airDate = result.proposedDate;
         } else {
-          sceneUpdate.releaseDate = result.proposedDate;
+          videoUpdate.releaseDate = result.proposedDate;
         }
       }
       if (fieldsToApply.has("details") && result.proposedDetails) {
-        sceneUpdate.overview = result.proposedDetails;
+        videoUpdate.overview = result.proposedDetails;
       }
       if (fieldsToApply.has("url") && result.proposedUrl) {
         // Video tables have no freeform `url` column. The scraped URL
         // goes into the externalIds map under a `custom:scraped` key so
         // the information isn't lost; the plugin identify flow uses
         // the same map.
-        sceneUpdate.externalIds = sql`COALESCE(${
+        videoUpdate.externalIds = sql`COALESCE(${
           videoKind === "video_episode" ? videoEpisodes.externalIds : videoMovies.externalIds
         }, '{}'::jsonb) || ${JSON.stringify({ "custom:scraped": result.proposedUrl })}::jsonb`;
       }
@@ -1038,7 +1037,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
 
         const studioId = await findOrCreateStudio(studioName, rawStudio);
         if (videoKind === "video_movie") {
-          sceneUpdate.studioId = studioId;
+          videoUpdate.studioId = studioId;
         } else {
           // Episodes inherit studio from the parent series. Update the
           // series directly so cards and filters see the new value.
@@ -1057,19 +1056,19 @@ export async function scrapersRoutes(app: FastifyInstance) {
       }
 
       // Mark organized and NSFW (identify flow always treats content as NSFW)
-      sceneUpdate.organized = true;
-      sceneUpdate.isNsfw = true;
+      videoUpdate.organized = true;
+      videoUpdate.isNsfw = true;
 
       // Update the correct video table
       if (videoKind === "video_episode") {
         await tx
           .update(videoEpisodes)
-          .set(sceneUpdate)
+          .set(videoUpdate)
           .where(eq(videoEpisodes.id, videoId));
       } else {
         await tx
           .update(videoMovies)
-          .set(sceneUpdate)
+          .set(videoUpdate)
           .where(eq(videoMovies.id, videoId));
       }
 

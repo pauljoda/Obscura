@@ -50,9 +50,9 @@ export async function toggleScraper(
   });
 }
 
-export async function scrapeScene(
+export async function scrapeVideo(
   scraperId: string,
-  sceneId: string,
+  videoId: string,
   action?: string,
   options?: { url?: string; query?: string },
 ): Promise<{
@@ -66,7 +66,7 @@ export async function scrapeScene(
   return fetchApi(`/scrapers/${scraperId}/scrape`, {
     method: "POST",
     body: JSON.stringify({
-      sceneId,
+      videoId,
       action: action || "auto",
       url: options?.url,
       query: options?.query,
@@ -76,13 +76,13 @@ export async function scrapeScene(
 
 export async function fetchScrapeResults(params?: {
   status?: string;
-  sceneId?: string;
+  videoId?: string;
   limit?: number;
   offset?: number;
 }): Promise<{ results: ScrapeResult[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     status: params?.status,
-    sceneId: params?.sceneId,
+    videoId: params?.videoId,
     limit: params?.limit,
     offset: params?.offset,
   });
@@ -95,7 +95,7 @@ const SCRAPE_RESULTS_PAGE_SIZE = 500;
 /** Loads all scrape results for the given filters (e.g. full pending queue). */
 export async function fetchAllScrapeResults(params?: {
   status?: string;
-  sceneId?: string;
+  videoId?: string;
 }): Promise<{ results: ScrapeResult[]; total: number }> {
   const results: ScrapeResult[] = [];
   let offset = 0;
@@ -128,7 +128,7 @@ export async function acceptScrapeResult(
   id: string,
   fields?: string[],
   options?: { excludePerformers?: string[]; excludeTags?: string[] },
-): Promise<{ ok: true; sceneId: string }> {
+): Promise<{ ok: true; videoId: string }> {
   return fetchApi(`/scrapers/results/${id}/accept`, {
     method: "POST",
     body: JSON.stringify({
@@ -188,7 +188,7 @@ export async function testStashBoxEndpoint(
 
 export async function identifyViaStashBox(
   endpointId: string,
-  sceneId: string,
+  videoId: string,
 ): Promise<{
   result?: ScrapeResult;
   normalized?: NormalizedScrapeResult;
@@ -198,7 +198,7 @@ export async function identifyViaStashBox(
 }> {
   return fetchApi(`/stashbox-endpoints/${endpointId}/identify`, {
     method: "POST",
-    body: JSON.stringify({ sceneId }),
+    body: JSON.stringify({ videoId }),
   });
 }
 

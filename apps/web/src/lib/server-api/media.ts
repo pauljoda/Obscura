@@ -207,13 +207,13 @@ export async function fetchPerformerDetail(id: string, params?: { nsfw?: string 
 
 export async function fetchScrapeResults(params?: {
   status?: string;
-  sceneId?: string;
+  videoId?: string;
   limit?: number;
   offset?: number;
 }) {
   const qs = buildQueryString({
     status: params?.status,
-    sceneId: params?.sceneId,
+    videoId: params?.videoId,
     limit: params?.limit,
     offset: params?.offset,
   });

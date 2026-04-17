@@ -94,13 +94,13 @@ export function ScrapePhashesTab() {
 
   const applySubmissionResults = useCallback(
     (
-      sceneId: string,
+      videoId: string,
       endpointId: string,
       submissions: PhashContributionSubmission[],
     ) => {
       setItems((prev) =>
         prev.map((item) => {
-          if (item.scene.id !== sceneId) return item;
+          if (item.video.id !== videoId) return item;
           // Merge incoming submissions, replacing any existing row for the
           // same (endpoint, algorithm, hash) tuple.
           const merged = [...item.submissions];
@@ -122,11 +122,11 @@ export function ScrapePhashesTab() {
   );
 
   const submitOne = useCallback(
-    async (sceneId: string, endpointId: string): Promise<void> => {
-      const key = `${sceneId}:${endpointId}`;
+    async (videoId: string, endpointId: string): Promise<void> => {
+      const key = `${videoId}:${endpointId}`;
       setSubmitting((prev) => new Set(prev).add(key));
       try {
-        const res = await submitFingerprintsToEndpoint(endpointId, sceneId);
+        const res = await submitFingerprintsToEndpoint(endpointId, videoId);
         const now = new Date().toISOString();
         const stamped: PhashContributionSubmission[] = res.submissions.map((s) => ({
           endpointId,
@@ -136,14 +136,14 @@ export function ScrapePhashesTab() {
           error: s.error ?? null,
           submittedAt: now,
         }));
-        applySubmissionResults(sceneId, endpointId, stamped);
+        applySubmissionResults(videoId, endpointId, stamped);
       } catch (err) {
         const now = new Date().toISOString();
         const message = err instanceof Error ? err.message : "Submission failed";
         // Surface a synthetic error submission for each algorithm so the UI
         // shows a red pill instead of silently doing nothing.
         applySubmissionResults(
-          sceneId,
+          videoId,
           endpointId,
           ALGORITHMS.map((alg) => ({
             endpointId,
@@ -168,26 +168,26 @@ export function ScrapePhashesTab() {
   const submitRow = useCallback(
     async (item: PhashContributionItem) => {
       for (const link of item.stashIds) {
-        await submitOne(item.scene.id, link.endpointId);
+        await submitOne(item.video.id, link.endpointId);
       }
     },
     [submitOne],
   );
 
   const submitAll = useCallback(async () => {
-    // Fan out (scene, endpoint) pairs sequentially. Parallelism would race the
+    // Fan out (video, endpoint) pairs sequentially. Parallelism would race the
     // per-endpoint token bucket on the API side and defeat the 240 rpm cap.
-    const tasks: Array<{ sceneId: string; endpointId: string }> = [];
+    const tasks: Array<{ videoId: string; endpointId: string }> = [];
     for (const item of items) {
       for (const link of item.stashIds) {
-        tasks.push({ sceneId: item.scene.id, endpointId: link.endpointId });
+        tasks.push({ videoId: item.video.id, endpointId: link.endpointId });
       }
     }
     if (tasks.length === 0) return;
 
     setBulkProgress({ current: 0, total: tasks.length });
     for (let i = 0; i < tasks.length; i++) {
-      await submitOne(tasks[i].sceneId, tasks[i].endpointId);
+      await submitOne(tasks[i].videoId, tasks[i].endpointId);
       setBulkProgress({ current: i + 1, total: tasks.length });
     }
     setBulkProgress(null);
@@ -201,7 +201,7 @@ export function ScrapePhashesTab() {
         await deleteStashId(linkId);
         setItems((prev) =>
           prev.map((item) =>
-            item.scene.id !== itemId
+            item.video.id !== itemId
               ? item
               : { ...item, stashIds: item.stashIds.filter((l) => l.id !== linkId) },
           ),
@@ -214,19 +214,19 @@ export function ScrapePhashesTab() {
   );
 
   const addStashId = useCallback(
-    async (sceneId: string, endpointId: string, stashId: string) => {
+    async (videoId: string, endpointId: string, stashId: string) => {
       const trimmed = stashId.trim();
       if (!trimmed || !endpointId) return;
       try {
         const created = await createStashId({
           entityType: "video",
-          entityId: sceneId,
+          entityId: videoId,
           stashBoxEndpointId: endpointId,
           stashId: trimmed,
         });
         setItems((prev) =>
           prev.map((item) => {
-            if (item.scene.id !== sceneId) return item;
+            if (item.video.id !== videoId) return item;
             const withoutSameEndpoint = item.stashIds.filter(
               (l) => l.endpointId !== endpointId,
             );
@@ -334,7 +334,7 @@ export function ScrapePhashesTab() {
           <Fingerprint className="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p className="text-text-muted text-sm">No videos linked to StashBox endpoints yet.</p>
           <p className="text-text-disabled text-xs mt-1">
-            Run Identify and accept a match to link scenes, then return here to contribute their fingerprints.
+            Run Identify and accept a match to link videos, then return here to contribute their fingerprints.
           </p>
         </div>
       )}
@@ -343,13 +343,13 @@ export function ScrapePhashesTab() {
       <div className="space-y-1.5">
         {items.map((item) => (
           <PhashRow
-            key={item.scene.id}
+            key={item.video.id}
             item={item}
             endpoints={endpoints}
             submitting={submitting}
             onSubmit={() => void submitRow(item)}
-            onRemoveStashId={(linkId) => void removeStashId(item.scene.id, linkId)}
-            onAddStashId={(endpointId, stashId) => void addStashId(item.scene.id, endpointId, stashId)}
+            onRemoveStashId={(linkId) => void removeStashId(item.video.id, linkId)}
+            onAddStashId={(endpointId, stashId) => void addStashId(item.video.id, endpointId, stashId)}
           />
         ))}
       </div>
@@ -374,14 +374,14 @@ function PhashRow({ item, endpoints, submitting, onSubmit, onRemoveStashId, onAd
   const [newStashId, setNewStashId] = useState<string>("");
 
   const hashes: Array<{ algorithm: FingerprintAlgorithm; value: string | null }> = [
-    { algorithm: "MD5", value: item.scene.checksumMd5 },
-    { algorithm: "OSHASH", value: item.scene.oshash },
-    { algorithm: "PHASH", value: item.scene.phash },
+    { algorithm: "MD5", value: item.video.checksumMd5 },
+    { algorithm: "OSHASH", value: item.video.oshash },
+    { algorithm: "PHASH", value: item.video.phash },
   ];
 
   const rowSubmitting = useMemo(
-    () => item.stashIds.some((l) => submitting.has(`${item.scene.id}:${l.endpointId}`)),
-    [item.stashIds, item.scene.id, submitting],
+    () => item.stashIds.some((l) => submitting.has(`${item.video.id}:${l.endpointId}`)),
+    [item.stashIds, item.video.id, submitting],
   );
 
   // Latest submission per (endpoint, algorithm) for the pill grid.
@@ -406,9 +406,9 @@ function PhashRow({ item, endpoints, submitting, onSubmit, onRemoveStashId, onAd
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-text-primary truncate">{item.scene.title}</div>
+          <div className="text-sm font-medium text-text-primary truncate">{item.video.title}</div>
           <div className="text-mono-sm text-text-disabled mt-0.5">
-            {formatDuration(item.scene.duration)}
+            {formatDuration(item.video.duration)}
           </div>
         </div>
 
@@ -524,15 +524,15 @@ function PhashRow({ item, endpoints, submitting, onSubmit, onRemoveStashId, onAd
         ))}
       </div>
 
-      {/* Submission pills — only render when scene is linked */}
+      {/* Submission pills — only render when the video is linked */}
       {item.stashIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
           {item.stashIds.flatMap((link) =>
             ALGORITHMS.filter((alg) => {
-              // Skip algorithms the scene doesn't actually have.
-              if (alg === "MD5") return !!item.scene.checksumMd5;
-              if (alg === "OSHASH") return !!item.scene.oshash;
-              return !!item.scene.phash;
+              // Skip algorithms the video doesn't actually have.
+              if (alg === "MD5") return !!item.video.checksumMd5;
+              if (alg === "OSHASH") return !!item.video.oshash;
+              return !!item.video.phash;
             }).map((alg) => {
               const key = `${link.endpointId}:${alg}`;
               const submission = latestByKey.get(key);

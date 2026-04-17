@@ -9,7 +9,7 @@ export interface PhashContributionStashId {
   stashId: string;
 }
 
-export interface PhashContributionScene {
+export interface PhashContributionVideo {
   id: string;
   title: string;
   thumbnailPath: string | null;
@@ -29,7 +29,7 @@ export interface PhashContributionSubmission {
 }
 
 export interface PhashContributionItem {
-  scene: PhashContributionScene;
+  video: PhashContributionVideo;
   stashIds: PhashContributionStashId[];
   submissions: PhashContributionSubmission[];
 }
@@ -63,11 +63,11 @@ export interface SubmitFingerprintsResponse {
 
 export async function submitFingerprintsToEndpoint(
   endpointId: string,
-  sceneId: string,
+  videoId: string,
   algorithms?: FingerprintAlgorithm[],
 ): Promise<SubmitFingerprintsResponse> {
   return fetchApi(`/stashbox-endpoints/${endpointId}/submit-fingerprints`, {
     method: "POST",
-    body: JSON.stringify({ sceneId, ...(algorithms ? { algorithms } : {}) }),
+    body: JSON.stringify({ videoId, ...(algorithms ? { algorithms } : {}) }),
   });
 }

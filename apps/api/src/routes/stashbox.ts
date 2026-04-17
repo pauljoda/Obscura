@@ -250,12 +250,12 @@ export async function stashboxRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /stashbox-endpoints/:id/identify ───────────────────────
-  // Scene identification via StashBox (fingerprint-first, then title)
+  // Video identification via StashBox (fingerprint-first, then title)
   app.post("/stashbox-endpoints/:id/identify", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const body = request.body as { sceneId: string };
+    const body = request.body as { videoId: string };
 
-    if (!body.sceneId) {
+    if (!body.videoId) {
       return reply.code(400).send({ error: "Video id is required" });
     }
 
@@ -273,10 +273,8 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "StashBox endpoint is disabled" });
     }
 
-    // Load the target video entity (episode or movie). The body parameter
-    // is still called `sceneId` for wire compatibility with existing web
-    // clients.
-    const scene = await loadVideoFingerprintSource(body.sceneId);
+    // Load the target video entity (episode or movie).
+    const scene = await loadVideoFingerprintSource(body.videoId);
 
     if (!scene) {
       return reply.code(404).send({ error: "Video not found" });
@@ -700,12 +698,12 @@ export async function stashboxRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const body = (request.body ?? {}) as {
-        sceneId?: string;
+        videoId?: string;
         algorithms?: Array<"MD5" | "OSHASH" | "PHASH">;
       };
 
-      if (!body.sceneId) {
-        return reply.code(400).send({ error: "sceneId is required" });
+      if (!body.videoId) {
+        return reply.code(400).send({ error: "videoId is required" });
       }
 
       const [ep] = await db
@@ -717,7 +715,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       if (!ep.enabled)
         return reply.code(400).send({ error: "StashBox endpoint is disabled" });
 
-      const scene = await loadVideoFingerprintSource(body.sceneId);
+      const scene = await loadVideoFingerprintSource(body.videoId);
       if (!scene) return reply.code(404).send({ error: "Video not found" });
 
       if (!scene.duration || scene.duration <= 0) {
@@ -762,7 +760,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       if (candidates.length === 0) {
         return reply
           .code(400)
-          .send({ error: "Scene has no fingerprints to submit" });
+          .send({ error: "Video has no fingerprints to submit" });
       }
 
       const client = getStashBoxClient(ep);
@@ -836,7 +834,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
   );
 
   // ─── GET /phash-contributions ────────────────────────────────────
-  // Paginated list of scenes that have at least one linked stash_id,
+  // Paginated list of videos that have at least one linked stash_id,
   // with their stash_id chips, available fingerprint hashes, and the
   // latest submission state per (endpoint, algorithm). Drives the web
   // pHashes tab.
@@ -937,18 +935,18 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .where(inArray(fingerprintSubmissions.sceneId, pageIds))
       .orderBy(desc(fingerprintSubmissions.submittedAt));
 
-    const items = sceneRows.map((scene) => ({
-      scene: {
-        id: scene.id,
-        title: scene.title,
-        thumbnailPath: scene.thumbnailPath,
-        duration: scene.duration,
-        checksumMd5: scene.checksumMd5,
-        oshash: scene.oshash,
-        phash: scene.phash,
+    const items = sceneRows.map((video) => ({
+      video: {
+        id: video.id,
+        title: video.title,
+        thumbnailPath: video.thumbnailPath,
+        duration: video.duration,
+        checksumMd5: video.checksumMd5,
+        oshash: video.oshash,
+        phash: video.phash,
       },
       stashIds: linkRows
-        .filter((l) => l.entityId === scene.id)
+        .filter((l) => l.entityId === video.id)
         .map((l) => ({
           id: l.id,
           endpointId: l.endpointId,
@@ -956,7 +954,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
           stashId: l.stashId,
         })),
       submissions: submissionRows
-        .filter((s) => s.sceneId === scene.id)
+        .filter((s) => s.sceneId === video.id)
         .map((s) => ({
           endpointId: s.endpointId,
           algorithm: s.algorithm,

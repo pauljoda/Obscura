@@ -39,7 +39,7 @@ import { entityTerms } from "../../lib/terminology";
 import type {
   Tab,
   Provider,
-  SceneRow,
+  VideoRow,
   PerformerRow,
   StudioRow,
   TagRow,
@@ -50,9 +50,9 @@ import type {
   StudioItem,
   TagItem,
 } from "./types";
-import { SCENE_FIELDS, tabEntityLabel } from "./types";
+import { VIDEO_FIELDS, tabEntityLabel } from "./types";
 
-import { ScrapeSceneRows, runSceneScrape, acceptAllScenes, seekSceneSingle } from "./scrape-scenes-tab";
+import { ScrapeVideoRows, runVideoScrape, acceptAllVideos, seekVideoSingle } from "./scrape-videos-tab";
 import { ScrapePerformerRows, runPerformerScrape, acceptAllPerformers } from "./scrape-performers-tab";
 import { ScrapeStudioRows, runStudioScrape, acceptAllStudios } from "./scrape-studios-tab";
 import { ScrapeTagRows, runTagScrape, acceptAllTags } from "./scrape-tags-tab";
@@ -86,13 +86,13 @@ import { useNsfwAwareProviders } from "../../hooks/use-nsfw-aware-providers";
 
 export function BulkScrape() {
   const { mode: nsfwMode } = useNsfw();
-  const [tab, setTab] = useState<Tab>("scenes");
+  const [tab, setTab] = useState<Tab>("videos");
   const [stashBoxEndpoints, setStashBoxEndpoints] = useState<StashBoxEndpoint[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Scene state
-  const [sceneRows, setSceneRows] = useState<SceneRow[]>([]);
-  const [sceneScrapers, setSceneScrapers] = useState<ScraperPackage[]>([]);
+  // Video state
+  const [videoRows, setVideoRows] = useState<VideoRow[]>([]);
+  const [videoScrapers, setVideoScrapers] = useState<ScraperPackage[]>([]);
 
   // Performer state
   const [perfRows, setPerfRows] = useState<PerformerRow[]>([]);
@@ -115,7 +115,7 @@ export function BulkScrape() {
   const [audioTrackRows, setAudioTrackRows] = useState<AudioTrackRow[]>([]);
 
   // All items for show-all toggle
-  const [allScenes, setAllScenes] = useState<VideoListItem[]>([]);
+  const [allVideos, setAllVideos] = useState<VideoListItem[]>([]);
   const [allPerformers, setAllPerformers] = useState<PerformerItem[]>([]);
   const [allStudios, setAllStudios] = useState<StudioItem[]>([]);
   const [allTags, setAllTags] = useState<TagItem[]>([]);
@@ -138,7 +138,7 @@ export function BulkScrape() {
   }
 
   function expandAll() {
-    if (tab === "scenes") setExpandedIds(new Set(sceneRows.map((r) => r.scene.id)));
+    if (tab === "videos") setExpandedIds(new Set(videoRows.map((r) => r.video.id)));
     else if (tab === "video-series") setExpandedIds(new Set(folderRows.map((r) => r.folder.id)));
     else if (tab === "galleries") setExpandedIds(new Set(galleryRows.map((r) => r.gallery.id)));
     else if (tab === "images") setExpandedIds(new Set(imageRows.map((r) => r.image.id)));
@@ -173,7 +173,7 @@ export function BulkScrape() {
       setStashBoxEndpoints(stashBoxRes.endpoints.filter((e) => e.enabled));
 
       const unorganized = videosRes.videos.filter((video) => !video.organized);
-      setSceneRows(unorganized.map((scene) => ({ scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() })));
+      setVideoRows(unorganized.map((video) => ({ video, status: "pending", selectedFields: new Set(VIDEO_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() })));
 
       const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
       setPerfRows(sparse.map((performer) => ({ performer, status: "pending", selectedFields: new Set() })));
@@ -187,7 +187,7 @@ export function BulkScrape() {
       setTagRows(sparseTags.map((tag) => ({ tag, status: "pending", selectedFields: new Set() })));
 
       // Store all for show-all toggle
-      setAllScenes(videosRes.videos);
+      setAllVideos(videosRes.videos);
       setAllPerformers(perfRes.performers);
       setAllStudios(studiosRes.studios);
       setAllTags(tagsRes.tags);
@@ -195,11 +195,11 @@ export function BulkScrape() {
       const enabled = scrapersRes.packages.filter((s) => s.enabled);
 
       // Filter by capability
-      const sceneCapable = enabled.filter((pkg) => {
+      const videoCapable = enabled.filter((pkg) => {
         const caps = pkg.capabilities as Record<string, boolean> | null;
         return caps && (caps.sceneByURL || caps.sceneByFragment || caps.sceneByName || caps.sceneByQueryFragment);
       });
-      setSceneScrapers(sceneCapable);
+      setVideoScrapers(videoCapable);
 
       const perfCapable = enabled.filter((pkg) => {
         const caps = pkg.capabilities as Record<string, boolean> | null;
@@ -267,11 +267,11 @@ export function BulkScrape() {
 
   // Rebuild rows when showAll toggles
   useEffect(() => {
-    if (!allScenes.length && !allPerformers.length && !allStudios.length && !allTags.length) return;
-    const filteredScenes = showAll ? allScenes : allScenes.filter((s) => !s.organized);
-    setSceneRows((prev) => {
-      const existing = new Map(prev.map((r) => [r.scene.id, r]));
-      return filteredScenes.map((scene) => existing.get(scene.id) ?? { scene, status: "pending", selectedFields: new Set(SCENE_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() });
+    if (!allVideos.length && !allPerformers.length && !allStudios.length && !allTags.length) return;
+    const filteredVideos = showAll ? allVideos : allVideos.filter((video) => !video.organized);
+    setVideoRows((prev) => {
+      const existing = new Map(prev.map((r) => [r.video.id, r]));
+      return filteredVideos.map((video) => existing.get(video.id) ?? { video, status: "pending", selectedFields: new Set(VIDEO_FIELDS), excludedPerformers: new Set(), excludedTags: new Set() });
     });
     const filteredPerfs = showAll ? allPerformers : allPerformers.filter((p) => !p.imagePath || !p.gender);
     setPerfRows((prev) => {
@@ -288,12 +288,12 @@ export function BulkScrape() {
       const existing = new Map(prev.map((r) => [r.tag.id, r]));
       return allTags.map((tag) => existing.get(tag.id) ?? { tag, status: "pending", selectedFields: new Set() });
     });
-  }, [showAll, allScenes, allPerformers, allStudios, allTags]);
+  }, [showAll, allVideos, allPerformers, allStudios, allTags]);
 
   /* ─── Stats ──────────────────────────────────────────────────── */
 
   const rows =
-    tab === "scenes" ? sceneRows
+    tab === "videos" ? videoRows
     : tab === "video-series" ? folderRows
     : tab === "galleries" ? galleryRows
     : tab === "images" ? imageRows
@@ -309,9 +309,9 @@ export function BulkScrape() {
   const processedCount = rows.filter((r) => r.status !== "pending" && r.status !== "scraping").length;
   const totalCount = rows.length;
 
-  // Studios/tags only use stashbox; scenes/performers also use community scrapers
+  // Studios/tags only use stashbox; videos/performers also use community scrapers
   const scrapersForTab = useNsfwAwareProviders(
-    tab === "scenes" ? sceneScrapers : tab === "performers" ? perfScrapers : [],
+    tab === "videos" ? videoScrapers : tab === "performers" ? perfScrapers : [],
   );
 
   // Hide NSFW plugins from the identify + bulk scrape UI while the
@@ -329,7 +329,7 @@ export function BulkScrape() {
   const pluginsForTab = nsfwAwarePlugins.filter((p) => {
     const caps = p.capabilities ?? {};
     switch (tab) {
-      case "scenes": return caps.videoByURL || caps.videoByName || caps.videoByFragment;
+      case "videos": return caps.videoByURL || caps.videoByName || caps.videoByFragment;
       case "video-series": return caps.folderByName || caps.folderByFragment || caps.folderCascade;
       case "galleries": return caps.galleryByURL || caps.galleryByFragment;
       case "images": return caps.imageByURL;
@@ -371,8 +371,8 @@ export function BulkScrape() {
       abortRef,
       setRunning,
     };
-    if (tab === "scenes") {
-      void runSceneScrape({ ...sharedTabProps, sceneRows, setSceneRows, sceneScrapers, plugins: pluginsForTab });
+    if (tab === "videos") {
+      void runVideoScrape({ ...sharedTabProps, videoRows, setVideoRows, videoScrapers, plugins: pluginsForTab });
     } else if (tab === "video-series") {
       void runVideoSeriesIdentify({ ...pluginRunProps, rows: folderRows, setRows: setFolderRows });
     } else if (tab === "galleries") {
@@ -393,7 +393,7 @@ export function BulkScrape() {
   }
 
   function handleAcceptAll() {
-    if (tab === "scenes") void acceptAllScenes(sceneRows, setSceneRows);
+    if (tab === "videos") void acceptAllVideos(videoRows, setVideoRows);
     else if (tab === "video-series") void acceptAllVideoSeries(folderRows, setFolderRows);
     else if (tab === "galleries") void acceptAllGalleries(galleryRows, setGalleryRows);
     else if (tab === "images") void acceptAllImages(imageRows, setImageRows);
@@ -441,7 +441,7 @@ export function BulkScrape() {
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
         {([
-          { key: "scenes" as Tab, label: entityTerms.videos, icon: Film, count: sceneRows.length },
+          { key: "videos" as Tab, label: entityTerms.videos, icon: Film, count: videoRows.length },
           { key: "video-series" as Tab, label: entityTerms.series, icon: FolderOpen, count: folderRows.length },
           { key: "galleries" as Tab, label: "Galleries", icon: Images, count: galleryRows.length },
           { key: "images" as Tab, label: "Images", icon: Image, count: imageRows.length },
@@ -630,7 +630,7 @@ export function BulkScrape() {
         <div className="surface-card no-lift p-12 text-center">
           <Check className="h-8 w-8 text-status-success-text mx-auto mb-2" />
           <p className="text-text-muted text-sm">
-            {tab === "scenes" ? `All ${entityTerms.videos.toLowerCase()} are organized!` :
+            {tab === "videos" ? `All ${entityTerms.videos.toLowerCase()} are organized!` :
              tab === "performers" ? `All ${entityTerms.performers.toLowerCase()} have complete metadata.` :
              tab === "studios" ? `All ${entityTerms.studios.toLowerCase()} have complete metadata.` :
              `All ${entityTerms.tags.toLowerCase()} loaded.`}
@@ -651,10 +651,10 @@ export function BulkScrape() {
             </button>
           </div>
 
-          {tab === "scenes" && (
-            <ScrapeSceneRows
-              sceneRows={sceneRows}
-              setSceneRows={setSceneRows}
+          {tab === "videos" && (
+            <ScrapeVideoRows
+              videoRows={videoRows}
+              setVideoRows={setVideoRows}
               expandedIds={expandedIds}
               toggleExpanded={toggleExpanded}
               onSeekSingle={(idx) => {
@@ -662,10 +662,10 @@ export function BulkScrape() {
                 const isScraper = selectedScraperId.startsWith("scraper:");
                 const isStashBox = selectedScraperId.startsWith("stashbox:");
                 const realId = selectedScraperId.replace(/^(stashbox|scraper|plugin):/, "");
-                const sl = isScraper ? sceneScrapers.filter((s) => s.id === realId) : selectedScraperId === "" ? sceneScrapers : [];
+                const sl = isScraper ? videoScrapers.filter((s) => s.id === realId) : selectedScraperId === "" ? videoScrapers : [];
                 const sb = isStashBox ? stashBoxEndpoints.filter((e) => e.id === realId) : selectedScraperId === "" ? stashBoxEndpoints : [];
                 const pl = isPlugin ? pluginsForTab.filter((p) => p.id === realId) : selectedScraperId === "" ? pluginsForTab : [];
-                void seekSceneSingle(idx, sceneRows, setSceneRows, sl, sb, pl);
+                void seekVideoSingle(idx, videoRows, setVideoRows, sl, sb, pl);
               }}
             />
           )}

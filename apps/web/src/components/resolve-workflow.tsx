@@ -21,7 +21,7 @@ import {
 import {
   fetchAllVideos,
   fetchInstalledScrapers,
-  scrapeScene,
+  scrapeVideo,
   acceptScrapeResult,
   rejectScrapeResult,
   toApiUrl,
@@ -101,7 +101,7 @@ export function ResolveWorkflow() {
     setMessage(null);
 
     try {
-      const res = await scrapeScene(
+      const res = await scrapeVideo(
         selectedScraperId,
         selectedSceneId,
         "auto",

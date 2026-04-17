@@ -31,10 +31,10 @@ export type {
 
 /* ─── Types ────────────────────────────────────────────────────── */
 
-export type Tab = "scenes" | "video-series" | "galleries" | "images" | "audio-libraries" | "audio-tracks" | "performers" | "studios" | "tags" | "phashes";
+export type Tab = "videos" | "video-series" | "galleries" | "images" | "audio-libraries" | "audio-tracks" | "performers" | "studios" | "tags" | "phashes";
 
-export const SCENE_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image", "episodeNumber"] as const;
-export type SceneField = typeof SCENE_FIELDS[number];
+export const VIDEO_FIELDS = ["title", "date", "details", "url", "studio", "performers", "tags", "image", "episodeNumber"] as const;
+export type VideoField = typeof VIDEO_FIELDS[number];
 
 /** Unified provider that can be either a community scraper or StashBox endpoint */
 export interface Provider {
@@ -43,14 +43,14 @@ export interface Provider {
   type: "scraper" | "stashbox";
 }
 
-export interface SceneRow {
-  scene: VideoListItem;
+export interface VideoRow {
+  video: VideoListItem;
   status: "pending" | "scraping" | "found" | "no-result" | "error" | "accepted" | "rejected";
   result?: ScrapeResult;
   normalized?: NormalizedScrapeResult;
   error?: string;
   matchedScraper?: string;
-  selectedFields: Set<SceneField>;
+  selectedFields: Set<VideoField>;
   excludedPerformers: Set<string>;
   excludedTags: Set<string>;
 }
@@ -101,7 +101,7 @@ export function perfFieldsFromResult(result: NormalizedPerformerScrapeResult): S
 }
 
 export function tabEntityLabel(t: Tab): string {
-  if (t === "scenes") return entityTerms.videos.toLowerCase();
+  if (t === "videos") return entityTerms.videos.toLowerCase();
   if (t === "performers") return entityTerms.performers.toLowerCase();
   if (t === "studios") return "studios";
   return "tags";

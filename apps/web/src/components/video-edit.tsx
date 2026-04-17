@@ -40,7 +40,7 @@ import {
   fetchTags,
   fetchPerformers,
   fetchStudios,
-  scrapeScene,
+  scrapeVideo,
   uploadVideoThumbnail,
   uploadVideoThumbnailFromUrl,
   generateVideoThumbnailFromFrame,
@@ -269,16 +269,12 @@ export function VideoEdit({
     setError(null);
 
     try {
-      const res = await scrapeScene(selectedScraper, id, "auto", {
+      const res = await scrapeVideo(selectedScraper, id, "auto", {
         url: url || undefined,
       });
 
-      let result: NormalizedScrapeResult | null = null;
-      if (res.normalized) {
-        result = res.normalized;
-      } else if (res.results && res.results.length > 0) {
-        result = res.results[0];
-      } else {
+      const result = res.normalized ?? res.results?.[0] ?? null;
+      if (!result) {
         setError("Scraper returned no results");
         return;
       }
@@ -380,7 +376,7 @@ export function VideoEdit({
 
       try {
         const res = await Promise.race([
-          scrapeScene(scraper.id, id, "auto", {
+          scrapeVideo(scraper.id, id, "auto", {
             url: url || undefined,
           }),
           new Promise<null>((_, reject) =>

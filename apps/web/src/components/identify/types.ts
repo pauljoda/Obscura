@@ -221,8 +221,8 @@ export interface SeriesCandidate {
 }
 
 export interface UIEpisodeMapping {
-  sceneId: string;
-  sceneTitle: string;
+  videoId: string;
+  videoTitle: string;
   filename: string;
   episodeTitle?: string;
   episodeNumber?: number;

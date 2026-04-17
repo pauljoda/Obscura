@@ -6,7 +6,7 @@ import { Checkbox } from "@obscura/ui/primitives/checkbox";
 import { cn } from "@obscura/ui/lib/utils";
 import { Check, X, ChevronDown, ScanSearch, Loader2 } from "lucide-react";
 import {
-  scrapeScene,
+  scrapeVideo,
   identifyViaStashBox,
   acceptScrapeResult,
   rejectScrapeResult,
@@ -16,28 +16,28 @@ import {
 import { entityTerms } from "../../lib/terminology";
 import { StatusDot, ToggleableField } from "./shared-components";
 import type {
-  SceneRow,
-  SceneField,
+  VideoRow,
+  VideoField,
   ScraperPackage,
   StashBoxEndpoint,
   ScrapeResult,
   NormalizedScrapeResult,
   TabSharedProps,
 } from "./types";
-import { SCENE_FIELDS, SEEK_TIMEOUT_MS, withTimeout } from "./types";
+import { VIDEO_FIELDS, SEEK_TIMEOUT_MS, withTimeout } from "./types";
 
 /* ─── Props ───────────────────────────────────────────────────── */
 
-export interface ScenesTabProps extends TabSharedProps {
-  sceneRows: SceneRow[];
-  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>;
-  sceneScrapers: ScraperPackage[];
+export interface VideosTabProps extends TabSharedProps {
+  videoRows: VideoRow[];
+  setVideoRows: React.Dispatch<React.SetStateAction<VideoRow[]>>;
+  videoScrapers: ScraperPackage[];
   plugins?: PluginInfo[];
 }
 
 /* ─── Seek helpers ────────────────────────────────────────────── */
 
-async function seekSceneViaStashBox(row: SceneRow, endpoints: StashBoxEndpoint[]): Promise<{
+async function seekVideoViaStashBox(row: VideoRow, endpoints: StashBoxEndpoint[]): Promise<{
   result?: ScrapeResult;
   normalized?: NormalizedScrapeResult;
   matchedScraper?: string;
@@ -46,7 +46,7 @@ async function seekSceneViaStashBox(row: SceneRow, endpoints: StashBoxEndpoint[]
   for (const ep of endpoints) {
     try {
       const res = await withTimeout(
-        identifyViaStashBox(ep.id, row.scene.id),
+        identifyViaStashBox(ep.id, row.video.id),
         SEEK_TIMEOUT_MS
       );
       if (res.result && res.normalized) {
@@ -66,20 +66,20 @@ async function seekSceneViaStashBox(row: SceneRow, endpoints: StashBoxEndpoint[]
 
 interface PluginInfo { id: string; name: string }
 
-async function seekSceneViaPlugin(
-  row: SceneRow,
+async function seekVideoViaPlugin(
+  row: VideoRow,
   pluginList: PluginInfo[],
 ): Promise<{ result?: ScrapeResult; normalized?: NormalizedScrapeResult; matchedScraper?: string }> {
   for (const plugin of pluginList) {
     try {
-      // Try videoByName with scene title
+      // Try videoByName with the current video title.
       const res = await withTimeout(
         executePlugin(plugin.id, "videoByName", {
-          name: row.scene.title,
-          title: row.scene.title,
+          name: row.video.title,
+          title: row.video.title,
         }, {
           saveResult: true,
-          entityId: row.scene.id,
+          entityId: row.video.id,
         }),
         SEEK_TIMEOUT_MS,
       );
@@ -97,8 +97,8 @@ async function seekSceneViaPlugin(
   return {};
 }
 
-async function seekScene(
-  row: SceneRow,
+async function seekVideo(
+  row: VideoRow,
   scraperList: ScraperPackage[],
   sbEndpoints: StashBoxEndpoint[],
   pluginList: PluginInfo[] = [],
@@ -110,13 +110,13 @@ async function seekScene(
 }> {
   // Try StashBox endpoints first (fingerprint matching is highest confidence)
   if (sbEndpoints.length > 0) {
-    const sbResult = await seekSceneViaStashBox(row, sbEndpoints);
+    const sbResult = await seekVideoViaStashBox(row, sbEndpoints);
     if (sbResult.result) return sbResult;
   }
 
   // Try Obscura plugins
   if (pluginList.length > 0) {
-    const pluginResult = await seekSceneViaPlugin(row, pluginList);
+    const pluginResult = await seekVideoViaPlugin(row, pluginList);
     if (pluginResult.result) return pluginResult;
   }
 
@@ -124,7 +124,7 @@ async function seekScene(
   for (const scraper of scraperList) {
     try {
       const res = await withTimeout(
-        scrapeScene(scraper.id, row.scene.id, "auto"),
+        scrapeVideo(scraper.id, row.video.id, "auto"),
         SEEK_TIMEOUT_MS
       );
       if (res.result && res.normalized) {
@@ -139,17 +139,17 @@ async function seekScene(
 
 /* ─── Tab component ───────────────────────────────────────────── */
 
-export function ScrapeSceneRows({
-  sceneRows,
-  setSceneRows,
+export function ScrapeVideoRows({
+  videoRows,
+  setVideoRows,
   expandedIds,
   toggleExpanded,
   onSeekSingle,
-}: Pick<ScenesTabProps, "sceneRows" | "setSceneRows" | "expandedIds" | "toggleExpanded"> & {
+}: Pick<VideosTabProps, "videoRows" | "setVideoRows" | "expandedIds" | "toggleExpanded"> & {
   onSeekSingle?: (idx: number) => void;
 }) {
-  function toggleSceneField(idx: number, field: SceneField) {
-    setSceneRows((prev) =>
+  function toggleVideoField(idx: number, field: VideoField) {
+    setVideoRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
         const next = new Set(r.selectedFields);
@@ -160,8 +160,8 @@ export function ScrapeSceneRows({
     );
   }
 
-  function toggleSceneExcludePerformer(idx: number, name: string) {
-    setSceneRows((prev) =>
+  function toggleVideoExcludePerformer(idx: number, name: string) {
+    setVideoRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
         const next = new Set(r.excludedPerformers);
@@ -172,8 +172,8 @@ export function ScrapeSceneRows({
     );
   }
 
-  function toggleSceneExcludeTag(idx: number, name: string) {
-    setSceneRows((prev) =>
+  function toggleVideoExcludeTag(idx: number, name: string) {
+    setVideoRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
         const next = new Set(r.excludedTags);
@@ -184,40 +184,40 @@ export function ScrapeSceneRows({
     );
   }
 
-  return sceneRows.map((row, idx) => (
-    <SceneRowCard
-      key={row.scene.id}
+  return videoRows.map((row, idx) => (
+    <VideoRowCard
+      key={row.video.id}
       row={row}
-      expanded={expandedIds.has(row.scene.id)}
-      onToggleExpand={() => toggleExpanded(row.scene.id)}
-      onAccept={() => void acceptSceneRow(sceneRows, idx, setSceneRows)}
-      onReject={() => void rejectSceneRow(sceneRows, idx, setSceneRows)}
+      expanded={expandedIds.has(row.video.id)}
+      onToggleExpand={() => toggleExpanded(row.video.id)}
+      onAccept={() => void acceptVideoRow(videoRows, idx, setVideoRows)}
+      onReject={() => void rejectVideoRow(videoRows, idx, setVideoRows)}
       onDismiss={() => {
-        setSceneRows((prev) =>
+        setVideoRows((prev) =>
           prev.map((r, i) => (i === idx ? { ...r, status: "pending", result: undefined, normalized: undefined, matchedScraper: undefined, error: undefined } : r))
         );
       }}
       onSeekSingle={onSeekSingle ? () => onSeekSingle(idx) : undefined}
-      onToggleField={(field) => toggleSceneField(idx, field)}
-      onTogglePerformer={(name) => toggleSceneExcludePerformer(idx, name)}
-      onToggleTag={(name) => toggleSceneExcludeTag(idx, name)}
+      onToggleField={(field) => toggleVideoField(idx, field)}
+      onTogglePerformer={(name) => toggleVideoExcludePerformer(idx, name)}
+      onToggleTag={(name) => toggleVideoExcludeTag(idx, name)}
     />
   ));
 }
 
 /* ─── Scrape runner ───────────────────────────────────────────── */
 
-export async function runSceneScrape({
-  sceneRows,
-  setSceneRows,
-  sceneScrapers,
+export async function runVideoScrape({
+  videoRows,
+  setVideoRows,
+  videoScrapers,
   stashBoxEndpoints,
   selectedScraperId,
   autoAccept,
   abortRef,
   setRunning,
   plugins = [],
-}: ScenesTabProps) {
+}: VideosTabProps) {
   setRunning(true);
   abortRef.current = false;
 
@@ -227,8 +227,8 @@ export async function runSceneScrape({
   const realId = selectedScraperId.replace(/^(stashbox|scraper|plugin):/, "");
 
   const scraperList = isScraper
-    ? sceneScrapers.filter((s) => s.id === realId)
-    : selectedScraperId === "" ? sceneScrapers : [];
+    ? videoScrapers.filter((s) => s.id === realId)
+    : selectedScraperId === "" ? videoScrapers : [];
   const sbEndpoints = isStashBox
     ? stashBoxEndpoints.filter((e) => e.id === realId)
     : selectedScraperId === "" ? stashBoxEndpoints : [];
@@ -237,52 +237,52 @@ export async function runSceneScrape({
     : selectedScraperId === "" ? plugins : [];
 
   // Reset non-accepted rows
-  setSceneRows((prev) =>
+  setVideoRows((prev) =>
     prev.map((r) =>
       r.status === "accepted" ? r : { ...r, status: "pending", result: undefined, normalized: undefined, error: undefined }
     )
   );
 
-  for (let i = 0; i < sceneRows.length; i++) {
+  for (let i = 0; i < videoRows.length; i++) {
     if (abortRef.current) break;
-    if (sceneRows[i].status === "accepted") continue;
+    if (videoRows[i].status === "accepted") continue;
 
-    setSceneRows((prev) =>
+    setVideoRows((prev) =>
       prev.map((r, idx) => (idx === i ? { ...r, status: "scraping" } : r))
     );
 
     try {
-      const { result, normalized, matchedScraper } = await seekScene(sceneRows[i], scraperList, sbEndpoints, pluginList);
+      const { result, normalized, matchedScraper } = await seekVideo(videoRows[i], scraperList, sbEndpoints, pluginList);
       if (result && normalized) {
         if (autoAccept) {
           try {
             await acceptScrapeResult(result.id);
-            setSceneRows((prev) =>
+            setVideoRows((prev) =>
               prev.map((r, idx) =>
                 idx === i ? { ...r, status: "accepted", result, normalized, matchedScraper } : r
               )
             );
           } catch {
-            setSceneRows((prev) =>
+            setVideoRows((prev) =>
               prev.map((r, idx) =>
                 idx === i ? { ...r, status: "found", result, normalized, matchedScraper } : r
               )
             );
           }
         } else {
-          setSceneRows((prev) =>
+          setVideoRows((prev) =>
             prev.map((r, idx) =>
               idx === i ? { ...r, status: "found", result, normalized, matchedScraper } : r
             )
           );
         }
       } else {
-        setSceneRows((prev) =>
+        setVideoRows((prev) =>
           prev.map((r, idx) => (idx === i ? { ...r, status: "no-result" } : r))
         );
       }
     } catch (err) {
-      setSceneRows((prev) =>
+      setVideoRows((prev) =>
         prev.map((r, idx) =>
           idx === i ? { ...r, status: "error", error: err instanceof Error ? err.message : "Failed" } : r
         )
@@ -294,36 +294,36 @@ export async function runSceneScrape({
 
 /* ─── Single-row seek ─────────────────────────────────────────── */
 
-export async function seekSceneSingle(
+export async function seekVideoSingle(
   idx: number,
-  sceneRows: SceneRow[],
-  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>,
+  videoRows: VideoRow[],
+  setVideoRows: React.Dispatch<React.SetStateAction<VideoRow[]>>,
   scraperList: ScraperPackage[],
   sbEndpoints: StashBoxEndpoint[],
   pluginList: PluginInfo[] = [],
 ) {
-  const row = sceneRows[idx];
+  const row = videoRows[idx];
   if (!row || row.status === "accepted" || row.status === "scraping") return;
 
-  setSceneRows((prev) =>
+  setVideoRows((prev) =>
     prev.map((r, i) => (i === idx ? { ...r, status: "scraping" } : r))
   );
 
   try {
-    const { result, normalized, matchedScraper } = await seekScene(row, scraperList, sbEndpoints, pluginList);
+    const { result, normalized, matchedScraper } = await seekVideo(row, scraperList, sbEndpoints, pluginList);
     if (result && normalized) {
-      setSceneRows((prev) =>
+      setVideoRows((prev) =>
         prev.map((r, i) =>
           i === idx ? { ...r, status: "found", result, normalized, matchedScraper } : r
         )
       );
     } else {
-      setSceneRows((prev) =>
+      setVideoRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "no-result" } : r))
       );
     }
   } catch (err) {
-    setSceneRows((prev) =>
+    setVideoRows((prev) =>
       prev.map((r, i) =>
         i === idx ? { ...r, status: "error", error: err instanceof Error ? err.message : "Failed" } : r
       )
@@ -333,57 +333,57 @@ export async function seekSceneSingle(
 
 /* ─── Accept / Reject helpers ─────────────────────────────────── */
 
-async function acceptSceneRow(
-  sceneRows: SceneRow[],
+async function acceptVideoRow(
+  videoRows: VideoRow[],
   idx: number,
-  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>
+  setVideoRows: React.Dispatch<React.SetStateAction<VideoRow[]>>
 ) {
-  const row = sceneRows[idx];
+  const row = videoRows[idx];
   if (!row.result) return;
   try {
     await acceptScrapeResult(row.result.id, Array.from(row.selectedFields), {
       excludePerformers: Array.from(row.excludedPerformers),
       excludeTags: Array.from(row.excludedTags),
     });
-    setSceneRows((prev) =>
+    setVideoRows((prev) =>
       prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
     );
   } catch { /* keep as found */ }
 }
 
-async function rejectSceneRow(
-  sceneRows: SceneRow[],
+async function rejectVideoRow(
+  videoRows: VideoRow[],
   idx: number,
-  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>
+  setVideoRows: React.Dispatch<React.SetStateAction<VideoRow[]>>
 ) {
-  const row = sceneRows[idx];
+  const row = videoRows[idx];
   if (!row.result) return;
   try {
     await rejectScrapeResult(row.result.id);
-    setSceneRows((prev) =>
+    setVideoRows((prev) =>
       prev.map((r, i) => (i === idx ? { ...r, status: "rejected", result: undefined, normalized: undefined } : r))
     );
   } catch { /* ignore */ }
 }
 
-export async function acceptAllScenes(
-  sceneRows: SceneRow[],
-  setSceneRows: React.Dispatch<React.SetStateAction<SceneRow[]>>
+export async function acceptAllVideos(
+  videoRows: VideoRow[],
+  setVideoRows: React.Dispatch<React.SetStateAction<VideoRow[]>>
 ) {
-  const found = sceneRows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.status === "found" && row.result);
+  const found = videoRows.map((r, i) => ({ row: r, idx: i })).filter(({ row }) => row.status === "found" && row.result);
   for (const { row, idx } of found) {
     try {
       await acceptScrapeResult(row.result!.id);
-      setSceneRows((prev) =>
+      setVideoRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r))
       );
     } catch { /* skip */ }
   }
 }
 
-/* ─── Scene row card ──────────────────────────────────────────── */
+/* ─── Video row card ──────────────────────────────────────────── */
 
-function SceneRowCard({
+function VideoRowCard({
   row,
   expanded,
   onToggleExpand,
@@ -395,14 +395,14 @@ function SceneRowCard({
   onTogglePerformer,
   onToggleTag,
 }: {
-  row: SceneRow;
+  row: VideoRow;
   expanded: boolean;
   onToggleExpand: () => void;
   onAccept: () => void;
   onReject: () => void;
   onDismiss: () => void;
   onSeekSingle?: () => void;
-  onToggleField: (field: SceneField) => void;
+  onToggleField: (field: VideoField) => void;
   onTogglePerformer: (name: string) => void;
   onToggleTag: (name: string) => void;
 }) {
@@ -423,9 +423,9 @@ function SceneRowCard({
         <StatusDot status={row.status} />
 
         {/* Thumbnail */}
-        {row.scene.thumbnailPath ? (
+        {row.video.thumbnailPath ? (
           <img
-            src={toApiUrl(row.scene.thumbnailPath)}
+            src={toApiUrl(row.video.thumbnailPath)}
             alt=""
             className="w-16 h-10 object-cover flex-shrink-0"
           />
@@ -435,11 +435,11 @@ function SceneRowCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-[0.8rem] font-medium truncate">{row.scene.title}</p>
+          <p className="text-[0.8rem] font-medium truncate">{row.video.title}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-text-disabled text-[0.65rem]">{row.scene.durationFormatted ?? "\u2014"}</span>
-            {row.scene.resolution && (
-              <span className="pill-accent px-1 py-0 text-[0.55rem]">{row.scene.resolution}</span>
+            <span className="text-text-disabled text-[0.65rem]">{row.video.durationFormatted ?? "\u2014"}</span>
+            {row.video.resolution && (
+              <span className="pill-accent px-1 py-0 text-[0.55rem]">{row.video.resolution}</span>
             )}
             {row.normalized?.studioName && (
               <span className="text-text-accent text-[0.65rem]">{row.normalized.studioName}</span>
