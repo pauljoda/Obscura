@@ -129,6 +129,11 @@ export interface UpdateVideoBody {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+function normalizeRole(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 /**
  * Internal "video row" in a list projection, normalized across
  * episodes and movies so the rest of the code path is source-agnostic.
@@ -1202,7 +1207,24 @@ export async function getVideoDetail(id: string) {
         performers.id,
       ),
     )
-    .where(eq(joinIdCol, row.id));
+    .where(eq(joinIdCol, row.id))
+    .orderBy(
+      asc(
+        row.kind === "episode"
+          ? videoEpisodePerformers.order
+          : videoMoviePerformers.order,
+      ),
+      asc(performers.name),
+    );
+
+  type VideoPerformerDetail = (typeof perfRows)[number] & {
+    roleSource?: "episode" | "series" | "movie" | null;
+  };
+  let performerDetails: VideoPerformerDetail[] = perfRows.map((perfRow) => ({
+    ...perfRow,
+    character: normalizeRole(perfRow.character),
+    roleSource: row.kind === "movie" ? ("movie" as const) : null,
+  }));
 
   // Episodes inherit the series-level cast. Merge series performers
   // first (they represent the main cast) so they show before
@@ -1224,16 +1246,47 @@ export async function getVideoDetail(id: string) {
         performers,
         eq(schema.videoSeriesPerformers.performerId, performers.id),
       )
-      .where(eq(schema.videoSeriesPerformers.seriesId, row.seriesId));
+      .where(eq(schema.videoSeriesPerformers.seriesId, row.seriesId))
+      .orderBy(asc(schema.videoSeriesPerformers.order), asc(performers.name));
 
-    // Dedupe: series performers go first, episode performers after.
-    const epIds = new Set(perfRows.map((p) => p.id));
-    const merged = [
-      ...seriesPerfRows.filter((p) => !epIds.has(p.id)),
-      ...perfRows,
-    ];
-    perfRows.length = 0;
-    perfRows.push(...merged);
+    const episodeById = new Map(perfRows.map((p) => [p.id, p]));
+    performerDetails = seriesPerfRows.map((seriesPerf) => {
+      const episodePerf = episodeById.get(seriesPerf.id);
+      if (!episodePerf) {
+        return {
+          ...seriesPerf,
+          character: normalizeRole(seriesPerf.character),
+          roleSource: "series" as const,
+        };
+      }
+
+      episodeById.delete(seriesPerf.id);
+      const episodeCharacter = normalizeRole(episodePerf.character);
+      const seriesCharacter = normalizeRole(seriesPerf.character);
+
+      return {
+        ...episodePerf,
+        character: episodeCharacter ?? seriesCharacter,
+        roleSource:
+          episodeCharacter !== null
+            ? ("episode" as const)
+            : ("series" as const),
+      };
+    });
+
+    for (const episodePerf of episodeById.values()) {
+      performerDetails.push({
+        ...episodePerf,
+        character: normalizeRole(episodePerf.character),
+        roleSource: "episode" as const,
+      });
+    }
+  } else {
+    performerDetails = perfRows.map((perfRow) => ({
+      ...perfRow,
+      character: normalizeRole(perfRow.character),
+      roleSource: row.kind === "movie" ? ("movie" as const) : null,
+    }));
   }
 
   const tagRows = await db
@@ -1352,7 +1405,7 @@ export async function getVideoDetail(id: string) {
     resumeTime: row.resumeTime,
     lastPlayedAt: row.lastPlayedAt,
     studio: studioEmbed,
-    performers: perfRows,
+    performers: performerDetails,
     tags: tagRows,
     markers,
     subtitleTracks,

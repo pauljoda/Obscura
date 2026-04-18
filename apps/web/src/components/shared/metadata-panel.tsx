@@ -22,6 +22,8 @@ export interface PerformerEmbed {
   gender?: string | null;
   favorite?: boolean;
   isNsfw?: boolean;
+  character?: string | null;
+  roleSource?: "episode" | "series" | "movie" | null;
 }
 
 export interface TagEmbed {
@@ -122,15 +124,31 @@ export function PerformersSection({
                   <p className="text-sm font-medium text-text-primary">
                     {p.name}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {p.gender && (
-                      <span className="text-xs text-text-disabled capitalize">
-                        {p.gender}
-                      </span>
+                  <div className="mt-0.5 space-y-1">
+                    {(p.character || p.gender || p.favorite || p.roleSource) && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {p.character && (
+                          <span className="text-xs text-text-muted">
+                            as {p.character}
+                          </span>
+                        )}
+                        {p.roleSource && (
+                          <span className="bg-surface-3 px-1 py-0.5 text-[0.6rem] uppercase tracking-[0.12em] text-text-disabled">
+                            {p.roleSource}
+                          </span>
+                        )}
+                      </div>
                     )}
-                    {p.favorite && (
-                      <Star className="h-3 w-3 fill-accent-500 text-accent-500" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {p.gender && (
+                        <span className="text-xs text-text-disabled capitalize">
+                          {p.gender}
+                        </span>
+                      )}
+                      {p.favorite && (
+                        <Star className="h-3 w-3 fill-accent-500 text-accent-500" />
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>

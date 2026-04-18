@@ -564,6 +564,7 @@ export interface VideoSeriesDetailDto extends VideoSeriesListItemDto {
     gender: string | null;
     imagePath: string | null;
     isNsfw: boolean;
+    character?: string | null;
   }[];
   tags: TagEmbedDto[];
   breadcrumbs: VideoSeriesBreadcrumbDto[];
@@ -953,9 +954,23 @@ export interface PerformerDetailDto {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  knownFor: PerformerKnownForDto[];
   tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type PerformerKnownForSourceType = "movie" | "series" | "episode";
+
+export interface PerformerKnownForDto {
+  sourceType: PerformerKnownForSourceType;
+  sourceId: string;
+  sourceTitle: string;
+  character: string | null;
+  seriesId: string | null;
+  seriesTitle: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
 }
 
 export interface PerformerUpdateDto {
@@ -1411,6 +1426,8 @@ export interface VideoListItemDto {
     isNsfw?: boolean;
     /** Role name from the join table (e.g. "Ron Trosper"). */
     character?: string | null;
+    /** Whether the displayed role came from the direct entity row or inherited series cast. */
+    roleSource?: "episode" | "series" | "movie" | null;
   }[];
   tags: TagEmbedDto[];
   createdAt: string;

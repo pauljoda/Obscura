@@ -502,6 +502,21 @@ export function PerformerPageClient({
             </div>
           ) : null}
 
+          {performer.knownFor.length > 0 ? (
+            <div className="surface-well p-4">
+              <div className="mb-3 text-kicker">Known For</div>
+              <div className="grid gap-2">
+                {performer.knownFor.map((role) => (
+                  <KnownForRoleRow
+                    key={`${role.sourceType}:${role.sourceId}:${role.character ?? ""}`}
+                    role={role}
+                    currentPath={currentPath}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <NsfwGate>
             <div className="surface-well p-4">
               <div className="mb-2 text-kicker">StashBox IDs</div>
@@ -591,4 +606,76 @@ function computeAge(birthdate: string): string | null {
   } catch {
     return null;
   }
+}
+
+function KnownForRoleRow({
+  role,
+  currentPath,
+}: {
+  role: NonNullable<PerformerDetail["knownFor"]>[number];
+  currentPath: string;
+}) {
+  const href =
+    role.sourceType === "series"
+      ? `/videos?series=${role.sourceId}&from=${encodeURIComponent(currentPath)}`
+      : `/videos/${role.sourceId}?from=${encodeURIComponent(currentPath)}`;
+
+  const sourceLabel =
+    role.sourceType === "series"
+      ? "Series"
+      : role.sourceType === "movie"
+        ? "Movie"
+        : "Episode";
+
+  const contextLabel =
+    role.sourceType === "episode"
+      ? `${role.seriesTitle ?? "Series"} · ${formatEpisodeRef(
+          role.seasonNumber,
+          role.episodeNumber,
+        )}`
+      : role.sourceTitle;
+
+  return (
+    <Link
+      href={href}
+      className="surface-card-sharp flex items-start justify-between gap-3 p-3 transition-colors duration-fast hover:border-border-accent"
+    >
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-text-primary">
+          {role.character ?? "Unknown role"}
+        </div>
+        <div className="mt-1 text-xs text-text-muted">
+          {contextLabel}
+        </div>
+        {role.sourceType === "episode" ? (
+          <div className="mt-1 text-[0.7rem] text-text-disabled">
+            {role.sourceTitle}
+          </div>
+        ) : null}
+      </div>
+      <span className="bg-surface-3 px-1.5 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-text-disabled">
+        {sourceLabel}
+      </span>
+    </Link>
+  );
+}
+
+function formatEpisodeRef(
+  seasonNumber: number | null,
+  episodeNumber: number | null,
+): string {
+  if (seasonNumber == null && episodeNumber == null) {
+    return "Episode";
+  }
+  if (seasonNumber == null) {
+    return `E${String(episodeNumber).padStart(2, "0")}`;
+  }
+  if (episodeNumber == null) {
+    return seasonNumber === 0
+      ? "Specials"
+      : `S${String(seasonNumber).padStart(2, "0")}`;
+  }
+  return seasonNumber === 0
+    ? `Specials E${String(episodeNumber).padStart(2, "0")}`
+    : `S${String(seasonNumber).padStart(2, "0")}E${String(episodeNumber).padStart(2, "0")}`;
 }

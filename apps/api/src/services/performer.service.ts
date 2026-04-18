@@ -34,6 +34,139 @@ import {
 
 const { performers, performerTags, tags } = schema;
 
+function normalizeRole(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+async function listPerformerKnownFor(performerId: string, sfwOnly: boolean) {
+  const [seriesRows, movieRows, episodeRows] = await Promise.all([
+    db
+      .select({
+        sourceId: schema.videoSeries.id,
+        title: schema.videoSeries.title,
+        customName: schema.videoSeries.customName,
+        character: schema.videoSeriesPerformers.character,
+        isNsfw: schema.videoSeries.isNsfw,
+      })
+      .from(schema.videoSeriesPerformers)
+      .innerJoin(
+        schema.videoSeries,
+        eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
+      )
+      .where(eq(schema.videoSeriesPerformers.performerId, performerId)),
+    db
+      .select({
+        sourceId: schema.videoMovies.id,
+        title: schema.videoMovies.title,
+        character: schema.videoMoviePerformers.character,
+        isNsfw: schema.videoMovies.isNsfw,
+      })
+      .from(schema.videoMoviePerformers)
+      .innerJoin(
+        schema.videoMovies,
+        eq(schema.videoMoviePerformers.movieId, schema.videoMovies.id),
+      )
+      .where(eq(schema.videoMoviePerformers.performerId, performerId)),
+    db
+      .select({
+        sourceId: schema.videoEpisodes.id,
+        title: schema.videoEpisodes.title,
+        character: schema.videoEpisodePerformers.character,
+        seasonNumber: schema.videoEpisodes.seasonNumber,
+        episodeNumber: schema.videoEpisodes.episodeNumber,
+        isNsfw: schema.videoEpisodes.isNsfw,
+        seriesId: schema.videoSeries.id,
+        seriesTitle: schema.videoSeries.title,
+        seriesCustomName: schema.videoSeries.customName,
+        seriesIsNsfw: schema.videoSeries.isNsfw,
+        seriesCharacter: schema.videoSeriesPerformers.character,
+      })
+      .from(schema.videoEpisodePerformers)
+      .innerJoin(
+        schema.videoEpisodes,
+        eq(schema.videoEpisodePerformers.episodeId, schema.videoEpisodes.id),
+      )
+      .innerJoin(
+        schema.videoSeries,
+        eq(schema.videoEpisodes.seriesId, schema.videoSeries.id),
+      )
+      .leftJoin(
+        schema.videoSeriesPerformers,
+        and(
+          eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
+          eq(
+            schema.videoSeriesPerformers.performerId,
+            schema.videoEpisodePerformers.performerId,
+          ),
+        ),
+      )
+      .where(eq(schema.videoEpisodePerformers.performerId, performerId)),
+  ]);
+
+  const knownFor = [
+    ...seriesRows
+      .filter((row) => !sfwOnly || !row.isNsfw)
+      .map((row) => ({
+        sourceType: "series" as const,
+        sourceId: row.sourceId,
+        sourceTitle: row.customName ?? row.title,
+        character: normalizeRole(row.character),
+        seriesId: row.sourceId,
+        seriesTitle: row.customName ?? row.title,
+        seasonNumber: null,
+        episodeNumber: null,
+      }))
+      .filter((row) => row.character),
+    ...movieRows
+      .filter((row) => !sfwOnly || !row.isNsfw)
+      .map((row) => ({
+        sourceType: "movie" as const,
+        sourceId: row.sourceId,
+        sourceTitle: row.title,
+        character: normalizeRole(row.character),
+        seriesId: null,
+        seriesTitle: null,
+        seasonNumber: null,
+        episodeNumber: null,
+      }))
+      .filter((row) => row.character),
+    ...episodeRows
+      .filter((row) => !sfwOnly || (!row.isNsfw && !row.seriesIsNsfw))
+      .map((row) => {
+        const character = normalizeRole(row.character);
+        const seriesCharacter = normalizeRole(row.seriesCharacter);
+        return {
+          sourceType: "episode" as const,
+          sourceId: row.sourceId,
+          sourceTitle: row.title,
+          character,
+          seriesId: row.seriesId,
+          seriesTitle: row.seriesCustomName ?? row.seriesTitle,
+          seasonNumber: row.seasonNumber,
+          episodeNumber: row.episodeNumber,
+          duplicateOfSeriesRole:
+            character !== null && seriesCharacter !== null && character === seriesCharacter,
+        };
+      })
+      .filter((row) => row.character && !row.duplicateOfSeriesRole)
+      .map(({ duplicateOfSeriesRole: _duplicateOfSeriesRole, ...row }) => row),
+  ];
+
+  const sourceRank = { series: 0, movie: 1, episode: 2 } as const;
+  knownFor.sort((a, b) => {
+    const bySource = sourceRank[a.sourceType] - sourceRank[b.sourceType];
+    if (bySource !== 0) return bySource;
+    const bySeries = (a.seriesTitle ?? "").localeCompare(b.seriesTitle ?? "");
+    if (bySeries !== 0) return bySeries;
+    const byTitle = (a.sourceTitle ?? "").localeCompare(b.sourceTitle ?? "");
+    if (byTitle !== 0) return byTitle;
+    return (a.character ?? "").localeCompare(b.character ?? "");
+  });
+
+  return knownFor;
+}
+
 // ─── SQL Expressions ──────────────────────────────────────────
 
 const sfwPerformerSceneCountExpr = performerSfwSceneCountExpr();
@@ -316,6 +449,7 @@ export async function getPerformerById(id: string, sfwOnly: boolean) {
     .from(performers)
     .where(eq(performers.id, id));
   const videoCount = Number(cnt?.n ?? 0);
+  const knownFor = await listPerformerKnownFor(id, sfwOnly);
 
   return {
     id: row.id,
@@ -342,6 +476,7 @@ export async function getPerformerById(id: string, sfwOnly: boolean) {
     rating: row.rating,
     isNsfw: row.isNsfw,
     videoCount,
+    knownFor,
     tags: row.performerTags.map((pt) => ({
       id: pt.tag.id,
       name: pt.tag.name,

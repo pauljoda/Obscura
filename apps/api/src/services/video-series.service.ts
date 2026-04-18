@@ -379,11 +379,12 @@ export async function getVideoSeriesDetail(id: string, nsfwMode?: string) {
       gender: performers.gender,
       imagePath: performers.imagePath,
       isNsfw: performers.isNsfw,
+      character: videoSeriesPerformers.character,
     })
     .from(videoSeriesPerformers)
     .innerJoin(performers, eq(videoSeriesPerformers.performerId, performers.id))
     .where(eq(videoSeriesPerformers.seriesId, id))
-    .orderBy(asc(performers.name));
+    .orderBy(asc(videoSeriesPerformers.order), asc(performers.name));
 
   const folderTags = await db
     .select({

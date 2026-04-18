@@ -1553,6 +1553,7 @@ function SeriesCastStrip({
     gender: string | null;
     imagePath: string | null;
     isNsfw: boolean;
+    character?: string | null;
   }[];
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1614,6 +1615,11 @@ function SeriesCastStrip({
                 <div className="text-[0.72rem] text-text-primary truncate group-hover:text-text-accent transition-colors">
                   {performer.name}
                 </div>
+                {performer.character ? (
+                  <div className="mt-0.5 text-[0.62rem] text-text-muted truncate">
+                    {performer.character}
+                  </div>
+                ) : null}
               </div>
             </Link>
           );
