@@ -1,0 +1,110 @@
+<script lang="ts">
+  import type { Snippet } from "svelte";
+  import { PUBLIC_API_URL } from "$env/static/public";
+
+  interface Props {
+    /** From +layout.server.ts — server-side probe of system status. */
+    awaitingConsent: boolean;
+    children: Snippet;
+  }
+
+  let { awaitingConsent, children }: Props = $props();
+
+  type State = "ready" | "accepting" | "restarting";
+  let state = $state<State>("ready");
+  let error = $state<string | null>(null);
+
+  const GITHUB_URL = "https://github.com/pauljoda/obscura";
+
+  async function fetchSystemStatus(): Promise<{ awaitingBreakingConsent: boolean }> {
+    const res = await fetch(`${PUBLIC_API_URL}/system/status`);
+    if (!res.ok) throw new Error(`system status ${res.status}`);
+    return res.json();
+  }
+
+  async function acceptBreakingGate(): Promise<void> {
+    const res = await fetch(`${PUBLIC_API_URL}/system/breaking-gate/accept`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error(`breaking gate accept ${res.status}`);
+  }
+
+  async function handleAccept() {
+    state = "accepting";
+    error = null;
+    try {
+      await acceptBreakingGate();
+      state = "restarting";
+      const deadline = Date.now() + 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const s = await fetchSystemStatus();
+          if (!s.awaitingBreakingConsent) {
+            window.location.reload();
+            return;
+          }
+        } catch {
+          // API still restarting
+        }
+      }
+      error = "Upgrade took longer than expected. Refresh the page in a minute.";
+    } catch (err) {
+      state = "ready";
+      error = err instanceof Error ? err.message : String(err);
+    }
+  }
+</script>
+
+{#if !awaitingConsent}
+  {@render children()}
+{:else}
+  <div class="fixed inset-0 flex items-center justify-center bg-bg text-text-primary p-8 overflow-auto z-[9999]">
+    <div class="max-w-[38rem] w-full">
+      <div class="font-heading text-2xl font-semibold mb-4 text-accent-500">
+        Thank you for being an early supporter of Obscura.
+      </div>
+      <p class="leading-relaxed mb-4">
+        This upgrade includes a one-time breaking change: the
+        <strong>Scenes</strong> section has been replaced with a richer
+        <strong>Videos</strong> model (series, seasons, episodes, and movies).
+      </p>
+      <p class="leading-relaxed mb-4">
+        Your video files on disk are untouched. The old
+        <code class="px-1 mx-1 bg-white/5 font-mono">scenes</code> database rows
+        (including custom metadata, tags, and markers) will be dropped — after
+        continuing, rescan your library roots to rebuild the new video entries.
+      </p>
+      <p class="leading-relaxed mb-6 opacity-80">
+        Future updates are unlikely to require this kind of break.
+      </p>
+      {#if error}
+        <div class="text-error-text mb-4">{error}</div>
+      {/if}
+      <div class="flex gap-3 flex-wrap">
+        <button
+          type="button"
+          onclick={handleAccept}
+          disabled={state === "accepting" || state === "restarting"}
+          class="px-4 py-2 border border-border-accent bg-gradient-to-r from-accent-900 to-accent-800 text-accent-100 font-medium disabled:opacity-40 transition-all duration-fast"
+        >
+          {#if state === "accepting"}
+            Applying…
+          {:else if state === "restarting"}
+            Restarting API…
+          {:else}
+            Continue &amp; rebuild library
+          {/if}
+        </button>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="px-4 py-2 border border-border-subtle text-text-muted hover:text-text-primary transition-colors duration-fast"
+        >
+          Read on GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+{/if}
