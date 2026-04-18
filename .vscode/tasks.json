@@ -14,6 +14,25 @@
       },
       "problemMatcher": [],
       "detail": "Boots the dev Postgres container. pg-boss runs the job queue in-DB — no Redis required."
+    },
+    {
+      "label": "Web (SvelteKit port): build",
+      "type": "shell",
+      "command": "pnpm --filter @obscura/web-svelte build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Production-builds apps/web-svelte via @sveltejs/adapter-node → build/index.js."
+    },
+    {
+      "label": "Web (SvelteKit port): preview prod build",
+      "type": "shell",
+      "command": "node apps/web-svelte/build/index.js",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "PORT": "3000" }
+      },
+      "problemMatcher": [],
+      "detail": "Runs the adapter-node output directly on :3000. Run the build task first."
     }
   ]
 }

@@ -11,6 +11,44 @@
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "Obscura: Docker Up"
+    },
+    {
+      "name": "Web (SvelteKit port): dev",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Obscura: Docker Up",
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Web (SvelteKit port): attach (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8009",
+      "webRoot": "${workspaceFolder}/apps/web-svelte",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${webRoot}/*",
+        "webpack:///src/*": "${webRoot}/src/*"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Web (SvelteKit port): dev + Chrome",
+      "configurations": [
+        "Web (SvelteKit port): dev",
+        "Web (SvelteKit port): attach (Chrome)"
+      ],
+      "stopAll": true
     }
   ]
 }

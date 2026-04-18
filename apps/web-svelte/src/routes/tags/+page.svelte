@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Plus, Tag as TagIcon } from "@lucide/svelte";
-  import { Button } from "@obscura/ui-svelte";
+  import { Plus, Tag as TagIcon, Star } from "@lucide/svelte";
+  import { Badge, Button } from "@obscura/ui-svelte";
+  import { toApiUrl } from "$lib/api/core";
 
   let { data } = $props();
 </script>
@@ -38,23 +39,37 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
       {#each data.tags as tag (tag.id)}
         <a
-          href={`/tags/${tag.id}`}
+          href={`/tags/${encodeURIComponent(tag.name)}`}
           class="surface-card-sharp p-3 flex flex-col gap-2 hover:border-border-accent transition-colors duration-fast"
         >
           <div class="flex items-center gap-2">
-            <TagIcon class="h-4 w-4 text-accent-500 shrink-0" />
+            {#if tag.imagePath}
+              <img
+                src={toApiUrl(tag.imagePath)}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                class="h-6 w-6 object-cover shrink-0 border border-border-subtle"
+              />
+            {:else}
+              <TagIcon class="h-4 w-4 text-accent-500 shrink-0" />
+            {/if}
             <span class="truncate text-body font-medium text-text-primary">{tag.name}</span>
+            {#if tag.favorite}
+              <Star class="h-3 w-3 text-accent-500 fill-current ml-auto shrink-0" />
+            {/if}
           </div>
-          {#if tag.aliases && tag.aliases.length > 0}
-            <div class="flex flex-wrap gap-1">
-              {#each tag.aliases.slice(0, 3) as alias}
-                <span class="tag-chip tag-chip-default text-[0.6rem]">{alias}</span>
-              {/each}
-              {#if tag.aliases.length > 3}
-                <span class="text-[0.6rem] text-text-disabled">+{tag.aliases.length - 3}</span>
-              {/if}
-            </div>
-          {/if}
+          <div class="flex flex-wrap items-center gap-1.5">
+            {#if tag.videoCount > 0}
+              <Badge>{tag.videoCount} video{tag.videoCount === 1 ? "" : "s"}</Badge>
+            {/if}
+            {#if tag.imageCount > 0}
+              <Badge>{tag.imageCount} image{tag.imageCount === 1 ? "" : "s"}</Badge>
+            {/if}
+            {#if tag.isNsfw}
+              <Badge variant="warning">NSFW</Badge>
+            {/if}
+          </div>
         </a>
       {/each}
     </div>
