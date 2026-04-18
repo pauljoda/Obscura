@@ -36,8 +36,10 @@
   import VideoMetadataPanel from "$lib/components/VideoMetadataPanel.svelte";
   import VideoMarkerEditor from "$lib/components/VideoMarkerEditor.svelte";
   import VideoFileInfo from "$lib/components/VideoFileInfo.svelte";
+  import VideoTranscriptPanel from "$lib/components/VideoTranscriptPanel.svelte";
+  import VideoEdit from "$lib/components/VideoEdit.svelte";
 
-  const tabs = ["Details", "Markers", "Files"] as const;
+  const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
   type Tab = (typeof tabs)[number];
 
   let { data } = $props();
@@ -58,6 +60,17 @@
   let activeSubtitleId = $state<string | null>(null);
   let subtitleChoiceLocked = $state(false);
   let moreActionsOpen = $state(false);
+  let isTranscriptDocked = $state(false);
+
+  const hasSubtitles = $derived((video.subtitleTracks?.length ?? 0) > 0);
+
+  function handleSeek(time: number) {
+    playerHandle?.seekTo(time);
+  }
+
+  function toggleTranscriptDock() {
+    isTranscriptDocked = !isTranscriptDocked;
+  }
 
   let playerHandle: VideoPlayerHandle | undefined = $state();
 
@@ -429,14 +442,58 @@
         {#if tab === "Markers" && video.markers.length > 0}
           <span class="ml-1.5 text-[0.6rem] text-text-disabled">{video.markers.length}</span>
         {/if}
+        {#if tab === "Transcript" && (video.subtitleTracks?.length ?? 0) > 0}
+          <span class="ml-1.5 text-[0.6rem] text-text-disabled">{video.subtitleTracks!.length}</span>
+        {/if}
       </button>
     {/each}
   </div>
 
   {#if activeTab === "Details"}
     <VideoMetadataPanel {video} />
+  {:else if activeTab === "Metadata"}
+    <VideoEdit id={video.id} inline onSaved={refreshVideo} currentPlaybackTime={displayTime} />
   {:else if activeTab === "Markers"}
     <VideoMarkerEditor {video} {getCurrentTime} {displayTime} onRefresh={refreshVideo} />
+  {:else if activeTab === "Transcript"}
+    {#if isTranscriptDocked}
+      <div class="space-y-3">
+        <div class="surface-well px-3 py-2 text-[0.78rem] text-text-muted flex items-center justify-between gap-2">
+          <span>Transcript is docked next to the video.</span>
+          <button
+            type="button"
+            onclick={toggleTranscriptDock}
+            class="text-text-accent hover:text-text-accent-bright transition-colors"
+          >
+            Move it back here
+          </button>
+        </div>
+        <VideoTranscriptPanel
+          videoId={video.id}
+          tracks={video.subtitleTracks ?? []}
+          activeTrackId={activeSubtitleId}
+          onActiveTrackIdChange={handleActiveSubtitleChange}
+          currentTime={displayTime}
+          onSeek={handleSeek}
+          onTracksChanged={refreshVideo}
+          variant="tracks-only"
+          isDocked
+          onDockToggle={toggleTranscriptDock}
+        />
+      </div>
+    {:else}
+      <VideoTranscriptPanel
+        videoId={video.id}
+        tracks={video.subtitleTracks ?? []}
+        activeTrackId={activeSubtitleId}
+        onActiveTrackIdChange={handleActiveSubtitleChange}
+        currentTime={displayTime}
+        onSeek={handleSeek}
+        onTracksChanged={refreshVideo}
+        onDockToggle={hasSubtitles ? toggleTranscriptDock : undefined}
+        isDocked={false}
+      />
+    {/if}
   {:else if activeTab === "Files"}
     <VideoFileInfo {video} />
   {/if}

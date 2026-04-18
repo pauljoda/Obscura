@@ -17,7 +17,7 @@
 </script>
 
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import type Hls from "hls.js";
   import {
     Captions,
@@ -438,11 +438,20 @@
   // ─── Source lifecycle (direct <-> HLS) ───────────────────────────
   $effect(() => {
     if (!videoEl) return;
+    // Track ONLY src + directSrc + videoEl. Every write inside this effect
+    // (streamMode, qualityMode, etc.) would otherwise retrigger the effect and
+    // we'd infinitely tear down + reload the <video>, which is exactly what
+    // kept readyState pinned at 0 on the direct stream.
+    const currentSrc = src;
+    const currentDirectSrc = directSrc;
+    const localVideoEl = videoEl;
 
+    return untrack(() => {
+    const videoEl = localVideoEl!;
     let cancelled = false;
     const hlsLoadAbort = new AbortController();
 
-    const srcKey = `${src ?? ""}|${directSrc ?? ""}`;
+    const srcKey = `${currentSrc ?? ""}|${currentDirectSrc ?? ""}`;
     const isNewSource = srcKey !== prevSrcKey;
     prevSrcKey = srcKey;
 
@@ -723,6 +732,7 @@
       cancelled = true;
       destroyHls();
     };
+    });
   });
 
   // Sync streamMode from qualityMode
