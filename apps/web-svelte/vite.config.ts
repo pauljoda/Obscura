@@ -18,4 +18,17 @@ export default defineConfig({
     noExternal: [],
     external: ["jassub"],
   },
+  define: {
+    // @obscura/contracts reads `process.env.NEXT_PUBLIC_API_URL` /
+    // `process.env.API_URL` at module scope. Next.js inlines these at
+    // build time; Vite does not polyfill `process` in browser bundles,
+    // so accessing it throws ReferenceError. Shim both to the empty
+    // string so the `?? "http://localhost:4000"` fallback activates.
+    // Server fetches in SvelteKit read INTERNAL_API_URL from
+    // `$env/static/private`; client fetches read PUBLIC_API_URL from
+    // `$env/static/public` — neither relies on @obscura/contracts'
+    // API_BASE_URL.
+    "process.env.NEXT_PUBLIC_API_URL": JSON.stringify(""),
+    "process.env.API_URL": JSON.stringify(""),
+  },
 });
