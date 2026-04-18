@@ -4,11 +4,17 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  lazy,
   useRef,
+  Suspense,
   useState,
 } from "react";
 import dynamic from "next/dynamic";
-import { VideoPlayer, type VideoPlayerHandle } from "./video-player";
+import type { VideoPlayerHandle } from "./video-player";
+
+const VideoPlayer = lazy(
+  () => import("./video-player").then((m) => ({ default: m.VideoPlayer })),
+);
 
 const VideoEdit = dynamic(
   () => import("./video-edit").then((m) => ({ default: m.VideoEdit })),
@@ -28,6 +34,27 @@ const IdentifyButton = dynamic(
     })),
   { ssr: false },
 );
+const AddToCollectionModal = dynamic(
+  () =>
+    import("./collections/add-to-collection-modal").then((m) => ({
+      default: m.AddToCollectionModal,
+    })),
+  { ssr: false },
+);
+const VideoMarkerEditor = dynamic(
+  () =>
+    import("./videos/video-marker-editor").then((m) => ({
+      default: m.VideoMarkerEditor,
+    })),
+  { ssr: false },
+);
+const VideoFileInfo = dynamic(
+  () =>
+    import("./videos/video-file-info").then((m) => ({
+      default: m.VideoFileInfo,
+    })),
+  { ssr: false },
+);
 import { cn } from "@obscura/ui/lib/utils";
 import {
   Star,
@@ -44,29 +71,28 @@ import {
   FolderPlus,
 } from "lucide-react";
 import Link from "next/link";
+import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contracts";
+import type {
+  LibrarySettings,
+  VideoDetail as VideoDetailType,
+} from "../lib/api/types";
+import { toApiUrl } from "../lib/api/core";
 import {
   fetchLibraryConfig,
-  fetchVideoDetail,
-  fetchTags,
-  updateVideo,
   rebuildVideoPreview,
-  resetVideoMetadata,
-  recordVideoPlay,
+} from "../lib/api/library";
+import {
+  fetchVideoDetail,
   recordVideoOrgasm,
-  toApiUrl,
-  type LibrarySettings,
-  type VideoDetail as VideoDetailType,
-  type TagItem,
-} from "../lib/api";
-import type { SubtitleAppearance, SubtitleDisplayStyle } from "@obscura/contracts";
+  recordVideoPlay,
+  resetVideoMetadata,
+  updateVideo,
+} from "../lib/api/videos";
 import { NsfwBlur, NsfwChip } from "./nsfw/nsfw-gate";
 import { useNsfw } from "./nsfw/nsfw-context";
 import { useTerms } from "../lib/terminology";
-import { AddToCollectionModal } from "./collections/add-to-collection-modal";
 import { usePlaylistContext } from "./collections/playlist-context";
 import { VideoMetadataPanel } from "./videos/video-metadata-panel";
-import { VideoMarkerEditor } from "./videos/video-marker-editor";
-import { VideoFileInfo } from "./videos/video-file-info";
 import { BackLink } from "./shared/back-link";
 
 const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
@@ -75,11 +101,9 @@ type Tab = (typeof tabs)[number];
 export function VideoDetail({
   id,
   initialVideo = null,
-  initialTags = [],
 }: {
   id: string;
   initialVideo?: VideoDetailType | null;
-  initialTags?: TagItem[];
 }) {
   const loadDetail = useCallback(
     () => fetchVideoDetail(id),
@@ -101,7 +125,6 @@ export function VideoDetail({
   const [ratingHover, setRatingHover] = useState(0);
   const [savingRating, setSavingRating] = useState(false);
   const currentTimeRef = useRef(0);
-  const [allTags, setAllTags] = useState<TagItem[]>(initialTags);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const [activeSubtitleId, setActiveSubtitleId] = useState<string | null>(null);
   /** True once the user has made an explicit choice (including "Off"), or
@@ -309,14 +332,13 @@ export function VideoDetail({
     }
 
     setLoading(true);
-    Promise.all([loadDetail(), fetchTags({ nsfw: nsfwMode })])
-      .then(([videoData, tagsData]) => {
+    loadDetail()
+      .then((videoData) => {
         setVideo(videoData);
-        setAllTags(tagsData.tags);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id, initialVideo, nsfwMode, loadDetail]);
+  }, [id, initialVideo, loadDetail]);
 
   const handlePlayStarted = useCallback(() => {
     recordVideoPlay(id).catch(() => {});
@@ -482,30 +504,38 @@ export function VideoDetail({
                 : undefined
             }
           >
-            <VideoPlayer
-              ref={playerRef}
-              src={toApiUrl(video.streamUrl)}
-              directSrc={toApiUrl(video.directStreamUrl)}
-              poster={toApiUrl(video.thumbnailPath)}
-              markers={video.markers.map((m) => ({
-                id: m.id,
-                time: m.seconds,
-                title: m.title,
-              }))}
-              duration={video.duration ?? undefined}
-              onPlayStarted={handlePlayStarted}
-              onTimeUpdate={handleTimeUpdate}
-              trickplaySprite={toApiUrl(video.spritePath, video.updatedAt)}
-              trickplayVtt={toApiUrl(video.trickplayVttPath, video.updatedAt)}
-              subtitleTracks={video.subtitleTracks ?? []}
-              activeSubtitleTrackId={activeSubtitleId}
-              onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
-              subtitleChoiceLocked={subtitleChoiceLocked}
-              subtitleDefaults={subtitleDefaults}
-              defaultPlaybackMode={defaultPlaybackMode}
-              autoPlay={playlist.isActive && playlist.isPlaylistItem("video", video.id)}
-              onEnded={() => playlist.reportContentEnded("video", video.id)}
-            />
+            <Suspense
+              fallback={
+                <div className="aspect-video w-full surface-media-well flex items-center justify-center bg-black">
+                  <Loader2 className="h-8 w-8 text-text-accent animate-spin" />
+                </div>
+              }
+            >
+              <VideoPlayer
+                ref={playerRef}
+                src={toApiUrl(video.streamUrl)}
+                directSrc={toApiUrl(video.directStreamUrl)}
+                poster={toApiUrl(video.thumbnailPath)}
+                markers={video.markers.map((m) => ({
+                  id: m.id,
+                  time: m.seconds,
+                  title: m.title,
+                }))}
+                duration={video.duration ?? undefined}
+                onPlayStarted={handlePlayStarted}
+                onTimeUpdate={handleTimeUpdate}
+                trickplaySprite={toApiUrl(video.spritePath, video.updatedAt)}
+                trickplayVtt={toApiUrl(video.trickplayVttPath, video.updatedAt)}
+                subtitleTracks={video.subtitleTracks ?? []}
+                activeSubtitleTrackId={activeSubtitleId}
+                onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
+                subtitleChoiceLocked={subtitleChoiceLocked}
+                subtitleDefaults={subtitleDefaults}
+                defaultPlaybackMode={defaultPlaybackMode}
+                autoPlay={playlist.isActive && playlist.isPlaylistItem("video", video.id)}
+                onEnded={() => playlist.reportContentEnded("video", video.id)}
+              />
+            </Suspense>
           </div>
           {isTranscriptDocked && (
             <>
