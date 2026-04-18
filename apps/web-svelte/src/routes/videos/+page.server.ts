@@ -11,10 +11,12 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
 
   const seriesParam = url.searchParams.get("series");
   const search = url.searchParams.get("search") ?? undefined;
-  const sort = url.searchParams.get("sort") ?? undefined;
+  const sort = url.searchParams.get("sort") ?? "recent";
   const orderRaw = url.searchParams.get("order");
-  const order: "asc" | "desc" | undefined =
-    orderRaw === "asc" || orderRaw === "desc" ? orderRaw : undefined;
+  const order: "asc" | "desc" =
+    orderRaw === "asc" || orderRaw === "desc" ? orderRaw : "desc";
+  const viewRaw = url.searchParams.get("view");
+  const view: "grid" | "list" = viewRaw === "list" ? "list" : "grid";
   const pageParam = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
@@ -38,5 +40,8 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     pageSize: PAGE_SIZE,
     series: seriesParam ?? null,
     search: search ?? "",
+    sort,
+    order,
+    view,
   };
 };

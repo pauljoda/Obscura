@@ -1,11 +1,20 @@
 <script lang="ts">
-  import { Edit, Captions, Star } from "@lucide/svelte";
+  import { invalidate } from "$app/navigation";
+  import { Edit, Captions } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { updateVideo } from "$lib/api/videos";
   import VideoPlayer from "$lib/components/VideoPlayer.svelte";
+  import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
+  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
 
   let { data } = $props();
-  const v = data.video;
+  let v = $state(data.video);
+
+  // Keep local state in sync when SvelteKit re-runs the load (e.g. after invalidate)
+  $effect(() => {
+    v = data.video;
+  });
 
   const subtitleTracks = (
     (v as { subtitleTracks?: Array<{ id: string; label?: string; language?: string | null; format?: string }> }).subtitleTracks ?? []
@@ -17,6 +26,17 @@
       language: t.language,
       src: toApiUrl(`/videos/${v.id}/subtitles/${t.id}/source`) ?? "",
     }));
+
+  async function handleRating(rating: number | null) {
+    v.rating = rating;
+    try {
+      await updateVideo(v.id, { rating });
+      await invalidate(`videos:${v.id}`);
+    } catch {
+      // revert on failure
+      v.rating = data.video.rating;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -50,14 +70,16 @@
   </header>
 
   <section class="surface-panel overflow-hidden">
-    <VideoPlayer
-      src={toApiUrl(v.streamUrl)}
-      directSrc={toApiUrl(v.directStreamUrl)}
-      poster={toApiUrl(v.thumbnailPath)}
-      trickplaySprite={toApiUrl(v.spritePath)}
-      trickplayVtt={toApiUrl(v.trickplayVttPath)}
-      subtitles={subtitleTracks}
-    />
+    <NsfwBlur isNsfw={v.isNsfw} class="block">
+      <VideoPlayer
+        src={toApiUrl(v.streamUrl)}
+        directSrc={toApiUrl(v.directStreamUrl)}
+        poster={toApiUrl(v.thumbnailPath)}
+        trickplaySprite={toApiUrl(v.spritePath)}
+        trickplayVtt={toApiUrl(v.trickplayVttPath)}
+        subtitles={subtitleTracks}
+      />
+    </NsfwBlur>
 
     <div class="p-4 flex flex-wrap items-center gap-3 text-body-sm text-text-muted">
       {#if v.durationFormatted}<span>⏱ {v.durationFormatted}</span>{/if}
@@ -71,13 +93,10 @@
           CC
         </span>
       {/if}
-      {#if v.rating && v.rating > 0}
-        <span class="inline-flex items-center gap-1 text-accent-300">
-          <Star class="h-3 w-3 fill-current" />
-          {Math.round(v.rating / 20)}
-        </span>
-      {/if}
       {#if v.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
+      <span class="ml-auto">
+        <StarRatingPicker value={v.rating ?? null} onChange={handleRating} />
+      </span>
     </div>
   </section>
 
