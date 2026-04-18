@@ -22,16 +22,22 @@ import type {
 
 const SHORT_REVALIDATE_SECONDS = 5;
 
-export async function fetchVideos(params: FetchVideosParams) {
+export async function fetchVideos(
+  params: FetchVideosParams,
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildFetchVideosQuery(params);
 
   return serverFetch<{ videos: VideoListItem[]; total: number; limit: number; offset: number }>(
     `/videos${qs}`,
-    { tags: ["videos"] },
+    { fetch: options?.fetch },
   );
 }
 
-export async function fetchVideoCards(params: Omit<FetchVideosParams, "view">) {
+export async function fetchVideoCards(
+  params: Omit<FetchVideosParams, "view">,
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildFetchVideosQuery({ ...params, view: "card" });
 
   return serverFetch<{
@@ -39,7 +45,7 @@ export async function fetchVideoCards(params: Omit<FetchVideosParams, "view">) {
     total: number;
     limit: number;
     offset: number;
-  }>(`/videos${qs}`, { tags: ["videos"] });
+  }>(`/videos${qs}`, { fetch: options?.fetch });
 }
 
 export async function fetchSeries(params?: {
@@ -83,11 +89,11 @@ export async function fetchSeriesDetail(id: string, params?: { nsfw?: string }) 
   });
 }
 
-export async function fetchVideoDetail(id: string) {
-  return serverFetch<VideoDetail>(`/videos/${id}`, {
-    revalidate: 15,
-    tags: ["videos", `video-${id}`],
-  });
+export async function fetchVideoDetail(
+  id: string,
+  options?: { fetch?: typeof fetch },
+) {
+  return serverFetch<VideoDetail>(`/videos/${id}`, { fetch: options?.fetch });
 }
 
 export async function fetchVideoStats(nsfw?: string) {

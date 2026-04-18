@@ -26,26 +26,29 @@ import type {
   TagItem,
 } from "../api/types";
 
-export async function fetchGalleries(params?: {
-  search?: string;
-  sort?: string;
-  order?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  type?: string;
-  parent?: string;
-  root?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  imageCountMin?: number;
-  organized?: string;
-  nsfw?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export async function fetchGalleries(
+  params?: {
+    search?: string;
+    sort?: string;
+    order?: string;
+    tag?: string[];
+    performer?: string[];
+    studio?: string;
+    type?: string;
+    parent?: string;
+    root?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    imageCountMin?: number;
+    organized?: string;
+    nsfw?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -73,22 +76,16 @@ export async function fetchGalleries(params?: {
 
   return serverFetch<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }>(
     `/galleries${qs}`,
-    { tags: ["galleries"] },
+    { fetch: options?.fetch },
   );
 }
 
-export async function fetchGalleryDetail(id: string) {
-  return serverFetch<GalleryDetailDto>(`/galleries/${id}`, {
-    revalidate: 0,
-    tags: ["galleries", `gallery-${id}`],
-  });
+export async function fetchGalleryDetail(id: string, options?: { fetch?: typeof fetch }) {
+  return serverFetch<GalleryDetailDto>(`/galleries/${id}`, { fetch: options?.fetch });
 }
 
-export async function fetchImageDetail(id: string) {
-  return serverFetch<ImageDetailDto>(`/images/${id}`, {
-    revalidate: 0,
-    tags: ["images", `image-${id}`],
-  });
+export async function fetchImageDetail(id: string, options?: { fetch?: typeof fetch }) {
+  return serverFetch<ImageDetailDto>(`/images/${id}`, { fetch: options?.fetch });
 }
 
 export async function fetchGalleryStats() {
@@ -97,24 +94,27 @@ export async function fetchGalleryStats() {
   });
 }
 
-export async function fetchImages(params?: {
-  search?: string;
-  sort?: string;
-  order?: string;
-  gallery?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  nsfw?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  resolution?: string;
-  organized?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export async function fetchImages(
+  params?: {
+    search?: string;
+    sort?: string;
+    order?: string;
+    gallery?: string;
+    tag?: string[];
+    performer?: string[];
+    studio?: string;
+    nsfw?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    resolution?: string;
+    organized?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -140,7 +140,7 @@ export async function fetchImages(params?: {
 
   return serverFetch<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }>(
     `/images${qs}`,
-    { tags: ["images"] },
+    { fetch: options?.fetch },
   );
 }
 
@@ -263,25 +263,28 @@ export async function fetchAllPendingScrapeResults(): Promise<{
 
 // ─── Audio ────────────────────────────────────────────────────
 
-export async function fetchAudioLibraries(params?: {
-  search?: string;
-  sort?: string;
-  order?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  parent?: string;
-  root?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  trackCountMin?: number;
-  organized?: string;
-  nsfw?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export async function fetchAudioLibraries(
+  params?: {
+    search?: string;
+    sort?: string;
+    order?: string;
+    tag?: string[];
+    performer?: string[];
+    studio?: string;
+    parent?: string;
+    root?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    trackCountMin?: number;
+    organized?: string;
+    nsfw?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -308,22 +311,16 @@ export async function fetchAudioLibraries(params?: {
 
   return serverFetch<{ items: AudioLibraryListItemDto[]; total: number }>(
     `/audio-libraries${qs}`,
-    { tags: ["audio-libraries"] },
+    { fetch: options?.fetch },
   );
 }
 
-export async function fetchAudioLibraryDetail(id: string) {
-  return serverFetch<AudioLibraryDetailDto>(`/audio-libraries/${id}`, {
-    revalidate: 0,
-    tags: ["audio-libraries", `audio-library-${id}`],
-  });
+export async function fetchAudioLibraryDetail(id: string, options?: { fetch?: typeof fetch }) {
+  return serverFetch<AudioLibraryDetailDto>(`/audio-libraries/${id}`, { fetch: options?.fetch });
 }
 
-export async function fetchAudioTrackDetail(id: string) {
-  return serverFetch<AudioTrackDetailDto>(`/audio-tracks/${id}`, {
-    revalidate: 0,
-    tags: ["audio-tracks", `audio-track-${id}`],
-  });
+export async function fetchAudioTrackDetail(id: string, options?: { fetch?: typeof fetch }) {
+  return serverFetch<AudioTrackDetailDto>(`/audio-tracks/${id}`, { fetch: options?.fetch });
 }
 
 export async function fetchAudioLibraryStats(nsfw?: string) {
@@ -335,26 +332,26 @@ export async function fetchAudioLibraryStats(nsfw?: string) {
 
 // ─── Collections ──────────────────────────────────────────────────
 
-export async function fetchCollections(params: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  mode?: string;
-  limit?: number;
-  offset?: number;
-}) {
+export async function fetchCollections(
+  params: {
+    search?: string;
+    sort?: string;
+    order?: "asc" | "desc";
+    mode?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString(params);
   return serverFetch<PaginatedResponse<CollectionListItemDto>>(
     `/collections${qs}`,
-    { revalidate: 0, tags: ["collections"] },
+    { fetch: options?.fetch },
   );
 }
 
-export async function fetchCollectionDetail(id: string) {
-  return serverFetch<CollectionDetailDto>(`/collections/${id}`, {
-    revalidate: 0,
-    tags: ["collections", `collection-${id}`],
-  });
+export async function fetchCollectionDetail(id: string, options?: { fetch?: typeof fetch }) {
+  return serverFetch<CollectionDetailDto>(`/collections/${id}`, { fetch: options?.fetch });
 }
 
 export async function fetchCollectionItems(
