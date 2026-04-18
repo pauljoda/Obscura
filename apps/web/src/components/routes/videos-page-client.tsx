@@ -1616,7 +1616,7 @@ function SeriesCastStrip({
                   {performer.name}
                 </div>
                 {performer.character ? (
-                  <div className="mt-0.5 text-[0.62rem] text-text-muted truncate">
+                  <div className="mt-0.5 line-clamp-2 min-h-[2rem] text-[0.62rem] leading-tight text-text-muted">
                     {performer.character}
                   </div>
                 ) : null}
