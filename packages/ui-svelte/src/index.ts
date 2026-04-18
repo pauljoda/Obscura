@@ -22,7 +22,17 @@ export {
   type NavSection,
 } from "./navigation/app-shell-sections";
 
-// Primitives and composed components are exported from ./primitives/*.svelte
-// and ./composed/*.svelte respectively via the `exports` map in package.json.
-// Import them directly:
-//   import Button from "@obscura/ui-svelte/primitives/Button.svelte";
+// Primitives
+export { default as Button } from "./primitives/Button.svelte";
+export { buttonVariants, type ButtonVariant, type ButtonSize } from "./primitives/Button.svelte";
+export { default as Badge } from "./primitives/Badge.svelte";
+export { badgeVariants, type BadgeVariant } from "./primitives/Badge.svelte";
+export { default as Checkbox } from "./primitives/Checkbox.svelte";
+
+// Composed
+export { default as StatusLed } from "./composed/StatusLed.svelte";
+export { type LedStatus, type LedSize } from "./composed/StatusLed.svelte";
+export { default as Meter } from "./composed/Meter.svelte";
+export { default as Panel } from "./composed/Panel.svelte";
+export { default as MediaCard } from "./composed/MediaCard.svelte";
+export { type MediaCardProps, type PerformerRef } from "./composed/MediaCard.svelte";

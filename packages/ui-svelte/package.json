@@ -35,7 +35,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-svelte": "^0.468.0",
+    "@lucide/svelte": "^1.8.0",
     "tailwind-merge": "^3.5.0"
   }
 }
