@@ -1,22 +1,33 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Music, Search as SearchIcon } from "@lucide/svelte";
+  import { Music } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
+  import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
+  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
+  import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
 
   let { data } = $props();
 
-  let search = $state(data.search);
+  const sortOptions = [
+    { value: "recent", label: "Recently added" },
+    { value: "date", label: "Release date" },
+    { value: "title", label: "Title A–Z" },
+    { value: "trackCount", label: "Track count" },
+    { value: "rating", label: "Rating" },
+  ];
 
-  function handleSearch(e: SubmitEvent) {
-    e.preventDefault();
+  function updateUrl(patch: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(page.url.searchParams);
-    if (search.trim()) params.set("search", search.trim());
-    else params.delete("search");
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null || v === undefined || v === "") params.delete(k);
+      else params.set(k, v);
+    }
     params.delete("page");
     const qs = params.toString();
-    void goto(qs ? `/audio?${qs}` : "/audio", { keepFocus: true });
+    void goto(qs ? `/audio?${qs}` : "/audio", { keepFocus: true, noScroll: true });
   }
 </script>
 
@@ -24,25 +35,24 @@
   <title>Audio — Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <header class="flex items-center justify-between gap-4 flex-wrap">
-    <div>
-      <p class="text-kicker text-text-muted">Browse</p>
-      <h1 class="text-h1 text-text-primary">Audio</h1>
-      <p class="text-body text-text-muted mt-1">
-        {data.total.toLocaleString()} librar{data.total === 1 ? "y" : "ies"}
-      </p>
-    </div>
-    <form onsubmit={handleSearch} class="relative">
-      <SearchIcon class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
-      <input
-        type="search"
-        bind:value={search}
-        placeholder="Search audio"
-        class="bg-surface-2 border border-border-default pl-7 pr-3 py-1.5 text-body-sm text-text-primary focus:border-border-accent outline-none transition-colors duration-fast w-48 sm:w-72"
-      />
-    </form>
+<div class="space-y-4">
+  <header>
+    <p class="text-kicker text-text-muted">Browse</p>
+    <h1 class="text-h1 text-text-primary">Audio</h1>
+    <p class="text-body text-text-muted mt-1">
+      {data.total.toLocaleString()} librar{data.total === 1 ? "y" : "ies"}
+    </p>
   </header>
+
+  <FilterBar
+    {sortOptions}
+    sortBy={data.sort}
+    sortDir={data.order}
+    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+    searchQuery={data.search}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    showViewToggle={false}
+  />
 
   {#if data.libraries.length === 0}
     <div class="surface-panel p-8 text-center">
@@ -51,26 +61,32 @@
     </div>
   {:else}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-      {#each data.libraries as a (a.id)}
+      {#each data.libraries as a, i (a.id)}
+        {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
           href={`/audio/${a.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <div class="aspect-square bg-surface-1 relative">
-            {#if a.coverImagePath}
-              <img
-                src={toApiUrl(a.coverImagePath)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <div class="flex h-full items-center justify-center">
-                <Music class="h-8 w-8 text-text-disabled" />
+          <NsfwBlur isNsfw={a.isNsfw} class="block">
+            <div class="aspect-square bg-surface-1 relative">
+              {#if a.coverImagePath}
+                <img
+                  src={toApiUrl(a.coverImagePath)}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  class="h-full w-full object-cover"
+                />
+              {:else}
+                <div class={gradient + " h-full w-full flex items-center justify-center"}>
+                  <Music class="h-10 w-10 text-white/20" />
+                </div>
+              {/if}
+              <div class="pointer-events-none absolute bottom-1 right-1 z-10">
+                <NsfwShowModeChip isNsfw={a.isNsfw} />
               </div>
-            {/if}
-          </div>
+            </div>
+          </NsfwBlur>
           <div class="p-2 space-y-1">
             <h4 class="truncate text-body-sm font-medium text-text-primary">{a.title}</h4>
             <div class="flex items-center gap-1.5 text-[0.62rem] text-text-muted">

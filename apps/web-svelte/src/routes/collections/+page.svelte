@@ -1,22 +1,29 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { FolderOpen, Plus, Search as SearchIcon } from "@lucide/svelte";
+  import { FolderOpen, Plus } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
+  import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
 
   let { data } = $props();
 
-  let search = $state(data.search);
+  const sortOptions = [
+    { value: "recent", label: "Recently added" },
+    { value: "name", label: "Name A–Z" },
+    { value: "itemCount", label: "Item count" },
+  ];
 
-  function handleSearch(e: SubmitEvent) {
-    e.preventDefault();
+  function updateUrl(patch: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(page.url.searchParams);
-    if (search.trim()) params.set("search", search.trim());
-    else params.delete("search");
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null || v === undefined || v === "") params.delete(k);
+      else params.set(k, v);
+    }
     params.delete("page");
     const qs = params.toString();
-    void goto(qs ? `/collections?${qs}` : "/collections", { keepFocus: true });
+    void goto(qs ? `/collections?${qs}` : "/collections", { keepFocus: true, noScroll: true });
   }
 </script>
 
@@ -24,7 +31,7 @@
   <title>Collections — Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4">
   <header class="flex items-center justify-between gap-4 flex-wrap">
     <div>
       <p class="text-kicker text-text-muted">Browse</p>
@@ -33,24 +40,23 @@
         {data.total.toLocaleString()} collection{data.total === 1 ? "" : "s"}
       </p>
     </div>
-    <div class="flex items-center gap-2">
-      <form onsubmit={handleSearch} class="relative">
-        <SearchIcon class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-disabled" />
-        <input
-          type="search"
-          bind:value={search}
-          placeholder="Search collections"
-          class="bg-surface-2 border border-border-default pl-7 pr-3 py-1.5 text-body-sm text-text-primary focus:border-border-accent outline-none transition-colors duration-fast w-48 sm:w-64"
-        />
-      </form>
-      <a href="/collections/new">
-        <Button variant="primary" size="md">
-          <Plus class="h-4 w-4" />
-          New collection
-        </Button>
-      </a>
-    </div>
+    <a href="/collections/new">
+      <Button variant="primary" size="md">
+        <Plus class="h-4 w-4" />
+        New collection
+      </Button>
+    </a>
   </header>
+
+  <FilterBar
+    {sortOptions}
+    sortBy={data.sort}
+    sortDir={data.order}
+    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+    searchQuery={data.search}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    showViewToggle={false}
+  />
 
   {#if data.collections.length === 0}
     <div class="surface-panel p-8 text-center">
@@ -59,12 +65,13 @@
     </div>
   {:else}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {#each data.collections as c (c.id)}
+      {#each data.collections as c, i (c.id)}
+        {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
           href={`/collections/${c.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <div class="aspect-video bg-surface-1">
+          <div class="aspect-video bg-surface-1 relative">
             {#if c.coverImagePath}
               <img
                 src={toApiUrl(c.coverImagePath)}
@@ -74,8 +81,8 @@
                 class="h-full w-full object-cover"
               />
             {:else}
-              <div class="flex h-full items-center justify-center">
-                <FolderOpen class="h-8 w-8 text-text-disabled" />
+              <div class={gradient + " h-full w-full flex items-center justify-center"}>
+                <FolderOpen class="h-10 w-10 text-white/20" />
               </div>
             {/if}
           </div>
