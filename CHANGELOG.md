@@ -8,8 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- **Video detail pages open without the multi-minute stall.** The `/videos/:id` route no longer blocks navigation on an unnecessary global tag preload, and the heavy player bundle now loads behind a client-side boundary so the page can render before the playback stack finishes compiling in development.
-
 - **Plugin and scraper dropdowns are now searchable.** The metadata provider selection dropdowns on the Identify page and on individual edit pages (Video, Studio, Performer, Tag) have been upgraded from native system selects to a custom searchable dropdown. This makes it much easier to find and select a specific plugin, StashBox endpoint, or community scraper when you have many installed.
 
 - **Video URLs now save.** The URL field on the video metadata edit form previously showed a "Saved" confirmation but the value was silently dropped — there was no database column behind it. The video tables now carry a `url` column, and edits are persisted and displayed on the detail page.
@@ -30,8 +28,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- Video detail navigation no longer waits on the global `/tags` fetch even though the route never used those results on first paint.
-
 - TMDB and other CommonJS plugins no longer fail to load with `exports is not defined in ES module scope`. Plugin bundles are CommonJS, but plugins installed under `apps/worker/.obscura-cache/plugins/*` resolve their nearest `package.json` to `apps/worker/package.json` which declares `"type": "module"` — so Node tried to parse CJS as ESM and `loadTypeScriptPlugin` threw immediately. The loader now drops a sentinel `package.json` (with `"type": "commonjs"`) next to the entry file whenever the bundle contains CJS markers, shielding the plugin from the host app's module-type declaration. Existing installs are fixed on the next load without a reinstall.
 - TMDB-identified movies no longer open the cascade drawer in a broken "series payload in a movie slot" state. `deriveProposedResultFromPluginOutput` ran the bare-shape fallbacks in series → movie → episode order, and `normalizeSeriesResult` only requires `title` to succeed — so a bare TMDB movie payload (with `releaseDate` / `runtime`, no `seasons`) was stored with `seasons: []` and the drawer classified it as a series. The helper now routes movie-shaped inputs (carrying `releaseDate` or `runtime`, without series signals) to `normalizeMovieResult` first so the drawer can render the movie review body.
 - `/scrapers/results/:id/accept` unconditionally flagged the target video, any newly-created studio, performers, and tags as `isNsfw = true`, which was wrong once Obscura-native plugins started flowing through this route. The accept path now looks up the scrape_result's source (`stashBoxEndpointId` / `scraperPackageId` / `pluginPackageId`) and uses `true` for stash-based sources (StashBox endpoints and stash-compat community scrapers are porn-metadata protocols) while deferring to the `plugin_packages.isNsfw` flag for Obscura plugins. YouTube, TMDB, and other SFW plugins no longer drag clean matches into the NSFW-filtered bucket.
@@ -49,10 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- The always-visible video player on `/videos/:id` now loads lazily behind a Suspense boundary, so Next can paint the detail page before compiling the full playback/trickplay/subtitle stack in development.
-
-- The web app's `dev` script now runs `next dev` with `--turbopack`, cutting cold-route compile times on first navigation (especially on heavy pages like `/videos` and `/videos/[id]`) from 10–30 seconds to under a second. Does not affect production builds.
-- The video detail page now lazy-loads the edit form, transcript panel, and identify button via `next/dynamic`. Previously each video detail navigation had to compile the full `VideoEdit` (~1200 lines), `VideoTranscriptPanel` (~560 lines), and `IdentifyButton` → `CascadeReviewDrawer` (~1700 lines combined) trees before painting the Details tab, even though those components are only used on other tabs or when clicking Identify. They now compile on first use, which meaningfully shortens time-to-first-paint on `/videos/[id]` in both dev and prod.
+- Reverted the three recent attempts at fixing the video detail route's dev-mode hang (turbopack enablement, `lazy()`/`dynamic(ssr:false)` subtree splitting, and the "unblock" SSR simplification). None of them fixed the underlying problem and each added its own risk surface (notably turbopack's known compile hangs and the split React 19 `lazy()` + Next 15 App Router SSR interaction). The page is back to the pre-regression direct-import shape while we hunt the real cause.
 - The API search registry now exports the video search provider as `videosSearchProvider`, and nearby video/audio service comments were updated to describe current video/series behavior instead of the old scene/folder terminology.
 - Internal API HLS helpers and tests now use `videoId` naming instead of `sceneId`. This is an internal cleanup only — the `/video-stream/*` route surface is unchanged — but it removes another obsolete scene-era alias from the video playback stack.
 - Shared first-party comments, examples, and local dashboard props now use `video` / `series` wording instead of lingering `scene` / `folder` labels. This includes the subtitle preview copy, current-path examples, dashboard recent-additions helper props, and shared contract comments for video-series DTOs.
