@@ -151,10 +151,13 @@ export async function fetchStudios(params?: { nsfw?: string }) {
   });
 }
 
-export async function fetchTags(params?: { nsfw?: string }) {
+export async function fetchTags(
+  params?: { nsfw?: string },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
   return serverFetch<{ tags: TagItem[] }>(`/tags${qs}`, {
-    tags: ["tags"],
+    fetch: options?.fetch,
   });
 }
 
