@@ -1,12 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Film, Clock } from "@lucide/svelte";
-  import { MediaCard, type PerformerRef } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import { Film } from "@lucide/svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
+  import VideoCard from "$lib/components/VideoCard.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
 
   let { data } = $props();
 
@@ -90,80 +88,22 @@
       <p class="text-body text-text-muted">No videos match those filters.</p>
     </div>
   {:else if data.view === "list"}
-    <ul class="surface-panel divide-y divide-border-subtle overflow-hidden">
+    <div class="space-y-1.5">
       {#each data.videos as v, i (v.id)}
-        <li>
-          <a
-            href={`/videos/${v.id}`}
-            class="flex items-center gap-3 px-3 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
-          >
-            <NsfwBlur isNsfw={v.isNsfw} class="block shrink-0">
-              <div class="w-24 aspect-video bg-surface-1 overflow-hidden">
-                {#if v.thumbnailPath}
-                  <img
-                    src={toApiUrl(v.thumbnailPath)}
-                    alt=""
-                    loading="lazy"
-                    class="h-full w-full object-cover"
-                  />
-                {:else}
-                  <div class={VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length] + " h-full flex items-center justify-center"}>
-                    <Film class="h-5 w-5 text-white/20" />
-                  </div>
-                {/if}
-              </div>
-            </NsfwBlur>
-            <div class="flex-1 min-w-0">
-              <div class="truncate text-text-primary">{v.title}</div>
-              <div class="flex items-center gap-2 text-[0.7rem] text-text-muted mt-0.5">
-                {#if v.durationFormatted}
-                  <span class="inline-flex items-center gap-1"><Clock class="h-3 w-3" />{v.durationFormatted}</span>
-                {/if}
-                {#if v.resolution}<span>{v.resolution}</span>{/if}
-                {#if v.codec}<span class="font-mono">{v.codec}</span>{/if}
-                {#if v.fileSizeFormatted}<span>{v.fileSizeFormatted}</span>{/if}
-                {#if v.playCount > 0}<span>▶ {v.playCount}</span>{/if}
-              </div>
-            </div>
-            {#if v.tags && v.tags.length > 0}
-              <div class="hidden md:flex gap-1 shrink-0">
-                {#each v.tags.slice(0, 2) as t (t.id)}
-                  <span class="tag-chip tag-chip-default">{t.name}</span>
-                {/each}
-              </div>
-            {/if}
-          </a>
-        </li>
+        <VideoCard video={videoListItemToCardData(v, "/videos")} variant="list" index={i} />
       {/each}
-    </ul>
+    </div>
   {:else}
     <div
       class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
     >
       {#each data.videos as v, i (v.id)}
-        {@const cardPerformers = (v.performers ?? []).map((p) => ({
-          name: p.name,
-          imagePath: p.imagePath ? toApiUrl(p.imagePath) ?? null : null,
-        })) as PerformerRef[]}
-        <a href={`/videos/${v.id}`} class="block">
-          <NsfwBlur isNsfw={v.isNsfw} class="block">
-            <MediaCard
-              title={v.title}
-              thumbnail={toApiUrl(v.thumbnailPath)}
-              cardThumbnail={toApiUrl(v.cardThumbnailPath)}
-              gradientClass={VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
-              duration={v.durationFormatted ?? undefined}
-              resolution={v.resolution ?? undefined}
-              codec={v.codec ?? undefined}
-              hasSubtitles={v.hasSubtitles}
-              fileSize={v.fileSizeFormatted ?? undefined}
-              performers={cardPerformers.length > 0 ? cardPerformers : undefined}
-              tags={(v.tags ?? []).map((t) => t.name)}
-              rating={v.rating ?? undefined}
-              views={v.playCount}
-            />
-          </NsfwBlur>
-        </a>
+        <VideoCard
+          video={videoListItemToCardData(v, "/videos")}
+          variant="grid"
+          index={i}
+          imageLoading={i < 6 ? "eager" : "lazy"}
+        />
       {/each}
     </div>
   {/if}
