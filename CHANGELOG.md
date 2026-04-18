@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Web UI is being rewritten in SvelteKit.** The frontend port from Next.js + React to SvelteKit + Svelte 5 (runes) is underway on the `port/sveltekit` branch. No user-facing change yet — the live app still ships the Next.js build. Tracking: Linear project *Web Port: Next.js → SvelteKit* (APP-31..103). The swap happens when the port reaches full parity.
 - **Actors now show who they played across Videos and Series.** Episode and Series cast lists now render character names, episode detail falls back to the Series role when no episode-specific role was saved, and Actor detail pages now include a new **Known For** section that lists saved movie / series / unique episode roles with their source.
 - **Long cast role names now stay readable in Series cast strips.** Character subtitles in the Cast & Crew rail now wrap to a second line instead of being cut off after a few words, so long role names remain visible on smaller cards.
 
@@ -27,6 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `apps/web-svelte/` — SvelteKit app scaffold (Svelte 5 runes, `@sveltejs/adapter-node`, Vitest + `@testing-library/svelte`, dev on port 8009). Builds to `build/index.js` via adapter-node; side-by-side with the Next.js `apps/web/` during the port.
+- `packages/ui-svelte/` — new Svelte component library scaffold. Copies design tokens (`colors`, `spacing`, `typography`, `animation`), pure utilities (`cn`, `buildHierarchyTree`, `parseTrickplayVtt`), and navigation metadata verbatim from `@obscura/ui`. Svelte 5 primitives land in Phase 2.
+- TypeScript path aliases for `@obscura/ui-svelte` in `tsconfig.base.json`.
+- Font loading for the Svelte app is self-hosted via `@fontsource/geist-sans` and `@fontsource-variable/{inter,jetbrains-mono}` (replaces `next/font/google`).
+- `apps/web-svelte/scripts/copy-jassub-assets.mjs` — jassub Web Worker + WASM copy retargeted from `public/jassub/` to SvelteKit's `static/jassub/`.
 - Actor detail responses now include a `knownFor` role feed built from `video_movie_performers`, `video_series_performers`, and `video_episode_performers`, with unique episode entries only when the episode role differs from the Series role. The web Actor page renders this as a new **Known For** panel with source badges and episode context.
 - `runAudioLibraryIdentify`, `runAudioTrackIdentify`, `runGalleryIdentify`, `runImageIdentify` and their paired `acceptAll*` / `seek*Single` helpers in `apps/web/src/components/identify/identify-runners.ts`. Each one mirrors the video-series pattern: walks rows through eligible plugins, respects the abort flag for mid-run "Stop", auto-accepts when the user opts in, and saves a `scrape_result` row so the per-row Accept/Dismiss buttons and the Accept-All pass can reuse the same DB state. The four placeholder `export async function runXIdentify(): Promise<void> {}` lines in the corresponding tab files are gone — the tabs now import from the runners module instead.
 
