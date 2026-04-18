@@ -1,10 +1,22 @@
 <script lang="ts">
-  import { Film, Edit, ExternalLink, Captions, Star } from "@lucide/svelte";
+  import { Edit, Captions, Star } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import VideoPlayer from "$lib/components/VideoPlayer.svelte";
 
   let { data } = $props();
   const v = data.video;
+
+  const subtitleTracks = (
+    (v as { subtitleTracks?: Array<{ id: string; label?: string; language?: string | null; format?: string }> }).subtitleTracks ?? []
+  )
+    .filter((t) => !t.format || t.format === "vtt")
+    .map((t) => ({
+      id: t.id,
+      label: t.label ?? t.language ?? "Captions",
+      language: t.language,
+      src: toApiUrl(`/videos/${v.id}/subtitles/${t.id}/source`) ?? "",
+    }));
 </script>
 
 <svelte:head>
@@ -37,33 +49,15 @@
     </a>
   </header>
 
-  <!-- Player placeholder — deep port lands in APP-78..82. For now show the hero frame. -->
   <section class="surface-panel overflow-hidden">
-    <div class="relative aspect-video bg-surface-1">
-      {#if v.thumbnailPath}
-        <img src={toApiUrl(v.thumbnailPath)} alt="" class="h-full w-full object-cover" />
-      {:else}
-        <div class="flex h-full items-center justify-center">
-          <Film class="h-16 w-16 text-text-disabled" />
-        </div>
-      {/if}
-      <div class="absolute inset-0 flex items-center justify-center">
-        <div class="surface-panel backdrop-blur-sm px-4 py-3 text-center space-y-2">
-          <p class="text-label text-text-muted">VideoPlayer port in progress (APP-77/78)</p>
-          {#if v.streamUrl || v.directStreamUrl}
-            <a
-              href={toApiUrl(v.streamUrl ?? v.directStreamUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1.5 text-body-sm text-text-accent hover:text-accent-300"
-            >
-              <ExternalLink class="h-3 w-3" />
-              Open stream in new tab
-            </a>
-          {/if}
-        </div>
-      </div>
-    </div>
+    <VideoPlayer
+      src={toApiUrl(v.streamUrl)}
+      directSrc={toApiUrl(v.directStreamUrl)}
+      poster={toApiUrl(v.thumbnailPath)}
+      trickplaySprite={toApiUrl(v.spritePath)}
+      trickplayVtt={toApiUrl(v.trickplayVttPath)}
+      subtitles={subtitleTracks}
+    />
 
     <div class="p-4 flex flex-wrap items-center gap-3 text-body-sm text-text-muted">
       {#if v.durationFormatted}<span>⏱ {v.durationFormatted}</span>{/if}

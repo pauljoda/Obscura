@@ -8,29 +8,32 @@ import type {
 } from "@obscura/contracts";
 import { serverFetch } from "./core";
 
-export async function fetchLibraryConfig() {
+export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
   return serverFetch<{
     settings: LibrarySettingsDto;
     roots: LibraryRootDto[];
     storage: StorageStatsDto;
-  }>("/settings/library", { revalidate: 0, tags: ["settings"] });
+  }>("/settings/library", { fetch: options?.fetch });
 }
 
-export async function fetchInstalledScrapers() {
+export async function fetchInstalledScrapers(options?: { fetch?: typeof fetch }) {
   return serverFetch<{ packages: ScraperPackageDto[] }>("/scrapers/packages", {
-    tags: ["scrapers"],
+    fetch: options?.fetch,
   });
 }
 
-export async function fetchStashBoxEndpointsServer() {
+export async function fetchStashBoxEndpointsServer(options?: { fetch?: typeof fetch }) {
   return serverFetch<{ endpoints: StashBoxEndpointDto[] }>("/stashbox-endpoints", {
-    tags: ["stashbox"],
+    fetch: options?.fetch,
   });
 }
 
-export async function fetchJobsDashboard() {
-  return serverFetch<JobsDashboardDto>("/jobs", {
-    revalidate: 10,
-    tags: ["jobs"],
+export async function fetchJobsDashboard(options?: { fetch?: typeof fetch }) {
+  return serverFetch<JobsDashboardDto>("/jobs", { fetch: options?.fetch });
+}
+
+export async function fetchInstalledPlugins(options?: { fetch?: typeof fetch }) {
+  return serverFetch<{ packages: unknown[] }>("/plugins/packages", {
+    fetch: options?.fetch,
   });
 }
