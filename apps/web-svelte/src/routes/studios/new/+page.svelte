@@ -1,9 +1,109 @@
 <script lang="ts">
-  import ComingSoon from "$lib/components/ComingSoon.svelte";
+  import { goto, invalidate } from "$app/navigation";
+  import { ArrowLeft, Save, Loader } from "@lucide/svelte";
+  import { Button } from "@obscura/ui-svelte";
+  import { createStudio } from "$lib/api/entities";
+
+  let name = $state("");
+  let description = $state("");
+  let aliases = $state("");
+  let url = $state("");
+  let saving = $state(false);
+  let error = $state<string | null>(null);
+
+  async function handleSubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed || saving) return;
+    saving = true;
+    error = null;
+    try {
+      await createStudio({
+        name: trimmed,
+        description: description.trim() || undefined,
+        aliases: aliases.trim() || undefined,
+        url: url.trim() || undefined,
+      });
+      await invalidate("studios");
+      await goto(`/studios/${encodeURIComponent(trimmed)}`);
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Create failed";
+      saving = false;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>/studios/new — Obscura</title>
+  <title>New studio — Obscura</title>
 </svelte:head>
 
-<ComingSoon route="/studios/new" issue="APP-70" />
+<div class="space-y-6">
+  <header class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a
+        href="/studios"
+        class="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast"
+      >
+        <ArrowLeft class="h-3 w-3" />
+        Back
+      </a>
+      <h1 class="text-lg font-heading font-semibold">New studio</h1>
+    </div>
+    <Button variant="primary" size="md" type="submit" form="studio-create-form" disabled={saving || !name.trim()}>
+      {#if saving}<Loader class="h-3 w-3 animate-spin" />{:else}<Save class="h-3 w-3" />{/if}
+      Create
+    </Button>
+  </header>
+
+  {#if error}
+    <div class="surface-panel border-error/30 p-3 text-body-sm text-error-text">{error}</div>
+  {/if}
+
+  <form id="studio-create-form" onsubmit={handleSubmit} class="max-w-2xl surface-panel p-5 space-y-4">
+    <div class="space-y-1.5">
+      <label for="studio-name" class="text-label text-text-muted">Name</label>
+      <input
+        id="studio-name"
+        type="text"
+        bind:value={name}
+        required
+        maxlength={200}
+        autofocus
+        class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
+      />
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="studio-description" class="text-label text-text-muted">Description</label>
+      <textarea
+        id="studio-description"
+        bind:value={description}
+        rows="3"
+        class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast resize-none"
+      ></textarea>
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="studio-aliases" class="text-label text-text-muted">
+        Aliases <span class="text-text-disabled">(comma-separated)</span>
+      </label>
+      <input
+        id="studio-aliases"
+        type="text"
+        bind:value={aliases}
+        class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
+      />
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="studio-url" class="text-label text-text-muted">URL</label>
+      <input
+        id="studio-url"
+        type="url"
+        bind:value={url}
+        placeholder="https://…"
+        class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
+      />
+    </div>
+  </form>
+</div>

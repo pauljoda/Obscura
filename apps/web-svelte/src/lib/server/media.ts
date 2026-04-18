@@ -144,10 +144,13 @@ export async function fetchImages(params?: {
   );
 }
 
-export async function fetchStudios(params?: { nsfw?: string }) {
+export async function fetchStudios(
+  params?: { nsfw?: string },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
   return serverFetch<{ studios: StudioItem[] }>(`/studios${qs}`, {
-    tags: ["studios"],
+    fetch: options?.fetch,
   });
 }
 
@@ -161,21 +164,24 @@ export async function fetchTags(
   });
 }
 
-export async function fetchPerformers(params?: {
-  search?: string;
-  sort?: string;
-  order?: string;
-  gender?: string;
-  favorite?: string;
-  country?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  hasImage?: string;
-  videoCountMin?: number;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-}) {
+export async function fetchPerformers(
+  params?: {
+    search?: string;
+    sort?: string;
+    order?: string;
+    gender?: string;
+    favorite?: string;
+    country?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    hasImage?: string;
+    videoCountMin?: number;
+    limit?: number;
+    offset?: number;
+    nsfw?: string;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString({
     search: params?.search,
     sort: params?.sort,
@@ -197,7 +203,7 @@ export async function fetchPerformers(params?: {
     total: number;
     limit: number;
     offset: number;
-  }>(`/performers${qs}`, { tags: ["performers"] });
+  }>(`/performers${qs}`, { fetch: options?.fetch });
 }
 
 export async function fetchPerformerDetail(id: string, params?: { nsfw?: string }) {

@@ -29,6 +29,24 @@
       }
     },
     {
+      "name": "API + Worker: dev (no Next)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "turbo",
+        "run",
+        "dev",
+        "--parallel",
+        "--filter=@obscura/api",
+        "--filter=@obscura/worker"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Obscura: Docker Up"
+    },
+    {
       "name": "Web (SvelteKit port): attach (Chrome)",
       "type": "chrome",
       "request": "launch",
@@ -45,6 +63,15 @@
     {
       "name": "Web (SvelteKit port): dev + Chrome",
       "configurations": [
+        "Web (SvelteKit port): dev",
+        "Web (SvelteKit port): attach (Chrome)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Web (SvelteKit port): Full Stack + Chrome",
+      "configurations": [
+        "API + Worker: dev (no Next)",
         "Web (SvelteKit port): dev",
         "Web (SvelteKit port): attach (Chrome)"
       ],
