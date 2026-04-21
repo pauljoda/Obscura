@@ -1,7 +1,14 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Film } from "@lucide/svelte";
+  import { Film, FolderOpen, HardDrive } from "@lucide/svelte";
+  import SeriesCard from "$lib/components/SeriesCard.svelte";
+  import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
+  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
+  import { entityTerms, formatVideoCount } from "$lib/terminology";
+  import { toApiUrl } from "$lib/api/core";
+  import NsfwTagLabel from "$lib/components/NsfwTagLabel.svelte";
   import FilterBar, {
     type SortDir,
     type ViewMode,
@@ -199,7 +206,7 @@
 </script>
 
 <svelte:head>
-  <title>Videos — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">
@@ -208,8 +215,12 @@
       <p class="text-kicker text-text-muted">Browse</p>
       <h1 class="text-h1 text-text-primary">Videos</h1>
       <p class="text-body text-text-muted mt-1">
-        {data.total.toLocaleString()} video{data.total === 1 ? "" : "s"}
-        {#if data.series}
+        {#if data.view === "series" && !data.seriesId}
+          {data.seriesTotal.toLocaleString()} series
+        {:else}
+          {data.total.toLocaleString()} video{data.total === 1 ? "" : "s"}
+        {/if}
+        {#if data.seriesId}
           <span class="text-text-disabled">· filtered by series</span>
         {/if}
       </p>
@@ -239,7 +250,221 @@
     {onDeletePreset}
   />
 
-  {#if data.videos.length === 0}
+  {#if data.view === "series" && data.activeSeries}
+    <!-- Drilled-down series detail — Jellyfin-style hero, breadcrumbs,
+         child series, seasons, then the series' own videos. -->
+    {@const series = data.activeSeries}
+    {@const backdrop = toApiUrl(series.backdropImagePath, series.updatedAt)}
+    {@const cover = toApiUrl(series.coverImagePath, series.updatedAt)}
+    <HierarchyShell>
+      {#snippet breadcrumbs()}
+        <HierarchyBreadcrumbs
+          items={[
+            { id: "root", title: entityTerms.videos, href: "/videos?view=series" },
+            ...series.breadcrumbs.map((crumb) => ({
+              id: crumb.id,
+              title: crumb.displayTitle,
+              href: `/videos?view=series&series=${crumb.id}`,
+            })),
+          ]}
+        />
+      {/snippet}
+      {#snippet children()}
+        <!-- Hero Header -->
+        <div class="relative min-h-[200px] sm:min-h-[280px] overflow-hidden border border-border-subtle">
+          {#if backdrop}
+            <img src={backdrop} alt="" class="absolute inset-0 h-full w-full object-cover" />
+          {:else if cover}
+            <img src={cover} alt="" class="absolute inset-0 h-full w-full object-cover blur-lg scale-110 opacity-50" />
+          {/if}
+          <div class="absolute inset-0 bg-gradient-to-t from-surface-1 via-black/60 to-black/30"></div>
+
+          <div class="relative flex min-h-[200px] sm:min-h-[280px] items-end gap-4 p-4 sm:gap-6 sm:p-6">
+            {#if cover}
+              <div class="flex-shrink-0 w-[72px] sm:w-[160px]">
+                <img
+                  src={cover}
+                  alt={series.displayTitle}
+                  class="aspect-[2/3] w-full object-cover border border-white/10 shadow-lg"
+                />
+              </div>
+            {/if}
+            <div class="flex-1 min-w-0">
+              {#if series.folderPath}
+                <div class="mb-1 flex min-w-0 items-start gap-1.5 text-[0.68rem] text-white/50">
+                  <HardDrive class="mt-0.5 h-3 w-3 flex-shrink-0" />
+                  <span class="min-w-0 break-words">{series.folderPath}</span>
+                </div>
+              {/if}
+              <h1 class="mt-1.5 text-2xl sm:text-4xl font-heading font-semibold text-text-primary leading-tight">
+                {series.displayTitle}
+              </h1>
+              <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-white/70">
+                {#if series.studio}
+                  <a
+                    href={`/studios/${series.studio.id}`}
+                    class="text-text-accent font-medium hover:text-text-accent-bright transition-colors"
+                  >
+                    {series.studio.name}
+                  </a>
+                {/if}
+                {#if series.date}<span>{series.date}</span>{/if}
+                <span>{formatVideoCount(series.visibleSfwVideoCount)}</span>
+                {#if series.childSeasonCount > 0}
+                  <span>
+                    {series.childSeasonCount} child {series.childSeasonCount === 1
+                      ? entityTerms.seriesSingular.toLowerCase()
+                      : entityTerms.series.toLowerCase()}
+                  </span>
+                {/if}
+              </div>
+              {#if series.details}
+                <p class="mt-3 text-[0.82rem] text-white/70 leading-relaxed max-w-2xl">
+                  {series.details}
+                </p>
+              {/if}
+              {#if series.tags.length > 0}
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                  {#each series.tags as tag (tag.id)}
+                    <a
+                      href={`/tags/${encodeURIComponent(tag.name)}`}
+                      class="tag-chip tag-chip-default hover:tag-chip-accent cursor-pointer transition-colors"
+                    >
+                      <NsfwTagLabel isNsfw={tag.isNsfw} text={tag.name} />
+                    </a>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <!-- Child series -->
+        {#if data.childSeries.length > 0}
+          <HierarchySection title={`Child ${entityTerms.series.toLowerCase()}`}>
+            {#snippet children()}
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {#each data.childSeries as s (s.id)}
+                  <SeriesCard series={s} href={`/videos?view=series&series=${s.id}`} compact />
+                {/each}
+              </div>
+            {/snippet}
+          </HierarchySection>
+        {/if}
+
+        <!-- Seasons -->
+        {#if series.renderingMode === "seasons" && series.seasons.length > 0}
+          <HierarchySection title="Seasons">
+            {#snippet children()}
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {#each series.seasons as season (season.id)}
+                  {@const label = season.seasonNumber === 0 ? "Specials" : `Season ${season.seasonNumber}`}
+                  {@const poster = toApiUrl(season.posterPath ?? season.previewThumbnailPath)}
+                  <a
+                    href={`/videos?view=series&series=${season.id}`}
+                    class="group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent"
+                  >
+                    <div class="relative aspect-[2/3] bg-surface-2">
+                      {#if poster}
+                        <img src={poster} alt={label} class="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                      {:else}
+                        <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                          <FolderOpen class="h-8 w-8" />
+                        </div>
+                      {/if}
+                    </div>
+                    <div class="space-y-1 px-2.5 py-2">
+                      <h3 class="truncate text-[0.82rem] font-medium text-text-primary">{label}</h3>
+                      <div class="text-[0.68rem] text-text-muted">
+                        {formatVideoCount(season.episodeCount)}
+                      </div>
+                    </div>
+                  </a>
+                {/each}
+              </div>
+            {/snippet}
+          </HierarchySection>
+        {/if}
+
+        <!-- Videos under the active series -->
+        <HierarchySection title={entityTerms.videos}>
+          {#snippet children()}
+            {#if data.videos.length === 0}
+              <div class="surface-panel p-8 text-center">
+                <Film class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
+                <p class="text-body text-text-muted">
+                  No {entityTerms.videos.toLowerCase()} in this {entityTerms.seriesSingular.toLowerCase()}.
+                </p>
+              </div>
+            {:else}
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {#each data.videos as v, i (v.id)}
+                  <VideoCard
+                    video={videoListItemToCardData(v, "/videos")}
+                    variant="grid"
+                    index={i}
+                    imageLoading={i < 6 ? "eager" : "lazy"}
+                  />
+                {/each}
+              </div>
+            {/if}
+          {/snippet}
+        </HierarchySection>
+      {/snippet}
+    </HierarchyShell>
+  {:else if data.view === "series" && !data.seriesId}
+    <!-- Root-level series view — Jellyfin-style hierarchy shell with a
+         Series grid on top and Videos grid below, mirroring the React
+         /videos series landing. -->
+    <HierarchyShell>
+      {#snippet title()}
+        <div>
+          <h2 class="text-2xl font-semibold text-text-primary">{entityTerms.series}</h2>
+          <p class="mt-1 text-[0.78rem] text-text-muted">
+            Browse {entityTerms.series.toLowerCase()} and {entityTerms.movies.toLowerCase()}
+            from disk, then drill down into individual {entityTerms.videos.toLowerCase()}.
+          </p>
+        </div>
+      {/snippet}
+      {#snippet children()}
+        {#if data.series.length > 0}
+          <HierarchySection title={entityTerms.series}>
+            {#snippet children()}
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {#each data.series as s (s.id)}
+                  <SeriesCard series={s} href={`/videos?view=series&series=${s.id}`} compact />
+                {/each}
+              </div>
+            {/snippet}
+          </HierarchySection>
+        {/if}
+
+        <HierarchySection title={entityTerms.videos}>
+          {#snippet children()}
+            {#if data.videos.length === 0}
+              <div class="surface-panel p-8 text-center">
+                <Film class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
+                <p class="text-body text-text-muted">
+                  No top-level {entityTerms.videos.toLowerCase()} — drill into a {entityTerms.seriesSingular.toLowerCase()} above.
+                </p>
+              </div>
+            {:else}
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {#each data.videos as v, i (v.id)}
+                  <VideoCard
+                    video={videoListItemToCardData(v, "/videos")}
+                    variant="grid"
+                    index={i}
+                    imageLoading={i < 6 ? "eager" : "lazy"}
+                  />
+                {/each}
+              </div>
+            {/if}
+          {/snippet}
+        </HierarchySection>
+      {/snippet}
+    </HierarchyShell>
+  {:else if data.videos.length === 0}
     <div class="surface-panel p-8 text-center">
       <Film class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No videos match those filters.</p>

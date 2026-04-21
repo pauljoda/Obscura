@@ -48,17 +48,20 @@ export async function fetchVideoCards(
   }>(`/videos${qs}`, { fetch: options?.fetch });
 }
 
-export async function fetchSeries(params?: {
-  parent?: string;
-  root?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-  studio?: string;
-  tag?: string;
-  performer?: string;
-}) {
+export async function fetchSeries(
+  params?: {
+    parent?: string;
+    root?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+    nsfw?: string;
+    studio?: string;
+    tag?: string;
+    performer?: string;
+  },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString({
     parent: params?.parent,
     root: params?.root,
@@ -78,14 +81,20 @@ export async function fetchSeries(params?: {
   }>(`/video-series${qs}`, {
     revalidate: SHORT_REVALIDATE_SECONDS,
     tags: ["video-series"],
+    fetch: options?.fetch,
   });
 }
 
-export async function fetchSeriesDetail(id: string, params?: { nsfw?: string }) {
+export async function fetchSeriesDetail(
+  id: string,
+  params?: { nsfw?: string },
+  options?: { fetch?: typeof fetch },
+) {
   const qs = buildQueryString({ nsfw: params?.nsfw });
   return serverFetch<VideoSeriesDetailDto>(`/video-series/${id}${qs}`, {
     revalidate: SHORT_REVALIDATE_SECONDS,
     tags: ["video-series", `video-series-${id}`],
+    fetch: options?.fetch,
   });
 }
 

@@ -61,16 +61,69 @@
   let activeSubtitleId = $state<string | null>(null);
   let subtitleChoiceLocked = $state(false);
   let moreActionsOpen = $state(false);
-  let isTranscriptDocked = $state(false);
+
+  // ── Transcript dock plumbing (mirrors the React video-detail) ─────
+  /** User's persisted preference. Effective dock state additionally
+   *  requires subtitles + a desktop viewport. */
+  let userWantsDock = $state(false);
+  let dockVideoPercent = $state(80);
+  let isDesktopViewport = $state(false);
+  let videoWrapperEl: HTMLDivElement | null = $state(null);
+  let videoWrapperHeight = $state<number | null>(null);
+  let isResizing = false;
 
   const hasSubtitles = $derived((video.subtitleTracks?.length ?? 0) > 0);
+  const subtitlesEnabled = $derived(activeSubtitleId != null);
+  const isTranscriptDocked = $derived(
+    userWantsDock && hasSubtitles && subtitlesEnabled && isDesktopViewport,
+  );
 
   function handleSeek(time: number) {
     playerHandle?.seekTo(time);
   }
 
   function toggleTranscriptDock() {
-    isTranscriptDocked = !isTranscriptDocked;
+    userWantsDock = !userWantsDock;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "obscura:transcript-docked",
+        userWantsDock ? "1" : "0",
+      );
+    }
+  }
+
+  function handleResizeStart(event: PointerEvent) {
+    event.preventDefault();
+    isResizing = true;
+    (event.currentTarget as Element | null)?.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleResizeMove(event: PointerEvent) {
+    if (!isResizing) return;
+    const container = videoWrapperEl?.parentElement as HTMLElement | null;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = ((event.clientX - rect.left) / rect.width) * 100;
+    dockVideoPercent = Math.max(40, Math.min(92, pct));
+  }
+
+  function handleResizeEnd(event: PointerEvent) {
+    if (!isResizing) return;
+    isResizing = false;
+    try {
+      (event.currentTarget as Element | null)?.releasePointerCapture?.(
+        event.pointerId,
+      );
+    } catch {
+      // already released
+    }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "obscura:transcript-dock-width",
+        String(Math.round(dockVideoPercent)),
+      );
+    }
   }
 
   let playerHandle: VideoPlayerHandle | undefined = $state();
@@ -195,7 +248,51 @@
       if (target && !target.closest("[data-more-actions]")) moreActionsOpen = false;
     };
     window.addEventListener("click", onDocClick, true);
-    return () => window.removeEventListener("click", onDocClick, true);
+
+    // Dock preferences: width + wanted flag.
+    if (window.localStorage.getItem("obscura:transcript-docked") === "1") {
+      userWantsDock = true;
+    }
+    const savedWidth = Number(
+      window.localStorage.getItem("obscura:transcript-dock-width"),
+    );
+    if (Number.isFinite(savedWidth) && savedWidth >= 40 && savedWidth <= 92) {
+      dockVideoPercent = savedWidth;
+    }
+
+    // Desktop viewport tracking for the dock breakpoint (lg / 1024px).
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const updateViewport = () => (isDesktopViewport = mq.matches);
+    updateViewport();
+    mq.addEventListener("change", updateViewport);
+
+    return () => {
+      window.removeEventListener("click", onDocClick, true);
+      mq.removeEventListener("change", updateViewport);
+    };
+  });
+
+  // Mirror the video wrapper's height into the docked transcript panel so
+  // the transcript never stretches the page. Restarts whenever the player
+  // wrapper ref attaches, the dock preference flips, or the viewport crosses
+  // the breakpoint.
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    const el = videoWrapperEl;
+    if (!el) return;
+    // Sync initial measurement.
+    videoWrapperHeight = Math.round(el.getBoundingClientRect().height);
+    // Re-run whenever dock state changes since flex-basis flips height.
+    void isTranscriptDocked;
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const next = Math.round(entry.contentRect.height);
+      if (videoWrapperHeight !== next) videoWrapperHeight = next;
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
   });
 
   const explicitCounterLabels = $derived(nsfw.mode === "show");
@@ -213,22 +310,67 @@
   />
 
   <NsfwBlur isNsfw={video.isNsfw ?? false}>
-    <VideoPlayer
-      bind:handle={playerHandle}
-      src={toApiUrl(video.streamUrl)}
-      directSrc={toApiUrl(video.directStreamUrl)}
-      poster={toApiUrl(video.thumbnailPath)}
-      markers={video.markers.map((m) => ({ id: m.id, time: m.seconds, title: m.title }))}
-      duration={video.duration ?? undefined}
-      onPlayStarted={handlePlayStarted}
-      onTimeUpdate={handleTimeUpdate}
-      trickplaySprite={toApiUrl(video.spritePath, video.updatedAt)}
-      trickplayVtt={toApiUrl(video.trickplayVttPath, video.updatedAt)}
-      subtitleTracks={video.subtitleTracks ?? []}
-      activeSubtitleTrackId={activeSubtitleId}
-      onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
-      {subtitleChoiceLocked}
-    />
+    <!-- Split layout — when docked, items-start pins both columns to the
+         video's intrinsic height so the sidecar never inflates the page. -->
+    <div class={cn(isTranscriptDocked && "lg:flex lg:items-start lg:gap-0")}>
+      <div
+        bind:this={videoWrapperEl}
+        class={cn(isTranscriptDocked && "lg:min-w-0")}
+        style={isTranscriptDocked ? `flex: 0 0 ${dockVideoPercent}%` : undefined}
+      >
+        <VideoPlayer
+          bind:handle={playerHandle}
+          src={toApiUrl(video.streamUrl)}
+          directSrc={toApiUrl(video.directStreamUrl)}
+          poster={toApiUrl(video.thumbnailPath)}
+          markers={video.markers.map((m) => ({ id: m.id, time: m.seconds, title: m.title }))}
+          duration={video.duration ?? undefined}
+          onPlayStarted={handlePlayStarted}
+          onTimeUpdate={handleTimeUpdate}
+          trickplaySprite={toApiUrl(video.spritePath, video.updatedAt)}
+          trickplayVtt={toApiUrl(video.trickplayVttPath, video.updatedAt)}
+          subtitleTracks={video.subtitleTracks ?? []}
+          activeSubtitleTrackId={activeSubtitleId}
+          onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
+          {subtitleChoiceLocked}
+        />
+      </div>
+      {#if isTranscriptDocked}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          role="separator"
+          aria-label="Resize transcript panel"
+          aria-orientation="vertical"
+          onpointerdown={handleResizeStart}
+          onpointermove={handleResizeMove}
+          onpointerup={handleResizeEnd}
+          onpointercancel={handleResizeEnd}
+          class="hidden lg:flex w-2 shrink-0 cursor-col-resize items-center justify-center bg-surface-3 hover:bg-accent-950 active:bg-accent-950 transition-colors group"
+          style={`touch-action: none; ${videoWrapperHeight != null ? `height: ${videoWrapperHeight}px;` : ""}`}
+        >
+          <span
+            class="h-8 w-[2px] bg-border-default group-hover:bg-border-accent group-active:bg-border-accent transition-colors"
+          ></span>
+        </div>
+        <div
+          class="hidden lg:flex lg:flex-col lg:flex-1 lg:min-w-0 lg:overflow-hidden"
+          style={videoWrapperHeight != null ? `height: ${videoWrapperHeight}px` : undefined}
+        >
+          <VideoTranscriptPanel
+            videoId={video.id}
+            tracks={video.subtitleTracks ?? []}
+            activeTrackId={activeSubtitleId}
+            onActiveTrackIdChange={handleActiveSubtitleChange}
+            currentTime={displayTime}
+            onSeek={handleSeek}
+            onTracksChanged={refreshVideo}
+            variant="list-only"
+            isDocked
+            onDockToggle={toggleTranscriptDock}
+          />
+        </div>
+      {/if}
+    </div>
   </NsfwBlur>
 
   <!-- Video header -->
