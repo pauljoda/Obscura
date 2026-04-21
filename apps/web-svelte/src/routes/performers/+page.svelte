@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Users, Star } from "@lucide/svelte";
+  import { Users, Star, Heart } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
@@ -90,6 +90,8 @@
     activeFilters.length > 0 || sortBy !== "videoCount" || sortDir !== "desc",
   );
 
+  const favoriteCount = $derived(data.performers.filter((p) => p.favorite).length);
+
   // Group performers alphabetically
   const grouped = $derived.by(() => {
     type Perf = (typeof data.performers)[number];
@@ -120,6 +122,35 @@
     <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
   </div>
 
+  <!-- Stats strip — actors / favorites / showing — matches the React
+       /performers page's dashboard row. -->
+  <div class="grid grid-cols-3 gap-2">
+    <div class="surface-stat px-3 py-2">
+      <span class="text-kicker !text-text-disabled flex items-center gap-1.5">
+        <Users class="h-3 w-3" /> Actors
+      </span>
+      <div class="text-lg font-semibold text-text-primary leading-tight">
+        {data.total}
+      </div>
+    </div>
+    <div class="surface-stat px-3 py-2">
+      <span class="text-kicker !text-text-disabled flex items-center gap-1.5">
+        <Heart class="h-3 w-3" /> Favorites
+      </span>
+      <div class="text-lg font-semibold text-text-primary leading-tight">
+        {favoriteCount}
+      </div>
+    </div>
+    <div class="surface-stat px-3 py-2">
+      <span class="text-kicker !text-text-disabled flex items-center gap-1.5">
+        <Users class="h-3 w-3" /> Showing
+      </span>
+      <div class="text-lg font-semibold text-text-primary leading-tight">
+        {data.performers.length}
+      </div>
+    </div>
+  </div>
+
   <FilterBar
     {sortOptions}
     {sortBy}
@@ -148,7 +179,7 @@
           <h2 class="text-kicker text-text-accent">{letter}</h2>
         </div>
         <div
-          class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3"
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
         >
           {#each group as p, i (p.id)}
             {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
@@ -201,7 +232,7 @@
     {/each}
   {:else}
     <div
-      class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
     >
       {#each data.performers as p, i (p.id)}
         {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
