@@ -1,5 +1,6 @@
 import { getContext, setContext } from "svelte";
 import { browser } from "$app/environment";
+import { invalidateAll } from "$app/navigation";
 import { isModShiftZ } from "../nsfw-hotkey";
 import { type NsfwMode } from "../nsfw-cookie";
 
@@ -10,6 +11,18 @@ const KEY = Symbol("nsfw");
 function writeCookie(mode: NsfwMode) {
   if (!browser) return;
   document.cookie = `${COOKIE_NAME}=${encodeURIComponent(mode)};path=/;max-age=${COOKIE_MAX_AGE};samesite=lax`;
+}
+
+/**
+ * Tell SvelteKit to re-run every `+page.server.ts` / `+layout.server.ts`
+ * loader. The NSFW cookie is read by those loaders to build API
+ * query-strings (`?nsfw=show|off|blur`), so any mode change must
+ * refresh the data the API returned with the old value. Without this,
+ * grids keep displaying the pre-toggle filtering until a hard reload.
+ */
+function refetchServerData() {
+  if (!browser) return;
+  void invalidateAll();
 }
 
 export class NsfwStore {
@@ -36,6 +49,7 @@ export class NsfwStore {
           if (data.isLan) {
             this.mode = "show";
             writeCookie("show");
+            refetchServerData();
           }
         })
         .catch(() => {})
@@ -64,14 +78,17 @@ export class NsfwStore {
   }
 
   setMode(next: NsfwMode) {
+    if (this.mode === next) return;
     this.mode = next;
     writeCookie(next);
+    refetchServerData();
   }
 
   toggleShowOff() {
     const next = this.mode === "show" ? "off" : "show";
     this.mode = next;
     writeCookie(next);
+    refetchServerData();
   }
 }
 
