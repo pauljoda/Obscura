@@ -1,9 +1,16 @@
 <script lang="ts">
-  import ComingSoon from "$lib/components/ComingSoon.svelte";
+  import CollectionEditor from "$lib/components/CollectionEditor.svelte";
+
+  let { data } = $props();
 </script>
 
 <svelte:head>
-  <title>/collections/[id]/edit — Obscura</title>
+  <title>Edit {data.collection.name} — Obscura</title>
 </svelte:head>
 
-<ComingSoon route="/collections/[id]/edit" issue="APP-75" />
+<CollectionEditor
+  collection={data.collection}
+  availableTags={data.availableTags}
+  availablePerformers={data.availablePerformers}
+  availableStudios={data.availableStudios}
+/>
