@@ -7,6 +7,7 @@
     Download,
     Film,
     Globe,
+    KeyRound,
     Loader2,
     Package,
     Pencil,
@@ -35,6 +36,7 @@
     fetchStashBoxEndpoints,
     installObscuraPlugin,
     installScraper,
+    savePluginAuthKey,
     uninstallScraper,
     uninstallPlugin,
     toggleScraper,
@@ -92,6 +94,9 @@
   let pluginUpdates = $state<Record<string, PluginUpdateStatus>>({});
   let updatingPluginId = $state<string | null>(null);
   let checkingUpdates = $state(false);
+  let authExpandedFor = $state<string | null>(null);
+  let authValues = $state<Record<string, string>>({});
+  let authSavingFor = $state<string | null>(null);
   let capFilter = $state<CapFilter>("all");
   let installedSearch = $state("");
 
@@ -308,6 +313,42 @@
       );
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to remove";
+    }
+  }
+
+  function toggleAuthExpanded(pluginId: string) {
+    if (authExpandedFor === pluginId) {
+      authExpandedFor = null;
+      authValues = {};
+    } else {
+      authExpandedFor = pluginId;
+      authValues = {};
+    }
+  }
+
+  async function handleSaveAuth(plugin: InstalledPlugin) {
+    if (!plugin.authFields) return;
+    authSavingFor = plugin.id;
+    try {
+      let saved = 0;
+      for (const field of plugin.authFields) {
+        const value = authValues[field.key]?.trim();
+        if (!value) continue;
+        await savePluginAuthKey(plugin.id, field.key, value);
+        saved += 1;
+      }
+      if (saved > 0) {
+        flashMessage(`Saved ${saved} credential${saved === 1 ? "" : "s"} for ${plugin.name}`);
+        installedPlugins = installedPlugins.map((p) =>
+          p.id === plugin.id ? { ...p, authStatus: "ok" as const } : p,
+        );
+      }
+      authExpandedFor = null;
+      authValues = {};
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Failed to save credentials";
+    } finally {
+      authSavingFor = null;
     }
   }
 
@@ -674,74 +715,176 @@
             {#each visiblePlugins as plugin (plugin.id)}
               {@const update = pluginUpdates[plugin.pluginId]}
               {@const caps = enabledCaps(plugin.capabilities)}
+              {@const hasAuth = !!plugin.authFields && plugin.authFields.length > 0}
+              {@const authExpanded = authExpandedFor === plugin.id}
               <div
-                class={"surface-card no-lift p-4 transition-opacity duration-fast " +
+                class={"surface-card no-lift transition-opacity duration-fast " +
                   (plugin.enabled ? "" : "opacity-60")}
               >
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                      <p class="text-sm font-semibold">{plugin.name}</p>
-                      <span class="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
-                      {#if plugin.isNsfw}
-                        <span class="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
-                      {/if}
-                      <Badge variant={plugin.enabled ? "accent" : "default"}>
-                        {#snippet children()}{plugin.enabled ? "Enabled" : "Disabled"}{/snippet}
-                      </Badge>
-                      {#if update?.updateAvailable}
-                        <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20">
-                          <Sparkles class="h-2.5 w-2.5" />
-                          Update available
-                        </span>
+                <div class="p-4">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2.5 flex-wrap">
+                        <p class="text-sm font-semibold">{plugin.name}</p>
+                        <span class="tag-chip tag-chip-accent text-[0.55rem]">Obscura</span>
+                        {#if plugin.isNsfw}
+                          <span class="tag-chip text-[0.55rem] bg-status-error/10 text-status-error-text border border-status-error/20">NSFW</span>
+                        {/if}
+                        <Badge variant={plugin.enabled ? "accent" : "default"}>
+                          {#snippet children()}{plugin.enabled ? "Enabled" : "Disabled"}{/snippet}
+                        </Badge>
+                        {#if update?.updateAvailable}
+                          <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20">
+                            <Sparkles class="h-2.5 w-2.5" />
+                            Update available
+                          </span>
+                        {/if}
+                        {#if hasAuth}
+                          {#if plugin.authStatus === "ok"}
+                            <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-success/10 text-status-success-text border border-status-success/20">
+                              <Check class="h-2.5 w-2.5" />
+                              Auth OK
+                            </span>
+                          {:else}
+                            <span class="inline-flex items-center gap-1 text-[0.55rem] px-1.5 py-0.5 bg-status-warning/10 text-status-warning-text border border-status-warning/20">
+                              <AlertCircle class="h-2.5 w-2.5" />
+                              Auth Required
+                            </span>
+                          {/if}
+                        {/if}
+                      </div>
+                      <p class="text-mono-sm text-text-disabled mt-0.5">
+                        {plugin.pluginId} · v{plugin.version} · {plugin.runtime}
+                      </p>
+                      {#if caps.length > 0}
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
+                          {#each caps as key}
+                            <span class="tag-chip-default text-[0.6rem] px-1.5 py-0.5">
+                              {CAPABILITY_META[key]?.label ?? key}
+                            </span>
+                          {/each}
+                        </div>
                       {/if}
                     </div>
-                    <p class="text-mono-sm text-text-disabled mt-0.5">
-                      {plugin.pluginId} · v{plugin.version} · {plugin.runtime}
-                    </p>
-                    {#if caps.length > 0}
-                      <div class="flex flex-wrap items-center gap-1.5 mt-2.5">
-                        {#each caps as key}
-                          <span class="tag-chip-default text-[0.6rem] px-1.5 py-0.5">
-                            {CAPABILITY_META[key]?.label ?? key}
-                          </span>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-                  <div class="flex items-center gap-2 shrink-0">
-                    {#if update?.updateAvailable}
-                      <button
-                        onclick={() => void handlePluginUpdate(plugin)}
-                        disabled={updatingPluginId === plugin.id}
-                        class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-status-success-text hover:text-text-primary transition-colors duration-fast disabled:opacity-40"
-                      >
-                        {#if updatingPluginId === plugin.id}
-                          <Loader2 class="h-3.5 w-3.5 animate-spin" />
-                        {:else}
-                          <Download class="h-3.5 w-3.5" />
-                        {/if}
-                        Update
-                      </button>
-                    {/if}
-                    <button
-                      onclick={() => void handlePluginToggle(plugin)}
-                      class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast text-text-muted hover:text-text-primary"
-                    >
-                      {#if plugin.enabled}
-                        <ToggleRight class="h-4 w-4 text-text-accent" />Disable
-                      {:else}
-                        <ToggleLeft class="h-4 w-4" />Enable
+                    <div class="flex items-center gap-2 shrink-0">
+                      {#if update?.updateAvailable}
+                        <button
+                          onclick={() => void handlePluginUpdate(plugin)}
+                          disabled={updatingPluginId === plugin.id}
+                          class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-status-success-text hover:text-text-primary transition-colors duration-fast disabled:opacity-40"
+                        >
+                          {#if updatingPluginId === plugin.id}
+                            <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                          {:else}
+                            <Download class="h-3.5 w-3.5" />
+                          {/if}
+                          Update
+                        </button>
                       {/if}
-                    </button>
-                    <button
-                      onclick={() => void handlePluginRemove(plugin)}
-                      class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-status-error-text transition-colors duration-fast"
-                    >
-                      <Trash2 class="h-3.5 w-3.5" />Remove
-                    </button>
+                      {#if hasAuth}
+                        <button
+                          onclick={() => toggleAuthExpanded(plugin.id)}
+                          class={"flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast " +
+                            (plugin.authStatus === "missing" ? "text-status-warning-text" : "text-text-muted hover:text-text-primary")}
+                        >
+                          <KeyRound class="h-3.5 w-3.5" />
+                          {authExpanded ? "Close" : "Configure"}
+                        </button>
+                      {/if}
+                      <button
+                        onclick={() => void handlePluginToggle(plugin)}
+                        class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors duration-fast text-text-muted hover:text-text-primary"
+                      >
+                        {#if plugin.enabled}
+                          <ToggleRight class="h-4 w-4 text-text-accent" />Disable
+                        {:else}
+                          <ToggleLeft class="h-4 w-4" />Enable
+                        {/if}
+                      </button>
+                      <button
+                        onclick={() => void handlePluginRemove(plugin)}
+                        class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-text-muted hover:text-status-error-text transition-colors duration-fast"
+                      >
+                        <Trash2 class="h-3.5 w-3.5" />Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {#if authExpanded && plugin.authFields}
+                  <div class="border-t border-border-subtle px-4 py-3 space-y-3 bg-surface-1/50">
+                    <h4 class="text-[0.72rem] font-medium text-text-secondary">Authentication</h4>
+                    {#each plugin.authFields as field (field.key)}
+                      <div>
+                        <div class="flex items-center justify-between mb-1">
+                          <label class="text-[0.65rem] text-text-disabled" for="auth-{plugin.id}-{field.key}">
+                            {field.label}
+                            {#if field.required}
+                              <span class="text-status-error-text ml-0.5">*</span>
+                            {/if}
+                          </label>
+                          {#if field.url}
+                            <a
+                              href={field.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="text-[0.6rem] text-text-accent hover:underline"
+                            >
+                              Get key →
+                            </a>
+                          {/if}
+                        </div>
+                        <input
+                          id="auth-{plugin.id}-{field.key}"
+                          type="password"
+                          value={authValues[field.key] ?? ""}
+                          oninput={(e) => {
+                            authValues = {
+                              ...authValues,
+                              [field.key]: (e.currentTarget as HTMLInputElement).value,
+                            };
+                          }}
+                          placeholder={plugin.authStatus === "ok"
+                            ? "••••••••  (configured — enter new value to replace)"
+                            : "Paste your API key"}
+                          class="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
+                        />
+                      </div>
+                    {/each}
+                    <div class="flex items-center justify-end gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onclick={() => {
+                          authExpandedFor = null;
+                          authValues = {};
+                        }}
+                        class="h-auto px-3 py-1.5 text-[0.72rem]"
+                      >
+                        {#snippet children()}Cancel{/snippet}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={authSavingFor === plugin.id ||
+                          !plugin.authFields.some((f) => authValues[f.key]?.trim())}
+                        onclick={() => void handleSaveAuth(plugin)}
+                        class="h-auto gap-1.5 px-3 py-1.5 text-[0.72rem]"
+                      >
+                        {#snippet children()}
+                          {#if authSavingFor === plugin.id}
+                            <Loader2 class="h-3 w-3 animate-spin" />
+                          {:else}
+                            <Save class="h-3 w-3" />
+                          {/if}
+                          Save Credentials
+                        {/snippet}
+                      </Button>
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/each}
             {#each filteredInstalled as pkg (pkg.id)}

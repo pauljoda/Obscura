@@ -1,29 +1,24 @@
 <script lang="ts">
-  /**
-   * Condensed first-pass port of the React CascadeReviewDrawer.
-   *
-   * The React version (1,455 lines) shows a full cascade editor: series
-   * header with poster / backdrop pickers, disambiguation candidates,
-   * per-season poster pickers, and per-episode field masks. This Svelte
-   * port keeps the core accept flow functional end-to-end while the
-   * per-season / per-episode editors come in a follow-up pass. On open
-   * it fetches the scrape result, renders the series / movie / episode
-   * fields with per-field toggles, and submits a `CascadeAcceptSpec`
-   * via the appropriate accept endpoint.
-   */
-  import { onMount } from "svelte";
-  import { AlertCircle, Check, Loader2 } from "@lucide/svelte";
-  import { Checkbox, cn } from "@obscura/ui-svelte";
-  import {
-    fetchScrapeResult,
-    acceptVideoSeriesScrape,
-    acceptVideoMovieScrape,
-    acceptVideoEpisodeScrape,
-    type AcceptFieldMask,
-    type CascadeAcceptSpec,
-  } from "$lib/api/scrapers";
+  import { AlertCircle, ScanSearch } from "@lucide/svelte";
+  import type {
+    NormalizedEpisodeResult,
+    NormalizedMovieResult,
+    NormalizedSeriesResult,
+  } from "@obscura/contracts";
   import type { ScrapeResult } from "$lib/api/types";
+  import { executePlugin, fetchScrapeResult } from "$lib/api/scrapers";
+  import { fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
+  import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
   import ReviewDrawer from "./ReviewDrawer.svelte";
+  import SeriesCascadeBody from "./SeriesCascadeBody.svelte";
+  import MovieReviewBody from "./MovieReviewBody.svelte";
+  import EpisodeReviewBody from "./EpisodeReviewBody.svelte";
+
+  type DrawerMode =
+    | { kind: "series"; result: NormalizedSeriesResult }
+    | { kind: "movie"; result: NormalizedMovieResult }
+    | { kind: "episode"; result: NormalizedEpisodeResult }
+    | { kind: "empty"; reason: string };
 
   interface Props {
     scrapeResultId: string;
@@ -40,7 +35,7 @@
   }
 
   let {
-    scrapeResultId,
+    scrapeResultId: initialScrapeResultId,
     entityKind,
     entityId,
     label,
@@ -53,106 +48,124 @@
     onAcceptAndNext,
   }: Props = $props();
 
+  let currentScrapeResultId = $state(initialScrapeResultId);
+  let row = $state<ScrapeResult | null>(null);
   let loading = $state(true);
-  let loadError = $state<string | null>(null);
-  let result = $state<ScrapeResult | null>(null);
-  let acceptError = $state<string | null>(null);
-  let busy = $state(false);
+  let error = $state<string | null>(null);
+  let rerunning = $state(false);
 
-  /**
-   * Keys we surface in the drawer. Mask keys match the `AcceptFieldMask`
-   * shape; the `proposedResult` lookup keys mirror the React drawer's
-   * per-field selector (series payloads use `studioName`/`tagNames`
-   * while the mask keys stay in the React contract's vocabulary).
-   */
-  const FIELD_KEYS: Array<{
-    mask: keyof AcceptFieldMask;
-    propKey: string;
-    label: string;
-  }> = [
-    { mask: "title", propKey: "title", label: "Title" },
-    { mask: "releaseDate", propKey: "date", label: "Date" },
-    { mask: "overview", propKey: "details", label: "Details" },
-    { mask: "externalIds", propKey: "urls", label: "URLs" },
-    { mask: "studio", propKey: "studioName", label: "Studio" },
-    { mask: "genres", propKey: "tagNames", label: "Tags" },
-  ];
-  let fieldMask = $state<Record<string, boolean>>(
-    Object.fromEntries(FIELD_KEYS.map(({ mask }) => [mask, true])),
-  );
+  function classifyProposedResult(raw: unknown): DrawerMode {
+    if (!raw || typeof raw !== "object") {
+      return { kind: "empty", reason: "No proposed result payload on this scrape row." };
+    }
+    const r = raw as Record<string, unknown>;
 
-  onMount(() => {
-    void load();
-  });
+    if (typeof r.kind === "string") {
+      if (r.kind === "series" && r.series && typeof r.series === "object") {
+        return { kind: "series", result: r.series as NormalizedSeriesResult };
+      }
+      if (r.kind === "movie" && r.movie && typeof r.movie === "object") {
+        return { kind: "movie", result: r.movie as NormalizedMovieResult };
+      }
+      if (r.kind === "episode" && r.episode && typeof r.episode === "object") {
+        return { kind: "episode", result: r.episode as NormalizedEpisodeResult };
+      }
+    }
 
-  async function load() {
+    if ("seasons" in r || "firstAirDate" in r || "endAirDate" in r) {
+      return { kind: "series", result: r as unknown as NormalizedSeriesResult };
+    }
+    if ("episodeNumber" in r && "seasonNumber" in r) {
+      return { kind: "episode", result: r as unknown as NormalizedEpisodeResult };
+    }
+    if ("title" in r && ("releaseDate" in r || "runtime" in r)) {
+      return { kind: "movie", result: r as unknown as NormalizedMovieResult };
+    }
+
+    return {
+      kind: "empty",
+      reason:
+        "The scrape result does not match a typed movie / series / episode shape. Re-run with a plugin that supports seriesCascade to populate this view.",
+    };
+  }
+
+  function entityKindToModeKind(
+    kind: "video_series" | "video_movie" | "video_episode",
+  ): "series" | "movie" | "episode" {
+    if (kind === "video_series") return "series";
+    if (kind === "video_movie") return "movie";
+    return "episode";
+  }
+
+  async function loadRow(id: string) {
     loading = true;
-    loadError = null;
+    error = null;
     try {
-      result = await fetchScrapeResult(scrapeResultId);
+      row = await fetchScrapeResult(id);
     } catch (err) {
-      loadError = err instanceof Error ? err.message : "Failed to load";
+      error = err instanceof Error ? err.message : "Failed to load";
     } finally {
       loading = false;
     }
   }
 
-  function buildMask(): AcceptFieldMask {
-    return Object.fromEntries(
-      FIELD_KEYS.filter(({ mask }) => fieldMask[mask]).map(({ mask }) => [mask, true]),
-    ) as AcceptFieldMask;
-  }
+  $effect(() => {
+    void loadRow(currentScrapeResultId);
+  });
 
-  function buildSeriesCascade(): CascadeAcceptSpec {
-    // Placeholder — the full per-season / per-episode tree is built in
-    // the React drawer. The first-pass port defaults to "accept all
-    // seasons" once the user clicks Accept.
-    return { acceptAllSeasons: true };
-  }
-
-  async function submit(accept: () => Promise<unknown>, next: boolean) {
-    busy = true;
-    acceptError = null;
+  async function reRunWithExternalId(tmdbId: string) {
+    if (!row?.pluginPackageId) {
+      error = "Cannot re-run — scrape row has no plugin reference.";
+      return;
+    }
+    rerunning = true;
+    error = null;
     try {
-      await accept();
-      if (next && onAcceptAndNext) onAcceptAndNext();
-      else onAccepted();
+      const action =
+        entityKind === "video_series"
+          ? "folderByName"
+          : entityKind === "video_movie"
+            ? "movieByName"
+            : "episodeByName";
+
+      let pluginInput: Record<string, unknown> = {
+        title: label,
+        name: label,
+        externalIds: { tmdb: tmdbId },
+      };
+      if (entityKind === "video_series") {
+        try {
+          const detail = await fetchVideoSeriesLibraryDetail(entityId);
+          const extra = buildLocalSeasonsInput(detail);
+          if (extra) pluginInput = { ...pluginInput, ...extra };
+        } catch {
+          // fall through — metadata-only re-run is better than no re-run
+        }
+      }
+
+      const res = await executePlugin(row.pluginPackageId, action, pluginInput, {
+        saveResult: true,
+        entityId,
+      });
+      if (!res.ok) {
+        throw new Error("Plugin returned no result for the picked candidate.");
+      }
+      const saved = res.result as { id?: string } | null;
+      if (!saved?.id) {
+        throw new Error("Plugin did not persist a scrape result.");
+      }
+      currentScrapeResultId = saved.id;
     } catch (err) {
-      acceptError = err instanceof Error ? err.message : "Accept failed";
+      error = err instanceof Error ? err.message : "Re-run failed";
     } finally {
-      busy = false;
+      rerunning = false;
     }
   }
 
-  function acceptByKind() {
-    const fieldMaskBody = buildMask();
-    switch (entityKind) {
-      case "video_series":
-        return acceptVideoSeriesScrape(entityId, {
-          scrapeResultId,
-          fieldMask: fieldMaskBody,
-          cascade: buildSeriesCascade(),
-        });
-      case "video_movie":
-        return acceptVideoMovieScrape(entityId, {
-          scrapeResultId,
-          fieldMask: fieldMaskBody,
-        });
-      case "video_episode":
-        return acceptVideoEpisodeScrape(entityId, {
-          scrapeResultId,
-          fieldMask: fieldMaskBody,
-        });
-    }
-  }
-
-  function toggleField(key: string) {
-    fieldMask = { ...fieldMask, [key]: !fieldMask[key] };
-  }
-
-  const proposed = $derived(
-    result?.proposedResult as Record<string, unknown> | undefined,
+  const mode = $derived<DrawerMode>(
+    row ? classifyProposedResult(row.proposedResult) : { kind: "empty", reason: "Loading…" },
   );
+  const expectedKind = $derived(entityKindToModeKind(entityKind));
 </script>
 
 <ReviewDrawer
@@ -163,91 +176,58 @@
   {hasNext}
   {hasPrev}
   {loading}
-  error={loadError}
+  {error}
 >
-  {#snippet footer()}
-    <div class="flex items-center justify-end gap-3">
-      {#if acceptError}
-        <span class="text-[0.7rem] text-status-error-text flex items-center gap-1.5">
-          <AlertCircle class="h-3 w-3" />
-          {acceptError}
-        </span>
-      {/if}
-      {#if onAcceptAndNext}
-        <button
-          type="button"
-          onclick={() => void submit(acceptByKind, false)}
-          disabled={busy}
-          class={cn(
-            "px-4 py-1.5 text-[0.72rem] font-medium text-text-muted hover:text-text-primary transition-colors",
-            busy && "opacity-50 cursor-not-allowed",
-          )}
-        >
-          Accept
-        </button>
-      {/if}
-      <button
-        type="button"
-        onclick={() => void submit(acceptByKind, !!onAcceptAndNext)}
-        disabled={busy}
-        class={cn(
-          "surface-card px-4 py-1.5 text-[0.72rem] font-medium hover:border-border-accent",
-          busy && "opacity-50 cursor-not-allowed",
-        )}
-      >
-        {#if busy}
-          <span class="flex items-center gap-1.5">
-            <Loader2 class="h-3 w-3 animate-spin" /> Applying…
-          </span>
-        {:else}
-          <span class="flex items-center gap-1.5">
-            <Check class="h-3 w-3" /> {onAcceptAndNext ? "Accept & next" : "Accept"}
-          </span>
-        {/if}
-      </button>
-    </div>
-  {/snippet}
   {#snippet children()}
-    {#if proposed}
-      <div class="p-5 space-y-4">
-        <div class="surface-well p-4 space-y-3">
-          <h3 class="text-label text-text-muted">Proposed fields</h3>
-          <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-[0.8rem]">
-            {#each FIELD_KEYS as field (field.mask)}
-              {@const value = proposed[field.propKey] ?? null}
-              {#if value}
-                <label class="flex items-start gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={!!fieldMask[field.mask]}
-                    onchange={() => toggleField(field.mask)}
-                  />
-                  <div class="min-w-0">
-                    <div class="text-text-disabled text-[0.6rem] uppercase tracking-wider font-semibold">
-                      {field.label}
-                    </div>
-                    <div class="truncate text-text-primary">
-                      {Array.isArray(value) ? value.join(", ") : String(value)}
-                    </div>
-                  </div>
-                </label>
-              {/if}
-            {/each}
-          </div>
-        </div>
-
-        {#if proposed.seasons || proposed.episodes}
-          <div class="surface-well p-4 text-[0.72rem] text-text-muted">
-            Cascade accept applies the selected top-level fields plus every
-            matched season and episode. Per-season and per-episode picker
-            UI is tracked as a follow-up port — see the React
-            `CascadeReviewDrawer` for the full shape.
-          </div>
-        {/if}
+    {#if mode.kind === "empty"}
+      <div
+        class="m-5 flex items-start gap-2 border border-border-subtle bg-surface-2/50 px-3 py-3 text-[0.72rem] text-text-muted"
+      >
+        <ScanSearch class="h-4 w-4 flex-shrink-0 text-text-disabled" />
+        <p>{mode.reason}</p>
       </div>
-    {:else if !loading}
-      <div class="m-5 flex items-center gap-2 border border-border-subtle bg-surface-2 px-3 py-2 text-[0.72rem] text-text-muted">
+    {:else if mode.kind === "series" && entityKind === "video_series"}
+      {#key currentScrapeResultId}
+        <SeriesCascadeBody
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          seriesId={entityId}
+          {rerunning}
+          onPickCandidate={(id) => void reRunWithExternalId(id)}
+          {onAccepted}
+          {onAcceptAndNext}
+        />
+      {/key}
+    {:else if mode.kind === "movie" && entityKind === "video_movie"}
+      {#key currentScrapeResultId}
+        <MovieReviewBody
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          movieId={entityId}
+          {onAccepted}
+          {onAcceptAndNext}
+        />
+      {/key}
+    {:else if mode.kind === "episode" && entityKind === "video_episode"}
+      {#key currentScrapeResultId}
+        <EpisodeReviewBody
+          result={mode.result}
+          scrapeResultId={currentScrapeResultId}
+          episodeId={entityId}
+          {onAccepted}
+          {onAcceptAndNext}
+        />
+      {/key}
+    {:else if mode.kind !== expectedKind}
+      <div
+        class="m-5 flex items-start gap-2 border border-status-warning/30 bg-status-warning/10 px-3 py-3 text-[0.72rem] text-status-warning-text"
+      >
         <AlertCircle class="h-4 w-4 flex-shrink-0" />
-        No proposed payload to review.
+        <p>
+          This scrape result contains a <strong>{mode.kind}</strong> payload, but the drawer
+          was opened for a <strong>{expectedKind}</strong>. Re-run the identify from the
+          correct entity.
+        </p>
       </div>
     {/if}
   {/snippet}
