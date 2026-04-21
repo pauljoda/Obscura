@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-  <title>Plugins — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-6">

@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-  <title>Scrape — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <BulkScrape />

@@ -208,7 +208,7 @@
 </script>
 
 <svelte:head>
-  <title>Resolve — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 {#if loading}

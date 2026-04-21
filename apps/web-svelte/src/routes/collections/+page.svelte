@@ -10,9 +10,9 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "recent", label: "Recently added" },
+    { value: "recent", label: "Recently Added" },
     { value: "name", label: "Name A–Z" },
-    { value: "itemCount", label: "Item count" },
+    { value: "itemCount", label: "Item Count" },
   ];
 
   function updateUrl(patch: Record<string, string | null | undefined>) {
@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-  <title>Collections — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">
@@ -42,8 +42,10 @@
     </div>
     <a href="/collections/new">
       <Button variant="primary" size="md">
-        <Plus class="h-4 w-4" />
-        New collection
+        {#snippet children()}
+          <Plus class="h-4 w-4" />
+          New Collection
+        {/snippet}
       </Button>
     </a>
   </header>

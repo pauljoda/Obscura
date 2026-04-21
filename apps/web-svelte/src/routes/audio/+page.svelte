@@ -12,10 +12,10 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "recent", label: "Recently added" },
-    { value: "date", label: "Release date" },
+    { value: "recent", label: "Recently Added" },
+    { value: "date", label: "Release Date" },
     { value: "title", label: "Title A–Z" },
-    { value: "trackCount", label: "Track count" },
+    { value: "trackCount", label: "Track Count" },
     { value: "rating", label: "Rating" },
   ];
 
@@ -32,7 +32,7 @@
 </script>
 
 <svelte:head>
-  <title>Audio — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">

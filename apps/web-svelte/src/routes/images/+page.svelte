@@ -9,11 +9,65 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "recent", label: "Recently added" },
-    { value: "date", label: "Image date" },
+    { value: "recent", label: "Recently Added" },
+    { value: "date", label: "Image Date" },
     { value: "title", label: "Title A–Z" },
     { value: "rating", label: "Rating" },
   ];
+
+  const FILTER_KEYS = ["studio", "performer", "tag", "ratingMin"] as const;
+  type FilterKey = (typeof FILTER_KEYS)[number];
+
+  function filterLabel(key: FilterKey): string {
+    switch (key) {
+      case "studio":
+        return "Studio";
+      case "performer":
+        return "Performer";
+      case "tag":
+        return "Tag";
+      case "ratingMin":
+        return "Min Rating";
+    }
+  }
+
+  const activeFilters = $derived(
+    FILTER_KEYS.flatMap((key) => {
+      const raw = page.url.searchParams.getAll(key);
+      return raw.map((value) => ({ label: filterLabel(key), value, type: key }));
+    }),
+  );
+
+  function onAddFilter(type: string, _label: string, value: string) {
+    const params = new URLSearchParams(page.url.searchParams);
+    if (type === "ratingMin") params.set(type, value);
+    else {
+      const existing = params.getAll(type);
+      if (!existing.includes(value)) params.append(type, value);
+    }
+    params.delete("page");
+    void goto(`/images?${params.toString()}`, { keepFocus: true, noScroll: true });
+  }
+
+  function onRemoveFilter(index: number) {
+    const f = activeFilters[index];
+    if (!f) return;
+    const params = new URLSearchParams(page.url.searchParams);
+    const remaining = params.getAll(f.type).filter((v) => v !== f.value);
+    params.delete(f.type);
+    for (const v of remaining) params.append(f.type, v);
+    params.delete("page");
+    const qs = params.toString();
+    void goto(qs ? `/images?${qs}` : "/images", { keepFocus: true, noScroll: true });
+  }
+
+  function onClearFiltersAndSort() {
+    void goto("/images", { keepFocus: true, noScroll: true });
+  }
+
+  const canClearFiltersAndSort = $derived(
+    activeFilters.length > 0 || data.sort !== "recent" || data.order !== "desc" || !!data.search,
+  );
 
   function updateUrl(patch: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(page.url.searchParams);
@@ -37,7 +91,7 @@
 </script>
 
 <svelte:head>
-  <title>Images — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">
@@ -57,6 +111,11 @@
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     showViewToggle={false}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
   />
 
   {#if data.images.length === 0}

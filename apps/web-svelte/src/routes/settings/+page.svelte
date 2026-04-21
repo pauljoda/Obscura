@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-  <title>Settings — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-6">
