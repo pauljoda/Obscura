@@ -18,10 +18,16 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const seasonNumber =
     seasonRaw != null && /^\d+$/.test(seasonRaw) ? seasonRaw : undefined;
   const search = url.searchParams.get("search") ?? undefined;
-  const sort = url.searchParams.get("sort") ?? "recent";
+  // When drilling into a series the default sort flips to episode-asc so
+  // the first-season-first-episode ordering is correct without the user
+  // having to pick it manually. Matches the React page's reset-on-enter
+  // behaviour.
+  const defaultSort = seriesParam ? "episode" : "recent";
+  const sort = url.searchParams.get("sort") ?? defaultSort;
   const orderRaw = url.searchParams.get("order");
+  const defaultOrder: "asc" | "desc" = seriesParam ? "asc" : "desc";
   const order: "asc" | "desc" =
-    orderRaw === "asc" || orderRaw === "desc" ? orderRaw : "desc";
+    orderRaw === "asc" || orderRaw === "desc" ? orderRaw : defaultOrder;
   const viewRaw = url.searchParams.get("view");
   const view: "grid" | "list" | "series" =
     viewRaw === "list" ? "list" : viewRaw === "series" ? "series" : "grid";

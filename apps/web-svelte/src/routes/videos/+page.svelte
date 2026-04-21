@@ -23,14 +23,14 @@
   let { data } = $props();
 
   const sortOptions = [
+    { value: "episode", label: "Episode order" },
     { value: "recent", label: "Recently Added" },
-    { value: "date", label: "Video Date" },
-    { value: "title", label: "Title A–Z" },
+    { value: "date", label: "Video date" },
+    { value: "title", label: "Title A-Z" },
     { value: "duration", label: "Duration" },
     { value: "size", label: "File Size" },
     { value: "rating", label: "Rating" },
     { value: "plays", label: "Most Played" },
-    { value: "episode", label: "Episode Order" },
   ];
 
   function updateUrl(patch: Record<string, string | null | undefined>) {
@@ -344,37 +344,48 @@
           </div>
         </div>
 
-        <!-- Cast & Crew -->
+        <!-- Cast & Crew — 110-px 3:4 portraits, centered name + clamped
+             character role, matching the React SeriesCastStrip. -->
         {#if series.performers && series.performers.length > 0}
-          <HierarchySection title="Cast & Crew">
-            {#snippet children()}
-              <div class="flex gap-3 overflow-x-auto pb-2">
-                {#each series.performers as p (p.id)}
-                  {@const img = toApiUrl(p.imagePath)}
-                  <a
-                    href={`/performers/${p.id}`}
-                    class="flex-shrink-0 w-24 group"
-                  >
-                    <div class="aspect-[3/4] bg-surface-2 overflow-hidden border border-border-subtle group-hover:border-border-accent transition-colors">
-                      {#if img}
-                        <img src={img} alt={p.name} class="h-full w-full object-cover" loading="lazy" />
-                      {:else}
-                        <div class="flex h-full w-full items-center justify-center text-text-disabled">
-                          <Users class="h-6 w-6" />
-                        </div>
-                      {/if}
-                    </div>
-                    <div class="mt-1.5 text-[0.7rem] font-medium text-text-primary truncate">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-kicker">Cast & Crew</h4>
+            </div>
+            <div class="flex gap-3 overflow-x-auto scrollbar-hidden pb-2">
+              {#each series.performers as p (p.id)}
+                {@const img = toApiUrl(p.imagePath)}
+                <a
+                  href={`/performers/${p.id}`}
+                  class="flex-shrink-0 w-[110px] group"
+                >
+                  <div class="aspect-[3/4] w-full overflow-hidden border border-border-subtle bg-surface-2">
+                    {#if img}
+                      <img
+                        src={img}
+                        alt={p.name}
+                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    {:else}
+                      <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                        <Users class="h-8 w-8" />
+                      </div>
+                    {/if}
+                  </div>
+                  <div class="mt-1.5 text-center">
+                    <div class="text-[0.72rem] text-text-primary truncate group-hover:text-text-accent transition-colors">
                       {p.name}
                     </div>
                     {#if p.character}
-                      <div class="text-[0.62rem] text-text-muted truncate">{p.character}</div>
+                      <div class="mt-0.5 line-clamp-2 min-h-[2rem] text-[0.62rem] leading-tight text-text-muted">
+                        {p.character}
+                      </div>
                     {/if}
-                  </a>
-                {/each}
-              </div>
-            {/snippet}
-          </HierarchySection>
+                  </div>
+                </a>
+              {/each}
+            </div>
+          </div>
         {/if}
 
         <!-- Child series -->
