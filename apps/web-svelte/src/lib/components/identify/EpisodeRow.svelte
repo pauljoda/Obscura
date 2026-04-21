@@ -1,6 +1,6 @@
 <script lang="ts">
   import { AlertCircle, ChevronDown } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn } from "@obscura/ui-svelte";
   import type { NormalizedEpisodeResult } from "@obscura/contracts";
   import type { AcceptFieldMask } from "$lib/api/scrapers";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
@@ -45,15 +45,13 @@
     onclick={() => (expanded = !expanded)}
     class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-2/60"
   >
-    <input
-      type="checkbox"
+    <Checkbox
       checked={episodeState.accepted}
       onchange={(e) => {
         e.stopPropagation();
         onAccepted((e.currentTarget as HTMLInputElement).checked);
       }}
       onclick={(e) => e.stopPropagation()}
-      class="h-3 w-3"
     />
     <span class="w-12 flex-shrink-0 font-mono text-[0.62rem] text-text-muted">
       {episode.seasonNumber}×{String(episode.episodeNumber).padStart(2, "0")}

@@ -160,6 +160,20 @@ export async function migrateVideoAssetStorage(
   });
 }
 
+export async function clearAllMetadata(): Promise<{
+  ok: boolean;
+  episodesCleared: number;
+  moviesCleared: number;
+  seriesCleared: number;
+  librariesQueued: number;
+  librariesSkipped: number;
+}> {
+  return fetchApi("/jobs/clear-metadata", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 export async function acknowledgeJobFailures(queueName?: string): Promise<{
   ok: boolean;
   queueName: string | null;

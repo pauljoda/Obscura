@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ChevronDown } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn } from "@obscura/ui-svelte";
   import type { NormalizedSeasonResult } from "@obscura/contracts";
   import type { AcceptFieldMask } from "$lib/api/scrapers";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
@@ -65,15 +65,14 @@
     onclick={onExpand}
     class="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface-2/40"
   >
-    <input
-      type="checkbox"
+    <Checkbox
+      size="md"
       checked={seasonState.accepted}
       onchange={(e) => {
         e.stopPropagation();
         onSeasonAccepted((e.currentTarget as HTMLInputElement).checked);
       }}
       onclick={(e) => e.stopPropagation()}
-      class="h-3.5 w-3.5"
       title="Accept this season"
     />
     <span class="flex-1 font-medium text-[0.82rem] text-text-primary">{label}</span>

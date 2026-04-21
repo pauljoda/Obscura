@@ -20,6 +20,15 @@ const {
   audioTracks,
   videoEpisodes,
   videoMovies,
+  videoSeries,
+  videoSeasons,
+  videoEpisodePerformers,
+  videoEpisodeTags,
+  videoMoviePerformers,
+  videoMovieTags,
+  videoSeriesPerformers,
+  videoSeriesTags,
+  scrapeResults,
 } = schema;
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -1120,6 +1129,122 @@ export async function jobsRoutes(app: FastifyInstance) {
       queueName: queueName ?? null,
       runsUpdated: updatedRows.length,
       externalRemovedByQueue,
+    };
+  });
+
+  /**
+   * Nukes every scrape-derived custom metadata field across the video
+   * library and queues a fresh library-scan on each enabled root so the
+   * user can rebuild identification from scratch. Keeps technical probe
+   * data (duration, codec, fingerprints, thumbnails) — the idea is
+   * "wipe everything a scraper / user might have set, rediscover from
+   * disk, re-identify." Associations (performers, tags, studios) and
+   * the scrape_results log are also cleared. Cascading FKs take care of
+   * subordinate rows (season metadata, join rows).
+   */
+  app.post("/jobs/clear-metadata", async () => {
+    const now = new Date();
+
+    // 1. Drop association tables (performers/tags/studios bindings).
+    await db.delete(videoEpisodePerformers);
+    await db.delete(videoEpisodeTags);
+    await db.delete(videoMoviePerformers);
+    await db.delete(videoMovieTags);
+    await db.delete(videoSeriesPerformers);
+    await db.delete(videoSeriesTags);
+
+    // 2. Purge the scrape-result audit log; stale payloads would
+    // confuse fresh identify flows.
+    await db.delete(scrapeResults);
+
+    // 3. Clear per-table scraped fields. Technical probe data stays
+    // intact. Columns marked NOT NULL (e.g. videoMovies.title) keep
+    // their current value — the library scan will refresh them from
+    // disk as needed.
+    const episodeClear = await db
+      .update(videoEpisodes)
+      .set({
+        title: null,
+        overview: null,
+        airDate: null,
+        runtime: null,
+        stillPath: null,
+        url: null,
+        externalIds: {},
+        rating: null,
+        organized: false,
+        updatedAt: now,
+      })
+      .returning({ id: videoEpisodes.id });
+
+    const movieClear = await db
+      .update(videoMovies)
+      .set({
+        sortTitle: null,
+        originalTitle: null,
+        overview: null,
+        tagline: null,
+        releaseDate: null,
+        runtime: null,
+        posterPath: null,
+        backdropPath: null,
+        logoPath: null,
+        url: null,
+        studioId: null,
+        rating: null,
+        contentRating: null,
+        organized: false,
+        externalIds: {},
+        updatedAt: now,
+      })
+      .returning({ id: videoMovies.id });
+
+    const seriesClear = await db
+      .update(videoSeries)
+      .set({
+        sortTitle: null,
+        originalTitle: null,
+        overview: null,
+        tagline: null,
+        status: null,
+        firstAirDate: null,
+        endAirDate: null,
+        posterPath: null,
+        backdropPath: null,
+        logoPath: null,
+        studioId: null,
+        rating: null,
+        contentRating: null,
+        organized: false,
+        externalIds: {},
+        updatedAt: now,
+      })
+      .returning({ id: videoSeries.id });
+
+    await db.update(videoSeasons).set({
+      title: null,
+      overview: null,
+      posterPath: null,
+      airDate: null,
+      externalIds: {},
+      updatedAt: now,
+    });
+
+    // 4. Queue library-scan jobs for every enabled root so the tree
+    // gets rediscovered immediately.
+    const scanResult = await enqueueLibraryScans({
+      by: "manual",
+      kind: "standard",
+      label: "Rescan after Clear Metadata",
+    });
+
+    return {
+      ok: true as const,
+      episodesCleared: episodeClear.length,
+      moviesCleared: movieClear.length,
+      seriesCleared: seriesClear.length,
+      librariesQueued: scanResult.jobIds.length,
+      librariesSkipped: scanResult.skipped,
     };
   });
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check, Image as ImageIcon, X } from "@lucide/svelte";
   import type { ImageCandidate } from "@obscura/contracts";
-  import { cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn } from "@obscura/ui-svelte";
 
   export type ImagePickerAspect = "poster" | "backdrop" | "still" | "logo";
 
@@ -133,11 +133,11 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-[100] flex items-center justify-center bg-bg/80 backdrop-blur"
+    class="fixed inset-0 z-[110] flex items-center justify-center bg-bg/95 backdrop-blur-md"
     onclick={handleBackdropClick}
   >
     <div
-      class="glass-1 flex max-h-[90vh] w-full max-w-5xl flex-col border border-border-subtle shadow-2xl"
+      class="surface-elevated flex max-h-[90vh] w-full max-w-5xl flex-col border border-border-subtle shadow-2xl"
     >
       <div
         class="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3"
@@ -188,8 +188,11 @@
           </label>
         {/if}
 
-        <label class="flex items-center gap-1.5">
-          <input type="checkbox" bind:checked={hideLanguageless} class="h-3 w-3" />
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <Checkbox
+            checked={hideLanguageless}
+            onchange={(e) => (hideLanguageless = (e.currentTarget as HTMLInputElement).checked)}
+          />
           <span class="text-text-muted">Hide language-agnostic</span>
         </label>
 
