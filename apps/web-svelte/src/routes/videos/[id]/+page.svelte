@@ -38,6 +38,7 @@
   import VideoFileInfo from "$lib/components/VideoFileInfo.svelte";
   import VideoTranscriptPanel from "$lib/components/VideoTranscriptPanel.svelte";
   import VideoEdit from "$lib/components/VideoEdit.svelte";
+  import IdentifyButton from "$lib/components/IdentifyButton.svelte";
 
   const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
   type Tab = (typeof tabs)[number];
@@ -326,6 +327,15 @@
         >
           <CheckCircle2 class="h-4 w-4" />
         </button>
+
+        {#if (video as { entityKind?: string }).entityKind}
+          <IdentifyButton
+            entityKind={(video as { entityKind: "video_series" | "video_movie" | "video_episode" }).entityKind}
+            entityId={video.id}
+            title={video.title}
+            label={(video as { entityKind?: string }).entityKind === "video_movie" ? "Identify" : "Re-identify"}
+          />
+        {/if}
 
         <div class="relative" data-more-actions>
           <button

@@ -4,6 +4,7 @@
   import { appShellSections, cn } from "@obscura/ui-svelte";
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
   import LogoMark from "./LogoMark.svelte";
+  import ChangelogDialog from "./ChangelogDialog.svelte";
   import { APP_VERSION } from "$lib/version";
 
   interface Props {
@@ -135,18 +136,24 @@
 
   <!-- Version indicator -->
   <div class="border-t border-border-subtle px-3 py-3 shrink-0">
-    <div class="flex items-center overflow-hidden whitespace-nowrap h-5">
-      <div class="w-8 flex items-center justify-center shrink-0">
-        <span class="led led-sm led-idle"></span>
-      </div>
-      <div
-        class={cn(
-          "overflow-hidden transition-[max-width,opacity] duration-moderate",
-          isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
-        )}
-      >
-        <span class="text-mono-sm text-text-disabled">v{APP_VERSION}</span>
-      </div>
-    </div>
+    <ChangelogDialog version={APP_VERSION}>
+      {#snippet children()}
+        <div class="flex items-center group overflow-hidden whitespace-nowrap h-5">
+          <div class="w-8 flex items-center justify-center shrink-0">
+            <span class="led led-sm led-idle"></span>
+          </div>
+          <div
+            class={cn(
+              "overflow-hidden transition-[max-width,opacity] duration-moderate",
+              isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
+            )}
+          >
+            <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
+              v{APP_VERSION}
+            </span>
+          </div>
+        </div>
+      {/snippet}
+    </ChangelogDialog>
   </div>
 </aside>
