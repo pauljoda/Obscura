@@ -97,7 +97,7 @@
       </p>
     </div>
   {:else}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {#each filtered as studio (studio.id)}
         <a
           href={`/studios/${encodeURIComponent(studio.name)}`}

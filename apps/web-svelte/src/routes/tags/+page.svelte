@@ -9,14 +9,13 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "name", label: "Name" },
-    { value: "videoCount", label: "Video Count" },
-    { value: "imageCount", label: "Image Count" },
+    { value: "videos", label: "Usage Count" },
+    { value: "name", label: "Name A-Z" },
   ];
 
-  const sortBy = $derived(page.url.searchParams.get("sort") ?? "name");
+  const sortBy = $derived(page.url.searchParams.get("sort") ?? "videos");
   const sortDir: SortDir = $derived(
-    page.url.searchParams.get("order") === "desc" ? "desc" : "asc",
+    page.url.searchParams.get("order") === "asc" ? "asc" : "desc",
   );
   const searchQuery = $derived(page.url.searchParams.get("search") ?? "");
 
@@ -35,7 +34,7 @@
   }
 
   const canClearFiltersAndSort = $derived(
-    !!searchQuery || sortBy !== "name" || sortDir !== "asc",
+    !!searchQuery || sortBy !== "videos" || sortDir !== "desc",
   );
 
   const filtered = $derived.by(() => {
@@ -45,10 +44,13 @@
     const sign = sortDir === "asc" ? 1 : -1;
     list = [...list].sort((a, b) => {
       switch (sortBy) {
-        case "videoCount":
-          return sign * ((a.videoCount ?? 0) - (b.videoCount ?? 0));
-        case "imageCount":
-          return sign * ((a.imageCount ?? 0) - (b.imageCount ?? 0));
+        case "videos":
+          // "Usage Count" is videos + images per the React label.
+          return (
+            sign *
+            (((a.videoCount ?? 0) + (a.imageCount ?? 0)) -
+              ((b.videoCount ?? 0) + (b.imageCount ?? 0)))
+          );
         case "name":
         default:
           return sign * a.name.localeCompare(b.name);
@@ -99,7 +101,7 @@
       {/if}
     </div>
   {:else}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
       {#each filtered as tag (tag.id)}
         <a
           href={`/tags/${encodeURIComponent(tag.name)}`}
