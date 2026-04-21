@@ -100,7 +100,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {#each filtered as studio (studio.id)}
         <a
-          href={`/studios/${encodeURIComponent(studio.name)}`}
+          href={`/studios/${studio.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
           <div class="aspect-[4/3] bg-surface-1 relative">

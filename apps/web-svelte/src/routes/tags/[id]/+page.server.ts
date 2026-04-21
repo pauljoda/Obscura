@@ -8,29 +8,49 @@ const VIDEO_LIMIT = 60;
 const GALLERY_LIMIT = 24;
 const IMAGE_LIMIT = 48;
 
+type TagDetail = {
+  id: string;
+  name: string;
+  description?: string | null;
+  aliases?: string[];
+  isNsfw?: boolean;
+  favorite?: boolean;
+  imagePath?: string | null;
+  videoCount?: number;
+  imageCount?: number;
+};
+
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`tags:${params.id}`);
   const nsfw = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
 
-  let tag;
-  try {
-    tag = await serverFetch<{
-      id: string;
-      name: string;
-      description?: string | null;
-      aliases?: string[];
-      isNsfw?: boolean;
-      favorite?: boolean;
-      imagePath?: string | null;
-      videoCount?: number;
-      imageCount?: number;
-    }>(`/tags/${params.id}`, { fetch });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (/404/.test(message)) error(404, "Tag not found");
-    throw err;
-  }
+  // The /tags landing page links by `encodeURIComponent(tag.name)` to
+  // match the React app's URL shape, but the API's `/tags/:id`
+  // endpoint only accepts IDs. Resolve name → id by searching the
+  // tag list, then fetch detail by id — mirrors the React
+  // tag-detail page's behavior.
+  const nameFromUrl = decodeURIComponent(params.id);
 
+  let tag: TagDetail;
+  try {
+    tag = await serverFetch<TagDetail>(`/tags/${params.id}`, { fetch });
+  } catch {
+    const list = await serverFetch<{ tags: TagDetail[] }>(
+      `/tags${buildQueryString({ nsfw })}`,
+      { fetch },
+    ).catch(() => ({ tags: [] as TagDetail[] }));
+    const match = list.tags.find(
+      (t) => t.name.toLowerCase() === nameFromUrl.toLowerCase(),
+    );
+    if (!match) error(404, "Tag not found");
+    try {
+      tag = await serverFetch<TagDetail>(`/tags/${match.id}`, { fetch });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/404/.test(message)) error(404, "Tag not found");
+      throw err;
+    }
+  }
   const tagName = tag.name;
   // The /videos + /galleries + /images API accepts a `tag=` filter by name.
   const videoQs = buildQueryString({

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import {
     Check,
     Loader2,
@@ -336,61 +336,71 @@
     void loadData();
   });
 
-  // Rebuild rows when showAll toggles
+  // Rebuild rows when showAll toggles or when the source arrays change.
+  // The existing row snapshots are read via `untrack` so writing the new
+  // arrays does not re-trigger this effect (which would be an infinite
+  // loop — Svelte 5 $effect re-runs on any tracked state it reads).
   $effect(() => {
     void showAll;
+    void allVideos;
+    void allPerformers;
+    void allStudios;
+    void allTags;
     if (!allVideos.length && !allPerformers.length && !allStudios.length && !allTags.length)
       return;
-    const filteredVideos = showAll
-      ? allVideos
-      : allVideos.filter((video) => !video.organized);
-    const existingVideo = new Map(videoRows.map((r) => [r.video.id, r]));
-    videoRows = filteredVideos.map(
-      (video) =>
-        existingVideo.get(video.id) ?? {
-          video,
-          status: "pending",
-          selectedFields: new Set(VIDEO_FIELDS),
-          excludedPerformers: new Set(),
-          excludedTags: new Set(),
-        },
-    );
 
-    const filteredPerfs = showAll
-      ? allPerformers
-      : allPerformers.filter((p) => !p.imagePath || !p.gender);
-    const existingPerf = new Map(perfRows.map((r) => [r.performer.id, r]));
-    perfRows = filteredPerfs.map(
-      (performer) =>
-        existingPerf.get(performer.id) ?? {
-          performer,
-          status: "pending",
-          selectedFields: new Set(),
-        },
-    );
+    untrack(() => {
+      const filteredVideos = showAll
+        ? allVideos
+        : allVideos.filter((video) => !video.organized);
+      const existingVideo = new Map(videoRows.map((r) => [r.video.id, r]));
+      videoRows = filteredVideos.map(
+        (video) =>
+          existingVideo.get(video.id) ?? {
+            video,
+            status: "pending",
+            selectedFields: new Set(VIDEO_FIELDS),
+            excludedPerformers: new Set(),
+            excludedTags: new Set(),
+          },
+      );
 
-    const filteredStudios = showAll
-      ? allStudios
-      : allStudios.filter((s) => !s.url || !s.imageUrl);
-    const existingStudio = new Map(studioRows.map((r) => [r.studio.id, r]));
-    studioRows = filteredStudios.map(
-      (studio) =>
-        existingStudio.get(studio.id) ?? {
-          studio,
-          status: "pending",
-          selectedFields: new Set(),
-        },
-    );
+      const filteredPerfs = showAll
+        ? allPerformers
+        : allPerformers.filter((p) => !p.imagePath || !p.gender);
+      const existingPerf = new Map(perfRows.map((r) => [r.performer.id, r]));
+      perfRows = filteredPerfs.map(
+        (performer) =>
+          existingPerf.get(performer.id) ?? {
+            performer,
+            status: "pending",
+            selectedFields: new Set(),
+          },
+      );
 
-    const existingTag = new Map(tagRows.map((r) => [r.tag.id, r]));
-    tagRows = allTags.map(
-      (tagItem) =>
-        existingTag.get(tagItem.id) ?? {
-          tag: tagItem,
-          status: "pending",
-          selectedFields: new Set(),
-        },
-    );
+      const filteredStudios = showAll
+        ? allStudios
+        : allStudios.filter((s) => !s.url || !s.imageUrl);
+      const existingStudio = new Map(studioRows.map((r) => [r.studio.id, r]));
+      studioRows = filteredStudios.map(
+        (studio) =>
+          existingStudio.get(studio.id) ?? {
+            studio,
+            status: "pending",
+            selectedFields: new Set(),
+          },
+      );
+
+      const existingTag = new Map(tagRows.map((r) => [r.tag.id, r]));
+      tagRows = allTags.map(
+        (tagItem) =>
+          existingTag.get(tagItem.id) ?? {
+            tag: tagItem,
+            status: "pending",
+            selectedFields: new Set(),
+          },
+      );
+    });
   });
 
   const rows = $derived(
