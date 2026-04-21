@@ -1,11 +1,12 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Film, FolderOpen, HardDrive } from "@lucide/svelte";
+  import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
+  import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import NsfwTagLabel from "$lib/components/NsfwTagLabel.svelte";
@@ -285,10 +286,10 @@
               </div>
             {/if}
             <div class="flex-1 min-w-0">
-              {#if series.folderPath}
+              {#if series.libraryRootLabel}
                 <div class="mb-1 flex min-w-0 items-start gap-1.5 text-[0.68rem] text-white/50">
                   <HardDrive class="mt-0.5 h-3 w-3 flex-shrink-0" />
-                  <span class="min-w-0 break-words">{series.folderPath}</span>
+                  <span class="min-w-0 break-words">{series.libraryRootLabel}</span>
                 </div>
               {/if}
               <h1 class="mt-1.5 text-2xl sm:text-4xl font-heading font-semibold text-text-primary leading-tight">
@@ -313,13 +314,22 @@
                   </span>
                 {/if}
               </div>
+              <div class="mt-3">
+                <IdentifyButton
+                  entityKind="video_series"
+                  entityId={series.id}
+                  title={series.displayTitle}
+                  label="Identify Series"
+                />
+              </div>
               {#if series.details}
                 <p class="mt-3 text-[0.82rem] text-white/70 leading-relaxed max-w-2xl">
                   {series.details}
                 </p>
               {/if}
               {#if series.tags.length > 0}
-                <div class="mt-3 flex flex-wrap gap-1.5">
+                <div class="mt-3 flex flex-wrap gap-1.5 items-center">
+                  <span class="text-[0.65rem] uppercase tracking-[0.14em] text-text-muted">Tags:</span>
                   {#each series.tags as tag (tag.id)}
                     <a
                       href={`/tags/${encodeURIComponent(tag.name)}`}
@@ -333,6 +343,39 @@
             </div>
           </div>
         </div>
+
+        <!-- Cast & Crew -->
+        {#if series.performers && series.performers.length > 0}
+          <HierarchySection title="Cast & Crew">
+            {#snippet children()}
+              <div class="flex gap-3 overflow-x-auto pb-2">
+                {#each series.performers as p (p.id)}
+                  {@const img = toApiUrl(p.imagePath)}
+                  <a
+                    href={`/performers/${p.id}`}
+                    class="flex-shrink-0 w-24 group"
+                  >
+                    <div class="aspect-[3/4] bg-surface-2 overflow-hidden border border-border-subtle group-hover:border-border-accent transition-colors">
+                      {#if img}
+                        <img src={img} alt={p.name} class="h-full w-full object-cover" loading="lazy" />
+                      {:else}
+                        <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                          <Users class="h-6 w-6" />
+                        </div>
+                      {/if}
+                    </div>
+                    <div class="mt-1.5 text-[0.7rem] font-medium text-text-primary truncate">
+                      {p.name}
+                    </div>
+                    {#if p.character}
+                      <div class="text-[0.62rem] text-text-muted truncate">{p.character}</div>
+                    {/if}
+                  </a>
+                {/each}
+              </div>
+            {/snippet}
+          </HierarchySection>
+        {/if}
 
         <!-- Child series -->
         {#if data.childSeries.length > 0}
