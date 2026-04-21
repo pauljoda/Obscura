@@ -56,16 +56,16 @@
     switch (kind) {
       case "video":
         return `/videos/${id}`;
+      case "video-series":
+        return `/videos?series=${id}`;
       case "gallery":
         return `/galleries/${id}`;
       case "image":
         return `/images/${id}`;
-      case "audio_library":
+      case "audio-library":
         return `/audio/${id}`;
-      case "audio_track":
+      case "audio-track":
         return `/audio/tracks/${id}`;
-      case "collection":
-        return `/collections/${id}`;
       case "performer":
         return `/performers/${id}`;
       case "studio":
@@ -120,22 +120,22 @@
             {#each group.items as item (item.id)}
               <li>
                 <a
-                  href={entityHref(group.kind, item.id, item.name)}
+                  href={entityHref(group.kind, item.id, item.title)}
                   class="flex items-center gap-3 px-4 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
                 >
-                  {#if item.thumbnailPath}
+                  {#if item.imagePath}
                     <img
-                      src={toApiUrl(item.thumbnailPath)}
+                      src={toApiUrl(item.imagePath)}
                       alt=""
                       loading="lazy"
                       class="h-8 w-12 object-cover shrink-0"
                     />
                   {/if}
                   <span class="flex-1 min-w-0 truncate text-text-primary">
-                    {item.title ?? item.name ?? item.id}
+                    {item.title ?? item.id}
                   </span>
-                  {#if item.studioName}
-                    <span class="text-text-accent truncate max-w-[200px]">{item.studioName}</span>
+                  {#if item.subtitle}
+                    <span class="text-text-accent truncate max-w-[200px]">{item.subtitle}</span>
                   {/if}
                 </a>
               </li>

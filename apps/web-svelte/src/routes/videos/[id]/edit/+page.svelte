@@ -4,7 +4,7 @@
   import BackLink from "$lib/components/BackLink.svelte";
   import { entityTerms } from "$lib/terminology";
 
-  const id = $derived($page.params.id);
+  const id = $derived($page.params.id!);
 </script>
 
 <svelte:head>

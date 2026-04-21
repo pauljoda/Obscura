@@ -57,10 +57,10 @@
         Storage
       </h2>
       <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-body-sm text-text-secondary">
-        <div class="flex gap-2"><dt class="text-text-muted">Cache:</dt><dd>{formatBytes(cfg.storage?.cacheBytes)}</dd></div>
-        <div class="flex gap-2"><dt class="text-text-muted">Thumbnails:</dt><dd>{formatBytes(cfg.storage?.thumbnailBytes)}</dd></div>
-        <div class="flex gap-2"><dt class="text-text-muted">HLS:</dt><dd>{formatBytes(cfg.storage?.hlsBytes)}</dd></div>
-        <div class="flex gap-2"><dt class="text-text-muted">DB:</dt><dd>{formatBytes(cfg.storage?.databaseBytes)}</dd></div>
+        <div class="flex gap-2"><dt class="text-text-muted">Thumbnails:</dt><dd>{formatBytes(cfg.storage?.thumbnailsBytes)}</dd></div>
+        <div class="flex gap-2"><dt class="text-text-muted">Previews:</dt><dd>{formatBytes(cfg.storage?.previewsBytes)}</dd></div>
+        <div class="flex gap-2"><dt class="text-text-muted">Trickplay:</dt><dd>{formatBytes(cfg.storage?.trickplayBytes)}</dd></div>
+        <div class="flex gap-2"><dt class="text-text-muted">Total:</dt><dd>{formatBytes(cfg.storage?.totalBytes)}</dd></div>
       </dl>
     </section>
 

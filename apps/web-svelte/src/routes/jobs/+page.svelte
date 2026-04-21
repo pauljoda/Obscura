@@ -60,12 +60,12 @@
         {#each d.queues as q}
           <div class="surface-panel p-4 space-y-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-label text-text-muted truncate">{q.label ?? q.queueName}</span>
+              <span class="text-label text-text-muted truncate">{q.label ?? q.name}</span>
               <StatusLed status={(q.active ?? 0) > 0 ? "accent" : "idle"} />
             </div>
             <dl class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[0.7rem] text-text-secondary">
               <dt class="text-text-muted">Active:</dt><dd>{q.active ?? 0}</dd>
-              <dt class="text-text-muted">Queued:</dt><dd>{q.queued ?? q.pending ?? 0}</dd>
+              <dt class="text-text-muted">Queued:</dt><dd>{q.waiting ?? 0}</dd>
               <dt class="text-text-muted">Failed:</dt><dd>{q.failed ?? 0}</dd>
               <dt class="text-text-muted">Complete:</dt><dd>{q.completed ?? 0}</dd>
             </dl>

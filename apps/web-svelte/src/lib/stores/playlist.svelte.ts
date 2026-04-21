@@ -31,7 +31,7 @@ function getEntityHref(item: CollectionItemDto): string {
       return `/galleries/${item.entityId}`;
     case "image":
       return `/images/${item.entityId}`;
-    case "audio_track":
+    case "audio-track":
       return `/audio/tracks/${item.entityId}`;
     default:
       return `/`;

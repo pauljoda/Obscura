@@ -35,7 +35,8 @@
 
   // Group performers alphabetically
   const grouped = $derived.by(() => {
-    const map = new Map<string, typeof data.performers>();
+    type Perf = (typeof data.performers)[number];
+    const map = new Map<string, Perf[]>();
     for (const p of data.performers) {
       const first = (p.name?.[0] ?? "?").toUpperCase();
       const key = /[A-Z]/.test(first) ? first : "#";

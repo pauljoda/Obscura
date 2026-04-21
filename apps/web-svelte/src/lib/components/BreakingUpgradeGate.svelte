@@ -11,8 +11,8 @@
   let { awaitingConsent, children }: Props = $props();
 
   type State = "ready" | "accepting" | "restarting";
-  let state = $state<State>("ready");
-  let error = $state<string | null>(null);
+  let phase: State = $state("ready");
+  let error: string | null = $state(null);
 
   const GITHUB_URL = "https://github.com/pauljoda/obscura";
 
@@ -30,11 +30,11 @@
   }
 
   async function handleAccept() {
-    state = "accepting";
+    phase = "accepting";
     error = null;
     try {
       await acceptBreakingGate();
-      state = "restarting";
+      phase = "restarting";
       const deadline = Date.now() + 60_000;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 2000));
@@ -50,7 +50,7 @@
       }
       error = "Upgrade took longer than expected. Refresh the page in a minute.";
     } catch (err) {
-      state = "ready";
+      phase = "ready";
       error = err instanceof Error ? err.message : String(err);
     }
   }
@@ -85,12 +85,12 @@
         <button
           type="button"
           onclick={handleAccept}
-          disabled={state === "accepting" || state === "restarting"}
+          disabled={phase === "accepting" || phase === "restarting"}
           class="px-4 py-2 border border-border-accent bg-gradient-to-r from-accent-900 to-accent-800 text-accent-100 font-medium disabled:opacity-40 transition-all duration-fast"
         >
-          {#if state === "accepting"}
+          {#if phase === "accepting"}
             Applying…
-          {:else if state === "restarting"}
+          {:else if phase === "restarting"}
             Restarting API…
           {:else}
             Continue &amp; rebuild library
