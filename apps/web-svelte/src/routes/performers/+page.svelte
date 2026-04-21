@@ -1,8 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Plus, Users, Star } from "@lucide/svelte";
-  import { Button } from "@obscura/ui-svelte";
+  import { Users, Star } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
@@ -106,28 +105,20 @@
 </script>
 
 <svelte:head>
-  <title>Actors — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">
-  <header class="flex items-center justify-between gap-4 flex-wrap">
+  <div class="flex items-start justify-between gap-4">
     <div>
-      <p class="text-kicker text-text-muted">Browse</p>
-      <h1 class="text-h1 text-text-primary">Actors</h1>
-      <p class="text-body text-text-muted mt-1">
-        {data.total} actor{data.total === 1 ? "" : "s"}
-        {#if data.total > data.performers.length}
-          <span class="text-text-disabled">— showing {data.performers.length}</span>
-        {/if}
-      </p>
+      <h1 class="flex items-center gap-2.5">
+        <Users class="h-5 w-5 text-text-accent" />
+        Actors
+      </h1>
+      <p class="mt-1 text-[0.78rem] text-text-muted">Browse actors in your library</p>
     </div>
-    <a href="/performers/new">
-      <Button variant="primary" size="md">
-        <Plus class="h-4 w-4" />
-        New actor
-      </Button>
-    </a>
-  </header>
+    <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
+  </div>
 
   <FilterBar
     {sortOptions}

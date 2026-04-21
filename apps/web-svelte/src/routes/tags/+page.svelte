@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Plus, Tag as TagIcon, Star } from "@lucide/svelte";
-  import { Badge, Button } from "@obscura/ui-svelte";
+  import { Tag as TagIcon, Star } from "@lucide/svelte";
+  import { Badge } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
   import { toApiUrl } from "$lib/api/core";
 
@@ -63,23 +63,16 @@
 </svelte:head>
 
 <div class="space-y-6">
-  <header class="flex items-center justify-between gap-4">
+  <div class="flex items-start justify-between gap-4">
     <div>
-      <p class="text-kicker text-text-muted">Browse</p>
-      <h1 class="text-h1 text-text-primary">Tags</h1>
-      <p class="text-body text-text-muted mt-1">
-        {filtered.length} tag{filtered.length === 1 ? "" : "s"}
-      </p>
+      <h1 class="flex items-center gap-2.5">
+        <TagIcon class="h-5 w-5 text-text-accent" />
+        Tags
+      </h1>
+      <p class="text-text-muted text-[0.78rem] mt-1">Browse tags in your library</p>
     </div>
-    <a href="/tags/new">
-      <Button variant="primary" size="md">
-        {#snippet children()}
-          <Plus class="h-4 w-4" />
-          New tag
-        {/snippet}
-      </Button>
-    </a>
-  </header>
+    <span class="text-mono-sm text-text-disabled mt-1">{filtered.length} total</span>
+  </div>
 
   <FilterBar
     {sortOptions}

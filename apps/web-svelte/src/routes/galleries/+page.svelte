@@ -99,13 +99,16 @@
 </svelte:head>
 
 <div class="space-y-4">
-  <header>
-    <p class="text-kicker text-text-muted">Browse</p>
-    <h1 class="text-h1 text-text-primary">Galleries</h1>
-    <p class="text-body text-text-muted mt-1">
-      {data.total.toLocaleString()} galler{data.total === 1 ? "y" : "ies"}
-    </p>
-  </header>
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="flex items-center gap-2.5">
+        <Layers class="h-5 w-5 text-text-accent" />
+        Galleries
+      </h1>
+      <p class="text-text-muted text-[0.78rem] mt-1">Browse galleries in your library</p>
+    </div>
+    <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
+  </div>
 
   <FilterBar
     viewMode={data.view}

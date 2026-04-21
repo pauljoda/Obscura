@@ -210,22 +210,17 @@
 </svelte:head>
 
 <div class="space-y-4">
-  <header class="flex items-center justify-between gap-4 flex-wrap">
+  <div class="flex items-start justify-between gap-4">
     <div>
-      <p class="text-kicker text-text-muted">Browse</p>
-      <h1 class="text-h1 text-text-primary">Videos</h1>
-      <p class="text-body text-text-muted mt-1">
-        {#if data.view === "series" && !data.seriesId}
-          {data.seriesTotal.toLocaleString()} series
-        {:else}
-          {data.total.toLocaleString()} video{data.total === 1 ? "" : "s"}
-        {/if}
-        {#if data.seriesId}
-          <span class="text-text-disabled">· filtered by series</span>
-        {/if}
+      <h1 class="flex items-center gap-2.5">
+        <Film class="h-5 w-5 text-text-accent" />
+        Videos
+      </h1>
+      <p class="mt-1 text-[0.78rem] text-text-muted">
+        Browse and manage your media library
       </p>
     </div>
-  </header>
+  </div>
 
   <FilterBar
     viewMode={data.view}
