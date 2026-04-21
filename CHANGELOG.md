@@ -46,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - SvelteKit `/scrapers` now redirects to `/plugins` (was a `ComingSoon` stub).
 - SvelteKit `/resolve/review` is fully functional — fetches pending scrape results server-side, renders an accept/reject card per result with the same proposed-field readout as the React app, supports single Accept/Reject, bulk Accept-All, and in-place refresh.
 - SvelteKit `/resolve` is fully functional — 1:1 port of the React `ResolveWorkflow`: paginated unmatched-queue sidebar (Load More Queue), searchable `ProviderSelector` with per-scraper filtering, per-video scrape with optional URL override, auto / by-url / by-title / search-results fallback paths, inline diff card against current metadata with per-field toggles, Accept-with-selected-fields and Reject actions.
+- SvelteKit `/performers/scrape` is fully functional — 1:1 port of `BulkPerformerScrape`: filters performers missing image or gender, runs each through the selected scraper sequentially with Start/Stop, live per-row status (pending/scraping/found/no-result/error/accepted/rejected), per-row Accept/Reject, Auto-accept toggle, Accept-All for found rows, live progress bar.
 
 ### Fixed
 
