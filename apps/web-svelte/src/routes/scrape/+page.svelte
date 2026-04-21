@@ -1,9 +1,9 @@
 <script lang="ts">
-  import ComingSoon from "$lib/components/ComingSoon.svelte";
+  import BulkScrape from "$lib/components/BulkScrape.svelte";
 </script>
 
 <svelte:head>
-  <title>/scrape — Obscura</title>
+  <title>Scrape — Obscura</title>
 </svelte:head>
 
-<ComingSoon route="/scrape" issue="APP-84" />
+<BulkScrape />
