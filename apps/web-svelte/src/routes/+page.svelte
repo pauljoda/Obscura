@@ -204,7 +204,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <Film class="w-5 h-5 text-accent-500" />
-            Recent videos
+            Recent Videos
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each recentVideos as video, i (video.id)}
@@ -242,7 +242,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <Layers class="w-5 h-5 text-accent-500" />
-            Recent galleries
+            Recent Galleries
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each galleries as g (g.id)}
@@ -284,7 +284,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <ImageIcon class="w-5 h-5 text-accent-500" />
-            Recent images
+            Recent Images
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each images as img (img.id)}
@@ -319,7 +319,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <Music class="w-5 h-5 text-accent-500" />
-            Recent audio
+            Recent Audio
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each audioLibraries as a, i (a.id)}
@@ -365,7 +365,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <FolderOpen class="w-5 h-5 text-accent-500" />
-            Recent series
+            Recent Series
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each series as s (s.id)}
@@ -404,7 +404,7 @@
         <section>
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
             <Users class="w-5 h-5 text-accent-500" />
-            Recent actors
+            Recent Performers
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each performers as p (p.id)}
