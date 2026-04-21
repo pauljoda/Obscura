@@ -24,23 +24,35 @@
 </script>
 
 <svelte:head>
-  <title>{t.title} — Track — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="max-w-3xl space-y-5">
-  <header class="flex items-start gap-3">
-    <Music class="h-8 w-8 text-accent-500 shrink-0 mt-1" />
+  <div class="flex items-start gap-3">
     <div class="flex-1 min-w-0 space-y-1">
-      <p class="text-kicker text-text-muted">Track</p>
-      <h1 class="text-h1 text-text-primary">{t.title}</h1>
-      <div class="flex flex-wrap items-center gap-2 text-body-sm text-text-muted">
+      <h1 class="flex items-center gap-2.5 text-text-primary">
+        <Music class="h-5 w-5 text-text-accent" />
+        {t.title}
+      </h1>
+      <div class="flex flex-wrap items-center gap-2 text-[0.78rem] text-text-muted">
         {#if t.embeddedArtist}<span>{t.embeddedArtist}</span>{/if}
         {#if t.embeddedAlbum}<span>· {t.embeddedAlbum}</span>{/if}
-        {#if t.libraryId}<a href={`/audio/${t.libraryId}`} class="text-text-accent hover:text-accent-300">in library</a>{/if}
-        {#if t.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
+        {#if t.libraryId}
+          <a
+            href={`/audio/${t.libraryId}`}
+            class="text-text-accent hover:text-accent-300 transition-colors"
+          >
+            · in library
+          </a>
+        {/if}
+        {#if t.isNsfw}
+          <Badge variant="warning">
+            {#snippet children()}NSFW{/snippet}
+          </Badge>
+        {/if}
       </div>
     </div>
-  </header>
+  </div>
 
   <section class="surface-panel p-4">
     {#if streamUrl}

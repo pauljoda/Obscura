@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `apps/web-svelte/` first-pass detail-page ports: `/images/[id]` (full preview + rating stars + details/studio/performers/tags/gallery/file-path sidebar), `/audio/[id]` (cover + Play All/Shuffle + in-page `<audio>` element + per-row track play/pause with active-row highlight), `/audio/tracks/[id]` (icon header + badge snippet parity), and `/collections/[id]` (items fetched via parallel `Promise.all`, bucketed by `entityType` into Videos / Galleries / Images / Tracks `HierarchySection`s with type-appropriate card shapes).
 - `apps/web-svelte/` — SvelteKit app scaffold (Svelte 5 runes, `@sveltejs/adapter-node`, Vitest + `@testing-library/svelte`, dev on port 8009). Builds to `build/index.js` via adapter-node; side-by-side with the Next.js `apps/web/` during the port.
 - `packages/ui-svelte/` — new Svelte component library scaffold. Copies design tokens (`colors`, `spacing`, `typography`, `animation`), pure utilities (`cn`, `buildHierarchyTree`, `parseTrickplayVtt`), and navigation metadata verbatim from `@obscura/ui`. Svelte 5 primitives land in Phase 2.
 - TypeScript path aliases for `@obscura/ui-svelte` in `tsconfig.base.json`.
