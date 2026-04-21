@@ -4,19 +4,74 @@ import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
 
+const VIDEO_LIMIT = 60;
+const GALLERY_LIMIT = 24;
+const AUDIO_LIMIT = 24;
+const SERIES_LIMIT = 24;
+
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`performers:${params.id}`);
   const nsfw = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
   const qs = buildQueryString({ nsfw });
+
+  let performer;
   try {
-    const performer = await serverFetch<Record<string, unknown> & { id: string; name: string }>(
+    performer = await serverFetch<Record<string, unknown> & { id: string; name: string }>(
       `/performers/${encodeURIComponent(params.id)}${qs}`,
       { fetch },
     );
-    return { performer };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (/404/.test(message)) error(404, "Actor not found");
     throw err;
   }
+
+  // Fetch performer appearances in parallel. Errors fall back to empty
+  // collections so a stale link to a broken endpoint still renders the
+  // performer's own profile.
+  const performerFilterQs = buildQueryString({
+    performer: params.id,
+    nsfw,
+    limit: VIDEO_LIMIT,
+    sort: "recent",
+    order: "desc",
+  });
+  const seriesQs = buildQueryString({
+    performer: params.id,
+    nsfw,
+    limit: SERIES_LIMIT,
+  });
+  const galleriesQs = buildQueryString({
+    performer: params.id,
+    nsfw,
+    limit: GALLERY_LIMIT,
+  });
+  const audioQs = buildQueryString({
+    performer: params.id,
+    nsfw,
+    limit: AUDIO_LIMIT,
+  });
+
+  const [videosRes, seriesRes, galleriesRes, audioRes] = await Promise.all([
+    serverFetch<{ videos: unknown[]; total: number }>(`/videos${performerFilterQs}`, { fetch })
+      .catch(() => ({ videos: [], total: 0 })),
+    serverFetch<{ items: unknown[]; total: number }>(`/video-series${seriesQs}`, { fetch })
+      .catch(() => ({ items: [], total: 0 })),
+    serverFetch<{ galleries: unknown[]; total: number }>(`/galleries${galleriesQs}`, { fetch })
+      .catch(() => ({ galleries: [], total: 0 })),
+    serverFetch<{ items: unknown[]; total: number }>(`/audio-libraries${audioQs}`, { fetch })
+      .catch(() => ({ items: [], total: 0 })),
+  ]);
+
+  return {
+    performer,
+    videos: videosRes.videos,
+    totalVideos: videosRes.total,
+    series: seriesRes.items,
+    totalSeries: seriesRes.total,
+    galleries: galleriesRes.galleries,
+    totalGalleries: galleriesRes.total,
+    audioLibraries: audioRes.items,
+    totalAudioLibraries: audioRes.total,
+  };
 };
