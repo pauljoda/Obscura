@@ -390,8 +390,10 @@
           </HierarchySection>
         {/if}
 
-        <!-- Seasons -->
-        {#if series.renderingMode === "seasons" && series.seasons.length > 0}
+        <!-- Seasons — only when no season is active. Clicking a season
+             stays on the same series URL but adds `?season=N`, matching
+             the React client-side drill-down. -->
+        {#if series.renderingMode === "seasons" && series.seasons.length > 0 && data.activeSeasonNumber == null}
           <HierarchySection title="Seasons">
             {#snippet children()}
               <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -399,7 +401,7 @@
                   {@const label = season.seasonNumber === 0 ? "Specials" : `Season ${season.seasonNumber}`}
                   {@const poster = toApiUrl(season.posterPath ?? season.previewThumbnailPath)}
                   <a
-                    href={`/videos?view=series&series=${season.id}`}
+                    href={`/videos?view=series&series=${series.id}&season=${season.seasonNumber}`}
                     class="group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent"
                   >
                     <div class="relative aspect-[2/3] bg-surface-2">
@@ -424,8 +426,24 @@
           </HierarchySection>
         {/if}
 
-        <!-- Videos under the active series -->
-        <HierarchySection title={entityTerms.videos}>
+        <!-- Videos under the active series (or a specific season). -->
+        <HierarchySection
+          title={data.activeSeasonNumber != null
+            ? data.activeSeasonNumber === 0
+              ? "Specials"
+              : `Season ${data.activeSeasonNumber}`
+            : entityTerms.videos}
+        >
+          {#snippet action()}
+            {#if data.activeSeasonNumber != null}
+              <a
+                href={`/videos?view=series&series=${series.id}`}
+                class="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
+              >
+                ← All seasons
+              </a>
+            {/if}
+          {/snippet}
           {#snippet children()}
             {#if data.videos.length === 0}
               <div class="surface-panel p-8 text-center">

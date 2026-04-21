@@ -1109,10 +1109,14 @@
   >
     {#if src || directSrc}
       <!-- svelte-ignore a11y_media_has_caption -->
+      <!-- Cap the player's width off the viewport height so the scrub /
+           play / volume row always stays inside the fold. Without this,
+           a 16:9 aspect with w-full on a wide desktop window pushes the
+           controls below the viewport and the player appears broken. -->
       <video
         bind:this={videoEl}
         {poster}
-        class="aspect-video w-full bg-black"
+        class="aspect-video w-full max-w-[calc((100dvh-14rem)*16/9)] mx-auto bg-black"
         onclick={togglePlay}
         playsinline
         crossorigin="anonymous"

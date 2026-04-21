@@ -14,6 +14,9 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
 
   const seriesParam = url.searchParams.get("series");
+  const seasonRaw = url.searchParams.get("season");
+  const seasonNumber =
+    seasonRaw != null && /^\d+$/.test(seasonRaw) ? seasonRaw : undefined;
   const search = url.searchParams.get("search") ?? undefined;
   const sort = url.searchParams.get("sort") ?? "recent";
   const orderRaw = url.searchParams.get("order");
@@ -43,6 +46,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
           sort,
           order,
           videoSeriesId: seriesParam ?? undefined,
+          seasonNumber,
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
           nsfw: nsfwMode,
@@ -78,6 +82,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     page,
     pageSize: PAGE_SIZE,
     seriesId: seriesParam ?? null,
+    activeSeasonNumber: seasonNumber != null ? Number(seasonNumber) : null,
     search: search ?? "",
     sort,
     order,
