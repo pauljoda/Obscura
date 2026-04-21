@@ -12,10 +12,10 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "recent", label: "Recently added" },
-    { value: "date", label: "Gallery date" },
+    { value: "recent", label: "Recently Added" },
+    { value: "date", label: "Gallery Date" },
     { value: "title", label: "Title A–Z" },
-    { value: "imageCount", label: "Image count" },
+    { value: "imageCount", label: "Image Count" },
     { value: "rating", label: "Rating" },
   ];
 
@@ -30,6 +30,60 @@
     void goto(qs ? `/galleries?${qs}` : "/galleries", { keepFocus: true, noScroll: true });
   }
 
+  const FILTER_KEYS = ["studio", "performer", "tag", "ratingMin"] as const;
+  type FilterKey = (typeof FILTER_KEYS)[number];
+
+  function filterLabel(key: FilterKey): string {
+    switch (key) {
+      case "studio":
+        return "Studio";
+      case "performer":
+        return "Performer";
+      case "tag":
+        return "Tag";
+      case "ratingMin":
+        return "Min Rating";
+    }
+  }
+
+  const activeFilters = $derived(
+    FILTER_KEYS.flatMap((key) => {
+      const raw = page.url.searchParams.getAll(key);
+      return raw.map((value) => ({ label: filterLabel(key), value, type: key }));
+    }),
+  );
+
+  function onAddFilter(type: string, _label: string, value: string) {
+    const params = new URLSearchParams(page.url.searchParams);
+    if (type === "ratingMin") params.set(type, value);
+    else {
+      const existing = params.getAll(type);
+      if (!existing.includes(value)) params.append(type, value);
+    }
+    params.delete("page");
+    void goto(`/galleries?${params.toString()}`, { keepFocus: true, noScroll: true });
+  }
+
+  function onRemoveFilter(index: number) {
+    const f = activeFilters[index];
+    if (!f) return;
+    const params = new URLSearchParams(page.url.searchParams);
+    const remaining = params.getAll(f.type).filter((v) => v !== f.value);
+    params.delete(f.type);
+    for (const v of remaining) params.append(f.type, v);
+    params.delete("page");
+    const qs = params.toString();
+    void goto(qs ? `/galleries?${qs}` : "/galleries", { keepFocus: true, noScroll: true });
+  }
+
+  function onClearFiltersAndSort() {
+    void goto("/galleries", { keepFocus: true, noScroll: true });
+  }
+
+  const canClearFiltersAndSort = $derived(
+    activeFilters.length > 0 || data.sort !== "recent" || data.order !== "desc" || !!data.search,
+  );
+
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
@@ -41,7 +95,7 @@
 </script>
 
 <svelte:head>
-  <title>Galleries — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-4">
@@ -62,6 +116,11 @@
     onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
   />
 
   {#if data.galleries.length === 0}

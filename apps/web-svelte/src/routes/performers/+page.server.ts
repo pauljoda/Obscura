@@ -8,8 +8,9 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
 
   const params = {
     search: url.searchParams.get("search") ?? undefined,
-    sort: url.searchParams.get("sort") ?? undefined,
-    order: url.searchParams.get("order") ?? undefined,
+    // Default to videoCount to match the React /performers landing sort.
+    sort: url.searchParams.get("sort") ?? "videoCount",
+    order: url.searchParams.get("order") ?? "desc",
     gender: url.searchParams.get("gender") ?? undefined,
     favorite: url.searchParams.get("favorite") ?? undefined,
     country: url.searchParams.get("country") ?? undefined,

@@ -2,8 +2,11 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { Plus, Users, Star } from "@lucide/svelte";
-  import { Badge, Button } from "@obscura/ui-svelte";
-  import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
+  import { Button } from "@obscura/ui-svelte";
+  import FilterBar, {
+    type SortDir,
+    type ActiveFilter,
+  } from "$lib/components/FilterBar.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import { toApiUrl } from "$lib/api/core";
@@ -12,13 +15,13 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "recent", label: "Recently added" },
+    { value: "videoCount", label: "Video Count" },
     { value: "name", label: "Name A–Z" },
-    { value: "videoCount", label: "Most videos" },
+    { value: "recent", label: "Recently Added" },
     { value: "rating", label: "Rating" },
   ];
 
-  const sortBy = $derived(page.url.searchParams.get("sort") ?? "recent");
+  const sortBy = $derived(page.url.searchParams.get("sort") ?? "videoCount");
   const sortDir: SortDir = $derived(
     page.url.searchParams.get("order") === "asc" ? "asc" : "desc",
   );
@@ -32,6 +35,61 @@
     const qs = params.toString();
     void goto(qs ? `/performers?${qs}` : "/performers", { keepFocus: true, noScroll: true });
   }
+
+  const FILTER_KEYS = ["gender", "country", "favorite", "hasImage", "ratingMin"] as const;
+  type FilterKey = (typeof FILTER_KEYS)[number];
+
+  function filterLabel(key: FilterKey): string {
+    switch (key) {
+      case "gender":
+        return "Gender";
+      case "country":
+        return "Country";
+      case "favorite":
+        return "Favorite";
+      case "hasImage":
+        return "Photo";
+      case "ratingMin":
+        return "Min Rating";
+    }
+  }
+
+  const activeFilters = $derived<ActiveFilter[]>(
+    FILTER_KEYS.flatMap((key) => {
+      const raw = page.url.searchParams.getAll(key);
+      return raw.map((value) => ({ label: filterLabel(key), value, type: key }));
+    }),
+  );
+
+  function onAddFilter(type: string, _label: string, value: string) {
+    const params = new URLSearchParams(page.url.searchParams);
+    if (type === "favorite" || type === "hasImage" || type === "ratingMin") {
+      params.set(type, value);
+    } else {
+      const existing = params.getAll(type);
+      if (!existing.includes(value)) params.append(type, value);
+    }
+    void goto(`/performers?${params.toString()}`, { keepFocus: true, noScroll: true });
+  }
+
+  function onRemoveFilter(index: number) {
+    const f = activeFilters[index];
+    if (!f) return;
+    const params = new URLSearchParams(page.url.searchParams);
+    const remaining = params.getAll(f.type!).filter((v) => v !== f.value);
+    params.delete(f.type!);
+    for (const v of remaining) params.append(f.type!, v);
+    const qs = params.toString();
+    void goto(qs ? `/performers?${qs}` : "/performers", { keepFocus: true, noScroll: true });
+  }
+
+  function onClearFiltersAndSort() {
+    void goto("/performers", { keepFocus: true, noScroll: true });
+  }
+
+  const canClearFiltersAndSort = $derived(
+    activeFilters.length > 0 || sortBy !== "videoCount" || sortDir !== "desc",
+  );
 
   // Group performers alphabetically
   const grouped = $derived.by(() => {
@@ -79,6 +137,11 @@
     searchQuery={page.url.searchParams.get("search") ?? ""}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     showViewToggle={false}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
   />
 
   {#if data.performers.length === 0}

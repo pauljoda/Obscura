@@ -1,13 +1,66 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { Plus, Building2, Star } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
+  import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
   import { toApiUrl } from "$lib/api/core";
 
   let { data } = $props();
+
+  const sortOptions = [
+    { value: "name", label: "Name" },
+    { value: "videoCount", label: "Video Count" },
+    { value: "rating", label: "Rating" },
+  ];
+
+  const sortBy = $derived(page.url.searchParams.get("sort") ?? "name");
+  const sortDir: SortDir = $derived(
+    page.url.searchParams.get("order") === "desc" ? "desc" : "asc",
+  );
+  const searchQuery = $derived(page.url.searchParams.get("search") ?? "");
+
+  function updateUrl(patch: Record<string, string | null | undefined>) {
+    const params = new URLSearchParams(page.url.searchParams);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null || v === undefined || v === "") params.delete(k);
+      else params.set(k, v);
+    }
+    const qs = params.toString();
+    void goto(qs ? `/studios?${qs}` : "/studios", { keepFocus: true, noScroll: true });
+  }
+
+  function onClearFiltersAndSort() {
+    void goto("/studios", { keepFocus: true, noScroll: true });
+  }
+
+  const canClearFiltersAndSort = $derived(
+    !!searchQuery || sortBy !== "name" || sortDir !== "asc",
+  );
+
+  // Client-side filter + sort — the server returns the full list.
+  const filtered = $derived.by(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = data.studios;
+    if (q) list = list.filter((s) => s.name.toLowerCase().includes(q));
+    const sign = sortDir === "asc" ? 1 : -1;
+    list = [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "videoCount":
+          return sign * ((a.videoCount ?? 0) - (b.videoCount ?? 0));
+        case "rating":
+          return sign * ((a.rating ?? 0) - (b.rating ?? 0));
+        case "name":
+        default:
+          return sign * a.name.localeCompare(b.name);
+      }
+    });
+    return list;
+  });
 </script>
 
 <svelte:head>
-  <title>Studios — Obscura</title>
+  <title>Obscura</title>
 </svelte:head>
 
 <div class="space-y-6">
@@ -16,25 +69,41 @@
       <p class="text-kicker text-text-muted">Browse</p>
       <h1 class="text-h1 text-text-primary">Studios</h1>
       <p class="text-body text-text-muted mt-1">
-        {data.studios.length} studio{data.studios.length === 1 ? "" : "s"}
+        {filtered.length} studio{filtered.length === 1 ? "" : "s"}
       </p>
     </div>
     <a href="/studios/new">
       <Button variant="primary" size="md">
-        <Plus class="h-4 w-4" />
-        New studio
+        {#snippet children()}
+          <Plus class="h-4 w-4" />
+          New studio
+        {/snippet}
       </Button>
     </a>
   </header>
 
-  {#if data.studios.length === 0}
+  <FilterBar
+    {sortOptions}
+    {sortBy}
+    {sortDir}
+    onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? sortDir })}
+    {searchQuery}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    showViewToggle={false}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
+  />
+
+  {#if filtered.length === 0}
     <div class="surface-panel p-8 text-center">
       <Building2 class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
-      <p class="text-body text-text-muted">No studios yet.</p>
+      <p class="text-body text-text-muted">
+        {searchQuery ? "No studios match that search." : "No studios yet."}
+      </p>
     </div>
   {:else}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {#each data.studios as studio (studio.id)}
+      {#each filtered as studio (studio.id)}
         <a
           href={`/studios/${encodeURIComponent(studio.name)}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
@@ -54,23 +123,39 @@
               </div>
             {/if}
             {#if studio.favorite}
-              <Star class="absolute top-1.5 right-1.5 h-3 w-3 text-accent-500 fill-current drop-shadow-[0_0_4px_rgba(199,155,92,0.5)]" />
+              <Star
+                class="absolute top-1.5 right-1.5 h-3 w-3 text-accent-500 fill-current drop-shadow-[0_0_4px_rgba(199,155,92,0.5)]"
+              />
             {/if}
           </div>
           <div class="p-2.5 space-y-1.5">
             <h4 class="truncate text-body font-medium text-text-primary">{studio.name}</h4>
             <div class="flex flex-wrap items-center gap-1">
               {#if studio.videoCount > 0}
-                <Badge>{studio.videoCount} video{studio.videoCount === 1 ? "" : "s"}</Badge>
+                <Badge>
+                  {#snippet children()}
+                    {studio.videoCount} video{studio.videoCount === 1 ? "" : "s"}
+                  {/snippet}
+                </Badge>
               {/if}
               {#if studio.imageAppearanceCount > 0}
-                <Badge>{studio.imageAppearanceCount} image{studio.imageAppearanceCount === 1 ? "" : "s"}</Badge>
+                <Badge>
+                  {#snippet children()}
+                    {studio.imageAppearanceCount} image{studio.imageAppearanceCount === 1 ? "" : "s"}
+                  {/snippet}
+                </Badge>
               {/if}
               {#if studio.audioLibraryCount > 0}
-                <Badge>{studio.audioLibraryCount} album{studio.audioLibraryCount === 1 ? "" : "s"}</Badge>
+                <Badge>
+                  {#snippet children()}
+                    {studio.audioLibraryCount} album{studio.audioLibraryCount === 1 ? "" : "s"}
+                  {/snippet}
+                </Badge>
               {/if}
               {#if studio.isNsfw}
-                <Badge variant="warning">NSFW</Badge>
+                <Badge variant="warning">
+                  {#snippet children()}NSFW{/snippet}
+                </Badge>
               {/if}
             </div>
           </div>
