@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - SvelteKit `/videos/[id]` detail page now exposes all five tabs in parity with the React app: **Details / Metadata / Markers / Transcript / Files**. New components `VideoTranscriptPanel.svelte` (track list, upload, extract, cue scroll-into-view with 3-second user-scroll cooldown, optional dock next to the video), `VideoEdit.svelte` (view + edit modes, studio / performer / tag autocomplete via `<datalist>`, chip-style adds, thumbnail upload + "use current frame" capture + revert-to-generated, episode season/episode/absolute for series), and a standalone `/videos/[id]/edit` route.
 - SvelteKit `/scrapers` now redirects to `/plugins` (was a `ComingSoon` stub).
 - SvelteKit `/resolve/review` is fully functional — fetches pending scrape results server-side, renders an accept/reject card per result with the same proposed-field readout as the React app, supports single Accept/Reject, bulk Accept-All, and in-place refresh.
+- SvelteKit `/resolve` is fully functional — 1:1 port of the React `ResolveWorkflow`: paginated unmatched-queue sidebar (Load More Queue), searchable `ProviderSelector` with per-scraper filtering, per-video scrape with optional URL override, auto / by-url / by-title / search-results fallback paths, inline diff card against current metadata with per-field toggles, Accept-with-selected-fields and Reject actions.
 
 ### Fixed
 
