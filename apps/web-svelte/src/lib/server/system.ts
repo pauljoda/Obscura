@@ -20,15 +20,17 @@ export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
 }
 
 export async function fetchInstalledScrapers(options?: { fetch?: typeof fetch }) {
-  return serverFetch<{ packages: ScraperPackageDto[] }>("/scrapers/packages", {
-    fetch: options?.fetch,
-  });
+  const f = options?.fetch ?? fetch;
+  const res = await f("/api/scrapers/packages");
+  if (!res.ok) throw new Error(`scrapers packages ${res.status}`);
+  return res.json() as Promise<{ packages: ScraperPackageDto[] }>;
 }
 
 export async function fetchStashBoxEndpointsServer(options?: { fetch?: typeof fetch }) {
-  return serverFetch<{ endpoints: StashBoxEndpointDto[] }>("/stashbox-endpoints", {
-    fetch: options?.fetch,
-  });
+  const f = options?.fetch ?? fetch;
+  const res = await f("/api/stashbox-endpoints");
+  if (!res.ok) throw new Error(`stashbox endpoints ${res.status}`);
+  return res.json() as Promise<{ endpoints: StashBoxEndpointDto[] }>;
 }
 
 export async function fetchJobsDashboard(options?: { fetch?: typeof fetch; nsfwMode?: string }) {

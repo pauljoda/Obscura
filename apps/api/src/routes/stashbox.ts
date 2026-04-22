@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { mapStashBoxEndpointList } from "@obscura/app-core";
 import { db, schema } from "../db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import {
@@ -89,22 +90,7 @@ export async function stashboxRoutes(app: FastifyInstance) {
       .from(stashBoxEndpoints)
       .orderBy(stashBoxEndpoints.name);
 
-    return {
-      endpoints: rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        endpoint: r.endpoint,
-        apiKeyPreview: maskApiKey(r.apiKey),
-        enabled: r.enabled,
-        // StashBox is the porn-metadata-exchange protocol used by
-        // StashDB, FansDB, ThePornDB, MetadataAPI, etc. Every endpoint
-        // reachable via this interface is treated as NSFW so the SFW
-        // mode filter hides them from identify / bulk-scrape pickers.
-        isNsfw: true,
-        createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
-      })),
-    };
+    return mapStashBoxEndpointList(rows);
   });
 
   // ─── POST /stashbox-endpoints ────────────────────────────────────

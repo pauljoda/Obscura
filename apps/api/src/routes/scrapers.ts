@@ -7,6 +7,7 @@ import { unzipSync } from "fflate";
 import { db, schema } from "../db";
 import { eq, desc, ilike, and, sql } from "drizzle-orm";
 import { getCacheRootDir } from "@obscura/media-core";
+import { mapInstalledScraperPackages } from "@obscura/app-core";
 import {
   parseScraperYaml,
   scrapeScene,
@@ -242,7 +243,7 @@ export async function scrapersRoutes(app: FastifyInstance) {
       .from(scraperPackages)
       .orderBy(scraperPackages.name);
 
-    return { packages };
+    return mapInstalledScraperPackages(packages);
   });
 
   // ─── POST /scrapers/packages ────────────────────────────────────
