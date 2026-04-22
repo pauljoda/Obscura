@@ -1,28 +1,28 @@
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import {
+  browseDirectories,
+  createLibraryRootWrite,
+  deleteLibraryRootWrite,
+  LibraryRootNotFoundError,
+  listLibraryRootsRead,
   loadLibraryConfig,
   resolveClientInfo,
+  updateLibraryRootWrite,
   updateLibrarySettingsWrite,
+  type CreateLibraryRootBody,
   type LibrarySettingsWritePayload,
+  type ListLibrariesQuery,
+  type UpdateLibraryRootBody,
 } from "@obscura/app-core";
-import { and, asc, eq, or, type SQL } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
-  browseDirectories,
   ensureLibrarySettingsRow,
   getStorageStats,
-  verifyDirectory,
 } from "../lib/library";
-import { syncMediaNsfwWithLibraryRoot } from "../lib/library-root-nsfw-sync";
 
-const { libraryRoots, librarySettings } = schema;
-
-function labelForPath(targetPath: string) {
-  const base = path.basename(targetPath);
-  return base || targetPath;
-}
+const { libraryRoots } = schema;
 
 export async function settingsRoutes(app: FastifyInstance) {
   app.get("/settings/library", async () => {
@@ -42,176 +42,66 @@ export async function settingsRoutes(app: FastifyInstance) {
   });
 
   app.get("/libraries", async (request) => {
-    const query = request.query as {
-      scanVideos?: string;
-      scanImages?: string;
-      scanAudio?: string;
-      enabled?: string;
-    };
-    const asBool = (raw?: string) => {
-      if (raw == null) return undefined;
-      if (raw === "true" || raw === "1") return true;
-      if (raw === "false" || raw === "0") return false;
-      return undefined;
-    };
-    const filters: SQL[] = [];
-    // The legacy `scanVideos` query param is preserved as a client alias
-    // that maps to the new `scanMovies` + `scanSeries` booleans. Passing
-    // `?scanVideos=true` filters for roots with at least one of the two
-    // video flags enabled; `?scanVideos=false` requires both to be off.
-    const scanVideosAlias = asBool(query.scanVideos);
-    const scanImages = asBool(query.scanImages);
-    const scanAudio = asBool(query.scanAudio);
-    const enabled = asBool(query.enabled);
-    if (scanVideosAlias === true) {
-      filters.push(
-        or(
-          eq(libraryRoots.scanMovies, true),
-          eq(libraryRoots.scanSeries, true),
-        )!,
-      );
-    } else if (scanVideosAlias === false) {
-      filters.push(
-        and(
-          eq(libraryRoots.scanMovies, false),
-          eq(libraryRoots.scanSeries, false),
-        )!,
-      );
-    }
-    if (scanImages != null) filters.push(eq(libraryRoots.scanImages, scanImages));
-    if (scanAudio != null) filters.push(eq(libraryRoots.scanAudio, scanAudio));
-    if (enabled != null) filters.push(eq(libraryRoots.enabled, enabled));
-    const whereClause = filters.length > 0 ? and(...filters) : undefined;
-    const roots = await db
-      .select()
-      .from(libraryRoots)
-      .where(whereClause)
-      .orderBy(asc(libraryRoots.path));
-    return { roots };
+    return listLibraryRootsRead(db, request.query as ListLibrariesQuery);
   });
 
   app.get("/libraries/browse", async (request) => {
     const query = request.query as { path?: string };
-
     try {
       return await browseDirectories(query.path);
     } catch (error) {
-      throw new AppError(400, error instanceof Error ? error.message : "Unable to browse directory");
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : "Unable to browse directory",
+      );
     }
   });
 
   app.post("/libraries", async (request, reply) => {
-    const body = request.body as {
-      path: string;
-      label?: string;
-      enabled?: boolean;
-      recursive?: boolean;
-      scanVideos?: boolean;
-      scanMovies?: boolean;
-      scanSeries?: boolean;
-      scanImages?: boolean;
-      scanAudio?: boolean;
-    };
-
     try {
-      const resolvedPath = path.resolve(body.path);
-      await verifyDirectory(resolvedPath);
-
-      // The legacy `scanVideos` body param is an alias that enables
-      // both scan_movies and scan_series (or disables both). Explicit
-      // scanMovies / scanSeries overrides still apply on top.
-      const videoAlias = body.scanVideos;
-      const [created] = await db
-        .insert(libraryRoots)
-        .values({
-          path: resolvedPath,
-          label: body.label?.trim() || labelForPath(resolvedPath),
-          enabled: body.enabled ?? true,
-          recursive: body.recursive ?? true,
-          scanMovies: body.scanMovies ?? videoAlias ?? true,
-          scanSeries: body.scanSeries ?? videoAlias ?? true,
-          scanImages: body.scanImages ?? true,
-          scanAudio: body.scanAudio ?? true,
-        })
-        .returning();
-
+      const created = await createLibraryRootWrite(
+        db,
+        request.body as CreateLibraryRootBody,
+      );
       reply.code(201);
       return created;
     } catch (error) {
-      throw new AppError(400, error instanceof Error ? error.message : "Unable to add library root");
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : "Unable to add library root",
+      );
     }
   });
 
-  app.patch("/libraries/:id", async (request, reply) => {
+  app.patch("/libraries/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const body = request.body as {
-      path?: string;
-      label?: string;
-      enabled?: boolean;
-      recursive?: boolean;
-      scanVideos?: boolean;
-      scanMovies?: boolean;
-      scanSeries?: boolean;
-      scanImages?: boolean;
-      scanAudio?: boolean;
-      isNsfw?: boolean;
-    };
-
-    const [existing] = await db.select().from(libraryRoots).where(eq(libraryRoots.id, id));
-    if (!existing) throw new AppError(404, "Library root not found");
-
     try {
-      const nextPath = body.path ? path.resolve(body.path) : existing.path;
-      if (body.path) {
-        await verifyDirectory(nextPath);
-      }
-
-      // Legacy `scanVideos` body param is still honored as a paired
-      // alias that flips both scan_movies + scan_series. Explicit
-      // individual flags win when supplied.
-      const videoAlias = body.scanVideos;
-
-      const [updated] = await db
-        .update(libraryRoots)
-        .set({
-          path: nextPath,
-          label: body.label?.trim() || existing.label,
-          enabled: body.enabled ?? existing.enabled,
-          recursive: body.recursive ?? existing.recursive,
-          scanMovies:
-            body.scanMovies ?? videoAlias ?? existing.scanMovies,
-          scanSeries:
-            body.scanSeries ?? videoAlias ?? existing.scanSeries,
-          scanImages: body.scanImages ?? existing.scanImages,
-          scanAudio: body.scanAudio ?? existing.scanAudio,
-          isNsfw: body.isNsfw ?? existing.isNsfw,
-          updatedAt: new Date(),
-        })
-        .where(eq(libraryRoots.id, id))
-        .returning();
-
-      if (updated && body.isNsfw !== undefined) {
-        const prevNsfw = existing.isNsfw === true;
-        const nextNsfw = updated.isNsfw === true;
-        if (prevNsfw !== nextNsfw) {
-          await syncMediaNsfwWithLibraryRoot(db, updated.path, nextNsfw);
-        }
-      }
-
-      return updated;
+      return await updateLibraryRootWrite(
+        db,
+        id,
+        request.body as UpdateLibraryRootBody,
+      );
     } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError(400, error instanceof Error ? error.message : "Unable to update library root");
+      if (error instanceof LibraryRootNotFoundError) {
+        throw new AppError(404, error.message);
+      }
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : "Unable to update library root",
+      );
     }
   });
 
-  app.delete("/libraries/:id", async (request, reply) => {
+  app.delete("/libraries/:id", async (request) => {
     const { id } = request.params as { id: string };
-    const [deleted] = await db.delete(libraryRoots).where(eq(libraryRoots.id, id)).returning();
-
-    if (!deleted) throw new AppError(404, "Library root not found");
-
-    return { ok: true };
+    try {
+      return await deleteLibraryRootWrite(db, id);
+    } catch (error) {
+      if (error instanceof LibraryRootNotFoundError) {
+        throw new AppError(404, error.message);
+      }
+      throw error;
+    }
   });
 
   // ─── GET /client-info ─────────────────────────────────────────
