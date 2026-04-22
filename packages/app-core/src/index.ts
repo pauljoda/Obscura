@@ -1,6 +1,7 @@
 export * from "./appearance-count-expressions";
 export * from "./breaking-gate";
 export * from "./changelog";
+export * from "./jobs-reads";
 export * from "./library-config";
 export * from "./network";
 export * from "./performer-reads";

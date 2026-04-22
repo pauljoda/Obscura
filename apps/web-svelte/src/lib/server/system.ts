@@ -6,8 +6,6 @@ import type {
   StashBoxEndpointDto,
   StorageStatsDto,
 } from "@obscura/contracts";
-import { serverFetch } from "./core";
-
 export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
   const f = options?.fetch ?? fetch;
   const res = await f("/api/settings/library");
@@ -33,9 +31,17 @@ export async function fetchStashBoxEndpointsServer(options?: { fetch?: typeof fe
   return res.json() as Promise<{ endpoints: StashBoxEndpointDto[] }>;
 }
 
-export async function fetchJobsDashboard(options?: { fetch?: typeof fetch; nsfwMode?: string }) {
-  const qs = options?.nsfwMode ? `?nsfw=${encodeURIComponent(options.nsfwMode)}` : "";
-  return serverFetch<JobsDashboardDto>(`/jobs${qs}`, { fetch: options?.fetch });
+export async function fetchJobsDashboard(options?: {
+  fetch?: typeof fetch;
+  nsfwMode?: string;
+}) {
+  const f = options?.fetch ?? fetch;
+  const qs = options?.nsfwMode
+    ? `?nsfw=${encodeURIComponent(options.nsfwMode)}`
+    : "";
+  const res = await f(`/api/jobs${qs}`);
+  if (!res.ok) throw new Error(`jobs dashboard ${res.status}`);
+  return res.json() as Promise<JobsDashboardDto>;
 }
 
 export async function fetchInstalledPlugins(options?: { fetch?: typeof fetch }) {
