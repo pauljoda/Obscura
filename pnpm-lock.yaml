@@ -178,15 +178,24 @@ importers:
       '@obscura/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@obscura/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@obscura/ui-svelte':
         specifier: workspace:*
         version: link:../../packages/ui-svelte
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
       hls.js:
         specifier: ^1.6.15
         version: 1.6.15
       jassub:
         specifier: 2.4.2
         version: 2.4.2
+      postgres:
+        specifier: ^3.4.8
+        version: 3.4.8
     devDependencies:
       '@fontsource-variable/inter':
         specifier: ^5.2.5

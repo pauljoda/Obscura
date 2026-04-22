@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- A shared DB runtime in `@obscura/db` (`createDbRuntime`) now owns the connection-string lifecycle for both Fastify (`apps/api/src/db`) and the SvelteKit server (`apps/web-svelte/src/lib/server/db.ts`). Both apps reconfigure, close, and swap typed Drizzle + `postgres` clients through the same helper so the Svelte app can start owning backend read paths without duplicating the bootstrap code.
 - The breaking-upgrade gate helpers now live in `@obscura/app-core`, and the SvelteKit app now serves local `/api/system/status` and `/api/system/breaking-gate/accept` routes so the root layout and upgrade gate no longer depend on Fastify for that shell state.
 - The SvelteKit app now serves `/api/changelog` and `/api/client-info` locally, backed by a new shared `@obscura/app-core` package that both SvelteKit and Fastify import so the first backend slice can move without forking behavior.
 - Browser parity coverage for the active Svelte migration routes. Added `e2e/parity.spec.ts`, `e2e/parity/route-matrix.ts`, a reusable `e2e/fixture-library.ts`, root `test:parity` / `test:parity:update` scripts, a dashboard load check, and committed Playwright screenshot baselines for videos, video detail, search, plugins, settings, jobs, and identify in both the live app and the SvelteKit port.

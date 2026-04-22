@@ -8,3 +8,5 @@
  */
 export * as schema from "./schema";
 export type { AppDb } from "./types";
+export { createDbRuntime } from "./runtime";
+export type { DbRuntime, DbRuntimeDeps } from "./runtime";

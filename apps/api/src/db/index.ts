@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { createDbRuntime } from "@obscura/db";
 import * as schema from "./schema";
 
 const DEFAULT_DATABASE_URL =
@@ -8,51 +9,49 @@ const DEFAULT_DATABASE_URL =
 export type ApiQueryClient = ReturnType<typeof postgres>;
 export type ApiDatabase = ReturnType<typeof drizzle<typeof schema>>;
 
-type DatabaseState = {
-  connectionString: string;
-  queryClient: ApiQueryClient;
-  db: ApiDatabase;
-};
-
 function resolveDatabaseUrl() {
   return process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 }
 
-function createDatabaseState(connectionString: string): DatabaseState {
-  const queryClient = postgres(connectionString);
-  return {
-    connectionString,
-    queryClient,
-    db: drizzle(queryClient, { schema }),
-  };
+const runtime = createDbRuntime<ApiQueryClient, ApiDatabase>({
+  createQueryClient: (url) => postgres(url),
+  createDatabase: (client) => drizzle(client, { schema }),
+  closeQueryClient: (client) => client.end({ timeout: 5 }),
+});
+
+// Eagerly configure with the default/env connection so legacy `db` /
+// `queryClient` exports are usable synchronously at import time.
+function syncConfigure(connectionString: string) {
+  // `configure` is async only because of optional previous-client cleanup.
+  // The first call has no previous client, so we can safely discard the
+  // returned promise — nothing awaits close here.
+  void runtime.configure(connectionString);
 }
 
-let state = createDatabaseState(resolveDatabaseUrl());
+syncConfigure(resolveDatabaseUrl());
 
-export let queryClient = state.queryClient;
-export let db = state.db;
+export let queryClient: ApiQueryClient = runtime.getClient();
+export let db: ApiDatabase = runtime.getDatabase();
 
 export async function configureDatabase(options?: {
   connectionString?: string;
 }): Promise<void> {
   const nextConnectionString = options?.connectionString ?? resolveDatabaseUrl();
-  if (nextConnectionString === state.connectionString) {
+  if (nextConnectionString === runtime.getConnectionString()) {
     return;
   }
 
-  const previous = state;
-  state = createDatabaseState(nextConnectionString);
-  queryClient = state.queryClient;
-  db = state.db;
-  await previous.queryClient.end({ timeout: 5 });
+  await runtime.configure(nextConnectionString);
+  queryClient = runtime.getClient();
+  db = runtime.getDatabase();
 }
 
 export async function closeDatabase(): Promise<void> {
-  await state.queryClient.end({ timeout: 5 });
+  await runtime.close();
 }
 
 export function getDatabaseUrl() {
-  return state.connectionString;
+  return runtime.getConnectionString() ?? resolveDatabaseUrl();
 }
 
 /**
@@ -63,7 +62,7 @@ export function getDatabaseUrl() {
  * reference would go stale.
  */
 export function getDatabaseClient(): ApiQueryClient {
-  return state.queryClient;
+  return runtime.getClient();
 }
 
 export { schema };
