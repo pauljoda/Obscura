@@ -1,535 +1,111 @@
 /**
- * Performer business logic extracted from route handlers.
- *
- * All functions return plain data objects and throw AppError for
- * HTTP-level error conditions (404, 400, 502, etc.).
+ * Performer business logic — thin Fastify-side shim around
+ * @obscura/app-core helpers.
  */
-import { existsSync } from "node:fs";
-import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
-import path from "node:path";
 import {
-  eq,
-  ilike,
-  or,
-  desc,
-  asc,
-  sql,
-  and,
-  ne,
-  isNotNull,
-  isNull,
-  gte,
-  lte,
-} from "drizzle-orm";
-import { getGeneratedPerformerDir } from "@obscura/media-core";
-import {
+  createPerformerWrite,
+  deletePerformerImageWrite,
+  deletePerformerWrite,
   getPerformerByIdRead,
   listPerformersRead,
+  PerformerNotFoundError,
+  PerformerUpstreamError,
+  PerformerValidationError,
+  setPerformerFavoriteWrite,
+  setPerformerImageFromUrlWrite,
+  setPerformerRatingWrite,
+  updatePerformerWrite,
+  uploadPerformerImageWrite,
+  type CreatePerformerBody,
   type ListPerformersQuery as SharedListPerformersQuery,
+  type UpdatePerformerBody,
 } from "@obscura/app-core";
-import { db, schema } from "../db";
+import { db } from "../db";
 import { AppError } from "../plugins/error-handler";
-import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
-import {
-  performerAudioLibraryCountExpr,
-  performerImageAppearanceCountExpr,
-  performerSfwSceneCountExpr,
-  performerTotalSceneCountExpr,
-} from "../lib/appearance-count-expressions";
 
-const { performers, performerTags, tags } = schema;
-
-function normalizeRole(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+function mapPerformerError(err: unknown): never {
+  if (err instanceof PerformerNotFoundError)
+    throw new AppError(404, err.message);
+  if (err instanceof PerformerValidationError)
+    throw new AppError(400, err.message);
+  if (err instanceof PerformerUpstreamError)
+    throw new AppError(502, err.message);
+  throw err;
 }
 
-async function listPerformerKnownFor(performerId: string, sfwOnly: boolean) {
-  const [seriesRows, movieRows, episodeRows] = await Promise.all([
-    db
-      .select({
-        sourceId: schema.videoSeries.id,
-        title: schema.videoSeries.title,
-        customName: schema.videoSeries.customName,
-        character: schema.videoSeriesPerformers.character,
-        isNsfw: schema.videoSeries.isNsfw,
-      })
-      .from(schema.videoSeriesPerformers)
-      .innerJoin(
-        schema.videoSeries,
-        eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
-      )
-      .where(eq(schema.videoSeriesPerformers.performerId, performerId)),
-    db
-      .select({
-        sourceId: schema.videoMovies.id,
-        title: schema.videoMovies.title,
-        character: schema.videoMoviePerformers.character,
-        isNsfw: schema.videoMovies.isNsfw,
-      })
-      .from(schema.videoMoviePerformers)
-      .innerJoin(
-        schema.videoMovies,
-        eq(schema.videoMoviePerformers.movieId, schema.videoMovies.id),
-      )
-      .where(eq(schema.videoMoviePerformers.performerId, performerId)),
-    db
-      .select({
-        sourceId: schema.videoEpisodes.id,
-        title: schema.videoEpisodes.title,
-        character: schema.videoEpisodePerformers.character,
-        seasonNumber: schema.videoEpisodes.seasonNumber,
-        episodeNumber: schema.videoEpisodes.episodeNumber,
-        isNsfw: schema.videoEpisodes.isNsfw,
-        seriesId: schema.videoSeries.id,
-        seriesTitle: schema.videoSeries.title,
-        seriesCustomName: schema.videoSeries.customName,
-        seriesIsNsfw: schema.videoSeries.isNsfw,
-        seriesCharacter: schema.videoSeriesPerformers.character,
-      })
-      .from(schema.videoEpisodePerformers)
-      .innerJoin(
-        schema.videoEpisodes,
-        eq(schema.videoEpisodePerformers.episodeId, schema.videoEpisodes.id),
-      )
-      .innerJoin(
-        schema.videoSeries,
-        eq(schema.videoEpisodes.seriesId, schema.videoSeries.id),
-      )
-      .leftJoin(
-        schema.videoSeriesPerformers,
-        and(
-          eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
-          eq(
-            schema.videoSeriesPerformers.performerId,
-            schema.videoEpisodePerformers.performerId,
-          ),
-        ),
-      )
-      .where(eq(schema.videoEpisodePerformers.performerId, performerId)),
-  ]);
+export interface ListPerformersQuery extends SharedListPerformersQuery {}
+export type { CreatePerformerBody, UpdatePerformerBody };
 
-  const knownFor = [
-    ...seriesRows
-      .filter((row) => !sfwOnly || !row.isNsfw)
-      .map((row) => ({
-        sourceType: "series" as const,
-        sourceId: row.sourceId,
-        sourceTitle: row.customName ?? row.title,
-        character: normalizeRole(row.character),
-        seriesId: row.sourceId,
-        seriesTitle: row.customName ?? row.title,
-        seasonNumber: null,
-        episodeNumber: null,
-      }))
-      .filter((row) => row.character),
-    ...movieRows
-      .filter((row) => !sfwOnly || !row.isNsfw)
-      .map((row) => ({
-        sourceType: "movie" as const,
-        sourceId: row.sourceId,
-        sourceTitle: row.title,
-        character: normalizeRole(row.character),
-        seriesId: null,
-        seriesTitle: null,
-        seasonNumber: null,
-        episodeNumber: null,
-      }))
-      .filter((row) => row.character),
-    ...episodeRows
-      .filter((row) => !sfwOnly || (!row.isNsfw && !row.seriesIsNsfw))
-      .map((row) => {
-        const character = normalizeRole(row.character);
-        const seriesCharacter = normalizeRole(row.seriesCharacter);
-        return {
-          sourceType: "episode" as const,
-          sourceId: row.sourceId,
-          sourceTitle: row.title,
-          character,
-          seriesId: row.seriesId,
-          seriesTitle: row.seriesCustomName ?? row.seriesTitle,
-          seasonNumber: row.seasonNumber,
-          episodeNumber: row.episodeNumber,
-          duplicateOfSeriesRole:
-            character !== null && seriesCharacter !== null && character === seriesCharacter,
-        };
-      })
-      .filter((row) => row.character && !row.duplicateOfSeriesRole)
-      .map(({ duplicateOfSeriesRole: _duplicateOfSeriesRole, ...row }) => row),
-  ];
-
-  const sourceRank = { series: 0, movie: 1, episode: 2 } as const;
-  knownFor.sort((a, b) => {
-    const bySource = sourceRank[a.sourceType] - sourceRank[b.sourceType];
-    if (bySource !== 0) return bySource;
-    const bySeries = (a.seriesTitle ?? "").localeCompare(b.seriesTitle ?? "");
-    if (bySeries !== 0) return bySeries;
-    const byTitle = (a.sourceTitle ?? "").localeCompare(b.sourceTitle ?? "");
-    if (byTitle !== 0) return byTitle;
-    return (a.character ?? "").localeCompare(b.character ?? "");
-  });
-
-  return knownFor;
-}
-
-// ─── SQL Expressions ──────────────────────────────────────────
-
-const sfwPerformerSceneCountExpr = performerSfwSceneCountExpr();
-const totalPerformerSceneCountExpr = performerTotalSceneCountExpr();
-
-// ─── Query Types ──────────────────────────────────────────────
-
-export interface ListPerformersQuery {
-  search?: string;
-  sort?: string;
-  order?: string;
-  gender?: string;
-  favorite?: string;
-  country?: string;
-  limit?: string;
-  offset?: string;
-  nsfw?: string;
-  ratingMin?: string;
-  ratingMax?: string;
-  hasImage?: string;
-  videoCountMin?: string;
-}
-
-export interface CreatePerformerBody {
-  name: string;
-  disambiguation?: string | null;
-  aliases?: string | null;
-  gender?: string | null;
-  birthdate?: string | null;
-  country?: string | null;
-  ethnicity?: string | null;
-  eyeColor?: string | null;
-  hairColor?: string | null;
-  height?: number | null;
-  weight?: number | null;
-  measurements?: string | null;
-  tattoos?: string | null;
-  piercings?: string | null;
-  careerStart?: number | null;
-  careerEnd?: number | null;
-  details?: string | null;
-  imageUrl?: string | null;
-  favorite?: boolean;
-  rating?: number | null;
-  tagNames?: string[];
-}
-
-export interface UpdatePerformerBody {
-  name?: string;
-  disambiguation?: string | null;
-  aliases?: string | null;
-  gender?: string | null;
-  birthdate?: string | null;
-  country?: string | null;
-  ethnicity?: string | null;
-  eyeColor?: string | null;
-  hairColor?: string | null;
-  height?: number | null;
-  weight?: number | null;
-  measurements?: string | null;
-  tattoos?: string | null;
-  piercings?: string | null;
-  careerStart?: number | null;
-  careerEnd?: number | null;
-  details?: string | null;
-  imageUrl?: string | null;
-  favorite?: boolean;
-  rating?: number | null;
-  isNsfw?: boolean;
-  tagNames?: string[];
-}
-
-// ─── Helpers ──────────────────────────────────────────────────
-
-/** Ensure a performer exists or throw 404. */
-async function requirePerformer(id: string) {
-  const row = await db.query.performers.findFirst({
-    where: eq(performers.id, id),
-    columns: { id: true },
-  });
-  if (!row) throw new AppError(404, "Actor not found");
-  return row;
-}
-
-/** Resolve tag names and attach them to a performer inside a transaction. */
-async function syncTags(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  performerId: string,
-  tagNames: string[],
-) {
-  for (const tagName of tagNames) {
-    const trimmed = tagName.trim();
-    if (!trimmed) continue;
-    let tag = await tx.query.tags.findFirst({
-      where: ilike(tags.name, trimmed),
-    });
-    if (!tag) {
-      [tag] = await tx.insert(tags).values({ name: trimmed }).returning();
-    }
-    await tx.insert(performerTags).values({
-      performerId,
-      tagId: tag.id,
-    });
-  }
-}
-
-/** Write a buffer to the performer image path and return the asset URL. */
-async function writePerformerImage(id: string, buffer: Buffer) {
-  const genDir = getGeneratedPerformerDir(id);
-  await mkdir(genDir, { recursive: true });
-  const imageDiskPath = path.join(genDir, "image.jpg");
-  await writeFile(imageDiskPath, buffer);
-  return `/assets/performers/${id}/image`;
-}
-
-// ─── Service Functions ────────────────────────────────────────
-
-/**
- * List performers with filtering, sorting, and pagination.
- */
 export async function listPerformers(query: ListPerformersQuery) {
-  return listPerformersRead(db, query satisfies SharedListPerformersQuery);
+  return listPerformersRead(db, query);
 }
 
-/**
- * Get a single performer by ID with full detail and tags.
- */
 export async function getPerformerById(id: string, sfwOnly: boolean) {
   const detail = await getPerformerByIdRead(db, id, sfwOnly);
   if (!detail) throw new AppError(404, "Actor not found");
   return detail;
 }
 
-/**
- * Create a new performer, optionally with tag names.
- */
 export async function createPerformer(body: CreatePerformerBody) {
-  if (!body.name?.trim()) {
-    throw new AppError(400, "Name is required");
+  try {
+    return await createPerformerWrite(db, body);
+  } catch (err) {
+    mapPerformerError(err);
   }
-
-  const result = await db.transaction(async (tx) => {
-    const [created] = await tx
-      .insert(performers)
-      .values({
-        name: body.name.trim(),
-        disambiguation: body.disambiguation ?? null,
-        aliases: body.aliases ?? null,
-        gender: body.gender ?? null,
-        birthdate: body.birthdate ?? null,
-        country: body.country ?? null,
-        ethnicity: body.ethnicity ?? null,
-        eyeColor: body.eyeColor ?? null,
-        hairColor: body.hairColor ?? null,
-        height: body.height ?? null,
-        weight: body.weight ?? null,
-        measurements: body.measurements ?? null,
-        tattoos: body.tattoos ?? null,
-        piercings: body.piercings ?? null,
-        careerStart: body.careerStart ?? null,
-        careerEnd: body.careerEnd ?? null,
-        details: body.details ?? null,
-        imageUrl: body.imageUrl ?? null,
-        favorite: body.favorite ?? false,
-        rating: body.rating ?? null,
-      })
-      .returning();
-
-    if (body.tagNames?.length) {
-      await syncTags(tx, created.id, body.tagNames);
-    }
-
-    return created;
-  });
-
-  return { ok: true as const, id: result.id };
 }
 
-/**
- * Update a performer, optionally replacing tags.
- */
 export async function updatePerformer(id: string, body: UpdatePerformerBody) {
-  await requirePerformer(id);
-
-  await db.transaction(async (tx) => {
-    // Build update set from provided fields
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
-    const fields = [
-      "name",
-      "disambiguation",
-      "aliases",
-      "gender",
-      "birthdate",
-      "country",
-      "ethnicity",
-      "eyeColor",
-      "hairColor",
-      "height",
-      "weight",
-      "measurements",
-      "tattoos",
-      "piercings",
-      "careerStart",
-      "careerEnd",
-      "details",
-      "imageUrl",
-      "favorite",
-      "rating",
-      "isNsfw",
-    ] as const;
-
-    for (const field of fields) {
-      if (field in body) {
-        updates[field] = (body as Record<string, unknown>)[field];
-      }
-    }
-
-    await tx.update(performers).set(updates).where(eq(performers.id, id));
-
-    // Handle tags if provided
-    if (body.tagNames !== undefined) {
-      await tx
-        .delete(performerTags)
-        .where(eq(performerTags.performerId, id));
-
-      if (body.tagNames.length > 0) {
-        await syncTags(tx, id, body.tagNames);
-      }
-    }
-  });
-
-  return { ok: true as const, id };
+  try {
+    return await updatePerformerWrite(db, id, body);
+  } catch (err) {
+    mapPerformerError(err);
+  }
 }
 
-/**
- * Delete a performer and clean up generated files.
- */
 export async function deletePerformer(id: string) {
-  await requirePerformer(id);
-
-  await db.delete(performers).where(eq(performers.id, id));
-
-  // Clean up image files
-  const genDir = getGeneratedPerformerDir(id);
   try {
-    if (existsSync(genDir)) await rm(genDir, { recursive: true });
-  } catch {
-    // non-fatal
+    return await deletePerformerWrite(db, id);
+  } catch (err) {
+    mapPerformerError(err);
   }
-
-  return { ok: true as const };
 }
 
-/**
- * Set the favorite flag on a performer.
- */
 export async function setPerformerFavorite(id: string, favorite: boolean) {
-  await requirePerformer(id);
-
-  await db
-    .update(performers)
-    .set({ favorite, updatedAt: new Date() })
-    .where(eq(performers.id, id));
-
-  return { ok: true as const, favorite };
-}
-
-/**
- * Set the rating on a performer.
- */
-export async function setPerformerRating(id: string, rating: number | null) {
-  await requirePerformer(id);
-
-  await db
-    .update(performers)
-    .set({ rating, updatedAt: new Date() })
-    .where(eq(performers.id, id));
-
-  return { ok: true as const, rating };
-}
-
-/**
- * Upload a performer image from a buffer (multipart upload).
- */
-export async function uploadPerformerImage(id: string, buffer: Buffer) {
-  await requirePerformer(id);
-
-  const assetUrl = await writePerformerImage(id, buffer);
-
-  await db
-    .update(performers)
-    .set({ imagePath: assetUrl, updatedAt: new Date() })
-    .where(eq(performers.id, id));
-
-  return { ok: true as const, imagePath: assetUrl };
-}
-
-/**
- * Set a performer image from a URL or base64 data URL.
- */
-export async function setPerformerImageFromUrl(id: string, imageUrl: string) {
-  if (
-    !imageUrl ||
-    (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:image/"))
-  ) {
-    throw new AppError(400, "Invalid image URL");
-  }
-
-  await requirePerformer(id);
-
-  let buffer: Buffer;
-
-  if (imageUrl.startsWith("data:image/")) {
-    const base64Data = imageUrl.split(",")[1];
-    if (!base64Data) {
-      throw new AppError(400, "Invalid data URL");
-    }
-    buffer = Buffer.from(base64Data, "base64");
-  } else {
-    let res: Response;
-    try {
-      res = await fetch(imageUrl);
-    } catch {
-      throw new AppError(502, "Failed to download image");
-    }
-    if (!res.ok) {
-      throw new AppError(502, `Failed to fetch image: ${res.status}`);
-    }
-    buffer = Buffer.from(await res.arrayBuffer());
-  }
-
-  const assetUrl = await writePerformerImage(id, buffer);
-
-  await db
-    .update(performers)
-    .set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() })
-    .where(eq(performers.id, id));
-
-  return { ok: true as const, imagePath: assetUrl };
-}
-
-/**
- * Delete a performer's image file and clear the database reference.
- */
-export async function deletePerformerImage(id: string) {
-  await requirePerformer(id);
-
-  const imageDiskPath = path.join(getGeneratedPerformerDir(id), "image.jpg");
   try {
-    if (existsSync(imageDiskPath)) await unlink(imageDiskPath);
-  } catch {
-    // non-fatal
+    return await setPerformerFavoriteWrite(db, id, favorite);
+  } catch (err) {
+    mapPerformerError(err);
   }
+}
 
-  await db
-    .update(performers)
-    .set({ imagePath: null, updatedAt: new Date() })
-    .where(eq(performers.id, id));
+export async function setPerformerRating(id: string, rating: number | null) {
+  try {
+    return await setPerformerRatingWrite(db, id, rating);
+  } catch (err) {
+    mapPerformerError(err);
+  }
+}
 
-  return { ok: true as const };
+export async function uploadPerformerImage(id: string, buffer: Buffer) {
+  try {
+    return await uploadPerformerImageWrite(db, id, buffer);
+  } catch (err) {
+    mapPerformerError(err);
+  }
+}
+
+export async function setPerformerImageFromUrl(id: string, imageUrl: string) {
+  try {
+    return await setPerformerImageFromUrlWrite(db, id, imageUrl);
+  } catch (err) {
+    mapPerformerError(err);
+  }
+}
+
+export async function deletePerformerImage(id: string) {
+  try {
+    return await deletePerformerImageWrite(db, id);
+  } catch (err) {
+    mapPerformerError(err);
+  }
 }

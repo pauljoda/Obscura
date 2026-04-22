@@ -9,6 +9,7 @@ export * from "./library-roots-crud";
 export * from "./library-settings-writes";
 export * from "./network";
 export * from "./performer-reads";
+export * from "./performer-writes";
 export * from "./provider-lists";
 export * from "./search";
 export * from "./studio-reads";

@@ -1,9 +1,12 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import {
+  createPerformerWrite,
   listPerformersRead,
+  type CreatePerformerBody,
   type ListPerformersQuery,
 } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
+import { mapPerformerErrorToJson } from "$lib/server/performer-error-mapper";
 
 const QUERY_KEYS = [
   "search",
@@ -29,4 +32,14 @@ export const GET: RequestHandler = async ({ url }) => {
   }
   const db = await getWebDb();
   return json(await listPerformersRead(db, query));
+};
+
+export const POST: RequestHandler = async ({ request }) => {
+  const db = await getWebDb();
+  const body = (await request.json()) as CreatePerformerBody;
+  try {
+    return json(await createPerformerWrite(db, body), { status: 201 });
+  } catch (err) {
+    return mapPerformerErrorToJson(err);
+  }
 };
