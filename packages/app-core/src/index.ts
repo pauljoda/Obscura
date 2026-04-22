@@ -1,6 +1,7 @@
 export * from "./appearance-count-expressions";
 export * from "./breaking-gate";
 export * from "./changelog";
+export * from "./collections";
 export * from "./errors";
 export * from "./hierarchy";
 export * from "./image-media";
@@ -24,5 +25,6 @@ export * from "./tag-reads";
 export * from "./tag-writes";
 export * from "./upload-utils";
 export * from "./video-markers";
+export * from "./video-collection-reads";
 export * from "./video-series";
 export * from "./video-subtitles";

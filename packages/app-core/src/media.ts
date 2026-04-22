@@ -546,6 +546,79 @@ export async function getGalleryImagesRead(
   };
 }
 
+export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const galleryRows = await db
+    .select()
+    .from(galleries)
+    .where(inArray(galleries.id, ids));
+
+  const galleryIds = galleryRows.map((gallery) => gallery.id);
+  const [perfJoins, tagJoins, studioRows] = await Promise.all([
+    galleryIds.length > 0
+      ? db
+          .select({
+            galleryId: galleryPerformers.galleryId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(galleryPerformers)
+          .innerJoin(performers, eq(galleryPerformers.performerId, performers.id))
+          .where(inArray(galleryPerformers.galleryId, galleryIds))
+      : Promise.resolve([]),
+    galleryIds.length > 0
+      ? db
+          .select({
+            galleryId: galleryTags.galleryId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(galleryTags)
+          .innerJoin(tags, eq(galleryTags.tagId, tags.id))
+          .where(inArray(galleryTags.galleryId, galleryIds))
+      : Promise.resolve([]),
+    (() => {
+      const studioIds = [
+        ...new Set(galleryRows.flatMap((gallery) => (gallery.studioId ? [gallery.studioId] : []))),
+      ];
+      return studioIds.length > 0
+        ? db
+            .select({ id: studios.id, name: studios.name })
+            .from(studios)
+            .where(inArray(studios.id, studioIds))
+        : Promise.resolve([]);
+    })(),
+  ]);
+
+  const studioMap = new Map(studioRows.map((studio) => [studio.id, studio.name]));
+
+  return galleryRows.map((gallery) => ({
+    id: gallery.id,
+    title: gallery.title,
+    galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
+    coverImagePath: `/assets/galleries/${gallery.id}/cover`,
+    previewImagePaths: [] as string[],
+    imageCount: gallery.imageCount,
+    rating: gallery.rating,
+    organized: gallery.organized,
+    isNsfw: gallery.isNsfw,
+    date: gallery.date,
+    photographer: gallery.photographer,
+    parentId: gallery.parentId,
+    studioId: gallery.studioId,
+    studioName: gallery.studioId ? (studioMap.get(gallery.studioId) ?? null) : null,
+    performers: perfJoins
+      .filter((join) => join.galleryId === gallery.id)
+      .map((join) => ({ id: join.performerId, name: join.performerName })),
+    tags: tagJoins
+      .filter((join) => join.galleryId === gallery.id)
+      .map((join) => ({ id: join.tagId, name: join.tagName, isNsfw: join.tagIsNsfw })),
+    createdAt: gallery.createdAt.toISOString(),
+  }));
+}
+
 export async function getGalleryStatsRead(db: AppDb) {
   const [galleryStats, imageStats, recentStats] = await Promise.all([
     db.select({ totalGalleries: sql<number>`count(*)::int` }).from(galleries),
@@ -1049,6 +1122,65 @@ export async function getImageDetailRead(db: AppDb, id: string) {
     createdAt: image.createdAt.toISOString(),
     updatedAt: image.updatedAt.toISOString(),
   };
+}
+
+export async function getImagesByIdsRead(db: AppDb, ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const imageRows = await db.select().from(images).where(inArray(images.id, ids));
+  const imageIds = imageRows.map((image) => image.id);
+  const [perfJoins, tagJoins] = await Promise.all([
+    imageIds.length > 0
+      ? db
+          .select({
+            imageId: imagePerformers.imageId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(imagePerformers)
+          .innerJoin(performers, eq(imagePerformers.performerId, performers.id))
+          .where(inArray(imagePerformers.imageId, imageIds))
+      : Promise.resolve([]),
+    imageIds.length > 0
+      ? db
+          .select({
+            imageId: imageTags.imageId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(imageTags)
+          .innerJoin(tags, eq(imageTags.tagId, tags.id))
+          .where(inArray(imageTags.imageId, imageIds))
+      : Promise.resolve([]),
+  ]);
+
+  return imageRows.map((image) => ({
+    id: image.id,
+    title: image.title,
+    date: image.date,
+    rating: image.rating,
+    organized: image.organized,
+    isNsfw: image.isNsfw,
+    width: image.width,
+    height: image.height,
+    format: image.format,
+    isVideo: isVideoImageFormat(image.format),
+    fileSize: image.fileSize,
+    thumbnailPath: image.thumbnailPath,
+    previewPath: getImagePreviewPath(image.id, image.format),
+    fullPath: `/assets/images/${image.id}/full`,
+    galleryId: image.galleryId,
+    sortOrder: image.sortOrder,
+    studioId: image.studioId,
+    performers: perfJoins
+      .filter((join) => join.imageId === image.id)
+      .map((join) => ({ id: join.performerId, name: join.performerName })),
+    tags: tagJoins
+      .filter((join) => join.imageId === image.id)
+      .map((join) => ({ id: join.tagId, name: join.tagName, isNsfw: join.tagIsNsfw })),
+    createdAt: image.createdAt.toISOString(),
+  }));
 }
 
 export async function updateImageWrite(
@@ -1905,6 +2037,69 @@ export async function listAudioTracksRead(
     })),
     total: countResult[0]?.count ?? 0,
   };
+}
+
+export async function getTracksByIdsRead(db: AppDb, ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const rows = await db.select().from(audioTracks).where(inArray(audioTracks.id, ids));
+  const trackIds = rows.map((row) => row.id);
+  const [perfLinks, tagLinks] = await Promise.all([
+    trackIds.length > 0
+      ? db
+          .select({
+            trackId: audioTrackPerformers.trackId,
+            performerId: performers.id,
+            performerName: performers.name,
+          })
+          .from(audioTrackPerformers)
+          .innerJoin(performers, eq(audioTrackPerformers.performerId, performers.id))
+          .where(inArray(audioTrackPerformers.trackId, trackIds))
+      : Promise.resolve([]),
+    trackIds.length > 0
+      ? db
+          .select({
+            trackId: audioTrackTags.trackId,
+            tagId: tags.id,
+            tagName: tags.name,
+            tagIsNsfw: tags.isNsfw,
+          })
+          .from(audioTrackTags)
+          .innerJoin(tags, eq(audioTrackTags.tagId, tags.id))
+          .where(inArray(audioTrackTags.trackId, trackIds))
+      : Promise.resolve([]),
+  ]);
+
+  return rows.map((track) => ({
+    id: track.id,
+    title: track.title,
+    date: track.date,
+    rating: track.rating,
+    organized: track.organized,
+    isNsfw: track.isNsfw,
+    duration: track.duration,
+    bitRate: track.bitRate,
+    sampleRate: track.sampleRate,
+    channels: track.channels,
+    codec: track.codec,
+    fileSize: track.fileSize,
+    embeddedArtist: track.embeddedArtist,
+    embeddedAlbum: track.embeddedAlbum,
+    trackNumber: track.trackNumber,
+    waveformPath: track.waveformPath,
+    libraryId: track.libraryId,
+    sortOrder: track.sortOrder,
+    studioId: track.studioId,
+    performers: perfLinks
+      .filter((join) => join.trackId === track.id)
+      .map((join) => ({ id: join.performerId, name: join.performerName })),
+    tags: tagLinks
+      .filter((join) => join.trackId === track.id)
+      .map((join) => ({ id: join.tagId, name: join.tagName, isNsfw: join.tagIsNsfw })),
+    playCount: track.playCount,
+    lastPlayedAt: track.lastPlayedAt?.toISOString() ?? null,
+    createdAt: track.createdAt.toISOString(),
+  }));
 }
 
 export async function updateAudioTrackWrite(
