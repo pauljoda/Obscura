@@ -1,10 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { runMigrations } from "./db/migrate";
 import {
   BreakingGateAwaitingConsentError,
   checkBreakingGate,
-} from "./db/breaking-gate";
+} from "@obscura/app-core";
+import { runMigrations } from "./db/migrate";
 import { closeDatabase, configureDatabase } from "./db";
 import { initQueues, stopQueues } from "./lib/queues";
 import { buildApiApp, type ApiTestDeps } from "./app";

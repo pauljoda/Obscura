@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The SvelteKit shell can now decide locally whether the one-time upgrade gate is active.** The new app now serves its own `/api/system/status` and `/api/system/breaking-gate/accept` endpoints using the same shared gate logic as Fastify, so side-by-side testing no longer depends on the old API just to render or clear the upgrade prompt.
 - **The SvelteKit app now owns its first local API endpoints.** `/api/changelog` and `/api/client-info` now run directly inside the new Svelte app while reusing the same shared logic as Fastify, so the old and new stacks can keep running side by side for comparison as the backend migration starts.
 - **The SvelteKit shell now behaves more like the live app for keyboard and screen-reader users.** The restored command palette, mobile overflow sheet, nav tabs, and playlist controls now expose dialog state, active-page state, focus management, and explicit control labels instead of acting like unlabeled visual-only chrome.
 - **The SvelteKit app shell now preserves the live app's core navigation flows.** The side-by-side port has regained the global command palette, the mobile "More" overflow sheet, and the persistent playlist queue/controller so mobile and keyboard users no longer lose those shell actions when testing the new build.
@@ -33,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- The breaking-upgrade gate helpers now live in `@obscura/app-core`, and the SvelteKit app now serves local `/api/system/status` and `/api/system/breaking-gate/accept` routes so the root layout and upgrade gate no longer depend on Fastify for that shell state.
 - The SvelteKit app now serves `/api/changelog` and `/api/client-info` locally, backed by a new shared `@obscura/app-core` package that both SvelteKit and Fastify import so the first backend slice can move without forking behavior.
 - Browser parity coverage for the active Svelte migration routes. Added `e2e/parity.spec.ts`, `e2e/parity/route-matrix.ts`, a reusable `e2e/fixture-library.ts`, root `test:parity` / `test:parity:update` scripts, a dashboard load check, and committed Playwright screenshot baselines for videos, video detail, search, plugins, settings, jobs, and identify in both the live app and the SvelteKit port.
 - `GET /jobs` now honors a `?nsfw=off` query param (and still honors the pre-existing header / POST-body variants via `readSfwOnly`). When SFW mode is on, the endpoint filters out any `jobRuns` row whose `targetType` resolves to an NSFW-marked row in `video_episodes`, `video_movies`, `video_series`, `library_roots`, or `audio_tracks` before returning the active / failed / completed / recent lists. Over-fetches the raw query by 3× so the post-filter still returns a meaningful page. Queue aggregate counts remain unfiltered (they come from pg-boss state).

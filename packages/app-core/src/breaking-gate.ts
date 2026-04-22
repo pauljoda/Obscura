@@ -4,35 +4,6 @@ import path from "node:path";
 import os from "node:os";
 import postgres from "postgres";
 
-/**
- * One-time break-gate for the scenes → videos model flip.
- *
- * The videos_to_series staging/finalize framework has been removed. Any
- * install that still has a populated `scenes` table would silently lose
- * that data when migration 0018 drops the scene_* tables. To keep the
- * data loss from being silent, this gate runs before the migrator:
- *
- *   1. If a marker file exists on disk → skip the gate entirely.
- *   2. Otherwise, look at the live DB.
- *      - `scenes` table absent → post-finalize install or fresh DB.
- *        Write the marker and proceed.
- *      - `scenes` table present but empty → fresh install that ran the
- *        old migrations through 0017 without ever scanning. Write the
- *        marker and proceed (no data to lose).
- *      - `scenes` table present with rows → gate blocks boot. The API
- *        server serves only `/health`, `/system/status`, and
- *        `POST /system/breaking-gate/accept` until the user consents.
- *
- * The marker lives on disk rather than in the database because we want
- * it to survive the migrator dropping the `data_migrations` table in
- * 0018 and, more importantly, because the whole point of the gate is
- * "don't mutate state until the user consents" — writing a DB row
- * before consent contradicts that.
- *
- * This is a single-purpose gate for v0.20 only. Future breaking
- * changes belong in the CHANGELOG, not here.
- */
-
 const GATE_ID = "scenes-to-videos-v0.20";
 
 export function resolveDataDir(): string {

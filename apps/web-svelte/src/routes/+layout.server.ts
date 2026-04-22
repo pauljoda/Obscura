@@ -27,7 +27,7 @@ export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
   }
 
   try {
-    const res = await fetch(`${INTERNAL_API_URL}/system/status`);
+    const res = await fetch("/api/system/status");
     if (res.ok) {
       const status = (await res.json()) as { awaitingBreakingConsent?: boolean };
       awaitingBreakingConsent = status.awaitingBreakingConsent ?? false;

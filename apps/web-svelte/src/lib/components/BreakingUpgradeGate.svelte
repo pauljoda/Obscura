@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { PUBLIC_API_URL } from "$env/static/public";
+  import {
+    acceptBreakingGate,
+    fetchSystemStatus,
+  } from "$lib/api/system";
 
   interface Props {
     /** From +layout.server.ts — server-side probe of system status. */
@@ -15,19 +18,6 @@
   let error: string | null = $state(null);
 
   const GITHUB_URL = "https://github.com/pauljoda/obscura";
-
-  async function fetchSystemStatus(): Promise<{ awaitingBreakingConsent: boolean }> {
-    const res = await fetch(`${PUBLIC_API_URL}/system/status`);
-    if (!res.ok) throw new Error(`system status ${res.status}`);
-    return res.json();
-  }
-
-  async function acceptBreakingGate(): Promise<void> {
-    const res = await fetch(`${PUBLIC_API_URL}/system/breaking-gate/accept`, {
-      method: "POST",
-    });
-    if (!res.ok) throw new Error(`breaking gate accept ${res.status}`);
-  }
 
   async function handleAccept() {
     phase = "accepting";

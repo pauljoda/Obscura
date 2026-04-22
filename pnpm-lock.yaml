@@ -287,6 +287,10 @@ importers:
         version: 5.9.3
 
   packages/app-core:
+    dependencies:
+      postgres:
+        specifier: ^3.4.8
+        version: 3.4.8
     devDependencies:
       '@types/node':
         specifier: ^22.19.17

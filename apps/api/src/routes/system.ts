@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
+import { writeGateMarker } from "@obscura/app-core";
 import { apiRoutes } from "@obscura/contracts";
-import { writeGateMarker } from "../db/breaking-gate";
 
 export async function systemRoutes(app: FastifyInstance) {
   app.get(apiRoutes.systemStatus, async () => ({
