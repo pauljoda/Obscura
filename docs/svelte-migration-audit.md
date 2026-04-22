@@ -6,16 +6,16 @@ Last updated: 2026-04-21
 
 The SvelteKit app has reached route-surface parity with the current Next.js app: both expose the same 35 first-party page routes. The shell is also much closer to parity after restoring the command palette, the mobile overflow navigation sheet, and the persistent playlist controller/queue.
 
-This is still not a full-app cutover candidate. The SvelteKit project is a frontend replacement only. It continues to depend on the existing Fastify API for all server data and mutations, the Docker/dev entrypoints still boot the Next.js web app, and the unified production image still packages `apps/web` rather than `apps/web-svelte`.
+This is still not a full-app cutover candidate. The target is full-stack SvelteKit, but the current implementation still depends on the existing Fastify API for server data and mutations, the Docker/dev entrypoints still boot the Next.js web app, and the unified production image still packages `apps/web` rather than `apps/web-svelte`.
 
 ## Chosen Direction
 
-The selected target architecture is now explicit:
+The selected target is a full-stack SvelteKit app plus a thin background worker.
 
-- `apps/web-svelte` becomes the sole web and API surface.
-- Fastify is transitional and will be removed.
-- Heavy media work remains out-of-process in the worker runtime for ffmpeg isolation, retries, and restart safety.
-- The migration will proceed by route family with parity checks, not as a single big-bang cutover.
+- Fastify is not part of the target end-state.
+- Heavy media jobs remain out-of-process for ffmpeg isolation, retries, and restart safety.
+- Boot-time DB migration and breaking-change gate checks move to the SvelteKit server bootstrap unless they are later split into a dedicated bootstrap path.
+- The cutover proceeds by route family with parity checks, not as a single big-bang migration.
 
 ## Route Surface
 
