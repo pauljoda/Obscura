@@ -18,4 +18,5 @@ export * from "./studio-writes";
 export * from "./tag-reads";
 export * from "./tag-writes";
 export * from "./video-markers";
+export * from "./video-series";
 export * from "./video-subtitles";
