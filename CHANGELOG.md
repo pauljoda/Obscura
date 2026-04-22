@@ -89,6 +89,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Root test scripts now include `@obscura/web-svelte`: `pnpm test:ci` and `pnpm coverage` both execute the SvelteKit unit suite so the in-progress port can fail the same top-level quality gate as the live React app.
 - `apps/web-svelte/` app-shell parity pass: the root layout now mounts `CommandPalette.svelte` for Cmd/Ctrl+K search with grouped entity results and recent-search recall, `MobileMoreNavButton.svelte` + `MobileMoreSheet.svelte` restore the React shell's overflow navigation and long-press NSFW toggle affordance on mobile, and `PlaylistController.svelte` + `PlaylistQueueSheet.svelte` restore the persistent playlist controls at the bottom of the shell. Added a small Vitest file for the shared search-kind config so `@obscura/web-svelte` has a stable unit-test target during the port.
 - Reverted the three recent attempts at fixing the video detail route's dev-mode hang (turbopack enablement, `lazy()`/`dynamic(ssr:false)` subtree splitting, and the "unblock" SSR simplification). None of them fixed the underlying problem and each added its own risk surface (notably turbopack's known compile hangs and the split React 19 `lazy()` + Next 15 App Router SSR interaction). The page is back to the pre-regression direct-import shape while we hunt the real cause.
 - The API search registry now exports the video search provider as `videosSearchProvider`, and nearby video/audio service comments were updated to describe current video/series behavior instead of the old scene/folder terminology.
@@ -117,6 +118,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Deleted the entire data-migration staging/finalize framework: `apps/api/src/db/data-migrations/` (run.ts, registry.ts, types.ts, lockdown.ts, videos_to_series_model_v1/*), the `GET /system/migrations` and `POST /system/migrations/:name/finalize` routes, the `MigrationBanner` component, and the `data_migrations` ledger table. The scenes → videos flip was the only customer and has fully landed; carrying the framework added more code than any future breaking change would save.
 - Deleted the push-era legacy-install bridge in `apps/api/src/db/migrate.ts`: `LEGACY_SCHEMA_SENTINELS`, sentinel seeding, pre-baseline deltas, and `reconcileSchema`. The runner is now ~55 lines of "call drizzle-orm's migrator." Any deployment that never got onto versioned migrations must wipe its DB and rescan.
 - Dropped the legacy `scenes`, `scene_folders`, `scene_performers`, `scene_tags`, `scene_folder_performers`, `scene_folder_tags`, `scene_markers`, and `scene_subtitles` tables in migration 0018. On any install that still had rows in `scenes`, the new breaking-upgrade gate (below) warns first and waits for explicit consent before the drop runs.
+
+### Docs
+
+- Added `docs/svelte-migration-audit.md`, a cutover-readiness snapshot for the SvelteKit port. It records the current 35/35 route match against the Next.js app, the restored shell-level parity surfaces, and the remaining blockers: backend replacement has not started, Docker/release wiring still ships `apps/web`, and route presence still needs route-by-route visual verification before the React frontend can be retired.
 
 ### Added
 
