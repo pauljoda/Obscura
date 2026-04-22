@@ -253,7 +253,7 @@
   let playing = $state(false);
   let isDragging = $state(false);
   let currentTime = $state(0);
-  let duration = $state(propDuration ?? 0);
+  let duration = $state(0);
   let muted = $state(false);
   let volume = $state(1);
   let showControls = $state(true);

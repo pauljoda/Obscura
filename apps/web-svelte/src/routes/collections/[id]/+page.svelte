@@ -13,7 +13,7 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
 
   let { data } = $props();
-  const c = data.collection;
+  const c = $derived(data.collection);
   const items = $derived(data.items);
 
   type ItemEntry = (typeof items)[number];

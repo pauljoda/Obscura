@@ -15,7 +15,7 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
 
   let { data } = $props();
-  const s = data.studio;
+  const s = $derived(data.studio);
 
   const videos = $derived(data.videos as VideoListItem[]);
   const series = $derived(data.series as VideoSeriesListItemDto[]);

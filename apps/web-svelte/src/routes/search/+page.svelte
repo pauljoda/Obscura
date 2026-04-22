@@ -16,6 +16,11 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let results = $state<SearchResponseDto | null>(null);
+  let searchInput: HTMLInputElement | undefined = $state();
+
+  $effect(() => {
+    searchInput?.focus();
+  });
 
   async function runSearch(term: string) {
     if (!term.trim()) {
@@ -92,9 +97,9 @@
       <SearchIcon class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-disabled" />
       <input
         type="search"
+        bind:this={searchInput}
         bind:value={q}
         placeholder="Search across videos, galleries, performers, tags…"
-        autofocus
         class="w-full bg-surface-2 border border-border-default pl-9 pr-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
       />
     </form>

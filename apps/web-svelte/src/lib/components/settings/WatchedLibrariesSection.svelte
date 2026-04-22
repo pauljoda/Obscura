@@ -236,8 +236,8 @@
           />
         </div>
 
-        <div class="space-y-2">
-          <label class="control-label">Library Options</label>
+        <div class="space-y-2" role="group" aria-labelledby="library-options-heading">
+          <div id="library-options-heading" class="control-label">Library Options</div>
           <div class="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <ToggleCard
               label="Recursive"

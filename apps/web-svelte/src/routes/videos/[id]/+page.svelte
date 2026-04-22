@@ -44,10 +44,13 @@
   type Tab = (typeof tabs)[number];
 
   let { data } = $props();
-  let video = $state<VideoDetailDto>(data.video);
+  let overrideVideo = $state<VideoDetailDto | null>(null);
+  const video = $derived<VideoDetailDto>(overrideVideo ?? data.video);
 
   $effect(() => {
-    video = data.video;
+    // Reset override whenever the loader provides a new video.
+    data.video;
+    overrideVideo = null;
   });
 
   const nsfw = useNsfw();
@@ -136,7 +139,7 @@
 
   async function refreshVideo() {
     try {
-      video = await fetchVideoDetail(video.id);
+      overrideVideo = await fetchVideoDetail(video.id);
       await invalidate(`videos:${video.id}`);
     } catch {
       // ignore

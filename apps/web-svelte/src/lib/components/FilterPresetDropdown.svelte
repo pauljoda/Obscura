@@ -93,8 +93,12 @@
   </button>
 
   {#if open}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
+    <button
+      type="button"
+      class="fixed inset-0 z-40"
+      aria-label="Close preset menu"
+      onclick={() => (open = false)}
+    ></button>
     <div class="absolute right-0 top-full mt-1 z-50 w-56 surface-elevated py-1">
       {#if presets.length > 0}
         <div class="max-h-48 overflow-y-auto tag-scroll-area">

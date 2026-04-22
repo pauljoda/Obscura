@@ -9,10 +9,12 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
 
   let { data } = $props();
-  const g = data.gallery;
+  const g = $derived(data.gallery);
 
-  let images = $state<ImageListItemDto[]>(g.images);
-  let imageTotal = $state(g.imageTotal);
+  const initialImages: ImageListItemDto[] = data.gallery.images;
+  const initialImageTotal: number = data.gallery.imageTotal;
+  let images = $state<ImageListItemDto[]>(initialImages);
+  let imageTotal = $state(initialImageTotal);
   let loadingMore = $state(false);
 
   let lightboxOpen = $state(false);

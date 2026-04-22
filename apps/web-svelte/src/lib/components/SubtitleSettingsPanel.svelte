@@ -32,6 +32,10 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div
+  role="dialog"
+  aria-modal="true"
+  aria-label="Subtitle style"
+  tabindex="-1"
   class="absolute right-0 top-0 bottom-0 z-20 w-[min(22rem,85%)] player-dropdown flex flex-col"
   onclick={(e) => e.stopPropagation()}
 >

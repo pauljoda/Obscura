@@ -225,8 +225,12 @@
           </button>
 
           {#if sortOpen}
-            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-            <div class="fixed inset-0 z-40" onclick={() => (sortOpen = false)}></div>
+            <button
+              type="button"
+              class="fixed inset-0 z-40"
+              aria-label="Close sort menu"
+              onclick={() => (sortOpen = false)}
+            ></button>
             <div class="absolute right-0 top-full mt-1 z-50 w-44 surface-elevated py-1">
               {#each sortOptions as opt (opt.value)}
                 <button

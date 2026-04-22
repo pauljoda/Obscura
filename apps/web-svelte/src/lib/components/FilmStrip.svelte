@@ -43,7 +43,7 @@
   let markersEl: HTMLDivElement | undefined = $state();
   let frames = $state<TrickplayFrame[] | null>(null);
   let error = $state(false);
-  let dragging = false;
+  let dragging = $state(false);
   let dragStartX = 0;
   let dragStartTime = 0;
   let rafId = 0;

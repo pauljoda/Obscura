@@ -16,7 +16,7 @@
   import { formatVideoCount } from "$lib/terminology";
 
   let { data } = $props();
-  const p = data.performer as {
+  const p = $derived(data.performer as {
     id: string;
     name: string;
     disambiguation?: string | null;
@@ -44,7 +44,7 @@
       character: string | null;
       thumbnailPath: string | null;
     }>;
-  };
+  });
 
   const videos = $derived(data.videos as VideoListItem[]);
   const series = $derived(data.series as VideoSeriesListItemDto[]);

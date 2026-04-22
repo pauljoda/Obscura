@@ -10,7 +10,9 @@
 
   let { label, value, class: className, onCommit }: Props = $props();
 
-  const inputId = `quality-slider-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const inputId = $derived(
+    `quality-slider-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+  );
 
   let draft = $state(1);
 

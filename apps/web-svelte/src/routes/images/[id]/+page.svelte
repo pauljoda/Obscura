@@ -4,7 +4,7 @@
   import { toApiUrl } from "$lib/api/core";
 
   let { data } = $props();
-  const img = data.image as {
+  const img = $derived(data.image as {
     id: string;
     title: string;
     details: string | null;
@@ -24,7 +24,7 @@
     studio: { id: string; name: string } | null;
     performers: { id: string; name: string }[];
     tags: { id: string; name: string; isNsfw: boolean }[];
-  };
+  });
 
   const ratingStars = $derived(img.rating ? Math.round(img.rating / 20) : 0);
 

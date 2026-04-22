@@ -10,6 +10,11 @@
   let isNsfw = $state(false);
   let saving = $state(false);
   let error = $state<string | null>(null);
+  let nameInput: HTMLInputElement | undefined = $state();
+
+  $effect(() => {
+    nameInput?.focus();
+  });
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -74,11 +79,11 @@
       <input
         id="tag-name"
         type="text"
+        bind:this={nameInput}
         bind:value={name}
         required
         maxlength={120}
         autocomplete="off"
-        autofocus
         class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
         placeholder="e.g. cinematic"
       />

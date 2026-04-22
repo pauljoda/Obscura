@@ -16,7 +16,7 @@
   import { PUBLIC_API_URL } from "$env/static/public";
 
   let { data } = $props();
-  const a = data.library;
+  const a = $derived(data.library);
 
   function formatDuration(sec: number | null | undefined) {
     if (!sec) return null;

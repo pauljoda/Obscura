@@ -6,7 +6,7 @@
   import { PUBLIC_API_URL } from "$env/static/public";
 
   let { data } = $props();
-  const t = data.track;
+  const t = $derived(data.track);
 
   const streamUrl = $derived(
     browser ? `${PUBLIC_API_URL}/audio-tracks/${t.id}/stream` : "",

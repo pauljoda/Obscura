@@ -10,7 +10,7 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
 
   let { data } = $props();
-  const t = data.tag;
+  const t = $derived(data.tag);
   const videos = $derived(data.videos as VideoListItem[]);
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
   const images = $derived(data.images as ImageListItemDto[]);
