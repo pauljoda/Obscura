@@ -2,7 +2,7 @@
  * Studio read helpers shared by the Fastify API and the SvelteKit server.
  */
 import { schema, type AppDb } from "@obscura/db";
-import { asc, ne } from "drizzle-orm";
+import { asc, eq, ne, sql } from "drizzle-orm";
 import {
   studioAudioLibraryCountExpr,
   studioImageAppearanceCountExpr,
@@ -79,5 +79,149 @@ export async function listStudiosRead(
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     })),
+  };
+}
+
+export interface StudioDetailParent {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+}
+
+export interface StudioDetailChild {
+  id: string;
+  name: string;
+  imagePath: string | null;
+  imageUrl: string | null;
+  videoCount: number;
+}
+
+export interface StudioDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string | null;
+  url: string | null;
+  parentId: string | null;
+  parent: StudioDetailParent | null;
+  childStudios: StudioDetailChild[];
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  videoCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function getStudioByIdRead(
+  db: AppDb,
+  id: string,
+  sfwOnly: boolean,
+): Promise<StudioDetail | null> {
+  const row = await db.query.studios.findFirst({
+    where: eq(studios.id, id),
+    with: {
+      parent: {
+        columns: { id: true, name: true, imagePath: true, imageUrl: true },
+      },
+      children: {
+        columns: {
+          id: true,
+          name: true,
+          imagePath: true,
+          imageUrl: true,
+          isNsfw: true,
+        },
+        orderBy: asc(studios.name),
+      },
+    },
+  });
+  if (!row) return null;
+  if (sfwOnly && row.isNsfw) return null;
+
+  const studioIdsForCounts = [row.id, ...row.children.map((c) => c.id)];
+  const epNsfwClause = sfwOnly ? sql`AND (ve.is_nsfw IS NOT TRUE)` : sql``;
+  const movieNsfwClause = sfwOnly ? sql`AND (vm.is_nsfw IS NOT TRUE)` : sql``;
+  const sceneCountsByStudio = await db.execute<{
+    studio_id: string;
+    cnt: number;
+  }>(sql`
+    SELECT studio_id::text AS studio_id, SUM(cnt)::int AS cnt FROM (
+      SELECT vs.studio_id AS studio_id, COUNT(*)::int AS cnt
+      FROM video_episodes ve
+      INNER JOIN video_series vs ON vs.id = ve.series_id
+      WHERE vs.studio_id IS NOT NULL
+        AND vs.studio_id IN ${
+          studioIdsForCounts.length > 0
+            ? sql`(${sql.join(
+                studioIdsForCounts.map((sid) => sql`${sid}::uuid`),
+                sql`, `,
+              )})`
+            : sql`(NULL)`
+        }
+        ${epNsfwClause}
+      GROUP BY vs.studio_id
+      UNION ALL
+      SELECT vm.studio_id AS studio_id, COUNT(*)::int AS cnt
+      FROM video_movies vm
+      WHERE vm.studio_id IS NOT NULL
+        AND vm.studio_id IN ${
+          studioIdsForCounts.length > 0
+            ? sql`(${sql.join(
+                studioIdsForCounts.map((sid) => sql`${sid}::uuid`),
+                sql`, `,
+              )})`
+            : sql`(NULL)`
+        }
+        ${movieNsfwClause}
+      GROUP BY vm.studio_id
+    ) combined
+    GROUP BY studio_id
+  `);
+  const sceneCountBy = new Map<string, number>();
+  for (const r of sceneCountsByStudio as unknown as Array<{
+    studio_id: string;
+    cnt: number;
+  }>) {
+    sceneCountBy.set(r.studio_id, Number(r.cnt ?? 0));
+  }
+
+  const videoCount = sceneCountBy.get(row.id) ?? 0;
+
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    aliases: row.aliases,
+    url: row.url,
+    parentId: row.parentId,
+    parent: row.parent
+      ? {
+          id: row.parent.id,
+          name: row.parent.name,
+          imagePath: row.parent.imagePath,
+          imageUrl: row.parent.imageUrl,
+        }
+      : null,
+    childStudios: row.children
+      .filter((c) => !sfwOnly || !c.isNsfw)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        imagePath: c.imagePath,
+        imageUrl: c.imageUrl,
+        videoCount: sceneCountBy.get(c.id) ?? 0,
+      })),
+    imageUrl: row.imageUrl,
+    imagePath: row.imagePath,
+    favorite: row.favorite,
+    rating: row.rating,
+    isNsfw: row.isNsfw,
+    videoCount,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }

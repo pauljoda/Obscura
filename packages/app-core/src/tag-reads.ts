@@ -14,6 +14,56 @@ import {
 
 const { tags, imageTags, images } = schema;
 
+export interface TagDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  aliases: string | null;
+  parentId: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  ignoreAutoTag: boolean;
+  videoCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function getTagByIdRead(
+  db: AppDb,
+  id: string,
+  sfwOnly: boolean,
+): Promise<TagDetail | null> {
+  const row = await db.query.tags.findFirst({ where: eq(tags.id, id) });
+  if (!row) return null;
+
+  const [cnt] = await db
+    .select({
+      n: sfwOnly ? tagSfwSceneCountExpr() : tagTotalSceneCountExpr(),
+    })
+    .from(tags)
+    .where(eq(tags.id, id));
+
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    aliases: row.aliases,
+    parentId: row.parentId,
+    imageUrl: row.imageUrl,
+    imagePath: row.imagePath,
+    favorite: row.favorite,
+    rating: row.rating,
+    isNsfw: row.isNsfw,
+    ignoreAutoTag: row.ignoreAutoTag,
+    videoCount: Number(cnt?.n ?? 0),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 export interface TagListEntry {
   id: string;
   name: string;

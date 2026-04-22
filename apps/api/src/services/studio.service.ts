@@ -18,7 +18,7 @@ import {
   isNotNull,
 } from "drizzle-orm";
 import { getGeneratedStudioDir } from "@obscura/media-core";
-import { listStudiosRead } from "@obscura/app-core";
+import { getStudioByIdRead, listStudiosRead } from "@obscura/app-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
@@ -47,85 +47,9 @@ export async function listStudios(sfwOnly: boolean) {
 // ─── getStudioById ────────────────────────────────────────────
 
 export async function getStudioById(id: string, sfwOnly: boolean) {
-  const row = await db.query.studios.findFirst({
-    where: eq(studios.id, id),
-    with: {
-      parent: { columns: { id: true, name: true, imagePath: true, imageUrl: true } },
-      children: {
-        columns: { id: true, name: true, imagePath: true, imageUrl: true, isNsfw: true },
-        orderBy: asc(studios.name),
-      },
-    },
-  });
-  if (!row) throw new AppError(404, "Studio not found");
-  if (sfwOnly && row.isNsfw) throw new AppError(404, "Studio not found");
-
-  // Compute scene counts (episodes + movies) across the row and all its
-  // children in a single UNION aggregate so one DB roundtrip covers both
-  // the detail view and its child studio chips.
-  const studioIdsForCounts = [row.id, ...row.children.map((c) => c.id)];
-  const epNsfwClause = sfwOnly ? sql`AND (ve.is_nsfw IS NOT TRUE)` : sql``;
-  const movieNsfwClause = sfwOnly ? sql`AND (vm.is_nsfw IS NOT TRUE)` : sql``;
-  const sceneCountsByStudio = await db.execute<{
-    studio_id: string;
-    cnt: number;
-  }>(sql`
-    SELECT studio_id::text AS studio_id, SUM(cnt)::int AS cnt FROM (
-      SELECT vs.studio_id AS studio_id, COUNT(*)::int AS cnt
-      FROM video_episodes ve
-      INNER JOIN video_series vs ON vs.id = ve.series_id
-      WHERE vs.studio_id IS NOT NULL
-        AND vs.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
-        ${epNsfwClause}
-      GROUP BY vs.studio_id
-      UNION ALL
-      SELECT vm.studio_id AS studio_id, COUNT(*)::int AS cnt
-      FROM video_movies vm
-      WHERE vm.studio_id IS NOT NULL
-        AND vm.studio_id IN ${studioIdsForCounts.length > 0 ? sql`(${sql.join(studioIdsForCounts.map((sid) => sql`${sid}::uuid`), sql`, `)})` : sql`(NULL)`}
-        ${movieNsfwClause}
-      GROUP BY vm.studio_id
-    ) combined
-    GROUP BY studio_id
-  `);
-  const sceneCountBy = new Map<string, number>();
-  for (const r of sceneCountsByStudio as unknown as Array<{
-    studio_id: string;
-    cnt: number;
-  }>) {
-    sceneCountBy.set(r.studio_id, Number(r.cnt ?? 0));
-  }
-
-  const videoCount = sceneCountBy.get(row.id) ?? 0;
-
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    aliases: row.aliases,
-    url: row.url,
-    parentId: row.parentId,
-    parent: row.parent
-      ? { id: row.parent.id, name: row.parent.name, imagePath: row.parent.imagePath, imageUrl: row.parent.imageUrl }
-      : null,
-    childStudios: row.children
-      .filter((c) => !sfwOnly || !c.isNsfw)
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        imagePath: c.imagePath,
-        imageUrl: c.imageUrl,
-        videoCount: sceneCountBy.get(c.id) ?? 0,
-      })),
-    imageUrl: row.imageUrl,
-    imagePath: row.imagePath,
-    favorite: row.favorite,
-    rating: row.rating,
-    isNsfw: row.isNsfw,
-    videoCount,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+  const detail = await getStudioByIdRead(db, id, sfwOnly);
+  if (!detail) throw new AppError(404, "Studio not found");
+  return detail;
 }
 
 // ─── updateStudio ─────────────────────────────────────────────

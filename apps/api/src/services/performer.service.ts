@@ -23,6 +23,7 @@ import {
 } from "drizzle-orm";
 import { getGeneratedPerformerDir } from "@obscura/media-core";
 import {
+  getPerformerByIdRead,
   listPerformersRead,
   type ListPerformersQuery as SharedListPerformersQuery,
 } from "@obscura/app-core";
@@ -299,66 +300,9 @@ export async function listPerformers(query: ListPerformersQuery) {
  * Get a single performer by ID with full detail and tags.
  */
 export async function getPerformerById(id: string, sfwOnly: boolean) {
-  const row = await db.query.performers.findFirst({
-    where: eq(performers.id, id),
-    with: {
-      performerTags: {
-        with: { tag: true },
-      },
-    },
-  });
-
-  if (!row) throw new AppError(404, "Actor not found");
-  if (sfwOnly && row.isNsfw) throw new AppError(404, "Actor not found");
-
-  // Always compute from video_episodes + video_movies. The cached
-  // `performers.scene_count` column is ignored and will be dropped in
-  // the videos_to_series finalize phase.
-  const [cnt] = await db
-    .select({
-      n: sfwOnly
-        ? performerSfwSceneCountExpr()
-        : performerTotalSceneCountExpr(),
-    })
-    .from(performers)
-    .where(eq(performers.id, id));
-  const videoCount = Number(cnt?.n ?? 0);
-  const knownFor = await listPerformerKnownFor(id, sfwOnly);
-
-  return {
-    id: row.id,
-    name: row.name,
-    disambiguation: row.disambiguation,
-    aliases: row.aliases,
-    gender: row.gender,
-    birthdate: row.birthdate,
-    country: row.country,
-    ethnicity: row.ethnicity,
-    eyeColor: row.eyeColor,
-    hairColor: row.hairColor,
-    height: row.height,
-    weight: row.weight,
-    measurements: row.measurements,
-    tattoos: row.tattoos,
-    piercings: row.piercings,
-    careerStart: row.careerStart,
-    careerEnd: row.careerEnd,
-    details: row.details,
-    imageUrl: row.imageUrl,
-    imagePath: row.imagePath,
-    favorite: row.favorite,
-    rating: row.rating,
-    isNsfw: row.isNsfw,
-    videoCount,
-    knownFor,
-    tags: row.performerTags.map((pt) => ({
-      id: pt.tag.id,
-      name: pt.tag.name,
-      isNsfw: pt.tag.isNsfw,
-    })),
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+  const detail = await getPerformerByIdRead(db, id, sfwOnly);
+  if (!detail) throw new AppError(404, "Actor not found");
+  return detail;
 }
 
 /**

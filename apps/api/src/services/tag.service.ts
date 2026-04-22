@@ -15,7 +15,7 @@ import {
   ne,
 } from "drizzle-orm";
 import { getGeneratedTagDir } from "@obscura/media-core";
-import { listTagsRead } from "@obscura/app-core";
+import { getTagByIdRead, listTagsRead } from "@obscura/app-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
@@ -42,36 +42,9 @@ export async function listTags(sfwOnly: boolean) {
 // ─── getTagById ───────────────────────────────────────────────
 
 export async function getTagById(id: string, sfwOnly: boolean) {
-  const row = await db.query.tags.findFirst({ where: eq(tags.id, id) });
-  if (!row) throw new AppError(404, "Tag not found");
-
-  // Recompute scene count from video_episode_tags + video_movie_tags.
-  // The cached `tags.scene_count` column is ignored and will be dropped
-  // in the videos_to_series finalize phase.
-  const [cnt] = await db
-    .select({
-      n: sfwOnly ? tagSfwSceneCountExpr() : tagTotalSceneCountExpr(),
-    })
-    .from(tags)
-    .where(eq(tags.id, id));
-  const videoCount = Number(cnt?.n ?? 0);
-
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    aliases: row.aliases,
-    parentId: row.parentId,
-    imageUrl: row.imageUrl,
-    imagePath: row.imagePath,
-    favorite: row.favorite,
-    rating: row.rating,
-    isNsfw: row.isNsfw,
-    ignoreAutoTag: row.ignoreAutoTag,
-    videoCount,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+  const detail = await getTagByIdRead(db, id, sfwOnly);
+  if (!detail) throw new AppError(404, "Tag not found");
+  return detail;
 }
 
 // ─── updateTag ────────────────────────────────────────────────

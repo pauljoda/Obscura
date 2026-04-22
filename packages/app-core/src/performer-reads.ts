@@ -25,6 +25,11 @@ import {
 
 const { performers } = schema;
 
+function normalizeRole(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export const MAX_PERFORMER_LIST_LIMIT = 50_000;
 
 export interface ListPerformersQuery {
@@ -220,5 +225,265 @@ export async function listPerformersRead(
     total: countResult[0]?.count ?? 0,
     limit,
     offset,
+  };
+}
+
+export type PerformerKnownForEntry =
+  | {
+      sourceType: "series";
+      sourceId: string;
+      sourceTitle: string;
+      character: string | null;
+      seriesId: string;
+      seriesTitle: string;
+      seasonNumber: null;
+      episodeNumber: null;
+    }
+  | {
+      sourceType: "movie";
+      sourceId: string;
+      sourceTitle: string;
+      character: string | null;
+      seriesId: null;
+      seriesTitle: null;
+      seasonNumber: null;
+      episodeNumber: null;
+    }
+  | {
+      sourceType: "episode";
+      sourceId: string;
+      sourceTitle: string | null;
+      character: string | null;
+      seriesId: string;
+      seriesTitle: string;
+      seasonNumber: number | null;
+      episodeNumber: number | null;
+    };
+
+export async function listPerformerKnownFor(
+  db: AppDb,
+  performerId: string,
+  sfwOnly: boolean,
+): Promise<PerformerKnownForEntry[]> {
+  const [seriesRows, movieRows, episodeRows] = await Promise.all([
+    db
+      .select({
+        sourceId: schema.videoSeries.id,
+        title: schema.videoSeries.title,
+        customName: schema.videoSeries.customName,
+        character: schema.videoSeriesPerformers.character,
+        isNsfw: schema.videoSeries.isNsfw,
+      })
+      .from(schema.videoSeriesPerformers)
+      .innerJoin(
+        schema.videoSeries,
+        eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
+      )
+      .where(eq(schema.videoSeriesPerformers.performerId, performerId)),
+    db
+      .select({
+        sourceId: schema.videoMovies.id,
+        title: schema.videoMovies.title,
+        character: schema.videoMoviePerformers.character,
+        isNsfw: schema.videoMovies.isNsfw,
+      })
+      .from(schema.videoMoviePerformers)
+      .innerJoin(
+        schema.videoMovies,
+        eq(schema.videoMoviePerformers.movieId, schema.videoMovies.id),
+      )
+      .where(eq(schema.videoMoviePerformers.performerId, performerId)),
+    db
+      .select({
+        sourceId: schema.videoEpisodes.id,
+        title: schema.videoEpisodes.title,
+        character: schema.videoEpisodePerformers.character,
+        seasonNumber: schema.videoEpisodes.seasonNumber,
+        episodeNumber: schema.videoEpisodes.episodeNumber,
+        isNsfw: schema.videoEpisodes.isNsfw,
+        seriesId: schema.videoSeries.id,
+        seriesTitle: schema.videoSeries.title,
+        seriesCustomName: schema.videoSeries.customName,
+        seriesIsNsfw: schema.videoSeries.isNsfw,
+        seriesCharacter: schema.videoSeriesPerformers.character,
+      })
+      .from(schema.videoEpisodePerformers)
+      .innerJoin(
+        schema.videoEpisodes,
+        eq(schema.videoEpisodePerformers.episodeId, schema.videoEpisodes.id),
+      )
+      .innerJoin(
+        schema.videoSeries,
+        eq(schema.videoEpisodes.seriesId, schema.videoSeries.id),
+      )
+      .leftJoin(
+        schema.videoSeriesPerformers,
+        and(
+          eq(schema.videoSeriesPerformers.seriesId, schema.videoSeries.id),
+          eq(
+            schema.videoSeriesPerformers.performerId,
+            schema.videoEpisodePerformers.performerId,
+          ),
+        ),
+      )
+      .where(eq(schema.videoEpisodePerformers.performerId, performerId)),
+  ]);
+
+  const knownFor: PerformerKnownForEntry[] = [
+    ...seriesRows
+      .filter((row) => !sfwOnly || !row.isNsfw)
+      .map((row) => ({
+        sourceType: "series" as const,
+        sourceId: row.sourceId,
+        sourceTitle: row.customName ?? row.title,
+        character: normalizeRole(row.character),
+        seriesId: row.sourceId,
+        seriesTitle: row.customName ?? row.title,
+        seasonNumber: null,
+        episodeNumber: null,
+      }))
+      .filter((row) => row.character),
+    ...movieRows
+      .filter((row) => !sfwOnly || !row.isNsfw)
+      .map((row) => ({
+        sourceType: "movie" as const,
+        sourceId: row.sourceId,
+        sourceTitle: row.title,
+        character: normalizeRole(row.character),
+        seriesId: null,
+        seriesTitle: null,
+        seasonNumber: null,
+        episodeNumber: null,
+      }))
+      .filter((row) => row.character),
+    ...episodeRows
+      .filter((row) => !sfwOnly || (!row.isNsfw && !row.seriesIsNsfw))
+      .map((row) => {
+        const character = normalizeRole(row.character);
+        const seriesCharacter = normalizeRole(row.seriesCharacter);
+        return {
+          sourceType: "episode" as const,
+          sourceId: row.sourceId,
+          sourceTitle: row.title,
+          character,
+          seriesId: row.seriesId,
+          seriesTitle: row.seriesCustomName ?? row.seriesTitle,
+          seasonNumber: row.seasonNumber,
+          episodeNumber: row.episodeNumber,
+          duplicateOfSeriesRole:
+            character !== null &&
+            seriesCharacter !== null &&
+            character === seriesCharacter,
+        };
+      })
+      .filter((row) => row.character && !row.duplicateOfSeriesRole)
+      .map(({ duplicateOfSeriesRole: _duplicate, ...row }) => row),
+  ];
+
+  const sourceRank = { series: 0, movie: 1, episode: 2 } as const;
+  knownFor.sort((a, b) => {
+    const bySource = sourceRank[a.sourceType] - sourceRank[b.sourceType];
+    if (bySource !== 0) return bySource;
+    const bySeries = (a.seriesTitle ?? "").localeCompare(b.seriesTitle ?? "");
+    if (bySeries !== 0) return bySeries;
+    const byTitle = (a.sourceTitle ?? "").localeCompare(b.sourceTitle ?? "");
+    if (byTitle !== 0) return byTitle;
+    return (a.character ?? "").localeCompare(b.character ?? "");
+  });
+
+  return knownFor;
+}
+
+export interface PerformerDetail {
+  id: string;
+  name: string;
+  disambiguation: string | null;
+  aliases: string | null;
+  gender: string | null;
+  birthdate: string | null;
+  country: string | null;
+  ethnicity: string | null;
+  eyeColor: string | null;
+  hairColor: string | null;
+  height: number | null;
+  weight: number | null;
+  measurements: string | null;
+  tattoos: string | null;
+  piercings: string | null;
+  careerStart: number | null;
+  careerEnd: number | null;
+  details: string | null;
+  imageUrl: string | null;
+  imagePath: string | null;
+  favorite: boolean;
+  rating: number | null;
+  isNsfw: boolean;
+  videoCount: number;
+  knownFor: PerformerKnownForEntry[];
+  tags: Array<{ id: string; name: string; isNsfw: boolean }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getPerformerByIdRead(
+  db: AppDb,
+  id: string,
+  sfwOnly: boolean,
+): Promise<PerformerDetail | null> {
+  const row = await db.query.performers.findFirst({
+    where: eq(performers.id, id),
+    with: {
+      performerTags: {
+        with: { tag: true },
+      },
+    },
+  });
+  if (!row) return null;
+  if (sfwOnly && row.isNsfw) return null;
+
+  const [cnt] = await db
+    .select({
+      n: sfwOnly
+        ? performerSfwSceneCountExpr()
+        : performerTotalSceneCountExpr(),
+    })
+    .from(performers)
+    .where(eq(performers.id, id));
+  const videoCount = Number(cnt?.n ?? 0);
+  const knownFor = await listPerformerKnownFor(db, id, sfwOnly);
+
+  return {
+    id: row.id,
+    name: row.name,
+    disambiguation: row.disambiguation,
+    aliases: row.aliases,
+    gender: row.gender,
+    birthdate: row.birthdate,
+    country: row.country,
+    ethnicity: row.ethnicity,
+    eyeColor: row.eyeColor,
+    hairColor: row.hairColor,
+    height: row.height,
+    weight: row.weight,
+    measurements: row.measurements,
+    tattoos: row.tattoos,
+    piercings: row.piercings,
+    careerStart: row.careerStart,
+    careerEnd: row.careerEnd,
+    details: row.details,
+    imageUrl: row.imageUrl,
+    imagePath: row.imagePath,
+    favorite: row.favorite,
+    rating: row.rating,
+    isNsfw: row.isNsfw,
+    videoCount,
+    knownFor,
+    tags: row.performerTags.map((pt) => ({
+      id: pt.tag.id,
+      name: pt.tag.name,
+      isNsfw: pt.tag.isNsfw,
+    })),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
