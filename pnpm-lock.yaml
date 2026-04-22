@@ -312,6 +312,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
+      pg-boss:
+        specifier: ^10.3.2
+        version: 10.4.2
       postgres:
         specifier: ^3.4.8
         version: 3.4.8

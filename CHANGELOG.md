@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The SvelteKit app now owns the gallery, image, and audio media APIs directly.** Browsing and editing galleries, images, audio libraries, and audio tracks now run through local SvelteKit `/api/*` endpoints backed by shared app-core logic, including gallery chapters and covers, bulk image updates, audio track markers, and image / track uploads.
 - **The SvelteKit shell can now decide locally whether the one-time upgrade gate is active.** The new app now serves its own `/api/system/status` and `/api/system/breaking-gate/accept` endpoints using the same shared gate logic as Fastify, so side-by-side testing no longer depends on the old API just to render or clear the upgrade prompt.
 - **The SvelteKit app now owns its first local API endpoints.** `/api/changelog` and `/api/client-info` now run directly inside the new Svelte app while reusing the same shared logic as Fastify, so the old and new stacks can keep running side by side for comparison as the backend migration starts.
 - **The SvelteKit shell now behaves more like the live app for keyboard and screen-reader users.** The restored command palette, mobile overflow sheet, nav tabs, and playlist controls now expose dialog state, active-page state, focus management, and explicit control labels instead of acting like unlabeled visual-only chrome.
@@ -112,6 +113,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Gallery, image, and audio-library / audio-track server logic now lives in `@obscura/app-core`, and the SvelteKit app exposes matching `/api/galleries`, `/api/images`, `/api/audio-libraries`, and `/api/audio-tracks` route trees instead of falling back to the Fastify catch-all for those media families.
 - Root test scripts now include `@obscura/web-svelte`: `pnpm test:ci` and `pnpm coverage` both execute the SvelteKit unit suite so the in-progress port can fail the same top-level quality gate as the live React app.
 - `apps/web-svelte/` app-shell parity pass: the root layout now mounts `CommandPalette.svelte` for Cmd/Ctrl+K search with grouped entity results and recent-search recall, `MobileMoreNavButton.svelte` + `MobileMoreSheet.svelte` restore the React shell's overflow navigation and long-press NSFW toggle affordance on mobile, and `PlaylistController.svelte` + `PlaylistQueueSheet.svelte` restore the persistent playlist controls at the bottom of the shell. Added a small Vitest file for the shared search-kind config so `@obscura/web-svelte` has a stable unit-test target during the port.
 - Reverted the three recent attempts at fixing the video detail route's dev-mode hang (turbopack enablement, `lazy()`/`dynamic(ssr:false)` subtree splitting, and the "unblock" SSR simplification). None of them fixed the underlying problem and each added its own risk surface (notably turbopack's known compile hangs and the split React 19 `lazy()` + Next 15 App Router SSR interaction). The page is back to the pre-regression direct-import shape while we hunt the real cause.
