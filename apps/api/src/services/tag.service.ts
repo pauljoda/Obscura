@@ -15,6 +15,7 @@ import {
   ne,
 } from "drizzle-orm";
 import { getGeneratedTagDir } from "@obscura/media-core";
+import { listTagsRead } from "@obscura/app-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
@@ -35,53 +36,7 @@ const {
 // ─── listTags ─────────────────────────────────────────────────
 
 export async function listTags(sfwOnly: boolean) {
-  const sceneCountExpr = sfwOnly
-    ? tagSfwSceneCountExpr()
-    : tagTotalSceneCountExpr();
-
-  const imageAgg = sfwOnly
-    ? await db
-        .select({
-          tagId: imageTags.tagId,
-          cnt: sql<number>`count(*)::int`,
-        })
-        .from(imageTags)
-        .innerJoin(images, eq(images.id, imageTags.imageId))
-        .where(ne(images.isNsfw, true))
-        .groupBy(imageTags.tagId)
-    : await db
-        .select({
-          tagId: imageTags.tagId,
-          cnt: sql<number>`count(*)::int`,
-        })
-        .from(imageTags)
-        .groupBy(imageTags.tagId);
-  const imageMap = new Map(imageAgg.map((r) => [r.tagId, Number(r.cnt)]));
-
-  const tagRows = await db
-    .select({
-      id: tags.id,
-      name: tags.name,
-      description: tags.description,
-      aliases: tags.aliases,
-      imagePath: tags.imagePath,
-      favorite: tags.favorite,
-      rating: tags.rating,
-      isNsfw: tags.isNsfw,
-      videoCount: sceneCountExpr,
-    })
-    .from(tags)
-    .where(sfwOnly ? ne(tags.isNsfw, true) : undefined);
-
-  const mapped = tagRows.map((tag) => ({
-    ...tag,
-    videoCount: Number(tag.videoCount ?? 0),
-    imageCount: imageMap.get(tag.id) ?? 0,
-  }));
-
-  mapped.sort((a, b) => b.videoCount - a.videoCount);
-
-  return { tags: mapped };
+  return listTagsRead(db, sfwOnly);
 }
 
 // ─── getTagById ───────────────────────────────────────────────

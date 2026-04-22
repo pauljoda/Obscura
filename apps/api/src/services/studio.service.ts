@@ -18,6 +18,7 @@ import {
   isNotNull,
 } from "drizzle-orm";
 import { getGeneratedStudioDir } from "@obscura/media-core";
+import { listStudiosRead } from "@obscura/app-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import {
@@ -40,51 +41,7 @@ const {
 // ─── listStudios ──────────────────────────────────────────────
 
 export async function listStudios(sfwOnly: boolean) {
-  const rows = await db
-    .select({
-      id: studios.id,
-      name: studios.name,
-      description: studios.description,
-      aliases: studios.aliases,
-      url: studios.url,
-      parentId: studios.parentId,
-      imageUrl: studios.imageUrl,
-      imagePath: studios.imagePath,
-      favorite: studios.favorite,
-      rating: studios.rating,
-      isNsfw: studios.isNsfw,
-      videoCount: sfwOnly
-        ? studioSfwSceneCountExpr()
-        : studioTotalSceneCountExpr(),
-      createdAt: studios.createdAt,
-      updatedAt: studios.updatedAt,
-      imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
-      audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
-    })
-    .from(studios)
-    .where(sfwOnly ? ne(studios.isNsfw, true) : undefined)
-    .orderBy(asc(studios.name));
-
-  return {
-    studios: rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      aliases: r.aliases,
-      url: r.url,
-      parentId: r.parentId,
-      imageUrl: r.imageUrl,
-      imagePath: r.imagePath,
-      favorite: r.favorite,
-      rating: r.rating,
-      isNsfw: r.isNsfw,
-      videoCount: Number(r.videoCount ?? 0),
-      imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
-      audioLibraryCount: Number(r.audioLibraryCount ?? 0),
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    })),
-  };
+  return listStudiosRead(db, sfwOnly);
 }
 
 // ─── getStudioById ────────────────────────────────────────────

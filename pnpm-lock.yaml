@@ -300,6 +300,12 @@ importers:
 
   packages/app-core:
     dependencies:
+      '@obscura/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
       postgres:
         specifier: ^3.4.8
         version: 3.4.8

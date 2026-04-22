@@ -22,6 +22,10 @@ import {
   lte,
 } from "drizzle-orm";
 import { getGeneratedPerformerDir } from "@obscura/media-core";
+import {
+  listPerformersRead,
+  type ListPerformersQuery as SharedListPerformersQuery,
+} from "@obscura/app-core";
 import { db, schema } from "../db";
 import { AppError } from "../plugins/error-handler";
 import { MAX_ENTITY_LIST_LIMIT, parsePagination, type SortConfig } from "../lib/query-helpers";
@@ -288,137 +292,7 @@ async function writePerformerImage(id: string, buffer: Buffer) {
  * List performers with filtering, sorting, and pagination.
  */
 export async function listPerformers(query: ListPerformersQuery) {
-  const { limit, offset } = parsePagination(query.limit, query.offset, 50, MAX_ENTITY_LIST_LIMIT);
-  const sfwOnly = query.nsfw === "off";
-
-  // Build WHERE conditions
-  const conditions = [];
-
-  if (sfwOnly) {
-    conditions.push(ne(performers.isNsfw, true));
-  }
-
-  if (query.search) {
-    const term = `%${query.search}%`;
-    conditions.push(
-      or(
-        ilike(performers.name, term),
-        ilike(performers.aliases, term),
-        ilike(performers.disambiguation, term),
-      )!,
-    );
-  }
-
-  if (query.gender) {
-    conditions.push(ilike(performers.gender, query.gender));
-  }
-
-  if (query.favorite === "true") {
-    conditions.push(eq(performers.favorite, true));
-  }
-
-  if (query.country) {
-    conditions.push(ilike(performers.country, query.country));
-  }
-
-  const pRatingMin =
-    query.ratingMin !== undefined ? Number(query.ratingMin) : NaN;
-  if (Number.isInteger(pRatingMin) && pRatingMin >= 1 && pRatingMin <= 5) {
-    conditions.push(
-      and(isNotNull(performers.rating), gte(performers.rating, pRatingMin))!,
-    );
-  }
-  const pRatingMax =
-    query.ratingMax !== undefined ? Number(query.ratingMax) : NaN;
-  if (Number.isInteger(pRatingMax) && pRatingMax >= 1 && pRatingMax <= 5) {
-    conditions.push(
-      and(isNotNull(performers.rating), lte(performers.rating, pRatingMax))!,
-    );
-  }
-
-  if (query.hasImage === "true") {
-    conditions.push(isNotNull(performers.imagePath));
-  }
-  if (query.hasImage === "false") {
-    conditions.push(isNull(performers.imagePath));
-  }
-
-  const vcm =
-    query.videoCountMin !== undefined ? Number(query.videoCountMin) : NaN;
-  if (Number.isInteger(vcm) && vcm >= 1) {
-    conditions.push(
-      gte(sfwOnly ? sfwPerformerSceneCountExpr : totalPerformerSceneCountExpr, vcm),
-    );
-  }
-
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const sceneCountSelect = sfwOnly
-    ? sfwPerformerSceneCountExpr
-    : totalPerformerSceneCountExpr;
-
-  // Sorting
-  const sortDir = query.order === "asc" ? asc : desc;
-  const sortAsc = query.order === "asc" ? asc : null;
-  let orderBy;
-  switch (query.sort) {
-    case "name":
-      orderBy = (sortAsc ?? asc)(performers.name);
-      break;
-    case "videos":
-      orderBy = query.order === "asc"
-        ? asc(sceneCountSelect)
-        : desc(sceneCountSelect);
-      break;
-    case "rating":
-      orderBy = sortDir(performers.rating);
-      break;
-    case "recent":
-    default:
-      orderBy = sortDir(performers.createdAt);
-      break;
-  }
-
-  const [rows, countResult] = await Promise.all([
-    db
-      .select({
-        id: performers.id,
-        name: performers.name,
-        disambiguation: performers.disambiguation,
-        gender: performers.gender,
-        imagePath: performers.imagePath,
-        favorite: performers.favorite,
-        rating: performers.rating,
-        isNsfw: performers.isNsfw,
-        videoCount: sceneCountSelect,
-        imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
-        audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
-        country: performers.country,
-        createdAt: performers.createdAt,
-      })
-      .from(performers)
-      .where(where)
-      .orderBy(orderBy)
-      .limit(limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(performers)
-      .where(where),
-  ]);
-
-  return {
-    performers: rows.map((r) => ({
-      ...r,
-      videoCount: Number(r.videoCount ?? 0),
-      imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
-      audioLibraryCount: Number(r.audioLibraryCount ?? 0),
-      createdAt: r.createdAt.toISOString(),
-    })),
-    total: countResult[0]?.count ?? 0,
-    limit,
-    offset,
-  };
+  return listPerformersRead(db, query satisfies SharedListPerformersQuery);
 }
 
 /**
