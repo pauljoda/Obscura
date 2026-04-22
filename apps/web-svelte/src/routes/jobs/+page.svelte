@@ -49,7 +49,7 @@
 
   async function loadDashboard() {
     try {
-      const response = await fetchJobsDashboard();
+      const response = await fetchJobsDashboard(nsfw.mode);
       dashboard = response;
       error = null;
     } catch (err) {

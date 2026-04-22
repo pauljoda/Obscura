@@ -28,8 +28,9 @@ export async function fetchStashBoxEndpointsServer(options?: { fetch?: typeof fe
   });
 }
 
-export async function fetchJobsDashboard(options?: { fetch?: typeof fetch }) {
-  return serverFetch<JobsDashboardDto>("/jobs", { fetch: options?.fetch });
+export async function fetchJobsDashboard(options?: { fetch?: typeof fetch; nsfwMode?: string }) {
+  const qs = options?.nsfwMode ? `?nsfw=${encodeURIComponent(options.nsfwMode)}` : "";
+  return serverFetch<JobsDashboardDto>(`/jobs${qs}`, { fetch: options?.fetch });
 }
 
 export async function fetchInstalledPlugins(options?: { fetch?: typeof fetch }) {

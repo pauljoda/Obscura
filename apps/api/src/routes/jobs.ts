@@ -63,9 +63,102 @@ function readSfwOnly(request: FastifyRequest): boolean {
   if (body && typeof body === "object" && body.nsfw === "off") {
     return true;
   }
+  const query = request.query as { nsfw?: string } | undefined;
+  if (query && typeof query === "object" && query.nsfw === "off") {
+    return true;
+  }
   const raw = request.headers["x-obscura-nsfw-mode"];
   const headerVal = Array.isArray(raw) ? raw[0] : raw;
   return headerVal === "off";
+}
+
+/**
+ * Given a batch of job rows, returns the subset whose target entity is
+ * NSFW (so callers can filter them out in SFW mode without leaking
+ * targetLabel / existence). Targets with unrecognized `targetType` are
+ * treated as non-sensitive and always pass through.
+ */
+async function collectNsfwJobTargetIds(
+  jobs: Array<typeof jobRuns.$inferSelect>,
+): Promise<Set<string>> {
+  const episodeIds: string[] = [];
+  const movieIds: string[] = [];
+  const seriesIds: string[] = [];
+  const libraryRootIds: string[] = [];
+  const audioTrackIds: string[] = [];
+
+  for (const job of jobs) {
+    if (!job.targetId) continue;
+    switch (job.targetType) {
+      case "video_episode":
+        episodeIds.push(job.targetId);
+        break;
+      case "video_movie":
+        movieIds.push(job.targetId);
+        break;
+      case "video_series":
+        seriesIds.push(job.targetId);
+        break;
+      case "library-root":
+        libraryRootIds.push(job.targetId);
+        break;
+      case "audio-track":
+        audioTrackIds.push(job.targetId);
+        break;
+      default:
+        break;
+    }
+  }
+
+  const nsfwIds = new Set<string>();
+
+  if (episodeIds.length) {
+    const rows = await db
+      .select({ id: videoEpisodes.id })
+      .from(videoEpisodes)
+      .where(and(inArray(videoEpisodes.id, episodeIds), eq(videoEpisodes.isNsfw, true)));
+    for (const r of rows) nsfwIds.add(r.id);
+  }
+  if (movieIds.length) {
+    const rows = await db
+      .select({ id: videoMovies.id })
+      .from(videoMovies)
+      .where(and(inArray(videoMovies.id, movieIds), eq(videoMovies.isNsfw, true)));
+    for (const r of rows) nsfwIds.add(r.id);
+  }
+  if (seriesIds.length) {
+    const rows = await db
+      .select({ id: videoSeries.id })
+      .from(videoSeries)
+      .where(and(inArray(videoSeries.id, seriesIds), eq(videoSeries.isNsfw, true)));
+    for (const r of rows) nsfwIds.add(r.id);
+  }
+  if (libraryRootIds.length) {
+    const rows = await db
+      .select({ id: libraryRoots.id })
+      .from(libraryRoots)
+      .where(and(inArray(libraryRoots.id, libraryRootIds), eq(libraryRoots.isNsfw, true)));
+    for (const r of rows) nsfwIds.add(r.id);
+  }
+  if (audioTrackIds.length) {
+    const rows = await db
+      .select({ id: audioTracks.id })
+      .from(audioTracks)
+      .where(and(inArray(audioTracks.id, audioTrackIds), eq(audioTracks.isNsfw, true)));
+    for (const r of rows) nsfwIds.add(r.id);
+  }
+
+  return nsfwIds;
+}
+
+async function filterSfwJobs<T extends typeof jobRuns.$inferSelect>(
+  jobs: T[],
+  sfwOnly: boolean,
+): Promise<T[]> {
+  if (!sfwOnly || jobs.length === 0) return jobs;
+  const nsfwIds = await collectNsfwJobTargetIds(jobs);
+  if (nsfwIds.size === 0) return jobs;
+  return jobs.filter((j) => !j.targetId || !nsfwIds.has(j.targetId));
 }
 
 function episodesSfwFilter(sfwOnly: boolean): SQL | undefined {
@@ -613,7 +706,7 @@ async function cancelQueueJobs(queueName: QueueName, reason = "Cancelled by user
 }
 
 export async function jobsRoutes(app: FastifyInstance) {
-  app.get("/jobs", async () => {
+  app.get("/jobs", async (request) => {
     const settings = await ensureLibrarySettingsRow();
     const [latestScan] = await db
       .select({ finishedAt: jobRuns.finishedAt })
@@ -673,7 +766,17 @@ export async function jobsRoutes(app: FastifyInstance) {
       };
     });
 
-    const activeJobs = await db
+    const sfwOnly = readSfwOnly(request);
+
+    // Over-fetch when SFW filtering is on so post-filter still leaves
+    // a meaningful page. Cheap: each list is capped and the NSFW fan-out
+    // resolves in five batched lookups max.
+    const activeLimit = sfwOnly ? 72 : 24;
+    const failedLimit = sfwOnly ? 72 : 24;
+    const completedLimit = sfwOnly ? 36 : 12;
+    const recentLimit = sfwOnly ? 54 : 18;
+
+    const activeJobsRaw = await db
       .select()
       .from(jobRuns)
       .where(inArray(jobRuns.status, ["waiting", "active", "delayed"]))
@@ -685,28 +788,35 @@ export async function jobsRoutes(app: FastifyInstance) {
         end`,
         asc(jobRuns.createdAt)
       )
-      .limit(24);
+      .limit(activeLimit);
 
-    const failedJobs = await db
+    const failedJobsRaw = await db
       .select()
       .from(jobRuns)
       .where(eq(jobRuns.status, "failed"))
       .orderBy(desc(jobRuns.updatedAt), desc(jobRuns.createdAt))
-      .limit(24);
+      .limit(failedLimit);
 
-    const completedJobs = await db
+    const completedJobsRaw = await db
       .select()
       .from(jobRuns)
       .where(eq(jobRuns.status, "completed"))
       .orderBy(desc(jobRuns.finishedAt), desc(jobRuns.createdAt))
-      .limit(12);
+      .limit(completedLimit);
 
-    const recentJobs = await db
+    const recentJobsRaw = await db
       .select()
       .from(jobRuns)
       .where(inArray(jobRuns.status, ["waiting", "active", "failed", "completed", "delayed"]))
       .orderBy(desc(jobRuns.updatedAt), desc(jobRuns.createdAt))
-      .limit(18);
+      .limit(recentLimit);
+
+    const [activeJobs, failedJobs, completedJobs, recentJobs] = await Promise.all([
+      filterSfwJobs(activeJobsRaw, sfwOnly).then((rows) => rows.slice(0, 24)),
+      filterSfwJobs(failedJobsRaw, sfwOnly).then((rows) => rows.slice(0, 24)),
+      filterSfwJobs(completedJobsRaw, sfwOnly).then((rows) => rows.slice(0, 12)),
+      filterSfwJobs(recentJobsRaw, sfwOnly).then((rows) => rows.slice(0, 18)),
+    ]);
 
     return {
       queues,

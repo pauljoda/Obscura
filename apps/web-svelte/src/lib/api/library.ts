@@ -63,8 +63,9 @@ export async function deleteLibraryRoot(id: string): Promise<{ ok: true }> {
   });
 }
 
-export async function fetchJobsDashboard(): Promise<JobsDashboard> {
-  return fetchApi("/jobs");
+export async function fetchJobsDashboard(nsfwMode?: string): Promise<JobsDashboard> {
+  const qs = nsfwMode ? `?nsfw=${encodeURIComponent(nsfwMode)}` : "";
+  return fetchApi(`/jobs${qs}`);
 }
 
 export async function runQueue(
