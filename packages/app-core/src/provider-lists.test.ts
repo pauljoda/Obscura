@@ -51,3 +51,66 @@ describe("mapInstalledScraperPackages", () => {
     expect(result).toEqual({ packages: rows });
   });
 });
+
+describe("mapInstalledPluginPackages", () => {
+  const basePackageRow = {
+    id: "pkg-1",
+    pluginId: "tmdb",
+    name: "TMDB",
+    version: "1.0.0",
+    runtime: "typescript",
+    installPath: "/tmp/tmdb",
+    sha256: null,
+    isNsfw: false,
+    capabilities: {},
+    enabled: true,
+    sourceIndex: "obscura-community",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-02T00:00:00Z"),
+  };
+
+  it("derives authStatus as missing when required auth fields have no stored values", async () => {
+    const { mapInstalledPluginPackages } = await import("./provider-lists");
+    const result = mapInstalledPluginPackages({
+      packageRows: [
+        {
+          ...basePackageRow,
+          manifestRaw: {
+            auth: [{ key: "apiKey", label: "API Key", required: true }],
+          },
+        },
+      ],
+      authRows: [],
+    });
+    expect(result[0].authStatus).toBe("missing");
+    expect(result[0].createdAt).toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("derives authStatus as ok when every required auth field is configured", async () => {
+    const { mapInstalledPluginPackages } = await import("./provider-lists");
+    const result = mapInstalledPluginPackages({
+      packageRows: [
+        {
+          ...basePackageRow,
+          manifestRaw: {
+            auth: [
+              { key: "apiKey", label: "API Key", required: true },
+              { key: "optional", label: "Optional", required: false },
+            ],
+          },
+        },
+      ],
+      authRows: [{ pluginId: "tmdb", authKey: "apiKey" }],
+    });
+    expect(result[0].authStatus).toBe("ok");
+  });
+
+  it("returns null authStatus when the manifest declares no auth fields", async () => {
+    const { mapInstalledPluginPackages } = await import("./provider-lists");
+    const result = mapInstalledPluginPackages({
+      packageRows: [{ ...basePackageRow, manifestRaw: {} }],
+      authRows: [],
+    });
+    expect(result[0].authStatus).toBeNull();
+  });
+});

@@ -39,7 +39,8 @@ export async function fetchJobsDashboard(options?: { fetch?: typeof fetch; nsfwM
 }
 
 export async function fetchInstalledPlugins(options?: { fetch?: typeof fetch }) {
-  return serverFetch<{ packages: unknown[] }>("/plugins/packages", {
-    fetch: options?.fetch,
-  });
+  const f = options?.fetch ?? fetch;
+  const res = await f("/api/plugins/packages");
+  if (!res.ok) throw new Error(`plugins packages ${res.status}`);
+  return res.json() as Promise<unknown[]>;
 }

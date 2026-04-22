@@ -24,6 +24,7 @@ import {
   type PluginInput,
 } from "@obscura/plugins";
 import { deriveProposedResultFromPluginOutput } from "../lib/plugin-proposed-result";
+import { mapInstalledPluginPackages } from "@obscura/app-core";
 
 const { pluginPackages, pluginAuth, scrapeResults } = schema;
 
@@ -82,56 +83,11 @@ async function upsertPlugin(
 export async function pluginsRoutes(app: FastifyInstance) {
   // ─── List installed plugins ─────────────────────────────────────
   app.get("/plugins/packages", async () => {
-    const rows = await db
-      .select()
-      .from(pluginPackages)
-      .orderBy(pluginPackages.name);
-
-    // Check auth status for each plugin
-    const authRows = await db
-      .select()
-      .from(pluginAuth);
-
-    const authByPlugin = new Map<string, Set<string>>();
-    for (const row of authRows) {
-      const set = authByPlugin.get(row.pluginId) ?? new Set();
-      set.add(row.authKey);
-      authByPlugin.set(row.pluginId, set);
-    }
-
-    return rows.map((row) => {
-      const manifest = row.manifestRaw as Record<string, unknown> | null;
-      const authFields = Array.isArray(manifest?.auth)
-        ? (manifest.auth as Array<{ key: string; label: string; required: boolean; url?: string }>)
-        : undefined;
-
-      let authStatus: "ok" | "missing" | null = null;
-      if (authFields && authFields.length > 0) {
-        const configured = authByPlugin.get(row.pluginId) ?? new Set();
-        const allRequired = authFields
-          .filter((f) => f.required)
-          .every((f) => configured.has(f.key));
-        authStatus = allRequired ? "ok" : "missing";
-      }
-
-      return {
-        id: row.id,
-        pluginId: row.pluginId,
-        name: row.name,
-        version: row.version,
-        runtime: row.runtime,
-        installPath: row.installPath,
-        sha256: row.sha256,
-        isNsfw: row.isNsfw,
-        capabilities: row.capabilities ?? {},
-        enabled: row.enabled,
-        sourceIndex: row.sourceIndex,
-        authStatus,
-        authFields,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      };
-    });
+    const [packageRows, authRows] = await Promise.all([
+      db.select().from(pluginPackages).orderBy(pluginPackages.name),
+      db.select().from(pluginAuth),
+    ]);
+    return mapInstalledPluginPackages({ packageRows, authRows });
   });
 
   // ─── Install plugin ─────────────────────────────────────────────
