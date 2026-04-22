@@ -12,11 +12,13 @@
   let { open, onClose }: Props = $props();
 
   const pathname = $derived(page.url.pathname);
+  let closeButton = $state<HTMLButtonElement | null>(null);
 
   $effect(() => {
     if (!open) return;
 
     document.body.style.overflow = "hidden";
+    closeButton?.focus();
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -38,6 +40,7 @@
 
   <div
     role="dialog"
+    aria-modal="true"
     aria-label="Navigation"
     class="fixed inset-x-0 bottom-14 z-[60] border-t border-border-subtle bg-surface-1"
   >
@@ -49,6 +52,7 @@
       <span class="text-sm font-medium text-text-primary">Navigate</span>
       <button
         type="button"
+        bind:this={closeButton}
         class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
         aria-label="Close navigation"
         onclick={onClose}
@@ -71,6 +75,7 @@
               <li>
                 <a
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   class={cn(
                     "group relative flex items-center gap-3 px-2.5 py-2.5 text-sm transition-colors",
                     active ? "bg-accent-950 text-glow-accent" : "text-text-muted active:bg-surface-2",

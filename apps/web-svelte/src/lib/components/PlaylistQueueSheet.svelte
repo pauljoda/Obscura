@@ -35,6 +35,11 @@
 </script>
 
 <div
+  id="playlist-queue-sheet"
+  role="region"
+  aria-label="Playlist queue"
+  aria-hidden={open ? undefined : "true"}
+  inert={!open}
   class={`fixed z-[55] transition-transform duration-300 ease-[var(--ease-mechanical)]
     inset-x-0 bottom-14 md:bottom-14 md:left-auto md:right-0 md:w-[420px]
     h-[calc(100dvh-7rem)] md:h-auto md:max-h-[70vh]

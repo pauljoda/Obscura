@@ -18,8 +18,11 @@
 
   // Wire all context providers once at the root. The stores themselves
   // attach keyboard listeners (Cmd+K, ⌘⇧Z) via $effect.root on client boot.
-  provideNsfw({ initialMode: data.initialNsfwMode, lanAutoEnable: data.lanAutoEnable });
-  const chrome = provideAppChrome(data.initialCollapsed);
+  provideNsfw(() => ({
+    initialMode: data.initialNsfwMode,
+    lanAutoEnable: data.lanAutoEnable,
+  }));
+  const chrome = provideAppChrome(() => data.initialCollapsed);
   provideSearch();
   const playlist = providePlaylist();
 </script>

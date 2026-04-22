@@ -15,6 +15,7 @@
   };
 
   let showQueue = $state(false);
+  const queueSheetId = "playlist-queue-sheet";
 
   const currentTitle = $derived(
     ((playlist.currentItem?.entity as Record<string, unknown> | undefined)?.title as string | undefined) ?? "Untitled",
@@ -50,6 +51,8 @@
       <button
         type="button"
         class={`p-1.5 transition-colors ${playlist.shuffle ? "text-text-accent" : "text-text-muted hover:text-text-secondary"}`}
+        aria-label={playlist.shuffle ? "Disable shuffle" : "Enable shuffle"}
+        aria-pressed={playlist.shuffle}
         title="Shuffle"
         onclick={() => playlist.toggleShuffle()}
       >
@@ -59,6 +62,7 @@
       <button
         type="button"
         class="p-1.5 text-text-secondary transition-colors hover:text-text-primary"
+        aria-label="Previous item"
         title="Previous"
         onclick={() => playlist.previous()}
       >
@@ -68,6 +72,7 @@
       <button
         type="button"
         class="p-1.5 text-text-secondary transition-colors hover:text-text-primary"
+        aria-label="Next item"
         title="Next"
         onclick={() => playlist.next()}
       >
@@ -77,6 +82,8 @@
       <button
         type="button"
         class={`p-1.5 transition-colors ${playlist.loop ? "text-text-accent" : "text-text-muted hover:text-text-secondary"}`}
+        aria-label={playlist.loop ? "Disable loop" : "Enable loop"}
+        aria-pressed={playlist.loop}
         title="Loop"
         onclick={() => playlist.toggleLoop()}
       >
@@ -88,6 +95,9 @@
       <button
         type="button"
         class="p-1.5 text-text-muted transition-colors hover:text-text-secondary"
+        aria-controls={queueSheetId}
+        aria-expanded={showQueue}
+        aria-label={showQueue ? "Hide queue" : "Show queue"}
         title="Queue"
         onclick={() => (showQueue = !showQueue)}
       >
@@ -100,6 +110,7 @@
       <button
         type="button"
         class="p-1.5 text-text-muted transition-colors hover:text-error-text"
+        aria-label="End playlist"
         title="End playlist"
         onclick={() => playlist.clearPlaylist()}
       >

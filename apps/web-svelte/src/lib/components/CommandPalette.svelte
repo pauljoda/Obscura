@@ -141,6 +141,9 @@
     ></button>
 
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search"
       class={cn(
         "relative mx-4 flex max-h-[70vh] w-full max-w-2xl flex-col",
         "surface-elevated border border-border-subtle shadow-2xl",
@@ -202,7 +205,6 @@
                     class="flex-1 truncate text-left text-sm text-text-muted group-hover:text-text-primary"
                     onclick={() => {
                       query = previousQuery;
-                      void runSearch(previousQuery);
                     }}
                   >
                     {previousQuery}

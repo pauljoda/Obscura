@@ -15,6 +15,8 @@
     "test:web": "vitest run --config apps/web/vitest.config.ts",
     "test:web-svelte": "pnpm --filter @obscura/web-svelte test:unit",
     "test:e2e": "playwright test",
+    "test:parity": "playwright test e2e/parity.spec.ts",
+    "test:parity:update": "playwright test e2e/parity.spec.ts --update-snapshots",
     "test:ci": "pnpm test:unit && pnpm test:integration && pnpm test:web && pnpm test:web-svelte",
     "coverage": "pnpm test:unit -- --coverage && pnpm test:integration -- --coverage && pnpm test:web -- --coverage && pnpm test:web-svelte -- --coverage",
     "release:check": "node scripts/release/check-version.mjs",

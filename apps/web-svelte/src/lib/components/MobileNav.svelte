@@ -12,7 +12,18 @@
     { label: "Jobs", href: "/jobs", icon: Activity },
   ];
 
-  const moreRoutes = ["/", "/search", "/images", "/studios", "/tags", "/collections", "/identify", "/settings"];
+  const moreRoutes = [
+    "/",
+    "/search",
+    "/images",
+    "/studios",
+    "/tags",
+    "/collections",
+    "/identify",
+    "/settings",
+    "/audio",
+    "/plugins",
+  ];
 
   const pathname = $derived(page.url.pathname);
   let sheetOpen = $state(false);
@@ -30,6 +41,7 @@
     {@const Icon = tab.icon}
     <a
       href={tab.href}
+      aria-current={active ? "page" : undefined}
       class={cn(
         "flex flex-col items-center gap-0.5 px-3 py-1.5 text-[0.65rem] transition-colors duration-fast",
         active ? "text-text-accent" : "text-text-disabled hover:text-text-muted",

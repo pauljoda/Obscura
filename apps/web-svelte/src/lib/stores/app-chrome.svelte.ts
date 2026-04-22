@@ -23,8 +23,8 @@ export class AppChromeStore {
   }
 }
 
-export function provideAppChrome(initialCollapsed: boolean) {
-  const store = new AppChromeStore(initialCollapsed);
+export function provideAppChrome(getInitialCollapsed: () => boolean) {
+  const store = new AppChromeStore(getInitialCollapsed());
   setContext(KEY, store);
   return store;
 }

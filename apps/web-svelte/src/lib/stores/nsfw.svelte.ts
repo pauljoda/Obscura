@@ -92,8 +92,8 @@ export class NsfwStore {
   }
 }
 
-export function provideNsfw(opts: { initialMode: NsfwMode; lanAutoEnable: boolean }) {
-  const store = new NsfwStore(opts);
+export function provideNsfw(getOpts: () => { initialMode: NsfwMode; lanAutoEnable: boolean }) {
+  const store = new NsfwStore(getOpts());
   setContext(KEY, store);
   return store;
 }
