@@ -2,6 +2,8 @@
   import { Film, Images, Users, Activity } from "@lucide/svelte";
   import { page } from "$app/state";
   import { cn } from "@obscura/ui-svelte";
+  import MobileMoreSheet from "./MobileMoreSheet.svelte";
+  import MobileMoreNavButton from "./MobileMoreNavButton.svelte";
 
   const primaryTabs = [
     { label: "Videos", href: "/videos", icon: Film },
@@ -10,7 +12,14 @@
     { label: "Jobs", href: "/jobs", icon: Activity },
   ];
 
+  const moreRoutes = ["/", "/search", "/images", "/studios", "/tags", "/collections", "/identify", "/settings"];
+
   const pathname = $derived(page.url.pathname);
+  let sheetOpen = $state(false);
+  const isMoreActive = $derived(
+    sheetOpen ||
+      moreRoutes.some((route) => pathname === route || (route !== "/" && pathname.startsWith(route + "/"))),
+  );
 </script>
 
 <nav
@@ -30,4 +39,12 @@
       <span>{tab.label}</span>
     </a>
   {/each}
+
+  <MobileMoreNavButton
+    {isMoreActive}
+    {sheetOpen}
+    onToggleSheet={() => (sheetOpen = !sheetOpen)}
+  />
 </nav>
+
+<MobileMoreSheet open={sheetOpen} onClose={() => (sheetOpen = false)} />

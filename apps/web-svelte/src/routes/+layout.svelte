@@ -6,6 +6,8 @@
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
   import MobileNav from "$lib/components/MobileNav.svelte";
   import BreakingUpgradeGate from "$lib/components/BreakingUpgradeGate.svelte";
+  import CommandPalette from "$lib/components/CommandPalette.svelte";
+  import PlaylistController from "$lib/components/PlaylistController.svelte";
 
   import { provideNsfw } from "$lib/stores/nsfw.svelte";
   import { provideAppChrome } from "$lib/stores/app-chrome.svelte";
@@ -46,6 +48,8 @@
       </main>
 
       <MobileNav />
+      <CommandPalette />
+      <PlaylistController />
     </div>
   {/snippet}
 </BreakingUpgradeGate>
