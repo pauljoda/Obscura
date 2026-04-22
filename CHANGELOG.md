@@ -122,6 +122,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Docs
 
 - Added `docs/svelte-migration-audit.md`, a cutover-readiness snapshot for the SvelteKit port. It records the current 35/35 route match against the Next.js app, the restored shell-level parity surfaces, and the remaining blockers: backend replacement has not started, Docker/release wiring still ships `apps/web`, and route presence still needs route-by-route visual verification before the React frontend can be retired.
+- Added `docs/superpowers/plans/2026-04-21-svelte-full-stack-cutover.md`, a program plan for the full replacement path. It locks the chosen end-state to full-stack SvelteKit plus a thin background worker, sequences the migration by route family, and makes parity harnessing the first required execution step before more backend rewrites land.
 
 ### Added
 

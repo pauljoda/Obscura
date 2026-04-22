@@ -8,6 +8,15 @@ The SvelteKit app has reached route-surface parity with the current Next.js app:
 
 This is still not a full-app cutover candidate. The SvelteKit project is a frontend replacement only. It continues to depend on the existing Fastify API for all server data and mutations, the Docker/dev entrypoints still boot the Next.js web app, and the unified production image still packages `apps/web` rather than `apps/web-svelte`.
 
+## Chosen Direction
+
+The selected target architecture is now explicit:
+
+- `apps/web-svelte` becomes the sole web and API surface.
+- Fastify is transitional and will be removed.
+- Heavy media work remains out-of-process in the worker runtime for ffmpeg isolation, retries, and restart safety.
+- The migration will proceed by route family with parity checks, not as a single big-bang cutover.
+
 ## Route Surface
 
 Route inventory check on 2026-04-21:
@@ -95,9 +104,7 @@ The root scripts should treat `@obscura/web-svelte` as a first-class app during 
 ### Recommended next steps
 
 1. Add route-by-route visual baselines for the shared 35-route surface, starting with dashboard, videos, search, plugins, settings, identify, jobs, and the main detail pages.
-2. Decide whether the target architecture is:
-   - SvelteKit frontend + existing Fastify API, or
-   - a true SvelteKit full-stack replacement
-3. If the goal is a full-stack replacement, define the Fastify-to-SvelteKit server migration plan explicitly. That work has not started in this tree.
-4. Swap Docker/dev wiring to a selectable web target only after the browser parity pass is clean.
+2. Extract shared framework-agnostic application services from Fastify before adding SvelteKit `+server.ts` handlers.
+3. Add SvelteKit-owned `/api/*`, `/assets/*`, and streaming handlers route family by route family while keeping Fastify as the oracle until each slice passes parity.
+4. Swap Docker/dev wiring to a selectable Svelte web target only after the browser parity pass is clean.
 5. Burn down the `svelte-check` warning backlog before cutover so new regressions are visible.
