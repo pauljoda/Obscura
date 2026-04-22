@@ -300,6 +300,9 @@ importers:
 
   packages/app-core:
     dependencies:
+      '@obscura/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@obscura/db':
         specifier: workspace:*
         version: link:../db

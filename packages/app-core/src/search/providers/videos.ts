@@ -1,7 +1,16 @@
-import { formatDuration, formatFileSize, getResolutionLabel } from "@obscura/contracts";
-import { db, schema } from "../../db";
+import {
+  formatDuration,
+  formatFileSize,
+  getResolutionLabel,
+} from "@obscura/contracts";
+import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, sql, and, gte, lte, eq, exists, ne } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 
 const {
   studios,
@@ -22,7 +31,9 @@ const {
  * distinguish between an episode row and a movie row — both render as
  * "video"-kind cards.
  */
-export const videosSearchProvider: SearchProvider = {
+export const createVideosSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "video",
   label: "Videos",
   defaultPreviewLimit: 3,
@@ -107,7 +118,6 @@ export const videosSearchProvider: SearchProvider = {
       movieConditions.push(gte(videoMovies.rating, filters.rating));
     }
     if (filters.dateFrom) {
-      // episodes use air_date, movies use release_date; both are text-typed
       episodeConditions.push(gte(videoEpisodes.airDate, filters.dateFrom));
       movieConditions.push(gte(videoMovies.releaseDate, filters.dateFrom));
     }
@@ -123,7 +133,6 @@ export const videosSearchProvider: SearchProvider = {
     const episodeWhere = and(...episodeConditions);
     const movieWhere = and(...movieConditions);
 
-    // Rank: exact title > prefix title > contains title > other match
     const episodeScoreExpr = sql<number>`CASE
       WHEN lower(${videoEpisodes.title}) = lower(${q}) THEN 100
       WHEN lower(${videoEpisodes.title}) LIKE lower(${q}) || '%' THEN 80
@@ -137,8 +146,6 @@ export const videosSearchProvider: SearchProvider = {
       ELSE 40
     END`;
 
-    // Fetch both lists wide (limit+offset worth of rows from each), then
-    // merge. For typical search result limits (50 or so) this is fine.
     const fetchCap = limit + offset;
 
     const [episodeRows, movieRows, episodeCountResult, movieCountResult] =
@@ -165,7 +172,10 @@ export const videosSearchProvider: SearchProvider = {
           .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
           .leftJoin(studios, eq(videoSeries.studioId, studios.id))
           .where(episodeWhere)
-          .orderBy(sql`${episodeScoreExpr} DESC`, sql`${videoEpisodes.createdAt} DESC`)
+          .orderBy(
+            sql`${episodeScoreExpr} DESC`,
+            sql`${videoEpisodes.createdAt} DESC`,
+          )
           .limit(fetchCap),
         db
           .select({
@@ -188,7 +198,10 @@ export const videosSearchProvider: SearchProvider = {
           .from(videoMovies)
           .leftJoin(studios, eq(videoMovies.studioId, studios.id))
           .where(movieWhere)
-          .orderBy(sql`${movieScoreExpr} DESC`, sql`${videoMovies.createdAt} DESC`)
+          .orderBy(
+            sql`${movieScoreExpr} DESC`,
+            sql`${videoMovies.createdAt} DESC`,
+          )
           .limit(fetchCap),
         db
           .select({ total: sql<number>`count(*)::int` })
@@ -244,4 +257,4 @@ export const videosSearchProvider: SearchProvider = {
       })),
     };
   },
-};
+});

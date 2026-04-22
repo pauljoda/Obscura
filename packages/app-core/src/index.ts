@@ -5,5 +5,6 @@ export * from "./library-config";
 export * from "./network";
 export * from "./performer-reads";
 export * from "./provider-lists";
+export * from "./search";
 export * from "./studio-reads";
 export * from "./tag-reads";

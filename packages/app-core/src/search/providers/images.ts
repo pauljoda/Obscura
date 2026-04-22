@@ -1,16 +1,43 @@
-import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists, ne } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
-import { getImagePreviewPath } from "../../lib/image-media";
+import { isVideoImageFormat } from "@obscura/contracts";
+import { schema, type AppDb } from "@obscura/db";
+import {
+  ilike,
+  or,
+  sql,
+  and,
+  gte,
+  lte,
+  count,
+  eq,
+  exists,
+  ne,
+} from "drizzle-orm";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 
 const { images, galleries, imageTags, tags } = schema;
 
-export const imagesSearchProvider: SearchProvider = {
+function imagePreviewPath(imageId: string, format: string | null): string | null {
+  return isVideoImageFormat(format) ? `/assets/images/${imageId}/preview` : null;
+}
+
+export const createImagesSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "image",
   label: "Images",
   defaultPreviewLimit: 3,
 
-  async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
+  async query({
+    q,
+    limit,
+    offset,
+    filters,
+  }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
 
     const matchCondition = or(
@@ -18,9 +45,13 @@ export const imagesSearchProvider: SearchProvider = {
       ilike(images.details, term),
       ilike(galleries.title, term),
       exists(
-        db.select({ x: sql`1` }).from(imageTags)
+        db
+          .select({ x: sql`1` })
+          .from(imageTags)
           .innerJoin(tags, eq(tags.id, imageTags.tagId))
-          .where(and(eq(imageTags.imageId, images.id), ilike(tags.name, term)))
+          .where(
+            and(eq(imageTags.imageId, images.id), ilike(tags.name, term)),
+          ),
       ),
     )!;
 
@@ -40,25 +71,27 @@ export const imagesSearchProvider: SearchProvider = {
     END`;
 
     const [rows, countResult] = await Promise.all([
-      db.select({
-        id: images.id,
-        title: images.title,
-        thumbnailPath: images.thumbnailPath,
-        galleryTitle: galleries.title,
-        galleryId: images.galleryId,
-        rating: images.rating,
-        width: images.width,
-        height: images.height,
-        format: images.format,
-        score: scoreExpr,
-      })
+      db
+        .select({
+          id: images.id,
+          title: images.title,
+          thumbnailPath: images.thumbnailPath,
+          galleryTitle: galleries.title,
+          galleryId: images.galleryId,
+          rating: images.rating,
+          width: images.width,
+          height: images.height,
+          format: images.format,
+          score: scoreExpr,
+        })
         .from(images)
         .leftJoin(galleries, eq(images.galleryId, galleries.id))
         .where(where)
         .orderBy(sql`${scoreExpr} DESC`, sql`${images.createdAt} DESC`)
         .limit(limit)
         .offset(offset),
-      db.select({ total: count() })
+      db
+        .select({ total: count() })
         .from(images)
         .leftJoin(galleries, eq(images.galleryId, galleries.id))
         .where(where),
@@ -74,7 +107,9 @@ export const imagesSearchProvider: SearchProvider = {
         title: r.title,
         subtitle: r.galleryTitle ?? null,
         imagePath: r.thumbnailPath ?? null,
-        href: r.galleryId ? `/galleries/${r.galleryId}?image=${r.id}` : `/images/${r.id}`,
+        href: r.galleryId
+          ? `/galleries/${r.galleryId}?image=${r.id}`
+          : `/images/${r.id}`,
         rating: r.rating,
         score: r.score,
         meta: {
@@ -82,10 +117,10 @@ export const imagesSearchProvider: SearchProvider = {
           height: r.height,
           galleryId: r.galleryId,
           format: r.format,
-          previewPath: getImagePreviewPath(r.id, r.format),
+          previewPath: imagePreviewPath(r.id, r.format),
           fullPath: `/assets/images/${r.id}/full`,
         },
       })),
     };
   },
-};
+});

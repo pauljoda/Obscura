@@ -1,21 +1,33 @@
-import { db, schema } from "../../db";
+import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, sql, and, gte, count, ne, desc } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 import {
   performerAudioLibraryCountExpr,
   performerImageAppearanceCountExpr,
   performerSfwSceneCountExpr,
   performerTotalSceneCountExpr,
-} from "../../lib/appearance-count-expressions";
+} from "../../appearance-count-expressions";
 
 const { performers } = schema;
 
-export const performersSearchProvider: SearchProvider = {
+export const createPerformersSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "performer",
   label: "Actors",
   defaultPreviewLimit: 3,
 
-  async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
+  async query({
+    q,
+    limit,
+    offset,
+    filters,
+  }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
     const sfwOnly = filters.nsfw === "off";
 
@@ -44,18 +56,19 @@ export const performersSearchProvider: SearchProvider = {
       : performerTotalSceneCountExpr();
 
     const [rows, countResult] = await Promise.all([
-      db.select({
-        id: performers.id,
-        name: performers.name,
-        disambiguation: performers.disambiguation,
-        gender: performers.gender,
-        imagePath: performers.imagePath,
-        rating: performers.rating,
-        videoCount: sceneCountSelect,
-        imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
-        audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
-        score: scoreExpr,
-      })
+      db
+        .select({
+          id: performers.id,
+          name: performers.name,
+          disambiguation: performers.disambiguation,
+          gender: performers.gender,
+          imagePath: performers.imagePath,
+          rating: performers.rating,
+          videoCount: sceneCountSelect,
+          imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
+          audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
+          score: scoreExpr,
+        })
         .from(performers)
         .where(where)
         .orderBy(desc(scoreExpr), desc(sceneCountSelect))
@@ -98,4 +111,4 @@ export const performersSearchProvider: SearchProvider = {
       }),
     };
   },
-};
+});

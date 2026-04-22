@@ -1,19 +1,31 @@
-import { db, schema } from "../../db";
+import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, sql, and, gte, count, ne } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 import {
   tagSfwSceneCountExpr,
   tagTotalSceneCountExpr,
-} from "../../lib/appearance-count-expressions";
+} from "../../appearance-count-expressions";
 
 const { tags } = schema;
 
-export const tagsSearchProvider: SearchProvider = {
+export const createTagsSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "tag",
   label: "Tags",
   defaultPreviewLimit: 8,
 
-  async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
+  async query({
+    q,
+    limit,
+    offset,
+    filters,
+  }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
 
     const matchCondition = or(
@@ -42,14 +54,15 @@ export const tagsSearchProvider: SearchProvider = {
       : tagTotalSceneCountExpr();
 
     const [rows, countResult] = await Promise.all([
-      db.select({
-        id: tags.id,
-        name: tags.name,
-        imagePath: tags.imagePath,
-        rating: tags.rating,
-        videoCount: sceneCountExpr,
-        score: scoreExpr,
-      })
+      db
+        .select({
+          id: tags.id,
+          name: tags.name,
+          imagePath: tags.imagePath,
+          rating: tags.rating,
+          videoCount: sceneCountExpr,
+          score: scoreExpr,
+        })
         .from(tags)
         .where(where)
         .orderBy(sql`${scoreExpr} DESC`, sql`${sceneCountExpr} DESC`)
@@ -66,7 +79,10 @@ export const tagsSearchProvider: SearchProvider = {
         id: r.id,
         kind: "tag" as const,
         title: r.name,
-        subtitle: Number(r.videoCount ?? 0) > 0 ? `${Number(r.videoCount)} videos` : null,
+        subtitle:
+          Number(r.videoCount ?? 0) > 0
+            ? `${Number(r.videoCount)} videos`
+            : null,
         imagePath: r.imagePath ?? null,
         href: `/tags/${encodeURIComponent(r.name)}`,
         rating: r.rating,
@@ -75,4 +91,4 @@ export const tagsSearchProvider: SearchProvider = {
       })),
     };
   },
-};
+});

@@ -1,30 +1,63 @@
-import { db, schema } from "../../db";
-import { ilike, or, sql, and, gte, lte, count, eq, exists, inArray, asc, ne } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import { schema, type AppDb } from "@obscura/db";
+import {
+  ilike,
+  or,
+  sql,
+  and,
+  gte,
+  lte,
+  count,
+  eq,
+  exists,
+  inArray,
+  asc,
+  ne,
+} from "drizzle-orm";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 
 const { galleries, galleryTags, tags, images } = schema;
 
-export const galleriesSearchProvider: SearchProvider = {
+export const createGalleriesSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "gallery",
   label: "Galleries",
   defaultPreviewLimit: 3,
 
-  async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
+  async query({
+    q,
+    limit,
+    offset,
+    filters,
+  }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
 
     const matchCondition = or(
       ilike(galleries.title, term),
       ilike(galleries.details, term),
       exists(
-        db.select({ x: sql`1` }).from(galleryTags)
+        db
+          .select({ x: sql`1` })
+          .from(galleryTags)
           .innerJoin(tags, eq(tags.id, galleryTags.tagId))
-          .where(and(eq(galleryTags.galleryId, galleries.id), ilike(tags.name, term)))
+          .where(
+            and(
+              eq(galleryTags.galleryId, galleries.id),
+              ilike(tags.name, term),
+            ),
+          ),
       ),
     )!;
 
     const conditions = [matchCondition];
     if (filters.rating) conditions.push(gte(galleries.rating, filters.rating));
-    if (filters.dateFrom) conditions.push(gte(galleries.date, filters.dateFrom));
+    if (filters.dateFrom)
+      conditions.push(gte(galleries.date, filters.dateFrom));
     if (filters.dateTo) conditions.push(lte(galleries.date, filters.dateTo));
     if (filters.nsfw === "off") conditions.push(ne(galleries.isNsfw, true));
 
@@ -38,15 +71,16 @@ export const galleriesSearchProvider: SearchProvider = {
     END`;
 
     const [rows, countResult] = await Promise.all([
-      db.select({
-        id: galleries.id,
-        title: galleries.title,
-        coverImageId: galleries.coverImageId,
-        imageCount: galleries.imageCount,
-        rating: galleries.rating,
-        galleryType: galleries.galleryType,
-        score: scoreExpr,
-      })
+      db
+        .select({
+          id: galleries.id,
+          title: galleries.title,
+          coverImageId: galleries.coverImageId,
+          imageCount: galleries.imageCount,
+          rating: galleries.rating,
+          galleryType: galleries.galleryType,
+          score: scoreExpr,
+        })
         .from(galleries)
         .where(where)
         .orderBy(sql`${scoreExpr} DESC`, sql`${galleries.createdAt} DESC`)
@@ -96,4 +130,4 @@ export const galleriesSearchProvider: SearchProvider = {
       })),
     };
   },
-};
+});

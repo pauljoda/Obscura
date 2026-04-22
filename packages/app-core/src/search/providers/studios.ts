@@ -1,21 +1,33 @@
-import { db, schema } from "../../db";
+import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, sql, and, gte, count, ne, desc } from "drizzle-orm";
-import type { SearchProvider, SearchProviderQuery, SearchProviderResult } from "../types";
+import type {
+  SearchProvider,
+  SearchProviderFactory,
+  SearchProviderQuery,
+  SearchProviderResult,
+} from "../types";
 import {
   studioAudioLibraryCountExpr,
   studioImageAppearanceCountExpr,
   studioSfwSceneCountExpr,
   studioTotalSceneCountExpr,
-} from "../../lib/appearance-count-expressions";
+} from "../../appearance-count-expressions";
 
 const { studios } = schema;
 
-export const studiosSearchProvider: SearchProvider = {
+export const createStudiosSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "studio",
   label: "Studios",
   defaultPreviewLimit: 3,
 
-  async query({ q, limit, offset, filters }: SearchProviderQuery): Promise<SearchProviderResult> {
+  async query({
+    q,
+    limit,
+    offset,
+    filters,
+  }: SearchProviderQuery): Promise<SearchProviderResult> {
     const term = `%${q}%`;
     const sfwOnly = filters.nsfw === "off";
 
@@ -44,16 +56,17 @@ export const studiosSearchProvider: SearchProvider = {
       : studioTotalSceneCountExpr();
 
     const [rows, countResult] = await Promise.all([
-      db.select({
-        id: studios.id,
-        name: studios.name,
-        imagePath: studios.imagePath,
-        rating: studios.rating,
-        videoCount: sceneCountSelect,
-        imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
-        audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
-        score: scoreExpr,
-      })
+      db
+        .select({
+          id: studios.id,
+          name: studios.name,
+          imagePath: studios.imagePath,
+          rating: studios.rating,
+          videoCount: sceneCountSelect,
+          imageAppearanceCount: studioImageAppearanceCountExpr(sfwOnly),
+          audioLibraryCount: studioAudioLibraryCountExpr(sfwOnly),
+          score: scoreExpr,
+        })
         .from(studios)
         .where(where)
         .orderBy(desc(scoreExpr), desc(sceneCountSelect))
@@ -89,4 +102,4 @@ export const studiosSearchProvider: SearchProvider = {
       }),
     };
   },
-};
+});

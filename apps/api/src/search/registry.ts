@@ -1,18 +1,9 @@
-import type { SearchProvider } from "./types";
-import { videoSeriesSearchProvider } from "./providers/video-series.provider";
-import { videosSearchProvider } from "./providers/scenes.provider";
-import { performersSearchProvider } from "./providers/performers.provider";
-import { studiosSearchProvider } from "./providers/studios.provider";
-import { tagsSearchProvider } from "./providers/tags.provider";
-import { galleriesSearchProvider } from "./providers/galleries.provider";
-import { imagesSearchProvider } from "./providers/images.provider";
+/**
+ * Shim — the canonical search registry lives in `@obscura/app-core`. This
+ * module binds the registry to the Fastify-side DB instance so the rest
+ * of the API keeps importing `searchProviders` from the same path.
+ */
+import { createSearchProviders } from "@obscura/app-core";
+import { db } from "../db";
 
-export const searchProviders = new Map<string, SearchProvider>([
-  ["video-series", videoSeriesSearchProvider],
-  ["video", videosSearchProvider],
-  ["performer", performersSearchProvider],
-  ["studio", studiosSearchProvider],
-  ["tag", tagsSearchProvider],
-  ["gallery", galleriesSearchProvider],
-  ["image", imagesSearchProvider],
-]);
+export const searchProviders = createSearchProviders(db);

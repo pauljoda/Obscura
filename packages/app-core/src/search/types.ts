@@ -1,4 +1,5 @@
 import type { EntityKind, SearchResultItem } from "@obscura/contracts";
+import type { AppDb } from "@obscura/db";
 
 export interface SearchProviderQuery {
   q: string;
@@ -25,3 +26,5 @@ export interface SearchProvider {
   defaultPreviewLimit: number;
   query(params: SearchProviderQuery): Promise<SearchProviderResult>;
 }
+
+export type SearchProviderFactory = (db: AppDb) => SearchProvider;

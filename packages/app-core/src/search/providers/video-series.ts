@@ -1,18 +1,17 @@
-import { db, schema } from "../../db";
+import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, and, ne, desc, sql } from "drizzle-orm";
 import type {
   SearchProvider,
+  SearchProviderFactory,
   SearchProviderQuery,
   SearchProviderResult,
 } from "../types";
 
 const { videoSeries } = schema;
 
-/**
- * Series search provider backed by `video_series`. Returns results as
- * `kind: "video-series"` and links at `/videos?series=:id`.
- */
-export const videoSeriesSearchProvider: SearchProvider = {
+export const createVideoSeriesSearchProvider: SearchProviderFactory = (
+  db: AppDb,
+): SearchProvider => ({
   kind: "video-series",
   label: "Series",
   defaultPreviewLimit: 2,
@@ -93,4 +92,4 @@ export const videoSeriesSearchProvider: SearchProvider = {
       }),
     };
   },
-};
+});
