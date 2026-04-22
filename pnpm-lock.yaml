@@ -181,6 +181,9 @@ importers:
       '@obscura/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@obscura/media-core':
+        specifier: workspace:*
+        version: link:../../packages/media-core
       '@obscura/ui-svelte':
         specifier: workspace:*
         version: link:../../packages/ui-svelte

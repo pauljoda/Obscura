@@ -19,6 +19,7 @@
     "@obscura/app-core": "workspace:*",
     "@obscura/contracts": "workspace:*",
     "@obscura/db": "workspace:*",
+    "@obscura/media-core": "workspace:*",
     "@obscura/ui-svelte": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hls.js": "^1.6.15",

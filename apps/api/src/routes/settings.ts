@@ -1,6 +1,6 @@
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { resolveClientInfo } from "@obscura/app-core";
+import { loadLibraryConfig, resolveClientInfo } from "@obscura/app-core";
 import {
   normalizeBackgroundWorkerConcurrency,
   normalizePlaybackMode,
@@ -43,15 +43,12 @@ function clampRange(value: unknown, min: number, max: number): number {
 
 export async function settingsRoutes(app: FastifyInstance) {
   app.get("/settings/library", async () => {
-    const settings = await ensureLibrarySettingsRow();
-    const roots = await db.select().from(libraryRoots).orderBy(asc(libraryRoots.path));
-    const storage = await getStorageStats();
-
-    return {
-      settings,
-      roots,
-      storage,
-    };
+    return loadLibraryConfig({
+      ensureSettings: () => ensureLibrarySettingsRow(),
+      loadRoots: () =>
+        db.select().from(libraryRoots).orderBy(asc(libraryRoots.path)),
+      loadStorage: () => getStorageStats(),
+    });
   });
 
   app.put("/settings/library", async (request) => {

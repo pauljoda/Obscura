@@ -9,11 +9,14 @@ import type {
 import { serverFetch } from "./core";
 
 export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
-  return serverFetch<{
+  const f = options?.fetch ?? fetch;
+  const res = await f("/api/settings/library");
+  if (!res.ok) throw new Error(`settings library ${res.status}`);
+  return res.json() as Promise<{
     settings: LibrarySettingsDto;
     roots: LibraryRootDto[];
     storage: StorageStatsDto;
-  }>("/settings/library", { fetch: options?.fetch });
+  }>;
 }
 
 export async function fetchInstalledScrapers(options?: { fetch?: typeof fetch }) {

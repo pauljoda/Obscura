@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from "./$types";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
-import { INTERNAL_API_URL } from "$env/static/private";
+import { fetchLibraryConfig } from "$lib/server/system";
 
 /**
  * Root server load. Reads cookies on every request so the client
@@ -15,15 +15,10 @@ export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
   let awaitingBreakingConsent = false;
 
   try {
-    const res = await fetch(`${INTERNAL_API_URL}/library/config`);
-    if (res.ok) {
-      const config = (await res.json()) as {
-        settings?: { nsfwLanAutoEnable?: boolean };
-      };
-      lanAutoEnable = config.settings?.nsfwLanAutoEnable ?? false;
-    }
+    const config = await fetchLibraryConfig({ fetch });
+    lanAutoEnable = config.settings?.nsfwLanAutoEnable ?? false;
   } catch {
-    // Non-fatal — API may be unavailable during cold start.
+    // Non-fatal — DB may be unavailable during cold start.
   }
 
   try {

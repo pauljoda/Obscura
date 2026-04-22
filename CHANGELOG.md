@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- The SvelteKit app now owns `GET /api/settings/library` locally. The root layout and the Settings page now read library settings, watched roots, and storage stats through the new Svelte route instead of Fastify. The shared payload builder lives in `@obscura/app-core` as `loadLibraryConfig`, so Fastify and Svelte return byte-identical shapes.
 - A shared DB runtime in `@obscura/db` (`createDbRuntime`) now owns the connection-string lifecycle for both Fastify (`apps/api/src/db`) and the SvelteKit server (`apps/web-svelte/src/lib/server/db.ts`). Both apps reconfigure, close, and swap typed Drizzle + `postgres` clients through the same helper so the Svelte app can start owning backend read paths without duplicating the bootstrap code.
 - The breaking-upgrade gate helpers now live in `@obscura/app-core`, and the SvelteKit app now serves local `/api/system/status` and `/api/system/breaking-gate/accept` routes so the root layout and upgrade gate no longer depend on Fastify for that shell state.
 - The SvelteKit app now serves `/api/changelog` and `/api/client-info` locally, backed by a new shared `@obscura/app-core` package that both SvelteKit and Fastify import so the first backend slice can move without forking behavior.
