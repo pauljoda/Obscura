@@ -1,45 +1,41 @@
 /**
  * Tag business logic extracted from route handlers.
  *
- * All functions return plain data objects and throw AppError for
- * HTTP-level error conditions (404, 400, 502, etc.).
+ * Most of the logic lives in `@obscura/app-core`; this module is a thin
+ * shim that binds the shared helpers to the Fastify-side DB instance and
+ * translates the sentinel error classes into AppError so the shared
+ * error-handler plugin maps them to HTTP responses.
  */
-import { existsSync } from "node:fs";
-import { writeFile, mkdir, unlink, rm } from "node:fs/promises";
-import path from "node:path";
 import {
-  eq,
-  desc,
-  sql,
-  and,
-  ne,
-} from "drizzle-orm";
-import { getGeneratedTagDir } from "@obscura/media-core";
-import { getTagByIdRead, listTagsRead } from "@obscura/app-core";
-import { db, schema } from "../db";
+  createTagWrite,
+  deleteTagImageWrite,
+  deleteTagWrite,
+  getTagByIdRead,
+  listTagsRead,
+  setTagFavoriteWrite,
+  setTagImageFromUrlWrite,
+  setTagRatingWrite,
+  TagNotFoundError,
+  TagUpstreamError,
+  TagValidationError,
+  updateTagWrite,
+  uploadTagImageWrite,
+  type CreateTagBody,
+  type UpdateTagBody,
+} from "@obscura/app-core";
+import { db } from "../db";
 import { AppError } from "../plugins/error-handler";
-import {
-  tagSfwSceneCountExpr,
-  tagTotalSceneCountExpr,
-} from "../lib/appearance-count-expressions";
 
-const {
-  tags,
-  performerTags,
-  galleryTags,
-  imageTags,
-  audioLibraryTags,
-  audioTrackTags,
-  images,
-} = schema;
-
-// ─── listTags ─────────────────────────────────────────────────
+function mapTagError(err: unknown): never {
+  if (err instanceof TagNotFoundError) throw new AppError(404, err.message);
+  if (err instanceof TagValidationError) throw new AppError(400, err.message);
+  if (err instanceof TagUpstreamError) throw new AppError(502, err.message);
+  throw err;
+}
 
 export async function listTags(sfwOnly: boolean) {
   return listTagsRead(db, sfwOnly);
 }
-
-// ─── getTagById ───────────────────────────────────────────────
 
 export async function getTagById(id: string, sfwOnly: boolean) {
   const detail = await getTagByIdRead(db, id, sfwOnly);
@@ -47,221 +43,66 @@ export async function getTagById(id: string, sfwOnly: boolean) {
   return detail;
 }
 
-// ─── updateTag ────────────────────────────────────────────────
-
-export async function updateTag(
-  id: string,
-  body: {
-    name?: string;
-    description?: string | null;
-    aliases?: string | null;
-    imageUrl?: string | null;
-    parentId?: string | null;
-    favorite?: boolean;
-    rating?: number | null;
-    ignoreAutoTag?: boolean;
-    isNsfw?: boolean;
-  },
-) {
-  const [existing] = await db.select().from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
-
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.name !== undefined) updates.name = body.name.trim();
-  if (body.description !== undefined) updates.description = body.description?.trim() || null;
-  if (body.aliases !== undefined) updates.aliases = body.aliases?.trim() || null;
-  if (body.imageUrl !== undefined) updates.imageUrl = body.imageUrl?.trim() || null;
-  if (body.parentId !== undefined) updates.parentId = body.parentId || null;
-  if (body.favorite !== undefined) updates.favorite = body.favorite;
-  if (body.rating !== undefined) updates.rating = body.rating;
-  if (body.ignoreAutoTag !== undefined) updates.ignoreAutoTag = body.ignoreAutoTag;
-  if (body.isNsfw !== undefined) updates.isNsfw = body.isNsfw;
-
-  await db.update(tags).set(updates).where(eq(tags.id, id));
-  const [updated] = await db
-    .select({
-      id: tags.id,
-      name: tags.name,
-      description: tags.description,
-      aliases: tags.aliases,
-      parentId: tags.parentId,
-      imageUrl: tags.imageUrl,
-      imagePath: tags.imagePath,
-      favorite: tags.favorite,
-      rating: tags.rating,
-      isNsfw: tags.isNsfw,
-      ignoreAutoTag: tags.ignoreAutoTag,
-      videoCount: tagTotalSceneCountExpr(),
-      createdAt: tags.createdAt,
-      updatedAt: tags.updatedAt,
-    })
-    .from(tags)
-    .where(eq(tags.id, id))
-    .limit(1);
-  return {
-    ...updated,
-    videoCount: Number(updated.videoCount ?? 0),
-  };
+export async function updateTag(id: string, body: UpdateTagBody) {
+  try {
+    return await updateTagWrite(db, id, body);
+  } catch (err) {
+    mapTagError(err);
+  }
 }
 
-// ─── createTag ────────────────────────────────────────────────
-
-export async function createTag(body: {
-  name: string;
-  description?: string;
-  aliases?: string;
-}) {
-  if (!body.name?.trim()) throw new AppError(400, "name is required");
-  const [created] = await db
-    .insert(tags)
-    .values({
-      name: body.name.trim(),
-      description: body.description?.trim() || null,
-      aliases: body.aliases?.trim() || null,
-    })
-    .returning();
-  return { ok: true as const, id: created.id };
+export async function createTag(body: CreateTagBody) {
+  try {
+    return await createTagWrite(db, body);
+  } catch (err) {
+    mapTagError(err);
+  }
 }
-
-// ─── deleteTag ────────────────────────────────────────────────
 
 export async function deleteTag(id: string) {
-  const deleted = await db.transaction(async (tx) => {
-    // Child tags reference this row via parent_id (no ON DELETE) — detach first.
-    await tx
-      .update(tags)
-      .set({ parentId: null, updatedAt: new Date() })
-      .where(eq(tags.parentId, id));
-
-    // Remove entity associations explicitly so delete succeeds even if the DB
-    // predates ON DELETE CASCADE on join tables. video_episode_tags,
-    // video_movie_tags, and video_series_tags all have ON DELETE CASCADE from
-    // their tag_id FK, so they clean up automatically when the tag row is
-    // deleted — no explicit wipes needed.
-    await tx.delete(performerTags).where(eq(performerTags.tagId, id));
-    await tx.delete(galleryTags).where(eq(galleryTags.tagId, id));
-    await tx.delete(imageTags).where(eq(imageTags.tagId, id));
-    await tx.delete(audioLibraryTags).where(eq(audioLibraryTags.tagId, id));
-    await tx.delete(audioTrackTags).where(eq(audioTrackTags.tagId, id));
-
-    const [row] = await tx.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
-    return row;
-  });
-
-  if (!deleted) throw new AppError(404, "Tag not found");
-  // Cleanup generated image directory
   try {
-    const dir = getGeneratedTagDir(id);
-    if (existsSync(dir)) await rm(dir, { recursive: true });
-  } catch {
-    /* non-fatal */
+    return await deleteTagWrite(db, id);
+  } catch (err) {
+    mapTagError(err);
   }
-  return { ok: true as const };
 }
-
-// ─── setTagFavorite ───────────────────────────────────────────
 
 export async function setTagFavorite(id: string, favorite: boolean) {
-  const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
-  await db.update(tags).set({ favorite, updatedAt: new Date() }).where(eq(tags.id, id));
-  return { ok: true as const, favorite };
+  try {
+    return await setTagFavoriteWrite(db, id, favorite);
+  } catch (err) {
+    mapTagError(err);
+  }
 }
-
-// ─── setTagRating ─────────────────────────────────────────────
 
 export async function setTagRating(id: string, rating: number | null) {
-  const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
-  await db.update(tags).set({ rating, updatedAt: new Date() }).where(eq(tags.id, id));
-  return { ok: true as const, rating };
+  try {
+    return await setTagRatingWrite(db, id, rating);
+  } catch (err) {
+    mapTagError(err);
+  }
 }
-
-// ─── uploadTagImage ───────────────────────────────────────────
 
 export async function uploadTagImage(id: string, buffer: Buffer) {
-  const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
-  const genDir = getGeneratedTagDir(id);
-  await mkdir(genDir, { recursive: true });
-  await writeFile(path.join(genDir, "image.jpg"), buffer);
-  const assetUrl = `/assets/tags/${id}/image`;
-  await db.update(tags).set({ imagePath: assetUrl, updatedAt: new Date() }).where(eq(tags.id, id));
-  return { ok: true as const, imagePath: assetUrl };
+  try {
+    return await uploadTagImageWrite(db, id, buffer);
+  } catch (err) {
+    mapTagError(err);
+  }
 }
-
-// ─── setTagImageFromUrl ───────────────────────────────────────
 
 export async function setTagImageFromUrl(id: string, imageUrl: string) {
-  if (!imageUrl || (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:image/"))) {
-    throw new AppError(400, "Invalid image URL");
-  }
-  const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
-
   try {
-    let buffer: Buffer;
-    let contentType = "image/jpeg";
-    if (imageUrl.startsWith("data:image/")) {
-      const match = imageUrl.match(/^data:(image\/\w+);/);
-      if (match) contentType = match[1];
-      const base64Data = imageUrl.split(",")[1];
-      if (!base64Data) throw new AppError(400, "Invalid data URL");
-      buffer = Buffer.from(base64Data, "base64");
-    } else {
-      const res = await fetch(imageUrl);
-      if (!res.ok) throw new AppError(502, `Failed to fetch image: ${res.status}`);
-      contentType = res.headers.get("content-type") ?? "image/jpeg";
-      buffer = Buffer.from(await res.arrayBuffer());
-    }
-    const head = buffer.subarray(0, 100).toString("utf8").trim();
-    if (head.startsWith("<") || head.startsWith("<?xml")) contentType = "image/svg+xml";
-    const ext = contentType.includes("svg")
-      ? "svg"
-      : contentType.includes("png")
-        ? "png"
-        : contentType.includes("webp")
-          ? "webp"
-          : "jpg";
-    const genDir = getGeneratedTagDir(id);
-    await mkdir(genDir, { recursive: true });
-    // Remove old image files of any extension
-    for (const old of ["jpg", "png", "svg", "webp"]) {
-      const oldPath = path.join(genDir, `image.${old}`);
-      if (existsSync(oldPath))
-        try {
-          await unlink(oldPath);
-        } catch {
-          /* ok */
-        }
-    }
-    await writeFile(path.join(genDir, `image.${ext}`), buffer);
-    const assetUrl = `/assets/tags/${id}/image`;
-    await db
-      .update(tags)
-      .set({ imagePath: assetUrl, imageUrl, updatedAt: new Date() })
-      .where(eq(tags.id, id));
-    return { ok: true as const, imagePath: assetUrl };
+    return await setTagImageFromUrlWrite(db, id, imageUrl);
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    throw new AppError(502, "Failed to download image");
+    mapTagError(err);
   }
 }
 
-// ─── deleteTagImage ───────────────────────────────────────────
-
 export async function deleteTagImage(id: string) {
-  const [existing] = await db.select({ id: tags.id }).from(tags).where(eq(tags.id, id)).limit(1);
-  if (!existing) throw new AppError(404, "Tag not found");
   try {
-    const p = path.join(getGeneratedTagDir(id), "image.jpg");
-    if (existsSync(p)) await unlink(p);
-  } catch {
-    /* non-fatal */
+    return await deleteTagImageWrite(db, id);
+  } catch (err) {
+    mapTagError(err);
   }
-  await db
-    .update(tags)
-    .set({ imagePath: null, imageUrl: null, updatedAt: new Date() })
-    .where(eq(tags.id, id));
-  return { ok: true as const };
 }

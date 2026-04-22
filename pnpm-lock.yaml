@@ -306,6 +306,9 @@ importers:
       '@obscura/db':
         specifier: workspace:*
         version: link:../db
+      '@obscura/media-core':
+        specifier: workspace:*
+        version: link:../media-core
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
