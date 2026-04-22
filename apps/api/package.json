@@ -21,6 +21,7 @@
     "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
+    "@obscura/app-core": "workspace:*",
     "@obscura/contracts": "workspace:*",
     "@obscura/db": "workspace:*",
     "@obscura/media-core": "workspace:*",

@@ -56,6 +56,9 @@ importers:
       '@fastify/static':
         specifier: ^9.0.0
         version: 9.0.0
+      '@obscura/app-core':
+        specifier: workspace:*
+        version: link:../../packages/app-core
       '@obscura/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -169,6 +172,9 @@ importers:
 
   apps/web-svelte:
     dependencies:
+      '@obscura/app-core':
+        specifier: workspace:*
+        version: link:../../packages/app-core
       '@obscura/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -276,6 +282,15 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/app-core:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.17
+        version: 22.19.17
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

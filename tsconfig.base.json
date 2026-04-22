@@ -12,6 +12,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@obscura/app-core": ["packages/app-core/src/index.ts"],
       "@obscura/contracts": ["packages/contracts/src/index.ts"],
       "@obscura/db": ["packages/db/src/index.ts"],
       "@obscura/db/*": ["packages/db/*"],
@@ -24,4 +25,3 @@
     }
   }
 }
-

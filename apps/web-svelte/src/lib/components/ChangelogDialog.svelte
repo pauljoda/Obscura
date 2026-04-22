@@ -81,7 +81,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { X } from "@lucide/svelte";
-  import { fetchApi } from "$lib/api/core";
 
   interface Props {
     version: string;
@@ -101,21 +100,13 @@
     if (content || loading) return;
     loading = true;
     try {
-      // The API exposes /changelog as `text/plain`; fetchApi would try to
-      // JSON-parse it, so hit the raw endpoint.
-      const base = (await import("$env/static/public"))
-        .PUBLIC_API_URL as string | undefined;
-      const url = `${base ?? "http://localhost:4000"}/changelog`;
-      const res = await fetch(url);
+      const res = await fetch("/api/changelog");
       content = res.ok ? await res.text() : "Failed to load changelog.";
     } catch {
       content = "Failed to load changelog.";
     } finally {
       loading = false;
     }
-    // Silence unused warning for the imported helper — kept in the import
-    // list for parity with other dialogs that reach into JSON endpoints.
-    void fetchApi;
   }
 
   $effect(() => {
