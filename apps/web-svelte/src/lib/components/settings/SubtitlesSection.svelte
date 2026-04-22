@@ -40,7 +40,7 @@
     opacity: settings.subtitleOpacity ?? defaultSubtitleAppearance.opacity,
   });
 
-  let langDraft = $state(settings.subtitlesPreferredLanguages ?? "en,eng");
+  let langDraft = $state("en,eng");
 
   $effect(() => {
     langDraft = settings.subtitlesPreferredLanguages ?? "en,eng";
@@ -101,7 +101,7 @@
   <div class="grid gap-2 md:grid-cols-2">
     <div class="surface-card no-lift p-3.5 space-y-3">
       <div>
-        <label class="control-label">Display style</label>
+        <div class="control-label">Display style</div>
         <p class="text-[0.68rem] text-text-muted mt-1">
           The preview on the right updates live as you change these.
         </p>
@@ -212,7 +212,7 @@
 
     <div class="surface-card no-lift p-3.5 flex flex-col">
       <div>
-        <label class="control-label">Preview</label>
+        <div class="control-label">Preview</div>
         <p class="text-[0.68rem] text-text-muted mt-1">
           Shows how captions will render on top of a video.
         </p>

@@ -33,8 +33,8 @@
 
   const nsfw = useNsfw();
 
-  let dashboard = $state<JobsDashboard | null>(data.dashboard ?? null);
-  let loading = $state(!data.dashboard);
+  let dashboard = $state<JobsDashboard | null>(null);
+  let loading = $state(true);
 
   let runningQueue = $state<string | null>(null);
   let cancellingQueue = $state<string | null>(null);
@@ -46,6 +46,11 @@
   let message = $state<string | null>(null);
 
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  $effect(() => {
+    dashboard = data.dashboard ?? null;
+    loading = !data.dashboard;
+  });
 
   async function loadDashboard() {
     try {

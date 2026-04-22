@@ -32,7 +32,7 @@
   )}
 >
   <div class="mb-3">
-    <label class="control-label mb-1">{label}</label>
+    <div class="control-label mb-1">{label}</div>
     <p class="text-[0.68rem] text-text-muted">{description}</p>
   </div>
   <div

@@ -10,7 +10,9 @@
 
   let { label, value, class: className, onCommit }: Props = $props();
 
-  let draft = $state(value);
+  const inputId = `quality-slider-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  let draft = $state(1);
 
   $effect(() => {
     draft = value;
@@ -39,7 +41,7 @@
 >
   <div class="mb-4 flex items-start justify-between">
     <div>
-      <label class="control-label">{label}</label>
+      <label class="control-label" for={inputId}>{label}</label>
       <p class="text-[0.65rem] text-text-muted mt-1">1 is native, 31 is smallest</p>
     </div>
     <span
@@ -57,6 +59,7 @@
       style:width="{((draft - 1) / 30) * 100}%"
     ></div>
     <input
+      id={inputId}
       type="range"
       min="1"
       max="31"

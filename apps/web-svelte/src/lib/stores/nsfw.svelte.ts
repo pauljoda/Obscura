@@ -42,20 +42,10 @@ export class NsfwStore {
 
     if (!this.initialized && !this.hasAutoEnabled) {
       this.hasAutoEnabled = true;
-      // No cookie yet and lanAutoEnable is on — check if we're on LAN
-      fetch("/api/client-info")
-        .then((r) => r.json())
-        .then((data: { isLan?: boolean }) => {
-          if (data.isLan) {
-            this.mode = "show";
-            writeCookie("show");
-            refetchServerData();
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          this.initialized = true;
-        });
+      // Defer the LAN probe until after the app has mounted on the client.
+      queueMicrotask(() => {
+        void this.detectLanAutoEnable();
+      });
     }
 
     // Global keydown for ⌘⇧Z / Ctrl+Shift+Z
@@ -75,6 +65,22 @@ export class NsfwStore {
         this.keydownAttached = false;
       };
     });
+  }
+
+  private async detectLanAutoEnable() {
+    try {
+      const response = await fetch("/api/client-info");
+      const data = (await response.json()) as { isLan?: boolean };
+      if (data.isLan) {
+        this.mode = "show";
+        writeCookie("show");
+        refetchServerData();
+      }
+    } catch {
+      // Non-fatal; the UI should still initialize even if client info fails.
+    } finally {
+      this.initialized = true;
+    }
   }
 
   setMode(next: NsfwMode) {

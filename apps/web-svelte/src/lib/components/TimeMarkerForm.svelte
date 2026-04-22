@@ -63,8 +63,8 @@
     saveLabel = "Save Marker",
   }: Props = $props();
 
-  let startText = $state(formatSecondsInput(seconds));
-  let endText = $state(endSeconds != null ? formatSecondsInput(endSeconds) : "");
+  let startText = $state("0:00");
+  let endText = $state("");
 
   $effect(() => {
     startText = formatSecondsInput(seconds);
@@ -190,7 +190,10 @@
         {#if endSeconds != null}
           <button
             type="button"
-            onclick={() => onEndSecondsChange(null)}
+            onclick={() => {
+              endText = "";
+              onEndSecondsChange(null);
+            }}
             class="flex items-center justify-center p-1.5 text-text-muted hover:text-error-text transition-colors"
             title="Clear end time"
             aria-label="Clear end time"

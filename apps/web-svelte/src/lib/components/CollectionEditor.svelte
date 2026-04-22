@@ -66,12 +66,21 @@
   let isSaving = $state(false);
   let saveError = $state<string | null>(null);
 
-  let name = $state(collection?.name ?? "New Collection");
-  let description = $state(collection?.description ?? "");
-  let mode = $state<CollectionMode>(collection?.mode ?? "manual");
-  let ruleTree = $state<CollectionRuleGroup | null>(collection?.ruleTree ?? null);
-  let slideshowDuration = $state(collection?.slideshowDurationSeconds ?? 5);
-  let slideshowAutoAdvance = $state(collection?.slideshowAutoAdvance ?? true);
+  let name = $state("New Collection");
+  let description = $state("");
+  let mode = $state<CollectionMode>("manual");
+  let ruleTree = $state<CollectionRuleGroup | null>(null);
+  let slideshowDuration = $state(5);
+  let slideshowAutoAdvance = $state(true);
+
+  $effect(() => {
+    name = collection?.name ?? "New Collection";
+    description = collection?.description ?? "";
+    mode = collection?.mode ?? "manual";
+    ruleTree = collection?.ruleTree ?? null;
+    slideshowDuration = collection?.slideshowDurationSeconds ?? 5;
+    slideshowAutoAdvance = collection?.slideshowAutoAdvance ?? true;
+  });
 
   async function handleSave() {
     isSaving = true;

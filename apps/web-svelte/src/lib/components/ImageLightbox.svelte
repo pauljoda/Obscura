@@ -21,7 +21,12 @@
 
   let { images, initialIndex, onClose, onIndexChange }: Props = $props();
 
-  let index = $state(initialIndex);
+  let index = $state(0);
+
+  $effect(() => {
+    index = initialIndex;
+  });
+
   $effect(() => {
     onIndexChange?.(index);
   });

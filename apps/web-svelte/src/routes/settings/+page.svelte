@@ -86,20 +86,36 @@
     updatedAt: "",
   };
 
-  let settings = $state<LibrarySettings>(
-    data.config ? normalizeSettings(data.config.settings) : defaultSettings,
-  );
-  let roots = $state<LibraryRoot[]>(data.config?.roots ?? []);
-  let storage = $state<StorageStats | null>(data.config?.storage ?? null);
-  let scraperCount = $state(data.scraperCount ?? 0);
+  let settings = $state<LibrarySettings>(defaultSettings);
+  let roots = $state<LibraryRoot[]>([]);
+  let storage = $state<StorageStats | null>(null);
+  let scraperCount = $state(0);
 
-  let savedMetadataStorageDedicated = settings.metadataStorageDedicated;
+  let savedMetadataStorageDedicated = $state(defaultSettings.metadataStorageDedicated);
 
   let message = $state<string | null>(null);
   let error = $state<string | null>(null);
 
   let metadataStorageDialogOpen = $state(false);
   let metadataStorageBusy = $state(false);
+
+  $effect(() => {
+    if (!data.config) {
+      settings = defaultSettings;
+      roots = [];
+      storage = null;
+      scraperCount = data.scraperCount ?? 0;
+      savedMetadataStorageDedicated = defaultSettings.metadataStorageDedicated;
+      return;
+    }
+
+    const normalized = normalizeSettings(data.config.settings);
+    settings = normalized;
+    roots = data.config.roots;
+    storage = data.config.storage;
+    scraperCount = data.scraperCount ?? 0;
+    savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
+  });
 
   function flashMessage(m: string, ms = 2000) {
     message = m;
@@ -309,7 +325,7 @@
     <div class="grid gap-2 md:grid-cols-2 md:items-stretch">
       <div class="surface-card no-lift flex h-full flex-col gap-3 p-3.5">
         <div>
-          <label class="control-label">NSFW Content Mode</label>
+          <div class="control-label">NSFW Content Mode</div>
           <p class="text-[0.68rem] text-text-muted">
             Stored per device. Does not affect stored data.
           </p>
@@ -416,7 +432,7 @@
 
     <div class="surface-card no-lift p-3.5 flex flex-col gap-3">
       <div>
-        <label class="control-label">Default playback mode</label>
+        <div class="control-label">Default playback mode</div>
         <p class="text-[0.68rem] text-text-muted">
           Direct streams the source file (fastest seek, no transcode). Adaptive HLS uses the
           on-demand ffmpeg pipeline (supports bitrate switching and renditions). You can still
