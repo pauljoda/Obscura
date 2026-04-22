@@ -1,5 +1,9 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { loadLibraryConfig } from "@obscura/app-core";
+import {
+  loadLibraryConfig,
+  updateLibrarySettingsWrite,
+  type LibrarySettingsWritePayload,
+} from "@obscura/app-core";
 import { schema } from "@obscura/db";
 import { asc } from "drizzle-orm";
 import { getWebDb } from "$lib/server/db";
@@ -21,4 +25,11 @@ export const GET: RequestHandler = async () => {
   });
 
   return json(payload);
+};
+
+export const PUT: RequestHandler = async ({ request }) => {
+  const db = await getWebDb();
+  const body = (await request.json()) as LibrarySettingsWritePayload;
+  const updated = await updateLibrarySettingsWrite(db, body);
+  return json(updated);
 };

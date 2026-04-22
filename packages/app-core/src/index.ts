@@ -3,6 +3,7 @@ export * from "./breaking-gate";
 export * from "./changelog";
 export * from "./jobs-reads";
 export * from "./library-config";
+export * from "./library-settings-writes";
 export * from "./network";
 export * from "./performer-reads";
 export * from "./provider-lists";
