@@ -1,6 +1,7 @@
 export * from "./appearance-count-expressions";
 export * from "./breaking-gate";
 export * from "./changelog";
+export * from "./errors";
 export * from "./jobs-reads";
 export * from "./library-browse";
 export * from "./library-config";
@@ -16,3 +17,4 @@ export * from "./studio-reads";
 export * from "./studio-writes";
 export * from "./tag-reads";
 export * from "./tag-writes";
+export * from "./video-markers";
