@@ -99,12 +99,16 @@ const imageSortConfig: SortConfig = {
     title: images.title,
     date: images.date,
     rating: images.rating,
+    resolution: images.width,
+    size: images.fileSize,
   },
   defaultDirs: {
     recent: "desc",
     title: "asc",
     date: "desc",
     rating: "desc",
+    resolution: "desc",
+    size: "desc",
   },
   fallbackColumn: images.createdAt,
 };

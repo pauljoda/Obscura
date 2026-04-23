@@ -1,11 +1,16 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
+  import { onMount } from "svelte";
   import { Layers } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
+  import {
+    createFilterPresets,
+    type FilterPreset,
+  } from "$lib/filter-presets";
 
   let { data } = $props();
 
@@ -82,6 +87,82 @@
     activeFilters.length > 0 || data.sort !== "recent" || data.order !== "desc" || !!data.search,
   );
 
+  const presetsApi = createFilterPresets("obscura-galleries-filter-presets");
+  let presets = $state<FilterPreset[]>([]);
+  let activePresetId = $state<string | null>(null);
+
+  onMount(() => {
+    presets = presetsApi.load();
+  });
+
+  function samePresetFilters(preset: FilterPreset): boolean {
+    if (preset.sortBy !== data.sort || preset.sortDir !== data.order) return false;
+    if (preset.filters.length !== activeFilters.length) return false;
+    for (const pf of preset.filters) {
+      if (
+        !activeFilters.some(
+          (af) => af.type === pf.type && af.value === pf.value,
+        )
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  $effect(() => {
+    const match = presets.find((p) => samePresetFilters(p));
+    activePresetId = match?.id ?? null;
+  });
+
+  function applyPreset(preset: FilterPreset) {
+    const params = new URLSearchParams();
+    if (preset.sortBy && preset.sortBy !== "recent") params.set("sort", preset.sortBy);
+    if (preset.sortDir && preset.sortDir !== "desc") params.set("order", preset.sortDir);
+    for (const f of preset.filters) {
+      if (f.type === "ratingMin") params.set(f.type, f.value);
+      else params.append(f.type, f.value);
+    }
+    const qs = params.toString();
+    void goto(qs ? `/galleries?${qs}` : "/galleries", { keepFocus: true, noScroll: true });
+  }
+
+  function savePreset(name: string) {
+    const id = `preset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const next: FilterPreset = {
+      id,
+      name,
+      filters: activeFilters.map((f) => ({ label: f.label, type: f.type, value: f.value })),
+      sortBy: data.sort,
+      sortDir: data.order,
+    };
+    presets = [...presets, next];
+    presetsApi.save(presets);
+  }
+
+  function overwritePreset(id: string) {
+    presets = presets.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            filters: activeFilters.map((f) => ({
+              label: f.label,
+              type: f.type,
+              value: f.value,
+            })),
+            sortBy: data.sort,
+            sortDir: data.order,
+          }
+        : p,
+    );
+    presetsApi.save(presets);
+  }
+
+  function deletePreset(id: string) {
+    presets = presets.filter((p) => p.id !== id);
+    presetsApi.save(presets);
+  }
+
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
@@ -117,11 +198,19 @@
     onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
+    searchPlaceholder="Search galleries..."
+    filterSections={["rating", "date"]}
     {activeFilters}
     {onAddFilter}
     {onRemoveFilter}
     {onClearFiltersAndSort}
     {canClearFiltersAndSort}
+    {presets}
+    {activePresetId}
+    onApplyPreset={applyPreset}
+    onSavePreset={savePreset}
+    onOverwritePreset={overwritePreset}
+    onDeletePreset={deletePreset}
   />
 
   {#if data.galleries.length === 0}
