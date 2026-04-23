@@ -41,6 +41,10 @@ vi.mock("$lib/stores/playlist.svelte", () => ({
   }),
 }));
 
+vi.mock("$lib/stores/app-chrome.svelte", () => ({
+  useAppChrome: () => ({ sidebarCollapsed: false }),
+}));
+
 function makeTrack(): AudioTrackDetailDto {
   return {
     id: "track-1",

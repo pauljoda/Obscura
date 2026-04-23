@@ -28,12 +28,14 @@
   import ChipInput from "$lib/components/ChipInput.svelte";
   import NsfwChip from "$lib/components/NsfwChip.svelte";
   import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
+  import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   let { data } = $props();
   const playlist = usePlaylist();
   const nsfw = useNsfw();
+  const appChrome = useAppChrome();
   let overrideTrack = $state<typeof data.track | null>(null);
   const track = $derived(overrideTrack ?? data.track);
   const trackList = $derived([track]);
@@ -188,7 +190,7 @@
   <title>{track.title} — Audio Track — Obscura</title>
 </svelte:head>
 
-<div class="space-y-6 pb-8">
+<div class="space-y-6 pb-64 md:pb-60">
   <!-- ─── Hero ─────────────────────────────────────────────────── -->
   <section class="relative isolate overflow-hidden border border-border-subtle">
     <!-- Blurred cover backdrop -->
@@ -335,20 +337,6 @@
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- ─── Player ────────────────────────────────────────────────── -->
-  <section class="overflow-hidden surface-panel">
-    <AudioPlayer
-      tracks={trackList}
-      {activeTrackId}
-      onTrackChange={(trackId) => (activeTrackId = trackId)}
-      onPlaybackComplete={() => {
-        if (isCurrentPlaylistItem) playlist.reportContentEnded("audio-track", track.id);
-      }}
-      libraryCoverUrl={libraryCoverUrl}
-      class="border-0 bg-transparent shadow-none"
-    />
   </section>
 
   <!-- ─── Details grid ──────────────────────────────────────────── -->
@@ -598,4 +586,27 @@
     entityId={track.id}
     entityTitle={track.title}
   />
+</div>
+
+<div
+  class={cn(
+    "pointer-events-none fixed left-0 right-0 z-[35] max-w-[100vw] px-2 pt-1",
+    "bottom-[calc(3.5rem+6px)] md:bottom-4 md:px-5",
+    appChrome.sidebarCollapsed ? "md:left-14" : "md:left-60",
+  )}
+  role="region"
+  aria-label="Audio playback"
+>
+  <div class="pointer-events-auto surface-elevated overflow-hidden">
+    <AudioPlayer
+      tracks={trackList}
+      {activeTrackId}
+      onTrackChange={(trackId) => (activeTrackId = trackId)}
+      onPlaybackComplete={() => {
+        if (isCurrentPlaylistItem) playlist.reportContentEnded("audio-track", track.id);
+      }}
+      libraryCoverUrl={libraryCoverUrl}
+      class="border-0 bg-transparent shadow-none"
+    />
+  </div>
 </div>

@@ -30,7 +30,6 @@
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import ChipInput from "$lib/components/ChipInput.svelte";
-  import InfoRow from "$lib/components/InfoRow.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import PerformersSection from "$lib/components/PerformersSection.svelte";
@@ -314,9 +313,27 @@
 </svelte:head>
 
 <div class="space-y-6 pb-64 md:pb-60">
-  <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
-    <div class="flex min-w-0 flex-1 gap-6 items-start">
-      <div class="relative h-40 w-40 flex-shrink-0 overflow-hidden surface-card-sharp sm:h-44 sm:w-44">
+  <!-- ─── Hero ─────────────────────────────────────────────────── -->
+  <section class="relative isolate overflow-hidden border border-border-subtle">
+    <!-- Blurred cover backdrop -->
+    <div class="pointer-events-none absolute inset-0 -z-10">
+      {#if library.coverImagePath}
+        <img
+          src={toApiUrl(library.coverImagePath)}
+          alt=""
+          aria-hidden="true"
+          class="h-full w-full object-cover scale-110 blur-3xl opacity-40"
+          decoding="async"
+        />
+      {:else}
+        <div class="h-full w-full bg-gradient-to-br from-accent-900 via-surface-1 to-surface-bg"></div>
+      {/if}
+      <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-black/60 to-[var(--color-surface-bg)]"></div>
+    </div>
+
+    <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:gap-7 sm:p-7">
+      <!-- Cover art -->
+      <div class="relative h-36 w-36 flex-shrink-0 overflow-hidden border border-border-default bg-surface-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:h-44 sm:w-44 md:h-48 md:w-48">
         <NsfwBlur isNsfw={library.isNsfw} class="h-full w-full">
           <div class="relative h-full w-full">
             {#if library.coverImagePath}
@@ -324,10 +341,11 @@
                 src={toApiUrl(library.coverImagePath)}
                 alt={library.title}
                 class="h-full w-full object-cover"
+                decoding="async"
               />
             {:else}
-              <div class="flex h-full w-full items-center justify-center bg-surface-2">
-                <Music class="h-14 w-14 text-text-disabled" />
+              <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent-800/40 via-surface-2 to-surface-3">
+                <Music class="h-14 w-14 text-accent-400/40" />
               </div>
             {/if}
             <div class="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-1">
@@ -337,20 +355,29 @@
         </NsfwBlur>
       </div>
 
-      <div class="min-w-0 flex-1 space-y-3 py-1">
+      <!-- Title + meta -->
+      <div class="min-w-0 flex-1 space-y-3">
         <div class="flex items-start justify-between gap-3">
-          {#if editMode}
-            <input
-              bind:value={title}
-              class="w-full min-w-0 border border-border-subtle bg-surface-2 px-3 py-2 text-xl font-heading font-semibold text-text-primary focus:border-border-accent focus:outline-none"
-              placeholder="Library title"
-            />
-          {:else}
-            <h1 class="flex min-w-0 items-center gap-2.5 text-text-primary">
-              <Music class="h-5 w-5 text-text-accent" />
-              <span class="truncate">{library.title}</span>
-            </h1>
-          {/if}
+          <div class="min-w-0 flex-1 space-y-2">
+            <div class="flex items-center gap-2 text-kicker">
+              <Music class="h-3 w-3" />
+              Audio Library
+              {#if library.isNsfw}
+                <span class="ml-1"><Badge variant="warning">NSFW</Badge></span>
+              {/if}
+            </div>
+            {#if editMode}
+              <input
+                bind:value={title}
+                class="w-full min-w-0 border border-border-subtle bg-surface-2/70 px-3 py-2 text-2xl font-heading font-semibold text-text-primary backdrop-blur-sm focus:border-border-accent focus:outline-none sm:text-3xl"
+                placeholder="Library title"
+              />
+            {:else}
+              <h1 class="font-heading text-3xl font-semibold leading-tight text-text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-4xl md:text-5xl">
+                {library.title}
+              </h1>
+            {/if}
+          </div>
 
           <div class="relative flex flex-shrink-0 items-center gap-1">
             {#if editMode}
@@ -358,7 +385,7 @@
                 type="button"
                 onclick={cancelEdit}
                 disabled={saving}
-                class="inline-flex items-center gap-1.5 px-3 py-2 text-[0.78rem] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary disabled:opacity-50"
+                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-3 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:text-text-primary disabled:opacity-50"
               >
                 <XCircle class="h-4 w-4" />
                 Cancel
@@ -368,7 +395,7 @@
                 onclick={() => void handleSave()}
                 disabled={saving || !title.trim()}
                 aria-label="Save changes"
-                class="inline-flex items-center gap-1.5 px-3 py-2 text-[0.78rem] text-accent-300 transition-colors hover:bg-surface-2 disabled:opacity-50"
+                class="inline-flex items-center gap-1.5 border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 px-3 py-2 text-[0.78rem] text-accent-100 shadow-[var(--shadow-glow-accent)] transition-all disabled:opacity-50"
               >
                 {#if saving}
                   <Loader2 class="h-4 w-4 animate-spin" />
@@ -382,17 +409,17 @@
                 type="button"
                 onclick={() => void beginEdit()}
                 aria-label="Edit library"
-                class="inline-flex items-center gap-1.5 px-3 py-2 text-[0.78rem] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
+                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-3 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
               >
                 <Edit2 class="h-4 w-4" />
-                Edit library
+                <span class="hidden sm:inline">Edit</span>
               </button>
               {#if visibleTracks.length > 0}
                 <button
                   type="button"
                   onclick={() => (moreActionsOpen = !moreActionsOpen)}
                   aria-label="More library actions"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-2 text-[0.78rem] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
+                  class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-2.5 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
                 >
                   <MoreVertical class="h-4 w-4" />
                 </button>
@@ -422,130 +449,67 @@
           </div>
         </div>
 
-        {#if editMode}
-          <div class="space-y-3">
-            <div>
-              <div class="mb-1.5 text-kicker">Description</div>
-              <textarea
-                bind:value={details}
-                rows="4"
-                class="min-h-[5rem] w-full resize-y border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-              ></textarea>
-            </div>
-            <div class="grid gap-3 md:grid-cols-2">
-              <label class="space-y-1.5">
-                <span class="text-kicker inline-flex items-center gap-2">
-                  <Calendar class="h-3.5 w-3.5" />
-                  Date
-                </span>
-                <input
-                  type="date"
-                  bind:value={date}
-                  class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-                />
-              </label>
-              <label class="space-y-1.5">
-                <span class="text-kicker inline-flex items-center gap-2">
-                  <Building2 class="h-3.5 w-3.5" />
-                  Studio
-                </span>
-                <input
-                  bind:value={studioName}
-                  list="audio-library-studio-options"
-                  class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-                  placeholder="Studio name"
-                  disabled={!suggestionsReady}
-                />
-                <datalist id="audio-library-studio-options">
-                  {#each studioOptions as studio (studio.id)}
-                    <option value={studio.name}></option>
-                  {/each}
-                </datalist>
-              </label>
-            </div>
-            <div class="space-y-1.5">
-              <div class="text-kicker">Rating</div>
-              <StarRatingPicker value={rating} onChange={(next) => (rating = next)} />
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onclick={() => (organized = !organized)}
-                class={cn(
-                  "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-                  organized
-                    ? "bg-accent-950 text-accent-300"
-                    : "bg-surface-2 text-text-muted hover:text-text-primary",
-                )}
-              >
-                <CheckCircle2 class="h-4 w-4" />
-                {organized ? "Marked organized" : "Mark as organized"}
-              </button>
-              <button
-                type="button"
-                onclick={() => (isNsfw = !isNsfw)}
-                class={cn(
-                  "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-                  isNsfw
-                    ? "bg-error-muted/60 text-error-text"
-                    : "bg-surface-2 text-text-muted hover:text-text-primary",
-                )}
-              >
-                {isNsfw ? "Marked NSFW" : "Mark as NSFW"}
-              </button>
-            </div>
-            {#if loadError}
-              <p class="text-[0.72rem] text-amber-300">{loadError}</p>
-            {/if}
-            {#if editError}
-              <p class="text-[0.72rem] text-error-text">{editError}</p>
-            {/if}
-          </div>
-        {:else}
-          <div class="flex flex-wrap items-center gap-2 text-[0.78rem] text-text-muted">
-            <span>{visibleTrackCount} track{visibleTrackCount === 1 ? "" : "s"}</span>
+        {#if !editMode}
+          <!-- Meta strip -->
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-text-secondary">
+            <span class="inline-flex items-center gap-1 font-medium text-text-primary">
+              <Music class="h-3 w-3" />
+              {visibleTrackCount} track{visibleTrackCount === 1 ? "" : "s"}
+            </span>
             {#if visibleDuration > 0}
-              <span>· {formatDuration(visibleDuration)}</span>
+              <span class="text-text-disabled">•</span>
+              <span class="inline-flex items-center gap-1 font-mono tabular-nums text-text-muted">
+                {formatDuration(visibleDuration)}
+              </span>
             {/if}
             {#if library.studio}
-              <span class="inline-flex items-center gap-1">
-                · <Building2 class="h-3 w-3" />
-                <a
-                  href={`/studios/${encodeURIComponent(library.studio.name)}`}
-                  class="text-text-accent transition-colors hover:text-text-accent-bright"
-                >
-                  {library.studio.name}
-                </a>
-              </span>
+              <span class="text-text-disabled">•</span>
+              <a
+                href={`/studios/${encodeURIComponent(library.studio.name)}`}
+                class="inline-flex items-center gap-1 text-text-accent transition-colors hover:text-accent-200"
+              >
+                <Building2 class="h-3 w-3" />
+                {library.studio.name}
+              </a>
             {/if}
             {#if library.date}
-              <span class="inline-flex items-center gap-1">
-                · <Calendar class="h-3 w-3" />{library.date}
+              <span class="text-text-disabled">•</span>
+              <span class="inline-flex items-center gap-1 text-text-muted">
+                <Calendar class="h-3 w-3" />
+                {library.date.slice(0, 10)}
               </span>
             {/if}
-            {#if library.isNsfw}
-              <Badge variant="warning">NSFW</Badge>
+            {#if library.organized}
+              <span class="text-text-disabled">•</span>
+              <span class="inline-flex items-center gap-1 text-accent-300">
+                <CheckCircle2 class="h-3 w-3" />
+                Organized
+              </span>
             {/if}
           </div>
 
-          {#if library.rating != null}
-            <StarRatingPicker value={library.rating} readOnly />
+          {#if library.rating != null || library.details}
+            <div class="space-y-2">
+              {#if library.rating != null}
+                <StarRatingPicker value={library.rating} readOnly />
+              {/if}
+              {#if library.details}
+                <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
+                  {library.details}
+                </p>
+              {/if}
+            </div>
           {/if}
 
-          {#if library.details}
-            <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
-              {library.details}
-            </p>
-          {/if}
-
+          <!-- Action strip -->
           <div class="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
               onclick={() => visibleTracks[0] && playTrack(visibleTracks[0].id)}
               disabled={visibleTracks.length === 0}
-              class="inline-flex items-center gap-1.5 border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 px-3 py-2 text-[0.78rem] font-medium text-accent-200 shadow-[var(--shadow-glow-accent)] transition-all duration-normal disabled:cursor-not-allowed disabled:opacity-40 hover:border-border-accent-strong hover:shadow-[var(--shadow-glow-accent-strong)]"
+              class="inline-flex items-center gap-2 border border-border-accent bg-gradient-to-br from-accent-500 to-accent-700 px-5 py-2 text-[0.82rem] font-medium text-bg shadow-[var(--shadow-glow-accent-strong)] transition-all duration-normal disabled:cursor-not-allowed disabled:opacity-40 hover:from-accent-400 hover:to-accent-600"
             >
-              <Play class="h-3 w-3" />
+              <Play class="h-4 w-4" fill="currentColor" />
               Play All
             </button>
             <button
@@ -553,49 +517,106 @@
               onclick={() => {
                 if (visibleTracks.length > 0) shufflePlayKey += 1;
               }}
-              class="inline-flex items-center gap-1.5 border border-border-subtle px-3 py-2 text-[0.78rem] text-text-muted transition-colors hover:border-border-accent hover:text-text-primary"
+              disabled={visibleTracks.length === 0}
+              class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/60 px-4 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-40"
             >
-              <Shuffle class="h-3 w-3" />
+              <Shuffle class="h-3.5 w-3.5" />
               Shuffle
             </button>
           </div>
         {/if}
       </div>
     </div>
+  </section>
 
-    <aside class="surface-well p-4 space-y-3 w-full lg:w-72 lg:flex-shrink-0">
-      <h2 class="text-kicker">Library Info</h2>
-      <div class="space-y-2.5">
-        <InfoRow icon={Music} label="Tracks" value={String(visibleTrackCount)} />
-        {#if visibleDuration > 0}
-          <InfoRow icon={Play} label="Duration" value={formatDuration(visibleDuration) ?? "--:--"} />
-        {/if}
-        {#if library.studio}
-          <InfoRow icon={Building2} label="Studio" value={library.studio.name} />
-        {/if}
-        {#if library.date}
-          <InfoRow icon={Calendar} label="Date" value={library.date.slice(0, 10)} />
-        {/if}
-        {#if library.organized}
-          <div class="inline-flex items-center gap-2 text-[0.72rem] text-accent-300">
-            <CheckCircle2 class="h-3.5 w-3.5" />
-            Organized
-          </div>
-        {/if}
-        {#if library.folderPath}
-          <div class="border-t border-border-subtle pt-2">
-            <h3 class="text-kicker flex items-center gap-1.5">
-              <HardDrive class="h-3 w-3" />
-              Path
-            </h3>
-            <p class="mt-1 break-all font-mono text-[0.7rem] text-text-disabled" title={library.folderPath}>
-              {library.folderPath}
-            </p>
-          </div>
-        {/if}
+  {#if editMode}
+    <!-- Edit form below hero -->
+    <section class="surface-panel p-5 space-y-4">
+      <div>
+        <div class="mb-1.5 text-kicker">Description</div>
+        <textarea
+          bind:value={details}
+          rows="4"
+          class="min-h-[5rem] w-full resize-y border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
+        ></textarea>
       </div>
-    </aside>
-  </div>
+      <div class="grid gap-3 md:grid-cols-2">
+        <label class="space-y-1.5">
+          <span class="text-kicker inline-flex items-center gap-2">
+            <Calendar class="h-3.5 w-3.5" />
+            Date
+          </span>
+          <input
+            type="date"
+            bind:value={date}
+            class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
+          />
+        </label>
+        <label class="space-y-1.5">
+          <span class="text-kicker inline-flex items-center gap-2">
+            <Building2 class="h-3.5 w-3.5" />
+            Studio
+          </span>
+          <input
+            bind:value={studioName}
+            list="audio-library-studio-options"
+            class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
+            placeholder="Studio name"
+            disabled={!suggestionsReady}
+          />
+          <datalist id="audio-library-studio-options">
+            {#each studioOptions as studio (studio.id)}
+              <option value={studio.name}></option>
+            {/each}
+          </datalist>
+        </label>
+      </div>
+      <div class="space-y-1.5">
+        <div class="text-kicker">Rating</div>
+        <StarRatingPicker value={rating} onChange={(next) => (rating = next)} />
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onclick={() => (organized = !organized)}
+          class={cn(
+            "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
+            organized
+              ? "bg-accent-950 text-accent-300 border border-border-accent"
+              : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
+          )}
+        >
+          <CheckCircle2 class="h-4 w-4" />
+          {organized ? "Marked organized" : "Mark as organized"}
+        </button>
+        <button
+          type="button"
+          onclick={() => (isNsfw = !isNsfw)}
+          class={cn(
+            "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
+            isNsfw
+              ? "bg-error-muted/60 text-error-text border border-error/40"
+              : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
+          )}
+        >
+          {isNsfw ? "Marked NSFW" : "Mark as NSFW"}
+        </button>
+      </div>
+      {#if loadError}
+        <p class="text-[0.72rem] text-amber-300">{loadError}</p>
+      {/if}
+      {#if editError}
+        <p class="text-[0.72rem] text-error-text">{editError}</p>
+      {/if}
+    </section>
+  {/if}
+
+  {#if library.folderPath}
+    <p class="flex items-center gap-2 break-all font-mono text-[0.68rem] text-text-disabled" title={library.folderPath}>
+      <HardDrive class="h-3 w-3 flex-shrink-0" />
+      {library.folderPath}
+    </p>
+  {/if}
 
   {#if editMode}
     <section class="space-y-3">
