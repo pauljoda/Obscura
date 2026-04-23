@@ -1,5 +1,6 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { eq } from "drizzle-orm";
@@ -141,6 +142,14 @@ function sendRangeStreamResponse(filePath: string, range: string | null): Respon
   });
 }
 
+function parseRangeStart(range: string | null): number | null {
+  if (!range?.startsWith("bytes=")) return null;
+  const [startRaw] = range.slice("bytes=".length).split("-", 1);
+  if (!startRaw) return 0;
+  const start = Number.parseInt(startRaw, 10);
+  return Number.isFinite(start) ? start : null;
+}
+
 function resolveAssetPath(rootDir: string, assetPath: string) {
   const resolved = path.resolve(rootDir, assetPath);
   const normalizedRoot = rootDir.endsWith(path.sep) ? rootDir : `${rootDir}${path.sep}`;
@@ -237,6 +246,19 @@ async function probeCodecs(filePath: string): Promise<{ video: string | null; au
   } catch {
     return { video: null, audio: null };
   }
+}
+
+function getDirectPrepareMode(codecs: {
+  video: string | null;
+  audio: string | null;
+}): RemuxCacheMetadata["mode"] {
+  const videoCanCopy =
+    codecs.video !== null && REMUXABLE_VIDEO_CODECS.has(codecs.video);
+  const audioCanCopy =
+    codecs.audio === null || REMUXABLE_AUDIO_CODECS.has(codecs.audio);
+  return videoCanCopy
+    ? (audioCanCopy ? "remux" : "audio-transcode")
+    : "transcode";
 }
 
 async function isCacheFresh(id: string, sourcePath: string): Promise<boolean> {
@@ -336,13 +358,7 @@ async function buildRemuxCache(id: string, sourcePath: string): Promise<string> 
   if (readyCache) return readyCache;
 
   const codecs = await probeCodecs(sourcePath);
-  const videoCanCopy =
-    codecs.video !== null && REMUXABLE_VIDEO_CODECS.has(codecs.video);
-  const audioCanCopy =
-    codecs.audio === null || REMUXABLE_AUDIO_CODECS.has(codecs.audio);
-  const mode: RemuxCacheMetadata["mode"] = videoCanCopy
-    ? (audioCanCopy ? "remux" : "audio-transcode")
-    : "transcode";
+  const mode = getDirectPrepareMode(codecs);
   const tempPath = `${cachePath}.${Date.now()}.tmp`;
   const ffmpegArgs = [
     "-hide_banner",
@@ -410,6 +426,117 @@ async function buildRemuxCache(id: string, sourcePath: string): Promise<string> 
   return cachePath;
 }
 
+async function streamPreparedVideoSource(sourcePath: string): Promise<Response> {
+  const mode = getDirectPrepareMode(await probeCodecs(sourcePath));
+  const ffmpegArgs = [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-nostats",
+    "-i",
+    sourcePath,
+    "-map",
+    "0:v:0",
+    "-map",
+    "0:a:0?",
+    "-sn",
+    "-dn",
+  ];
+
+  if (mode === "remux") {
+    ffmpegArgs.push(
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+    );
+  } else if (mode === "audio-transcode") {
+    ffmpegArgs.push(
+      "-c:v",
+      "copy",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "160k",
+    );
+  } else {
+    ffmpegArgs.push(
+      "-c:v",
+      "libx264",
+      "-preset",
+      "medium",
+      "-crf",
+      "18",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "160k",
+    );
+  }
+
+  ffmpegArgs.push(
+    "-movflags",
+    "frag_keyframe+empty_moov+default_base_moof",
+    "-f",
+    "mp4",
+    "pipe:1",
+  );
+
+  const ffmpeg = spawn("ffmpeg", ffmpegArgs, {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  let finished = false;
+
+  ffmpeg.stderr.setEncoding("utf8");
+  ffmpeg.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      ffmpeg.stdout.on("data", (chunk: Buffer) => {
+        if (finished) return;
+        controller.enqueue(new Uint8Array(chunk));
+      });
+      ffmpeg.stdout.on("end", () => {
+        if (finished) return;
+        finished = true;
+        controller.close();
+      });
+      ffmpeg.on("error", (error) => {
+        if (finished) return;
+        finished = true;
+        controller.error(error);
+      });
+      ffmpeg.on("close", (code) => {
+        if (finished) return;
+        finished = true;
+        if (code === 0 || code === null) {
+          controller.close();
+          return;
+        }
+        controller.error(
+          new Error(stderr.trim() || `ffmpeg exited with code ${code}`),
+        );
+      });
+    },
+    cancel() {
+      if (finished) return;
+      finished = true;
+      ffmpeg.kill("SIGKILL");
+    },
+  });
+
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "video/mp4",
+    },
+  });
+}
+
 async function ensureRemuxCache(id: string, sourcePath: string): Promise<string> {
   const existing = remuxLocks.get(id);
   if (existing) return existing;
@@ -435,6 +562,10 @@ export async function serveVideoSource(
     const cachedPath = await getReadyRemuxCache(video.id, video.filePath);
     if (cachedPath) {
       return sendRangeStreamResponse(cachedPath, range);
+    }
+    const rangeStart = parseRangeStart(range);
+    if (!range || rangeStart === 0) {
+      return streamPreparedVideoSource(video.filePath);
     }
     void ensureRemuxCache(video.id, video.filePath).catch(() => {});
     return preparingDirectSourceResponse();

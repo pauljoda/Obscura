@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- **Subtitle overlays and direct-video fallback are reliable again on Svelte video pages.** ASS subtitles now boot correctly once the player element is attached, and MKV direct-play attempts that still need an MP4 prep pass fail over to HLS quickly instead of hanging on a never-starting source request.
+- **Subtitle overlays and direct-video playback are reliable again on Svelte video pages.** ASS subtitles now boot correctly once the player element is attached, and large MKV episodes that need browser-safe audio now start direct playback immediately by streaming a fragmented MP4 instead of failing on the first source request.
 - **Video pages recover their sources after the Svelte cutover even when older library rows still reference the retired sample-media tree.** Obscura now resolves those legacy `apps/web/public/media/...` paths to the current repo fixture media on disk, so affected videos regain playback instead of opening to the empty placeholder state.
 - **Existing thumbnails and artwork now stay visible after the Svelte cutover.** The SvelteKit asset server now keeps reading generated media from the older cache locations as well as the new shared cache root, so previously built video thumbs, gallery covers, performer images, and similar assets do not disappear after upgrading.
 - **The repo now reads like a native Svelte codebase.** Migration planning docs were removed, VS Code run configs were rewritten around the current web-plus-worker stack, and lingering references to the retired Next.js/Fastify topology were scrubbed from active docs and comments.
@@ -124,6 +124,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Video rows now treat legacy sample-media paths from the removed `apps/web/public/media/scenes/...` tree as valid again by resolving them to the current repo fixture media, which restores `hasVideo`, direct source URLs, HLS source URLs, and file details for existing sample-library entries.
 - The Svelte video player now reloads the media element when a real direct-to-HLS fallback happens, so format errors can switch modes without getting stuck on the original direct source.
+- The Svelte direct-source endpoint now starts large MKV-style videos immediately instead of answering the browser's first `/source` request with a `503`. When a file still needs audio transcode or remux work for browser playback, Obscura now streams a fragmented MP4 on demand so direct mode can begin without waiting for a full cache file.
 - Generated thumbnails and other cached media now remain readable after the Svelte cutover. The asset server searches the current shared cache root plus the pre-cutover worker/API cache directories, so existing `/assets/*` URLs keep resolving until those files are rebuilt into the canonical location.
 
 - The Svelte port no longer carries placeholder plugin endpoints or warning noise in its core review flows. SvelteKit now serves the plugin batch/folder-cascade routes directly, the remaining `svelte-check` warnings in the gallery/review/tag-input stack are resolved, and the unit test environment stubs `HTMLMediaElement.pause()` so the Svelte suite runs cleanly.
