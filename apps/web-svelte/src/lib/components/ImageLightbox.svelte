@@ -1,11 +1,7 @@
 <script lang="ts">
   /**
-   * First-pass lightbox. Mirrors the core React ImageLightbox: backdrop
-   * overlay, prev/next navigation, close on ESC / backdrop click, image
-   * counter, and a minimal filmstrip. The heavyweight React features
-   * (edit panel, tag chip input, delete flow, chapter jumps) are
-   * scheduled for a later deep pass — first-pass focuses on letting the
-   * user actually view full-size images at all.
+   * Image lightbox with backdrop overlay, prev/next navigation, close on
+   * ESC or backdrop click, an image counter, and a minimal filmstrip.
    */
   import { onMount } from "svelte";
   import { X, ChevronLeft, ChevronRight } from "@lucide/svelte";

@@ -288,8 +288,7 @@
         status: "pending",
         selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
       }));
-      // Audio tracks: the React orchestrator only fetches libraries; individual
-      // tracks populate when plugins drive them — start empty.
+      // Audio tracks populate when plugins return them, so start empty.
       audioTrackRows = [];
       void AUDIO_TRACK_FIELDS;
     } finally {

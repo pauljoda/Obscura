@@ -69,7 +69,7 @@
   let collectionModalOpen = $state(false);
   let librarySettings = $state<LibrarySettings | null>(null);
 
-  // ── Transcript dock plumbing (mirrors the React video-detail) ─────
+  // ── Transcript dock plumbing ───────────────────────────────────────
   /** User's persisted preference. Effective dock state additionally
    *  requires subtitles + a desktop viewport. */
   let userWantsDock = $state(false);

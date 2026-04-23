@@ -122,8 +122,7 @@
     <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
   </div>
 
-  <!-- Stats strip — actors / favorites / showing — matches the React
-       /performers page's dashboard row. -->
+  <!-- Stats strip — actors / favorites / showing. -->
   <div class="grid grid-cols-3 gap-2">
     <div class="surface-stat px-3 py-2">
       <span class="text-kicker !text-text-disabled flex items-center gap-1.5">

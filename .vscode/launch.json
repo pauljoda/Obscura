@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Obscura: Full Stack",
+      "name": "Obscura: Dev Stack",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
@@ -13,7 +13,7 @@
       "preLaunchTask": "Obscura: Docker Up"
     },
     {
-      "name": "Svelte-Only: SvelteKit + Worker (no Fastify, no Next)",
+      "name": "Obscura: Web + Worker",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
@@ -26,9 +26,6 @@
         "--filter=@obscura/worker"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "INTERNAL_API_URL": "none"
-      },
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "Obscura: Docker Up",
@@ -39,7 +36,7 @@
       }
     },
     {
-      "name": "Web (SvelteKit port): dev",
+      "name": "Obscura: Web",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
@@ -55,28 +52,10 @@
       }
     },
     {
-      "name": "API + Worker: dev (no Next)",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "turbo",
-        "run",
-        "dev",
-        "--parallel",
-        "--filter=@obscura/api",
-        "--filter=@obscura/worker"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"],
-      "preLaunchTask": "Obscura: Docker Up"
-    },
-    {
-      "name": "Web (SvelteKit port): attach (Chrome)",
+      "name": "Obscura: Chrome",
       "type": "chrome",
       "request": "launch",
-      "url": "http://localhost:8009",
+      "url": "http://localhost:8008",
       "webRoot": "${workspaceFolder}/apps/web-svelte",
       "sourceMaps": true,
       "sourceMapPathOverrides": {
@@ -87,27 +66,18 @@
   ],
   "compounds": [
     {
-      "name": "Svelte-Only + Chrome",
+      "name": "Obscura: Web + Chrome",
       "configurations": [
-        "Svelte-Only: SvelteKit + Worker (no Fastify, no Next)",
-        "Web (SvelteKit port): attach (Chrome)"
+        "Obscura: Web",
+        "Obscura: Chrome"
       ],
       "stopAll": true
     },
     {
-      "name": "Web (SvelteKit port): dev + Chrome",
+      "name": "Obscura: Dev Stack + Chrome",
       "configurations": [
-        "Web (SvelteKit port): dev",
-        "Web (SvelteKit port): attach (Chrome)"
-      ],
-      "stopAll": true
-    },
-    {
-      "name": "Web (SvelteKit port): Full Stack + Chrome",
-      "configurations": [
-        "API + Worker: dev (no Next)",
-        "Web (SvelteKit port): dev",
-        "Web (SvelteKit port): attach (Chrome)"
+        "Obscura: Dev Stack",
+        "Obscura: Chrome"
       ],
       "stopAll": true
     }

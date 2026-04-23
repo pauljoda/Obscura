@@ -1,7 +1,7 @@
 /**
- * Jobs dashboard read helpers shared by the Fastify API and the SvelteKit
- * server. Takes a typed Drizzle db and the already-resolved SFW flag so
- * each host can decide how to parse the incoming request.
+ * Jobs dashboard read helpers for the first-party API surface. Takes a
+ * typed Drizzle db and the already-resolved SFW flag so the route layer
+ * can decide how to parse the incoming request.
  */
 import type { JobsDashboardDto } from "@obscura/contracts";
 import {

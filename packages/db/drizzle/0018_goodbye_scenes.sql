@@ -1,11 +1,8 @@
--- Drop legacy scene tables and the data-migration ledger.
+-- Remove obsolete scene tables and the unused migration ledger.
 --
--- The videos-to-series model has fully replaced scenes. Paul's install
--- already ran the old `videos_to_series_model_v1` finalize, so the
--- scene_* tables are already gone there. On any install that still
--- has them, the one-time breaking-upgrade gate ran first
--- (see packages/db/src/breaking-gate.ts) and the user consented to
--- the rescan before this migration executes. IF EXISTS makes both
+-- Some installs already have these tables removed. On installs that still
+-- have them, the one-time breaking gate (packages/db/src/breaking-gate.ts)
+-- can require consent before this migration executes. IF EXISTS keeps both
 -- paths safe.
 DROP TABLE IF EXISTS "scene_folder_performers" CASCADE;--> statement-breakpoint
 DROP TABLE IF EXISTS "scene_folder_tags" CASCADE;--> statement-breakpoint

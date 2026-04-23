@@ -1,7 +1,7 @@
 /**
- * Filesystem helpers shared by Fastify and SvelteKit for library root
- * management. `verifyDirectory` is used before inserting / updating a
- * library root. `browseDirectories` powers the directory picker UI.
+ * Filesystem helpers for library root management. `verifyDirectory` is
+ * used before inserting or updating a library root. `browseDirectories`
+ * powers the directory picker UI.
  */
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";

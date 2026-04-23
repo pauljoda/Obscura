@@ -1,9 +1,9 @@
 /**
- * Tag read helpers shared by the Fastify API and the SvelteKit server.
+ * Tag read helpers for the first-party API surface.
  *
  * These functions take a typed Drizzle database as an explicit argument
- * so both hosts can call through without depending on each other's
- * runtime. Write-side operations stay in the per-app service layer.
+ * so route handlers can call through without coupling to a global
+ * runtime.
  */
 import { schema, type AppDb } from "@obscura/db";
 import { eq, ne, sql } from "drizzle-orm";

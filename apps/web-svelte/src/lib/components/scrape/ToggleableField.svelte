@@ -9,8 +9,8 @@
     onToggle: () => void;
   }
 
-  // `field` is part of the public prop shape for parity with the React
-  // component (callers pass a semantic key); we don't need to read it here.
+  // `field` is part of the public prop shape callers use for semantic keys;
+  // this component doesn't need to read it directly.
   let { label, value, enabled, onToggle }: Props = $props();
 </script>
 

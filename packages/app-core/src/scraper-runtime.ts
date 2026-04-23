@@ -532,7 +532,8 @@ export async function installScraperPackageWrite(
       try {
         await downloadAndExtract(depZipUrl, depEntry.sha256, depDir);
       } catch {
-        // Dependency installation is best-effort to mirror Fastify.
+        // Dependency installation is best-effort; a missing optional
+        // dependency should not abort the package install.
       }
     }
   }
@@ -1126,7 +1127,7 @@ export async function acceptScrapeResultWrite(
                 })
                 .where(eq(performers.id, performerId));
             } catch {
-              // Non-fatal, mirrors Fastify.
+              // Non-fatal.
             }
           }
         }
@@ -1203,7 +1204,7 @@ export async function acceptScrapeResultWrite(
             .where(eq(videoMovies.id, videoId));
         }
       } catch {
-        // Non-fatal, mirrors Fastify.
+        // Non-fatal.
       }
     }
 
@@ -1313,7 +1314,7 @@ export async function applyPerformerScrapeWrite(
         })
         .where(eq(performers.id, input.performerId));
     } catch {
-      // Non-fatal, mirrors Fastify.
+      // Non-fatal.
     }
   }
 

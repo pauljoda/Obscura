@@ -24,11 +24,9 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
   depends(`tags:${params.id}`);
   const nsfw = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
 
-  // The /tags landing page links by `encodeURIComponent(tag.name)` to
-  // match the React app's URL shape, but the API's `/tags/:id`
-  // endpoint only accepts IDs. Resolve name → id by searching the
-  // tag list, then fetch detail by id — mirrors the React
-  // tag-detail page's behavior.
+  // The /tags landing page links by `encodeURIComponent(tag.name)`, but
+  // the API's `/tags/:id` endpoint accepts IDs. Resolve name -> id by
+  // searching the tag list, then fetch detail by id.
   const nameFromUrl = decodeURIComponent(params.id);
 
   let tag: TagDetail;

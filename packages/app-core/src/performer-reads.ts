@@ -1,5 +1,5 @@
 /**
- * Performer read helpers shared by the Fastify API and the SvelteKit server.
+ * Performer read helpers for the first-party API surface.
  */
 import { schema, type AppDb } from "@obscura/db";
 import {

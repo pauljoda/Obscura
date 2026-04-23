@@ -110,7 +110,7 @@ Muted, realistic. Like LED indicators in a darkened control room, not bright Saa
 
 ## Typography
 
-Three font voices loaded via `next/font`:
+Three font voices loaded via local `@fontsource` packages:
 
 | Voice   | Font           | Usage                                          |
 |---------|----------------|------------------------------------------------|

@@ -93,8 +93,7 @@
     };
   }
 
-  // Marks the unused toggleField helper as used (for future expansion; the
-  // React tab exposes per-row field toggles inside the cascade drawer).
+  // Marks the unused toggleField helper as used for future expansion.
   void toggleField;
 </script>
 

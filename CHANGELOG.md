@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The repo now reads like a native Svelte codebase.** Migration planning docs were removed, VS Code run configs were rewritten around the current web-plus-worker stack, and lingering references to the retired Next.js/Fastify topology were scrubbed from active docs and comments.
 - **The legacy Next.js, Fastify, and React workspace is gone.** Obscura now develops, validates, and ships against the SvelteKit app on port `8008`, with same-origin `/api` routes and the worker as the only separate process.
 - **SvelteKit is now the primary local and container runtime.** The default dev stack, Docker Compose stack, and unified image now boot the Svelte app directly on port `8008` with same-origin `/api` routes, instead of hiding the new app behind the old Next.js and Fastify pair.
 - **Series now has its own dedicated route in the Svelte app.** The shell navigation now includes a separate **Series** destination, `/videos` is back to being a straight mixed-video browser, and first-party Svelte links that open a series now land on `/series`.
@@ -150,6 +151,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- VS Code launch/tasks, cache-path defaults, and active inline docs now assume the current SvelteKit-plus-worker architecture only, without fallback wording or configs for the removed stack.
 - Shared runtime config and docs now assume a same-origin SvelteKit server on `http://localhost:8008`, and the remaining public/test fixture roots now live under `tests/fixtures/media/videos`.
 - SvelteKit now owns the full `/api/*` ingress directly. The fallback `api/[...rest]` proxy and its `INTERNAL_API_URL` dependency are gone, the Svelte server runs its own shared DB migrations before serving requests, and local/container startup now centers on `@obscura/web-svelte + @obscura/worker + postgres`.
 - The repository now keeps a single checked-in migration source under `packages/db/drizzle`. The legacy `apps/api/drizzle` mirror has been removed so the Svelte server, worker, and release tooling can converge on one migration ledger before the Fastify app is deleted.
@@ -185,6 +187,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+- Deleted the migration planning archive under `docs/superpowers/**` plus the old `docs/videos-to-series-rollout.md` runbook so the repo no longer carries the Svelte cutover or retired migration plans in its active docs tree.
 - Deleted the legacy `apps/web`, `apps/api`, and `packages/ui` workspaces along with their Fastify-only integration tests, parity snapshots, nginx config, and old Docker/dev wiring. The repo now carries a single first-party app stack: `apps/web-svelte` plus `apps/worker`.
 - Deleted frozen `legacy-schema.ts` and `read.ts` from the videos-to-series migration module — dead code after the destructive finalize dropped the legacy scene tables.
 - Deleted the entire data-migration staging/finalize framework: `apps/api/src/db/data-migrations/` (run.ts, registry.ts, types.ts, lockdown.ts, videos_to_series_model_v1/*), the `GET /system/migrations` and `POST /system/migrations/:name/finalize` routes, the `MigrationBanner` component, and the `data_migrations` ledger table. The scenes → videos flip was the only customer and has fully landed; carrying the framework added more code than any future breaking change would save.

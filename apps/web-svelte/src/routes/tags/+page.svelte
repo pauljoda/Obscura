@@ -45,7 +45,7 @@
     list = [...list].sort((a, b) => {
       switch (sortBy) {
         case "videos":
-          // "Usage Count" is videos + images per the React label.
+          // "Usage Count" is videos + images.
           return (
             sign *
             (((a.videoCount ?? 0) + (a.imageCount ?? 0)) -

@@ -1,5 +1,5 @@
 /**
- * Studio read helpers shared by the Fastify API and the SvelteKit server.
+ * Studio read helpers for the first-party API surface.
  */
 import { schema, type AppDb } from "@obscura/db";
 import { asc, eq, ne, sql } from "drizzle-orm";

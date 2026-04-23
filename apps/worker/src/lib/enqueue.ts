@@ -47,10 +47,9 @@ export async function enqueueJobIfNeeded(input: {
 }
 
 /**
- * Enqueue a job keyed on a video entity (episode or movie). Supersedes
- * the legacy `enqueuePendingSceneJob` helper; the payload carries an
- * `entityKind` discriminator so processors can look the row up in the
- * right table.
+ * Enqueue a job keyed on a video entity (episode or movie). The payload
+ * carries an `entityKind` discriminator so processors can look the row up
+ * in the right table.
  */
 export type VideoEntityKind = "video_episode" | "video_movie";
 

@@ -3,7 +3,7 @@
 /* Workspace packages are linked under node_modules; Tailwind v4 skips node_modules when scanning, so register them explicitly. */
 @source "../../../packages/ui-svelte/src";
 
-/* Self-hosted variable fonts replace Next.js `next/font/google`. */
+/* Self-hosted variable fonts used by the Svelte app shell. */
 @import "@fontsource/geist-sans/400.css";
 @import "@fontsource/geist-sans/500.css";
 @import "@fontsource/geist-sans/600.css";

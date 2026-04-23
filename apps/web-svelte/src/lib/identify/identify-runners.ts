@@ -31,15 +31,12 @@ import type {
 } from "./identify-types";
 
 /**
- * Svelte shim for the React runners: the tab components pass a functional
- * "updater" in the same shape as `setState` so we can keep the runner
- * code literally identical.
+ * Functional row updater passed in from the tab components.
  */
 export type RowUpdater<T> = (updater: (prev: T) => T) => void;
 
 /**
- * Svelte shim for `React.RefObject<boolean>` — a stable object whose
- * `current` flag can be flipped from outside the runner to abort.
+ * Stable abort flag that can be flipped from outside the runner.
  */
 export interface MutableFlag {
   current: boolean;

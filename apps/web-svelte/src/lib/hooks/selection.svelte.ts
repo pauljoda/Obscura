@@ -1,6 +1,6 @@
 /**
- * Rune-based multi-select helper. Mirrors the API of the React
- * useSelection hook: toggle/selectAll/deselectAll/isSelected/count.
+ * Rune-based multi-select helper with toggle/selectAll/deselectAll/
+ * isSelected/count helpers.
  *
  * Usage (inside a component):
  *   const sel = selection();

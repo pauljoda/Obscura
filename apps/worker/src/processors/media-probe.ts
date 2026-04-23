@@ -40,7 +40,7 @@ export async function processMediaProbe(job: Job) {
 
   if (entityKind !== "video_episode" && entityKind !== "video_movie") {
     throw new Error(
-      `media-probe processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+      `media-probe processor received unsupported payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
     );
   }
 

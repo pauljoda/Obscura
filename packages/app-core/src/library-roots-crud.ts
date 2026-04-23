@@ -1,8 +1,7 @@
 /**
- * Library roots CRUD helpers shared by Fastify and SvelteKit. The file
- * verification step is threaded in as a dep so each host can use its own
- * node:fs call path if needed — but the shared `verifyDirectory` from
- * library-browse.ts is the sensible default.
+ * Library roots CRUD helpers for the first-party API surface. The file
+ * verification step is threaded in as a dep so callers can override it if
+ * needed, though the shared `verifyDirectory` helper is the default.
  */
 import { schema, type AppDb } from "@obscura/db";
 import { and, asc, eq, or, type SQL } from "drizzle-orm";

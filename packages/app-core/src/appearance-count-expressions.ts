@@ -71,8 +71,8 @@ export function performerSfwSceneCountExpr() {
 
 /**
  * Episodes + movies linked to this performer regardless of NSFW status.
- * Replaces the cached `performers.scene_count` column after the
- * videos-to-series finalize phase drops the legacy scenes tables.
+ * Replaces the old cached `performers.scene_count` column with a live count
+ * across the current video tables.
  */
 export function performerTotalSceneCountExpr() {
   return sql<number>`(

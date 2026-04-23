@@ -35,7 +35,7 @@
       <p class="text-label text-text-muted tracking-[0.12em] uppercase">
         Obscura / Design System
       </p>
-      <h1 class="font-heading text-3xl">Design language — parity page</h1>
+      <h1 class="font-heading text-3xl">Design language showcase</h1>
       <p class="text-text-secondary max-w-2xl">
         Every primitive and composed component from <code>@obscura/ui-svelte</code> rendered
         for visual verification inside the live Svelte runtime.

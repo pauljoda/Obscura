@@ -1,8 +1,7 @@
 /**
- * Tag write helpers shared by Fastify and SvelteKit. These take a typed
- * Drizzle db and throw the sentinel error classes defined below for
- * not-found / validation / upstream-failure conditions; each host maps
- * them to its own HTTP response.
+ * Tag write helpers for the first-party API surface. These take a typed
+ * Drizzle db and throw sentinel error classes for not-found, validation,
+ * and upstream-failure conditions; the route layer maps them to HTTP.
  */
 import { existsSync } from "node:fs";
 import { mkdir, rm, unlink, writeFile } from "node:fs/promises";

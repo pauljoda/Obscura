@@ -390,19 +390,9 @@ export function getCacheRootDir() {
   }
 
   const sharedCache = path.join(workspaceRoot, ".obscura-cache");
-  const legacyWorkerCache = path.join(workspaceRoot, "apps", "worker", ".obscura-cache");
-  const legacyApiCache = path.join(workspaceRoot, "apps", "api", ".obscura-cache");
 
   if (existsSync(sharedCache)) {
     return sharedCache;
-  }
-
-  if (existsSync(legacyWorkerCache)) {
-    return legacyWorkerCache;
-  }
-
-  if (existsSync(legacyApiCache)) {
-    return legacyApiCache;
   }
 
   return sharedCache;

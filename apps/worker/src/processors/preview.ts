@@ -112,7 +112,7 @@ export async function processPreview(job: Job) {
 
   if (entityKind !== "video_episode" && entityKind !== "video_movie") {
     throw new Error(
-      `preview processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+      `preview processor received unsupported payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
     );
   }
 

@@ -568,8 +568,7 @@ export async function processLibraryScan(job: Job): Promise<void> {
   });
 
   // Silence unused import warning (settings is not currently read; retained
-  // for parity with the old pipeline so future probe/preview gating has a
-  // single place to plug in).
+  // so future probe/preview gating has a single place to plug in).
   void settings;
 }
 

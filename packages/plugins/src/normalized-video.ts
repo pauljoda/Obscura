@@ -12,9 +12,8 @@
  *
  * These types coexist with the existing NormalizedVideoResult /
  * NormalizedFolderResult / NormalizedGalleryResult / etc. types; they
- * are additive, not replacements, because the existing shapes are
- * still used by legacy scene/folder/gallery flows that Plan D will
- * retire once the UI has adapted.
+ * are additive, not replacements, because different plugin workflows
+ * still consume different normalized shapes today.
  */
 
 import type {

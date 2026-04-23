@@ -55,7 +55,7 @@ Supporting services:
 
 The application schema is intentionally not a direct copy of stash.
 
-Planned core entities:
+Core entities:
 
 - `Asset`
 - `FileVariant`
