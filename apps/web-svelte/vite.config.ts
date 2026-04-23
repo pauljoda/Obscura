@@ -9,8 +9,8 @@ export default defineConfig({
     strictPort: false,
   },
   optimizeDeps: {
-    // jassub ships IIFE workers that Vite can't pre-bundle; we load it
-    // purely at runtime via a string-indirect dynamic import.
+    // jassub ships browser-only worker assets we manage separately under
+    // /static/jassub, so keep the package out of Vite's prebundle pass.
     exclude: ["jassub"],
   },
   ssr: {

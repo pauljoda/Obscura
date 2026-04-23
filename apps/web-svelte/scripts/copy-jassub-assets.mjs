@@ -5,6 +5,9 @@
 // the web app bundle.
 //
 // What ends up in static/jassub:
+//   - jassub-client.js   — bundled browser entry with dependency interop
+//                          resolved ahead of time so Vite never has to
+//                          process the upstream package directly.
 //   - jassub-worker.js   — bundled Web Worker entry (built from
 //                          jassub/dist/worker/worker.js with esbuild).
 //   - jassub-worker.wasm         — baseline libass build
@@ -26,6 +29,21 @@ const distDir = path.join(path.dirname(pkgJsonPath), "dist");
 
 const outDir = path.join(__dirname, "..", "static", "jassub");
 await mkdir(outDir, { recursive: true });
+
+await esbuild.build({
+  entryPoints: [path.join(distDir, "jassub.js")],
+  outfile: path.join(outDir, "jassub-client.js"),
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  minify: true,
+  sourcemap: false,
+  loader: {
+    ".wasm": "copy",
+    ".woff2": "copy",
+  },
+});
 
 await esbuild.build({
   entryPoints: [path.join(distDir, "worker", "worker.js")],
@@ -57,5 +75,5 @@ for (const [rel, out] of staticFiles) {
 }
 
 console.log(
-  `[copy-jassub-assets] bundled worker + copied ${staticFiles.length} static files -> ${outDir}`,
+  `[copy-jassub-assets] bundled client/worker + copied ${staticFiles.length} static files -> ${outDir}`,
 );

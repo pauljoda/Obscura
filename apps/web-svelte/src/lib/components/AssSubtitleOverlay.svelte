@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { fetchVideoSubtitleSource } from "$lib/api/videos";
+  import { loadJassub } from "$lib/vendor/load-jassub";
 
   interface Props {
     videoEl: HTMLVideoElement | null | undefined;
@@ -13,33 +13,23 @@
 
   let instance: { destroy?: () => Promise<void> | void } | null = null;
 
-  onMount(() => {
+  $effect(() => {
+    const video = videoEl;
+    const currentVideoId = videoId;
+    const currentTrackId = trackId;
+    if (!video) return;
+
     let cancelled = false;
+    let localInstance: { destroy?: () => Promise<void> | void } | null = null;
 
     async function boot() {
-      if (!videoEl) return;
-
-      let subContent: string;
       try {
-        subContent = await fetchVideoSubtitleSource(videoId, trackId);
-      } catch (err) {
-        console.warn("[ass-overlay] failed to fetch subtitle source", err);
-        return;
-      }
-      if (cancelled) return;
-
-      // Lazy-import at runtime only — Vite cannot statically analyze
-      // jassub's IIFE worker, so we use a string indirection + the
-      // @vite-ignore hint so it's left alone at build time.
-      const mod = "jassub";
-      const { default: JASSUB } = await import(/* @vite-ignore */ mod);
-      if (cancelled || !videoEl) return;
-
-      try {
-        instance = new (JASSUB as unknown as new (opts: Record<string, unknown>) => {
-          destroy?: () => Promise<void> | void;
-        })({
-          video: videoEl,
+        const subContent = await fetchVideoSubtitleSource(currentVideoId, currentTrackId);
+        if (cancelled) return;
+        const JASSUB = await loadJassub();
+        if (cancelled) return;
+        localInstance = new JASSUB({
+          video,
           subContent,
           workerUrl: "/jassub/jassub-worker.js",
           wasmUrl: "/jassub/jassub-worker.wasm",
@@ -48,8 +38,9 @@
           defaultFont: "liberation sans",
           queryFonts: "local",
         });
+        instance = localInstance;
       } catch (err) {
-        console.warn("[ass-overlay] JASSUB init failed", err);
+        console.warn("[ass-overlay] failed to boot", err);
       }
     }
 
@@ -57,14 +48,14 @@
 
     return () => {
       cancelled = true;
-      if (instance && typeof instance.destroy === "function") {
+      if (localInstance && typeof localInstance.destroy === "function") {
         try {
-          void instance.destroy();
+          void localInstance.destroy();
         } catch {
           // ignore
         }
       }
-      instance = null;
+      if (instance === localInstance) instance = null;
     };
   });
 

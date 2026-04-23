@@ -255,6 +255,7 @@
   let seededRenditions: HlsRendition[] = [];
   let qualityModeRef: QualityMode = "direct";
   let directFallbackTried = false;
+  let adaptiveSrcRef = "";
 
   let playing = $state(false);
   let isDragging = $state(false);
@@ -337,6 +338,10 @@
   $effect(() => {
     subtitleSelectionContext;
     autoSelected = false;
+  });
+
+  $effect(() => {
+    adaptiveSrcRef = src ?? "";
   });
 
   // ─── Subtitle auto-select ────────────────────────────────────────
@@ -429,7 +434,7 @@
       playerNotice = `Playback failed: ${reason}.`;
       return;
     }
-    if (!src) {
+    if (!adaptiveSrcRef) {
       playerNotice = `Direct playback failed: ${reason}.`;
       return;
     }

@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { eq } from "drizzle-orm";
@@ -42,10 +42,11 @@ interface RemuxCacheMetadata {
   sourcePath: string;
   sourceSize: number;
   sourceMtimeMs: number;
-  mode: "remux" | "transcode";
+  mode: "remux" | "audio-transcode" | "transcode";
 }
 
 const remuxLocks = new Map<string, Promise<string>>();
+const REMUX_BUILD_RETRY_AFTER_SECONDS = 1;
 
 function mimeForExt(ext: string): string {
   switch (ext) {
@@ -70,6 +71,22 @@ function mimeForExt(ext: string): string {
 
 function jsonError(status: number, error: string, extra?: Record<string, unknown>) {
   return Response.json({ error, ...extra }, { status });
+}
+
+function preparingDirectSourceResponse() {
+  return Response.json(
+    {
+      error: "Direct source is still being prepared",
+      retryAfter: REMUX_BUILD_RETRY_AFTER_SECONDS,
+    },
+    {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": String(REMUX_BUILD_RETRY_AFTER_SECONDS),
+      },
+    },
+  );
 }
 
 function toResponseStream(filePath: string, headers: HeadersInit, status = 200): Response {
@@ -230,8 +247,12 @@ async function isCacheFresh(id: string, sourcePath: string): Promise<boolean> {
   try {
     const raw = await readFile(metaPath, "utf8");
     const meta = JSON.parse(raw) as RemuxCacheMetadata;
-    const sourceStats = await stat(sourcePath);
+    const [sourceStats, cacheStats] = await Promise.all([
+      stat(sourcePath),
+      stat(cachePath),
+    ]);
     return (
+      cacheStats.size > 0 &&
       meta.sourcePath === sourcePath &&
       meta.sourceSize === sourceStats.size &&
       meta.sourceMtimeMs === sourceStats.mtimeMs
@@ -241,44 +262,122 @@ async function isCacheFresh(id: string, sourcePath: string): Promise<boolean> {
   }
 }
 
+async function isPlayableMp4(filePath: string): Promise<boolean> {
+  if (!existsSync(filePath)) return false;
+  try {
+    const { stdout } = await runProcess("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=format_name",
+      "-of",
+      "default=nk=1:nw=1",
+      filePath,
+    ]);
+    return stdout.includes("mov,mp4");
+  } catch {
+    return false;
+  }
+}
+
+async function writeRemuxMetadata(
+  id: string,
+  sourcePath: string,
+  mode: RemuxCacheMetadata["mode"],
+): Promise<void> {
+  const sourceStats = await stat(sourcePath);
+  const metadata: RemuxCacheMetadata = {
+    sourcePath,
+    sourceSize: sourceStats.size,
+    sourceMtimeMs: sourceStats.mtimeMs,
+    mode,
+  };
+  await writeFile(
+    getRemuxMetadataPath(id),
+    JSON.stringify(metadata, null, 2),
+    "utf8",
+  );
+}
+
+async function getReadyRemuxCache(
+  id: string,
+  sourcePath: string,
+): Promise<string | null> {
+  const cachePath = getRemuxCachePath(id);
+  if (await isCacheFresh(id, sourcePath)) {
+    return cachePath;
+  }
+  if (!existsSync(cachePath)) {
+    return null;
+  }
+  try {
+    const [sourceStats, cacheStats] = await Promise.all([
+      stat(sourcePath),
+      stat(cachePath),
+    ]);
+    if (cacheStats.size <= 0 || cacheStats.mtimeMs + 1000 < sourceStats.mtimeMs) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  if (!(await isPlayableMp4(cachePath))) {
+    return null;
+  }
+  await writeRemuxMetadata(id, sourcePath, "transcode");
+  return cachePath;
+}
+
 async function buildRemuxCache(id: string, sourcePath: string): Promise<string> {
   const cacheDir = getRemuxCacheDir();
   await mkdir(cacheDir, { recursive: true });
   const cachePath = getRemuxCachePath(id);
-  if (await isCacheFresh(id, sourcePath)) return cachePath;
+  const readyCache = await getReadyRemuxCache(id, sourcePath);
+  if (readyCache) return readyCache;
 
   const codecs = await probeCodecs(sourcePath);
-  const canRemux =
-    codecs.video !== null &&
-    REMUXABLE_VIDEO_CODECS.has(codecs.video) &&
-    (codecs.audio === null || REMUXABLE_AUDIO_CODECS.has(codecs.audio));
+  const videoCanCopy =
+    codecs.video !== null && REMUXABLE_VIDEO_CODECS.has(codecs.video);
+  const audioCanCopy =
+    codecs.audio === null || REMUXABLE_AUDIO_CODECS.has(codecs.audio);
+  const mode: RemuxCacheMetadata["mode"] = videoCanCopy
+    ? (audioCanCopy ? "remux" : "audio-transcode")
+    : "transcode";
+  const tempPath = `${cachePath}.${Date.now()}.tmp`;
+  const ffmpegArgs = [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-nostats",
+    "-y",
+    "-i",
+    sourcePath,
+    "-map",
+    "0:v:0",
+    "-map",
+    "0:a:0?",
+    "-sn",
+    "-dn",
+  ];
 
-  if (canRemux) {
-    await runProcess("ffmpeg", [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-nostats",
-      "-y",
-      "-i",
-      sourcePath,
-      "-c",
+  if (mode === "remux") {
+    ffmpegArgs.push(
+      "-c:v",
       "copy",
-      "-movflags",
-      "+faststart",
-      "-f",
-      "mp4",
-      cachePath,
-    ]);
+      "-c:a",
+      "copy",
+    );
+  } else if (mode === "audio-transcode") {
+    ffmpegArgs.push(
+      "-c:v",
+      "copy",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "160k",
+    );
   } else {
-    await runProcess("ffmpeg", [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-nostats",
-      "-y",
-      "-i",
-      sourcePath,
+    ffmpegArgs.push(
       "-c:v",
       "libx264",
       "-preset",
@@ -289,26 +388,25 @@ async function buildRemuxCache(id: string, sourcePath: string): Promise<string> 
       "aac",
       "-b:a",
       "160k",
-      "-movflags",
-      "+faststart",
-      "-f",
-      "mp4",
-      cachePath,
-    ]);
+    );
   }
 
-  const sourceStats = await stat(sourcePath);
-  const metadata: RemuxCacheMetadata = {
-    sourcePath,
-    sourceSize: sourceStats.size,
-    sourceMtimeMs: sourceStats.mtimeMs,
-    mode: canRemux ? "remux" : "transcode",
-  };
-  await writeFile(
-    getRemuxMetadataPath(id),
-    JSON.stringify(metadata, null, 2),
-    "utf8",
+  ffmpegArgs.push(
+    "-movflags",
+    "+faststart",
+    "-f",
+    "mp4",
+    tempPath,
   );
+
+  try {
+    await runProcess("ffmpeg", ffmpegArgs);
+    await rename(tempPath, cachePath);
+  } catch (error) {
+    await rm(tempPath, { force: true }).catch(() => {});
+    throw error;
+  }
+  await writeRemuxMetadata(id, sourcePath, mode);
   return cachePath;
 }
 
@@ -334,8 +432,12 @@ export async function serveVideoSource(
 
   const ext = path.extname(video.filePath).toLowerCase();
   if (NEEDS_TRANSCODE.has(ext) && !BROWSER_NATIVE.has(ext)) {
-    const cachedPath = await ensureRemuxCache(video.id, video.filePath);
-    return sendRangeStreamResponse(cachedPath, range);
+    const cachedPath = await getReadyRemuxCache(video.id, video.filePath);
+    if (cachedPath) {
+      return sendRangeStreamResponse(cachedPath, range);
+    }
+    void ensureRemuxCache(video.id, video.filePath).catch(() => {});
+    return preparingDirectSourceResponse();
   }
 
   return sendRangeStreamResponse(video.filePath, range);
