@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
   import { Music } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl, buildQueryString } from "$lib/api/core";
-  import { PUBLIC_API_URL } from "$env/static/public";
+  import AudioPlayer from "$lib/components/AudioPlayer.svelte";
+  import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   let { data } = $props();
   const t = $derived(data.track);
-
-  const streamUrl = $derived(
-    browser ? `${PUBLIC_API_URL}/audio-tracks/${t.id}/stream` : "",
+  const playlist = usePlaylist();
+  const trackList = $derived([t]);
+  const isCurrentPlaylistItem = $derived(
+    playlist.isActive && playlist.isPlaylistItem("audio-track", t.id),
   );
+  let activeTrackId = $state<string | null>(null);
 
   function formatDuration(sec: number | null | undefined) {
     if (!sec) return null;
@@ -21,6 +22,10 @@
     if (h > 0) return `${h}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     return `${m}:${String(s).padStart(2, "0")}`;
   }
+
+  $effect(() => {
+    if (isCurrentPlaylistItem) activeTrackId = t.id;
+  });
 </script>
 
 <svelte:head>
@@ -46,20 +51,21 @@
           </a>
         {/if}
         {#if t.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
+          <Badge variant="warning">NSFW</Badge>
         {/if}
       </div>
     </div>
   </div>
 
   <section class="surface-panel p-4">
-    {#if streamUrl}
-      <audio controls preload="none" src={streamUrl} class="w-full">
-        Your browser does not support audio playback.
-      </audio>
-    {/if}
+    <AudioPlayer
+      tracks={trackList}
+      {activeTrackId}
+      onTrackChange={(trackId) => (activeTrackId = trackId)}
+      onPlaybackComplete={() => {
+        if (isCurrentPlaylistItem) playlist.reportContentEnded("audio-track", t.id);
+      }}
+    />
   </section>
 
   <section class="surface-panel p-5 space-y-2">

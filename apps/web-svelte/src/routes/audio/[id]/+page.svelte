@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { cn } from "@obscura/ui-svelte";
   import {
     Music,
     Play,
@@ -12,11 +12,13 @@
   } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import { PUBLIC_API_URL } from "$env/static/public";
+  import { useAppChrome } from "$lib/stores/app-chrome.svelte";
 
   let { data } = $props();
   const a = $derived(data.library);
+  const appChrome = useAppChrome();
 
   function formatDuration(sec: number | null | undefined) {
     if (!sec) return null;
@@ -31,41 +33,22 @@
 
   const ratingStars = $derived(a.rating ? Math.round(a.rating / 20) : 0);
 
-  let audioEl: HTMLAudioElement | null = $state(null);
   let activeTrackId = $state<string | null>(null);
   let playing = $state(false);
+  let shufflePlayKey = $state(0);
 
   function playTrack(id: string) {
-    if (!audioEl) return;
-    if (activeTrackId === id) {
-      if (playing) audioEl.pause();
-      else void audioEl.play();
-      return;
-    }
+    if (activeTrackId === id) return;
     activeTrackId = id;
-    const base = PUBLIC_API_URL ?? "http://localhost:4000";
-    audioEl.src = `${base}/audio-stream/${id}`;
-    void audioEl.play().catch(() => {});
+    playing = true;
   }
-
-  onMount(() => {
-    if (!audioEl) return;
-    const onPlay = () => (playing = true);
-    const onPause = () => (playing = false);
-    audioEl.addEventListener("play", onPlay);
-    audioEl.addEventListener("pause", onPause);
-    return () => {
-      audioEl?.removeEventListener("play", onPlay);
-      audioEl?.removeEventListener("pause", onPause);
-    };
-  });
 </script>
 
 <svelte:head>
   <title>Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-6 pb-64 md:pb-60">
   <div class="flex flex-col sm:flex-row gap-4 items-start">
     <div class="w-48 h-48 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden shadow-lg">
       {#if a.coverImagePath}
@@ -104,14 +87,12 @@
           </span>
         {/if}
         {#if a.isNsfw}
-          <Badge variant="warning">
-            {#snippet children()}NSFW{/snippet}
-          </Badge>
+          <Badge variant="warning">NSFW</Badge>
         {/if}
       </div>
 
       <div class="flex items-center gap-0.5 pt-1">
-        {#each Array.from({ length: 5 }) as _, i}
+        {#each Array.from({ length: 5 }) as _, i (i)}
           <Star
             class={`h-4 w-4 ${
               i < ratingStars
@@ -140,8 +121,10 @@
         </button>
         <button
           type="button"
+          onclick={() => {
+            if (a.tracks.length > 0) shufflePlayKey += 1;
+          }}
           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] text-text-muted border border-border-subtle hover:text-text-primary hover:border-border-accent transition-colors"
-          title="Shuffle (coming soon)"
         >
           <Shuffle class="h-3 w-3" />
           Shuffle
@@ -150,60 +133,56 @@
     </div>
   </div>
 
-  <audio bind:this={audioEl} controls class="w-full" preload="none"></audio>
-
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
     <div class="min-w-0 space-y-2">
       <HierarchySection title={`Tracks — ${a.trackCount}`}>
-        {#snippet children()}
-          <ul class="surface-panel divide-y divide-border-subtle">
-            {#each a.tracks as t (t.id)}
-              {@const isActive = activeTrackId === t.id}
-              <li
-                class={`flex items-center gap-3 px-4 py-2 transition-colors duration-fast ${
-                  isActive ? "bg-accent-950" : "hover:bg-surface-2"
+        <ul class="surface-panel divide-y divide-border-subtle">
+          {#each a.tracks as t (t.id)}
+            {@const isActive = activeTrackId === t.id}
+            <li
+              class={`flex items-center gap-3 px-4 py-2 transition-colors duration-fast ${
+                isActive ? "bg-accent-950" : "hover:bg-surface-2"
+              }`}
+            >
+              <button
+                type="button"
+                onclick={() => playTrack(t.id)}
+                class="w-6 h-6 flex items-center justify-center text-text-muted hover:text-text-accent transition-colors"
+                aria-label={isActive && playing ? "Pause" : "Play"}
+              >
+                {#if isActive && playing}
+                  <Pause class="h-3.5 w-3.5" fill="currentColor" />
+                {:else}
+                  <Play class="h-3.5 w-3.5" fill="currentColor" />
+                {/if}
+              </button>
+              <span class="w-6 text-[0.72rem] text-text-disabled text-right font-mono">
+                {t.trackNumber ?? ""}
+              </span>
+              <a
+                href={`/audio/tracks/${t.id}`}
+                class={`flex-1 min-w-0 text-[0.82rem] truncate transition-colors ${
+                  isActive ? "text-text-accent" : "text-text-primary hover:text-text-accent"
                 }`}
               >
-                <button
-                  type="button"
-                  onclick={() => playTrack(t.id)}
-                  class="w-6 h-6 flex items-center justify-center text-text-muted hover:text-text-accent transition-colors"
-                  aria-label={isActive && playing ? "Pause" : "Play"}
-                >
-                  {#if isActive && playing}
-                    <Pause class="h-3.5 w-3.5" fill="currentColor" />
-                  {:else}
-                    <Play class="h-3.5 w-3.5" fill="currentColor" />
-                  {/if}
-                </button>
-                <span class="w-6 text-[0.72rem] text-text-disabled text-right font-mono">
-                  {t.trackNumber ?? ""}
+                {t.title}
+              </a>
+              {#if t.embeddedArtist}
+                <span class="text-[0.72rem] text-text-muted truncate max-w-[240px]">
+                  {t.embeddedArtist}
                 </span>
-                <a
-                  href={`/audio/tracks/${t.id}`}
-                  class={`flex-1 min-w-0 text-[0.82rem] truncate transition-colors ${
-                    isActive ? "text-text-accent" : "text-text-primary hover:text-text-accent"
-                  }`}
-                >
-                  {t.title}
-                </a>
-                {#if t.embeddedArtist}
-                  <span class="text-[0.72rem] text-text-muted truncate max-w-[240px]">
-                    {t.embeddedArtist}
-                  </span>
-                {/if}
-                <span class="text-[0.72rem] text-text-disabled font-mono w-16 text-right">
-                  {formatDuration(t.duration) ?? "—"}
-                </span>
-              </li>
-            {/each}
-          </ul>
-          {#if a.trackTotal > a.tracks.length}
-            <p class="text-[0.78rem] text-text-muted mt-2 text-center">
-              Showing {a.tracks.length} of {a.trackTotal}.
-            </p>
-          {/if}
-        {/snippet}
+              {/if}
+              <span class="text-[0.72rem] text-text-disabled font-mono w-16 text-right">
+                {formatDuration(t.duration) ?? "—"}
+              </span>
+            </li>
+          {/each}
+        </ul>
+        {#if a.trackTotal > a.tracks.length}
+          <p class="text-[0.78rem] text-text-muted mt-2 text-center">
+            Showing {a.tracks.length} of {a.trackTotal}.
+          </p>
+        {/if}
       </HierarchySection>
     </div>
 
@@ -264,5 +243,30 @@
         {/if}
       </div>
     </aside>
+  </div>
+</div>
+
+<div
+  class={cn(
+    "pointer-events-none fixed left-0 right-0 z-[45] max-w-[100vw] px-2 pt-1",
+    "bottom-[calc(3.5rem+6px)] md:bottom-4 md:px-5",
+    appChrome.sidebarCollapsed ? "md:left-14" : "md:left-60",
+  )}
+  role="region"
+  aria-label="Audio playback"
+>
+  <div class="pointer-events-auto surface-elevated overflow-hidden">
+    <AudioPlayer
+      tracks={a.tracks}
+      {activeTrackId}
+      onTrackChange={(trackId) => {
+        activeTrackId = trackId;
+        playing = true;
+      }}
+      onPlayingChange={(isPlaying) => (playing = isPlaying)}
+      libraryCoverUrl={toApiUrl(a.coverImagePath)}
+      {shufflePlayKey}
+      class="border-0 bg-transparent shadow-none"
+    />
   </div>
 </div>

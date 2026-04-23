@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The Svelte audio library page now uses the live app's floating playback bar.** `/audio/[id]` now mounts the custom player as a hovering bottom transport with waveform scrubbing and play/shuffle controls, while `/audio/tracks/[id]` uses the same custom player inline like the original app.
 - **The Svelte video detail page now keeps rating and subtitle choices in sync without a reload.** Rating stars repaint immediately after you click them, saved subtitle selections are restored only when the matching track still exists, and library subtitle defaults can re-apply correctly when you move between videos.
 - **The Svelte video detail page can stream video locally again.** The SvelteKit app now owns the `video-stream` transport used by `/videos/[id]`, so direct source playback and adaptive `hls2` playback no longer depend on the disabled Fastify fallback during the port.
 - **SvelteKit boot no longer throws the plugin-loader dynamic-import warning.** The server-only TypeScript plugin loader now imports plugin entry files through an explicit runtime file URL, so Vite stops trying to statically analyze arbitrary plugin paths during `@obscura/web-svelte` startup.
@@ -40,6 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- The SvelteKit app now has a custom audio playback stack for the ported detail routes: `AudioPlayer.svelte`, `AudioWaveformFilmstrip.svelte`, and a local `GET /api/audio-stream/:id` route for direct audio bytes and browser-safe transcoding. The Svelte audio library and audio-track detail pages can now play through the new app without falling back to the legacy Fastify stream endpoint.
 - Focused Svelte component coverage for the video detail subtitle-default flow. `VideoPlayer.test.ts` now verifies that preferred subtitle auto-selection fires for unlocked videos and re-arms when a new video clears the previous video's locked subtitle state.
 - The SvelteKit app now owns the video-stream transport used by `/videos/[id]`: `GET /api/video-stream/:id`, `/source`, `/hls/status`, `/hls/*`, and `/hls2/*`. Video detail playback can now fetch direct media bytes, legacy HLS assets, and virtual-HLS manifests/segments locally instead of failing with a 501 when the Fastify fallback is disabled.
 - The SvelteKit app now owns every video-subtitle route except the embedded-extraction enqueue: `GET/POST /api/videos/:id/subtitles`, `GET (vtt) / PATCH / DELETE /api/videos/:id/subtitles/:trackId`, `GET /api/videos/:id/subtitles/:trackId/source` (raw ASS/SSA), and `GET /api/videos/:id/subtitles/:trackId/cues`. Shared `@obscura/app-core` helpers take a neutral `UploadSubtitleInput { filename, buffer, language, label }` shape so each host handles multipart parsing its own way. The extract-subtitles queue enqueue stays Fastify-local (bound to per-host queue wiring) and continues to proxy through the catch-all.
@@ -98,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- The Svelte audio library page no longer drops its player inline in the middle of the detail layout. The custom player now sits in the same fixed bottom playback region as the live app, leaves padding so track lists and metadata stay readable behind it, and keeps the visible play state in sync between the list row and the transport.
 - The Svelte video detail page now uses immutable optimistic updates for rating, orgasm count, and organized state, so those controls repaint immediately instead of waiting for a full page refresh. Subtitle preference hydration also now falls back cleanly when a saved subtitle track no longer exists, allowing library subtitle defaults to take over on the next load.
 - `@obscura/web-svelte` dev/build logs no longer emit Vite's "dynamic import cannot be analyzed" warning for `packages/plugins/src/ts-loader.ts`. The plugin runtime now resolves plugin entry paths to file URLs and marks the import as runtime-only, which preserves dynamic plugin loading while keeping the SvelteKit boot log focused on real issues.
 - SvelteKit migration warning backlog trimmed from 22 to 4. Remaining dropdowns now use real `<button>` overlays with labels, the subtitle settings panel renders as a proper `dialog`, the `WatchedLibrariesSection` "Library Options" cluster is a labeled group, the QualitySlider input id is reactive, the FilmStrip drag state is declared with `$state`, the video detail page re-keys its video through `$derived` instead of capturing `data.video` once, the sibling detail pages (audio, collections, galleries, images, performers, studios, tags, audio tracks) do the same, and the `performers/new`, `studios/new`, `tags/new`, and `search` inputs use a `bind:this` + `$effect(() => input?.focus())` focus pattern instead of the flagged `autofocus` attribute.
@@ -122,6 +125,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- SvelteKit `/audio/[id]` now follows the React library-detail layout by mounting the custom player in a bottom-hover transport that offsets for the sidebar and mobile nav, while `/audio/tracks/[id]` uses the same custom player inline for track-detail parity.
 - SvelteKit `/videos/[id]` now restores per-video subtitle selections, applies library subtitle/playback defaults to `VideoPlayer`, honors active collection playlists for autoplay/advance, and uses a real Add-to-Collection modal from the More actions menu so the detail route matches the React flow more closely.
 - Collection CRUD, item management, and dynamic rule evaluation now live in `@obscura/app-core`, with a shared polymorphic entity loader for videos, galleries, images, and audio tracks so `/api/collections` can run inside SvelteKit.
 - Gallery, image, and audio-library / audio-track server logic now lives in `@obscura/app-core`, and the SvelteKit app exposes matching `/api/galleries`, `/api/images`, `/api/audio-libraries`, and `/api/audio-tracks` route trees instead of falling back to the Fastify catch-all for those media families.
