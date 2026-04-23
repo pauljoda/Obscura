@@ -697,7 +697,7 @@
           </div>
         {:else}
           <div class="surface-panel overflow-hidden">
-            <div class="grid grid-cols-[2.25rem,minmax(0,1fr),auto,3.5rem,2rem] items-center gap-3 border-b border-border-subtle/80 px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-disabled sm:gap-4 sm:px-4">
+            <div class="grid grid-cols-[2rem_minmax(0,1fr)_auto_3rem_1.75rem] items-center gap-3 border-b border-border-subtle/80 px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-disabled sm:px-4">
               <span class="text-center">#</span>
               <span>Title</span>
               <span class="justify-self-end">Rating</span>

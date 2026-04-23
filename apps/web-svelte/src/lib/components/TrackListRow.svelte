@@ -43,7 +43,7 @@
 
 <div
   class={cn(
-    "group/row relative grid grid-cols-[2.25rem,minmax(0,1fr),auto,3.5rem,2rem] items-center gap-3 px-3 sm:gap-4 sm:px-4 py-2.5 transition-colors duration-fast",
+    "group/row relative grid grid-cols-[2rem_minmax(0,1fr)_auto_3rem_1.75rem] items-center gap-3 px-3 sm:px-4 py-1.5 transition-colors duration-fast",
     "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:transition-all before:duration-normal",
     isActive
       ? "bg-gradient-to-r from-accent-900/40 via-accent-950/30 to-transparent before:bg-[var(--color-accent-500)] before:shadow-[0_0_12px_rgba(199,155,92,0.55)]"
