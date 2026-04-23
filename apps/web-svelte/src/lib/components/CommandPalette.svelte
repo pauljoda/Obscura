@@ -7,6 +7,8 @@
   import type { SearchResponseDto, SearchResultItem } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -292,9 +294,9 @@
                           "flex shrink-0 items-center justify-center overflow-hidden bg-surface-1",
                           item.kind === "performer"
                             ? "h-8 w-8"
-                            : item.kind === "video-series"
+                            : item.kind === "video-series" || item.kind === "gallery"
                               ? "h-10 w-7"
-                              : "h-8 w-12",
+                              : "h-8 w-8",
                         )}
                       >
                         {#if item.kind === "video-series"}
@@ -307,6 +309,31 @@
                               : null}
                             showCount={false}
                             class="h-full w-full"
+                          />
+                        {:else if item.kind === "gallery"}
+                          <GalleryThumbnail
+                            title={item.title}
+                            coverImagePath={item.imagePath}
+                            imageCount={typeof item.meta?.imageCount === "number"
+                              ? item.meta.imageCount
+                              : null}
+                            isNsfw={item.meta?.isNsfw === true}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showCount={false}
+                          />
+                        {:else if item.kind === "image"}
+                          <ImageThumbnail
+                            title={item.title}
+                            thumbnailPath={item.imagePath}
+                            previewPath={typeof item.meta?.previewPath === "string"
+                              ? item.meta.previewPath
+                              : null}
+                            isVideo={typeof item.meta?.previewPath === "string" && !!item.meta.previewPath}
+                            isNsfw={item.meta?.isNsfw === true}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showChips={false}
                           />
                         {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />

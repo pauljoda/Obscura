@@ -184,6 +184,17 @@ async function handleGalleryCover(
   deps: AssetResolverDeps,
   id: string,
 ): Promise<Response> {
+  // Custom uploaded cover takes precedence over the linked image thumb.
+  const customPath = firstExistingPath(
+    cacheCandidates("galleries", id, "cover-custom.jpg"),
+  );
+  if (customPath) {
+    return streamFile(customPath, {
+      "Cache-Control": "no-cache",
+      "Content-Type": "image/jpeg",
+    });
+  }
+
   const gallery = await deps.getGalleryCover(id);
   if (!gallery.found) {
     return notFound("Gallery not found");
@@ -192,15 +203,17 @@ async function handleGalleryCover(
     return notFound("No cover image available");
   }
 
-  return serveFileIfExists(
-    firstExistingPath(cacheCandidates("images", gallery.coverImageId, "thumb.jpg")) ??
-      path.join("__missing__", "thumb.jpg"),
-    {
-      "Cache-Control": "no-cache",
-      "Content-Type": "image/jpeg",
-    },
-    "Cover thumbnail not yet generated",
-  );
+  const coverThumb = firstExistingPath([
+    ...cacheCandidates("images", gallery.coverImageId, "thumb-custom.jpg"),
+    ...cacheCandidates("images", gallery.coverImageId, "thumb.jpg"),
+  ]);
+  if (!coverThumb) {
+    return notFound("Cover thumbnail not yet generated");
+  }
+  return streamFile(coverThumb, {
+    "Cache-Control": "no-cache",
+    "Content-Type": "image/jpeg",
+  });
 }
 
 async function handleImageAsset(
@@ -209,7 +222,10 @@ async function handleImageAsset(
   kind: string,
 ): Promise<Response> {
   if (kind === "thumb") {
-    const thumbPath = firstExistingPath(cacheCandidates("images", id, "thumb.jpg"));
+    const thumbPath = firstExistingPath([
+      ...cacheCandidates("images", id, "thumb-custom.jpg"),
+      ...cacheCandidates("images", id, "thumb.jpg"),
+    ]);
     if (!thumbPath) {
       return notFound("Image thumbnail not found");
     }

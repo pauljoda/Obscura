@@ -83,6 +83,7 @@ export const createImagesSearchProvider: SearchProviderFactory = (
           width: images.width,
           height: images.height,
           format: images.format,
+          isNsfw: images.isNsfw,
           score: scoreExpr,
         })
         .from(images)
@@ -118,6 +119,7 @@ export const createImagesSearchProvider: SearchProviderFactory = (
           height: r.height,
           galleryId: r.galleryId,
           format: r.format,
+          isNsfw: r.isNsfw,
           previewPath: imagePreviewPath(r.id, r.format),
           fullPath: `/assets/images/${r.id}/full`,
         },

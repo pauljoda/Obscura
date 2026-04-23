@@ -1,12 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { Images, Layers } from "@lucide/svelte";
+  import { Layers } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
 
   let { data } = $props();
@@ -139,17 +137,18 @@
             href={`/galleries/${g.id}`}
             class="flex items-center gap-3 px-3 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
           >
-            <NsfwBlur isNsfw={g.isNsfw} class="block shrink-0">
-              <div class="w-20 aspect-[3/4] bg-surface-1 overflow-hidden">
-                {#if g.coverImagePath}
-                  <img src={toApiUrl(g.coverImagePath)} alt="" loading="lazy" class="h-full w-full object-cover" />
-                {:else}
-                  <div class={VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length] + " h-full flex items-center justify-center"}>
-                    <Layers class="h-5 w-5 text-white/20" />
-                  </div>
-                {/if}
-              </div>
-            </NsfwBlur>
+            <div class="w-20 shrink-0">
+              <GalleryThumbnail
+                title={g.title}
+                coverImagePath={g.coverImagePath}
+                previewImagePaths={g.previewImagePaths}
+                imageCount={g.imageCount}
+                isNsfw={g.isNsfw}
+                size="list"
+                gradientFallback={VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
+                showCount={false}
+              />
+            </div>
             <div class="flex-1 min-w-0">
               <div class="truncate text-text-primary">{g.title}</div>
               <div class="flex items-center gap-2 text-[0.7rem] text-text-muted mt-0.5">
@@ -171,26 +170,15 @@
           href={`/galleries/${g.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <NsfwBlur isNsfw={g.isNsfw} class="block">
-            <div class="aspect-[3/4] bg-surface-1 relative">
-              {#if g.coverImagePath}
-                <img
-                  src={toApiUrl(g.coverImagePath)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  class="h-full w-full object-cover"
-                />
-              {:else}
-                <div class={gradient + " h-full w-full flex items-center justify-center"}>
-                  <Layers class="h-8 w-8 text-white/20" />
-                </div>
-              {/if}
-              <div class="pointer-events-none absolute bottom-1 right-1 z-10">
-                <NsfwShowModeChip isNsfw={g.isNsfw} />
-              </div>
-            </div>
-          </NsfwBlur>
+          <GalleryThumbnail
+            title={g.title}
+            coverImagePath={g.coverImagePath}
+            previewImagePaths={g.previewImagePaths}
+            imageCount={g.imageCount}
+            isNsfw={g.isNsfw}
+            size="grid"
+            gradientFallback={gradient}
+          />
           <div class="p-2.5 space-y-1">
             <h4 class="truncate text-body font-medium text-text-primary">{g.title}</h4>
             <div class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">

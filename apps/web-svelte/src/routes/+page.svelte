@@ -17,6 +17,8 @@
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -236,22 +238,14 @@
                   href={`/galleries/${g.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <NsfwBlur isNsfw={g.isNsfw} class="block">
-                    <div class="aspect-[3/4] bg-surface-1 relative">
-                      {#if g.coverImagePath}
-                        <img
-                          src={toApiUrl(g.coverImagePath)}
-                          alt={g.title}
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class="flex h-full items-center justify-center">
-                          <Layers class="h-8 w-8 text-text-disabled" />
-                        </div>
-                      {/if}
-                    </div>
-                  </NsfwBlur>
+                  <GalleryThumbnail
+                    title={g.title}
+                    coverImagePath={g.coverImagePath}
+                    previewImagePaths={g.previewImagePaths}
+                    imageCount={g.imageCount}
+                    isNsfw={g.isNsfw}
+                    size="grid"
+                  />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{g.title}</h3>
                     <p class="text-xs text-text-muted mt-0.5">
@@ -278,18 +272,16 @@
                   href={`/images/${img.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <NsfwBlur isNsfw={img.isNsfw} class="block">
-                    <div class="aspect-video bg-surface-1">
-                      {#if img.previewPath || img.thumbnailPath}
-                        <img
-                          src={toApiUrl(img.previewPath ?? img.thumbnailPath)}
-                          alt={img.title}
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {/if}
-                    </div>
-                  </NsfwBlur>
+                  <ImageThumbnail
+                    title={img.title}
+                    thumbnailPath={img.thumbnailPath}
+                    previewPath={img.previewPath}
+                    isNsfw={img.isNsfw}
+                    isVideo={img.isVideo}
+                    width={img.width}
+                    height={img.height}
+                    size="hero"
+                  />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{img.title}</h3>
                   </div>

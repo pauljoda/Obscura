@@ -20,6 +20,8 @@
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import { fetchSearch } from "$lib/api/media";
@@ -483,33 +485,30 @@
                 </a>
               {:else if item.kind === "gallery"}
                 {@const gradient = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
+                {@const previewPaths = (() => {
+                  try {
+                    const raw = item.meta?.previewImagePaths;
+                    return typeof raw === "string" ? (JSON.parse(raw) as string[]) : [];
+                  } catch {
+                    return [] as string[];
+                  }
+                })()}
+                {@const imageCount = typeof item.meta?.imageCount === "number"
+                  ? item.meta.imageCount
+                  : null}
                 <a
                   href={buildHrefWithFrom(item.href, currentPath)}
                   class="surface-card-sharp overflow-hidden transition-colors duration-fast hover:border-border-accent"
                 >
-                  <NsfwBlur isNsfw={isNsfwItem(item)} class="block">
-                    <div class="relative aspect-[3/4] bg-surface-1">
-                      {#if item.imagePath}
-                        <img
-                          src={toApiUrl(item.imagePath)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div
-                          class={gradient +
-                            " flex h-full w-full items-center justify-center"}
-                        >
-                          <Layers class="h-8 w-8 text-white/20" />
-                        </div>
-                      {/if}
-                      <div class="pointer-events-none absolute bottom-1 right-1 z-10">
-                        <NsfwShowModeChip isNsfw={isNsfwItem(item)} />
-                      </div>
-                    </div>
-                  </NsfwBlur>
+                  <GalleryThumbnail
+                    title={item.title}
+                    coverImagePath={item.imagePath}
+                    previewImagePaths={previewPaths}
+                    imageCount={imageCount}
+                    isNsfw={isNsfwItem(item)}
+                    size="grid"
+                    gradientFallback={gradient}
+                  />
                   <div class="space-y-1 p-2.5">
                     <h4 class="truncate text-body font-medium text-text-primary">
                       {item.title}
@@ -522,30 +521,26 @@
                   </div>
                 </a>
               {:else if item.kind === "image"}
+                {@const previewPath = typeof item.meta?.previewPath === "string"
+                  ? item.meta.previewPath
+                  : null}
+                {@const width = typeof item.meta?.width === "number" ? item.meta.width : null}
+                {@const height = typeof item.meta?.height === "number" ? item.meta.height : null}
+                {@const format = typeof item.meta?.format === "string" ? item.meta.format : null}
                 <a
                   href={buildHrefWithFrom(item.href, currentPath)}
                   class="surface-card-sharp group overflow-hidden transition-colors duration-fast hover:border-border-accent"
                 >
-                  <NsfwBlur isNsfw={isNsfwItem(item)} class="block">
-                    <div class="relative aspect-square bg-surface-1">
-                      {#if item.imagePath}
-                        <img
-                          src={toApiUrl(item.imagePath)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class="flex h-full w-full items-center justify-center">
-                          <ImageIcon class="h-6 w-6 text-text-disabled" />
-                        </div>
-                      {/if}
-                      <div class="pointer-events-none absolute bottom-1 right-1 z-10">
-                        <NsfwShowModeChip isNsfw={isNsfwItem(item)} />
-                      </div>
-                    </div>
-                  </NsfwBlur>
+                  <ImageThumbnail
+                    title={item.title}
+                    thumbnailPath={item.imagePath}
+                    previewPath={previewPath}
+                    isVideo={!!previewPath}
+                    isNsfw={isNsfwItem(item)}
+                    width={width}
+                    height={height}
+                    size="grid"
+                  />
                   {#if item.title}
                     <div class="px-1.5 py-1 text-[0.62rem] text-text-muted truncate">
                       {item.title}

@@ -80,6 +80,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
           imageCount: galleries.imageCount,
           rating: galleries.rating,
           galleryType: galleries.galleryType,
+          isNsfw: galleries.isNsfw,
           score: scoreExpr,
         })
         .from(galleries)
@@ -126,6 +127,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
         meta: {
           imageCount: r.imageCount,
           galleryType: r.galleryType,
+          isNsfw: r.isNsfw,
           previewImagePaths: JSON.stringify(previewMap.get(r.id) ?? []),
         },
       })),

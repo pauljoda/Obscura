@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { Images, Folder } from "@lucide/svelte";
+  import { Images } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { fetchGalleryImages, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
 
   let { data } = $props();
   let overrideRating = $state<number | null | undefined>(undefined);
@@ -119,22 +120,14 @@
                   href={`/galleries/${child.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <NsfwBlur isNsfw={child.isNsfw} class="block">
-                    <div class="aspect-[4/3] bg-surface-1">
-                      {#if child.coverImagePath}
-                        <img
-                          src={toApiUrl(child.coverImagePath)}
-                          alt=""
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class="flex h-full items-center justify-center">
-                          <Folder class="h-8 w-8 text-text-disabled" />
-                        </div>
-                      {/if}
-                    </div>
-                  </NsfwBlur>
+                  <GalleryThumbnail
+                    title={child.title}
+                    coverImagePath={child.coverImagePath}
+                    previewImagePaths={child.previewImagePaths}
+                    imageCount={child.imageCount}
+                    isNsfw={child.isNsfw}
+                    size="hero"
+                  />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{child.title}</h3>
                     <p class="text-xs text-text-muted mt-0.5">
@@ -156,24 +149,21 @@
                 <button
                   type="button"
                   onclick={() => openAt(i)}
-                  class="aspect-square bg-surface-1 overflow-hidden block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+                  class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
                   aria-label={img.title}
+                  title={img.title}
                 >
-                  <NsfwBlur isNsfw={img.isNsfw} class="block h-full w-full">
-                    {#if img.thumbnailPath}
-                      <img
-                        src={toApiUrl(img.thumbnailPath)}
-                        alt={img.title}
-                        loading="lazy"
-                        decoding="async"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div class="flex h-full items-center justify-center">
-                        <Images class="h-5 w-5 text-text-disabled" />
-                      </div>
-                    {/if}
-                  </NsfwBlur>
+                  <ImageThumbnail
+                    title={img.title}
+                    thumbnailPath={img.thumbnailPath}
+                    previewPath={img.previewPath}
+                    isNsfw={img.isNsfw}
+                    isVideo={img.isVideo}
+                    width={img.width}
+                    height={img.height}
+                    size="grid"
+                    showChips={false}
+                  />
                 </button>
               {/each}
             </div>

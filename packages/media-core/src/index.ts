@@ -1094,6 +1094,10 @@ export function getGeneratedImageDir(imageId: string) {
   return path.join(getCacheRootDir(), "images", imageId);
 }
 
+export function getGeneratedGalleryDir(galleryId: string) {
+  return path.join(getCacheRootDir(), "galleries", galleryId);
+}
+
 /**
  * Parse a zip/cbz/cbr file and return sorted member paths for image entries.
  */

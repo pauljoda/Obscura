@@ -306,6 +306,40 @@ export async function deleteAudioLibraryCover(id: string): Promise<{ ok: true }>
   return fetchApi(`/audio-libraries/${id}/cover`, { method: "DELETE" });
 }
 
+export async function setGalleryCoverFromImage(
+  galleryId: string,
+  imageId: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/galleries/${galleryId}/cover`, {
+    method: "POST",
+    body: JSON.stringify({ imageId }),
+  });
+}
+
+export async function uploadGalleryCover(
+  galleryId: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/galleries/${galleryId}/cover/upload`, file);
+}
+
+export async function deleteGalleryCover(galleryId: string): Promise<{ ok: true }> {
+  return fetchApi(`/galleries/${galleryId}/cover`, { method: "DELETE" });
+}
+
+export async function uploadImageThumbnail(
+  imageId: string,
+  file: File,
+): Promise<{ ok: true; thumbnailPath: string }> {
+  return uploadFile(`/images/${imageId}/thumbnail`, file);
+}
+
+export async function resetImageThumbnail(
+  imageId: string,
+): Promise<{ ok: true; thumbnailPath: string }> {
+  return fetchApi(`/images/${imageId}/thumbnail`, { method: "DELETE" });
+}
+
 export async function updateAudioTrack(
   id: string,
   data: AudioTrackPatchDto,

@@ -20,6 +20,7 @@ import {
   fileNameToTitle,
   getGeneratedAudioLibraryDir,
   getGeneratedAudioTrackDir,
+  getGeneratedGalleryDir,
   getGeneratedImageDir,
 } from "@obscura/media-core";
 import { NotFoundError, ValidationError } from "./errors";
@@ -817,12 +818,113 @@ export async function deleteGalleryCoverWrite(db: AppDb, galleryId: string) {
   });
   if (!existing) throw new NotFoundError("Gallery not found");
 
+  const customPath = path.join(
+    getGeneratedGalleryDir(galleryId),
+    GALLERY_COVER_FILE,
+  );
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    /* non-fatal */
+  }
+
   await db
     .update(galleries)
     .set({ coverImageId: null, updatedAt: new Date() })
     .where(eq(galleries.id, galleryId));
 
   return { ok: true as const };
+}
+
+const GALLERY_COVER_FILE = "cover-custom.jpg";
+
+export async function uploadGalleryCoverWrite(
+  db: AppDb,
+  galleryId: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const existing = await db.query.galleries.findFirst({
+    where: eq(galleries.id, galleryId),
+    columns: { id: true },
+  });
+  if (!existing) throw new NotFoundError("Gallery not found");
+
+  const dir = getGeneratedGalleryDir(galleryId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, GALLERY_COVER_FILE), buffer);
+
+  await db
+    .update(galleries)
+    .set({ updatedAt: new Date() })
+    .where(eq(galleries.id, galleryId));
+
+  return {
+    ok: true as const,
+    coverImagePath: `/assets/galleries/${galleryId}/cover`,
+  };
+}
+
+const IMAGE_CUSTOM_THUMB_FILE = "thumb-custom.jpg";
+
+export async function setCustomImageThumbnailWrite(
+  db: AppDb,
+  imageId: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const [image] = await db
+    .select({ id: images.id })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+  if (!image) throw new NotFoundError("Image not found");
+
+  const dir = getGeneratedImageDir(imageId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, IMAGE_CUSTOM_THUMB_FILE), buffer);
+
+  await db
+    .update(images)
+    .set({
+      thumbnailPath: `/assets/images/${imageId}/thumb`,
+      updatedAt: new Date(),
+    })
+    .where(eq(images.id, imageId));
+
+  return {
+    ok: true as const,
+    thumbnailPath: `/assets/images/${imageId}/thumb`,
+  };
+}
+
+export async function resetImageThumbnailWrite(db: AppDb, imageId: string) {
+  const [image] = await db
+    .select({ id: images.id })
+    .from(images)
+    .where(eq(images.id, imageId))
+    .limit(1);
+  if (!image) throw new NotFoundError("Image not found");
+
+  const customPath = path.join(
+    getGeneratedImageDir(imageId),
+    IMAGE_CUSTOM_THUMB_FILE,
+  );
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    /* non-fatal */
+  }
+
+  await db
+    .update(images)
+    .set({ updatedAt: new Date() })
+    .where(eq(images.id, imageId));
+
+  return {
+    ok: true as const,
+    thumbnailPath: `/assets/images/${imageId}/thumb`,
+  };
 }
 
 export async function createGalleryChapterWrite(

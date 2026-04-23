@@ -3,8 +3,7 @@
   import { page } from "$app/state";
   import { Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
 
   let { data } = $props();
 
@@ -131,23 +130,19 @@
       {#each data.images as img (img.id)}
         <a
           href={`/images/${img.id}`}
-          class="aspect-square bg-surface-1 overflow-hidden block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+          class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+          title={img.title}
         >
-          <NsfwBlur isNsfw={img.isNsfw} class="block h-full w-full">
-            {#if img.thumbnailPath}
-              <img
-                src={toApiUrl(img.thumbnailPath)}
-                alt={img.title}
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <div class="flex h-full items-center justify-center">
-                <ImageIcon class="h-5 w-5 text-text-disabled" />
-              </div>
-            {/if}
-          </NsfwBlur>
+          <ImageThumbnail
+            title={img.title}
+            thumbnailPath={img.thumbnailPath}
+            previewPath={img.previewPath}
+            isNsfw={img.isNsfw}
+            isVideo={img.isVideo}
+            width={img.width}
+            height={img.height}
+            size="grid"
+          />
         </a>
       {/each}
     </div>
