@@ -10,11 +10,13 @@
     Users,
     Building2,
   } from "@lucide/svelte";
-  import { cn, MediaCard, type PerformerRef } from "@obscura/ui-svelte";
+  import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
+  import VideoCard from "$lib/components/VideoCard.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
   let { data } = $props();
@@ -208,30 +210,12 @@
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each recentVideos as video, i (video.id)}
-              {@const cardPerformers = (video.performers ?? []).map((p) => ({
-                name: p.name,
-                imagePath: p.imagePath ? toApiUrl(p.imagePath) ?? null : null,
-              })) as PerformerRef[]}
               <div class="flex-none w-72 md:w-80 snap-start">
-                <a href={`/videos/${video.id}`} class="block">
-                  <NsfwBlur isNsfw={video.isNsfw} class="block">
-                    <MediaCard
-                      title={video.title}
-                      thumbnail={toApiUrl(video.thumbnailPath)}
-                      cardThumbnail={toApiUrl(video.cardThumbnailPath)}
-                      gradientClass={VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
-                      duration={video.durationFormatted ?? undefined}
-                      resolution={video.resolution ?? undefined}
-                      codec={video.codec ?? undefined}
-                      hasSubtitles={video.hasSubtitles}
-                      fileSize={video.fileSizeFormatted ?? undefined}
-                      performers={cardPerformers.length > 0 ? cardPerformers : undefined}
-                      tags={(video.tags ?? []).map((t) => t.name)}
-                      rating={video.rating ?? undefined}
-                      views={video.playCount}
-                    />
-                  </NsfwBlur>
-                </a>
+                <VideoCard
+                  video={videoListItemToCardData(video, "/")}
+                  variant="grid"
+                  index={i}
+                />
               </div>
             {/each}
           </div>

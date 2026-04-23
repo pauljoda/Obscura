@@ -5,7 +5,45 @@
   import { Badge } from "@obscura/ui-svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
-  import type { EntityKind, SearchResponseDto } from "@obscura/contracts";
+  import VideoCard from "$lib/components/VideoCard.svelte";
+  import type { VideoCardData } from "$lib/video-card-data";
+  import type {
+    EntityKind,
+    SearchResponseDto,
+    SearchResultItem,
+  } from "@obscura/contracts";
+
+  function videoSearchItemToCardData(item: SearchResultItem): VideoCardData {
+    const meta = item.meta ?? {};
+    const durationSeconds =
+      typeof meta.durationSeconds === "number" ? meta.durationSeconds : undefined;
+    const thumbnail = toApiUrl(item.imagePath ?? undefined);
+    const cardThumbnail = toApiUrl(
+      (meta.cardThumbnailPath as string | null | undefined) ?? undefined,
+    );
+    return {
+      id: item.id,
+      href: item.href,
+      title: item.title,
+      thumbnail,
+      cardThumbnail,
+      trickplaySprite: toApiUrl((meta.spritePath as string | null | undefined) ?? undefined),
+      trickplayVtt: toApiUrl(
+        (meta.trickplayVttPath as string | null | undefined) ?? undefined,
+      ),
+      scrubDurationSeconds: durationSeconds,
+      duration:
+        typeof meta.durationFormatted === "string" ? meta.durationFormatted : undefined,
+      resolution: typeof meta.resolution === "string" ? meta.resolution : undefined,
+      codec: typeof meta.codec === "string" ? meta.codec : undefined,
+      fileSize:
+        typeof meta.fileSizeFormatted === "string" ? meta.fileSizeFormatted : undefined,
+      studio: typeof meta.studio === "string" ? meta.studio : undefined,
+      views: typeof meta.views === "number" ? meta.views : undefined,
+      rating: item.rating ?? undefined,
+      hasSubtitles: false,
+    };
+  }
 
   let q = $state(page.url.searchParams.get("q") ?? "");
   const kindsParam = page.url.searchParams.get("kinds");
@@ -121,31 +159,45 @@
           <h2 class="text-label text-text-muted capitalize">
             {group.kind.replaceAll("_", " ")} ({group.total})
           </h2>
-          <ul class="surface-panel divide-y divide-border-subtle">
-            {#each group.items as item (item.id)}
-              <li>
-                <a
-                  href={entityHref(group.kind, item.id, item.title)}
-                  class="flex items-center gap-3 px-4 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
-                >
-                  {#if item.imagePath}
-                    <img
-                      src={toApiUrl(item.imagePath)}
-                      alt=""
-                      loading="lazy"
-                      class="h-8 w-12 object-cover shrink-0"
-                    />
-                  {/if}
-                  <span class="flex-1 min-w-0 truncate text-text-primary">
-                    {item.title ?? item.id}
-                  </span>
-                  {#if item.subtitle}
-                    <span class="text-text-accent truncate max-w-[200px]">{item.subtitle}</span>
-                  {/if}
-                </a>
-              </li>
-            {/each}
-          </ul>
+          {#if group.kind === "video"}
+            <ul class="surface-panel divide-y divide-border-subtle">
+              {#each group.items as item, index (item.id)}
+                <li>
+                  <VideoCard
+                    video={videoSearchItemToCardData(item)}
+                    variant="compact"
+                    index={index}
+                  />
+                </li>
+              {/each}
+            </ul>
+          {:else}
+            <ul class="surface-panel divide-y divide-border-subtle">
+              {#each group.items as item (item.id)}
+                <li>
+                  <a
+                    href={entityHref(group.kind, item.id, item.title)}
+                    class="flex items-center gap-3 px-4 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
+                  >
+                    {#if item.imagePath}
+                      <img
+                        src={toApiUrl(item.imagePath)}
+                        alt=""
+                        loading="lazy"
+                        class="h-8 w-12 object-cover shrink-0"
+                      />
+                    {/if}
+                    <span class="flex-1 min-w-0 truncate text-text-primary">
+                      {item.title ?? item.id}
+                    </span>
+                    {#if item.subtitle}
+                      <span class="text-text-accent truncate max-w-[200px]">{item.subtitle}</span>
+                    {/if}
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          {/if}
         </section>
       {/each}
     {/if}

@@ -4,7 +4,9 @@
   import { browser } from "$app/environment";
   import { Search, X, Clock, ArrowRight, Trash2 } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type { SearchResponseDto } from "@obscura/contracts";
+  import type { SearchResponseDto, SearchResultItem } from "@obscura/contracts";
+  import VideoCard from "$lib/components/VideoCard.svelte";
+  import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
   import { entityTerms } from "$lib/terminology";
@@ -77,6 +79,38 @@
     if (trimmed) recent.add(trimmed);
     closePalette();
     void goto(buildHrefWithFrom(href, currentPath));
+  }
+
+  function videoSearchItemToCardData(item: SearchResultItem): VideoCardData {
+    const meta = item.meta ?? {};
+    const durationSeconds =
+      typeof meta.durationSeconds === "number" ? meta.durationSeconds : undefined;
+    return {
+      id: item.id,
+      href: buildHrefWithFrom(item.href, currentPath),
+      title: item.title,
+      thumbnail: toApiUrl(item.imagePath ?? undefined),
+      cardThumbnail: toApiUrl(
+        (meta.cardThumbnailPath as string | null | undefined) ?? undefined,
+      ),
+      trickplaySprite: toApiUrl(
+        (meta.spritePath as string | null | undefined) ?? undefined,
+      ),
+      trickplayVtt: toApiUrl(
+        (meta.trickplayVttPath as string | null | undefined) ?? undefined,
+      ),
+      scrubDurationSeconds: durationSeconds,
+      duration:
+        typeof meta.durationFormatted === "string" ? meta.durationFormatted : undefined,
+      resolution: typeof meta.resolution === "string" ? meta.resolution : undefined,
+      codec: typeof meta.codec === "string" ? meta.codec : undefined,
+      fileSize:
+        typeof meta.fileSizeFormatted === "string" ? meta.fileSizeFormatted : undefined,
+      studio: typeof meta.studio === "string" ? meta.studio : undefined,
+      views: typeof meta.views === "number" ? meta.views : undefined,
+      rating: item.rating ?? undefined,
+      hasSubtitles: false,
+    };
   }
 
   function submitSearch() {
@@ -237,35 +271,44 @@
                   <span class="text-kicker">{group.label}</span>
                   <span class="text-[0.6rem] text-text-disabled">{group.total}</span>
                 </div>
-                {#each group.items as item (item.id)}
-                  {@const Icon = SEARCH_KIND_CONFIG[item.kind]?.icon}
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-fast hover:bg-surface-2"
-                    onclick={() => navigateTo(item.href)}
-                  >
-                    <div
-                      class={cn(
-                        "flex shrink-0 items-center justify-center overflow-hidden bg-surface-1",
-                        item.kind === "performer" ? "h-8 w-8" : "h-8 w-12",
-                      )}
+                {#each group.items as item, itemIndex (item.id)}
+                  {#if item.kind === "video"}
+                    <VideoCard
+                      video={videoSearchItemToCardData(item)}
+                      variant="compact"
+                      index={itemIndex}
+                      onSelect={navigateTo}
+                    />
+                  {:else}
+                    {@const Icon = SEARCH_KIND_CONFIG[item.kind]?.icon}
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-fast hover:bg-surface-2"
+                      onclick={() => navigateTo(item.href)}
                     >
-                      {#if item.imagePath}
-                        <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />
-                      {:else if Icon}
-                        <Icon class="h-3.5 w-3.5 text-text-disabled" />
-                      {/if}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="truncate text-sm text-text-primary">{item.title}</div>
-                      {#if item.subtitle}
-                        <div class="truncate text-[0.68rem] text-text-muted">{item.subtitle}</div>
-                      {/if}
-                    </div>
-                    <span class="tag-chip tag-chip-default shrink-0 text-[0.6rem]">
-                      {SEARCH_KIND_CONFIG[item.kind]?.label ?? item.kind}
-                    </span>
-                  </button>
+                      <div
+                        class={cn(
+                          "flex shrink-0 items-center justify-center overflow-hidden bg-surface-1",
+                          item.kind === "performer" ? "h-8 w-8" : "h-8 w-12",
+                        )}
+                      >
+                        {#if item.imagePath}
+                          <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />
+                        {:else if Icon}
+                          <Icon class="h-3.5 w-3.5 text-text-disabled" />
+                        {/if}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm text-text-primary">{item.title}</div>
+                        {#if item.subtitle}
+                          <div class="truncate text-[0.68rem] text-text-muted">{item.subtitle}</div>
+                        {/if}
+                      </div>
+                      <span class="tag-chip tag-chip-default shrink-0 text-[0.6rem]">
+                        {SEARCH_KIND_CONFIG[item.kind]?.label ?? item.kind}
+                      </span>
+                    </button>
+                  {/if}
                 {/each}
               </div>
             {/each}

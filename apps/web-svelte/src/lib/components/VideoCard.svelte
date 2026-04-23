@@ -9,6 +9,7 @@
   import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
   import NsfwText from "./NsfwText.svelte";
   import NsfwTagLabel from "./NsfwTagLabel.svelte";
+  import VideoThumbnail from "./VideoThumbnail.svelte";
   import { VIDEO_TAG_COLORS } from "$lib/video-tag-colors";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
@@ -44,42 +45,7 @@
     })),
   );
   const thumbnailGradient = $derived(VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]);
-  let failedThumbnailSources = $state<string[]>([]);
-  const thumbnailCandidate = $derived(video.cardThumbnail || video.thumbnail || null);
-  const thumbnailSrc = $derived.by(() => {
-    if (!thumbnailCandidate) return null;
-    return failedThumbnailSources.includes(thumbnailCandidate) ? null : thumbnailCandidate;
-  });
-  const showThumbnail = $derived(thumbnailSrc !== null);
-
-  function markThumbnailFailed() {
-    const source = thumbnailCandidate;
-    if (!source || failedThumbnailSources.includes(source)) return;
-    failedThumbnailSources = [...failedThumbnailSources, source];
-  }
 </script>
-
-{#snippet thumbnailFallback(frameClass = "", iconClass = "")}
-  <div
-    class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,239,213,0.16),transparent_38%),linear-gradient(180deg,rgba(7,8,11,0.06)_0%,rgba(7,8,11,0.55)_100%)]"
-    aria-hidden="true"
-  ></div>
-  <div class="relative flex h-full w-full items-center justify-center">
-    <div
-      class={cn(
-        "flex items-center justify-center border border-accent-500/25 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_24px_rgba(0,0,0,0.35)] backdrop-blur-sm",
-        frameClass,
-      )}
-    >
-      <Film
-        class={cn(
-          "text-accent-100 drop-shadow-[0_0_14px_rgba(196,154,90,0.24)]",
-          iconClass,
-        )}
-      />
-    </div>
-  </div>
-{/snippet}
 
 {#if variant === "list"}
   <a href={video.href} class="block">
@@ -100,44 +66,12 @@
         </div>
       {/if}
       <NsfwBlur isNsfw={video.isNsfw ?? false}>
-        <div
-          class={cn(
-            "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
-            thumbnailGradient,
-          )}
-        >
-          {#if showThumbnail}
-            <img
-              src={thumbnailSrc}
-              alt={video.title}
-              loading={index < 6 ? "eager" : "lazy"}
-              decoding="async"
-              class="h-full w-full object-cover"
-              onerror={markThumbnailFailed}
-            />
-          {:else}
-            {@render thumbnailFallback("h-11 w-11", "h-5 w-5")}
-          {/if}
-          <div
-            class="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5"
-          >
-            <NsfwShowModeChip isNsfw={video.isNsfw} />
-            {#if video.hasSubtitles}
-              <span
-                class="inline-flex items-center gap-0.5 bg-black/70 text-accent-100 border border-accent-500/40 px-1 py-px text-[0.5rem] font-mono uppercase tracking-[0.12em]"
-                title="Closed captions available"
-              >
-                <Captions class="h-2.5 w-2.5" />
-                CC
-              </span>
-            {/if}
-            {#if video.duration}
-              <span class="text-[0.55rem] font-mono bg-black/70 text-white/80 px-1">
-                {video.duration}
-              </span>
-            {/if}
-          </div>
-        </div>
+        <VideoThumbnail
+          {video}
+          imageLoading={index < 6 ? "eager" : "lazy"}
+          size="list"
+          gradient={thumbnailGradient}
+        />
       </NsfwBlur>
 
       <div class="flex-1 min-w-0 space-y-1">
@@ -234,23 +168,11 @@
       onclick={() => onSelect?.(video.href)}
       class="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
     >
-      <div
-        class={cn(
-          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12",
-          !showThumbnail && thumbnailGradient,
-        )}
-      >
-        {#if showThumbnail}
-          <img
-            src={thumbnailSrc}
-            alt=""
-            class="h-full w-full object-cover"
-            onerror={markThumbnailFailed}
-          />
-        {:else}
-          {@render thumbnailFallback("h-6 w-6", "h-3.5 w-3.5")}
-        {/if}
-      </div>
+      <VideoThumbnail
+        {video}
+        size="compact"
+        gradient={thumbnailGradient}
+      />
       <div class="flex-1 min-w-0">
         <div class="text-sm text-text-primary truncate">{video.title}</div>
         <div class="text-[0.68rem] text-text-muted truncate">
@@ -264,23 +186,11 @@
       href={video.href}
       class="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
     >
-      <div
-        class={cn(
-          "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12",
-          !showThumbnail && thumbnailGradient,
-        )}
-      >
-        {#if showThumbnail}
-          <img
-            src={thumbnailSrc}
-            alt=""
-            class="h-full w-full object-cover"
-            onerror={markThumbnailFailed}
-          />
-        {:else}
-          {@render thumbnailFallback("h-6 w-6", "h-3.5 w-3.5")}
-        {/if}
-      </div>
+      <VideoThumbnail
+        {video}
+        size="compact"
+        gradient={thumbnailGradient}
+      />
       <div class="flex-1 min-w-0">
         <div class="text-sm text-text-primary truncate">{video.title}</div>
         <div class="text-[0.68rem] text-text-muted truncate">
@@ -295,74 +205,12 @@
   <NsfwBlur isNsfw={video.isNsfw ?? false} class="h-full">
     <a href={video.href} class="block h-full">
       <article class="surface-card-sharp media-card-shell group h-full overflow-hidden">
-        <div
-          class={cn(
-            "relative aspect-video overflow-hidden bg-surface-1",
-            !showThumbnail && thumbnailGradient,
-          )}
-        >
-          {#if showThumbnail}
-            <img
-              src={thumbnailSrc}
-              alt={video.title}
-              loading={imageLoading}
-              decoding="async"
-              class="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
-              onerror={markThumbnailFailed}
-            />
-          {:else}
-            {@render thumbnailFallback("h-14 w-14", "h-7 w-7")}
-          {/if}
-
-          <div
-            class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/70 to-transparent pointer-events-none"
-          ></div>
-
-          {#if video.duration}
-            <span
-              class="absolute bottom-1.5 left-1.5 flex items-center gap-1 media-chip px-1.5 py-0.5 text-[0.65rem] font-mono text-white/90"
-            >
-              <Clock class="h-2.5 w-2.5 text-white/60" />
-              {video.duration}
-            </span>
-          {/if}
-
-          <div class="absolute top-1.5 right-1.5 flex items-center gap-1">
-            {#if video.hasSubtitles}
-              <span
-                class="media-chip flex items-center gap-0.5 px-1.5 py-0.5 text-[0.58rem] font-mono text-accent-100 border-accent-500/40"
-                title="Closed captions available"
-              >
-                <Captions class="h-2.5 w-2.5" />
-                CC
-              </span>
-            {/if}
-            {#if video.resolution}
-              <span class="pill-accent px-1.5 py-0.5 text-[0.58rem] font-semibold tracking-wide">
-                {video.resolution}
-              </span>
-            {/if}
-            {#if video.codec}
-              <span class="media-chip px-1.5 py-0.5 text-[0.58rem] font-mono text-white/70">
-                {video.codec}
-              </span>
-            {/if}
-          </div>
-
-          <div class="pointer-events-none absolute right-2 bottom-2 z-[25]">
-            <NsfwShowModeChip isNsfw={video.isNsfw} />
-          </div>
-
-          {#if video.episodeNumber != null}
-            <div class="pointer-events-none absolute left-1.5 top-1.5 z-[25]">
-              <span class="bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
-                {video.seasonNumber != null
-                  ? `S${String(video.seasonNumber).padStart(2, "0")}E${String(video.episodeNumber).padStart(2, "0")}`
-                  : `E${String(video.episodeNumber).padStart(2, "0")}`}
-              </span>
-            </div>
-          {/if}
-        </div>
+        <VideoThumbnail
+          {video}
+          {imageLoading}
+          size="grid"
+          gradient={thumbnailGradient}
+        />
 
         <div class="p-2.5 space-y-1.5">
           <NsfwText

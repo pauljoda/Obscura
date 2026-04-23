@@ -277,6 +277,8 @@ function toVideoCardListItem(row: VideoRow) {
     fileSizeFormatted: formatFileSize(row.fileSize),
     thumbnailPath: row.thumbnailPath,
     cardThumbnailPath: row.cardThumbnailPath,
+    spritePath: row.spritePath,
+    trickplayVttPath: row.trickplayVttPath,
     playCount: row.playCount,
     videoSeriesId: row.seriesId,
     seasonNumber: row.seasonNumber,

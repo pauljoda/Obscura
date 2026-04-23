@@ -1447,6 +1447,8 @@ export interface VideoCardListItemDto {
   fileSizeFormatted: string | null;
   thumbnailPath: string | null;
   cardThumbnailPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
   playCount: number;
   videoSeriesId: string | null;
   seasonNumber: number | null;
