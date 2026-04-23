@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- **Series browsing now has saved sort and full library filters.** The `/series` page can now sort by title, date, rating, recency, or video count; filter by rating, date, organized state, tags, performers, and studios; save named filter presets; and keep the chosen ordering across reloads.
+- **Series browsing now has saved sort and full library filters.** The `/series` page now defaults to recently added first, can sort by title, date, rating, recency, or video count, can filter by rating, date, organized state, tags, performers, and studios, and keeps any user-chosen ordering across reloads.
 - **Series Identify now reaches the cascade review instead of failing at plugin execution.** Obscura now serves the local series/season/episode payload that plugins need, and CommonJS plugins such as TMDB load reliably in the SvelteKit runtime.
 - **Series detail pages now have a larger artwork-first header.** The backdrop gets more vertical room, the poster is larger, and the metadata/actions sit in a fuller hero treatment so series pages feel less cramped.
 - **Video player flyouts now stay on screen.** Subtitle and quality menus open toward whichever side of the control has more space, clamp their height to the viewport, and stay horizontally inside the window instead of disappearing off the edge.

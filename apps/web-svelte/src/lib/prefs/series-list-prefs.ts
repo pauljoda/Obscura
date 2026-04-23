@@ -77,8 +77,8 @@ function parseActiveFilters(raw: unknown): SeriesListPrefsActiveFilter[] | null 
 const seriesPrefs = createListPrefs<SeriesListPrefs>({
   cookieName: SERIES_LIST_PREFS_COOKIE,
   defaults: () => ({
-    sortBy: "title",
-    sortDir: "asc",
+    sortBy: "recent",
+    sortDir: "desc",
     search: "",
     activeFilters: [],
   }),
