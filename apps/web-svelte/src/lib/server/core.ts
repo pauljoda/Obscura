@@ -25,9 +25,8 @@ import { PUBLIC_APP_URL } from "$env/static/public";
 
 export { buildQueryString } from "../query-string";
 
-// When no event fetch is supplied we need an absolute URL. In dev that
-// is the SvelteKit dev server; in prod it's nginx (which proxies /api
-// back to SvelteKit inside the unified container).
+// When no event fetch is supplied we need an absolute URL back to the
+// SvelteKit server.
 const ABSOLUTE_BASE =
   (typeof PUBLIC_APP_URL === "string" && PUBLIC_APP_URL.length > 0
     ? PUBLIC_APP_URL.replace(/\/$/, "")
@@ -41,10 +40,8 @@ export interface ServerFetchOptions {
   /** Extra fetch init (method, body, headers). */
   init?: RequestInit;
   /**
-   * Legacy Next.js tagging options. Ignored in SvelteKit — each `+*.server.ts`
+   * Back-compat tagging options. Ignored in SvelteKit — each `+*.server.ts`
    * load function should call `depends(key)` itself; see ./README.md.
-   * Accepted here so copied-over modules keep compiling until they are
-   * rewritten. Will be removed once every caller is ported.
    */
   revalidate?: number | false;
   tags?: string[];

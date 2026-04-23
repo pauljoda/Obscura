@@ -3,8 +3,8 @@
  * the root's flag. Video episodes and movies use full propagation when
  * clearing NSFW so tag/performer/studio signals are preserved.
  *
- * Shared by Fastify and SvelteKit so the PATCH /libraries/:id flow behaves
- * the same regardless of which host accepted the request.
+ * Shared by library-root mutations so the PATCH /libraries/:id flow keeps
+ * its media propagation rules in one place.
  */
 import {
   propagateEpisodeNsfw,

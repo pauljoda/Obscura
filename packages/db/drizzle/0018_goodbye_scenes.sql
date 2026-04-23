@@ -4,7 +4,7 @@
 -- already ran the old `videos_to_series_model_v1` finalize, so the
 -- scene_* tables are already gone there. On any install that still
 -- has them, the one-time breaking-upgrade gate ran first
--- (see apps/api/src/db/breaking-gate.ts) and the user consented to
+-- (see packages/db/src/breaking-gate.ts) and the user consented to
 -- the rescan before this migration executes. IF EXISTS makes both
 -- paths safe.
 DROP TABLE IF EXISTS "scene_folder_performers" CASCADE;--> statement-breakpoint

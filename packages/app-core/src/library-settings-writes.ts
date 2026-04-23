@@ -1,8 +1,7 @@
 /**
- * Library settings write helper shared by Fastify and SvelteKit. Takes a
- * typed Drizzle db and a partial payload, applies the same validation /
- * normalization / clamping as the Fastify route did historically, and
- * returns the updated row.
+ * Library settings write helper for the SvelteKit route layer. Takes a
+ * typed Drizzle db and a partial payload, applies shared validation /
+ * normalization / clamping, and returns the updated row.
  */
 import {
   normalizeBackgroundWorkerConcurrency,

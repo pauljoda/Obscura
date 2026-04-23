@@ -34,7 +34,7 @@ describe("/api/videos/[id] route", () => {
     deleteVideoWrite.mockReset();
   });
 
-  it("maps shared not-found errors to the Fastify-shaped JSON body", async () => {
+  it("maps shared not-found errors to the standard error JSON body", async () => {
     getVideoDetailRead.mockRejectedValue(new NotFoundError("Video not found"));
 
     const { GET } = await import("./+server");

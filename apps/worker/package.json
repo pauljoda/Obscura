@@ -13,6 +13,7 @@
     "test:integration": "vitest run --config ../../vitest.integration.config.ts ../../tests/worker.integration.test.ts"
   },
   "dependencies": {
+    "@obscura/app-core": "workspace:*",
     "@obscura/contracts": "workspace:*",
     "@obscura/db": "workspace:*",
     "@obscura/media-core": "workspace:*",

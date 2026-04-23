@@ -9,10 +9,9 @@
   available and `serverFetch` needs an absolute fallback URL. In local dev
   and in the unified image the canonical app origin is `http://localhost:8008`.
 
-## Invalidation — replacing `revalidateTag`
+## Invalidation
 
-SvelteKit does not have a cross-request cache like Next.js. We use
-`depends(key)` + `invalidate(key)` instead:
+Use `depends(key)` + `invalidate(key)`:
 
 ```ts
 // +page.server.ts
@@ -31,13 +30,11 @@ await invalidate("videos");           // reruns any load that depends("videos")
 await invalidate(`videos:${id}`);
 ```
 
-### Behaviour vs Next.js
-
 - **Scope**: `invalidate()` is per-client/per-tab. Two browsers hitting the
   same page will each run their own `load` at their own pace.
 - **Source of truth**: Postgres (via the SvelteKit server routes). Losing
-  Next.js's cross-request tag cache just means we don't memoise an upstream
-  response between visitors — correctness is unchanged.
+  a cross-request tag cache just means we don't memoise an upstream response
+  between visitors — correctness is unchanged.
 - **Load keys**: prefer concrete entity keys (`videos:{id}`) so a detail-page
   mutation doesn't force every list page to reload.
 

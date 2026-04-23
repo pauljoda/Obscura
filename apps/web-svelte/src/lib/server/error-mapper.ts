@@ -9,10 +9,10 @@ import {
 } from "@obscura/app-core";
 
 /**
- * Translate a generic app-core sentinel error into a SvelteKit JSON
- * response that matches the Fastify `{ error }` shape. Any error that
- * isn't a recognized sentinel is re-thrown so SvelteKit's generic 500
- * handler takes over.
+ * Translate a generic app-core sentinel error into the standard
+ * `{ error }` JSON response used by the first-party API routes. Any
+ * unrecognized error is re-thrown so SvelteKit's generic 500 handler
+ * takes over.
  */
 export function mapAppCoreErrorToJson(err: unknown): Response {
   if (err instanceof NotFoundError)

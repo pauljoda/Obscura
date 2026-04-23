@@ -414,7 +414,7 @@ describe("/api/plugins routes", () => {
     });
   });
 
-  it("maps app-core validation errors to Fastify-shaped JSON", async () => {
+  it("maps app-core validation errors to the standard error JSON body", async () => {
     installPluginPackageWrite.mockRejectedValue(
       new ValidationError("Either zipUrl or localPath is required"),
     );
@@ -434,7 +434,7 @@ describe("/api/plugins routes", () => {
     });
   });
 
-  it("maps app-core not-found errors to Fastify-shaped JSON", async () => {
+  it("maps app-core not-found errors to the standard error JSON body", async () => {
     executePluginWrite.mockRejectedValue(new NotFoundError("Plugin not found"));
 
     const { POST } = await import("./[id]/execute/+server");

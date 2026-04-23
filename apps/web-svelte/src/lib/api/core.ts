@@ -1,7 +1,6 @@
 /**
  * Client-side API fetch wrapper. Reads `PUBLIC_API_URL` from SvelteKit's
- * `$env/static/public`. In production nginx strips `/api` so this value is
- * `/api` and every request stays same-origin.
+ * `$env/static/public` and defaults to same-origin `/api`.
  */
 import { PUBLIC_API_URL } from "$env/static/public";
 

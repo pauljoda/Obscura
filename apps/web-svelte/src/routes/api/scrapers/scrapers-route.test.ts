@@ -287,7 +287,7 @@ describe("/api/scrapers routes", () => {
     expect(await response.json()).toEqual({ ok: true });
   });
 
-  it("maps shared validation errors to Fastify-shaped JSON", async () => {
+  it("maps shared validation errors to the standard error JSON body", async () => {
     installScraperPackageWrite.mockRejectedValue(
       new ValidationError("packageId is required"),
     );

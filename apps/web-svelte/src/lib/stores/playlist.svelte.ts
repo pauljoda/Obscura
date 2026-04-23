@@ -18,10 +18,7 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 }
 
 /**
- * Resolve a collection item to its SvelteKit route. Ported from
- * apps/web/src/components/collections/collection-item-helpers.ts — the
- * full helper lands with the collections port in Phase 5; this minimal
- * shape covers the four entity types the playlist drives.
+ * Resolve a collection item to its SvelteKit route.
  */
 function getEntityHref(item: CollectionItemDto): string {
   switch (item.entityType) {

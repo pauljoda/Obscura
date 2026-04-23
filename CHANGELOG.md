@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The legacy Next.js, Fastify, and React workspace is gone.** Obscura now develops, validates, and ships against the SvelteKit app on port `8008`, with same-origin `/api` routes and the worker as the only separate process.
 - **SvelteKit is now the primary local and container runtime.** The default dev stack, Docker Compose stack, and unified image now boot the Svelte app directly on port `8008` with same-origin `/api` routes, instead of hiding the new app behind the old Next.js and Fastify pair.
 - **Series now has its own dedicated route in the Svelte app.** The shell navigation now includes a separate **Series** destination, `/videos` is back to being a straight mixed-video browser, and first-party Svelte links that open a series now land on `/series`.
 - **Series pages no longer spill full episode lists into broader views.** The root `/series` screen now shows only series cards, and season-based series keep their episode grids hidden until you open a specific season instead of dumping every in-scope video at the bottom of the page.
@@ -149,6 +150,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Shared runtime config and docs now assume a same-origin SvelteKit server on `http://localhost:8008`, and the remaining public/test fixture roots now live under `tests/fixtures/media/videos`.
 - SvelteKit now owns the full `/api/*` ingress directly. The fallback `api/[...rest]` proxy and its `INTERNAL_API_URL` dependency are gone, the Svelte server runs its own shared DB migrations before serving requests, and local/container startup now centers on `@obscura/web-svelte + @obscura/worker + postgres`.
 - The repository now keeps a single checked-in migration source under `packages/db/drizzle`. The legacy `apps/api/drizzle` mirror has been removed so the Svelte server, worker, and release tooling can converge on one migration ledger before the Fastify app is deleted.
 - Database migrations and video-stream HLS helpers now live in shared packages instead of the legacy API app, so the Svelte server, worker, and test harness no longer import those runtime pieces from `apps/api`.
@@ -183,6 +185,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+- Deleted the legacy `apps/web`, `apps/api`, and `packages/ui` workspaces along with their Fastify-only integration tests, parity snapshots, nginx config, and old Docker/dev wiring. The repo now carries a single first-party app stack: `apps/web-svelte` plus `apps/worker`.
 - Deleted frozen `legacy-schema.ts` and `read.ts` from the videos-to-series migration module — dead code after the destructive finalize dropped the legacy scene tables.
 - Deleted the entire data-migration staging/finalize framework: `apps/api/src/db/data-migrations/` (run.ts, registry.ts, types.ts, lockdown.ts, videos_to_series_model_v1/*), the `GET /system/migrations` and `POST /system/migrations/:name/finalize` routes, the `MigrationBanner` component, and the `data_migrations` ledger table. The scenes → videos flip was the only customer and has fully landed; carrying the framework added more code than any future breaking change would save.
 - Deleted the push-era legacy-install bridge in `apps/api/src/db/migrate.ts`: `LEGACY_SCHEMA_SENTINELS`, sentinel seeding, pre-baseline deltas, and `reconcileSchema`. The runner is now ~55 lines of "call drizzle-orm's migrator." Any deployment that never got onto versioned migrations must wipe its DB and rescan.
@@ -191,7 +194,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Docs
 
 - Added `docs/superpowers/plans/2026-04-22-svelte-migration-next-slices.md`, which records the current Svelte migration checkpoint after the first local API extractions and defines the next execution tranche: warning cleanup, shared DB runtime extraction, and the next low-risk Svelte-owned config/provider routes while Fastify stays online for comparison.
-- Added `docs/svelte-migration-audit.md`, a cutover-readiness snapshot for the SvelteKit port. It records the current 35/35 route match against the Next.js app, the restored shell-level parity surfaces, and the remaining blockers: backend replacement has not started, Docker/release wiring still ships `apps/web`, and route presence still needs route-by-route visual verification before the React frontend can be retired.
+- Removed the temporary `docs/svelte-migration-audit.md` cutover snapshot now that the repo has finished the Svelte-only runtime transition and no longer ships the legacy apps alongside it.
 - Added `docs/superpowers/plans/2026-04-21-svelte-full-stack-cutover.md`, a program plan for the full replacement path. It locks the chosen end-state to full-stack SvelteKit plus a thin background worker, sequences the migration by route family, and makes parity harnessing the first required execution step before more backend rewrites land.
 - Added `docs/superpowers/specs/2026-04-21-svelte-full-stack-architecture.md` and refined `docs/svelte-migration-audit.md` to freeze the cutover contract. The migration now explicitly assigns pages, `/api/*`, `/assets/*`, and stream ownership to `apps/web-svelte`, keeps the worker out-of-process, preserves the existing shared-package boundaries under the new `packages/app-core` / `packages/job-runtime` split, and moves API-boot migration / breaking-gate responsibilities onto the future Svelte server bootstrap.
 

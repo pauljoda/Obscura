@@ -33,12 +33,12 @@
   <div class="mx-auto max-w-6xl px-6 py-10 space-y-10">
     <header class="space-y-2">
       <p class="text-label text-text-muted tracking-[0.12em] uppercase">
-        Obscura / SvelteKit port
+        Obscura / Design System
       </p>
       <h1 class="font-heading text-3xl">Design language — parity page</h1>
       <p class="text-text-secondary max-w-2xl">
         Every primitive and composed component from <code>@obscura/ui-svelte</code> rendered
-        for visual parity checks against the Next.js version at <code>:8008/design-language</code>.
+        for visual verification inside the live Svelte runtime.
       </p>
     </header>
 

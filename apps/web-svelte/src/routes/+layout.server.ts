@@ -5,7 +5,7 @@ import { fetchLibraryConfig } from "$lib/server/system";
 /**
  * Root server load. Reads cookies on every request so the client
  * hydrates with the correct NSFW mode and sidebar state, and probes
- * library config for LAN auto-enable. Mirrors apps/web/src/app/(app)/layout.tsx.
+ * library config for LAN auto-enable.
  */
 export const load: LayoutServerLoad = async ({ cookies, fetch }) => {
   const initialCollapsed = cookies.get("obscura-sidebar") === "collapsed";

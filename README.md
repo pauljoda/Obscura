@@ -53,7 +53,7 @@ Discussions can be conducted here, or via the subreddit https://www.reddit.com/r
 
 ## Quick Start
 
-Obscura ships as a **single Docker image** with PostgreSQL, nginx, ffmpeg, and all three services bundled. No external databases. No configuration required.
+Obscura ships as a **single Docker image** with PostgreSQL, SvelteKit, ffmpeg, and the background worker bundled. No external databases. No configuration required.
 
 ### Docker Run
 
@@ -326,12 +326,10 @@ The single image bundles:
 
 | Component | Role |
 |-----------|------|
-| **Next.js 15** | Web frontend (React 19, Tailwind CSS 4) |
-| **Fastify 5** | HTTP API (Drizzle ORM) |
+| **SvelteKit** | Web frontend and same-origin HTTP API ingress |
 | **pg-boss** | Background job queue (Postgres-backed, no Redis) |
 | **PostgreSQL 16** | Database |
 | **ffmpeg** | Video and audio transcoding |
-| **nginx** | Reverse proxy on port 8008 |
 
 All services run inside the container, coordinated by a single entrypoint. Port **8008** is the only exposed port.
 
@@ -356,14 +354,14 @@ pnpm install
 # Start PostgreSQL (pg-boss manages the queue inside the DB)
 docker compose -f infra/docker/docker-compose.yml up postgres -d
 
-# Push schema
-pnpm --filter @obscura/api db:push
+# Apply migrations
+pnpm --filter @obscura/db db:migrate
 
 # Start all services in dev mode
 pnpm dev
 ```
 
-The web UI runs at `http://localhost:8008` and the API at `http://localhost:4000`.
+The app and API both run at `http://localhost:8008`, with JSON served under `/api/*`.
 
 ### Commands
 
@@ -373,8 +371,9 @@ The web UI runs at `http://localhost:8008` and the API at `http://localhost:4000
 | `pnpm build` | Build all apps and packages |
 | `pnpm check` | Lint and typecheck across the monorepo |
 | `pnpm release:check` | Validate version and changelog alignment |
-| `pnpm --filter @obscura/api db:push` | Push schema changes to PostgreSQL |
-| `pnpm --filter @obscura/api db:studio` | Open Drizzle Studio |
+| `pnpm --filter @obscura/db db:generate` | Generate a new SQL migration from schema changes |
+| `pnpm --filter @obscura/db db:migrate` | Apply versioned migrations to PostgreSQL |
+| `pnpm --filter @obscura/db db:studio` | Open Drizzle Studio |
 
 ### Building the Docker Image Locally
 

@@ -379,7 +379,7 @@ describe("/api/stashbox* routes", () => {
     expect(submitResponse.status).toBe(200);
   });
 
-  it("maps shared not-found errors to Fastify-shaped JSON", async () => {
+  it("maps shared not-found errors to the standard error JSON body", async () => {
     testStashBoxEndpointWrite.mockRejectedValue(
       new NotFoundError("StashBox endpoint not found"),
     );

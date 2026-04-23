@@ -2,7 +2,6 @@
   "$schema": "https://turbo.build/schema.json",
   "globalEnv": [
     "DATABASE_URL",
-    "INTERNAL_API_URL",
     "PUBLIC_API_URL",
     "PUBLIC_APP_URL",
     "NODE_ENV",
@@ -12,7 +11,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "outputs": ["dist/**", "build/**", ".svelte-kit/**"]
     },
     "dev": {
       "cache": false,

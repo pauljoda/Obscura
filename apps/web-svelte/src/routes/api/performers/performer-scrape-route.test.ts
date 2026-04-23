@@ -52,7 +52,7 @@ describe("/api/performers/[id]/apply-scrape route", () => {
     expect(await response.json()).toEqual({ ok: true, id: "performer-1" });
   });
 
-  it("maps shared not-found errors to Fastify-shaped JSON", async () => {
+  it("maps shared not-found errors to the standard error JSON body", async () => {
     applyPerformerScrapeWrite.mockRejectedValue(new NotFoundError("Actor not found"));
 
     const { POST } = await import("./[id]/apply-scrape/+server");

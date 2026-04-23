@@ -5,14 +5,11 @@ export default defineConfig({
     environment: "node",
     include: [
       "packages/*/src/**/*.test.ts",
-      "apps/api/src/**/*.test.ts",
       "apps/worker/src/**/*.test.ts",
       "tests/**/*.test.ts",
     ],
     exclude: [
       "**/*.integration.test.ts",
-      "apps/web/**",
-      "**/.next/**",
       "**/dist/**",
     ],
     coverage: {

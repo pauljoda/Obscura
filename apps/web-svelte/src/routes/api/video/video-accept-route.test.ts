@@ -159,7 +159,7 @@ describe("/api/video/*/accept-scrape routes", () => {
     });
   });
 
-  it("maps shared validation errors to Fastify-shaped JSON", async () => {
+  it("maps shared validation errors to the standard error JSON body", async () => {
     acceptMovieScrapeWrite.mockRejectedValue(
       new ValidationError("scrapeResultId required"),
     );

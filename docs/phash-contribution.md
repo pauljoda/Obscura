@@ -131,11 +131,12 @@ per minute (Stash's default). Previously, each API route handler `new`-ed a
 fresh client per request, so the bucket was effectively reset on every call
 and bulk operations could blow right through the limit.
 
-The fix lives in `apps/api/src/lib/stashbox-clients.ts`: a process-wide Map
-keyed by endpoint UUID that hands out a cached client via `getStashBoxClient(ep)`.
-Rate limiting now holds across concurrent requests and across the lifetime of
-the API process. PATCH/DELETE handlers call `invalidateStashBoxClient(id)` so
-credential changes take effect immediately.
+The fix lives in `packages/app-core/src/stashbox-runtime.ts`: a process-wide
+Map keyed by endpoint UUID that hands out a cached client via
+`getStashBoxClient(ep)`. Rate limiting now holds across concurrent requests
+and across the lifetime of the SvelteKit server process. PATCH/DELETE handlers
+call `invalidateStashBoxClient(id)` so credential changes take effect
+immediately.
 
 ## Troubleshooting
 

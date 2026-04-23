@@ -134,8 +134,8 @@ export const apiRoutes = {
 
 export const API_BASE_URL =
   typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000")
-    : (process.env.API_URL ?? "http://localhost:4000");
+    ? (process.env.PUBLIC_API_URL ?? "/api")
+    : (process.env.API_URL ?? process.env.PUBLIC_API_URL ?? "http://localhost:8008/api");
 
 export {
   canUseInlineVideoPreview,

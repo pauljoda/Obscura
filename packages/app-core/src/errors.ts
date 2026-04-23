@@ -1,12 +1,7 @@
 /**
- * Generic sentinel error classes shared by the Fastify API and the
- * SvelteKit server. Each shared write/read helper throws one of these
- * with a human-readable message; each host maps to its own HTTP
- * response (AppError for Fastify, json-with-status for SvelteKit).
- *
- * Using a single classification keeps the host-side mapping tables
- * short. Use the existing per-entity classes (TagNotFoundError, etc.)
- * where they already exist; new entities should reach for these.
+ * Generic sentinel error classes for shared read/write helpers. Each host
+ * maps them into its own HTTP response shape while keeping the shared
+ * helper layer transport-agnostic.
  */
 export class NotFoundError extends Error {
   constructor(message = "Not found") {

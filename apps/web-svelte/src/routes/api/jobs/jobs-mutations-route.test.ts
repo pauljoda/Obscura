@@ -99,7 +99,7 @@ describe("/api/jobs mutation routes", () => {
     });
   });
 
-  it("maps shared queue-run not-found errors to Fastify-shaped JSON", async () => {
+  it("maps shared queue-run not-found errors to the standard error JSON body", async () => {
     runQueueWrite.mockRejectedValue(new NotFoundError("Unknown queue"));
 
     const { POST } = await import("./queues/[queueName]/run/+server");
@@ -320,7 +320,7 @@ describe("/api/jobs mutation routes", () => {
     });
   });
 
-  it("maps migrate validation errors to the Fastify-shaped JSON body", async () => {
+  it("maps migrate validation errors to the standard error JSON body", async () => {
     migrateVideoAssetStorageWrite.mockRejectedValue(
       new ValidationError("targetDedicated (boolean) is required"),
     );
