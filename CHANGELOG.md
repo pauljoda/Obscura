@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The `/search` page has been fully restored to match the live app.** The Svelte port's search page now renders proper entity cards — video thumbnails with hover trickplay, gallery/performer/image/studio/tag cards that match their listing pages — grouped by kind with "Browse all" links and a "Show more" pager per group. The header gained the kind-toggle chips and a filters panel (min rating, date range), so refining a search no longer requires jumping to the individual listing pages.
+
 - **Video thumbnails scrub on hover again — everywhere a video appears.** Hovering a video card now reveals a trickplay preview that follows your cursor across the thumbnail, with a timestamp chip that rides above the scrub bar and stays pinned inside the card. The same full-featured thumbnail (scrub, duration, resolution, codec, subtitle chip, episode badge) is now used consistently on the home dashboard's Recent Videos row, the `/search` results page, and the command palette — not just on the list pages.
 
 - **Subtitle overlays and direct-video playback are reliable again on Svelte video pages.** ASS subtitles now boot correctly once the player element is attached, and large MKV episodes that need browser-safe audio now start direct playback immediately by streaming a fragmented MP4 instead of failing on the first source request.
@@ -164,6 +166,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Svelte `/search` page rewritten to match the React version: entity-kind toggle chips, filters panel (min rating, date range), grouped results with `SEARCH_KIND_CONFIG`-driven section headers and "Browse all" links, per-group "Show more" pagination, and kind-specific card rendering (VideoCard + gallery/performer/image/studio/tag cards styled like each entity's listing page). Replaces the previous plain text-row fallback.
 - VS Code launch/tasks, cache-path defaults, and active inline docs now assume the current SvelteKit-plus-worker architecture only, without fallback wording or configs for the removed stack.
 - Shared runtime config and docs now assume a same-origin SvelteKit server on `http://localhost:8008`, and the remaining public/test fixture roots now live under `tests/fixtures/media/videos`.
 - SvelteKit now owns the full `/api/*` ingress directly. The fallback `api/[...rest]` proxy and its `INTERNAL_API_URL` dependency are gone, the Svelte server runs its own shared DB migrations before serving requests, and local/container startup now centers on `@obscura/web-svelte + @obscura/worker + postgres`.
