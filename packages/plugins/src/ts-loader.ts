@@ -7,6 +7,7 @@
  */
 
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { OscuraPlugin, OscuraPluginManifest } from "./types";
 import { PluginExecutionError } from "./executor";
@@ -86,10 +87,13 @@ export async function loadTypeScriptPlugin(
   // package.json's "type" setting in the hosting app.
   ensureCjsSentinel(entryPath);
 
-  // Dynamic import — works for both ESM and CJS (Node resolves)
+  // Dynamic import — works for both ESM and CJS (Node resolves). The
+  // plugin entry path is only known at runtime, so keep Vite from
+  // trying to statically analyze it when this server-only loader is
+  // pulled into the SvelteKit graph.
   let mod: Record<string, unknown>;
   try {
-    mod = await import(entryPath);
+    mod = await import(/* @vite-ignore */ pathToFileURL(entryPath).href);
   } catch (err) {
     throw new PluginExecutionError(
       `Failed to load plugin: ${err instanceof Error ? err.message : String(err)}`,
