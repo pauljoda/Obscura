@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Series detail pages now have a larger artwork-first header.** The backdrop gets more vertical room, the poster is larger, and the metadata/actions sit in a fuller hero treatment so series pages feel less cramped.
 - **Video player flyouts now stay on screen.** Subtitle and quality menus open toward whichever side of the control has more space, clamp their height to the viewport, and stay horizontally inside the window instead of disappearing off the edge.
 
 - **The `/search` page has been fully restored to match the live app.** The Svelte port's search page now renders proper entity cards — video thumbnails with hover trickplay, gallery/performer/image/studio/tag cards that match their listing pages — grouped by kind with "Browse all" links and a "Show more" pager per group. The header gained the kind-toggle chips and a filters panel (min rating, date range), so refining a search no longer requires jumping to the individual listing pages.
@@ -131,6 +132,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Identify plugin menus now portal above the page and anchor to their button with viewport-aware placement, so they no longer get clipped by the series header or appear detached from the control.
+- Subtitle style settings now open as a viewport-level dialog with internal scrolling, so the controls stay reachable on narrow screens instead of being cut off by the video frame.
 - Subtitle and quality flyouts in the Svelte video player now portal out of the player chrome, serialize their fixed-position styles correctly for Svelte, and recalculate on viewport resize/scroll so they keep fitting on screen.
 - Video rows now treat legacy sample-media paths from the removed `apps/web/public/media/scenes/...` tree as valid again by resolving them to the current repo fixture media, which restores `hasVideo`, direct source URLs, HLS source URLs, and file details for existing sample-library entries.
 - The Svelte video player now reloads the media element when a real direct-to-HLS fallback happens, so format errors can switch modes without getting stuck on the original direct source.

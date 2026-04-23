@@ -141,42 +141,57 @@
       {/snippet}
 
       {#snippet children()}
-        <div class="relative min-h-[200px] overflow-hidden border border-border-subtle sm:min-h-[280px]">
+        <div class="relative overflow-hidden border border-border-subtle bg-surface-1">
           {#if backdrop}
-            <img src={backdrop} alt="" class="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={backdrop}
+              alt=""
+              class="absolute inset-0 h-full w-full object-cover object-center"
+            />
           {:else if cover}
             <img
               src={cover}
               alt=""
-              class="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-lg"
+              class="absolute inset-0 h-full w-full scale-105 object-cover object-center opacity-60 blur-lg"
             />
           {/if}
-          <div class="absolute inset-0 bg-gradient-to-t from-surface-1 via-black/60 to-black/30"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-bg/90 via-bg/60 to-bg/20"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-bg via-bg/30 to-black/10"></div>
+          <div class="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-bg to-transparent"></div>
 
-          <div class="relative flex min-h-[200px] items-end gap-4 p-4 sm:min-h-[280px] sm:gap-6 sm:p-6">
+          <div class="relative flex min-h-[420px] flex-col justify-end gap-5 p-4 sm:min-h-[460px] sm:p-6 lg:min-h-[520px] lg:flex-row lg:items-end lg:gap-8 lg:p-8">
             {#if cover}
-              <div class="w-[72px] flex-shrink-0 sm:w-[160px]">
+              <div class="w-[124px] flex-shrink-0 sm:w-[190px] lg:w-[230px]">
                 <img
                   src={cover}
                   alt={series.displayTitle}
-                  class="aspect-[2/3] w-full border border-white/10 object-cover shadow-lg"
+                  class="aspect-[2/3] w-full border border-white/15 object-cover shadow-[0_18px_60px_rgba(0,0,0,0.55)]"
                 />
               </div>
             {/if}
 
-            <div class="min-w-0 flex-1">
-              {#if series.libraryRootLabel}
-                <div class="mb-1 flex min-w-0 items-start gap-1.5 text-[0.68rem] text-white/50">
-                  <HardDrive class="mt-0.5 h-3 w-3 flex-shrink-0" />
-                  <span class="min-w-0 break-words">{series.libraryRootLabel}</span>
-                </div>
-              {/if}
+            <div class="min-w-0 flex-1 lg:max-w-4xl">
+              <div class="flex flex-wrap items-center gap-2">
+                {#if series.libraryRootLabel}
+                  <div class="inline-flex min-w-0 items-center gap-1.5 border border-white/10 bg-black/30 px-2 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-white/60 backdrop-blur-md">
+                    <HardDrive class="h-3 w-3 flex-shrink-0" />
+                    <span class="min-w-0 break-words normal-case tracking-normal">{series.libraryRootLabel}</span>
+                  </div>
+                {/if}
+                {#if series.childSeasonCount > 0}
+                  <span class="border border-white/10 bg-black/30 px-2 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-white/60 backdrop-blur-md">
+                    {series.childSeasonCount} child {series.childSeasonCount === 1
+                      ? entityTerms.seriesSingular.toLowerCase()
+                      : entityTerms.series.toLowerCase()}
+                  </span>
+                {/if}
+              </div>
 
-              <h1 class="mt-1.5 text-2xl leading-tight font-heading font-semibold text-text-primary sm:text-4xl">
+              <h1 class="mt-4 max-w-4xl text-3xl leading-tight font-heading font-semibold text-text-primary sm:text-5xl">
                 {series.displayTitle}
               </h1>
 
-              <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-white/70">
+              <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.86rem] text-white/70">
                 {#if series.studio}
                   <a
                     href={`/studios/${series.studio.id}`}
@@ -187,16 +202,9 @@
                 {/if}
                 {#if series.date}<span>{series.date}</span>{/if}
                 <span>{formatVideoCount(series.visibleSfwVideoCount)}</span>
-                {#if series.childSeasonCount > 0}
-                  <span>
-                    {series.childSeasonCount} child {series.childSeasonCount === 1
-                      ? entityTerms.seriesSingular.toLowerCase()
-                      : entityTerms.series.toLowerCase()}
-                  </span>
-                {/if}
               </div>
 
-              <div class="mt-3">
+              <div class="mt-5 flex flex-wrap items-center gap-2">
                 <IdentifyButton
                   entityKind="video_series"
                   entityId={series.id}
@@ -206,13 +214,13 @@
               </div>
 
               {#if series.details}
-                <p class="mt-3 max-w-2xl text-[0.82rem] leading-relaxed text-white/70">
+                <p class="mt-5 max-w-3xl text-[0.95rem] leading-relaxed text-white/80">
                   {series.details}
                 </p>
               {/if}
 
               {#if series.tags.length > 0}
-                <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                <div class="mt-5 flex flex-wrap items-center gap-1.5">
                   <span class="text-[0.65rem] uppercase tracking-[0.14em] text-text-muted">Tags:</span>
                   {#each series.tags as tag (tag.id)}
                     <a

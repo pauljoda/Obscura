@@ -9,6 +9,11 @@
   import { fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
   import { filterNsfwAware } from "$lib/hooks/nsfw-aware-providers";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
+  import { portal } from "$lib/actions/portal";
+  import {
+    layoutPlayerMobileFlyout,
+    playerFlyoutStyleToString,
+  } from "$lib/player-flyout-layout";
   import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
 
   type EntityKind = "video_series" | "video_movie" | "video_episode";
@@ -40,6 +45,9 @@
   let busy = $state(false);
   let error = $state<string | null>(null);
   let drawerOpen = $state<string | null>(null);
+  let buttonEl: HTMLButtonElement | undefined = $state();
+  let menuStyle = $state<string | null>(null);
+  let menuIsWide = $state(false);
 
   $effect(() => {
     if (!open || plugins.length > 0 || loadingPlugins) return;
@@ -73,6 +81,62 @@
           ? "Identify Series"
           : "Re-identify"),
   );
+
+  $effect(() => {
+    if (!open) {
+      menuStyle = null;
+      return;
+    }
+
+    buttonEl;
+
+    const mql = window.matchMedia("(min-width: 640px)");
+    const runLayout = () => {
+      menuIsWide = mql.matches;
+      if (!buttonEl) {
+        menuStyle = null;
+        return;
+      }
+      const rect = buttonEl.getBoundingClientRect();
+      const flyoutLayout = layoutPlayerMobileFlyout(rect, {
+        vh: window.innerHeight,
+        vw: window.innerWidth,
+        maxHeightVh: 0.7,
+        gap: 10,
+        gutter: 12,
+        preferredWidth: 336,
+        minWidth: 272,
+      });
+      if (mql.matches) {
+        menuStyle = playerFlyoutStyleToString(flyoutLayout);
+      } else {
+        menuStyle = playerFlyoutStyleToString({
+          ...flyoutLayout,
+          left: "12px",
+          right: "12px",
+          width: undefined,
+          minWidth: undefined,
+          maxWidth: undefined,
+        });
+      }
+    };
+
+    runLayout();
+    const onMql = () => runLayout();
+    mql.addEventListener("change", onMql);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", runLayout);
+    vv?.addEventListener("scroll", runLayout);
+    window.addEventListener("resize", runLayout);
+    window.addEventListener("scroll", runLayout, true);
+    return () => {
+      mql.removeEventListener("change", onMql);
+      vv?.removeEventListener("resize", runLayout);
+      vv?.removeEventListener("scroll", runLayout);
+      window.removeEventListener("resize", runLayout);
+      window.removeEventListener("scroll", runLayout, true);
+    };
+  });
 
   function actionFor(plugin: InstalledPlugin): string | null {
     const caps = plugin.capabilities ?? {};
@@ -130,6 +194,7 @@
 <div class={cn("relative", className)}>
   <button
     type="button"
+    bind:this={buttonEl}
     onclick={() => (open = !open)}
     disabled={busy}
     class={cn(
@@ -150,8 +215,15 @@
   {#if open}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
-    <div class="absolute right-0 top-full z-50 mt-1 w-72 surface-elevated py-2">
+    <div use:portal class="fixed inset-0 z-[170]" onclick={() => (open = false)}></div>
+    <div
+      use:portal
+      class={cn(
+        "fixed z-[180] surface-elevated overflow-y-auto overscroll-contain py-2",
+        menuIsWide && "min-w-[272px] max-w-[336px]",
+      )}
+      style={menuStyle ?? undefined}
+    >
       <div class="px-3 pb-1 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
         Run identify plugin
       </div>
