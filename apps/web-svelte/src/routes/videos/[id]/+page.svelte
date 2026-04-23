@@ -15,7 +15,7 @@
     FolderPlus,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type { VideoDetailDto } from "@obscura/contracts";
+  import type { SubtitleAppearance, SubtitleDisplayStyle, VideoDetailDto } from "@obscura/contracts";
   import { toApiUrl } from "$lib/api/core";
   import {
     updateVideo,
@@ -24,8 +24,10 @@
     resetVideoMetadata,
     fetchVideoDetail,
   } from "$lib/api/videos";
-  import { rebuildVideoPreview } from "$lib/api/library";
+  import { fetchLibraryConfig, rebuildVideoPreview } from "$lib/api/library";
+  import type { LibrarySettings } from "$lib/api/types";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { usePlaylist } from "$lib/stores/playlist.svelte";
   import { entityTerms } from "$lib/terminology";
   import BackLink from "$lib/components/BackLink.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
@@ -39,6 +41,7 @@
   import VideoTranscriptPanel from "$lib/components/VideoTranscriptPanel.svelte";
   import VideoEdit from "$lib/components/VideoEdit.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
+  import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
 
   const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
   type Tab = (typeof tabs)[number];
@@ -54,6 +57,7 @@
   });
 
   const nsfw = useNsfw();
+  const playlist = usePlaylist();
   const terms = entityTerms;
 
   let activeTab = $state<Tab>("Details");
@@ -64,6 +68,8 @@
   let activeSubtitleId = $state<string | null>(null);
   let subtitleChoiceLocked = $state(false);
   let moreActionsOpen = $state(false);
+  let collectionModalOpen = $state(false);
+  let librarySettings = $state<LibrarySettings | null>(null);
 
   // ── Transcript dock plumbing (mirrors the React video-detail) ─────
   /** User's persisted preference. Effective dock state additionally
@@ -79,6 +85,23 @@
   const subtitlesEnabled = $derived(activeSubtitleId != null);
   const isTranscriptDocked = $derived(
     userWantsDock && hasSubtitles && subtitlesEnabled && isDesktopViewport,
+  );
+  const subtitleDefaults = $derived(
+    librarySettings
+      ? {
+          autoEnable: librarySettings.subtitlesAutoEnable ?? false,
+          preferredLanguages: librarySettings.subtitlesPreferredLanguages ?? "en,eng",
+          appearance: {
+            style: (librarySettings.subtitleStyle ?? "stylized") as SubtitleDisplayStyle,
+            fontScale: librarySettings.subtitleFontScale ?? 1,
+            positionPercent: librarySettings.subtitlePositionPercent ?? 88,
+            opacity: librarySettings.subtitleOpacity ?? 1,
+          } satisfies SubtitleAppearance,
+        }
+      : undefined,
+  );
+  const defaultPlaybackMode = $derived<"direct" | "hls">(
+    librarySettings?.defaultPlaybackMode === "hls" ? "hls" : "direct",
   );
 
   function handleSeek(time: number) {
@@ -158,9 +181,13 @@
   function handleActiveSubtitleChange(id: string | null) {
     activeSubtitleId = id;
     subtitleChoiceLocked = true;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`obscura:subtitle-lang:${video.id}`, id ?? "__off__");
+    }
   }
 
   let playTracked = false;
+  let hydratedSubtitlePrefsForVideoId = "";
   async function handlePlayStarted() {
     if (playTracked) return;
     playTracked = true;
@@ -250,6 +277,7 @@
       const target = e.target as HTMLElement | null;
       if (target && !target.closest("[data-more-actions]")) moreActionsOpen = false;
     };
+    let cancelled = false;
     window.addEventListener("click", onDocClick, true);
 
     // Dock preferences: width + wanted flag.
@@ -268,11 +296,40 @@
     const updateViewport = () => (isDesktopViewport = mq.matches);
     updateViewport();
     mq.addEventListener("change", updateViewport);
+    void fetchLibraryConfig()
+      .then((config) => {
+        if (!cancelled) librarySettings = config.settings;
+      })
+      .catch(() => {
+        // Non-fatal — the player falls back to built-in defaults.
+      });
 
     return () => {
+      cancelled = true;
       window.removeEventListener("click", onDocClick, true);
       mq.removeEventListener("change", updateViewport);
     };
+  });
+
+  $effect(() => {
+    playTracked = false;
+    hydratedSubtitlePrefsForVideoId = "";
+    video.id;
+  });
+
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    const videoId = video.id;
+    if (!videoId || hydratedSubtitlePrefsForVideoId === videoId) return;
+    hydratedSubtitlePrefsForVideoId = videoId;
+    const saved = window.localStorage.getItem(`obscura:subtitle-lang:${videoId}`);
+    if (saved) {
+      activeSubtitleId = saved === "__off__" ? null : saved;
+      subtitleChoiceLocked = true;
+      return;
+    }
+    activeSubtitleId = null;
+    subtitleChoiceLocked = false;
   });
 
   // Mirror the video wrapper's height into the docked transcript panel so
@@ -336,6 +393,10 @@
           activeSubtitleTrackId={activeSubtitleId}
           onActiveSubtitleTrackIdChange={handleActiveSubtitleChange}
           {subtitleChoiceLocked}
+          {subtitleDefaults}
+          {defaultPlaybackMode}
+          autoPlay={playlist.isActive && playlist.isPlaylistItem("video", video.id)}
+          onEnded={() => playlist.reportContentEnded("video", video.id)}
         />
       </div>
       {#if isTranscriptDocked}
@@ -418,7 +479,7 @@
       <div class="flex items-center gap-3 flex-shrink-0">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="flex items-center gap-0.5" onmouseleave={() => (ratingHover = 0)}>
-          {#each Array.from({ length: 5 }) as _, i}
+          {#each Array.from({ length: 5 }) as _, i (i)}
             {@const starIdx = i + 1}
             <button
               type="button"
@@ -500,7 +561,7 @@
                 class="w-full flex items-center gap-2 px-3 py-1.5 text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
                 onclick={() => {
                   moreActionsOpen = false;
-                  alert("Add to Collection coming soon (APP-75)");
+                  collectionModalOpen = true;
                 }}
               >
                 <FolderPlus class="h-3.5 w-3.5" />
@@ -652,4 +713,12 @@
   {:else if activeTab === "Files"}
     <VideoFileInfo {video} />
   {/if}
+
+  <AddToCollectionModal
+    open={collectionModalOpen}
+    onClose={() => (collectionModalOpen = false)}
+    entityType="video"
+    entityId={video.id}
+    entityTitle={video.title}
+  />
 </div>

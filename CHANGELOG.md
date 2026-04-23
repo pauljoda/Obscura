@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The Svelte video detail page now covers the live app's everyday playback workflow.** Per-video subtitle choices are remembered, library playback/subtitle defaults are applied in the player, collection playlists can autoplay and advance from video detail, and the More menu's Add to Collection action now opens a real picker instead of a placeholder.
 - **Collections now load and mutate through the SvelteKit app instead of the legacy API.** Collection list/detail pages, item management, reordering, dynamic-rule refreshes, and rule previews now run on local `/api/collections/*` endpoints backed by shared collection logic, so the new app can render mixed media collections without proxying that route family through Fastify.
 - **The SvelteKit app now owns the gallery, image, and audio media APIs directly.** Browsing and editing galleries, images, audio libraries, and audio tracks now run through local SvelteKit `/api/*` endpoints backed by shared app-core logic, including gallery chapters and covers, bulk image updates, audio track markers, and image / track uploads.
 - **The SvelteKit shell can now decide locally whether the one-time upgrade gate is active.** The new app now serves its own `/api/system/status` and `/api/system/breaking-gate/accept` endpoints using the same shared gate logic as Fastify, so side-by-side testing no longer depends on the old API just to render or clear the upgrade prompt.
@@ -114,6 +115,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- SvelteKit `/videos/[id]` now restores per-video subtitle selections, applies library subtitle/playback defaults to `VideoPlayer`, honors active collection playlists for autoplay/advance, and uses a real Add-to-Collection modal from the More actions menu so the detail route matches the React flow more closely.
 - Collection CRUD, item management, and dynamic rule evaluation now live in `@obscura/app-core`, with a shared polymorphic entity loader for videos, galleries, images, and audio tracks so `/api/collections` can run inside SvelteKit.
 - Gallery, image, and audio-library / audio-track server logic now lives in `@obscura/app-core`, and the SvelteKit app exposes matching `/api/galleries`, `/api/images`, `/api/audio-libraries`, and `/api/audio-tracks` route trees instead of falling back to the Fastify catch-all for those media families.
 - Root test scripts now include `@obscura/web-svelte`: `pnpm test:ci` and `pnpm coverage` both execute the SvelteKit unit suite so the in-progress port can fail the same top-level quality gate as the live React app.

@@ -1,4 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -16,5 +17,10 @@ export default defineConfig({
   },
   resolve: {
     conditions: process.env.VITEST ? ["browser"] : undefined,
+    alias: {
+      $lib: resolve("./src/lib"),
+      "$app/navigation": resolve("./src/test/mocks/app-navigation.ts"),
+      "$env/static/public": resolve("./src/test/mocks/env-static-public.ts"),
+    },
   },
 });
