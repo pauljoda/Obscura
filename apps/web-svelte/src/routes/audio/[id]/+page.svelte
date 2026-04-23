@@ -13,7 +13,6 @@
     MoreVertical,
     Users,
     Tag as TagIcon,
-    Star,
     AlertTriangle,
     Loader2,
   } from "@lucide/svelte";
@@ -31,10 +30,10 @@
   } from "$lib/api/entities";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import PerformersSection from "$lib/components/PerformersSection.svelte";
-  import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
   import TagsSection from "$lib/components/TagsSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import TrackListRow from "$lib/components/TrackListRow.svelte";
@@ -101,7 +100,6 @@
   let title = $state("");
   let details = $state("");
   let date = $state("");
-  let rating = $state<number | null>(null);
   let isNsfw = $state(false);
   let organized = $state(false);
   let studioName = $state("");
@@ -148,7 +146,6 @@
     title = source.title;
     details = source.details ?? "";
     date = source.date ?? "";
-    rating = source.rating;
     isNsfw = source.isNsfw;
     organized = source.organized;
     studioName = source.studio?.name ?? "";
@@ -247,7 +244,6 @@
         title: nextTitle,
         details: nextDetails,
         date: nextDate,
-        rating,
         organized,
         isNsfw,
         studioName: nextStudioName || null,
@@ -259,7 +255,6 @@
         title: nextTitle,
         details: nextDetails,
         date: nextDate,
-        rating,
         organized,
         isNsfw,
         studio: buildStudioEmbed(nextStudioName),
@@ -272,6 +267,16 @@
       editError = error instanceof Error ? error.message : "Failed to save library changes";
     } finally {
       saving = false;
+    }
+  }
+
+  async function handleLibraryRating(nextRating: number | null) {
+    const previousRating = library.rating;
+    overrideLibrary = { ...library, rating: nextRating };
+    try {
+      await updateAudioLibrary(library.id, { rating: nextRating });
+    } catch {
+      overrideLibrary = { ...library, rating: previousRating };
     }
   }
 
@@ -483,18 +488,18 @@
           {/if}
         </div>
 
-        {#if library.rating != null || library.details}
-          <div class="space-y-2">
-            {#if library.rating != null}
-              <StarRatingPicker value={library.rating} readOnly />
-            {/if}
-            {#if library.details}
-              <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
-                {library.details}
-              </p>
-            {/if}
-          </div>
-        {/if}
+        <div class="space-y-2">
+          <InlineRating
+            value={library.rating}
+            onSave={handleLibraryRating}
+            ariaLabelPrefix="Rate library with"
+          />
+          {#if library.details}
+            <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
+              {library.details}
+            </p>
+          {/if}
+        </div>
 
         <!-- Action strip -->
         <div class="flex flex-wrap items-center gap-2 pt-1">
@@ -566,9 +571,6 @@
           canAddNew
         />
       </div>
-      <FormField label="Rating" icon={Star}>
-        <StarRatingPicker value={rating} onChange={(next) => (rating = next)} />
-      </FormField>
       <TagSelect
         label="Artists"
         icon={Users}

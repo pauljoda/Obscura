@@ -13,9 +13,12 @@
     error?: string;
     required?: boolean;
     disabled?: boolean;
-    type?: "text" | "email" | "url" | "search";
+    type?: "text" | "email" | "url" | "search" | "number";
     autocomplete?: AutoFill;
     inputClass?: string;
+    min?: number | string;
+    max?: number | string;
+    step?: number | string;
   }
 
   let {
@@ -31,6 +34,9 @@
     type = "text",
     autocomplete = undefined,
     inputClass = "",
+    min,
+    max,
+    step,
   }: Props = $props();
 
   const id = `text-${Math.random().toString(36).slice(2, 9)}`;
@@ -43,6 +49,9 @@
     {disabled}
     {placeholder}
     {autocomplete}
+    {min}
+    {max}
+    {step}
     {value}
     oninput={(e) => onChange((e.currentTarget as HTMLInputElement).value)}
     aria-invalid={error ? "true" : undefined}

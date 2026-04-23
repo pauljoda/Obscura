@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { Image as ImageIcon, Star, FileText, HardDrive, Calendar } from "@lucide/svelte";
+  import { Image as ImageIcon, FileText, HardDrive, Calendar } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { updateImage } from "$lib/api/media";
+  import InlineRating from "$lib/components/InlineRating.svelte";
 
   let { data } = $props();
-  const img = $derived(data.image as {
+  let overrideRating = $state<number | null | undefined>(undefined);
+  const img = $derived((overrideRating === undefined
+    ? data.image
+    : { ...(data.image as unknown as Record<string, unknown>), rating: overrideRating }) as {
     id: string;
     title: string;
     details: string | null;
@@ -26,7 +31,16 @@
     tags: { id: string; name: string; isNsfw: boolean }[];
   });
 
-  const ratingStars = $derived(img.rating ? Math.round(img.rating / 20) : 0);
+  async function handleRatingSave(next: number | null) {
+    const previous = (data.image as { rating: number | null }).rating ?? null;
+    overrideRating = next;
+    try {
+      await updateImage(img.id, { rating: next });
+    } catch {
+      overrideRating = previous;
+      throw new Error("Failed to update rating");
+    }
+  }
 
   function formatSize(bytes: number | null): string {
     if (bytes == null || bytes <= 0) return "";
@@ -74,16 +88,12 @@
         {/if}
       </div>
     </div>
-    <div class="flex items-center gap-0.5 shrink-0 pt-1" title="Rating">
-      {#each Array.from({ length: 5 }) as _, i}
-        <Star
-          class={`h-4 w-4 ${
-            i < ratingStars
-              ? "fill-accent-500 text-accent-500"
-              : "text-text-disabled"
-          }`}
-        />
-      {/each}
+    <div class="shrink-0 pt-1">
+      <InlineRating
+        value={img.rating}
+        onSave={handleRatingSave}
+        ariaLabelPrefix="Rate image with"
+      />
     </div>
   </div>
 

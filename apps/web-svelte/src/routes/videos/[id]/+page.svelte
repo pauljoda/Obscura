@@ -2,7 +2,6 @@
   import { invalidate } from "$app/navigation";
   import { onMount } from "svelte";
   import {
-    Star,
     Clock,
     Calendar,
     Eye,
@@ -42,6 +41,7 @@
   import VideoEdit from "$lib/components/VideoEdit.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
 
   const tabs = ["Details", "Metadata", "Markers", "Transcript", "Files"] as const;
   type Tab = (typeof tabs)[number];
@@ -61,8 +61,6 @@
   const terms = entityTerms;
 
   let activeTab = $state<Tab>("Details");
-  let ratingHover = $state(0);
-  let savingRating = $state(false);
   let currentTime = $state(0);
   let displayTime = $state(0);
   let activeSubtitleId = $state<string | null>(null);
@@ -157,8 +155,6 @@
   let rebuildPreviewState = $state<"idle" | "queued" | "done">("idle");
   let resetMetadataState = $state<"idle" | "running" | "done">("idle");
 
-  const ratingStars = $derived(video.rating ? Math.round(video.rating / 20) : 0);
-  const activeStars = $derived(ratingHover > 0 ? ratingHover : ratingStars);
 
   function updateOptimisticVideo(
     updater: (current: VideoDetailDto) => VideoDetailDto,
@@ -204,18 +200,14 @@
     }
   }
 
-  async function handleRatingClick(starIdx: number) {
-    if (savingRating) return;
-    savingRating = true;
-    const newRating = starIdx === ratingStars ? null : starIdx * 20;
+  async function handleRatingSave(newRating: number | null) {
     const prevRating = video.rating;
+    updateOptimisticVideo((current) => ({ ...current, rating: newRating }));
     try {
-      updateOptimisticVideo((current) => ({ ...current, rating: newRating }));
       await updateVideo(video.id, { rating: newRating });
     } catch {
       updateOptimisticVideo((current) => ({ ...current, rating: prevRating }));
-    } finally {
-      savingRating = false;
+      throw new Error("Failed to update rating");
     }
   }
 
@@ -494,29 +486,11 @@
       </div>
 
       <div class="flex items-center gap-3 flex-shrink-0">
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="flex items-center gap-0.5" onmouseleave={() => (ratingHover = 0)}>
-          {#each Array.from({ length: 5 }) as _, i (i)}
-            {@const starIdx = i + 1}
-            <button
-              type="button"
-              class="p-0 bg-transparent border-none cursor-pointer"
-              onmouseenter={() => (ratingHover = starIdx)}
-              onclick={() => void handleRatingClick(starIdx)}
-              disabled={savingRating}
-              aria-label={`${starIdx} star${starIdx === 1 ? "" : "s"}`}
-            >
-              <Star
-                class={cn(
-                  "h-4 w-4 transition-colors duration-fast",
-                  starIdx <= activeStars
-                    ? "fill-accent-500 text-glow-accent"
-                    : "text-text-disabled hover:text-accent-800",
-                )}
-              />
-            </button>
-          {/each}
-        </div>
+        <InlineRating
+          value={video.rating}
+          onSave={handleRatingSave}
+          ariaLabelPrefix="Rate video with"
+        />
 
         <button
           type="button"

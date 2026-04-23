@@ -1,8 +1,14 @@
 <script lang="ts">
   import { goto, invalidate } from "$app/navigation";
-  import { ArrowLeft, Save, Loader } from "@lucide/svelte";
-  import { Button } from "@obscura/ui-svelte";
+  import { ArrowLeft, Calendar, Globe, Tag as TagIcon, User, Users } from "@lucide/svelte";
   import { createPerformer } from "$lib/api/entities";
+  import {
+    DateField,
+    EditFormShell,
+    SearchSelect,
+    TextField,
+    type SearchOption,
+  } from "$lib/components/forms";
 
   let name = $state("");
   let disambiguation = $state("");
@@ -12,14 +18,25 @@
   let birthdate = $state("");
   let saving = $state(false);
   let error = $state<string | null>(null);
-  let nameInput: HTMLInputElement | undefined = $state();
 
-  $effect(() => {
-    nameInput?.focus();
-  });
+  const genderOptions: SearchOption[] = [
+    { id: "male", name: "Male" },
+    { id: "female", name: "Female" },
+    { id: "transgender_male", name: "Transgender male" },
+    { id: "transgender_female", name: "Transgender female" },
+    { id: "intersex", name: "Intersex" },
+    { id: "non_binary", name: "Non-binary" },
+  ];
 
-  async function handleSubmit(e: SubmitEvent) {
-    e.preventDefault();
+  function genderLabelToValue(label: string): string {
+    return genderOptions.find((g) => g.name === label)?.id ?? "";
+  }
+
+  function genderValueToLabel(value: string): string {
+    return genderOptions.find((g) => g.id === value)?.name ?? "";
+  }
+
+  async function handleSave() {
     const trimmed = name.trim();
     if (!trimmed || saving) return;
     saving = true;
@@ -40,109 +57,82 @@
       saving = false;
     }
   }
+
+  function handleCancel() {
+    void goto("/performers");
+  }
 </script>
 
 <svelte:head>
   <title>New actor — Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <header class="flex items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <a
-        href="/performers"
-        class="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast"
-      >
-        <ArrowLeft class="h-3 w-3" />
-        Back
-      </a>
-      <h1 class="text-lg font-heading font-semibold">New actor</h1>
-    </div>
-    <Button variant="primary" size="md" type="submit" form="performer-create-form" disabled={saving || !name.trim()}>
-      {#if saving}<Loader class="h-3 w-3 animate-spin" />{:else}<Save class="h-3 w-3" />{/if}
-      Create
-    </Button>
+<div class="space-y-5">
+  <header class="flex items-center gap-3">
+    <a
+      href="/performers"
+      class="inline-flex items-center gap-1.5 surface-well px-2.5 py-1 text-[0.72rem] text-text-muted hover:text-text-accent transition-colors duration-fast"
+    >
+      <ArrowLeft class="h-3 w-3" />
+      Back
+    </a>
+    <h1 class="text-lg font-heading font-semibold">New actor</h1>
   </header>
 
-  {#if error}
-    <div class="surface-panel border-error/30 p-3 text-body-sm text-error-text">{error}</div>
-  {/if}
-
-  <form id="performer-create-form" onsubmit={handleSubmit} class="max-w-2xl surface-panel p-5 space-y-4">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div class="space-y-1.5 sm:col-span-2">
-        <label for="p-name" class="text-label text-text-muted">Name</label>
-        <input
-          id="p-name"
-          type="text"
-          bind:this={nameInput}
-          bind:value={name}
-          required
-          maxlength={200}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
+  <div class="max-w-2xl">
+    <EditFormShell
+      title="Actor details"
+      onSave={handleSave}
+      onCancel={handleCancel}
+      {saving}
+      saveDisabled={!name.trim()}
+      saveLabel="Create actor"
+      {error}
+    >
+      <TextField
+        label="Name"
+        icon={User}
+        value={name}
+        onChange={(v) => (name = v)}
+        placeholder="Full name"
+        required
+      />
+      <TextField
+        label="Disambiguation"
+        value={disambiguation}
+        onChange={(v) => (disambiguation = v)}
+        placeholder='e.g. "II" or "the Younger"'
+        helper="Used when two actors share a name."
+      />
+      <div class="grid gap-4 md:grid-cols-2">
+        <SearchSelect
+          label="Gender"
+          icon={Users}
+          value={genderValueToLabel(gender)}
+          onChange={(label) => (gender = genderLabelToValue(label))}
+          options={genderOptions}
+          placeholder="—"
+        />
+        <TextField
+          label="Country"
+          icon={Globe}
+          value={country}
+          onChange={(v) => (country = v)}
         />
       </div>
-
-      <div class="space-y-1.5 sm:col-span-2">
-        <label for="p-disambig" class="text-label text-text-muted">
-          Disambiguation <span class="text-text-disabled">(e.g. "II")</span>
-        </label>
-        <input
-          id="p-disambig"
-          type="text"
-          bind:value={disambiguation}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
-        />
-      </div>
-
-      <div class="space-y-1.5">
-        <label for="p-gender" class="text-label text-text-muted">Gender</label>
-        <select
-          id="p-gender"
-          bind:value={gender}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
-        >
-          <option value="">—</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="transgender_male">Transgender male</option>
-          <option value="transgender_female">Transgender female</option>
-          <option value="intersex">Intersex</option>
-          <option value="non_binary">Non-binary</option>
-        </select>
-      </div>
-
-      <div class="space-y-1.5">
-        <label for="p-country" class="text-label text-text-muted">Country</label>
-        <input
-          id="p-country"
-          type="text"
-          bind:value={country}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
-        />
-      </div>
-
-      <div class="space-y-1.5">
-        <label for="p-birthdate" class="text-label text-text-muted">Birthdate</label>
-        <input
-          id="p-birthdate"
-          type="date"
-          bind:value={birthdate}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
-        />
-      </div>
-
-      <div class="space-y-1.5 sm:col-span-2">
-        <label for="p-aliases" class="text-label text-text-muted">
-          Aliases <span class="text-text-disabled">(comma-separated)</span>
-        </label>
-        <input
-          id="p-aliases"
-          type="text"
-          bind:value={aliases}
-          class="w-full bg-surface-2 border border-border-default px-3 py-2 text-body text-text-primary focus:border-border-accent outline-none transition-colors duration-fast"
-        />
-      </div>
-    </div>
-  </form>
+      <DateField
+        label="Birthdate"
+        icon={Calendar}
+        value={birthdate}
+        onChange={(v) => (birthdate = v)}
+      />
+      <TextField
+        label="Aliases"
+        icon={TagIcon}
+        value={aliases}
+        onChange={(v) => (aliases = v)}
+        helper="Comma-separated alternate names."
+      />
+    </EditFormShell>
+  </div>
 </div>

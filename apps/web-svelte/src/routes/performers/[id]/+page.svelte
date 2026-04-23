@@ -2,6 +2,7 @@
   import { Users, Star, Film, Images, Music, FolderOpen } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { updatePerformer } from "$lib/api/entities";
   import type { VideoListItem } from "$lib/api/types";
   import type {
     VideoSeriesListItemDto,
@@ -10,13 +11,17 @@
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import { formatVideoCount } from "$lib/terminology";
 
   let { data } = $props();
-  const p = $derived(data.performer as {
+  let overrideRating = $state<number | null | undefined>(undefined);
+  const p = $derived((overrideRating === undefined
+    ? data.performer
+    : { ...(data.performer as Record<string, unknown>), rating: overrideRating }) as {
     id: string;
     name: string;
     disambiguation?: string | null;
@@ -51,7 +56,16 @@
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
   const audioLibraries = $derived(data.audioLibraries as AudioLibraryListItemDto[]);
 
-  const ratingStars = $derived(p.rating ? Math.round(p.rating / 20) : 0);
+  async function handleRatingSave(next: number | null) {
+    const previous = (data.performer as { rating?: number | null }).rating ?? null;
+    overrideRating = next;
+    try {
+      await updatePerformer(p.id, { rating: next });
+    } catch {
+      overrideRating = previous;
+      throw new Error("Failed to update rating");
+    }
+  }
 </script>
 
 <svelte:head>
@@ -90,16 +104,12 @@
           {/if}
         </div>
 
-        <div class="flex items-center gap-0.5 shrink-0 pt-1" title="Rating">
-          {#each Array.from({ length: 5 }) as _, i}
-            <Star
-              class={`h-4 w-4 ${
-                i < ratingStars
-                  ? "fill-accent-500 text-accent-500"
-                  : "text-text-disabled"
-              }`}
-            />
-          {/each}
+        <div class="shrink-0 pt-1">
+          <InlineRating
+            value={p.rating ?? null}
+            onSave={handleRatingSave}
+            ariaLabelPrefix="Rate performer with"
+          />
         </div>
       </div>
 

@@ -27,7 +27,7 @@
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import NsfwChip from "$lib/components/NsfwChip.svelte";
-  import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import {
     EditFormShell,
     FormField,
@@ -57,7 +57,6 @@
   let editing = $state(false);
   let saving = $state(false);
   let collectionModalOpen = $state(false);
-  let editRating = $state<number | null>(null);
   let editOrganized = $state(false);
   let editIsNsfw = $state(false);
   let editTags = $state<string[]>([]);
@@ -97,7 +96,6 @@
   }
 
   function resetEditState(source = track) {
-    editRating = source.rating;
     editOrganized = source.organized;
     editIsNsfw = source.isNsfw ?? false;
     editTags = source.tags.map((tag) => tag.name);
@@ -158,7 +156,6 @@
     editError = null;
     try {
       await updateAudioTrack(track.id, {
-        rating: editRating,
         organized: editOrganized,
         isNsfw: editIsNsfw,
         tagNames: [...editTags],
@@ -166,7 +163,6 @@
       });
       overrideTrack = {
         ...track,
-        rating: editRating,
         organized: editOrganized,
         isNsfw: editIsNsfw,
         tags: buildTagEmbeds(editTags),
@@ -187,12 +183,7 @@
     editError = null;
   }
 
-  async function handleRatingChange(nextRating: number | null) {
-    if (editing) {
-      editRating = nextRating;
-      return;
-    }
-
+  async function handleRatingSave(nextRating: number | null) {
     const previousRating = track.rating;
     overrideTrack = { ...track, rating: nextRating };
     try {
@@ -279,7 +270,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-4">
-          <StarRatingPicker value={editing ? editRating : track.rating} onChange={handleRatingChange} />
+          <InlineRating value={track.rating} onSave={handleRatingSave} />
           {#if track.organized}
             <span class="inline-flex items-center gap-1 text-[0.72rem] text-accent-300">
               <CheckCircle2 class="h-3.5 w-3.5" />

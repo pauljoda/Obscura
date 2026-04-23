@@ -1,15 +1,32 @@
 <script lang="ts">
-  import { Images, Star, Folder } from "@lucide/svelte";
+  import { Images, Folder } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
-  import { fetchGalleryImages } from "$lib/api/media";
+  import { fetchGalleryImages, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
 
   let { data } = $props();
-  const g = $derived(data.gallery);
+  let overrideRating = $state<number | null | undefined>(undefined);
+  const g = $derived(
+    overrideRating === undefined
+      ? data.gallery
+      : { ...data.gallery, rating: overrideRating },
+  );
+
+  async function handleRatingSave(next: number | null) {
+    const previous = data.gallery.rating ?? null;
+    overrideRating = next;
+    try {
+      await updateGallery(data.gallery.id, { rating: next });
+    } catch {
+      overrideRating = previous;
+      throw new Error("Failed to update rating");
+    }
+  }
 
   const initialImages: ImageListItemDto[] = data.gallery.images;
   const initialImageTotal: number = data.gallery.imageTotal;
@@ -65,17 +82,17 @@
           </a>
         {/if}
         {#if g.date}<span>· {g.date}</span>{/if}
-        {#if g.rating && g.rating > 0}
-          <span class="inline-flex items-center gap-1 text-accent-300">
-            · <Star class="h-3 w-3 fill-current" />{Math.round(g.rating / 20)}
-          </span>
-        {/if}
         {#if g.isNsfw}
           <Badge variant="warning">
             {#snippet children()}NSFW{/snippet}
           </Badge>
         {/if}
       </div>
+      <InlineRating
+        value={g.rating}
+        onSave={handleRatingSave}
+        ariaLabelPrefix="Rate gallery with"
+      />
       {#if g.details}
         <p class="mt-2 text-[0.82rem] text-text-secondary leading-relaxed whitespace-pre-wrap max-w-2xl">
           {g.details}
