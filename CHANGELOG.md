@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Image lightbox has been overhauled into a full zoom-and-pan viewer.** Open any gallery image and you can now wheel-zoom (centered on the cursor), drag-pan when zoomed, swipe left/right on mobile to navigate (swipe down to close), double-tap to toggle fit/2.5×, and press numbers 1–5 to rate without leaving the viewer. Video / animated images play back full size in the lightbox automatically. The viewer now carries a top bar with title/counter/rating/download, a bottom bar with zoom controls, and a toggleable Info panel (press **I**) showing dimensions, format, date, performers, and tags. Keyboard map: ← → navigate, +/- zoom, 0 reset, I info, 1–5 rate, Esc close.
+
 - **Gallery interior layout now respects each image's natural aspect ratio.** The uniform square grid inside a gallery has been replaced with a masonry-style column layout — portrait, landscape, and square images now sit side-by-side without cropping or awkward gaps, and the column count adapts to the viewport.
 
 - **Galleries and images now have saved filter presets, same as videos and series.** The `/galleries` and `/images` pages now show the filter-preset bookmark alongside the sort / filters / clear controls. Save the current sort + filters under a name, load it with one click, overwrite or rename, and delete presets you no longer need. Images also gained Resolution and File Size sort options.
