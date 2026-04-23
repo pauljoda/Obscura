@@ -4,7 +4,7 @@ import {
   type QueueName,
 } from "@obscura/contracts";
 import { BreakingGateAwaitingConsentError } from "@obscura/app-core";
-import { runMigrations } from "../../api/src/db/migrate.js";
+import { runMigrations } from "@obscura/db";
 import {
   closeDatabase,
   configureDatabase,

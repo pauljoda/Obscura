@@ -4,6 +4,8 @@ export * from "./changelog";
 export * from "./collections";
 export * from "./errors";
 export * from "./hierarchy";
+export * from "./hls";
+export * from "./hls-virtual";
 export * from "./image-media";
 export * from "./jobs-reads";
 export * from "./jobs-writes";

@@ -8,5 +8,7 @@
  */
 export * as schema from "./schema";
 export type { AppDb } from "./types";
+export * from "./breaking-gate";
 export { createDbRuntime } from "./runtime";
 export type { DbRuntime, DbRuntimeDeps } from "./runtime";
+export { runMigrations, BreakingGateAwaitingConsentError } from "./migrate";

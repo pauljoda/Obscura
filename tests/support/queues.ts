@@ -1,5 +1,4 @@
 import type { QueueName } from "@obscura/contracts";
-import type { QueueAdapter as ApiQueueAdapter } from "../../apps/api/src/lib/queues.ts";
 import type {
   QueueAdapter as WorkerQueueAdapter,
   RegisteredWorker,
@@ -12,9 +11,7 @@ type EnqueuedJob = {
   data: Record<string, unknown>;
 };
 
-export class FakeQueueAdapter
-  implements ApiQueueAdapter, WorkerQueueAdapter
-{
+export class FakeQueueAdapter implements WorkerQueueAdapter {
   public jobs: EnqueuedJob[] = [];
   public workers: Array<RegisteredWorker & { handler: WorkerHandler }> = [];
   private nextJobId = 1;

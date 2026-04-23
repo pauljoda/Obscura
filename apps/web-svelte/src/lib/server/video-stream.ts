@@ -4,16 +4,18 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { eq } from "drizzle-orm";
 import { getCacheRootDir, runProcess } from "@obscura/media-core";
-import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
-import { schema, type AppDb } from "@obscura/db";
-import { getHlsStatus, peekHlsTracker, startHlsGeneration } from "../../../../api/src/lib/hls";
 import {
   buildMasterPlaylist as buildVirtualMaster,
   buildVariantPlaylist as buildVirtualVariant,
+  getHlsStatus,
   getSegment as getVirtualSegment,
   getVirtualHlsRenditions,
+  peekHlsTracker,
   segmentCount as virtualSegmentCount,
-} from "../../../../api/src/lib/hls-virtual";
+  startHlsGeneration,
+} from "@obscura/app-core";
+import { HLS_RETRY_AFTER_SECONDS } from "@obscura/contracts/media";
+import { schema, type AppDb } from "@obscura/db";
 
 const { videoEpisodes, videoMovies } = schema;
 

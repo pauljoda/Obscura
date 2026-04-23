@@ -1,0 +1,1 @@
+ALTER TABLE "library_settings" ADD COLUMN "use_library_root_as_folder" boolean DEFAULT false NOT NULL;
