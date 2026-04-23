@@ -35,7 +35,7 @@
   }
 
   let {
-    scrapeResultId: initialScrapeResultId,
+    scrapeResultId,
     entityKind,
     entityId,
     label,
@@ -48,7 +48,8 @@
     onAcceptAndNext,
   }: Props = $props();
 
-  let currentScrapeResultId = $state(initialScrapeResultId);
+  let overrideScrapeResultId = $state<string | null>(null);
+  const currentScrapeResultId = $derived(overrideScrapeResultId ?? scrapeResultId);
   let row = $state<ScrapeResult | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -154,7 +155,7 @@
       if (!saved?.id) {
         throw new Error("Plugin did not persist a scrape result.");
       }
-      currentScrapeResultId = saved.id;
+      overrideScrapeResultId = saved.id;
     } catch (err) {
       error = err instanceof Error ? err.message : "Re-run failed";
     } finally {

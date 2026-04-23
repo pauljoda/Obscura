@@ -13,3 +13,9 @@ Object.defineProperty(globalThis.HTMLMediaElement.prototype, "play", {
     return Promise.resolve();
   },
 });
+
+Object.defineProperty(globalThis.HTMLMediaElement.prototype, "pause", {
+  configurable: true,
+  writable: true,
+  value() {},
+});

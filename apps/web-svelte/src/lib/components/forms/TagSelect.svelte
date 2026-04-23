@@ -144,19 +144,16 @@
 
 <FormField {label} {icon} {helper} {error} htmlFor={id}>
   <div bind:this={container} class="relative">
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-    <div
-      role="group"
-      aria-label={label ?? "Tag input"}
+    <label
+      for={id}
       class={cn(
         "flex min-h-[2.5rem] w-full flex-wrap items-center gap-1.5 border border-border-subtle bg-surface-2 px-2 py-1.5 transition-colors",
         "focus-within:border-border-accent focus-within:shadow-[var(--shadow-focus-accent)]",
         disabled && "opacity-50 pointer-events-none",
         error && "border-error/60",
       )}
-      onclick={() => {
+      onfocusin={() => {
         open = true;
-        void focusInput();
       }}
     >
       {#each values as value, i (value)}
@@ -198,7 +195,7 @@
         aria-autocomplete="list"
         aria-expanded={open}
       />
-    </div>
+    </label>
 
     {#if open && totalItems > 0}
       <div class="absolute left-0 right-0 top-full z-50 mt-1 surface-elevated overflow-hidden">

@@ -18,10 +18,18 @@
   import { entityTerms } from "$lib/terminology";
 
   let { data } = $props();
-  let results = $state<ScrapeResult[]>(data.initialResults);
+  let results = $state.raw<ScrapeResult[]>([]);
   let processingId = $state<string | null>(null);
   let message = $state<string | null>(null);
   let refreshing = $state(false);
+  let syncedInitialResults: ScrapeResult[] | null = $state(null);
+
+  $effect(() => {
+    if (syncedInitialResults !== data.initialResults) {
+      results = data.initialResults;
+      syncedInitialResults = data.initialResults;
+    }
+  });
 
   async function loadResults() {
     refreshing = true;

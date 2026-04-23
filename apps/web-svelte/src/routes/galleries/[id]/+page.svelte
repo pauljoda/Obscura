@@ -28,11 +28,10 @@
     }
   }
 
-  const initialImages: ImageListItemDto[] = data.gallery.images;
-  const initialImageTotal: number = data.gallery.imageTotal;
-  let images = $state<ImageListItemDto[]>(initialImages);
-  let imageTotal = $state(initialImageTotal);
+  let images = $state.raw<ImageListItemDto[]>([]);
+  let imageTotal = $state(0);
   let loadingMore = $state(false);
+  let syncedGalleryId = $state<string | null>(null);
 
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
@@ -58,6 +57,14 @@
   }
 
   const visibleChildGalleries = $derived(g.children ?? []);
+
+  $effect(() => {
+    if (syncedGalleryId !== data.gallery.id) {
+      images = data.gallery.images;
+      imageTotal = data.gallery.imageTotal;
+      syncedGalleryId = data.gallery.id;
+    }
+  });
 </script>
 
 <svelte:head>

@@ -14,6 +14,8 @@ const {
   getPluginUpdateStatusesRead,
   executePluginWrite,
   acceptPluginResultWrite,
+  startPluginBatchJob,
+  getPluginBatchJobStatus,
 } = vi.hoisted(() => ({
   db: { name: "web-db" },
   getWebDb: vi.fn(),
@@ -27,10 +29,17 @@ const {
   getPluginUpdateStatusesRead: vi.fn(),
   executePluginWrite: vi.fn(),
   acceptPluginResultWrite: vi.fn(),
+  startPluginBatchJob: vi.fn(),
+  getPluginBatchJobStatus: vi.fn(),
 }));
 
 vi.mock("$lib/server/db", () => ({
   getWebDb,
+}));
+
+vi.mock("$lib/server/plugin-batch", () => ({
+  startPluginBatchJob,
+  getPluginBatchJobStatus,
 }));
 
 vi.mock("@obscura/app-core", async () => {
@@ -65,6 +74,8 @@ describe("/api/plugins routes", () => {
     getPluginUpdateStatusesRead.mockReset();
     executePluginWrite.mockReset();
     acceptPluginResultWrite.mockReset();
+    startPluginBatchJob.mockReset();
+    getPluginBatchJobStatus.mockReset();
   });
 
   it("passes package install bodies through to app-core", async () => {
@@ -295,37 +306,111 @@ describe("/api/plugins routes", () => {
     });
   });
 
-  it("returns the Fastify-shaped 501 body for plugin batch starts", async () => {
-    const { POST } = await import("./batch/+server");
-    const response = await POST({} as never);
+  it("starts plugin batches through the shared batch helper", async () => {
+    startPluginBatchJob.mockResolvedValue({
+      jobId: "job-1",
+      status: "completed",
+    });
 
-    expect(response.status).toBe(501);
+    const { POST } = await import("./batch/+server");
+    const response = await POST({
+      request: new Request("http://test/api/plugins/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pluginId: "plugin-db-1",
+          action: "movieByName",
+          entityType: "video_movie",
+          entityIds: ["movie-1"],
+          autoAccept: true,
+        }),
+      }),
+    } as never);
+
+    expect(startPluginBatchJob).toHaveBeenCalledWith(db, {
+      pluginId: "plugin-db-1",
+      action: "movieByName",
+      entityType: "video_movie",
+      entityIds: ["movie-1"],
+      autoAccept: true,
+    });
+    expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      error: "Batch identification not yet implemented",
+      ok: true,
+      jobId: "job-1",
+      status: "completed",
     });
   });
 
-  it("returns the Fastify-shaped 501 body for plugin batch status", async () => {
+  it("returns stored plugin batch status payloads", async () => {
+    getPluginBatchJobStatus.mockReturnValue({
+      jobId: "job-1",
+      status: "completed",
+      total: 2,
+      completed: 2,
+      accepted: 1,
+      found: 1,
+      noResult: 0,
+      failed: 0,
+      items: [],
+    });
+
     const { GET } = await import("./batch/[jobId]/+server");
     const response = await GET({
       params: { jobId: "job-1" },
     } as never);
 
-    expect(response.status).toBe(501);
-    expect(await response.json()).toEqual({
-      error: "Batch status not yet implemented",
+    expect(getPluginBatchJobStatus).toHaveBeenCalledWith("job-1");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      jobId: "job-1",
+      status: "completed",
+      total: 2,
+      accepted: 1,
+      found: 1,
     });
   });
 
-  it("returns the Fastify-shaped 501 body for folder cascade", async () => {
+  it("passes folder cascade bodies through to app-core", async () => {
+    executePluginWrite.mockResolvedValue({
+      ok: true,
+      result: { id: "scrape-2" },
+      pluginId: "tmdb",
+      action: "folderCascade",
+    });
+
     const { POST } = await import("./[id]/folder-cascade/+server");
     const response = await POST({
       params: { id: "plugin-db-1" },
+      request: new Request("http://test/api/plugins/plugin-db-1/folder-cascade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folderId: "series-1",
+          externalSeriesId: "tmdb:42",
+          seasonNumber: 2,
+        }),
+      }),
     } as never);
 
-    expect(response.status).toBe(501);
+    expect(executePluginWrite).toHaveBeenCalledWith(db, {
+      pluginDbId: "plugin-db-1",
+      action: "folderCascade",
+      entityId: "series-1",
+      input: {
+        folderId: "series-1",
+        externalId: "tmdb:42",
+        externalSeriesId: "tmdb:42",
+        seasonNumber: 2,
+      },
+      saveResult: true,
+    });
+    expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      error: "Folder cascade not yet implemented",
+      ok: true,
+      result: { id: "scrape-2" },
+      pluginId: "tmdb",
+      action: "folderCascade",
     });
   });
 

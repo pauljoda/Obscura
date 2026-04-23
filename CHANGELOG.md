@@ -116,6 +116,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- The Svelte port no longer carries placeholder plugin endpoints or warning noise in its core review flows. SvelteKit now serves the plugin batch/folder-cascade routes directly, the remaining `svelte-check` warnings in the gallery/review/tag-input stack are resolved, and the unit test environment stubs `HTMLMediaElement.pause()` so the Svelte suite runs cleanly.
 - Mixed episode/movie sorting on the Svelte `/videos` route now respects the requested sort key after the merge step instead of always collapsing back to `createdAt DESC`.
 - Library-backed videos, series, galleries, images, audio items, collection entries, search results, and metadata counts now respect each library root's enabled/media-type state instead of continuing to surface content from disabled or unscanned roots.
 - Updating a watched library in the Svelte settings page now invalidates server data in the current tab so NSFW and enable/disable changes take effect immediately without a manual reload.
