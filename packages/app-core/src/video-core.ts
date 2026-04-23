@@ -179,6 +179,22 @@ interface VideoRow {
   absoluteEpisodeNumber: number | null;
 }
 
+type MixedVideoSortRow = Pick<
+  VideoRow,
+  | "id"
+  | "kind"
+  | "title"
+  | "createdAt"
+  | "rating"
+  | "duration"
+  | "fileSize"
+  | "playCount"
+  | "date"
+  | "seasonNumber"
+  | "episodeNumber"
+  | "absoluteEpisodeNumber"
+>;
+
 interface VideoSourceRow extends VideoRow {
   interactive: boolean;
   frameRate: number | null;
@@ -318,6 +334,96 @@ function parseSort(query: ListVideosQuery, kind: "episode" | "movie") {
       ? query.order
       : (defaultDir[sortKey] ?? "desc");
   return [dir === "asc" ? asc(col) : desc(col)];
+}
+
+function compareNullableNumbers(
+  left: number | null,
+  right: number | null,
+  dir: "asc" | "desc",
+) {
+  const leftValue = left ?? Number.NEGATIVE_INFINITY;
+  const rightValue = right ?? Number.NEGATIVE_INFINITY;
+  return dir === "asc" ? leftValue - rightValue : rightValue - leftValue;
+}
+
+function compareNullableStrings(
+  left: string | null,
+  right: string | null,
+  dir: "asc" | "desc",
+) {
+  const leftValue = left ?? "";
+  const rightValue = right ?? "";
+  return dir === "asc"
+    ? leftValue.localeCompare(rightValue)
+    : rightValue.localeCompare(leftValue);
+}
+
+function compareCreatedAt(
+  left: MixedVideoSortRow,
+  right: MixedVideoSortRow,
+  dir: "asc" | "desc",
+) {
+  const leftValue = left.createdAt?.getTime?.() ?? 0;
+  const rightValue = right.createdAt?.getTime?.() ?? 0;
+  return dir === "asc" ? leftValue - rightValue : rightValue - leftValue;
+}
+
+export function sortMergedVideos<T extends MixedVideoSortRow>(
+  rows: T[],
+  query: Pick<ListVideosQuery, "sort" | "order">,
+): T[] {
+  const sortKey = query.sort ?? "recent";
+  const dir: "asc" | "desc" =
+    query.order === "asc" || query.order === "desc"
+      ? query.order
+      : sortKey === "title" || sortKey === "episode"
+        ? "asc"
+        : "desc";
+
+  return [...rows].sort((left, right) => {
+    let cmp = 0;
+
+    switch (sortKey) {
+      case "title":
+        cmp = compareNullableStrings(left.title, right.title, dir);
+        break;
+      case "duration":
+        cmp = compareNullableNumbers(left.duration, right.duration, dir);
+        break;
+      case "size":
+        cmp = compareNullableNumbers(left.fileSize, right.fileSize, dir);
+        break;
+      case "rating":
+        cmp = compareNullableNumbers(left.rating, right.rating, dir);
+        break;
+      case "date":
+        cmp = compareNullableStrings(left.date, right.date, dir);
+        break;
+      case "plays":
+        cmp = compareNullableNumbers(left.playCount, right.playCount, dir);
+        break;
+      case "episode":
+        cmp = compareNullableNumbers(left.seasonNumber, right.seasonNumber, dir);
+        if (cmp === 0) {
+          cmp = compareNullableNumbers(left.episodeNumber, right.episodeNumber, dir);
+        }
+        if (cmp === 0) {
+          cmp = compareNullableNumbers(
+            left.absoluteEpisodeNumber,
+            right.absoluteEpisodeNumber,
+            dir,
+          );
+        }
+        break;
+      case "recent":
+      default:
+        cmp = compareCreatedAt(left, right, dir);
+        break;
+    }
+
+    if (cmp !== 0) return cmp;
+    return compareCreatedAt(left, right, "desc");
+  });
 }
 
 function buildCommonDateFilters<T extends "episode" | "movie">(
@@ -512,6 +618,7 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
     50,
     MAX_ENTITY_LIST_LIMIT,
   );
+  const mixedWindowSize = limit + offset;
 
   if (query.videoSeriesId && query.uncategorized === "true") {
     throw new ValidationError(
@@ -744,8 +851,8 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
       .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
       .where(where)
       .orderBy(...parseSort(query, "episode"))
-      .limit(limit)
-      .offset(offset);
+      .limit(wantMovies ? mixedWindowSize : limit)
+      .offset(wantMovies ? 0 : offset);
 
     episodes = rows.map((r) => ({
       kind: "episode",
@@ -930,8 +1037,8 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
       .from(videoMovies)
       .where(where)
       .orderBy(...parseSort(query, "movie"))
-      .limit(limit)
-      .offset(offset);
+      .limit(wantEpisodes ? mixedWindowSize : limit)
+      .offset(wantEpisodes ? 0 : offset);
 
     movies = rows.map((r) => ({
       kind: "movie",
@@ -967,15 +1074,11 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
     }));
   }
 
-  const merged = [...episodes, ...movies];
-  if (episodes.length > 0 && movies.length > 0) {
-    merged.sort((a, b) => {
-      const av = a.createdAt?.getTime?.() ?? 0;
-      const bv = b.createdAt?.getTime?.() ?? 0;
-      return bv - av;
-    });
-  }
-  const sliced = merged.slice(0, limit);
+  const mixedResults = episodes.length > 0 && movies.length > 0;
+  const merged = mixedResults
+    ? sortMergedVideos([...episodes, ...movies], query)
+    : [...episodes, ...movies];
+  const sliced = mixedResults ? merged.slice(offset, offset + limit) : merged.slice(0, limit);
   if (cardView) {
     return {
       videos: sliced.map(toVideoCardListItem),

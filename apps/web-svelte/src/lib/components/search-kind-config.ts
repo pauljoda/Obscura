@@ -30,7 +30,7 @@ interface SearchKindConfig {
 }
 
 export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
-  "video-series": { label: "Series", icon: FolderOpen, href: "/videos" },
+  "video-series": { label: "Series", icon: FolderOpen, href: "/series" },
   video: { label: "Videos", icon: Film, href: "/videos" },
   performer: { label: "Actors", icon: Users, href: "/performers" },
   studio: { label: "Studios", icon: Building2, href: "/studios" },

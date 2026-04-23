@@ -15,4 +15,8 @@ describe("search-kind-config", () => {
   it("preserves Obscura terminology for performer search results", () => {
     expect(SEARCH_KIND_CONFIG.performer.label).toBe("Actors");
   });
+
+  it("sends series search results to the dedicated series route", () => {
+    expect(SEARCH_KIND_CONFIG["video-series"].href).toBe("/series");
+  });
 });

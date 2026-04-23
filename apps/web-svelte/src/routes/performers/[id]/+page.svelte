@@ -208,7 +208,7 @@
           {#each p.knownFor as entry (entry.entityType + entry.entityId)}
             {@const href =
               entry.entityType === "video_series"
-                ? `/videos?view=series&series=${entry.entityId}`
+                ? `/series?series=${entry.entityId}`
                 : `/videos/${entry.entityId}`}
             <a
               {href}
@@ -270,9 +270,9 @@
   {#if series.length > 0}
     <HierarchySection title={`Series — ${formatVideoCount(data.totalSeries)}`}>
       {#snippet children()}
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {#each series as s (s.id)}
-            <SeriesCard series={s} href={`/videos?view=series&series=${s.id}`} compact />
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {#each series as s (s.id)}
+            <SeriesCard series={s} href={`/series?series=${s.id}`} compact />
           {/each}
         </div>
       {/snippet}

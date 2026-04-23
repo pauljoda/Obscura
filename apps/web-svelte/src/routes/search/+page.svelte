@@ -62,7 +62,7 @@
       case "video":
         return `/videos/${id}`;
       case "video-series":
-        return `/videos?series=${id}`;
+        return `/series?series=${id}`;
       case "gallery":
         return `/galleries/${id}`;
       case "image":

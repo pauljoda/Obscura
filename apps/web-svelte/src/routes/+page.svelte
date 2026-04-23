@@ -371,7 +371,7 @@
             {#each series as s (s.id)}
               <div class="flex-none w-64 md:w-72 snap-start">
                 <a
-                  href={`/videos?series=${s.id}`}
+                  href={`/series?series=${s.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
                   <NsfwBlur isNsfw={s.isNsfw} class="block">

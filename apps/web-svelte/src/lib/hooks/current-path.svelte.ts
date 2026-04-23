@@ -2,7 +2,7 @@ import { page } from "$app/state";
 
 /**
  * Returns the current page location as a string suitable for the `from`
- * query parameter (e.g. `/videos?series=abc`). Reactive via $app/state.
+ * query parameter (e.g. `/series?series=abc`). Reactive via $app/state.
  */
 export function currentPath(): string {
   const path = page.url.pathname;
