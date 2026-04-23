@@ -13,6 +13,7 @@ import {
   asc,
   ne,
 } from "drizzle-orm";
+import { galleryVisibleSql, imageVisibleSql } from "../../library-root-visibility";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -54,7 +55,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
       ),
     )!;
 
-    const conditions = [matchCondition];
+    const conditions = [matchCondition, galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)];
     if (filters.rating) conditions.push(gte(galleries.rating, filters.rating));
     if (filters.dateFrom)
       conditions.push(gte(galleries.date, filters.dateFrom));
@@ -98,7 +99,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
             imageId: images.id,
           })
           .from(images)
-          .where(inArray(images.galleryId, galleryIds))
+          .where(and(inArray(images.galleryId, galleryIds), imageVisibleSql(images.filePath)))
           .orderBy(asc(images.sortOrder))
       : [];
 

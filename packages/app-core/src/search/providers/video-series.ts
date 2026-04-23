@@ -1,5 +1,9 @@
 import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, and, ne, desc, sql } from "drizzle-orm";
+import {
+  videoEpisodeVisibleSql,
+  videoSeriesVisibleSql,
+} from "../../library-root-visibility";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -31,7 +35,7 @@ export const createVideoSeriesSearchProvider: SearchProviderFactory = (
       ilike(videoSeries.sortTitle, term),
     )!;
 
-    const conditions = [matchCondition];
+    const conditions = [matchCondition, videoSeriesVisibleSql(videoSeries.libraryRootId)];
     if (sfwOnly) conditions.push(ne(videoSeries.isNsfw, true));
 
     const where = and(...conditions);
@@ -55,6 +59,7 @@ export const createVideoSeriesSearchProvider: SearchProviderFactory = (
           totalEpisodeCount: sql<number>`(
             SELECT COUNT(*)::int FROM video_episodes ve
             WHERE ve.series_id = ${videoSeries.id}
+              AND ${videoEpisodeVisibleSql(sql.raw("ve.series_id"))}
           )`,
           score: scoreExpr,
         })

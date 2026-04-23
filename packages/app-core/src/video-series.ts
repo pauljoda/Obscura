@@ -19,6 +19,7 @@ import {
   UpstreamError,
   ValidationError,
 } from "./errors";
+import { videoSeriesVisibleSql } from "./library-root-visibility";
 
 const {
   videoSeries,
@@ -265,7 +266,7 @@ export async function listVideoSeriesRead(
     return { items: [], total: 0, limit, offset };
   }
 
-  const conds = [];
+  const conds = [videoSeriesVisibleSql(videoSeries.libraryRootId)];
   if (query.search) {
     const term = `%${query.search}%`;
     conds.push(
@@ -363,7 +364,7 @@ export async function getVideoSeriesDetailRead(
   const [series] = await db
     .select()
     .from(videoSeries)
-    .where(eq(videoSeries.id, id))
+    .where(and(eq(videoSeries.id, id), videoSeriesVisibleSql(videoSeries.libraryRootId)))
     .limit(1);
 
   if (!series) throw new NotFoundError("Series not found");

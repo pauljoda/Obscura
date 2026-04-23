@@ -12,6 +12,7 @@ import {
   exists,
   ne,
 } from "drizzle-orm";
+import { imageVisibleSql } from "../../library-root-visibility";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -55,7 +56,7 @@ export const createImagesSearchProvider: SearchProviderFactory = (
       ),
     )!;
 
-    const conditions = [matchCondition];
+    const conditions = [matchCondition, imageVisibleSql(images.filePath)];
     if (filters.rating) conditions.push(gte(images.rating, filters.rating));
     if (filters.dateFrom) conditions.push(gte(images.date, filters.dateFrom));
     if (filters.dateTo) conditions.push(lte(images.date, filters.dateTo));

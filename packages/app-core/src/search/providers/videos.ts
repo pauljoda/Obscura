@@ -5,6 +5,10 @@ import {
 } from "@obscura/contracts";
 import { schema, type AppDb } from "@obscura/db";
 import { ilike, or, sql, and, gte, lte, eq, exists, ne } from "drizzle-orm";
+import {
+  videoEpisodeVisibleSql,
+  videoMovieVisibleSql,
+} from "../../library-root-visibility";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -110,8 +114,14 @@ export const createVideosSearchProvider: SearchProviderFactory = (
       ),
     )!;
 
-    const episodeConditions = [episodeMatchCondition];
-    const movieConditions = [movieMatchCondition];
+    const episodeConditions = [
+      episodeMatchCondition,
+      videoEpisodeVisibleSql(videoEpisodes.seriesId),
+    ];
+    const movieConditions = [
+      movieMatchCondition,
+      videoMovieVisibleSql(videoMovies.libraryRootId),
+    ];
 
     if (filters.rating) {
       episodeConditions.push(gte(videoEpisodes.rating, filters.rating));

@@ -51,6 +51,10 @@ import {
   type QueueTrigger,
 } from "./queue-writes";
 import {
+  videoEpisodeVisibleSql,
+  videoMovieVisibleSql,
+} from "./library-root-visibility";
+import {
   assertDirExists,
   resolveCollisionSafePath,
   validateUploadMetadata,
@@ -466,7 +470,7 @@ async function loadEpisodeRow(
     .select()
     .from(videoEpisodes)
     .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
-    .where(eq(videoEpisodes.id, id))
+    .where(and(eq(videoEpisodes.id, id), videoEpisodeVisibleSql(videoEpisodes.seriesId)))
     .limit(1);
   if (!row) return null;
   const ep = row.video_episodes;
@@ -519,7 +523,7 @@ async function loadMovieRow(
   const [mv] = await db
     .select()
     .from(videoMovies)
-    .where(eq(videoMovies.id, id))
+    .where(and(eq(videoMovies.id, id), videoMovieVisibleSql(videoMovies.libraryRootId)))
     .limit(1);
   if (!mv) return null;
   return {
@@ -633,6 +637,7 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
   let episodeCount = 0;
   if (wantEpisodes) {
     const conds: SQL[] = [];
+    conds.push(videoEpisodeVisibleSql(videoEpisodes.seriesId));
     if (query.nsfw === "off") conds.push(ne(videoEpisodes.isNsfw, true));
     if (query.search) {
       const term = `%${query.search}%`;
@@ -892,6 +897,7 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
   let movieCount = 0;
   if (wantMovies) {
     const conds: SQL[] = [];
+    conds.push(videoMovieVisibleSql(videoMovies.libraryRootId));
     if (query.nsfw === "off") conds.push(ne(videoMovies.isNsfw, true));
     if (query.search) {
       const term = `%${query.search}%`;
@@ -1215,8 +1221,12 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
 }
 
 export async function getVideoStatsRead(db: AppDb, sfwOnly: boolean) {
-  const epWhere = sfwOnly ? ne(videoEpisodes.isNsfw, true) : undefined;
-  const mvWhere = sfwOnly ? ne(videoMovies.isNsfw, true) : undefined;
+  const epWhere = sfwOnly
+    ? and(videoEpisodeVisibleSql(videoEpisodes.seriesId), ne(videoEpisodes.isNsfw, true))
+    : videoEpisodeVisibleSql(videoEpisodes.seriesId);
+  const mvWhere = sfwOnly
+    ? and(videoMovieVisibleSql(videoMovies.libraryRootId), ne(videoMovies.isNsfw, true))
+    : videoMovieVisibleSql(videoMovies.libraryRootId);
 
   const [epStats] = await db
     .select({

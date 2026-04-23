@@ -25,6 +25,12 @@ import {
 import { NotFoundError, ValidationError } from "./errors";
 import { buildHierarchyScopeConditions } from "./hierarchy";
 import { getImagePreviewPath, isVideoImageFormat } from "./image-media";
+import {
+  audioLibraryVisibleSql,
+  audioTrackVisibleSql,
+  galleryVisibleSql,
+  imageVisibleSql,
+} from "./library-root-visibility";
 import { enqueueQueueJob } from "./queue-writes";
 import {
   assertDirExists,
@@ -235,7 +241,7 @@ export interface ListGalleriesQuery {
 
 export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 50, 200);
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)];
 
   conditions.push(...buildHierarchyScopeConditions(galleries.parentId, query));
 
@@ -399,7 +405,10 @@ export async function getGalleryDetailRead(
   const imageOffset = Number(options?.imageOffset) || 0;
 
   const gallery = await db.query.galleries.findFirst({
-    where: eq(galleries.id, id),
+    where: and(
+      eq(galleries.id, id),
+      galleryVisibleSql(galleries.folderPath, galleries.zipFilePath),
+    ),
     with: {
       studio: true,
       galleryPerformers: { with: { performer: true } },
@@ -413,11 +422,11 @@ export async function getGalleryDetailRead(
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(images)
-      .where(eq(images.galleryId, id)),
+      .where(and(eq(images.galleryId, id), imageVisibleSql(images.filePath))),
     db
       .select()
       .from(images)
-      .where(eq(images.galleryId, id))
+      .where(and(eq(images.galleryId, id), imageVisibleSql(images.filePath)))
       .orderBy(asc(images.sortOrder))
       .limit(imageLimit)
       .offset(imageOffset),
@@ -429,7 +438,12 @@ export async function getGalleryDetailRead(
         isNsfw: galleries.isNsfw,
       })
       .from(galleries)
-      .where(eq(galleries.parentId, id))
+      .where(
+        and(
+          eq(galleries.parentId, id),
+          galleryVisibleSql(galleries.folderPath, galleries.zipFilePath),
+        ),
+      )
       .orderBy(asc(galleries.title)),
   ]);
 
@@ -443,7 +457,7 @@ export async function getGalleryDetailRead(
             sortOrder: images.sortOrder,
           })
           .from(images)
-          .where(inArray(images.galleryId, childIds))
+          .where(and(inArray(images.galleryId, childIds), imageVisibleSql(images.filePath)))
           .orderBy(asc(images.sortOrder))
       : [];
   const childPreviewMap = new Map<string, string[]>();
@@ -519,7 +533,10 @@ export async function getGalleryImagesRead(
   const limit = Math.min(Number(options?.limit) || 60, 200);
   const offset = Number(options?.offset) || 0;
   const gallery = await db.query.galleries.findFirst({
-    where: eq(galleries.id, galleryId),
+    where: and(
+      eq(galleries.id, galleryId),
+      galleryVisibleSql(galleries.folderPath, galleries.zipFilePath),
+    ),
     columns: { id: true },
   });
   if (!gallery) throw new NotFoundError("Gallery not found");
@@ -528,11 +545,11 @@ export async function getGalleryImagesRead(
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(images)
-      .where(eq(images.galleryId, galleryId)),
+      .where(and(eq(images.galleryId, galleryId), imageVisibleSql(images.filePath))),
     db
       .select()
       .from(images)
-      .where(eq(images.galleryId, galleryId))
+      .where(and(eq(images.galleryId, galleryId), imageVisibleSql(images.filePath)))
       .orderBy(asc(images.sortOrder))
       .limit(limit)
       .offset(offset),
@@ -552,7 +569,12 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
   const galleryRows = await db
     .select()
     .from(galleries)
-    .where(inArray(galleries.id, ids));
+    .where(
+      and(
+        inArray(galleries.id, ids),
+        galleryVisibleSql(galleries.folderPath, galleries.zipFilePath),
+      ),
+    );
 
   const galleryIds = galleryRows.map((gallery) => gallery.id);
   const [perfJoins, tagJoins, studioRows] = await Promise.all([
@@ -621,12 +643,23 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
 
 export async function getGalleryStatsRead(db: AppDb) {
   const [galleryStats, imageStats, recentStats] = await Promise.all([
-    db.select({ totalGalleries: sql<number>`count(*)::int` }).from(galleries),
-    db.select({ totalImages: sql<number>`count(*)::int` }).from(images),
+    db
+      .select({ totalGalleries: sql<number>`count(*)::int` })
+      .from(galleries)
+      .where(galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)),
+    db
+      .select({ totalImages: sql<number>`count(*)::int` })
+      .from(images)
+      .where(imageVisibleSql(images.filePath)),
     db
       .select({ recentCount: sql<number>`count(*)::int` })
       .from(galleries)
-      .where(sql`${galleries.createdAt} > now() - interval '7 days'`),
+      .where(
+        and(
+          galleryVisibleSql(galleries.folderPath, galleries.zipFilePath),
+          sql`${galleries.createdAt} > now() - interval '7 days'`,
+        ),
+      ),
   ]);
 
   return {
@@ -954,7 +987,7 @@ export interface ListImagesQuery {
 
 export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 80, 200);
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [imageVisibleSql(images.filePath)];
   if (query.nsfw === "off") conditions.push(ne(images.isNsfw, true));
   if (query.search) {
     const term = `%${query.search}%`;
@@ -1076,7 +1109,7 @@ export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
 
 export async function getImageDetailRead(db: AppDb, id: string) {
   const image = await db.query.images.findFirst({
-    where: eq(images.id, id),
+    where: and(eq(images.id, id), imageVisibleSql(images.filePath)),
     with: {
       studio: true,
       imagePerformers: { with: { performer: true } },
@@ -1127,7 +1160,10 @@ export async function getImageDetailRead(db: AppDb, id: string) {
 export async function getImagesByIdsRead(db: AppDb, ids: string[]) {
   if (ids.length === 0) return [];
 
-  const imageRows = await db.select().from(images).where(inArray(images.id, ids));
+  const imageRows = await db
+    .select()
+    .from(images)
+    .where(and(inArray(images.id, ids), imageVisibleSql(images.filePath)));
   const imageIds = imageRows.map((image) => image.id);
   const [perfJoins, tagJoins] = await Promise.all([
     imageIds.length > 0
@@ -1359,7 +1395,7 @@ export async function listAudioLibrariesRead(
   query: ListAudioLibrariesQuery,
 ) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 60, 2000);
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [audioLibraryVisibleSql(audioLibraries.folderPath)];
   conditions.push(...buildHierarchyScopeConditions(audioLibraries.parentId, query));
   if (query.search) {
     const term = `%${query.search}%`;
@@ -1502,7 +1538,7 @@ export async function getAudioLibraryDetailRead(
   const [lib] = await db
     .select()
     .from(audioLibraries)
-    .where(eq(audioLibraries.id, id))
+    .where(and(eq(audioLibraries.id, id), audioLibraryVisibleSql(audioLibraries.folderPath)))
     .limit(1);
   if (!lib) throw new NotFoundError("Audio library not found");
 
@@ -1526,20 +1562,35 @@ export async function getAudioLibraryDetailRead(
       db
         .select()
         .from(audioTracks)
-        .where(eq(audioTracks.libraryId, id))
+        .where(
+          and(
+            eq(audioTracks.libraryId, id),
+            audioTrackVisibleSql(audioTracks.filePath),
+          ),
+        )
         .orderBy(sql`${audioTracks.sortOrder} ASC, ${audioTracks.title} ASC`)
         .limit(trackLimit)
         .offset(trackOffset),
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(audioTracks)
-        .where(eq(audioTracks.libraryId, id)),
+        .where(
+          and(
+            eq(audioTracks.libraryId, id),
+            audioTrackVisibleSql(audioTracks.filePath),
+          ),
+        ),
       db
         .select({ total: sql<number>`COALESCE(SUM(${audioTracks.duration}), 0)` })
         .from(audioTracks)
-        .where(eq(audioTracks.libraryId, id)),
+        .where(
+          and(
+            eq(audioTracks.libraryId, id),
+            audioTrackVisibleSql(audioTracks.filePath),
+          ),
+        ),
       db
-        .select({
+      .select({
           id: audioLibraries.id,
           title: audioLibraries.title,
           trackCount: audioLibraries.trackCount,
@@ -1548,7 +1599,12 @@ export async function getAudioLibraryDetailRead(
           isNsfw: audioLibraries.isNsfw,
         })
         .from(audioLibraries)
-        .where(eq(audioLibraries.parentId, id))
+        .where(
+          and(
+            eq(audioLibraries.parentId, id),
+            audioLibraryVisibleSql(audioLibraries.folderPath),
+          ),
+        )
         .orderBy(sql`${audioLibraries.title} ASC`),
     ]);
 
@@ -1650,17 +1706,27 @@ export async function getAudioLibraryStatsRead(
   nsfw?: string,
 ) {
   const sfwOnly = nsfw === "off";
-  const libWhere = sfwOnly ? eq(audioLibraries.isNsfw, false) : undefined;
+  const libWhere = sfwOnly
+    ? and(audioLibraryVisibleSql(audioLibraries.folderPath), eq(audioLibraries.isNsfw, false))
+    : audioLibraryVisibleSql(audioLibraries.folderPath);
   const trackWhere = sfwOnly
-    ? and(eq(audioTracks.isNsfw, false), eq(audioLibraries.isNsfw, false))
-    : undefined;
+    ? and(
+        audioTrackVisibleSql(audioTracks.filePath),
+        eq(audioTracks.isNsfw, false),
+        eq(audioLibraries.isNsfw, false),
+      )
+    : audioTrackVisibleSql(audioTracks.filePath);
   const recentWhere = sfwOnly
     ? and(
+        audioTrackVisibleSql(audioTracks.filePath),
         eq(audioTracks.isNsfw, false),
         eq(audioLibraries.isNsfw, false),
         sql`${audioTracks.createdAt} > NOW() - INTERVAL '7 days'`,
       )
-    : sql`${audioTracks.createdAt} > NOW() - INTERVAL '7 days'`;
+    : and(
+        audioTrackVisibleSql(audioTracks.filePath),
+        sql`${audioTracks.createdAt} > NOW() - INTERVAL '7 days'`,
+      );
 
   const [libCount, trackStats, recent] = await Promise.all([
     db
@@ -1814,7 +1880,11 @@ export async function deleteAudioLibraryCoverWrite(db: AppDb, id: string) {
 }
 
 export async function getAudioTrackDetailRead(db: AppDb, id: string) {
-  const [track] = await db.select().from(audioTracks).where(eq(audioTracks.id, id)).limit(1);
+  const [track] = await db
+    .select()
+    .from(audioTracks)
+    .where(and(eq(audioTracks.id, id), audioTrackVisibleSql(audioTracks.filePath)))
+    .limit(1);
   if (!track) throw new NotFoundError("Audio track not found");
 
   const [perfRows, tagRows, markerRows] = await Promise.all([
@@ -1912,7 +1982,7 @@ export async function listAudioTracksRead(
   query: ListAudioTracksQuery,
 ) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 80, 500);
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [audioTrackVisibleSql(audioTracks.filePath)];
 
   if (query.library) conditions.push(eq(audioTracks.libraryId, query.library));
   if (query.search) {
@@ -2042,7 +2112,10 @@ export async function listAudioTracksRead(
 export async function getTracksByIdsRead(db: AppDb, ids: string[]) {
   if (ids.length === 0) return [];
 
-  const rows = await db.select().from(audioTracks).where(inArray(audioTracks.id, ids));
+  const rows = await db
+    .select()
+    .from(audioTracks)
+    .where(and(inArray(audioTracks.id, ids), audioTrackVisibleSql(audioTracks.filePath)));
   const trackIds = rows.map((row) => row.id);
   const [perfLinks, tagLinks] = await Promise.all([
     trackIds.length > 0

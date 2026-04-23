@@ -11,6 +11,7 @@ import {
   tagSfwSceneCountExpr,
   tagTotalSceneCountExpr,
 } from "./appearance-count-expressions";
+import { imageVisibleSql } from "./library-root-visibility";
 
 const { tags, imageTags, images } = schema;
 
@@ -93,7 +94,7 @@ export async function listTagsRead(
         })
         .from(imageTags)
         .innerJoin(images, eq(images.id, imageTags.imageId))
-        .where(ne(images.isNsfw, true))
+        .where(sql`${imageVisibleSql(images.filePath)} AND ${ne(images.isNsfw, true)}`)
         .groupBy(imageTags.tagId)
     : await db
         .select({
@@ -101,6 +102,8 @@ export async function listTagsRead(
           cnt: sql<number>`count(*)::int`,
         })
         .from(imageTags)
+        .innerJoin(images, eq(images.id, imageTags.imageId))
+        .where(imageVisibleSql(images.filePath))
         .groupBy(imageTags.tagId);
   const imageMap = new Map(imageAgg.map((r) => [r.tagId, Number(r.cnt)]));
 

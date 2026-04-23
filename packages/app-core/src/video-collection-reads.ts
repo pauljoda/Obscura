@@ -7,6 +7,10 @@ import {
 } from "@obscura/contracts";
 import type { AppDb } from "@obscura/db";
 import { schema } from "@obscura/db";
+import {
+  videoEpisodeVisibleSql,
+  videoMovieVisibleSql,
+} from "./library-root-visibility";
 
 const {
   videoEpisodes,
@@ -107,8 +111,11 @@ export async function getVideosByIdsRead(db: AppDb, ids: string[]) {
       .select()
       .from(videoEpisodes)
       .leftJoin(videoSeries, eq(videoEpisodes.seriesId, videoSeries.id))
-      .where(inArray(videoEpisodes.id, ids)),
-    db.select().from(videoMovies).where(inArray(videoMovies.id, ids)),
+      .where(and(inArray(videoEpisodes.id, ids), videoEpisodeVisibleSql(videoEpisodes.seriesId))),
+    db
+      .select()
+      .from(videoMovies)
+      .where(and(inArray(videoMovies.id, ids), videoMovieVisibleSql(videoMovies.libraryRootId))),
   ]);
 
   const episodeIds = epRows.map((row) => row.video_episodes.id);

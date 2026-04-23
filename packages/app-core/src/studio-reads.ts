@@ -9,6 +9,10 @@ import {
   studioSfwSceneCountExpr,
   studioTotalSceneCountExpr,
 } from "./appearance-count-expressions";
+import {
+  videoMovieVisibleSql,
+  videoSeriesVisibleSql,
+} from "./library-root-visibility";
 
 const { studios } = schema;
 
@@ -162,6 +166,7 @@ export async function getStudioByIdRead(
               )})`
             : sql`(NULL)`
         }
+        AND ${videoSeriesVisibleSql(sql.raw("vs.library_root_id"))}
         ${epNsfwClause}
       GROUP BY vs.studio_id
       UNION ALL
@@ -176,6 +181,7 @@ export async function getStudioByIdRead(
               )})`
             : sql`(NULL)`
         }
+        AND ${videoMovieVisibleSql(sql.raw("vm.library_root_id"))}
         ${movieNsfwClause}
       GROUP BY vm.studio_id
     ) combined

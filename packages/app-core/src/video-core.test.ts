@@ -15,7 +15,7 @@ describe("sortMergedVideos", () => {
       seasonNumber: 1,
       episodeNumber: 3,
       absoluteEpisodeNumber: 3,
-      kind: "episode",
+      kind: "episode" as const,
     },
     {
       id: "movie-1",
@@ -29,7 +29,7 @@ describe("sortMergedVideos", () => {
       seasonNumber: null,
       episodeNumber: null,
       absoluteEpisodeNumber: null,
-      kind: "movie",
+      kind: "movie" as const,
     },
     {
       id: "episode-2",
@@ -43,7 +43,7 @@ describe("sortMergedVideos", () => {
       seasonNumber: 1,
       episodeNumber: 2,
       absoluteEpisodeNumber: 2,
-      kind: "episode",
+      kind: "episode" as const,
     },
   ];
 

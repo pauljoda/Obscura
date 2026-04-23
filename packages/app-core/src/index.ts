@@ -10,6 +10,7 @@ export * from "./jobs-writes";
 export * from "./library-browse";
 export * from "./library-config";
 export * from "./library-root-nsfw-sync";
+export * from "./library-root-visibility";
 export * from "./library-roots-crud";
 export * from "./library-settings-writes";
 export * from "./media";

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invalidateAll } from "$app/navigation";
   import {
     ChevronLeft,
     Clock,
@@ -92,6 +93,7 @@
       newRootIsNsfw = false;
       browserVisible = false;
       await onRootsChanged();
+      await invalidateAll();
       await runQueue("library-scan", nsfw.mode);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to add library root");
@@ -105,6 +107,7 @@
     roots = roots.map((r) => (r.id === root.id ? { ...r, enabled: next } : r));
     try {
       await updateLibraryRoot(root.id, { enabled: next });
+      await invalidateAll();
     } catch (err) {
       roots = roots.map((r) => (r.id === root.id ? { ...r, enabled: !next } : r));
       onError(err instanceof Error ? err.message : "Failed to update root");
@@ -119,6 +122,7 @@
     roots = roots.map((r) => (r.id === root.id ? { ...r, [field]: next } : r));
     try {
       await updateLibraryRoot(root.id, { [field]: next });
+      await invalidateAll();
     } catch (err) {
       roots = roots.map((r) => (r.id === root.id ? { ...r, [field]: !next } : r));
       onError(err instanceof Error ? err.message : "Failed to update root");
@@ -130,6 +134,7 @@
     roots = roots.map((r) => (r.id === root.id ? { ...r, isNsfw: next } : r));
     try {
       await updateLibraryRoot(root.id, { isNsfw: next });
+      await invalidateAll();
     } catch {
       roots = roots.map((r) => (r.id === root.id ? { ...r, isNsfw: !next } : r));
     }
@@ -140,6 +145,7 @@
       await deleteLibraryRoot(root.id);
       onMessage(`Removed ${root.label}.`);
       await onRootsChanged();
+      await invalidateAll();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to remove root");
     }
