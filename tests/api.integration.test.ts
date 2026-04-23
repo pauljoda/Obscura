@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import * as schema from "../packages/db/src/schema.ts";
 import { createApiTestContext, injectJson } from "./support/api.ts";
@@ -208,6 +208,145 @@ describe("API integration", () => {
     expect(response.json()).toEqual({
       error: "libraryRootId or seriesId field is required",
     });
+  });
+
+  it("supports the remaining core video actions", async () => {
+    const videoPath = await createSampleVideoFile(mediaDir, "actions-scene.mp4");
+    const [root] = await context.db.select().from(libraryRoots).limit(1);
+    const [movie] = await context.db
+      .insert(videoMovies)
+      .values({
+        libraryRootId: root!.id,
+        title: "Actions Scene",
+        filePath: videoPath,
+        organized: true,
+        overview: "Needs reset",
+        rating: 5,
+        releaseDate: "2024-02-03",
+      })
+      .returning({ id: videoMovies.id });
+
+    const statsBefore = await context.app.inject({
+      method: "GET",
+      url: "/videos/stats",
+    });
+    expect(statsBefore.statusCode).toBe(200);
+    expect((statsBefore.json() as { totalScenes: number }).totalScenes).toBeGreaterThanOrEqual(
+      1,
+    );
+
+    const play = await context.app.inject({
+      method: "POST",
+      url: `/videos/${movie.id}/play`,
+    });
+    expect(play.statusCode).toBe(200);
+    expect(play.json()).toEqual({ ok: true });
+
+    const orgasm = await context.app.inject({
+      method: "POST",
+      url: `/videos/${movie.id}/orgasm`,
+    });
+    expect(orgasm.statusCode).toBe(200);
+    expect(orgasm.json()).toEqual({ ok: true, orgasmCount: 1 });
+
+    const uploadedThumb = createMultipartBody({
+      file: {
+        fieldName: "file",
+        filename: "poster.jpg",
+        contentType: "image/jpeg",
+        content: Buffer.from("image-bytes"),
+      },
+    });
+    const thumbnailUpload = await context.app.inject({
+      method: "POST",
+      url: `/videos/${movie.id}/thumbnail`,
+      headers: {
+        "content-type": `multipart/form-data; boundary=${uploadedThumb.boundary}`,
+      },
+      payload: uploadedThumb.body,
+    });
+    expect(thumbnailUpload.statusCode).toBe(200);
+    expect(thumbnailUpload.json()).toEqual({
+      thumbnailPath: `/assets/videos/${movie.id}/thumb-custom`,
+    });
+
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(Buffer.from("remote-image"), {
+          status: 200,
+          headers: { "Content-Type": "image/jpeg" },
+        }),
+      );
+    try {
+      const fromUrl = await injectJson<{ thumbnailPath: string }>(context.app, {
+        method: "POST",
+        url: `/videos/${movie.id}/thumbnail/from-url`,
+        payload: { imageUrl: "https://example.com/poster.jpg" },
+      });
+      expect(fromUrl.response.statusCode).toBe(200);
+      expect(fromUrl.json).toEqual({
+        thumbnailPath: `/assets/videos/${movie.id}/thumb-custom`,
+      });
+    } finally {
+      fetchSpy.mockRestore();
+    }
+
+    const fromFrame = await injectJson<{ error: string }>(context.app, {
+      method: "POST",
+      url: `/videos/${movie.id}/thumbnail/from-frame`,
+      payload: { seconds: "bad" },
+    });
+    expect(fromFrame.response.statusCode).toBe(400);
+    expect(fromFrame.json).toEqual({ error: "Invalid frame time" });
+
+    const resetMetadata = await context.app.inject({
+      method: "POST",
+      url: `/videos/${movie.id}/reset-metadata`,
+    });
+    expect(resetMetadata.statusCode).toBe(200);
+    expect(resetMetadata.json()).toEqual({
+      ok: true,
+      id: movie.id,
+      title: "Actions Scene",
+    });
+
+    const [afterReset] = await context.db
+      .select()
+      .from(videoMovies)
+      .where(eq(videoMovies.id, movie.id));
+    expect(afterReset?.overview).toBeNull();
+    expect(afterReset?.rating).toBeNull();
+    expect(afterReset?.organized).toBe(false);
+    expect(afterReset?.releaseDate).toBeNull();
+    expect(afterReset?.playCount).toBe(1);
+    expect(afterReset?.orgasmCount).toBe(1);
+
+    context.queue.jobs = [];
+    const rebuild = await context.app.inject({
+      method: "POST",
+      url: `/videos/${movie.id}/preview/rebuild`,
+    });
+    expect(rebuild.statusCode).toBe(200);
+    expect(rebuild.json()).toMatchObject({ ok: true });
+    expect(context.queue.jobs.map((job) => job.queueName)).toEqual(["preview"]);
+
+    const thumbnailReset = await context.app.inject({
+      method: "DELETE",
+      url: `/videos/${movie.id}/thumbnail`,
+    });
+    expect(thumbnailReset.statusCode).toBe(200);
+    expect(thumbnailReset.json()).toEqual({
+      ok: true,
+      thumbnailPath: `/assets/videos/${movie.id}/thumb`,
+    });
+
+    const statsAfter = await context.app.inject({
+      method: "GET",
+      url: "/videos/stats",
+    });
+    expect(statsAfter.statusCode).toBe(200);
+    expect((statsAfter.json() as { totalPlays: number }).totalPlays).toBeGreaterThanOrEqual(1);
   });
 
   it("uploads, reads, parses, and deletes subtitle tracks", async () => {

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The SvelteKit app now owns most remaining admin and provider API flows directly.** Jobs mutations, plugin/scraper/StashBox management, local generated-asset routes, and the rest of the core video JSON/action endpoints now run through local `/api/*` handlers backed by shared app-core logic, shrinking the Fastify proxy surface further as the cutover work continues.
 - **The Svelte audio library page now uses the live app's floating playback bar.** `/audio/[id]` now mounts the custom player as a hovering bottom transport with waveform scrubbing and play/shuffle controls, while `/audio/tracks/[id]` uses the same custom player inline like the original app.
 - **The Svelte video detail page now keeps rating and subtitle choices in sync without a reload.** Rating stars repaint immediately after you click them, saved subtitle selections are restored only when the matching track still exists, and library subtitle defaults can re-apply correctly when you move between videos.
 - **The Svelte video detail page can stream video locally again.** The SvelteKit app now owns the `video-stream` transport used by `/videos/[id]`, so direct source playback and adaptive `hls2` playback no longer depend on the disabled Fastify fallback during the port.
@@ -41,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- The SvelteKit app now serves the remaining provider/admin route families it was still proxying for normal use: generated-asset routes, jobs mutations and queue controls, plugin/scraper/StashBox CRUD and result routes, metadata-provider helpers, stash-id / pHash contribution lookups, and the rest of the `videos/*` JSON/action surface. Shared `@obscura/app-core` modules now cover plugin execution, scraper runtime, StashBox runtime, video-core helpers, queue writes, and proposal/result mapping so Fastify and SvelteKit can share the same behavior and tests.
 - The SvelteKit app now has a custom audio playback stack for the ported detail routes: `AudioPlayer.svelte`, `AudioWaveformFilmstrip.svelte`, and a local `GET /api/audio-stream/:id` route for direct audio bytes and browser-safe transcoding. The Svelte audio library and audio-track detail pages can now play through the new app without falling back to the legacy Fastify stream endpoint.
 - Focused Svelte component coverage for the video detail subtitle-default flow. `VideoPlayer.test.ts` now verifies that preferred subtitle auto-selection fires for unlocked videos and re-arms when a new video clears the previous video's locked subtitle state.
 - The SvelteKit app now owns the video-stream transport used by `/videos/[id]`: `GET /api/video-stream/:id`, `/source`, `/hls/status`, `/hls/*`, and `/hls2/*`. Video detail playback can now fetch direct media bytes, legacy HLS assets, and virtual-HLS manifests/segments locally instead of failing with a 501 when the Fastify fallback is disabled.

@@ -1,0 +1,20 @@
+import { json, type RequestHandler } from "@sveltejs/kit";
+import { listScrapeResultsRead } from "@obscura/app-core";
+import { getWebDb } from "$lib/server/db";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
+
+export const GET: RequestHandler = async ({ url }) => {
+  const db = await getWebDb();
+  try {
+    return json(
+      await listScrapeResultsRead(db, {
+        status: url.searchParams.get("status") ?? undefined,
+        videoId: url.searchParams.get("videoId") ?? undefined,
+        limit: url.searchParams.get("limit") ?? undefined,
+        offset: url.searchParams.get("offset") ?? undefined,
+      }),
+    );
+  } catch (err) {
+    return mapAppCoreErrorToJson(err);
+  }
+};

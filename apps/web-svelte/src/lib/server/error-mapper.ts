@@ -1,7 +1,9 @@
 import { json } from "@sveltejs/kit";
 import {
   ConflictError,
+  InternalError,
   NotFoundError,
+  UnprocessableError,
   UpstreamError,
   ValidationError,
 } from "@obscura/app-core";
@@ -21,5 +23,12 @@ export function mapAppCoreErrorToJson(err: unknown): Response {
     return json({ error: err.message }, { status: 502 });
   if (err instanceof ConflictError)
     return json({ error: err.message }, { status: 409 });
+  if (err instanceof UnprocessableError)
+    return json(
+      err.detail ? { error: err.message, detail: err.detail } : { error: err.message },
+      { status: 422 },
+    );
+  if (err instanceof InternalError)
+    return json({ error: err.message }, { status: 500 });
   throw err;
 }

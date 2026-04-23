@@ -1,64 +1,137 @@
 import type { FastifyInstance } from "fastify";
 import type { MultipartFile } from "@fastify/multipart";
-import * as videoService from "../services/videos";
+import {
+  ConflictError,
+  InternalError,
+  NotFoundError,
+  UpstreamError,
+  ValidationError,
+  deleteVideoWrite,
+  getVideoDetailRead,
+  getVideoStatsRead,
+  listVideosRead,
+  recordVideoOrgasmWrite,
+  recordVideoPlayWrite,
+  rebuildVideoPreviewWrite,
+  resetVideoMetadataWrite,
+  resetVideoThumbnailWrite,
+  setCustomVideoThumbnailFromFrameWrite,
+  setCustomVideoThumbnailFromUrlWrite,
+  setCustomVideoThumbnailWrite,
+  updateVideoWrite,
+  uploadVideoEpisodeWrite,
+  uploadVideoMovieWrite,
+  type ListVideosQuery,
+  type UpdateVideoBody,
+} from "@obscura/app-core";
 import * as videoSubtitlesService from "../services/video-subtitles.service";
 import * as videoMarkersService from "../services/video-markers.service";
+import { db } from "../db";
+import { enqueueQueueJob } from "../lib/job-enqueue";
+import { streamToFile } from "../lib/upload";
+import { AppError } from "../plugins/error-handler";
+
+const videoWriteDeps = { enqueueJob: enqueueQueueJob };
+
+function rethrowAppCoreError(error: unknown): never {
+  if (error instanceof NotFoundError) throw new AppError(404, error.message);
+  if (error instanceof ValidationError) throw new AppError(400, error.message);
+  if (error instanceof UpstreamError) throw new AppError(502, error.message);
+  if (error instanceof ConflictError) throw new AppError(409, error.message);
+  if (error instanceof InternalError) throw new AppError(500, error.message);
+  throw error;
+}
 
 export async function videosRoutes(app: FastifyInstance) {
   // ─── GET /videos ──────────────────────────────────────────────
   app.get("/videos", async (request) => {
-    const query = request.query as videoService.ListVideosQuery;
-    return videoService.listVideos(query);
+    try {
+      return await listVideosRead(db, request.query as ListVideosQuery);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── GET /videos/stats ────────────────────────────────────────
   app.get("/videos/stats", async (request) => {
-    const query = request.query as { nsfw?: string };
-    return videoService.getVideoStats(query.nsfw === "off");
+    try {
+      const query = request.query as { nsfw?: string };
+      return await getVideoStatsRead(db, query.nsfw === "off");
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── GET /videos/:id ──────────────────────────────────────────
   app.get("/videos/:id", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.getVideoDetail(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await getVideoDetailRead(db, id);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── PATCH /videos/:id ────────────────────────────────────────
   app.patch("/videos/:id", async (request) => {
-    const { id } = request.params as { id: string };
-    const body = request.body as videoService.UpdateVideoBody;
-    return videoService.updateVideo(id, body);
+    try {
+      const { id } = request.params as { id: string };
+      const body = request.body as UpdateVideoBody;
+      return await updateVideoWrite(db, id, body);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── DELETE /videos/:id ───────────────────────────────────────
   app.delete("/videos/:id", async (request) => {
-    const { id } = request.params as { id: string };
-    const query = request.query as { deleteFile?: string };
-    return videoService.deleteVideo(id, query.deleteFile === "true");
+    try {
+      const { id } = request.params as { id: string };
+      const query = request.query as { deleteFile?: string };
+      return await deleteVideoWrite(db, id, query.deleteFile === "true");
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── POST /videos/:id/reset-metadata ──────────────────────────
   app.post("/videos/:id/reset-metadata", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.resetVideoMetadata(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await resetVideoMetadataWrite(db, id);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── POST /videos/:id/play ────────────────────────────────────
   app.post("/videos/:id/play", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.recordVideoPlay(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await recordVideoPlayWrite(db, id);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── POST /videos/:id/orgasm ──────────────────────────────────
   app.post("/videos/:id/orgasm", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.recordVideoOrgasm(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await recordVideoOrgasmWrite(db, id);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── POST /videos/:id/preview/rebuild ─────────────────────────
   app.post("/videos/:id/preview/rebuild", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.rebuildVideoPreview(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await rebuildVideoPreviewWrite(db, id, videoWriteDeps);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── Thumbnails ───────────────────────────────────────────────
@@ -70,27 +143,44 @@ export async function videosRoutes(app: FastifyInstance) {
       return { error: "No file uploaded" };
     }
     const buffer = await file.toBuffer();
-    return videoService.setCustomVideoThumbnail(id, buffer);
+    try {
+      return await setCustomVideoThumbnailWrite(db, id, buffer);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   app.delete("/videos/:id/thumbnail", async (request) => {
-    const { id } = request.params as { id: string };
-    return videoService.resetVideoThumbnail(id);
+    try {
+      const { id } = request.params as { id: string };
+      return await resetVideoThumbnailWrite(db, id);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   app.post("/videos/:id/thumbnail/from-url", async (request) => {
-    const { id } = request.params as { id: string };
-    const { imageUrl } = request.body as { imageUrl: string };
-    return videoService.setCustomVideoThumbnailFromUrl(id, imageUrl);
+    try {
+      const { id } = request.params as { id: string };
+      const { imageUrl } = request.body as { imageUrl: string };
+      return await setCustomVideoThumbnailFromUrlWrite(db, id, imageUrl);
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   app.post("/videos/:id/thumbnail/from-frame", async (request) => {
-    const { id } = request.params as { id: string };
-    const body = request.body as { seconds?: number };
-    return videoService.setCustomVideoThumbnailFromFrame(
-      id,
-      Number(body?.seconds),
-    );
+    try {
+      const { id } = request.params as { id: string };
+      const body = request.body as { seconds?: number };
+      return await setCustomVideoThumbnailFromFrameWrite(
+        db,
+        id,
+        Number(body?.seconds),
+      );
+    } catch (error) {
+      rethrowAppCoreError(error);
+    }
   });
 
   // ─── POST /videos/upload ──────────────────────────────────────
@@ -143,14 +233,23 @@ export async function videosRoutes(app: FastifyInstance) {
       }
     }
 
-    if (seriesId) {
-      return videoService.uploadVideoEpisode(seriesId, file);
+    try {
+      const upload = {
+        filename: file.filename,
+        mimetype: file.mimetype,
+        persist: (dest: string) => streamToFile(file, dest),
+      };
+      if (seriesId) {
+        return await uploadVideoEpisodeWrite(db, seriesId, upload, videoWriteDeps);
+      }
+      if (!libraryRootId) {
+        reply.code(400);
+        return { error: "libraryRootId or seriesId field is required" };
+      }
+      return await uploadVideoMovieWrite(db, libraryRootId, upload, videoWriteDeps);
+    } catch (error) {
+      rethrowAppCoreError(error);
     }
-    if (!libraryRootId) {
-      reply.code(400);
-      return { error: "libraryRootId or seriesId field is required" };
-    }
-    return videoService.uploadVideoMovie(libraryRootId, file);
   });
 
   // ─── Subtitles ────────────────────────────────────────────────

@@ -619,7 +619,15 @@ export async function stashboxRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "entityType, entityId, stashBoxEndpointId, and stashId are required" });
     }
 
-    const validTypes = ["scene", "performer", "studio", "tag"];
+    const validTypes = [
+      "video",
+      "video_episode",
+      "video_movie",
+      "scene",
+      "performer",
+      "studio",
+      "tag",
+    ];
     if (!validTypes.includes(body.entityType)) {
       return reply.code(400).send({ error: `entityType must be one of: ${validTypes.join(", ")}` });
     }

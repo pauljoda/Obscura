@@ -1,115 +1,70 @@
 import type { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
 import { apiRoutes } from "@obscura/contracts";
-import type {
-  NormalizedMovieResult,
-  NormalizedEpisodeResult,
-  NormalizedSeriesResult,
-} from "@obscura/contracts";
-import { scrapeResults } from "@obscura/db/src/schema";
-import { db } from "../db";
 import {
-  acceptMovieScrape,
-  acceptEpisodeScrape,
-  acceptSeriesScrape,
-  type AcceptFieldMask,
-  type CascadeAcceptSpec,
-} from "../services/scrape-accept.service";
+  ConflictError,
+  InternalError,
+  NotFoundError,
+  UpstreamError,
+  ValidationError,
+  acceptEpisodeScrapeWrite,
+  acceptMovieScrapeWrite,
+  acceptSeriesScrapeWrite,
+  type AcceptEpisodeScrapeInput,
+  type AcceptMovieScrapeInput,
+  type AcceptSeriesScrapeInput,
+} from "@obscura/app-core";
+import { db } from "../db";
+import { AppError } from "../plugins/error-handler";
 
-interface AcceptBody {
-  scrapeResultId: string;
-  fieldMask?: AcceptFieldMask;
+function rethrowAppCoreError(error: unknown): never {
+  if (error instanceof NotFoundError) throw new AppError(404, error.message);
+  if (error instanceof ValidationError) throw new AppError(400, error.message);
+  if (error instanceof UpstreamError) throw new AppError(502, error.message);
+  if (error instanceof ConflictError) throw new AppError(409, error.message);
+  if (error instanceof InternalError) throw new AppError(500, error.message);
+  throw error;
 }
 
 export async function videoAcceptRoutes(app: FastifyInstance) {
-  app.post(apiRoutes.videoMovieAcceptScrape, async (request, reply) => {
-    const { id: movieId } = request.params as { id: string };
-    const body = request.body as AcceptBody;
-    if (!body?.scrapeResultId) {
-      return reply.code(400).send({ ok: false, error: "scrapeResultId required" });
-    }
-    const [row] = await db
-      .select()
-      .from(scrapeResults)
-      .where(eq(scrapeResults.id, body.scrapeResultId))
-      .limit(1);
-    if (!row) {
-      return reply.code(404).send({ ok: false, error: "scrape result not found" });
-    }
-    const proposed = row.proposedResult as unknown;
-    if (!proposed || typeof proposed !== "object") {
-      return reply.code(400).send({
-        ok: false,
-        error: "scrape result has no proposed_result payload",
+  app.post(apiRoutes.videoMovieAcceptScrape, async (request) => {
+    try {
+      const { id: movieId } = request.params as { id: string };
+      const body = (request.body ?? {}) as Omit<AcceptMovieScrapeInput, "movieId">;
+      return await acceptMovieScrapeWrite(db, {
+        movieId,
+        ...body,
       });
+    } catch (error) {
+      rethrowAppCoreError(error);
     }
-    await acceptMovieScrape({
-      scrapeResultId: body.scrapeResultId,
-      movieId,
-      result: proposed as NormalizedMovieResult,
-      fieldMask: body.fieldMask,
-    });
-    return { ok: true };
   });
 
-  app.post(apiRoutes.videoEpisodeAcceptScrape, async (request, reply) => {
-    const { id: episodeId } = request.params as { id: string };
-    const body = request.body as AcceptBody;
-    if (!body?.scrapeResultId) {
-      return reply.code(400).send({ ok: false, error: "scrapeResultId required" });
-    }
-    const [row] = await db
-      .select()
-      .from(scrapeResults)
-      .where(eq(scrapeResults.id, body.scrapeResultId))
-      .limit(1);
-    if (!row) {
-      return reply.code(404).send({ ok: false, error: "scrape result not found" });
-    }
-    const proposed = row.proposedResult as unknown;
-    if (!proposed || typeof proposed !== "object") {
-      return reply.code(400).send({
-        ok: false,
-        error: "scrape result has no proposed_result payload",
+  app.post(apiRoutes.videoEpisodeAcceptScrape, async (request) => {
+    try {
+      const { id: episodeId } = request.params as { id: string };
+      const body = (request.body ?? {}) as Omit<
+        AcceptEpisodeScrapeInput,
+        "episodeId"
+      >;
+      return await acceptEpisodeScrapeWrite(db, {
+        episodeId,
+        ...body,
       });
+    } catch (error) {
+      rethrowAppCoreError(error);
     }
-    await acceptEpisodeScrape({
-      scrapeResultId: body.scrapeResultId,
-      episodeId,
-      result: proposed as NormalizedEpisodeResult,
-      fieldMask: body.fieldMask,
-    });
-    return { ok: true };
   });
 
-  app.post(apiRoutes.videoSeriesAcceptScrape, async (request, reply) => {
-    const { id: seriesId } = request.params as { id: string };
-    const body = request.body as AcceptBody & { cascade?: CascadeAcceptSpec };
-    if (!body?.scrapeResultId) {
-      return reply.code(400).send({ ok: false, error: "scrapeResultId required" });
-    }
-    const [row] = await db
-      .select()
-      .from(scrapeResults)
-      .where(eq(scrapeResults.id, body.scrapeResultId))
-      .limit(1);
-    if (!row) {
-      return reply.code(404).send({ ok: false, error: "scrape result not found" });
-    }
-    const proposed = row.proposedResult as unknown;
-    if (!proposed || typeof proposed !== "object") {
-      return reply.code(400).send({
-        ok: false,
-        error: "scrape result has no proposed_result payload",
+  app.post(apiRoutes.videoSeriesAcceptScrape, async (request) => {
+    try {
+      const { id: seriesId } = request.params as { id: string };
+      const body = (request.body ?? {}) as Omit<AcceptSeriesScrapeInput, "seriesId">;
+      return await acceptSeriesScrapeWrite(db, {
+        seriesId,
+        ...body,
       });
+    } catch (error) {
+      rethrowAppCoreError(error);
     }
-    const counts = await acceptSeriesScrape({
-      scrapeResultId: body.scrapeResultId,
-      seriesId,
-      result: proposed as NormalizedSeriesResult,
-      fieldMask: body.fieldMask,
-      cascade: body.cascade,
-    });
-    return { ok: true, ...counts };
   });
 }

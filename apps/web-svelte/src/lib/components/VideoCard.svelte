@@ -43,13 +43,48 @@
       imagePath: p.imagePath,
     })),
   );
+  const thumbnailGradient = $derived(VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]);
+  let failedThumbnailSources = $state<string[]>([]);
+  const thumbnailCandidate = $derived(video.cardThumbnail || video.thumbnail || null);
+  const thumbnailSrc = $derived.by(() => {
+    if (!thumbnailCandidate) return null;
+    return failedThumbnailSources.includes(thumbnailCandidate) ? null : thumbnailCandidate;
+  });
+  const showThumbnail = $derived(thumbnailSrc !== null);
+
+  function markThumbnailFailed() {
+    const source = thumbnailCandidate;
+    if (!source || failedThumbnailSources.includes(source)) return;
+    failedThumbnailSources = [...failedThumbnailSources, source];
+  }
 </script>
+
+{#snippet thumbnailFallback(frameClass = "", iconClass = "")}
+  <div
+    class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,239,213,0.16),transparent_38%),linear-gradient(180deg,rgba(7,8,11,0.06)_0%,rgba(7,8,11,0.55)_100%)]"
+    aria-hidden="true"
+  ></div>
+  <div class="relative flex h-full w-full items-center justify-center">
+    <div
+      class={cn(
+        "flex items-center justify-center border border-accent-500/25 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_24px_rgba(0,0,0,0.35)] backdrop-blur-sm",
+        frameClass,
+      )}
+    >
+      <Film
+        class={cn(
+          "text-accent-100 drop-shadow-[0_0_14px_rgba(196,154,90,0.24)]",
+          iconClass,
+        )}
+      />
+    </div>
+  </div>
+{/snippet}
 
 {#if variant === "list"}
   <a href={video.href} class="block">
     <div class="surface-card-sharp group flex items-center gap-3 px-3 py-2 cursor-pointer">
       {#if onToggleSelect}
-        <!-- svelte-ignore a11y_consider_explicit_label -->
         <div
           onclick={(e) => e.stopPropagation()}
           role="presentation"
@@ -68,17 +103,20 @@
         <div
           class={cn(
             "relative w-28 flex-shrink-0 aspect-video overflow-hidden",
-            VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length],
+            thumbnailGradient,
           )}
         >
-          {#if video.thumbnail}
+          {#if showThumbnail}
             <img
-              src={video.cardThumbnail || video.thumbnail}
+              src={thumbnailSrc}
               alt={video.title}
               loading={index < 6 ? "eager" : "lazy"}
               decoding="async"
               class="h-full w-full object-cover"
+              onerror={markThumbnailFailed}
             />
+          {:else}
+            {@render thumbnailFallback("h-11 w-11", "h-5 w-5")}
           {/if}
           <div
             class="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5"
@@ -108,7 +146,7 @@
             isNsfw={video.isNsfw ?? false}
             class="truncate text-[0.8rem] font-medium text-text-primary block"
           >
-            {#snippet children()}{video.title}{/snippet}
+            {video.title}
           </NsfwText>
           {#if video.resolution}
             <span class="pill-accent px-1 py-0 text-[0.55rem] font-semibold flex-shrink-0">
@@ -199,17 +237,18 @@
       <div
         class={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12",
-          !video.thumbnail && VIDEO_CARD_GRADIENTS[0],
+          !showThumbnail && thumbnailGradient,
         )}
       >
-        {#if video.cardThumbnail || video.thumbnail}
+        {#if showThumbnail}
           <img
-            src={video.cardThumbnail || video.thumbnail}
+            src={thumbnailSrc}
             alt=""
             class="h-full w-full object-cover"
+            onerror={markThumbnailFailed}
           />
         {:else}
-          <Film class="h-3.5 w-3.5 text-text-disabled" />
+          {@render thumbnailFallback("h-6 w-6", "h-3.5 w-3.5")}
         {/if}
       </div>
       <div class="flex-1 min-w-0">
@@ -228,17 +267,18 @@
       <div
         class={cn(
           "shrink-0 overflow-hidden bg-surface-1 flex items-center justify-center h-8 w-12",
-          !video.thumbnail && VIDEO_CARD_GRADIENTS[0],
+          !showThumbnail && thumbnailGradient,
         )}
       >
-        {#if video.cardThumbnail || video.thumbnail}
+        {#if showThumbnail}
           <img
-            src={video.cardThumbnail || video.thumbnail}
+            src={thumbnailSrc}
             alt=""
             class="h-full w-full object-cover"
+            onerror={markThumbnailFailed}
           />
         {:else}
-          <Film class="h-3.5 w-3.5 text-text-disabled" />
+          {@render thumbnailFallback("h-6 w-6", "h-3.5 w-3.5")}
         {/if}
       </div>
       <div class="flex-1 min-w-0">
@@ -258,21 +298,20 @@
         <div
           class={cn(
             "relative aspect-video overflow-hidden bg-surface-1",
-            !video.thumbnail && VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length],
+            !showThumbnail && thumbnailGradient,
           )}
         >
-          {#if video.thumbnail}
+          {#if showThumbnail}
             <img
-              src={video.cardThumbnail || video.thumbnail}
+              src={thumbnailSrc}
               alt={video.title}
               loading={imageLoading}
               decoding="async"
               class="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
+              onerror={markThumbnailFailed}
             />
           {:else}
-            <div class="flex h-full w-full items-center justify-center">
-              <Film class="h-7 w-7 text-white/10" />
-            </div>
+            {@render thumbnailFallback("h-14 w-14", "h-7 w-7")}
           {/if}
 
           <div
@@ -330,7 +369,7 @@
             isNsfw={video.isNsfw ?? false}
             class="truncate text-[0.8rem] font-medium text-text-primary leading-tight block"
           >
-            {#snippet children()}{video.title}{/snippet}
+            {video.title}
           </NsfwText>
 
           {#if video.studio || performersRow.length > 0}

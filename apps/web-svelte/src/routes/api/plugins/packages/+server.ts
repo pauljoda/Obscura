@@ -1,7 +1,8 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { mapInstalledPluginPackages } from "@obscura/app-core";
+import { installPluginPackageWrite, mapInstalledPluginPackages } from "@obscura/app-core";
 import { schema } from "@obscura/db";
 import { getWebDb } from "$lib/server/db";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const GET: RequestHandler = async () => {
   const db = await getWebDb();
@@ -11,4 +12,14 @@ export const GET: RequestHandler = async () => {
   ]);
 
   return json(mapInstalledPluginPackages({ packageRows, authRows }));
+};
+
+export const POST: RequestHandler = async ({ request }) => {
+  const db = await getWebDb();
+
+  try {
+    return json(await installPluginPackageWrite(db, await request.json()));
+  } catch (error) {
+    return mapAppCoreErrorToJson(error);
+  }
 };

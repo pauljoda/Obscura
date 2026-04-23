@@ -309,9 +309,21 @@ importers:
       '@obscura/media-core':
         specifier: workspace:*
         version: link:../media-core
+      '@obscura/plugins':
+        specifier: workspace:*
+        version: link:../plugins
+      '@obscura/stash-import':
+        specifier: workspace:*
+        version: link:../stash-import
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(pg@8.20.0)(postgres@3.4.8)
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
+      js-yaml:
+        specifier: ^4.1.1
+        version: 4.1.1
       pg-boss:
         specifier: ^10.3.2
         version: 10.4.2
@@ -319,6 +331,9 @@ importers:
         specifier: ^3.4.8
         version: 3.4.8
     devDependencies:
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       '@types/node':
         specifier: ^22.19.17
         version: 22.19.17
@@ -400,6 +415,9 @@ importers:
 
   packages/stash-import:
     dependencies:
+      '@obscura/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@obscura/media-core':
         specifier: workspace:*
         version: link:../media-core

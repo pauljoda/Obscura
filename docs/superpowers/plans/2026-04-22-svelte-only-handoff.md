@@ -68,10 +68,27 @@ From `apps/web-svelte/src/routes/api/`:
 - `performers/:id/favorite`, `rating`, `image`, `image/from-url`
 - `video-series/:id/cover`, `backdrop` (POST multipart + DELETE)
 
-**Video sub-routes (partial)**
+**Video routes**
 
-- `videos/:id/markers`, `videos/markers/:markerId`
+- `videos` (list)
+- `videos/stats`
+- `videos/upload`
+- `videos/:id` (GET, PATCH, DELETE)
+- `videos/:id/reset-metadata`
+- `videos/:id/play`
+- `videos/:id/orgasm`
+- `videos/:id/preview/rebuild`
+- `videos/:id/thumbnail` (+ `from-url`, `from-frame`)
 - `videos/:id/subtitles`, `subtitles/:trackId` (+ `source`, `cues`)
+- `videos/:id/markers`, `videos/markers/:markerId`
+
+**Media libraries**
+
+- `collections` (+ items, reorder, refresh, preview-rules)
+- `galleries` (+ stats, cover, chapters, image upload/list)
+- `images` (+ bulk)
+- `audio-libraries` (+ stats, cover, track upload)
+- `audio-tracks` (+ play, markers)
 
 **Provider integrations (list only)**
 
@@ -97,27 +114,23 @@ var at it to keep them working while you migrate them.
 **Fully proxied**
 
 1. `assets/*` — generated asset streaming (thumbnails, sprites, etc.)
-2. `galleries/*` — list, detail, CRUD, zip handling
-3. `images/*` — list, detail, CRUD, bulk update
-4. `audio-libraries/*` — list, detail, CRUD, images
-5. `audio-tracks/*` — list, detail, CRUD
-6. `audio-stream/*` — HLS-like audio streaming
-7. `collections/*` — list, detail, CRUD, rule engine
-8. `video-accept/*` — scrape-accept flows for series/movies/episodes
-9. `video-library/*` — hierarchy/browse endpoints
-10. `videos/*` (core) — list, detail, update, delete, upload, thumbnails,
-    play, orgasm, preview rebuild
-11. `video-stream/*` — HLS streaming
+2. `audio-stream/*` — HLS-like audio streaming
+3. `video-accept/*` — scrape-accept flows for series/movies/episodes
+4. `video-library/*` — hierarchy/browse endpoints
+5. `video-stream/*` — HLS streaming
 
 **Partially proxied (only list / dashboard is local)**
 
-12. `jobs` mutations — run, cancel, queues/:name/run, phash-backfill,
-    rebuild-preview, migrate-video-asset-storage, acknowledge-failed,
-    clear-metadata
-13. `scrapers` writes — install, delete, patch, execute, accept
-14. `stashbox` writes — scrape, test, install
-15. `plugins` writes — install, delete, patch, execute, auth config
-16. `videos/:id/subtitles/extract` — queue-backed enqueue
+6. `jobs` mutations — run, cancel, queues/:name/run, phash-backfill,
+   rebuild-preview, migrate-video-asset-storage, acknowledge-failed,
+   clear-metadata
+7. `scrapers` writes and runtime reads — community index/install, execute,
+   results, accept/reject, performer apply-scrape
+8. `stashbox` writes and identify flows — test, identify, lookup,
+   stash-ids, phash contributions, metadata providers
+9. `plugins` writes and runtime reads — install, delete, patch, execute,
+   auth config, indexes, batch runs
+10. `videos/:id/subtitles/extract` — queue-backed enqueue
 
 ## Approximate remaining work
 
@@ -133,9 +146,11 @@ From the Fastify service layer:
 | `services/collection.service.ts` | 601 |
 | + scrape-accept + plugins + scrapers + stashbox routes | ~2500 |
 
-Total: roughly 7000-8000 LOC still to move behind `@obscura/app-core`.
-Pattern is established (sentinel error classes, `db: AppDb` threading,
-Svelte `+server.ts` shim); remaining work is mechanical.
+The remaining work is now concentrated in runtime-heavy surfaces
+(assets, stream delivery, queue-backed scraper/plugin/jobs flows) rather
+than broad CRUD coverage. Pattern is established: shared app-core
+helpers, Svelte `+server.ts` shims, and 501s for anything still falling
+through the proxy.
 
 ## Migration rhythm
 

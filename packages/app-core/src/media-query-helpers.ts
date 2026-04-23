@@ -175,3 +175,5 @@ export function parsePagination(
     offset: Number(offsetStr) || 0,
   };
 }
+
+export const MAX_ENTITY_LIST_LIMIT = 50_000;

@@ -1,6 +1,11 @@
 import PgBoss from "pg-boss";
 import { and, eq, inArray } from "drizzle-orm";
-import type { JobKind, JobTriggerKind, QueueName } from "@obscura/contracts";
+import {
+  queueDefinitions,
+  type JobKind,
+  type JobTriggerKind,
+  type QueueName,
+} from "@obscura/contracts";
 import type { AppDb } from "@obscura/db";
 import { schema } from "@obscura/db";
 
@@ -39,6 +44,9 @@ async function getBoss() {
         console.error("[app-core] pg-boss error", error);
       });
       await boss.start();
+      for (const definition of queueDefinitions) {
+        await boss.createQueue(definition.name);
+      }
       return boss;
     })();
   }
@@ -111,4 +119,28 @@ export async function enqueueQueueJob(
   });
 
   return { id: jobId };
+}
+
+export async function cancelQueueJob(
+  queueName: QueueName,
+  jobId: string,
+): Promise<void> {
+  const boss = await getBoss();
+  try {
+    await boss.cancel(queueName, jobId);
+  } catch {
+    // already completed / failed / archived — nothing to cancel
+  }
+}
+
+export async function deleteQueueJob(
+  queueName: QueueName,
+  jobId: string,
+): Promise<void> {
+  const boss = await getBoss();
+  try {
+    await boss.deleteJob(queueName, jobId);
+  } catch {
+    // already gone
+  }
 }

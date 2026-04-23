@@ -29,9 +29,26 @@ export class UpstreamError extends Error {
   }
 }
 
+export class InternalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InternalError";
+  }
+}
+
 export class ConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ConflictError";
+  }
+}
+
+export class UnprocessableError extends Error {
+  detail?: string;
+
+  constructor(message: string, options?: { detail?: string }) {
+    super(message);
+    this.name = "UnprocessableError";
+    this.detail = options?.detail;
   }
 }

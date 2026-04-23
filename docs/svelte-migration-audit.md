@@ -1,12 +1,12 @@
 # Svelte Migration Audit
 
-Last updated: 2026-04-21
+Last updated: 2026-04-22
 
 ## Executive Summary
 
 The SvelteKit app has reached route-surface parity with the current Next.js app: both expose the same 35 first-party page routes. The shell is also much closer to parity after restoring the command palette, the mobile overflow navigation sheet, and the persistent playlist controller/queue.
 
-This is still not a full-app cutover candidate. The target is full-stack SvelteKit, but the current implementation still depends on the existing Fastify API for server data and mutations, the Docker/dev entrypoints still boot the Next.js web app, and the unified production image still packages `apps/web` rather than `apps/web-svelte`.
+This is still not a full-app cutover candidate. The target is full-stack SvelteKit, but production wiring still boots the Next.js web app and the unified production image still packages `apps/web` rather than `apps/web-svelte`. On the API side, SvelteKit now owns a substantial portion of the route tree, but a smaller proxy surface still exists for assets/streaming and the remaining scraper/runtime mutations.
 
 ## Chosen Direction
 
@@ -61,16 +61,25 @@ Covered route families:
 
 ### Backend
 
-The backend has not been ported to SvelteKit.
+The backend is now partially ported to SvelteKit.
 
-- `apps/web-svelte` uses `PUBLIC_API_URL` on the client and `INTERNAL_API_URL` on the server to talk to the existing Fastify service.
-- `apps/web-svelte/src/routes` currently has no `+server.ts` endpoints.
-- The only server-owned route file in the Svelte app is `+layout.server.ts`, which performs SSR data loading, not API replacement.
+- `apps/web-svelte` is the browser-facing API ingress. Client helpers default to same-origin `/api`, and the catch-all proxy in `apps/web-svelte/src/routes/api/[...rest]/+server.ts` only handles routes SvelteKit does not yet own locally.
+- `apps/web-svelte/src/routes/api/**/+server.ts` now covers:
+  - foundation and settings (`changelog`, `client-info`, `system/status`, `settings/library`, `libraries`)
+  - entity CRUD and media writes for `tags`, `studios`, `performers`, `video-series`
+  - collections, galleries, images, audio libraries, and audio tracks
+  - `search`, `jobs` dashboard `GET`, provider package lists, and the full core `videos/*` JSON/mutation surface
+  - video subtitles and markers
+- The remaining Fastify dependency surface is narrower and concentrated in:
+  - generated asset delivery (`/assets/*`)
+  - stream delivery (`/video-stream/*`, `/audio-stream/*`)
+  - scraper, StashBox, plugin, video-accept, and jobs mutation endpoints
+  - `POST /videos/:id/subtitles/extract`
 
 Cutover implication:
 
-- Replacing React with SvelteKit is currently feasible.
-- Replacing Node/Fastify is not. The Svelte app is still coupled to the existing API process.
+- Replacing the React UI is already feasible.
+- Replacing the Fastify HTTP process for normal CRUD flows is close, but not finished until the remaining proxy-only route families are ported.
 
 ### Deployment
 
@@ -91,7 +100,8 @@ The root scripts should treat `@obscura/web-svelte` as a first-class app during 
 
 ### Hard blockers
 
-- No Svelte-owned backend surface. All data and mutation behavior still rely on Fastify.
+- Generated asset and media stream endpoints still live behind the Fastify proxy surface.
+- Scraper/plugin/StashBox/video-accept/jobs mutation flows still rely on Fastify route handlers.
 - Docker/dev/prod entrypoints still boot the Next.js app.
 - No release workflow path packages `apps/web-svelte`.
 
@@ -104,7 +114,7 @@ The root scripts should treat `@obscura/web-svelte` as a first-class app during 
 ### Recommended next steps
 
 1. Add route-by-route visual baselines for the shared 35-route surface, starting with dashboard, videos, search, plugins, settings, identify, jobs, and the main detail pages.
-2. Extract shared framework-agnostic application services from Fastify before adding SvelteKit `+server.ts` handlers.
-3. Add SvelteKit-owned `/api/*`, `/assets/*`, and streaming handlers route family by route family while keeping Fastify as the oracle until each slice passes parity.
+2. Finish the remaining runtime ownership gaps: scraper/plugin/StashBox/video-accept/jobs mutations, `/assets/*`, `/video-stream/*`, and `/audio-stream/*`.
+3. Run Svelte-only verification with `INTERNAL_API_URL=none` and treat every `[api-proxy] 501` as a migration bug until normal use is clean.
 4. Swap Docker/dev wiring to a selectable Svelte web target only after the browser parity pass is clean.
 5. Burn down the `svelte-check` warning backlog before cutover so new regressions are visible.

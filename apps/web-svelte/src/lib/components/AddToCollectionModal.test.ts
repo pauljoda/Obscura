@@ -3,9 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as navigation from "$app/navigation";
 import AddToCollectionModal from "./AddToCollectionModal.svelte";
 
-const fetchCollections = vi.fn();
-const addCollectionItems = vi.fn();
-const createCollection = vi.fn();
+const { fetchCollections, addCollectionItems, createCollection } = vi.hoisted(
+  () => ({
+    fetchCollections: vi.fn(),
+    addCollectionItems: vi.fn(),
+    createCollection: vi.fn(),
+  }),
+);
 
 vi.mock("$lib/api/media", () => ({
   fetchCollections,

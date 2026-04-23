@@ -270,6 +270,19 @@ export async function lookupTagViaStashBox(
   });
 }
 
+export async function lookupPerformerViaStashBox(
+  endpointId: string,
+  query: string,
+): Promise<{
+  performers: NormalizedPerformerScrapeResult[];
+  rawPerformers: unknown[];
+}> {
+  return fetchApi(`/stashbox-endpoints/${endpointId}/lookup/performer`, {
+    method: "POST",
+    body: JSON.stringify({ query }),
+  });
+}
+
 export type { NormalizedStudioScrapeResult, NormalizedTagScrapeResult };
 
 /* ─── Obscura Community Plugins ─────────────────────────────── */

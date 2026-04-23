@@ -31,6 +31,7 @@ Thumbs.db
 
 # IDE
 .idea/
+.cursor/
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json

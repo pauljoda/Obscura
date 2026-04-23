@@ -8,7 +8,7 @@ import type {
   SubtitleCueDto,
   VideoMarkerDto,
 } from "@obscura/contracts";
-import { buildQueryString, fetchApi, uploadFile } from "./core";
+import { buildQueryString, fetchApi, toApiUrl, uploadFile } from "./core";
 import {
   buildFetchVideosQuery,
   type FetchVideosParams,
@@ -125,8 +125,9 @@ export async function fetchVideoSubtitleSource(
   videoId: string,
   trackId: string,
 ): Promise<string> {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-  const res = await fetch(`${base}/videos/${videoId}/subtitles/${trackId}/source`);
+  const res = await fetch(
+    toApiUrl(`/videos/${videoId}/subtitles/${trackId}/source`) ?? "",
+  );
   if (!res.ok) {
     throw new Error(`Failed to load subtitle source: ${res.status}`);
   }
@@ -139,18 +140,10 @@ export async function uploadVideoSubtitle(
   language: string,
   label?: string,
 ): Promise<{ track: VideoSubtitleTrackDto }> {
-  const form = new FormData();
-  form.append("language", language);
-  if (label) form.append("label", label);
-  form.append("file", file);
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/videos/${videoId}/subtitles`,
-    { method: "POST", body: form },
-  );
-  if (!res.ok) {
-    throw new Error((await res.text()) || `Upload failed: ${res.status}`);
-  }
-  return res.json();
+  return uploadFile(`/videos/${videoId}/subtitles`, file, {
+    language,
+    ...(label ? { label } : {}),
+  });
 }
 
 export async function deleteVideoSubtitle(

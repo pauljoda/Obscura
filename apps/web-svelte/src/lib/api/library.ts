@@ -178,9 +178,8 @@ export async function clearAllMetadata(): Promise<{
 export async function acknowledgeJobFailures(queueName?: string): Promise<{
   ok: boolean;
   queueName: string | null;
-  redisRemoved: number;
-  redisRemovedByQueue: Record<string, number>;
   runsUpdated: number;
+  externalRemovedByQueue: Record<string, number>;
 }> {
   return fetchApi("/jobs/acknowledge-failed", {
     method: "POST",

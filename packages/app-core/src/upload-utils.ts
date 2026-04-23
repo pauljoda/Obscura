@@ -1,6 +1,6 @@
 import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ValidationError } from "./errors";
+import { InternalError, ValidationError } from "./errors";
 
 const uploadCategories = {
   video: {
@@ -69,8 +69,8 @@ export function sanitizeUploadFilename(raw: string | undefined | null): string {
   return base;
 }
 
-export function validateUploadInput(
-  file: UploadFileInput | null | undefined,
+export function validateUploadMetadata(
+  file: Pick<UploadFileInput, "filename" | "mimetype"> | null | undefined,
   category: UploadCategory,
 ) {
   if (!file) throw new ValidationError("No file provided");
@@ -90,10 +90,18 @@ export function validateUploadInput(
   ) {
     throw new ValidationError(`Unsupported ${category} mime type "${mime}"`);
   }
-  if (!file.buffer.length) {
+  return { safeName, ext };
+}
+
+export function validateUploadInput(
+  file: UploadFileInput | null | undefined,
+  category: UploadCategory,
+) {
+  const validated = validateUploadMetadata(file, category);
+  if (!file?.buffer.length) {
     throw new ValidationError("Uploaded file is empty");
   }
-  return { safeName, ext };
+  return validated;
 }
 
 export async function resolveCollisionSafePath(
@@ -109,7 +117,7 @@ export async function resolveCollisionSafePath(
     candidate = path.join(dir, `${base} (${counter})${ext}`);
     counter += 1;
     if (counter > 9999) {
-      throw new ValidationError(
+      throw new InternalError(
         "Could not find a free filename after 9999 attempts",
       );
     }

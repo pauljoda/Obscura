@@ -140,9 +140,13 @@
     try {
       const result = await acknowledgeJobFailures(scope === "all" ? undefined : scope);
       const parts: string[] = [];
-      if (result.redisRemoved > 0) {
+      const externalRemoved = Object.values(result.externalRemovedByQueue).reduce(
+        (sum, count) => sum + count,
+        0,
+      );
+      if (externalRemoved > 0) {
         parts.push(
-          `cleared ${result.redisRemoved} failed BullMQ job${result.redisRemoved === 1 ? "" : "s"}`,
+          `cleared ${externalRemoved} failed queue job${externalRemoved === 1 ? "" : "s"}`,
         );
       }
       if (result.runsUpdated > 0) {

@@ -7,7 +7,7 @@ import { PUBLIC_API_URL } from "$env/static/public";
 
 export { buildQueryString } from "../query-string";
 
-const API_BASE = PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = PUBLIC_API_URL || "/api";
 
 export async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
