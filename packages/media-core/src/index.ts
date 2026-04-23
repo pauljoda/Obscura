@@ -379,23 +379,46 @@ function findWorkspaceRoot(startDir: string) {
   }
 }
 
+function getDefaultCacheRoots() {
+  const workspaceRoot = findWorkspaceRoot(process.cwd());
+  if (!workspaceRoot) {
+    const localCache = path.resolve(process.cwd(), ".obscura-cache");
+    return {
+      canonical: localCache,
+      candidates: [localCache],
+    };
+  }
+
+  const sharedCache = path.join(workspaceRoot, ".obscura-cache");
+  const legacyWorkerCache = path.join(workspaceRoot, "apps", "worker", ".obscura-cache");
+  const legacyApiCache = path.join(workspaceRoot, "apps", "api", ".obscura-cache");
+
+  return {
+    canonical: sharedCache,
+    candidates: [sharedCache, legacyWorkerCache, legacyApiCache],
+  };
+}
+
 export function getCacheRootDir() {
   if (process.env.OBSCURA_CACHE_DIR) {
     return path.resolve(process.env.OBSCURA_CACHE_DIR);
   }
 
-  const workspaceRoot = findWorkspaceRoot(process.cwd());
-  if (!workspaceRoot) {
-    return path.resolve(process.cwd(), ".obscura-cache");
+  return getDefaultCacheRoots().canonical;
+}
+
+/**
+ * Cache roots we should search when reading generated assets.
+ * The shared workspace cache is canonical, but we continue to read from the
+ * pre-cutover worker/API cache directories so existing generated media stays
+ * visible until it is rebuilt or moved.
+ */
+export function getCacheRootCandidates() {
+  if (process.env.OBSCURA_CACHE_DIR) {
+    return [path.resolve(process.env.OBSCURA_CACHE_DIR)];
   }
 
-  const sharedCache = path.join(workspaceRoot, ".obscura-cache");
-
-  if (existsSync(sharedCache)) {
-    return sharedCache;
-  }
-
-  return sharedCache;
+  return [...new Set(getDefaultCacheRoots().candidates)];
 }
 
 export function getGeneratedVideoDir(videoId: string) {

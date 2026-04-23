@@ -19,9 +19,14 @@ function createDeps(
 
 describe("resolveAssetRequest", () => {
   let cacheDir: string | null = null;
+  let previousCwd: string | null = null;
 
   afterEach(async () => {
     delete process.env.OBSCURA_CACHE_DIR;
+    if (previousCwd) {
+      process.chdir(previousCwd);
+      previousCwd = null;
+    }
     if (cacheDir) {
       await rm(cacheDir, { recursive: true, force: true });
       cacheDir = null;
@@ -56,6 +61,45 @@ describe("resolveAssetRequest", () => {
     );
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "card-bytes",
+    );
+  });
+
+  it("serves cached video thumbnails from the legacy worker cache after cutover", async () => {
+    cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
+    previousCwd = process.cwd();
+    process.chdir(cacheDir);
+    await writeFile(path.join(cacheDir, "pnpm-workspace.yaml"), "packages:\n  - apps/*\n");
+
+    const legacyThumbPath = path.join(
+      cacheDir,
+      "apps",
+      "worker",
+      ".obscura-cache",
+      "videos",
+      "video-1",
+      "thumbnail.jpg",
+    );
+    await mkdir(path.dirname(legacyThumbPath), { recursive: true });
+    await writeFile(legacyThumbPath, "legacy-thumb-bytes");
+
+    const mediaDir = path.join(cacheDir, "media");
+    await mkdir(mediaDir, { recursive: true });
+    const videoPath = path.join(mediaDir, "clip.mp4");
+    await writeFile(videoPath, "video-bytes");
+
+    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const response = await resolveAssetRequest(
+      createDeps({
+        resolveVideoFilePath: async () => videoPath,
+        getMetadataStorageDedicated: async () => true,
+      }),
+      "videos/video-1/thumb",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/jpeg");
+    expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
+      "legacy-thumb-bytes",
     );
   });
 

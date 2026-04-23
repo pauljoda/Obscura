@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Existing thumbnails and artwork now stay visible after the Svelte cutover.** The SvelteKit asset server now keeps reading generated media from the older cache locations as well as the new shared cache root, so previously built video thumbs, gallery covers, performer images, and similar assets do not disappear after upgrading.
 - **The repo now reads like a native Svelte codebase.** Migration planning docs were removed, VS Code run configs were rewritten around the current web-plus-worker stack, and lingering references to the retired Next.js/Fastify topology were scrubbed from active docs and comments.
 - **The legacy Next.js, Fastify, and React workspace is gone.** Obscura now develops, validates, and ships against the SvelteKit app on port `8008`, with same-origin `/api` routes and the worker as the only separate process.
 - **SvelteKit is now the primary local and container runtime.** The default dev stack, Docker Compose stack, and unified image now boot the Svelte app directly on port `8008` with same-origin `/api` routes, instead of hiding the new app behind the old Next.js and Fastify pair.
@@ -118,6 +119,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - SvelteKit `/identify` and `/scrape` are now fully functional — the React `BulkScrape` stack is ported in its entirety. Every tab — **Videos / Series / Galleries / Images / Albums / Tracks / Performers / Studios / Tags / pHashes** — runs through the same ported runners and surfaces the same per-row controls as the Next.js app (Accept, Reject, Dismiss, single-row Identify, per-field masking in the Review drawer, Accept-All, Auto-accept, Stop mid-run, Load more). The per-entity **Identify** button (`IdentifyButton.svelte`) is also ported for series/movie/episode detail-page entry points — it lists eligible plugins, runs the right action per entity kind (seriesCascade / movieByName / episodeByFragment / …), and opens the new `CascadeReviewDrawer`. First-pass cascade drawer covers the accept flow with field masks; the detailed per-season / per-episode editor surface remains a follow-up.
 
 ### Fixed
+
+- Generated thumbnails and other cached media now remain readable after the Svelte cutover. The asset server searches the current shared cache root plus the pre-cutover worker/API cache directories, so existing `/assets/*` URLs keep resolving until those files are rebuilt into the canonical location.
 
 - The Svelte port no longer carries placeholder plugin endpoints or warning noise in its core review flows. SvelteKit now serves the plugin batch/folder-cascade routes directly, the remaining `svelte-check` warnings in the gallery/review/tag-input stack are resolved, and the unit test environment stubs `HTMLMediaElement.pause()` so the Svelte suite runs cleanly.
 - Mixed episode/movie sorting on the Svelte `/videos` route now respects the requested sort key after the merge step instead of always collapsing back to `createdAt DESC`.

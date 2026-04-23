@@ -1,15 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import {
+  VIDEO_GENERATED_FILENAMES,
   extractZipMember,
-  getCacheRootDir,
-  getGeneratedAudioLibraryDir,
-  getGeneratedAudioTrackDir,
-  getGeneratedImageDir,
-  getGeneratedPerformerDir,
-  getGeneratedSeriesDir,
-  getGeneratedStudioDir,
-  getGeneratedTagDir,
+  getCacheRootCandidates,
   getGeneratedVideoDir,
   getVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
@@ -111,6 +105,10 @@ function serveEntityImage(dir: string, entityLabel: string): Response {
   });
 }
 
+function cacheCandidates(...parts: string[]) {
+  return getCacheRootCandidates().map((root) => path.join(root, ...parts));
+}
+
 async function handleVideoAsset(
   deps: AssetResolverDeps,
   id: string,
@@ -152,7 +150,26 @@ async function handleVideoAsset(
   const diskKey = KIND_TO_DISK_KEY[resolvedKind];
   const primaryPath = primary[diskKey];
   const secondaryPath = secondary[diskKey];
-  const selectedPath = firstExistingPath([primaryPath, secondaryPath]);
+  const legacyDedicatedFileName =
+    resolvedKind === "thumb"
+      ? VIDEO_GENERATED_FILENAMES.thumb
+      : resolvedKind === "card"
+        ? VIDEO_GENERATED_FILENAMES.card
+        : resolvedKind === "sprite"
+          ? VIDEO_GENERATED_FILENAMES.sprite
+          : resolvedKind === "preview"
+            ? VIDEO_GENERATED_FILENAMES.preview
+            : VIDEO_GENERATED_FILENAMES.trickplay;
+  const legacyDedicatedCandidates = cacheCandidates(
+    "videos",
+    id,
+    legacyDedicatedFileName,
+  );
+  const selectedPath = firstExistingPath([
+    primaryPath,
+    secondaryPath,
+    ...legacyDedicatedCandidates,
+  ]);
   if (!selectedPath) {
     return notFound("Asset not found");
   }
@@ -176,7 +193,8 @@ async function handleGalleryCover(
   }
 
   return serveFileIfExists(
-    path.join(getGeneratedImageDir(gallery.coverImageId), "thumb.jpg"),
+    firstExistingPath(cacheCandidates("images", gallery.coverImageId, "thumb.jpg")) ??
+      path.join("__missing__", "thumb.jpg"),
     {
       "Cache-Control": "no-cache",
       "Content-Type": "image/jpeg",
@@ -191,25 +209,25 @@ async function handleImageAsset(
   kind: string,
 ): Promise<Response> {
   if (kind === "thumb") {
-    return serveFileIfExists(
-      path.join(getGeneratedImageDir(id), "thumb.jpg"),
-      {
-        "Cache-Control": "no-cache",
-        "Content-Type": "image/jpeg",
-      },
-      "Image thumbnail not found",
-    );
+    const thumbPath = firstExistingPath(cacheCandidates("images", id, "thumb.jpg"));
+    if (!thumbPath) {
+      return notFound("Image thumbnail not found");
+    }
+    return streamFile(thumbPath, {
+      "Cache-Control": "no-cache",
+      "Content-Type": "image/jpeg",
+    });
   }
 
   if (kind === "preview") {
-    return serveFileIfExists(
-      path.join(getGeneratedImageDir(id), "preview.mp4"),
-      {
-        "Cache-Control": "public, max-age=86400, immutable",
-        "Content-Type": "video/mp4",
-      },
-      "Image preview not found",
-    );
+    const previewPath = firstExistingPath(cacheCandidates("images", id, "preview.mp4"));
+    if (!previewPath) {
+      return notFound("Image preview not found");
+    }
+    return streamFile(previewPath, {
+      "Cache-Control": "public, max-age=86400, immutable",
+      "Content-Type": "video/mp4",
+    });
   }
 
   if (kind !== "full") {
@@ -254,7 +272,8 @@ async function handleCollectionCover(
   }
 
   return serveFileIfExists(
-    path.join(getCacheRootDir(), "collections", id, "cover.webp"),
+    firstExistingPath(cacheCandidates("collections", id, "cover.webp")) ??
+      path.join("__missing__", "cover.webp"),
     {
       "Content-Type": "image/webp",
     },
@@ -279,19 +298,31 @@ export async function resolveAssetRequest(
 
   if (family === "performers" && segments.length === 3) {
     return kind === "image"
-      ? serveEntityImage(getGeneratedPerformerDir(id), "Actor")
+      ? serveEntityImage(
+          firstExistingPath(cacheCandidates("performers", id)) ??
+            path.join("__missing__", id),
+          "Actor",
+        )
       : notFound("Unknown asset kind");
   }
 
   if (family === "studios" && segments.length === 3) {
     return kind === "image"
-      ? serveEntityImage(getGeneratedStudioDir(id), "Studio")
+      ? serveEntityImage(
+          firstExistingPath(cacheCandidates("studios", id)) ??
+            path.join("__missing__", id),
+          "Studio",
+        )
       : notFound("Unknown asset kind");
   }
 
   if (family === "tags" && segments.length === 3) {
     return kind === "image"
-      ? serveEntityImage(getGeneratedTagDir(id), "Tag")
+      ? serveEntityImage(
+          firstExistingPath(cacheCandidates("tags", id)) ??
+            path.join("__missing__", id),
+          "Tag",
+        )
       : notFound("Unknown asset kind");
   }
 
@@ -305,7 +336,8 @@ export async function resolveAssetRequest(
 
   if (family === "audio-libraries" && segments.length === 3 && kind === "cover") {
     return serveFileIfExists(
-      path.join(getGeneratedAudioLibraryDir(id), "cover-custom.jpg"),
+      firstExistingPath(cacheCandidates("audio-libraries", id, "cover-custom.jpg")) ??
+        path.join("__missing__", "cover-custom.jpg"),
       {
         "Cache-Control": "no-cache",
         "Content-Type": "image/jpeg",
@@ -323,10 +355,10 @@ export async function resolveAssetRequest(
     const baseName = kind === "cover" ? "poster" : "backdrop";
     return serveFirstMatchingFile(
       [
-        path.join(getGeneratedSeriesDir(id), `${kind}-custom.jpg`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.jpg`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.png`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.webp`),
+        ...cacheCandidates("video-series", id, `${kind}-custom.jpg`),
+        ...cacheCandidates("video-series", id, `${baseName}.jpg`),
+        ...cacheCandidates("video-series", id, `${baseName}.png`),
+        ...cacheCandidates("video-series", id, `${baseName}.webp`),
       ],
       `${prefix} not found`,
     );
@@ -341,10 +373,10 @@ export async function resolveAssetRequest(
     const baseName = kind === "cover" ? "poster" : "backdrop";
     return serveFirstMatchingFile(
       [
-        path.join(getGeneratedSeriesDir(id), `${kind}-custom.jpg`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.jpg`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.png`),
-        path.join(getGeneratedSeriesDir(id), `${baseName}.webp`),
+        ...cacheCandidates("video-series", id, `${kind}-custom.jpg`),
+        ...cacheCandidates("video-series", id, `${baseName}.jpg`),
+        ...cacheCandidates("video-series", id, `${baseName}.png`),
+        ...cacheCandidates("video-series", id, `${baseName}.webp`),
       ],
       `${prefix} not found`,
     );
@@ -353,10 +385,10 @@ export async function resolveAssetRequest(
   if (family === "seasons" && segments.length === 3 && kind === "poster") {
     return serveFirstMatchingFile(
       [
-        path.join(getCacheRootDir(), "seasons", id, "poster.jpg"),
-        path.join(getCacheRootDir(), "seasons", id, "poster.jpeg"),
-        path.join(getCacheRootDir(), "seasons", id, "poster.png"),
-        path.join(getCacheRootDir(), "seasons", id, "poster.webp"),
+        ...cacheCandidates("seasons", id, "poster.jpg"),
+        ...cacheCandidates("seasons", id, "poster.jpeg"),
+        ...cacheCandidates("seasons", id, "poster.png"),
+        ...cacheCandidates("seasons", id, "poster.webp"),
       ],
       "Season poster not found",
     );
@@ -368,7 +400,8 @@ export async function resolveAssetRequest(
     kind === "waveform.json"
   ) {
     return serveFileIfExists(
-      path.join(getGeneratedAudioTrackDir(id), "waveform.json"),
+      firstExistingPath(cacheCandidates("audio-tracks", id, "waveform.json")) ??
+        path.join("__missing__", "waveform.json"),
       {
         "Cache-Control": "public, max-age=86400, immutable",
         "Content-Type": "application/json",
