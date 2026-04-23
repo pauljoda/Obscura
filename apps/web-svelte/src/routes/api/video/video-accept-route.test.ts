@@ -7,12 +7,14 @@ const {
   acceptMovieScrapeWrite,
   acceptEpisodeScrapeWrite,
   acceptSeriesScrapeWrite,
+  getVideoSeriesLibraryDetailRead,
 } = vi.hoisted(() => ({
   db: { name: "web-db" },
   getWebDb: vi.fn(),
   acceptMovieScrapeWrite: vi.fn(),
   acceptEpisodeScrapeWrite: vi.fn(),
   acceptSeriesScrapeWrite: vi.fn(),
+  getVideoSeriesLibraryDetailRead: vi.fn(),
 }));
 
 vi.mock("$lib/server/db", () => ({
@@ -28,6 +30,7 @@ vi.mock("@obscura/app-core", async () => {
     acceptMovieScrapeWrite,
     acceptEpisodeScrapeWrite,
     acceptSeriesScrapeWrite,
+    getVideoSeriesLibraryDetailRead,
   };
 });
 
@@ -37,6 +40,47 @@ describe("/api/video/*/accept-scrape routes", () => {
     acceptMovieScrapeWrite.mockReset();
     acceptEpisodeScrapeWrite.mockReset();
     acceptSeriesScrapeWrite.mockReset();
+    getVideoSeriesLibraryDetailRead.mockReset();
+  });
+
+  it("serves the series library detail used by plugin identify cascades", async () => {
+    const detail = {
+      id: "series-1",
+      title: "Demo Series",
+      overview: "Local overview",
+      seasons: [
+        {
+          id: "season-1",
+          seasonNumber: 1,
+          title: "Season 1",
+          overview: null,
+          episodes: [
+            {
+              id: "episode-1",
+              seasonNumber: 1,
+              episodeNumber: 2,
+              title: "Second Episode",
+              filePath: "/media/demo/S01E02.mp4",
+            },
+          ],
+        },
+      ],
+    };
+    getVideoSeriesLibraryDetailRead.mockResolvedValue(detail);
+
+    const { GET } = await import("./series/[id]/+server");
+    const response = await GET({
+      params: { id: "series-1" },
+      url: new URL("http://test/api/video/series/series-1?nsfw=off"),
+    } as never);
+
+    expect(getVideoSeriesLibraryDetailRead).toHaveBeenCalledWith(
+      db,
+      "series-1",
+      "off",
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(detail);
   });
 
   it("passes movie accept bodies through to app-core", async () => {

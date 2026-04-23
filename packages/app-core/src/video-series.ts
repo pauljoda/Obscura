@@ -442,6 +442,111 @@ export async function getVideoSeriesDetailRead(
   };
 }
 
+export interface VideoSeriesLibraryEpisode {
+  id: string;
+  seasonNumber: number;
+  episodeNumber: number | null;
+  title: string | null;
+  filePath: string;
+}
+
+export interface VideoSeriesLibrarySeason {
+  id: string;
+  seasonNumber: number;
+  title: string | null;
+  overview: string | null;
+  episodes: VideoSeriesLibraryEpisode[];
+}
+
+export interface VideoSeriesLibraryDetail {
+  id: string;
+  title: string;
+  overview: string | null;
+  seasons: VideoSeriesLibrarySeason[];
+}
+
+export async function getVideoSeriesLibraryDetailRead(
+  db: AppDb,
+  id: string,
+  nsfwMode?: string,
+): Promise<VideoSeriesLibraryDetail> {
+  const [series] = await db
+    .select({
+      id: videoSeries.id,
+      title: videoSeries.title,
+      overview: videoSeries.overview,
+      isNsfw: videoSeries.isNsfw,
+    })
+    .from(videoSeries)
+    .where(and(eq(videoSeries.id, id), videoSeriesVisibleSql(videoSeries.libraryRootId)))
+    .limit(1);
+
+  if (!series) throw new NotFoundError("Series not found");
+  if (nsfwMode === "off" && series.isNsfw)
+    throw new NotFoundError("Series not found");
+
+  const [seasonRows, episodeRows] = await Promise.all([
+    db
+      .select({
+        id: videoSeasons.id,
+        seasonNumber: videoSeasons.seasonNumber,
+        title: videoSeasons.title,
+        overview: videoSeasons.overview,
+      })
+      .from(videoSeasons)
+      .where(eq(videoSeasons.seriesId, id))
+      .orderBy(asc(videoSeasons.seasonNumber)),
+    db
+      .select({
+        id: videoEpisodes.id,
+        seasonId: videoEpisodes.seasonId,
+        seasonNumber: videoEpisodes.seasonNumber,
+        episodeNumber: videoEpisodes.episodeNumber,
+        title: videoEpisodes.title,
+        filePath: videoEpisodes.filePath,
+      })
+      .from(videoEpisodes)
+      .where(
+        nsfwMode === "off"
+          ? and(eq(videoEpisodes.seriesId, id), ne(videoEpisodes.isNsfw, true))
+          : eq(videoEpisodes.seriesId, id),
+      )
+      .orderBy(
+        asc(videoEpisodes.seasonNumber),
+        asc(videoEpisodes.episodeNumber),
+        asc(videoEpisodes.createdAt),
+      ),
+  ]);
+
+  const episodesBySeason = new Map<string, VideoSeriesLibraryEpisode[]>();
+  for (const episode of episodeRows) {
+    const episodes = episodesBySeason.get(episode.seasonId) ?? [];
+    episodes.push({
+      id: episode.id,
+      seasonNumber: episode.seasonNumber,
+      episodeNumber: episode.episodeNumber,
+      title: episode.title,
+      filePath: episode.filePath,
+    });
+    episodesBySeason.set(episode.seasonId, episodes);
+  }
+
+  return {
+    id: series.id,
+    title: series.title,
+    overview: series.overview,
+    seasons: seasonRows
+      .map((season) => ({
+        id: season.id,
+        seasonNumber: season.seasonNumber,
+        title: season.title,
+        overview: season.overview,
+        episodes: episodesBySeason.get(season.id) ?? [],
+      }))
+      .filter((season) => season.episodes.length > 0),
+  };
+}
+
 export interface UpdateVideoSeriesBody {
   isNsfw?: boolean;
   customName?: string | null;

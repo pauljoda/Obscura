@@ -8,6 +8,7 @@
 
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { OscuraPlugin, OscuraPluginManifest } from "./types";
 import { PluginExecutionError } from "./executor";
@@ -21,32 +22,39 @@ import { PluginExecutionError } from "./executor";
  * `"type": "module"`, so the loader tries to parse CJS code as ESM
  * and fails with "exports is not defined in ES module scope".
  *
- * Drop a sentinel `package.json` alongside the entry file declaring
- * `"type": "commonjs"` the first time a plugin is loaded. Node stops
- * walking at this closer package.json and treats the sibling `.js`
- * file as CommonJS. Safe for plugins that are genuinely ESM because
- * we only write the sentinel when the entry contains CJS markers.
+ * Detect CJS entries before loading them. Node can load these directly
+ * through `require`, which avoids dev-server ESM transforms that ignore
+ * package metadata for runtime plugin files. We also write/update a local
+ * sentinel `package.json` so worker and production Node entrypoints resolve
+ * the file consistently.
  */
-function ensureCjsSentinel(entryPath: string): void {
+function ensureCjsSentinel(entryPath: string): boolean {
   try {
     const contents = readFileSync(entryPath, "utf8");
     const looksLikeCjs =
       /\bexports\.[a-zA-Z_$]/.test(contents) ||
       /\bmodule\.exports\b/.test(contents) ||
       /"use strict";/.test(contents);
-    if (!looksLikeCjs) return;
+    if (!looksLikeCjs) return false;
     const sentinelPath = path.join(path.dirname(entryPath), "package.json");
-    if (existsSync(sentinelPath)) return;
+    const existing = existsSync(sentinelPath)
+      ? (JSON.parse(readFileSync(sentinelPath, "utf8")) as Record<string, unknown>)
+      : {};
+    if (existing.type === "commonjs") return true;
     writeFileSync(
       sentinelPath,
-      JSON.stringify({ type: "commonjs" }, null, 2) + "\n",
+      JSON.stringify({ ...existing, type: "commonjs" }, null, 2) + "\n",
       "utf8",
     );
+    return true;
   } catch {
-    // Best-effort — if we can't write the sentinel, fall through and
-    // let the import() below throw a meaningful error.
+    // Best-effort — if detection or writing fails, fall through and let
+    // the loader below throw a meaningful error.
+    return false;
   }
 }
+
+const requirePlugin = createRequire(import.meta.url);
 
 /**
  * Load a TypeScript plugin's compiled JS entry point and return it
@@ -85,7 +93,7 @@ export async function loadTypeScriptPlugin(
 
   // Ensure CJS bundles load correctly regardless of the nearest
   // package.json's "type" setting in the hosting app.
-  ensureCjsSentinel(entryPath);
+  const isCommonJsEntry = ensureCjsSentinel(entryPath);
 
   // Dynamic import — works for both ESM and CJS (Node resolves). The
   // plugin entry path is only known at runtime, so keep Vite from
@@ -93,7 +101,9 @@ export async function loadTypeScriptPlugin(
   // pulled into the SvelteKit graph.
   let mod: Record<string, unknown>;
   try {
-    mod = await import(/* @vite-ignore */ pathToFileURL(entryPath).href);
+    mod = isCommonJsEntry
+      ? (requirePlugin(entryPath) as Record<string, unknown>)
+      : await import(/* @vite-ignore */ pathToFileURL(entryPath).href);
   } catch (err) {
     throw new PluginExecutionError(
       `Failed to load plugin: ${err instanceof Error ? err.message : String(err)}`,
