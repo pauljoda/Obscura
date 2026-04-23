@@ -3,7 +3,6 @@
   import {
     Music,
     Play,
-    Pause,
     Shuffle,
     Calendar,
     Building2,
@@ -14,7 +13,6 @@
     CheckCircle2,
     FolderPlus,
     MoreVertical,
-    Trash2,
     Loader2,
   } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
@@ -39,6 +37,7 @@
   import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
   import TagsSection from "$lib/components/TagsSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import TrackListRow from "$lib/components/TrackListRow.svelte";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -677,72 +676,33 @@
           </div>
         {:else}
           <div class="surface-panel overflow-hidden">
-            <div class="grid grid-cols-[2.5rem,minmax(0,1fr),7rem,4rem,2.75rem] items-center gap-3 border-b border-border-subtle px-4 py-2 text-[0.68rem] uppercase tracking-[0.18em] text-text-disabled">
-              <span class="text-right">#</span>
+            <div class="grid grid-cols-[2.25rem,minmax(0,1fr),auto,3.5rem,2rem] items-center gap-3 border-b border-border-subtle/80 px-3 py-2 text-[0.62rem] uppercase tracking-[0.18em] text-text-disabled sm:gap-4 sm:px-4">
+              <span class="text-center">#</span>
               <span>Title</span>
-              <span class="text-center">Rating</span>
-              <span class="text-right">Time</span>
+              <span class="justify-self-end">Rating</span>
+              <span class="justify-self-end">Time</span>
               <span class="sr-only">Actions</span>
             </div>
-            {#each visibleTracks as track, index (track.id)}
-              {@const isActive = activeTrackId === track.id}
-              <div
-                class={cn(
-                  "grid grid-cols-[2.5rem,minmax(0,1fr),7rem,4rem,2.75rem] items-center gap-3 px-4 py-2.5 transition-colors duration-fast",
-                  isActive ? "bg-accent-950/30" : "hover:bg-surface-2",
-                )}
-              >
-                <button
-                  type="button"
-                  onclick={() => playTrack(track.id)}
-                  class="inline-flex h-7 w-7 items-center justify-center justify-self-end text-text-muted transition-colors hover:text-text-accent"
-                  aria-label={isActive && playing ? "Pause" : "Play"}
-                >
-                  {#if isActive && playing}
-                    <Pause class="h-3.5 w-3.5" fill="currentColor" />
-                  {:else}
-                    <Play class="h-3.5 w-3.5" fill="currentColor" />
-                  {/if}
-                </button>
-                <div class="min-w-0">
-                  <a
-                    href={`/audio/tracks/${track.id}`}
-                    class={cn(
-                      "block truncate text-[0.84rem] transition-colors",
-                      isActive ? "font-medium text-text-accent" : "text-text-primary hover:text-text-accent",
-                    )}
-                  >
-                    {track.trackNumber ?? index + 1}. {track.title}
-                  </a>
-                  {#if track.embeddedArtist}
-                    <p class="truncate text-[0.72rem] text-text-muted">{track.embeddedArtist}</p>
-                  {/if}
-                </div>
-                <div class="justify-self-center">
-                  <StarRatingPicker
-                    value={track.rating}
-                    onChange={(nextRating) => void handleTrackRating(track.id, nextRating)}
-                    ariaLabelPrefix={index === 0 ? "Set" : `Rate ${track.title} with`}
-                  />
-                </div>
-                <span class="text-right font-mono text-[0.72rem] text-text-disabled">
-                  {formatDuration(track.duration) ?? "—"}
-                </span>
-                <button
-                  type="button"
-                  onclick={() =>
+            <div class="divide-y divide-border-subtle/60">
+              {#each visibleTracks as track, index (track.id)}
+                <TrackListRow
+                  {track}
+                  {index}
+                  isActive={activeTrackId === track.id}
+                  isPlaying={activeTrackId === track.id && playing}
+                  onPlay={playTrack}
+                  onRatingChange={(id, value) => void handleTrackRating(id, value)}
+                  onDelete={(t) =>
                     (trackDeleteTarget = {
-                      id: track.id,
-                      title: track.title,
-                      duration: track.duration ?? null,
+                      id: t.id,
+                      title: t.title,
+                      duration: t.duration ?? null,
                     })}
-                  aria-label={`Delete ${track.title}`}
-                  class="inline-flex h-8 w-8 items-center justify-center justify-self-end text-text-muted transition-colors hover:text-error-text"
-                >
-                  <Trash2 class="h-4 w-4" />
-                </button>
-              </div>
-            {/each}
+                  trackHref={`/audio/tracks/${track.id}`}
+                  ratingAriaPrefix={index === 0 ? "Set" : `Rate ${track.title} with`}
+                />
+              {/each}
+            </div>
           </div>
         {/if}
 

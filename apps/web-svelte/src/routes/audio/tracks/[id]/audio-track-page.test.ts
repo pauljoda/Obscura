@@ -105,6 +105,7 @@ describe("audio track detail page", () => {
           lanAutoEnable: false,
           awaitingBreakingConsent: false,
           track: makeTrack(),
+          libraryCoverImagePath: null,
         },
       },
     });
@@ -125,6 +126,7 @@ describe("audio track detail page", () => {
           lanAutoEnable: false,
           awaitingBreakingConsent: false,
           track: makeTrack(),
+          libraryCoverImagePath: null,
         },
       },
     });
