@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { getCollectionDetailRead } from "@obscura/app-core";
+import { resolveExistingMediaPath } from "@obscura/media-core";
 import { schema, type AppDb } from "@obscura/db";
 import type { AssetResolverDeps } from "./resolve-asset-request";
 
@@ -14,7 +15,7 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
         .where(eq(videoEpisodes.id, id))
         .limit(1);
       if (episode?.filePath) {
-        return episode.filePath;
+        return resolveExistingMediaPath(episode.filePath) ?? episode.filePath;
       }
 
       const [movie] = await db
@@ -22,7 +23,7 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
         .from(videoMovies)
         .where(eq(videoMovies.id, id))
         .limit(1);
-      return movie?.filePath ?? null;
+      return resolveExistingMediaPath(movie?.filePath) ?? movie?.filePath ?? null;
     },
 
     async getMetadataStorageDedicated() {

@@ -3,7 +3,11 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { eq } from "drizzle-orm";
-import { getCacheRootDir, runProcess } from "@obscura/media-core";
+import {
+  getCacheRootDir,
+  resolveExistingMediaPath,
+  runProcess,
+} from "@obscura/media-core";
 import {
   buildMasterPlaylist as buildVirtualMaster,
   buildVariantPlaylist as buildVirtualVariant,
@@ -155,8 +159,9 @@ async function getVideoSource(db: AppDb, id: string): Promise<VideoSource | null
     .where(eq(videoEpisodes.id, id))
     .limit(1);
 
-  if (episode?.filePath && existsSync(episode.filePath)) {
-    return episode;
+  const episodePath = resolveExistingMediaPath(episode?.filePath);
+  if (episode && episodePath) {
+    return { ...episode, filePath: episodePath };
   }
 
   const [movie] = await db
@@ -172,8 +177,9 @@ async function getVideoSource(db: AppDb, id: string): Promise<VideoSource | null
     .where(eq(videoMovies.id, id))
     .limit(1);
 
-  if (movie?.filePath && existsSync(movie.filePath)) {
-    return movie;
+  const moviePath = resolveExistingMediaPath(movie?.filePath);
+  if (movie && moviePath) {
+    return { ...movie, filePath: moviePath };
   }
 
   return null;

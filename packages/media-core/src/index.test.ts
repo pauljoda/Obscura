@@ -16,6 +16,7 @@ import {
   runProcess,
   isCorruptMediaError,
   CorruptMediaError,
+  resolveExistingMediaPath,
 } from "./index";
 
 async function hasBinary(name: string): Promise<boolean> {
@@ -282,5 +283,45 @@ describe("isAnimatedFormat", () => {
     expect(isAnimatedFormat("photo.jpg")).toBe(false);
     expect(isAnimatedFormat("photo.png")).toBe(false);
     expect(isAnimatedFormat("photo.tiff")).toBe(false);
+  });
+});
+
+describe("resolveExistingMediaPath", () => {
+  it("maps deleted legacy sample-media paths to the fixture media that still exists in the repo", () => {
+    const legacyPath = path.join(
+      process.cwd(),
+      "apps",
+      "web",
+      "public",
+      "media",
+      "scenes",
+      "Demo Videos",
+      "tears_of_steel.mp4",
+    );
+
+    expect(resolveExistingMediaPath(legacyPath)).toBe(
+      path.join(
+        process.cwd(),
+        "tests",
+        "fixtures",
+        "media",
+        "videos",
+        "Demo Videos",
+        "tears_of_steel.mp4",
+      ),
+    );
+  });
+
+  it("returns the original path when the file already exists", () => {
+    const existingPath = path.join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "media",
+      "videos",
+      "big_buck_bunny.mp4",
+    );
+
+    expect(resolveExistingMediaPath(existingPath)).toBe(existingPath);
   });
 });

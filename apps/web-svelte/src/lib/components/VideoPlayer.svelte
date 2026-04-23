@@ -49,6 +49,12 @@
   import FilmStrip from "./FilmStrip.svelte";
   import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
+  import {
+    chooseInitialPlaybackMode,
+    computeVideoLoadState,
+    requestedModeFromQualityMode,
+    type QualityMode,
+  } from "./video-player-load";
   import { fetchVideoSubtitleCues } from "$lib/api/videos";
   import type { VideoSubtitleTrackDto, SubtitleCueDto } from "$lib/api/types";
   import {
@@ -110,7 +116,6 @@
     handle = $bindable(),
   }: Props = $props();
 
-  type QualityMode = "auto" | "direct" | number | `seed:${string}`;
   interface QualityOption {
     value: QualityMode;
     label: string;
@@ -243,6 +248,7 @@
   let isDraggingRef = false;
 
   let prevSrcKey = "";
+  let prevLoadKey = "";
   let pendingAutoPlay = false;
   let pendingSeekTime: number | null = null;
   let pendingSeedName: string | null = null;
@@ -453,33 +459,35 @@
   // ─── Source lifecycle (direct <-> HLS) ───────────────────────────
   $effect(() => {
     if (!videoEl) return;
-    // Track ONLY src + directSrc + videoEl. Every write inside this effect
-    // (streamMode, qualityMode, etc.) would otherwise retrigger the effect and
-    // we'd infinitely tear down + reload the <video>, which is exactly what
-    // kept readyState pinned at 0 on the direct stream.
     const currentSrc = src;
     const currentDirectSrc = directSrc;
     const localVideoEl = videoEl;
+    const currentPropDuration = propDuration;
+    const currentDefaultPlaybackMode = defaultPlaybackMode;
+    const requestedMode = requestedModeFromQualityMode(qualityMode);
 
     return untrack(() => {
     const videoEl = localVideoEl!;
     let cancelled = false;
     const hlsLoadAbort = new AbortController();
 
-    const srcKey = `${currentSrc ?? ""}|${currentDirectSrc ?? ""}`;
-    const isNewSource = srcKey !== prevSrcKey;
-    prevSrcKey = srcKey;
+    const { srcKey, isNewSource, effectiveMode, loadKey } = computeVideoLoadState({
+      src: currentSrc,
+      directSrc: currentDirectSrc,
+      defaultPlaybackMode: currentDefaultPlaybackMode,
+      requestedMode,
+      prevSrcKey,
+    });
 
-    const initialMode: "direct" | "hls" =
-      defaultPlaybackMode === "hls" && src
-        ? "hls"
-        : directSrc
-          ? "direct"
-          : "hls";
-    const effectiveMode: "direct" | "hls" = isNewSource ? initialMode : streamMode;
+    if (loadKey === prevLoadKey) {
+      return;
+    }
+
+    prevSrcKey = srcKey;
+    prevLoadKey = loadKey;
 
     if (isNewSource) {
-      duration = propDuration ?? 0;
+      duration = currentPropDuration ?? 0;
       currentTime = 0;
       bufferedProgress = 0;
       bufferAhead = 0;
@@ -491,9 +499,13 @@
       deferredSeekTarget = null;
       const seeded = seededRenditions;
       if (seeded.length > 0) {
-        qualityOptions = renditionsToQualityOptions(seeded, Boolean(directSrc));
+        qualityOptions = renditionsToQualityOptions(seeded, Boolean(currentDirectSrc));
       } else {
-        qualityOptions = directSrc
+        qualityOptions = chooseInitialPlaybackMode({
+          src: currentSrc,
+          directSrc: currentDirectSrc,
+          defaultPlaybackMode: currentDefaultPlaybackMode,
+        }) === "direct"
           ? [
               { value: "direct" as const, label: "Direct" },
               { value: "auto" as const, label: "Auto" },
@@ -531,7 +543,7 @@
     if (effectiveMode === "direct") {
       hlsInitializing = false;
       usingAdaptiveStream = false;
-      const directSource = directSrc ?? src;
+      const directSource = currentDirectSrc ?? currentSrc;
       if (directSource) {
         videoEl.src = directSource;
         videoEl.load();
@@ -553,14 +565,14 @@
       };
     }
 
-    if (src?.endsWith(".m3u8")) {
+    if (currentSrc?.endsWith(".m3u8")) {
       hlsInitializing = true;
 
       void (async () => {
         const { default: Hls } = await import("hls.js");
         if (cancelled) return;
 
-        const statusUrl = hlsStatusUrlForSrc(src);
+        const statusUrl = hlsStatusUrlForSrc(currentSrc);
         if (statusUrl) {
           try {
             const ready = await waitForHlsReady(statusUrl, hlsLoadAbort.signal);
@@ -571,12 +583,12 @@
             if (cancelled || hlsLoadAbort.signal.aborted) return;
             hlsInitializing = false;
             usingAdaptiveStream = false;
-            if (directSrc) {
+            if (currentDirectSrc) {
               qualityMode = "direct";
               playerNotice = `Adaptive stream unavailable — switched to direct. (${
                 err instanceof Error ? err.message : "unknown error"
               })`;
-              videoEl!.src = directSrc;
+              videoEl!.src = currentDirectSrc;
               videoEl!.load();
               return;
             }
@@ -616,7 +628,7 @@
           hls.attachMedia(videoEl!);
           usingAdaptiveStream = true;
 
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(currentSrc));
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             hlsInitializing = false;
@@ -624,7 +636,7 @@
               .map((level, index) => ({ value: index, label: getLevelLabel(level, index) }))
               .reverse();
             const options: QualityOption[] = [
-              ...(directSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
+              ...(currentDirectSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
               { value: "auto" as const, label: "Auto" },
               ...hlsLevels,
             ];
@@ -689,10 +701,10 @@
             hlsInitializing = false;
             pendingAutoPlay = false;
             pendingSeekTime = null;
-            if (directSrc) {
+            if (currentDirectSrc) {
               qualityMode = "direct";
               playerNotice = "Adaptive stream failed — switched to direct.";
-              videoEl!.src = directSrc;
+              videoEl!.src = currentDirectSrc;
               videoEl!.load();
               return;
             }
@@ -705,7 +717,7 @@
         if (videoEl!.canPlayType("application/vnd.apple.mpegurl")) {
           hlsInitializing = false;
           usingAdaptiveStream = true;
-          videoEl!.src = src;
+          videoEl!.src = currentSrc;
           videoEl!.load();
           const seekTime = pendingSeekTime;
           const shouldPlay = pendingAutoPlay;
@@ -722,7 +734,7 @@
         }
 
         hlsInitializing = false;
-        const fallbackSource = directSrc ?? src;
+        const fallbackSource = currentDirectSrc ?? currentSrc;
         if (fallbackSource) {
           videoEl!.src = fallbackSource;
           videoEl!.load();
@@ -737,7 +749,7 @@
     }
 
     hlsInitializing = false;
-    const fallbackSource = directSrc ?? src;
+    const fallbackSource = currentDirectSrc ?? currentSrc;
     if (fallbackSource) {
       videoEl.src = fallbackSource;
       videoEl.load();

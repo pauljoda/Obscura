@@ -379,6 +379,43 @@ function findWorkspaceRoot(startDir: string) {
   }
 }
 
+function resolveLegacyWorkspaceMediaCandidates(filePath: string) {
+  const workspaceRoot = findWorkspaceRoot(process.cwd());
+  if (!workspaceRoot) {
+    return [path.resolve(filePath)];
+  }
+
+  const normalized = path.resolve(filePath);
+  const candidates = [normalized];
+  const legacyRoots = [
+    {
+      from: path.join(workspaceRoot, "apps", "web", "public", "media", "scenes"),
+      to: path.join(workspaceRoot, "tests", "fixtures", "media", "videos"),
+    },
+  ];
+
+  for (const mapping of legacyRoots) {
+    const normalizedFrom = path.resolve(mapping.from);
+    if (normalized === normalizedFrom || normalized.startsWith(`${normalizedFrom}${path.sep}`)) {
+      candidates.push(path.join(mapping.to, path.relative(normalizedFrom, normalized)));
+    }
+  }
+
+  return [...new Set(candidates)];
+}
+
+export function resolveExistingMediaPath(filePath: string | null | undefined) {
+  if (!filePath) return null;
+
+  for (const candidate of resolveLegacyWorkspaceMediaCandidates(filePath)) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function getDefaultCacheRoots() {
   const workspaceRoot = findWorkspaceRoot(process.cwd());
   if (!workspaceRoot) {

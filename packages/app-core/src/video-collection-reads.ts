@@ -1,10 +1,10 @@
-import { existsSync } from "node:fs";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   formatDuration,
   formatFileSize,
   getResolutionLabel,
 } from "@obscura/contracts";
+import { resolveExistingMediaPath } from "@obscura/media-core";
 import type { AppDb } from "@obscura/db";
 import { schema } from "@obscura/db";
 import {
@@ -57,7 +57,8 @@ interface VideoRow {
 }
 
 function toVideoListItem(row: VideoRow) {
-  const hasVideo = !!(row.filePath && existsSync(row.filePath));
+  const resolvedFilePath = resolveExistingMediaPath(row.filePath);
+  const hasVideo = resolvedFilePath !== null;
   return {
     id: row.id,
     title: row.title,
@@ -75,7 +76,7 @@ function toVideoListItem(row: VideoRow) {
     container: row.container,
     fileSize: row.fileSize,
     fileSizeFormatted: formatFileSize(row.fileSize),
-    filePath: row.filePath,
+    filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
     directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,

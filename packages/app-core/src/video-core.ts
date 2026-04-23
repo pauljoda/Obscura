@@ -5,6 +5,7 @@ import {
   allVideoGeneratedDiskPaths,
   fileNameToTitle,
   getGeneratedVideoDir,
+  resolveExistingMediaPath,
   runProcess,
 } from "@obscura/media-core";
 import {
@@ -215,7 +216,8 @@ function normalizeRole(value: string | null | undefined): string | null {
 }
 
 function toVideoListItem(row: VideoRow) {
-  const hasVideo = !!(row.filePath && existsSync(row.filePath));
+  const resolvedFilePath = resolveExistingMediaPath(row.filePath);
+  const hasVideo = resolvedFilePath !== null;
   return {
     id: row.id,
     title: row.title,
@@ -233,7 +235,7 @@ function toVideoListItem(row: VideoRow) {
     container: row.container,
     fileSize: row.fileSize,
     fileSizeFormatted: formatFileSize(row.fileSize),
-    filePath: row.filePath,
+    filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
     directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,
@@ -1424,7 +1426,8 @@ export async function getVideoDetailRead(db: AppDb, id: string) {
     )
     .where(eq(tagIdCol, row.id));
 
-  const hasVideo = !!(row.filePath && existsSync(row.filePath));
+  const resolvedFilePath = resolveExistingMediaPath(row.filePath);
+  const hasVideo = resolvedFilePath !== null;
 
   const markerRows = await db
     .select()
@@ -1498,7 +1501,7 @@ export async function getVideoDetailRead(db: AppDb, id: string) {
     container: row.container,
     fileSize: row.fileSize,
     fileSizeFormatted: formatFileSize(row.fileSize),
-    filePath: row.filePath,
+    filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
     directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,
@@ -1854,7 +1857,8 @@ export async function setCustomVideoThumbnailFromFrameWrite(
   }
   const entity = await findVideoEntity(db, id);
   if (!entity) throw new NotFoundError("Video not found");
-  if (!entity.filePath || !existsSync(entity.filePath)) {
+  const sourcePath = resolveExistingMediaPath(entity.filePath);
+  if (!sourcePath) {
     throw new NotFoundError("Video file not found");
   }
 
@@ -1883,7 +1887,7 @@ export async function setCustomVideoThumbnailFromFrameWrite(
       "-loglevel",
       "error",
       "-i",
-      entity.filePath,
+      sourcePath,
       "-ss",
       seconds.toFixed(3),
       "-frames:v",
@@ -1940,11 +1944,12 @@ export async function rebuildVideoPreviewWrite(
 ) {
   const entity = await findVideoEntity(db, id);
   if (!entity) throw new NotFoundError("Video not found");
-  if (!entity.filePath) {
+  const sourcePath = resolveExistingMediaPath(entity.filePath);
+  if (!sourcePath) {
     throw new ValidationError("Video has no file on disk");
   }
 
-  for (const p of allVideoGeneratedDiskPaths(id, entity.filePath)) {
+  for (const p of allVideoGeneratedDiskPaths(id, sourcePath)) {
     try {
       if (existsSync(p)) await unlink(p);
     } catch {}
