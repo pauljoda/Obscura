@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Video player flyouts now stay on screen.** Subtitle and quality menus open toward whichever side of the control has more space, clamp their height to the viewport, and stay horizontally inside the window instead of disappearing off the edge.
+
 - **The `/search` page has been fully restored to match the live app.** The Svelte port's search page now renders proper entity cards — video thumbnails with hover trickplay, gallery/performer/image/studio/tag cards that match their listing pages — grouped by kind with "Browse all" links and a "Show more" pager per group. The header gained the kind-toggle chips and a filters panel (min rating, date range), so refining a search no longer requires jumping to the individual listing pages.
 
 - **Video thumbnails scrub on hover again — everywhere a video appears.** Hovering a video card now reveals a trickplay preview that follows your cursor across the thumbnail, with a timestamp chip that rides above the scrub bar and stays pinned inside the card. The same full-featured thumbnail (scrub, duration, resolution, codec, subtitle chip, episode badge) is now used consistently on the home dashboard's Recent Videos row, the `/search` results page, and the command palette — not just on the list pages.
@@ -129,6 +131,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Subtitle and quality flyouts in the Svelte video player now portal out of the player chrome, serialize their fixed-position styles correctly for Svelte, and recalculate on viewport resize/scroll so they keep fitting on screen.
 - Video rows now treat legacy sample-media paths from the removed `apps/web/public/media/scenes/...` tree as valid again by resolving them to the current repo fixture media, which restores `hasVideo`, direct source URLs, HLS source URLs, and file details for existing sample-library entries.
 - The Svelte video player now reloads the media element when a real direct-to-HLS fallback happens, so format errors can switch modes without getting stuck on the original direct source.
 - The Svelte direct-source endpoint now starts large MKV-style videos immediately instead of answering the browser's first `/source` request with a `503`. When a file still needs audio transcode or remux work for browser playback, Obscura now streams a fragmented MP4 on demand so direct mode can begin without waiting for a full cache file.

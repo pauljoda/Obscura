@@ -56,6 +56,11 @@
     type QualityMode,
   } from "./video-player-load";
   import { fetchVideoSubtitleCues } from "$lib/api/videos";
+  import { portal } from "$lib/actions/portal";
+  import {
+    layoutPlayerMobileFlyout,
+    playerFlyoutStyleToString,
+  } from "$lib/player-flyout-layout";
   import type { VideoSubtitleTrackDto, SubtitleCueDto } from "$lib/api/types";
   import {
     captionClassName,
@@ -285,6 +290,11 @@
   let hlsInitializing = $state(false);
   let deferredSeekTarget = $state<number | null>(null);
   let subtitleMenuOpen = $state(false);
+  let subtitleMenuButton: HTMLButtonElement | undefined = $state();
+  let qualityMenuButton: HTMLButtonElement | undefined = $state();
+  const PLAYER_MENU_GUTTER_PX = 12;
+  let playerMenuFlyoutStyle = $state<string | null>(null);
+  let playerMenuIsSm = $state(false);
   let internalSubtitleId = $state<string | null>(null);
   let activeCueText = $state<string | null>(null);
   let subtitleSettingsOpen = $state(false);
@@ -371,6 +381,64 @@
     onActiveSubtitleTrackIdChange?.(id);
     subtitleMenuOpen = false;
   }
+
+  $effect(() => {
+    if (!subtitleMenuOpen && !qualityMenuOpen) {
+      playerMenuFlyoutStyle = null;
+      return;
+    }
+
+    subtitleMenuButton;
+    qualityMenuButton;
+
+    const mql = window.matchMedia("(min-width: 640px)");
+    const runLayout = () => {
+      const isSm = mql.matches;
+      playerMenuIsSm = isSm;
+      const trigger = subtitleMenuOpen ? subtitleMenuButton : qualityMenuButton;
+      if (!trigger) {
+        playerMenuFlyoutStyle = null;
+        return;
+      }
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const rect = trigger.getBoundingClientRect();
+      const flyoutLayout = layoutPlayerMobileFlyout(rect, {
+        vh,
+        vw,
+        maxHeightVh: 0.6,
+        preferredWidth: subtitleMenuOpen ? 360 : 220,
+        minWidth: subtitleMenuOpen ? 220 : 140,
+        gutter: PLAYER_MENU_GUTTER_PX,
+      });
+      if (isSm) {
+        playerMenuFlyoutStyle = playerFlyoutStyleToString(flyoutLayout);
+      } else {
+        playerMenuFlyoutStyle = playerFlyoutStyleToString({
+          ...flyoutLayout,
+          left: `${PLAYER_MENU_GUTTER_PX}px`,
+          right: `${PLAYER_MENU_GUTTER_PX}px`,
+          width: undefined,
+          minWidth: undefined,
+          maxWidth: undefined,
+        });
+      }
+    };
+
+    runLayout();
+    const onMql = () => runLayout();
+    mql.addEventListener("change", onMql);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", runLayout);
+    vv?.addEventListener("scroll", runLayout);
+    window.addEventListener("resize", runLayout);
+    return () => {
+      mql.removeEventListener("change", onMql);
+      vv?.removeEventListener("resize", runLayout);
+      vv?.removeEventListener("scroll", runLayout);
+      window.removeEventListener("resize", runLayout);
+    };
+  });
 
   function handleAppearanceChange(next: SubtitleAppearance) {
     localAppearance = next;
@@ -1447,6 +1515,7 @@
             <div class="relative">
               <button
                 type="button"
+                bind:this={subtitleMenuButton}
                 onclick={() => {
                   subtitleMenuOpen = !subtitleMenuOpen;
                   qualityMenuOpen = false;
@@ -1463,7 +1532,12 @@
               </button>
               {#if subtitleMenuOpen}
                 <div
-                  class="fixed inset-x-3 bottom-24 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-12 sm:min-w-[220px] sm:max-w-[360px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1"
+                  use:portal
+                  class={cn(
+                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                    playerMenuIsSm && "min-w-[220px] max-w-[360px]",
+                  )}
+                  style={playerMenuFlyoutStyle ?? undefined}
                 >
                   <button
                     type="button"
@@ -1520,6 +1594,7 @@
           <div class="relative">
             <button
               type="button"
+              bind:this={qualityMenuButton}
               onclick={() => {
                 qualityMenuOpen = !qualityMenuOpen;
                 speedMenuOpen = false;
@@ -1532,7 +1607,12 @@
             </button>
             {#if qualityMenuOpen}
               <div
-                class="fixed inset-x-3 bottom-24 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-12 sm:min-w-[140px] sm:max-w-[220px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1"
+                use:portal
+                class={cn(
+                  "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                  playerMenuIsSm && "min-w-[140px] max-w-[220px]",
+                )}
+                style={playerMenuFlyoutStyle ?? undefined}
               >
                 {#each qualityOptions as option (String(option.value))}
                   <button

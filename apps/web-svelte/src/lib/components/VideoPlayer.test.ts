@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import VideoPlayer from "./VideoPlayer.svelte";
 import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
@@ -51,6 +51,20 @@ describe("VideoPlayer subtitle defaults", () => {
     fetchVideoSubtitleCues.mockReset();
     fetchVideoSubtitleCues.mockResolvedValue({ cues: [] });
     window.localStorage?.removeItem?.("obscura:subtitle-appearance");
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
   });
 
   it("auto-selects the preferred subtitle track when unlocked", async () => {
@@ -104,5 +118,27 @@ describe("VideoPlayer subtitle defaults", () => {
     await waitFor(() => {
       expect(onActiveSubtitleTrackIdChange).toHaveBeenCalledWith("track-en-2");
     });
+  });
+
+  it("opens the subtitle flyout with viewport-constrained positioning", async () => {
+    render(VideoPlayer, {
+      props: {
+        subtitleTracks: [makeTrack("track-en", "en")],
+        activeSubtitleTrackId: null,
+        subtitleChoiceLocked: true,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Subtitles" }));
+
+    const flyout = await screen.findByText("Off");
+    const menu = flyout.closest(".player-dropdown");
+    expect(menu).toBeInTheDocument();
+    expect(menu?.className).toContain("fixed");
+    expect(menu).toHaveStyle({
+      left: "12px",
+      right: "12px",
+    });
+    expect(menu?.getAttribute("style")).toContain("max-height:");
   });
 });
