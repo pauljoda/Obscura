@@ -200,6 +200,19 @@ export const librarySettings = pgTable("library_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ─── UI Preferences ─────────────────────────────────────────────
+/**
+ * Generic key-value store for per-page UI view settings (thumbnail
+ * size sliders, saved filter presets, etc.). Single-user app so no
+ * user id column. The value is a JSON blob the client owns — the
+ * server only reads and writes opaque bytes.
+ */
+export const uiPrefs = pgTable("ui_prefs", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // ─── Job Runs ─────────────────────────────────────────────────────
 export const jobRuns = pgTable(
   "job_runs",

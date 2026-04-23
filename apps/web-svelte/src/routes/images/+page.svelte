@@ -5,10 +5,9 @@
   import { Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import {
-    createFilterPresets,
-    type FilterPreset,
-  } from "$lib/filter-presets";
+  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
+  import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
 
@@ -75,12 +74,15 @@
     activeFilters.length > 0 || data.sort !== "recent" || data.order !== "desc" || !!data.search,
   );
 
-  const presetsApi = createFilterPresets("obscura-images-filter-presets");
-  let presets = $state<FilterPreset[]>([]);
+  const presetsApi = createServerPresets("images:filterPresets");
+  const viewPrefs = createServerPrefs<{ cols: number }>("images:view", {
+    cols: 8,
+  });
   let activePresetId = $state<string | null>(null);
 
   onMount(() => {
-    presets = presetsApi.load();
+    void presetsApi.load();
+    void viewPrefs.load();
   });
 
   function samePresetFilters(preset: FilterPreset): boolean {
@@ -99,7 +101,7 @@
   }
 
   $effect(() => {
-    const match = presets.find((p) => samePresetFilters(p));
+    const match = presetsApi.presets.find((p) => samePresetFilters(p));
     activePresetId = match?.id ?? null;
   });
 
@@ -124,12 +126,11 @@
       sortBy: data.sort,
       sortDir: data.order,
     };
-    presets = [...presets, next];
-    presetsApi.save(presets);
+    presetsApi.save([...presetsApi.presets, next]);
   }
 
   function overwritePreset(id: string) {
-    presets = presets.map((p) =>
+    const next = presetsApi.presets.map((p) =>
       p.id === id
         ? {
             ...p,
@@ -143,12 +144,11 @@
           }
         : p,
     );
-    presetsApi.save(presets);
+    presetsApi.save(next);
   }
 
   function deletePreset(id: string) {
-    presets = presets.filter((p) => p.id !== id);
-    presetsApi.save(presets);
+    presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
   }
 
   function updateUrl(patch: Record<string, string | null | undefined>) {
@@ -188,28 +188,41 @@
     <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
   </div>
 
-  <FilterBar
-    {sortOptions}
-    sortBy={data.sort}
-    sortDir={data.order}
-    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
-    searchQuery={data.search}
-    onSearchChange={(q) => updateUrl({ search: q || null })}
-    searchPlaceholder="Search images..."
-    filterSections={["rating", "date"]}
-    showViewToggle={false}
-    {activeFilters}
-    {onAddFilter}
-    {onRemoveFilter}
-    {onClearFiltersAndSort}
-    {canClearFiltersAndSort}
-    {presets}
-    {activePresetId}
-    onApplyPreset={applyPreset}
-    onSavePreset={savePreset}
-    onOverwritePreset={overwritePreset}
-    onDeletePreset={deletePreset}
-  />
+  <div class="flex items-stretch gap-2">
+    <div class="flex-1 min-w-0">
+      <FilterBar
+        {sortOptions}
+        sortBy={data.sort}
+        sortDir={data.order}
+        onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+        searchQuery={data.search}
+        onSearchChange={(q) => updateUrl({ search: q || null })}
+        searchPlaceholder="Search images..."
+        filterSections={["rating", "date"]}
+        showViewToggle={false}
+        {activeFilters}
+        {onAddFilter}
+        {onRemoveFilter}
+        {onClearFiltersAndSort}
+        {canClearFiltersAndSort}
+        presets={presetsApi.presets}
+        {activePresetId}
+        onApplyPreset={applyPreset}
+        onSavePreset={savePreset}
+        onOverwritePreset={overwritePreset}
+        onDeletePreset={deletePreset}
+      />
+    </div>
+    <div class="surface-well flex items-center">
+      <ThumbSizeSlider
+        value={viewPrefs.current.cols}
+        min={3}
+        max={14}
+        onChange={(n) => viewPrefs.update({ cols: n })}
+        label="Thumbnail size"
+      />
+    </div>
+  </div>
 
   {#if data.images.length === 0}
     <div class="surface-panel p-8 text-center">
@@ -217,7 +230,7 @@
       <p class="text-body text-text-muted">No images match.</p>
     </div>
   {:else}
-    <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5">
+    <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
       {#each data.images as img (img.id)}
         <a
           href={`/images/${img.id}`}
@@ -255,3 +268,26 @@
     </nav>
   {/if}
 </div>
+
+<style>
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(max(2, min(var(--col-count, 8), 4)), minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+  @media (min-width: 640px) {
+    .thumb-grid {
+      grid-template-columns: repeat(max(3, min(var(--col-count, 8), 6)), minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 768px) {
+    .thumb-grid {
+      grid-template-columns: repeat(max(4, min(var(--col-count, 8), 10)), minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .thumb-grid {
+      grid-template-columns: repeat(var(--col-count, 8), minmax(0, 1fr));
+    }
+  }
+</style>

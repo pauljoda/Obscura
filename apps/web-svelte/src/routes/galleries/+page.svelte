@@ -6,11 +6,10 @@
   import { Badge } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import {
-    createFilterPresets,
-    type FilterPreset,
-  } from "$lib/filter-presets";
+  import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
 
@@ -87,12 +86,15 @@
     activeFilters.length > 0 || data.sort !== "recent" || data.order !== "desc" || !!data.search,
   );
 
-  const presetsApi = createFilterPresets("obscura-galleries-filter-presets");
-  let presets = $state<FilterPreset[]>([]);
+  const presetsApi = createServerPresets("galleries:filterPresets");
+  const viewPrefs = createServerPrefs<{ cols: number }>("galleries:view", {
+    cols: 4,
+  });
   let activePresetId = $state<string | null>(null);
 
   onMount(() => {
-    presets = presetsApi.load();
+    void presetsApi.load();
+    void viewPrefs.load();
   });
 
   function samePresetFilters(preset: FilterPreset): boolean {
@@ -111,7 +113,7 @@
   }
 
   $effect(() => {
-    const match = presets.find((p) => samePresetFilters(p));
+    const match = presetsApi.presets.find((p) => samePresetFilters(p));
     activePresetId = match?.id ?? null;
   });
 
@@ -136,12 +138,11 @@
       sortBy: data.sort,
       sortDir: data.order,
     };
-    presets = [...presets, next];
-    presetsApi.save(presets);
+    presetsApi.save([...presetsApi.presets, next]);
   }
 
   function overwritePreset(id: string) {
-    presets = presets.map((p) =>
+    const next = presetsApi.presets.map((p) =>
       p.id === id
         ? {
             ...p,
@@ -155,12 +156,11 @@
           }
         : p,
     );
-    presetsApi.save(presets);
+    presetsApi.save(next);
   }
 
   function deletePreset(id: string) {
-    presets = presets.filter((p) => p.id !== id);
-    presetsApi.save(presets);
+    presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
   }
 
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
@@ -189,29 +189,44 @@
     <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
   </div>
 
-  <FilterBar
-    viewMode={data.view}
-    onViewModeChange={(v: ViewMode) => updateUrl({ view: v === "grid" ? null : v })}
-    sortBy={data.sort}
-    sortDir={data.order}
-    {sortOptions}
-    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
-    searchQuery={data.search}
-    onSearchChange={(q) => updateUrl({ search: q || null })}
-    searchPlaceholder="Search galleries..."
-    filterSections={["rating", "date"]}
-    {activeFilters}
-    {onAddFilter}
-    {onRemoveFilter}
-    {onClearFiltersAndSort}
-    {canClearFiltersAndSort}
-    {presets}
-    {activePresetId}
-    onApplyPreset={applyPreset}
-    onSavePreset={savePreset}
-    onOverwritePreset={overwritePreset}
-    onDeletePreset={deletePreset}
-  />
+  <div class="flex items-stretch gap-2">
+    <div class="flex-1 min-w-0">
+      <FilterBar
+        viewMode={data.view}
+        onViewModeChange={(v: ViewMode) => updateUrl({ view: v === "grid" ? null : v })}
+        sortBy={data.sort}
+        sortDir={data.order}
+        {sortOptions}
+        onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+        searchQuery={data.search}
+        onSearchChange={(q) => updateUrl({ search: q || null })}
+        searchPlaceholder="Search galleries..."
+        filterSections={["rating", "date"]}
+        {activeFilters}
+        {onAddFilter}
+        {onRemoveFilter}
+        {onClearFiltersAndSort}
+        {canClearFiltersAndSort}
+        presets={presetsApi.presets}
+        {activePresetId}
+        onApplyPreset={applyPreset}
+        onSavePreset={savePreset}
+        onOverwritePreset={overwritePreset}
+        onDeletePreset={deletePreset}
+      />
+    </div>
+    {#if data.view !== "list"}
+      <div class="surface-well flex items-center">
+        <ThumbSizeSlider
+          value={viewPrefs.current.cols}
+          min={2}
+          max={8}
+          onChange={(n) => viewPrefs.update({ cols: n })}
+          label="Gallery card size"
+        />
+      </div>
+    {/if}
+  </div>
 
   {#if data.galleries.length === 0}
     <div class="surface-panel p-8 text-center">
@@ -252,7 +267,7 @@
       {/each}
     </ul>
   {:else}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+    <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
       {#each data.galleries as g, i (g.id)}
         {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
@@ -296,3 +311,21 @@
     </nav>
   {/if}
 </div>
+
+<style>
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(max(1, min(var(--col-count, 4), 3)), minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  @media (min-width: 640px) {
+    .thumb-grid {
+      grid-template-columns: repeat(max(1, min(var(--col-count, 4), 5)), minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .thumb-grid {
+      grid-template-columns: repeat(var(--col-count, 4), minmax(0, 1fr));
+    }
+  }
+</style>

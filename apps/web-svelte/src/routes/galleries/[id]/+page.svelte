@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { invalidate } from "$app/navigation";
   import { Images, Pencil } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
@@ -11,6 +12,8 @@
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
+  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
   let overrideRating = $state<number | null | undefined>(undefined);
@@ -39,6 +42,15 @@
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
   let editing = $state(false);
+
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "galleries:interiorView",
+    { cols: 6 },
+  );
+
+  onMount(() => {
+    void viewPrefs.load();
+  });
 
   function openAt(i: number) {
     lightboxIndex = i;
@@ -170,7 +182,21 @@
       {#if images.length > 0}
         <HierarchySection title={visibleChildGalleries.length > 0 ? "Images" : ""}>
           {#snippet children()}
-            <div class="gallery-masonry">
+            <div class="flex justify-end -mt-1 mb-1.5">
+              <div class="surface-well flex items-center">
+                <ThumbSizeSlider
+                  value={viewPrefs.current.cols}
+                  min={3}
+                  max={12}
+                  onChange={(n) => viewPrefs.update({ cols: n })}
+                  label="Thumbnail size"
+                />
+              </div>
+            </div>
+            <div
+              class="gallery-masonry"
+              style:--col-count={viewPrefs.current.cols}
+            >
               {#each images as img, i (img.id)}
                 {@const aspect =
                   img.width && img.height && img.height > 0
@@ -308,20 +334,23 @@
 
 <style>
   .gallery-masonry {
-    column-count: 3;
+    column-count: max(2, min(var(--col-count, 6), 3));
     column-gap: 0.375rem;
   }
   @media (min-width: 640px) {
-    .gallery-masonry { column-count: 4; }
+    .gallery-masonry {
+      column-count: max(3, min(var(--col-count, 6), 5));
+    }
   }
   @media (min-width: 768px) {
-    .gallery-masonry { column-count: 5; }
+    .gallery-masonry {
+      column-count: max(3, min(var(--col-count, 6), 8));
+    }
   }
   @media (min-width: 1024px) {
-    .gallery-masonry { column-count: 6; }
-  }
-  @media (min-width: 1280px) {
-    .gallery-masonry { column-count: 8; }
+    .gallery-masonry {
+      column-count: var(--col-count, 6);
+    }
   }
   .gallery-masonry-item {
     display: block;

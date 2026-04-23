@@ -32,6 +32,7 @@ export * from "./studio-writes";
 export * from "./stashbox-runtime";
 export * from "./tag-reads";
 export * from "./tag-writes";
+export * from "./ui-prefs";
 export * from "./upload-utils";
 export * from "./video-markers";
 export * from "./video-collection-reads";

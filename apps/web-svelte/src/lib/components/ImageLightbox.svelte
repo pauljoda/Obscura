@@ -50,6 +50,7 @@
   let imgEl: HTMLImageElement | HTMLVideoElement | undefined = $state();
   let naturalW = $state(0);
   let naturalH = $state(0);
+  let ready = $state(false);
 
   const current = $derived(images[index]);
   const currentRating = $derived.by(() => {
@@ -81,9 +82,17 @@
   });
 
   $effect(() => {
-    // Reset transform whenever the image changes.
+    // Reset fit state whenever the image changes; `ready` stays false
+    // until the new image loads and applyFit() computes the correct
+    // scale, so the viewer doesn't flash the natural-size image.
     if (current) {
-      resetTransform();
+      ready = false;
+      naturalW = 0;
+      naturalH = 0;
+      translateX = 0;
+      translateY = 0;
+      scale = 1;
+      fitScale = 1;
     }
   });
 
@@ -130,6 +139,7 @@
     scale = s;
     translateX = 0;
     translateY = 0;
+    ready = true;
   }
 
   function handleImageLoad(event: Event) {
@@ -433,7 +443,7 @@
           class="absolute inset-0 flex items-center justify-center"
           style:transform="translate({translateX}px, {translateY}px) scale({scale})"
           style:transform-origin="center center"
-          style:transition={panning ? "none" : "transform 0.16s ease-out"}
+          style:opacity={ready ? 1 : 0}
         >
           <NsfwBlur isNsfw={current.isNsfw}>
             {#if isCurrentVideo}
