@@ -2,7 +2,7 @@ import { expect, type APIRequestContext } from "@playwright/test";
 import { access } from "node:fs/promises";
 import path from "node:path";
 
-const apiBase = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:4000";
+const apiBase = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:8008/api";
 const configuredFixtureRoot = process.env.OBSCURA_E2E_LIBRARY_ROOT?.trim() || null;
 const repoFixtureRoot = path.resolve(process.cwd(), "apps/web/public/media/scenes");
 

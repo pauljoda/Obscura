@@ -5,10 +5,9 @@
 - `+page.server.ts` / `+layout.server.ts` destructure `fetch` from the event
   and pass it to `serverFetch(fetch, "/path")` so SvelteKit can track the
   upstream request for SSR streaming + hydration.
-- `INTERNAL_API_URL` (private) is the server-side base. In dev it is
-  `http://localhost:4000`. In the unified Docker image it is still
-  `http://localhost:4000` — everything lives on the same machine, nginx is
-  only used for the browser-facing ingress.
+- `PUBLIC_APP_URL` (public) is only needed when no event `fetch` is
+  available and `serverFetch` needs an absolute fallback URL. In local dev
+  and in the unified image the canonical app origin is `http://localhost:8008`.
 
 ## Invalidation — replacing `revalidateTag`
 
@@ -36,9 +35,9 @@ await invalidate(`videos:${id}`);
 
 - **Scope**: `invalidate()` is per-client/per-tab. Two browsers hitting the
   same page will each run their own `load` at their own pace.
-- **Source of truth**: Postgres (via the Fastify API). Losing Next.js's
-  cross-request tag cache just means we don't memoise an upstream response
-  between visitors — correctness is unchanged.
+- **Source of truth**: Postgres (via the SvelteKit server routes). Losing
+  Next.js's cross-request tag cache just means we don't memoise an upstream
+  response between visitors — correctness is unchanged.
 - **Load keys**: prefer concrete entity keys (`videos:{id}`) so a detail-page
   mutation doesn't force every list page to reload.
 

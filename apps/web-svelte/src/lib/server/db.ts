@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { createDbRuntime, schema } from "@obscura/db";
+import { createDbRuntime, runMigrations, schema } from "@obscura/db";
 import { env } from "$env/dynamic/private";
 
 type WebQueryClient = ReturnType<typeof postgres>;
@@ -14,17 +14,25 @@ const runtime = createDbRuntime<WebQueryClient, WebDatabase>({
   createDatabase: (client) => drizzle(client, { schema }),
   closeQueryClient: (client) => client.end({ timeout: 5 }),
 });
+let migrationsPromise: Promise<void> | null = null;
 
 function resolveDatabaseUrl() {
   return env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 }
 
+async function ensureDatabaseReady() {
+  const databaseUrl = resolveDatabaseUrl();
+  await runtime.configure(databaseUrl);
+  migrationsPromise ??= runMigrations(databaseUrl);
+  await migrationsPromise;
+}
+
 export async function getWebDb(): Promise<WebDatabase> {
-  await runtime.configure(resolveDatabaseUrl());
+  await ensureDatabaseReady();
   return runtime.getDatabase();
 }
 
 export async function getWebDbClient(): Promise<WebQueryClient> {
-  await runtime.configure(resolveDatabaseUrl());
+  await ensureDatabaseReady();
   return runtime.getClient();
 }

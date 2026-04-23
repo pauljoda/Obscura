@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { ensureFixtureLibraryRoot } from "./fixture-library";
 
-const API_BASE = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:4000";
+const API_BASE = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:8008/api";
 
 type VideosResponse = {
   videos: Array<{ id: string; title: string }>;

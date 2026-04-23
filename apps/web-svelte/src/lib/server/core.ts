@@ -2,11 +2,8 @@
  * Server-side API fetch wrapper. Runs only in SvelteKit `+*.server.ts`
  * files (not bundled into the client).
  *
- * All calls go same-origin to `/api/<path>` so SvelteKit either serves
- * the route locally or — for routes not yet migrated — the catch-all
- * proxy forwards to `INTERNAL_API_URL` (or returns 501 if unset). This
- * lets us run the app in Svelte-only mode and surface unmigrated routes
- * as loud failures.
+ * All calls go same-origin to `/api/<path>` and are served directly by
+ * SvelteKit.
  *
  * Two call patterns:
  *
@@ -34,7 +31,7 @@ export { buildQueryString } from "../query-string";
 const ABSOLUTE_BASE =
   (typeof PUBLIC_APP_URL === "string" && PUBLIC_APP_URL.length > 0
     ? PUBLIC_APP_URL.replace(/\/$/, "")
-    : "http://localhost:8009");
+    : "http://localhost:8008");
 
 type FetchLike = typeof fetch;
 

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **SvelteKit is now the primary local and container runtime.** The default dev stack, Docker Compose stack, and unified image now boot the Svelte app directly on port `8008` with same-origin `/api` routes, instead of hiding the new app behind the old Next.js and Fastify pair.
 - **Series now has its own dedicated route in the Svelte app.** The shell navigation now includes a separate **Series** destination, `/videos` is back to being a straight mixed-video browser, and first-party Svelte links that open a series now land on `/series`.
 - **Series pages no longer spill full episode lists into broader views.** The root `/series` screen now shows only series cards, and season-based series keep their episode grids hidden until you open a specific season instead of dumping every in-scope video at the bottom of the page.
 - **Video sorting works again in the Svelte browser.** Mixed movie-and-episode results on `/videos` now respect the selected sort option instead of snapping back to “recently added” after the merge step.
@@ -148,6 +149,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- SvelteKit now owns the full `/api/*` ingress directly. The fallback `api/[...rest]` proxy and its `INTERNAL_API_URL` dependency are gone, the Svelte server runs its own shared DB migrations before serving requests, and local/container startup now centers on `@obscura/web-svelte + @obscura/worker + postgres`.
 - The repository now keeps a single checked-in migration source under `packages/db/drizzle`. The legacy `apps/api/drizzle` mirror has been removed so the Svelte server, worker, and release tooling can converge on one migration ledger before the Fastify app is deleted.
 - Database migrations and video-stream HLS helpers now live in shared packages instead of the legacy API app, so the Svelte server, worker, and test harness no longer import those runtime pieces from `apps/api`.
 - The Svelte video browser is now split cleanly by responsibility: `/videos` only renders the mixed video feed, `/series` owns hierarchy browsing, the Svelte shell nav includes a dedicated Series entry, and dashboard/search/studio/performer series links now target `/series`.

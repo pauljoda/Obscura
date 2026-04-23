@@ -5,8 +5,8 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "dev:svelte-only": "INTERNAL_API_URL=none turbo run dev --parallel --filter=@obscura/web-svelte --filter=@obscura/worker",
+    "dev": "turbo run dev --parallel --filter=@obscura/web-svelte --filter=@obscura/worker",
+    "dev:svelte-only": "pnpm dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",

@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
-    port: 8009,
+    port: 8008,
     strictPort: false,
   },
   optimizeDeps: {
@@ -24,10 +24,8 @@ export default defineConfig({
     // build time; Vite does not polyfill `process` in browser bundles,
     // so accessing it throws ReferenceError. Shim both to the empty
     // string so the `?? "http://localhost:4000"` fallback activates.
-    // Server fetches in SvelteKit read INTERNAL_API_URL from
-    // `$env/static/private`; client fetches read PUBLIC_API_URL from
-    // `$env/static/public` — neither relies on @obscura/contracts'
-    // API_BASE_URL.
+    // Client fetches in SvelteKit read PUBLIC_API_URL from
+    // `$env/static/public`; server-side code uses same-origin `/api`.
     "process.env.NEXT_PUBLIC_API_URL": JSON.stringify(""),
     "process.env.API_URL": JSON.stringify(""),
   },
