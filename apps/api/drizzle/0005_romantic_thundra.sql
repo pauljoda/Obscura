@@ -1,1 +1,0 @@
-ALTER TABLE "scene_folders" ADD COLUMN "custom_name" text;

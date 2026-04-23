@@ -1,1 +1,0 @@
-ALTER TABLE "library_settings" ADD COLUMN "generate_phash" boolean DEFAULT false NOT NULL;
