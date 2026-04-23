@@ -1,17 +1,33 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { invalidate } from "$app/navigation";
   import { page } from "$app/state";
+  import { goto } from "$app/navigation";
   import { Film } from "@lucide/svelte";
   import FilterBar, {
-    type SortDir,
-    type ViewMode,
+    type AvailableItem,
   } from "$lib/components/FilterBar.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
+  import {
+    EXCLUSIVE_FILTER_TYPES,
+    clearVideosListPrefsCookie,
+    defaultVideosListPrefs,
+    formatFilterValue,
+    isDefaultVideosListPrefs,
+    videosPresets,
+    writeVideosListPrefsCookie,
+    type SortDir,
+    type SortOption,
+    type ViewMode,
+    type VideosListPrefs,
+    type VideosListPrefsActiveFilter,
+  } from "$lib/prefs/videos-list-prefs";
+  import type { FilterPreset } from "$lib/filter-presets";
 
   let { data } = $props();
 
-  const sortOptions = [
+  const sortOptions: { value: SortOption; label: string }[] = [
     { value: "recent", label: "Recently Added" },
     { value: "date", label: "Video date" },
     { value: "title", label: "Title A-Z" },
@@ -21,40 +37,270 @@
     { value: "plays", label: "Most Played" },
   ];
 
-  function updateUrl(patch: Record<string, string | null | undefined>) {
-    const params = new URLSearchParams(page.url.searchParams);
-    for (const [k, v] of Object.entries(patch)) {
-      if (v === null || v === undefined || v === "") params.delete(k);
-      else params.set(k, v);
-    }
-    params.delete("page");
-    const qs = params.toString();
-    void goto(qs ? `/videos?${qs}` : "/videos", { keepFocus: true, noScroll: true });
-  }
+  const defaultSortDir: Record<string, SortDir> = {
+    recent: "desc",
+    title: "asc",
+    duration: "desc",
+    size: "desc",
+    rating: "desc",
+    date: "desc",
+    plays: "desc",
+    episode: "asc",
+  };
 
+  // ── Prefs state ────────────────────────────────────────────────
+  // Server already read the cookie; we hydrate from `data.prefs` and
+  // treat that state as the source of truth. Any change flushes back
+  // through the cookie (client-side) and triggers `invalidate("videos")`
+  // so the server load function re-runs with the updated cookie.
+  // svelte-ignore state_referenced_locally
+  let viewMode = $state<ViewMode>(data.prefs.viewMode);
+  // svelte-ignore state_referenced_locally
+  let sortBy = $state<SortOption>(data.prefs.sortBy);
+  // svelte-ignore state_referenced_locally
+  let sortDir = $state<SortDir>(data.prefs.sortDir);
+  // svelte-ignore state_referenced_locally
+  let searchQuery = $state(data.prefs.search);
+  // svelte-ignore state_referenced_locally
+  let activeFilters = $state<VideosListPrefsActiveFilter[]>(data.prefs.activeFilters);
+  // svelte-ignore state_referenced_locally
+  let activePresetId = $state<string | null>(data.prefs.activePresetId ?? null);
+
+  // Mirror the server-side prefs snapshot in a derived view so the
+  // refetch effect below can compare against it without tripping
+  // Svelte 5's "referenced locally" warning.
+  const serverPrefs = $derived(data.prefs);
+
+  let presets = $state<FilterPreset[]>([]);
+
+  onMount(() => {
+    presets = videosPresets.load();
+  });
+
+  // ── Cookie writeback + refetch ────────────────────────────────
+  // Single source-of-truth effect: whenever any pref changes, write
+  // the cookie (or clear it if we're at defaults) and ask SvelteKit to
+  // re-run the server load so the listing reflects the new state. The
+  // search field is debounced on top of this so typing doesn't slam
+  // the server; filter/sort changes fire instantly.
+  let searchTimer: ReturnType<typeof setTimeout> | null = null;
+  let isInitialized = false;
+
+  $effect(() => {
+    // Track every pref so this runs on any change.
+    const prefs: VideosListPrefs = {
+      viewMode,
+      sortBy,
+      sortDir,
+      search: searchQuery,
+      activeFilters,
+      activePresetId: activePresetId ?? undefined,
+    };
+
+    if (!isInitialized) {
+      isInitialized = true;
+      return;
+    }
+
+    // Debounce only when the search string is the thing changing. We
+    // detect that by comparing the server's current search to ours —
+    // if other fields match the server already, the in-flight change
+    // must be the search.
+    const searchOnly =
+      prefs.viewMode === serverPrefs.viewMode &&
+      prefs.sortBy === serverPrefs.sortBy &&
+      prefs.sortDir === serverPrefs.sortDir &&
+      JSON.stringify(prefs.activeFilters) === JSON.stringify(serverPrefs.activeFilters) &&
+      (prefs.activePresetId ?? null) === (serverPrefs.activePresetId ?? null) &&
+      prefs.search !== serverPrefs.search;
+
+    const flush = () => {
+      if (isDefaultVideosListPrefs(prefs)) {
+        clearVideosListPrefsCookie();
+      } else {
+        writeVideosListPrefsCookie(prefs);
+      }
+      void invalidate("videos");
+    };
+
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    if (searchOnly) {
+      searchTimer = setTimeout(flush, 300);
+    } else {
+      flush();
+    }
+  });
+
+  // ── Handlers ───────────────────────────────────────────────────
   function onSearchChange(q: string) {
-    updateUrl({ search: q || null });
+    searchQuery = q;
   }
 
   function onSortChange(sort: string, dir?: SortDir) {
-    updateUrl({ sort, order: dir ?? data.order });
+    sortBy = sort as SortOption;
+    sortDir = dir ?? defaultSortDir[sort] ?? sortDir;
+    activePresetId = null;
   }
 
   function onViewModeChange(v: ViewMode) {
-    updateUrl({ view: v === "grid" ? null : v });
+    viewMode = v;
+    activePresetId = null;
+  }
+
+  function onAddFilter(type: string, label: string, value: string) {
+    activePresetId = null;
+    if (EXCLUSIVE_FILTER_TYPES.has(type)) {
+      const already = activeFilters.some((f) => f.type === type && f.value === value);
+      const withoutType = activeFilters.filter((f) => f.type !== type);
+      activeFilters = already ? withoutType : [...withoutType, { type, label, value }];
+    } else {
+      const already = activeFilters.some((f) => f.type === type && f.value === value);
+      activeFilters = already
+        ? activeFilters.filter((f) => !(f.type === type && f.value === value))
+        : [...activeFilters, { type, label, value }];
+    }
+    // Filter changes mean page 1 again.
+    resetPage();
+  }
+
+  function onRemoveFilter(index: number) {
+    activePresetId = null;
+    activeFilters = activeFilters.filter((_, i) => i !== index);
+    resetPage();
   }
 
   function onClearFiltersAndSort() {
-    void goto("/videos", { keepFocus: true, noScroll: true });
+    const d = defaultVideosListPrefs();
+    viewMode = d.viewMode;
+    sortBy = d.sortBy;
+    sortDir = d.sortDir;
+    searchQuery = d.search;
+    activeFilters = d.activeFilters;
+    activePresetId = null;
+    resetPage();
   }
 
+  function resetPage() {
+    if (page.url.searchParams.has("page")) {
+      const params = new URLSearchParams(page.url.searchParams);
+      params.delete("page");
+      const qs = params.toString();
+      void goto(qs ? `/videos?${qs}` : "/videos", {
+        keepFocus: true,
+        noScroll: true,
+        replaceState: true,
+      });
+    }
+  }
+
+  function onApplyPreset(preset: FilterPreset) {
+    if (activePresetId === preset.id) {
+      const d = defaultVideosListPrefs();
+      activeFilters = d.activeFilters;
+      sortBy = d.sortBy;
+      sortDir = d.sortDir;
+      activePresetId = null;
+    } else {
+      activeFilters = preset.filters.map((f) => ({ ...f }));
+      sortBy = preset.sortBy as SortOption;
+      sortDir = preset.sortDir;
+      activePresetId = preset.id;
+    }
+    resetPage();
+  }
+
+  function onSavePreset(name: string) {
+    const preset: FilterPreset = {
+      id: crypto.randomUUID(),
+      name,
+      filters: activeFilters.map((f) => ({ ...f })),
+      sortBy,
+      sortDir,
+    };
+    const updated = [...presets, preset];
+    presets = updated;
+    videosPresets.save(updated);
+    activePresetId = preset.id;
+  }
+
+  function onOverwritePreset(id: string) {
+    const updated = presets.map((p) =>
+      p.id === id
+        ? { ...p, filters: activeFilters.map((f) => ({ ...f })), sortBy, sortDir }
+        : p,
+    );
+    presets = updated;
+    videosPresets.save(updated);
+  }
+
+  function onDeletePreset(id: string) {
+    const updated = presets.filter((p) => p.id !== id);
+    presets = updated;
+    videosPresets.save(updated);
+    if (activePresetId === id) activePresetId = null;
+  }
+
+  // ── Derived values ────────────────────────────────────────────
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+
   const canClearFiltersAndSort = $derived(
-    Boolean(data.search) ||
-      data.sort !== "recent" ||
-      data.order !== "desc" ||
-      data.view !== "grid",
+    !isDefaultVideosListPrefs({
+      viewMode,
+      sortBy,
+      sortDir,
+      search: searchQuery,
+      activeFilters,
+      activePresetId: activePresetId ?? undefined,
+    }),
   );
+
+  const displayFilters = $derived(
+    activeFilters.map((f, i) => ({
+      type: f.type,
+      label: f.label,
+      value: formatFilterValue(f, { studios: studiosList }),
+      index: i,
+    })),
+  );
+
+  let studiosList = $state<AvailableItem[]>([]);
+  let tagsList = $state<AvailableItem[]>([]);
+  let performersList = $state<AvailableItem[]>([]);
+
+  // Streamed filter-panel data arrives as promises. Adopt on resolve.
+  $effect(() => {
+    void data.streamed.studios.then((r) => {
+      studiosList = r.map((s) => ({
+        id: s.id,
+        name: s.name,
+        videoCount: s.videoCount,
+        isNsfw: s.isNsfw,
+      }));
+    });
+  });
+  $effect(() => {
+    void data.streamed.tags.then((r) => {
+      tagsList = r.map((t) => ({
+        id: t.id,
+        name: t.name,
+        videoCount: t.videoCount,
+        isNsfw: t.isNsfw,
+      }));
+    });
+  });
+  $effect(() => {
+    void data.streamed.performers.then((r) => {
+      performersList = r.map((p) => ({
+        id: p.id,
+        name: p.name,
+        videoCount: p.videoCount,
+        isNsfw: p.isNsfw,
+      }));
+    });
+  });
 
   function pageHref(nextPage: number): string {
     const params = new URLSearchParams(page.url.searchParams);
@@ -80,19 +326,37 @@
         Browse and manage your media library
       </p>
     </div>
+    <span class="mt-1 text-mono-sm text-text-disabled">
+      {data.total.toLocaleString()} total
+    </span>
   </div>
 
   <FilterBar
-    viewMode={data.view}
+    viewMode={viewMode === "series" ? "grid" : viewMode}
     {onViewModeChange}
-    sortBy={data.sort}
-    sortDir={data.order}
+    {sortBy}
+    {sortDir}
     {sortOptions}
     {onSortChange}
-    searchQuery={data.search}
+    searchQuery={searchQuery}
     {onSearchChange}
-    onClearFiltersAndSort={canClearFiltersAndSort ? onClearFiltersAndSort : undefined}
+    activeFilters={displayFilters}
+    rawActiveFilters={activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
     {canClearFiltersAndSort}
+    availableStudios={studiosList}
+    availableTags={tagsList}
+    availablePerformers={performersList}
+    {presets}
+    {activePresetId}
+    {onApplyPreset}
+    {onSavePreset}
+    {onOverwritePreset}
+    {onDeletePreset}
+    {defaultSortDir}
+    searchPlaceholder="Search videos..."
   />
 
   {#if data.videos.length === 0}
@@ -100,14 +364,20 @@
       <Film class="mx-auto mb-3 h-10 w-10 text-text-disabled" />
       <p class="text-body text-text-muted">No videos match those filters.</p>
     </div>
-  {:else if data.view === "list"}
+  {:else if viewMode === "list"}
     <div class="space-y-1.5">
       {#each data.videos as video, index (video.id)}
-        <VideoCard video={videoListItemToCardData(video, "/videos")} variant="list" index={index} />
+        <VideoCard
+          video={videoListItemToCardData(video, "/videos")}
+          variant="list"
+          index={index}
+        />
       {/each}
     </div>
   {:else}
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div
+      class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+    >
       {#each data.videos as video, index (video.id)}
         <VideoCard
           video={videoListItemToCardData(video, "/videos")}

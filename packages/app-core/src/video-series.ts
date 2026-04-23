@@ -20,6 +20,12 @@ import {
   ValidationError,
 } from "./errors";
 import { videoSeriesVisibleSql } from "./library-root-visibility";
+import {
+  buildBooleanCondition,
+  buildDateConditions,
+  buildRatingConditions,
+  toArray,
+} from "./media-query-helpers";
 
 const {
   videoSeries,
@@ -248,12 +254,75 @@ export interface ListVideoSeriesQuery {
   parent?: string;
   root?: string;
   search?: string;
+  sort?: string;
+  order?: string;
   limit?: string;
   offset?: string;
   nsfw?: string;
-  studio?: string;
-  tag?: string;
-  performer?: string;
+  studio?: string | string[];
+  tag?: string | string[];
+  performer?: string | string[];
+  ratingMin?: string;
+  ratingMax?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: string;
+}
+
+type VideoSeriesRow = typeof videoSeries.$inferSelect;
+
+function compareText(left: string | null | undefined, right: string | null | undefined) {
+  return (left ?? "").localeCompare(right ?? "");
+}
+
+function compareNumber(left: number | null | undefined, right: number | null | undefined) {
+  return (left ?? Number.NEGATIVE_INFINITY) - (right ?? Number.NEGATIVE_INFINITY);
+}
+
+function compareDate(left: Date | null | undefined, right: Date | null | undefined) {
+  return (left?.getTime?.() ?? 0) - (right?.getTime?.() ?? 0);
+}
+
+function sortSeriesRows(
+  rows: VideoSeriesRow[],
+  query: Pick<ListVideoSeriesQuery, "sort" | "order">,
+  episodeCounts: Map<string, number>,
+) {
+  const sortKey = query.sort ?? "title";
+  const dir: "asc" | "desc" =
+    query.order === "asc" || query.order === "desc"
+      ? query.order
+      : sortKey === "title"
+        ? "asc"
+        : "desc";
+  const multiplier = dir === "asc" ? 1 : -1;
+
+  return [...rows].sort((left, right) => {
+    let cmp = 0;
+    switch (sortKey) {
+      case "recent":
+        cmp = compareDate(left.createdAt, right.createdAt);
+        break;
+      case "date":
+        cmp = compareText(left.firstAirDate, right.firstAirDate);
+        break;
+      case "rating":
+        cmp = compareNumber(left.rating, right.rating);
+        break;
+      case "videos":
+        cmp = compareNumber(episodeCounts.get(left.id), episodeCounts.get(right.id));
+        break;
+      case "title":
+      default:
+        cmp = compareText(
+          left.sortTitle ?? left.customName ?? left.title,
+          right.sortTitle ?? right.customName ?? right.title,
+        );
+        break;
+    }
+    if (cmp !== 0) return cmp * multiplier;
+    return compareText(left.title, right.title);
+  });
 }
 
 export async function listVideoSeriesRead(
@@ -280,33 +349,53 @@ export async function listVideoSeriesRead(
   if (query.nsfw === "off") {
     conds.push(eq(videoSeries.isNsfw, false));
   }
-  if (query.studio) {
-    conds.push(eq(videoSeries.studioId, query.studio));
-  }
   if (query.root && query.root !== "all") {
     conds.push(eq(videoSeries.libraryRootId, query.root));
   }
+  conds.push(...buildRatingConditions(videoSeries.rating, query.ratingMin, query.ratingMax));
+  conds.push(...buildDateConditions(videoSeries.firstAirDate, query.dateFrom, query.dateTo));
+  const organizedCond = buildBooleanCondition(videoSeries.organized, query.organized);
+  if (organizedCond) conds.push(organizedCond);
 
-  let tagFilterIds: string[] | undefined;
-  if (query.tag) {
+  const studioValues = toArray(query.studio);
+  if (studioValues.length > 0) {
+    const studioRows = await db
+      .select({ id: studios.id })
+      .from(studios)
+      .where(
+        or(
+          inArray(studios.id, studioValues),
+          inArray(studios.name, studioValues),
+        )!,
+      );
+    const studioIds = studioRows.map((s) => s.id);
+    if (studioIds.length === 0) {
+      return { items: [], total: 0, limit, offset };
+    }
+    conds.push(inArray(videoSeries.studioId, studioIds));
+  }
+
+  const tagValues = toArray(query.tag);
+  if (tagValues.length > 0) {
     const tagRows = await db
-      .select({ seriesId: videoSeriesTags.seriesId })
+      .selectDistinct({ seriesId: videoSeriesTags.seriesId })
       .from(videoSeriesTags)
       .innerJoin(tags, eq(videoSeriesTags.tagId, tags.id))
-      .where(ilike(tags.name, query.tag));
-    tagFilterIds = tagRows.map((r) => r.seriesId);
+      .where(inArray(tags.name, tagValues));
+    const tagFilterIds = tagRows.map((r) => r.seriesId);
     if (tagFilterIds.length === 0) {
       return { items: [], total: 0, limit, offset };
     }
     conds.push(inArray(videoSeries.id, tagFilterIds));
   }
 
-  if (query.performer) {
+  const performerValues = toArray(query.performer);
+  if (performerValues.length > 0) {
     const performerRows = await db
-      .select({ seriesId: videoSeriesPerformers.seriesId })
+      .selectDistinct({ seriesId: videoSeriesPerformers.seriesId })
       .from(videoSeriesPerformers)
       .innerJoin(performers, eq(videoSeriesPerformers.performerId, performers.id))
-      .where(ilike(performers.name, query.performer));
+      .where(inArray(performers.name, performerValues));
     const performerFilterIds = performerRows.map((r) => r.seriesId);
     if (performerFilterIds.length === 0) {
       return { items: [], total: 0, limit, offset };
@@ -328,12 +417,13 @@ export async function listVideoSeriesRead(
   );
 
   const visible =
-    query.studio || query.tag
+    studioValues.length > 0 || tagValues.length > 0 || performerValues.length > 0
       ? all
       : all.filter((s) => (episodeCounts.get(s.id) ?? 0) > 0);
 
   const total = visible.length;
-  const paged = visible.slice(offset, offset + limit);
+  const sorted = sortSeriesRows(visible, query, episodeCounts);
+  const paged = sorted.slice(offset, offset + limit);
 
   const [rootLabels, studioNames] = await Promise.all([
     fetchLibraryRootLabels(db, paged.map((s) => s.libraryRootId)),

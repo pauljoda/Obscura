@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Series browsing now has saved sort and full library filters.** The `/series` page can now sort by title, date, rating, recency, or video count; filter by rating, date, organized state, tags, performers, and studios; save named filter presets; and keep the chosen ordering across reloads.
 - **Series Identify now reaches the cascade review instead of failing at plugin execution.** Obscura now serves the local series/season/episode payload that plugins need, and CommonJS plugins such as TMDB load reliably in the SvelteKit runtime.
 - **Series detail pages now have a larger artwork-first header.** The backdrop gets more vertical room, the poster is larger, and the metadata/actions sit in a fuller hero treatment so series pages feel less cramped.
 - **Video player flyouts now stay on screen.** Subtitle and quality menus open toward whichever side of the control has more space, clamp their height to the viewport, and stay horizontally inside the window instead of disappearing off the edge.
@@ -174,6 +175,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Series thumbnails now render through one shared Svelte component across series cards, the dashboard, search results, and the command palette, so cover art, preview fallback, NSFW state, and count badges stay consistent everywhere.
 - Svelte `/search` page rewritten to match the React version: entity-kind toggle chips, filters panel (min rating, date range), grouped results with `SEARCH_KIND_CONFIG`-driven section headers and "Browse all" links, per-group "Show more" pagination, and kind-specific card rendering (VideoCard + gallery/performer/image/studio/tag cards styled like each entity's listing page). Replaces the previous plain text-row fallback.
 - VS Code launch/tasks, cache-path defaults, and active inline docs now assume the current SvelteKit-plus-worker architecture only, without fallback wording or configs for the removed stack.
 - Shared runtime config and docs now assume a same-origin SvelteKit server on `http://localhost:8008`, and the remaining public/test fixture roots now live under `tests/fixtures/media/videos`.
@@ -227,6 +229,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `/series` now has cookie-backed list preferences, filter presets, metadata filters, and saved ordering controls that match the video browser workflow.
 - `GET /plugins/check-updates` route that fetches the community plugin index and returns one `{pluginId, installedVersion, availableVersion, updateAvailable, zipUrl, sha256}` row per installed plugin. Supports `?refresh=1` to bypass the 5-minute index cache.
 - Plugins page (`/plugins` → Installed tab) now renders an **Update available** badge next to each installed plugin whose community registry version is newer than the installed one, plus a green **Update** action button that reinstalls the plugin in place. A **Check for updates** button in the Installed filter bar re-fetches the registry on demand.
 - **One-time scenes → videos breaking-upgrade gate.** `apps/api/src/db/breaking-gate.ts` runs at the very top of API boot. If a pre-break install is detected (`scenes` table present with rows) and no `/data/.breaking-gate/scenes-to-videos-v0.20.accepted` marker exists, the API boots into a minimal gate mode: only `GET /health`, `GET /system/status`, and `POST /system/breaking-gate/accept` are served. The web app detects `awaitingBreakingConsent: true` and shows a full-page takeover (`apps/web/src/components/system/breaking-upgrade-gate.tsx`) thanking the user, explaining what's about to change, linking to the GitHub repo, and offering a single "I understand, continue upgrade" button. Accept writes the marker file, replies 200, and exits the process — Docker / the dev watcher restart into a normal boot with the marker present, migration 0018 drops the legacy tables, and the app comes up normally.

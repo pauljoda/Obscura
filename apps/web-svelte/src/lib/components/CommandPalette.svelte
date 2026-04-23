@@ -6,6 +6,7 @@
   import { cn } from "@obscura/ui-svelte";
   import type { SearchResponseDto, SearchResultItem } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
+  import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -289,10 +290,25 @@
                       <div
                         class={cn(
                           "flex shrink-0 items-center justify-center overflow-hidden bg-surface-1",
-                          item.kind === "performer" ? "h-8 w-8" : "h-8 w-12",
+                          item.kind === "performer"
+                            ? "h-8 w-8"
+                            : item.kind === "video-series"
+                              ? "h-10 w-7"
+                              : "h-8 w-12",
                         )}
                       >
-                        {#if item.imagePath}
+                        {#if item.kind === "video-series"}
+                          <SeriesThumbnail
+                            title={item.title}
+                            coverImagePath={item.imagePath}
+                            isNsfw={item.meta?.isNsfw === true}
+                            videoCount={typeof item.meta?.videoCount === "number"
+                              ? item.meta.videoCount
+                              : null}
+                            showCount={false}
+                            class="h-full w-full"
+                          />
+                        {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />
                         {:else if Icon}
                           <Icon class="h-3.5 w-3.5 text-text-disabled" />

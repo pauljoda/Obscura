@@ -25,6 +25,18 @@
     videoCount?: number;
     isNsfw?: boolean;
   }
+
+  export type FilterSectionKey =
+    | "resolution"
+    | "rating"
+    | "date"
+    | "duration"
+    | "playback"
+    | "libraryFlags"
+    | "codec"
+    | "tags"
+    | "performers"
+    | "studios";
 </script>
 
 <script lang="ts">
@@ -81,6 +93,8 @@
     showSeriesView?: boolean;
     showSortControls?: boolean;
     defaultSortDir?: Record<string, SortDir>;
+    filterSections?: FilterSectionKey[];
+    showInteractiveFilter?: boolean;
     /** Placeholder text for the search box. */
     searchPlaceholder?: string;
   }
@@ -113,6 +127,19 @@
     showSeriesView = false,
     showSortControls = true,
     defaultSortDir = {},
+    filterSections = [
+      "resolution",
+      "rating",
+      "date",
+      "duration",
+      "playback",
+      "libraryFlags",
+      "codec",
+      "tags",
+      "performers",
+      "studios",
+    ],
+    showInteractiveFilter = true,
     searchPlaceholder = "Search videos...",
   }: Props = $props();
 
@@ -148,6 +175,7 @@
     Boolean(onAddFilter) ||
       availableTags.length + availablePerformers.length + availableStudios.length > 0,
   );
+  const enabledSections = $derived(new Set(filterSections));
 </script>
 
 <div class="space-y-0">
@@ -379,73 +407,78 @@
   {#if filterPanelOpen}
     <div class="surface-well mt-px p-3">
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <FilterSection title="Resolution">
-          {#snippet children()}
-            <div class="flex flex-wrap gap-1">
-              {#each ["4K", "1080p", "720p", "480p"] as res (res)}
-                <button
-                  type="button"
-                  onclick={() => onAddFilter?.("resolution", "Resolution", res)}
-                  class={cn(
-                    "tag-chip cursor-pointer transition-colors duration-fast",
-                    panelFilters.some((f) => f.type === "resolution" && f.value === res)
-                      ? "tag-chip-accent"
-                      : "tag-chip-default hover:tag-chip-accent",
-                  )}
-                >
-                  {res}
-                </button>
-              {/each}
-            </div>
-          {/snippet}
-        </FilterSection>
-
-        <FilterSection title="Rating">
-          {#snippet children()}
-            <div class="space-y-2">
-              <div class="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
-                At least
-              </div>
+        {#if enabledSections.has("resolution")}
+          <FilterSection title="Resolution">
+            {#snippet children()}
               <div class="flex flex-wrap gap-1">
-                {#each [1, 2, 3, 4, 5] as n (n)}
+                {#each ["4K", "1080p", "720p", "480p"] as res (res)}
                   <button
                     type="button"
-                    onclick={() => onAddFilter?.("ratingMin", "Min rating", String(n))}
+                    onclick={() => onAddFilter?.("resolution", "Resolution", res)}
                     class={cn(
                       "tag-chip cursor-pointer transition-colors duration-fast",
-                      panelFilters.some((f) => f.type === "ratingMin" && f.value === String(n))
+                      panelFilters.some((f) => f.type === "resolution" && f.value === res)
                         ? "tag-chip-accent"
                         : "tag-chip-default hover:tag-chip-accent",
                     )}
                   >
-                    {n}★+
+                    {res}
                   </button>
                 {/each}
               </div>
-              <div class="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
-                At most
-              </div>
-              <div class="flex flex-wrap gap-1">
-                {#each [1, 2, 3, 4, 5] as n (n)}
-                  <button
-                    type="button"
-                    onclick={() => onAddFilter?.("ratingMax", "Max rating", String(n))}
-                    class={cn(
-                      "tag-chip cursor-pointer transition-colors duration-fast",
-                      panelFilters.some((f) => f.type === "ratingMax" && f.value === String(n))
-                        ? "tag-chip-accent"
-                        : "tag-chip-default hover:tag-chip-accent",
-                    )}
-                  >
-                    ≤{n}★
-                  </button>
-                {/each}
-              </div>
-            </div>
-          {/snippet}
-        </FilterSection>
+            {/snippet}
+          </FilterSection>
+        {/if}
 
-        <FilterSection title="Video date">
+        {#if enabledSections.has("rating")}
+          <FilterSection title="Rating">
+            {#snippet children()}
+              <div class="space-y-2">
+                <div class="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
+                  At least
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  {#each [1, 2, 3, 4, 5] as n (n)}
+                    <button
+                      type="button"
+                      onclick={() => onAddFilter?.("ratingMin", "Min rating", String(n))}
+                      class={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        panelFilters.some((f) => f.type === "ratingMin" && f.value === String(n))
+                          ? "tag-chip-accent"
+                          : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      {n}★+
+                    </button>
+                  {/each}
+                </div>
+                <div class="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled">
+                  At most
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  {#each [1, 2, 3, 4, 5] as n (n)}
+                    <button
+                      type="button"
+                      onclick={() => onAddFilter?.("ratingMax", "Max rating", String(n))}
+                      class={cn(
+                        "tag-chip cursor-pointer transition-colors duration-fast",
+                        panelFilters.some((f) => f.type === "ratingMax" && f.value === String(n))
+                          ? "tag-chip-accent"
+                          : "tag-chip-default hover:tag-chip-accent",
+                      )}
+                    >
+                      ≤{n}★
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/snippet}
+          </FilterSection>
+        {/if}
+
+        {#if enabledSections.has("date")}
+        <FilterSection title="Date">
           {#snippet children()}
             <div class="flex flex-col gap-2">
               <label class="flex items-center gap-2 text-[0.7rem] text-text-muted">
@@ -475,7 +508,9 @@
             </div>
           {/snippet}
         </FilterSection>
+        {/if}
 
+        {#if enabledSections.has("duration")}
         <FilterSection title="Duration">
           {#snippet children()}
             <div class="flex flex-wrap gap-1">
@@ -496,7 +531,9 @@
             </div>
           {/snippet}
         </FilterSection>
+        {/if}
 
+        {#if enabledSections.has("playback")}
         <FilterSection title="Playback & file">
           {#snippet children()}
             <div class="flex flex-wrap gap-1">
@@ -522,11 +559,22 @@
             </div>
           {/snippet}
         </FilterSection>
+        {/if}
 
+        {#if enabledSections.has("libraryFlags")}
         <FilterSection title="Library flags">
           {#snippet children()}
             <div class="flex flex-wrap gap-1">
-              {#each [{ type: "organized", value: "true", label: "Organized" }, { type: "organized", value: "false", label: "Not organized" }, { type: "interactive", value: "true", label: "Interactive" }, { type: "interactive", value: "false", label: "Not interactive" }] as item (`${item.type}-${item.value}`)}
+              {#each [
+                { type: "organized", value: "true", label: "Organized" },
+                { type: "organized", value: "false", label: "Not organized" },
+                ...(showInteractiveFilter
+                  ? [
+                      { type: "interactive", value: "true", label: "Interactive" },
+                      { type: "interactive", value: "false", label: "Not interactive" },
+                    ]
+                  : []),
+              ] as item (`${item.type}-${item.value}`)}
                 <button
                   type="button"
                   onclick={() =>
@@ -548,7 +596,9 @@
             </div>
           {/snippet}
         </FilterSection>
+        {/if}
 
+        {#if enabledSections.has("codec")}
         <FilterSection title="Codec">
           {#snippet children()}
             <div class="flex flex-wrap gap-1">
@@ -569,8 +619,9 @@
             </div>
           {/snippet}
         </FilterSection>
+        {/if}
 
-        {#if tagItems.length > 0}
+        {#if enabledSections.has("tags") && tagItems.length > 0}
           <div class="md:col-span-2 xl:col-span-3">
             <AlphabeticalFilterSection
               title="Tags"
@@ -589,7 +640,7 @@
           </div>
         {/if}
 
-        {#if performerItems.length > 0}
+        {#if enabledSections.has("performers") && performerItems.length > 0}
           <div class="md:col-span-2 xl:col-span-3">
             <AlphabeticalFilterSection
               title="Performers"
@@ -606,7 +657,7 @@
           </div>
         {/if}
 
-        {#if studioItems.length > 0}
+        {#if enabledSections.has("studios") && studioItems.length > 0}
           <div class="md:col-span-2 xl:col-span-3">
             <AlphabeticalFilterSection
               title="Studios"

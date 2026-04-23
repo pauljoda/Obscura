@@ -19,6 +19,7 @@
     SearchResultItem,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
+  import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import { fetchSearch } from "$lib/api/media";
@@ -252,6 +253,8 @@
     switch (kind) {
       case "video":
         return "grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+      case "video-series":
+        return "grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
       case "gallery":
         return "grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
       case "image":
@@ -454,6 +457,30 @@
                   variant="grid"
                   index={index}
                 />
+              {:else if item.kind === "video-series"}
+                <a
+                  href={buildHrefWithFrom(item.href, currentPath)}
+                  class="surface-card-sharp overflow-hidden transition-colors duration-fast hover:border-border-accent"
+                >
+                  <SeriesThumbnail
+                    title={item.title}
+                    coverImagePath={item.imagePath}
+                    isNsfw={isNsfwItem(item)}
+                    videoCount={typeof item.meta?.videoCount === "number"
+                      ? item.meta.videoCount
+                      : null}
+                  />
+                  <div class="space-y-1 p-2.5">
+                    <h4 class="truncate text-body font-medium text-text-primary">
+                      {item.title}
+                    </h4>
+                    {#if item.subtitle}
+                      <div class="truncate text-[0.65rem] text-text-muted">
+                        {item.subtitle}
+                      </div>
+                    {/if}
+                  </div>
+                </a>
               {:else if item.kind === "gallery"}
                 {@const gradient = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
                 <a

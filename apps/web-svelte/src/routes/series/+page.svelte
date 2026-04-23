@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { goto, invalidate } from "$app/navigation";
   import { page } from "$app/state";
   import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
   import FilterBar, {
-    type SortDir,
+    type AvailableItem,
+    type FilterSectionKey,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
@@ -16,10 +18,24 @@
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import { videoListItemToCardData } from "$lib/video-card-data";
+  import type { FilterPreset } from "$lib/filter-presets";
+  import {
+    SERIES_EXCLUSIVE_FILTER_TYPES,
+    clearSeriesListPrefsCookie,
+    defaultSeriesListPrefs,
+    formatSeriesFilterValue,
+    isDefaultSeriesListPrefs,
+    seriesPresets,
+    writeSeriesListPrefsCookie,
+    type SeriesListPrefs,
+    type SeriesListPrefsActiveFilter,
+    type SeriesSortOption,
+    type SortDir,
+  } from "$lib/prefs/series-list-prefs";
 
   let { data } = $props();
 
-  const sortOptions = [
+  const videoSortOptions = [
     { value: "episode", label: "Episode order" },
     { value: "recent", label: "Recently Added" },
     { value: "date", label: "Video date" },
@@ -29,8 +45,31 @@
     { value: "rating", label: "Rating" },
     { value: "plays", label: "Most Played" },
   ];
+  const seriesSortOptions: { value: SeriesSortOption; label: string }[] = [
+    { value: "title", label: "Title A-Z" },
+    { value: "recent", label: "Recently Added" },
+    { value: "date", label: "Series date" },
+    { value: "rating", label: "Rating" },
+    { value: "videos", label: "Video count" },
+  ];
+  const defaultSeriesSortDir: Record<string, SortDir> = {
+    title: "asc",
+    recent: "desc",
+    date: "desc",
+    rating: "desc",
+    videos: "desc",
+  };
+  const seriesFilterSections: FilterSectionKey[] = [
+    "rating",
+    "date",
+    "libraryFlags",
+    "tags",
+    "performers",
+    "studios",
+  ];
 
   const currentPath = $derived(`${page.url.pathname}${page.url.search}`);
+  const usesRootPrefs = $derived(!data.activeSeries);
   const showsVideos = $derived(
     Boolean(
       data.activeSeries &&
@@ -38,14 +77,134 @@
           data.activeSeasonNumber != null),
     ),
   );
-  const canClearFiltersAndSort = $derived(
-    Boolean(data.search) ||
-      (showsVideos &&
-        (data.sort !== "episode" ||
-          data.order !== "asc" ||
-          data.view !== "grid")),
+  const listTotal = $derived(usesRootPrefs ? data.seriesTotal : data.total);
+  const totalPages = $derived(Math.max(1, Math.ceil(listTotal / data.pageSize)));
+
+  // svelte-ignore state_referenced_locally
+  let seriesSortBy = $state<SeriesSortOption>(data.prefs.sortBy);
+  // svelte-ignore state_referenced_locally
+  let seriesSortDir = $state<SortDir>(data.prefs.sortDir);
+  // svelte-ignore state_referenced_locally
+  let seriesSearchQuery = $state(data.prefs.search);
+  // svelte-ignore state_referenced_locally
+  let seriesActiveFilters = $state<SeriesListPrefsActiveFilter[]>(
+    data.prefs.activeFilters,
   );
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  // svelte-ignore state_referenced_locally
+  let seriesActivePresetId = $state<string | null>(data.prefs.activePresetId ?? null);
+  const serverPrefs = $derived(data.prefs);
+  let presets = $state<FilterPreset[]>([]);
+  let studiosList = $state<AvailableItem[]>([]);
+  let tagsList = $state<AvailableItem[]>([]);
+  let performersList = $state<AvailableItem[]>([]);
+
+  onMount(() => {
+    presets = seriesPresets.load();
+  });
+
+  const seriesDisplayFilters = $derived(
+    seriesActiveFilters.map((f, i) => ({
+      type: f.type,
+      label: f.label,
+      value: formatSeriesFilterValue(f, { studios: studiosList }),
+      index: i,
+    })),
+  );
+
+  const canClearSeriesFiltersAndSort = $derived(
+    !isDefaultSeriesListPrefs({
+      sortBy: seriesSortBy,
+      sortDir: seriesSortDir,
+      search: seriesSearchQuery,
+      activeFilters: seriesActiveFilters,
+      activePresetId: seriesActivePresetId ?? undefined,
+    }),
+  );
+  const canClearFiltersAndSort = $derived(
+    usesRootPrefs
+      ? canClearSeriesFiltersAndSort
+      : Boolean(data.search) ||
+          (showsVideos &&
+            (data.sort !== "episode" ||
+              data.order !== "asc" ||
+              data.view !== "grid")),
+  );
+
+  let searchTimer: ReturnType<typeof setTimeout> | null = null;
+  let isInitialized = false;
+
+  $effect(() => {
+    const prefs: SeriesListPrefs = {
+      sortBy: seriesSortBy,
+      sortDir: seriesSortDir,
+      search: seriesSearchQuery,
+      activeFilters: seriesActiveFilters,
+      activePresetId: seriesActivePresetId ?? undefined,
+    };
+
+    if (!usesRootPrefs) return;
+    if (!isInitialized) {
+      isInitialized = true;
+      return;
+    }
+
+    const searchOnly =
+      prefs.sortBy === serverPrefs.sortBy &&
+      prefs.sortDir === serverPrefs.sortDir &&
+      JSON.stringify(prefs.activeFilters) === JSON.stringify(serverPrefs.activeFilters) &&
+      (prefs.activePresetId ?? null) === (serverPrefs.activePresetId ?? null) &&
+      prefs.search !== serverPrefs.search;
+
+    const flush = () => {
+      if (isDefaultSeriesListPrefs(prefs)) {
+        clearSeriesListPrefsCookie();
+      } else {
+        writeSeriesListPrefsCookie(prefs);
+      }
+      void invalidate("video-series");
+    };
+
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    if (searchOnly) {
+      searchTimer = setTimeout(flush, 300);
+    } else {
+      flush();
+    }
+  });
+
+  $effect(() => {
+    void data.streamed.studios.then((r) => {
+      studiosList = r.map((s) => ({
+        id: s.id,
+        name: s.name,
+        videoCount: s.videoCount,
+        isNsfw: s.isNsfw,
+      }));
+    });
+  });
+  $effect(() => {
+    void data.streamed.tags.then((r) => {
+      tagsList = r.map((t) => ({
+        id: t.id,
+        name: t.name,
+        videoCount: t.videoCount,
+        isNsfw: t.isNsfw,
+      }));
+    });
+  });
+  $effect(() => {
+    void data.streamed.performers.then((r) => {
+      performersList = r.map((p) => ({
+        id: p.id,
+        name: p.name,
+        videoCount: p.videoCount,
+        isNsfw: p.isNsfw,
+      }));
+    });
+  });
 
   function updateUrl(patch: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(page.url.searchParams);
@@ -59,11 +218,22 @@
   }
 
   function onSearchChange(q: string) {
-    updateUrl({ search: q || null });
+    if (usesRootPrefs) {
+      seriesSearchQuery = q;
+    } else {
+      updateUrl({ search: q || null });
+    }
   }
 
   function onSortChange(sort: string, dir?: SortDir) {
-    updateUrl({ sort, order: dir ?? data.order });
+    if (usesRootPrefs) {
+      seriesSortBy = sort as SeriesSortOption;
+      seriesSortDir = dir ?? defaultSeriesSortDir[sort] ?? seriesSortDir;
+      seriesActivePresetId = null;
+      resetPage();
+    } else {
+      updateUrl({ sort, order: dir ?? data.order });
+    }
   }
 
   function onViewModeChange(v: ViewMode) {
@@ -71,10 +241,106 @@
   }
 
   function onClearFiltersAndSort() {
-    void goto(data.seriesId ? `/series?series=${data.seriesId}` : "/series", {
-      keepFocus: true,
-      noScroll: true,
-    });
+    if (usesRootPrefs) {
+      const d = defaultSeriesListPrefs();
+      seriesSortBy = d.sortBy;
+      seriesSortDir = d.sortDir;
+      seriesSearchQuery = d.search;
+      seriesActiveFilters = d.activeFilters;
+      seriesActivePresetId = null;
+      resetPage();
+    } else {
+      void goto(data.seriesId ? `/series?series=${data.seriesId}` : "/series", {
+        keepFocus: true,
+        noScroll: true,
+      });
+    }
+  }
+
+  function resetPage() {
+    if (page.url.searchParams.has("page")) {
+      const params = new URLSearchParams(page.url.searchParams);
+      params.delete("page");
+      const qs = params.toString();
+      void goto(qs ? `/series?${qs}` : "/series", {
+        keepFocus: true,
+        noScroll: true,
+        replaceState: true,
+      });
+    }
+  }
+
+  function onAddFilter(type: string, label: string, value: string) {
+    seriesActivePresetId = null;
+    if (SERIES_EXCLUSIVE_FILTER_TYPES.has(type)) {
+      const already = seriesActiveFilters.some((f) => f.type === type && f.value === value);
+      const withoutType = seriesActiveFilters.filter((f) => f.type !== type);
+      seriesActiveFilters = already ? withoutType : [...withoutType, { type, label, value }];
+    } else {
+      const already = seriesActiveFilters.some((f) => f.type === type && f.value === value);
+      seriesActiveFilters = already
+        ? seriesActiveFilters.filter((f) => !(f.type === type && f.value === value))
+        : [...seriesActiveFilters, { type, label, value }];
+    }
+    resetPage();
+  }
+
+  function onRemoveFilter(index: number) {
+    seriesActivePresetId = null;
+    seriesActiveFilters = seriesActiveFilters.filter((_, i) => i !== index);
+    resetPage();
+  }
+
+  function onApplyPreset(preset: FilterPreset) {
+    if (seriesActivePresetId === preset.id) {
+      const d = defaultSeriesListPrefs();
+      seriesActiveFilters = d.activeFilters;
+      seriesSortBy = d.sortBy;
+      seriesSortDir = d.sortDir;
+      seriesActivePresetId = null;
+    } else {
+      seriesActiveFilters = preset.filters.map((f) => ({ ...f }));
+      seriesSortBy = preset.sortBy as SeriesSortOption;
+      seriesSortDir = preset.sortDir;
+      seriesActivePresetId = preset.id;
+    }
+    resetPage();
+  }
+
+  function onSavePreset(name: string) {
+    const preset: FilterPreset = {
+      id: crypto.randomUUID(),
+      name,
+      filters: seriesActiveFilters.map((f) => ({ ...f })),
+      sortBy: seriesSortBy,
+      sortDir: seriesSortDir,
+    };
+    const updated = [...presets, preset];
+    presets = updated;
+    seriesPresets.save(updated);
+    seriesActivePresetId = preset.id;
+  }
+
+  function onOverwritePreset(id: string) {
+    const updated = presets.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            filters: seriesActiveFilters.map((f) => ({ ...f })),
+            sortBy: seriesSortBy,
+            sortDir: seriesSortDir,
+          }
+        : p,
+    );
+    presets = updated;
+    seriesPresets.save(updated);
+  }
+
+  function onDeletePreset(id: string) {
+    const updated = presets.filter((p) => p.id !== id);
+    presets = updated;
+    seriesPresets.save(updated);
+    if (seriesActivePresetId === id) seriesActivePresetId = null;
   }
 
   function pageHref(nextPage: number): string {
@@ -106,19 +372,35 @@
   <FilterBar
     viewMode={data.view}
     {onViewModeChange}
-    sortBy={data.sort}
-    sortDir={data.order}
-    {sortOptions}
+    sortBy={usesRootPrefs ? seriesSortBy : data.sort}
+    sortDir={usesRootPrefs ? seriesSortDir : data.order}
+    sortOptions={usesRootPrefs ? seriesSortOptions : videoSortOptions}
     {onSortChange}
-    searchQuery={data.search}
+    searchQuery={usesRootPrefs ? seriesSearchQuery : data.search}
     {onSearchChange}
     showViewToggle={showsVideos}
-    showSortControls={showsVideos}
+    showSortControls={usesRootPrefs || showsVideos}
     searchPlaceholder={showsVideos
       ? "Search videos in this series..."
       : "Search series..."}
+    activeFilters={usesRootPrefs ? seriesDisplayFilters : []}
+    rawActiveFilters={usesRootPrefs ? seriesActiveFilters : []}
+    onAddFilter={usesRootPrefs ? onAddFilter : undefined}
+    onRemoveFilter={usesRootPrefs ? onRemoveFilter : undefined}
     onClearFiltersAndSort={canClearFiltersAndSort ? onClearFiltersAndSort : undefined}
     {canClearFiltersAndSort}
+    availableStudios={usesRootPrefs ? studiosList : []}
+    availableTags={usesRootPrefs ? tagsList : []}
+    availablePerformers={usesRootPrefs ? performersList : []}
+    presets={usesRootPrefs ? presets : []}
+    activePresetId={usesRootPrefs ? seriesActivePresetId : null}
+    onApplyPreset={usesRootPrefs ? onApplyPreset : undefined}
+    onSavePreset={usesRootPrefs ? onSavePreset : undefined}
+    onOverwritePreset={usesRootPrefs ? onOverwritePreset : undefined}
+    onDeletePreset={usesRootPrefs ? onDeletePreset : undefined}
+    defaultSortDir={usesRootPrefs ? defaultSeriesSortDir : undefined}
+    filterSections={usesRootPrefs ? seriesFilterSections : undefined}
+    showInteractiveFilter={!usesRootPrefs}
   />
 
   {#if data.activeSeries}
@@ -411,7 +693,7 @@
     </HierarchyShell>
   {/if}
 
-  {#if showsVideos && totalPages > 1}
+  {#if (usesRootPrefs || showsVideos) && totalPages > 1}
     <nav class="flex items-center justify-center gap-2 border-t border-border-subtle pt-4">
       {#if data.page > 1}
         <a

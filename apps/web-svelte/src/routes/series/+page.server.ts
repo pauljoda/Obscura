@@ -5,6 +5,14 @@ import {
   fetchSeriesDetail,
 } from "$lib/server/videos";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import {
+  SERIES_LIST_PREFS_COOKIE,
+  defaultSeriesListPrefs,
+  parseSeriesListPrefs,
+  seriesListPrefsToFetchParams,
+} from "$lib/prefs/series-list-prefs";
+import { serverFetch } from "$lib/server/core";
+import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
 const PAGE_SIZE = 60;
 
@@ -13,6 +21,30 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
 
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
   const seriesParam = url.searchParams.get("series");
+  const prefsCookie = cookies.get(SERIES_LIST_PREFS_COOKIE);
+  const parsedPrefs =
+    parseSeriesListPrefs(prefsCookie) ?? defaultSeriesListPrefs();
+  const rootSort = url.searchParams.get("sort");
+  const rootOrder = url.searchParams.get("order");
+  const useUrlPrefs = !seriesParam && !prefsCookie;
+  const prefs = !useUrlPrefs
+    ? parsedPrefs
+    : {
+        ...parsedPrefs,
+        search: url.searchParams.get("search") ?? parsedPrefs.search,
+        sortBy:
+          rootSort === "recent" ||
+          rootSort === "title" ||
+          rootSort === "date" ||
+          rootSort === "rating" ||
+          rootSort === "videos"
+            ? rootSort
+            : parsedPrefs.sortBy,
+        sortDir:
+          rootOrder === "asc" || rootOrder === "desc"
+            ? rootOrder
+            : parsedPrefs.sortDir,
+      };
   const seasonRaw = url.searchParams.get("season");
   const seasonNumber =
     seasonRaw != null && /^\d+$/.test(seasonRaw) ? seasonRaw : undefined;
@@ -27,10 +59,16 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const view: "grid" | "list" = viewRaw === "list" ? "list" : "grid";
   const pageParam = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const seriesFetchParams = seriesListPrefsToFetchParams(prefs, nsfwMode);
 
   const seriesResponse = !seriesParam
     ? await fetchSeries(
-        { root: "all", search, limit: 200, nsfw: nsfwMode },
+        {
+          ...seriesFetchParams,
+          root: "all",
+          limit: PAGE_SIZE,
+          offset: (page - 1) * PAGE_SIZE,
+        },
         { fetch },
       ).catch(() => ({ items: [], total: 0, limit: 200, offset: 0 }))
     : { items: [], total: 0, limit: 200, offset: 0 };
@@ -68,6 +106,28 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
       ).catch(() => ({ videos: [], total: 0, limit: PAGE_SIZE, offset: 0 }))
     : { videos: [], total: 0, limit: PAGE_SIZE, offset: 0 };
 
+  const filterQs = nsfwMode ? `?nsfw=${nsfwMode}` : "";
+  const performersQs = nsfwMode
+    ? `?nsfw=${nsfwMode}&sort=videos&order=desc&limit=200`
+    : "?sort=videos&order=desc&limit=200";
+  const studiosPromise = serverFetch<{ studios: StudioItem[] }>(
+    `/studios${filterQs}`,
+    { fetch },
+  )
+    .then((r) => r.studios)
+    .catch(() => [] as StudioItem[]);
+  const tagsPromise = serverFetch<{ tags: TagItem[] }>(`/tags${filterQs}`, {
+    fetch,
+  })
+    .then((r) => r.tags)
+    .catch(() => [] as TagItem[]);
+  const performersPromise = serverFetch<{ performers: PerformerItem[] }>(
+    `/performers${performersQs}`,
+    { fetch },
+  )
+    .then((r) => r.performers)
+    .catch(() => [] as PerformerItem[]);
+
   return {
     videos: response.videos,
     total: response.total,
@@ -83,5 +143,11 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     sort,
     order,
     view,
+    prefs,
+    streamed: {
+      studios: studiosPromise,
+      tags: tagsPromise,
+      performers: performersPromise,
+    },
   };
 };

@@ -55,6 +55,7 @@ export const createVideoSeriesSearchProvider: SearchProviderFactory = (
           title: videoSeries.title,
           posterPath: videoSeries.posterPath,
           backdropPath: videoSeries.backdropPath,
+          isNsfw: videoSeries.isNsfw,
           rating: videoSeries.rating,
           totalEpisodeCount: sql<number>`(
             SELECT COUNT(*)::int FROM video_episodes ve
@@ -89,10 +90,10 @@ export const createVideoSeriesSearchProvider: SearchProviderFactory = (
               ? `${episodeCount} episode${episodeCount !== 1 ? "s" : ""}`
               : null,
           imagePath: r.posterPath ?? r.backdropPath ?? null,
-          href: `/videos?series=${r.id}`,
+          href: `/series?series=${r.id}`,
           rating: r.rating,
           score: Number(r.score ?? 0),
-          meta: { videoCount: episodeCount },
+          meta: { videoCount: episodeCount, isNsfw: r.isNsfw },
         };
       }),
     };

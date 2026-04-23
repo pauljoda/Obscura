@@ -16,6 +16,7 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
+  import SeriesCard from "$lib/components/SeriesCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -353,31 +354,8 @@
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each series as s (s.id)}
-              <div class="flex-none w-64 md:w-72 snap-start">
-                <a
-                  href={`/series?series=${s.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <NsfwBlur isNsfw={s.isNsfw} class="block">
-                    <div class="aspect-video bg-surface-1">
-                      {#if s.coverImagePath}
-                        <img
-                          src={toApiUrl(s.coverImagePath)}
-                          alt={s.title}
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class="flex h-full items-center justify-center">
-                          <FolderOpen class="h-8 w-8 text-text-disabled" />
-                        </div>
-                      {/if}
-                    </div>
-                  </NsfwBlur>
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{s.title}</h3>
-                  </div>
-                </a>
+              <div class="flex-none w-40 md:w-48 snap-start">
+                <SeriesCard series={s} href={`/series?series=${s.id}`} compact />
               </div>
             {/each}
           </div>

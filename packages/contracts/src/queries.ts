@@ -71,6 +71,14 @@ export interface GalleryListQuery extends ListQuery {
 export interface VideoSeriesListQuery extends ListQuery {
   parent?: string;
   root?: string;
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string | string[];
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: boolean;
 }
 
 export interface PerformerListQuery extends ListQuery {

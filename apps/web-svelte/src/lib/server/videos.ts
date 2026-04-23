@@ -53,26 +53,46 @@ export async function fetchSeries(
     parent?: string;
     root?: string;
     search?: string;
+    sort?: string;
+    order?: "asc" | "desc";
     limit?: number;
     offset?: number;
     nsfw?: string;
-    studio?: string;
-    tag?: string;
-    performer?: string;
+    studio?: string | string[];
+    tag?: string | string[];
+    performer?: string | string[];
+    ratingMin?: number;
+    ratingMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    organized?: string;
   },
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString({
-    parent: params?.parent,
-    root: params?.root,
-    search: params?.search,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-    studio: params?.studio,
-    tag: params?.tag,
-    performer: params?.performer,
-  });
+  const toList = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value : value ? [value] : undefined;
+  const qs = buildQueryString(
+    {
+      parent: params?.parent,
+      root: params?.root,
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      limit: params?.limit,
+      offset: params?.offset,
+      nsfw: params?.nsfw,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      organized: params?.organized,
+    },
+    {
+      studio: toList(params?.studio),
+      tag: toList(params?.tag),
+      performer: toList(params?.performer),
+    },
+  );
   return serverFetch<{
     items: VideoSeriesListItemDto[];
     total: number;

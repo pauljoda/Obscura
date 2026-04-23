@@ -1,14 +1,11 @@
 <script module lang="ts">
-  export interface FilterPreset {
-    id: string;
-    name: string;
-    [key: string]: unknown;
-  }
+  export type { FilterPreset } from "$lib/filter-presets";
 </script>
 
 <script lang="ts">
   import { Bookmark, Check, Plus, Trash2, X } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
+  import type { FilterPreset } from "$lib/filter-presets";
 
   interface Props {
     presets?: FilterPreset[];

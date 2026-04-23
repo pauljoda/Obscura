@@ -42,7 +42,7 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
         { limit: 12, sort: "recent", order: "desc", nsfw: nsfwMode },
         { fetch },
       ).catch(() => ({ items: [] as AudioLibraryListItemDto[], total: 0 })),
-      fetchSeries({ limit: 12, nsfw: nsfwMode }).catch(() => ({
+      fetchSeries({ limit: 12, sort: "recent", order: "desc", nsfw: nsfwMode }).catch(() => ({
         items: [] as VideoSeriesListItemDto[],
         total: 0,
         limit: 12,
