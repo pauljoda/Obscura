@@ -53,8 +53,9 @@
     data.library.updatedAt;
     overrideLibrary = null;
     resetFormFromLibrary(data.library);
-    if (!data.library.tracks.some((track) => track.id === activeTrackId)) {
-      activeTrackId = data.library.tracks[0]?.id ?? null;
+    if (activeTrackId && !data.library.tracks.some((track) => track.id === activeTrackId)) {
+      activeTrackId = null;
+      playing = false;
     }
   });
 
@@ -298,7 +299,10 @@
           library.totalDuration == null ? null : Math.max(0, library.totalDuration - deleteDuration),
         updatedAt: new Date().toISOString(),
       };
-      if (activeTrackId === deleteId) activeTrackId = nextTracks[0]?.id ?? null;
+      if (activeTrackId === deleteId) {
+        activeTrackId = playing ? (nextTracks[0]?.id ?? null) : null;
+        if (nextTracks.length === 0) playing = false;
+      }
       trackDeleteTarget = null;
     } finally {
       trackDeleteLoading = false;
@@ -718,7 +722,7 @@
                   <StarRatingPicker
                     value={track.rating}
                     onChange={(nextRating) => void handleTrackRating(track.id, nextRating)}
-                    ariaLabelPrefix={isActive ? "Set" : `Rate ${track.title} with`}
+                    ariaLabelPrefix={index === 0 ? "Set" : `Rate ${track.title} with`}
                   />
                 </div>
                 <span class="text-right font-mono text-[0.72rem] text-text-disabled">
@@ -824,7 +828,7 @@
 
 <div
   class={cn(
-    "pointer-events-none fixed left-0 right-0 z-[45] max-w-[100vw] px-2 pt-1",
+    "pointer-events-none fixed left-0 right-0 z-[35] max-w-[100vw] px-2 pt-1",
     "bottom-[calc(3.5rem+6px)] md:bottom-4 md:px-5",
     appChrome.sidebarCollapsed ? "md:left-14" : "md:left-60",
   )}
