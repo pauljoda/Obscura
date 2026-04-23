@@ -170,14 +170,19 @@
       {#if images.length > 0}
         <HierarchySection title={visibleChildGalleries.length > 0 ? "Images" : ""}>
           {#snippet children()}
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1.5">
+            <div class="gallery-masonry">
               {#each images as img, i (img.id)}
+                {@const aspect =
+                  img.width && img.height && img.height > 0
+                    ? img.width / img.height
+                    : 1}
                 <button
                   type="button"
                   onclick={() => openAt(i)}
-                  class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+                  class="gallery-masonry-item block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
                   aria-label={img.title}
                   title={img.title}
+                  style:aspect-ratio="{aspect}"
                 >
                   <ImageThumbnail
                     title={img.title}
@@ -188,6 +193,7 @@
                     width={img.width}
                     height={img.height}
                     size="grid"
+                    aspectClass="h-full w-full"
                     showChips={false}
                   />
                 </button>
@@ -299,3 +305,30 @@
     onClose={() => (lightboxOpen = false)}
   />
 {/if}
+
+<style>
+  .gallery-masonry {
+    column-count: 3;
+    column-gap: 0.375rem;
+  }
+  @media (min-width: 640px) {
+    .gallery-masonry { column-count: 4; }
+  }
+  @media (min-width: 768px) {
+    .gallery-masonry { column-count: 5; }
+  }
+  @media (min-width: 1024px) {
+    .gallery-masonry { column-count: 6; }
+  }
+  @media (min-width: 1280px) {
+    .gallery-masonry { column-count: 8; }
+  }
+  .gallery-masonry-item {
+    display: block;
+    width: 100%;
+    break-inside: avoid;
+    margin-bottom: 0.375rem;
+    background-color: var(--color-surface-1, #16161a);
+    overflow: hidden;
+  }
+</style>

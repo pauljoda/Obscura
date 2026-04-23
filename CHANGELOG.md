@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Gallery interior layout now respects each image's natural aspect ratio.** The uniform square grid inside a gallery has been replaced with a masonry-style column layout — portrait, landscape, and square images now sit side-by-side without cropping or awkward gaps, and the column count adapts to the viewport.
+
 - **Galleries and images now have saved filter presets, same as videos and series.** The `/galleries` and `/images` pages now show the filter-preset bookmark alongside the sort / filters / clear controls. Save the current sort + filters under a name, load it with one click, overwrite or rename, and delete presets you no longer need. Images also gained Resolution and File Size sort options.
 
 - **Galleries and images now have full inline edit forms.** Each detail page has an **Edit** button next to the rating that reveals the same standardized form used by videos and audio: title, details, date, studio, performers, tags, organized, NSFW (plus photographer on galleries). Galleries also get full cover management — upload a custom cover image, pick one of the gallery's own images as the cover (via an in-page picker grid), or clear the cover. Images get the same for their thumbnail: upload a custom thumbnail or revert to the auto-generated one.
