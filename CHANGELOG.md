@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The Svelte audio detail pages now behave much closer to the live app.** Audio libraries gained inline metadata editing, track ratings and delete actions, labeled track-table headers, and the track detail page now has the custom edit/rating/collection workflow instead of a bare technical readout.
 - **The SvelteKit app now owns most remaining admin and provider API flows directly.** Jobs mutations, plugin/scraper/StashBox management, local generated-asset routes, and the rest of the core video JSON/action endpoints now run through local `/api/*` handlers backed by shared app-core logic, shrinking the Fastify proxy surface further as the cutover work continues.
 - **The Svelte audio library page now uses the live app's floating playback bar.** `/audio/[id]` now mounts the custom player as a hovering bottom transport with waveform scrubbing and play/shuffle controls, while `/audio/tracks/[id]` uses the same custom player inline like the original app.
 - **The Svelte video detail page now keeps rating and subtitle choices in sync without a reload.** Rating stars repaint immediately after you click them, saved subtitle selections are restored only when the matching track still exists, and library subtitle defaults can re-apply correctly when you move between videos.
@@ -102,6 +103,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Audio library ratings, edit mode, and per-track delete actions now work in the Svelte port without waiting on a page refresh. `/audio/[id]` now updates its local state immediately after library saves and track-rating clicks, shows the same Title / Rating / Time headers as the live app, and confirms track removal before deleting.
+- Audio track detail pages in Svelte no longer stop at playback plus technical metadata. `/audio/tracks/[id]` now exposes the custom rating controls, inline metadata editor, organized / NSFW toggles, performer and tag editing, and Add to Collection action from the original app.
 - The Svelte audio library page no longer drops its player inline in the middle of the detail layout. The custom player now sits in the same fixed bottom playback region as the live app, leaves padding so track lists and metadata stay readable behind it, and keeps the visible play state in sync between the list row and the transport.
 - The Svelte video detail page now uses immutable optimistic updates for rating, orgasm count, and organized state, so those controls repaint immediately instead of waiting for a full page refresh. Subtitle preference hydration also now falls back cleanly when a saved subtitle track no longer exists, allowing library subtitle defaults to take over on the next load.
 - `@obscura/web-svelte` dev/build logs no longer emit Vite's "dynamic import cannot be analyzed" warning for `packages/plugins/src/ts-loader.ts`. The plugin runtime now resolves plugin entry paths to file URLs and marks the import as runtime-only, which preserves dynamic plugin loading while keeping the SvelteKit boot log focused on real issues.
