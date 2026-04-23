@@ -292,6 +292,16 @@
     resolveSubtitleAppearance(subtitleDefaults?.appearance ?? null, localAppearance),
   );
 
+  const subtitleSelectionContext = $derived.by(() =>
+    [
+      src ?? "",
+      directSrc ?? "",
+      subtitleChoiceLocked ? "locked" : "unlocked",
+      controlledSubtitleId ?? "__null__",
+      subtitleTracks.map((track) => track.id).join(","),
+    ].join("|"),
+  );
+
   const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
 
   const selectedQualityLabel = $derived(
@@ -316,6 +326,11 @@
   // ─── Subtitle: read local override ───────────────────────────────
   onMount(() => {
     localAppearance = readLocalSubtitleAppearance();
+  });
+
+  $effect(() => {
+    subtitleSelectionContext;
+    autoSelected = false;
   });
 
   // ─── Subtitle auto-select ────────────────────────────────────────

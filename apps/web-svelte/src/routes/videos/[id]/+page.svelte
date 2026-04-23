@@ -160,6 +160,12 @@
   const ratingStars = $derived(video.rating ? Math.round(video.rating / 20) : 0);
   const activeStars = $derived(ratingHover > 0 ? ratingHover : ratingStars);
 
+  function updateOptimisticVideo(
+    updater: (current: VideoDetailDto) => VideoDetailDto,
+  ) {
+    overrideVideo = updater(overrideVideo ?? data.video);
+  }
+
   async function refreshVideo() {
     try {
       overrideVideo = await fetchVideoDetail(video.id);
@@ -187,7 +193,7 @@
   }
 
   let playTracked = false;
-  let hydratedSubtitlePrefsForVideoId = "";
+  let hydratedSubtitlePrefsKey = "";
   async function handlePlayStarted() {
     if (playTracked) return;
     playTracked = true;
@@ -204,10 +210,10 @@
     const newRating = starIdx === ratingStars ? null : starIdx * 20;
     const prevRating = video.rating;
     try {
-      video.rating = newRating;
+      updateOptimisticVideo((current) => ({ ...current, rating: newRating }));
       await updateVideo(video.id, { rating: newRating });
     } catch {
-      video.rating = prevRating;
+      updateOptimisticVideo((current) => ({ ...current, rating: prevRating }));
     } finally {
       savingRating = false;
     }
@@ -215,12 +221,15 @@
 
   async function handleOrgasm() {
     const prev = video.orgasmCount;
-    video.orgasmCount = prev + 1;
+    updateOptimisticVideo((current) => ({ ...current, orgasmCount: prev + 1 }));
     try {
       const res = await recordVideoOrgasm(video.id);
-      video.orgasmCount = res.orgasmCount;
+      updateOptimisticVideo((current) => ({
+        ...current,
+        orgasmCount: res.orgasmCount,
+      }));
     } catch {
-      video.orgasmCount = prev;
+      updateOptimisticVideo((current) => ({ ...current, orgasmCount: prev }));
     }
   }
 
@@ -228,10 +237,10 @@
     const next = !video.organized;
     const prev = video.organized;
     try {
-      video.organized = next;
+      updateOptimisticVideo((current) => ({ ...current, organized: next }));
       await updateVideo(video.id, { organized: next });
     } catch {
-      video.organized = prev;
+      updateOptimisticVideo((current) => ({ ...current, organized: prev }));
     }
   }
 
@@ -313,20 +322,28 @@
 
   $effect(() => {
     playTracked = false;
-    hydratedSubtitlePrefsForVideoId = "";
+    hydratedSubtitlePrefsKey = "";
     video.id;
   });
 
   $effect(() => {
     if (typeof window === "undefined") return;
     const videoId = video.id;
-    if (!videoId || hydratedSubtitlePrefsForVideoId === videoId) return;
-    hydratedSubtitlePrefsForVideoId = videoId;
+    const trackIds = (video.subtitleTracks ?? []).map((track) => track.id).join(",");
+    const hydrationKey = `${videoId}:${trackIds}`;
+    if (!videoId || hydratedSubtitlePrefsKey === hydrationKey) return;
+    hydratedSubtitlePrefsKey = hydrationKey;
     const saved = window.localStorage.getItem(`obscura:subtitle-lang:${videoId}`);
     if (saved) {
-      activeSubtitleId = saved === "__off__" ? null : saved;
-      subtitleChoiceLocked = true;
-      return;
+      const restoredSubtitleId = saved === "__off__" ? null : saved;
+      const hasSavedTrack =
+        restoredSubtitleId == null ||
+        (video.subtitleTracks ?? []).some((track) => track.id === restoredSubtitleId);
+      if (hasSavedTrack) {
+        activeSubtitleId = restoredSubtitleId;
+        subtitleChoiceLocked = true;
+        return;
+      }
     }
     activeSubtitleId = null;
     subtitleChoiceLocked = false;
