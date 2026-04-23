@@ -4,8 +4,6 @@
     Disc3,
     FolderPlus,
     Pencil,
-    Save,
-    XCircle,
     CheckCircle2,
     Clock,
     Headphones,
@@ -16,6 +14,9 @@
     Building2,
     Library as LibraryIcon,
     Calendar,
+    Tag as TagIcon,
+    Users,
+    AlertTriangle,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { fetchPerformers, fetchTags } from "$lib/api/entities";
@@ -25,9 +26,15 @@
   import { entityTerms } from "$lib/terminology";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
-  import ChipInput from "$lib/components/ChipInput.svelte";
   import NsfwChip from "$lib/components/NsfwChip.svelte";
   import StarRatingPicker from "$lib/components/StarRatingPicker.svelte";
+  import {
+    EditFormShell,
+    FormField,
+    TagSelect,
+    ToggleChip,
+    type TagOption,
+  } from "$lib/components/forms";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
@@ -55,8 +62,9 @@
   let editIsNsfw = $state(false);
   let editTags = $state<string[]>([]);
   let editPerformers = $state<string[]>([]);
-  let tagSuggestions = $state<{ name: string; count?: number }[]>([]);
-  let performerSuggestions = $state<{ name: string; count?: number }[]>([]);
+  let tagSuggestions = $state<TagOption[]>([]);
+  let performerSuggestions = $state<TagOption[]>([]);
+  let editError = $state<string | null>(null);
 
   $effect(() => {
     data.track.id;
@@ -147,6 +155,7 @@
 
   async function handleSave() {
     saving = true;
+    editError = null;
     try {
       await updateAudioTrack(track.id, {
         rating: editRating,
@@ -165,9 +174,17 @@
         updatedAt: new Date().toISOString(),
       };
       editing = false;
+    } catch (err) {
+      editError = err instanceof Error ? err.message : "Failed to save changes";
     } finally {
       saving = false;
     }
+  }
+
+  function cancelEdit() {
+    resetEditState();
+    editing = false;
+    editError = null;
   }
 
   async function handleRatingChange(nextRating: number | null) {
@@ -343,129 +360,102 @@
   <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <!-- Main column -->
     <div class="space-y-5">
-      <!-- Description / details -->
-      {#if track.details || editing}
-        <section class="surface-panel p-5">
-          <h2 class="text-kicker mb-2">About this track</h2>
-          {#if track.details}
+      {#if editing}
+        <EditFormShell
+          title="Edit track"
+          description="Track-level overrides only — file metadata (codec, duration, bitrate) is read-only."
+          onSave={() => void handleSave()}
+          onCancel={cancelEdit}
+          {saving}
+          saveLabel="Save track changes"
+          error={editError}
+        >
+          <TagSelect
+            label={entityTerms.performers}
+            icon={Users}
+            values={editPerformers}
+            onChange={(next) => (editPerformers = next)}
+            options={performerSuggestions}
+            placeholder={`Add ${entityTerms.performer.toLowerCase()}…`}
+          />
+          <TagSelect
+            label="Tags"
+            icon={TagIcon}
+            values={editTags}
+            onChange={(next) => (editTags = next)}
+            options={tagSuggestions}
+            placeholder="Add tag…"
+          />
+          <FormField label="Flags">
+            <div class="flex flex-wrap gap-2">
+              <ToggleChip
+                value={editOrganized}
+                onChange={(v) => (editOrganized = v)}
+                onLabel="Organized"
+                offLabel="Mark as organized"
+                icon={CheckCircle2}
+              />
+              <ToggleChip
+                value={editIsNsfw}
+                onChange={(v) => (editIsNsfw = v)}
+                onLabel="Marked NSFW"
+                offLabel="Mark as NSFW"
+                icon={AlertTriangle}
+                variant="warning"
+              />
+            </div>
+          </FormField>
+        </EditFormShell>
+      {:else}
+        <!-- Description / details -->
+        {#if track.details}
+          <section class="surface-panel p-5">
+            <h2 class="text-kicker mb-2">About this track</h2>
             <p class="whitespace-pre-wrap text-[0.85rem] leading-relaxed text-text-secondary">
               {track.details}
             </p>
+          </section>
+        {/if}
+
+        <!-- Performers -->
+        <section class="surface-panel p-5">
+          <h2 class="text-kicker mb-3 flex items-center gap-2">
+            <Music class="h-3 w-3" />
+            {entityTerms.performers}
+          </h2>
+          {#if track.performers.length > 0}
+            <div class="flex flex-wrap gap-2">
+              {#each track.performers as performer (performer.id)}
+                <a
+                  href={`/performers/${performer.id}`}
+                  class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2 px-2.5 py-1 text-[0.78rem] text-text-primary transition-colors hover:border-border-accent hover:text-text-accent"
+                >
+                  {performer.name}
+                </a>
+              {/each}
+            </div>
           {:else}
-            <p class="text-[0.78rem] text-text-disabled italic">No description</p>
+            <p class="text-[0.72rem] text-text-disabled italic">No {entityTerms.performers.toLowerCase()} attached</p>
           {/if}
         </section>
-      {/if}
 
-      <!-- Performers -->
-      <section class="surface-panel p-5">
-        <h2 class="text-kicker mb-3 flex items-center gap-2">
-          <Music class="h-3 w-3" />
-          {entityTerms.performers}
-        </h2>
-        {#if editing}
-          <ChipInput
-            values={editPerformers}
-            onChange={(next) => (editPerformers = next)}
-            suggestions={performerSuggestions}
-            placeholder={`Add ${entityTerms.performer.toLowerCase()}...`}
-          />
-        {:else if track.performers.length > 0}
-          <div class="flex flex-wrap gap-2">
-            {#each track.performers as performer (performer.id)}
-              <a
-                href={`/performers/${performer.id}`}
-                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2 px-2.5 py-1 text-[0.78rem] text-text-primary transition-colors hover:border-border-accent hover:text-text-accent"
-              >
-                {performer.name}
-              </a>
-            {/each}
-          </div>
-        {:else}
-          <p class="text-[0.72rem] text-text-disabled italic">No {entityTerms.performers.toLowerCase()} attached</p>
-        {/if}
-      </section>
-
-      <!-- Tags -->
-      <section class="surface-panel p-5">
-        <h2 class="text-kicker mb-3">Tags</h2>
-        {#if editing}
-          <ChipInput
-            values={editTags}
-            onChange={(next) => (editTags = next)}
-            suggestions={tagSuggestions}
-            placeholder="Add tag..."
-          />
-        {:else if visibleTags.length > 0}
-          <div class="flex flex-wrap gap-1.5">
-            {#each visibleTags as tag (tag.id)}
-              <a
-                href={`/tags/${encodeURIComponent(tag.name)}`}
-                class="tag-chip tag-chip-default transition-colors hover:tag-chip-accent"
-              >
-                {tag.name}
-              </a>
-            {/each}
-          </div>
-        {:else}
-          <p class="text-[0.72rem] text-text-disabled italic">No tags</p>
-        {/if}
-      </section>
-
-      <!-- Edit mode toggles + save row -->
-      {#if editing}
-        <section class="surface-panel p-5 space-y-4">
-          <h2 class="text-kicker">Flags</h2>
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onclick={() => (editOrganized = !editOrganized)}
-              class={cn(
-                "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-                editOrganized
-                  ? "bg-accent-950 text-accent-300 border border-border-accent"
-                  : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
-              )}
-            >
-              <CheckCircle2 class="h-4 w-4" />
-              {editOrganized ? "Organized" : "Mark as organized"}
-            </button>
-            <button
-              type="button"
-              onclick={() => (editIsNsfw = !editIsNsfw)}
-              class={cn(
-                "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-                editIsNsfw
-                  ? "bg-error-muted/60 text-error-text border border-error/40"
-                  : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
-              )}
-            >
-              {editIsNsfw ? "Marked NSFW" : "Mark as NSFW"}
-            </button>
-          </div>
-          <div class="flex gap-2 pt-1">
-            <button
-              type="button"
-              onclick={() => void handleSave()}
-              disabled={saving}
-              aria-label="Save track changes"
-              class="inline-flex flex-1 items-center justify-center gap-1.5 border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 px-3 py-2 text-[0.78rem] font-medium text-accent-100 shadow-[var(--shadow-glow-accent)] transition-all disabled:opacity-50 hover:shadow-[var(--shadow-glow-accent-strong)]"
-            >
-              <Save class="h-3.5 w-3.5" />
-              {saving ? "Saving..." : "Save changes"}
-            </button>
-            <button
-              type="button"
-              onclick={() => {
-                resetEditState();
-                editing = false;
-              }}
-              class="inline-flex items-center justify-center gap-1.5 border border-border-subtle px-3 py-2 text-[0.78rem] text-text-muted transition-colors hover:bg-surface-3 hover:text-text-primary"
-            >
-              <XCircle class="h-3.5 w-3.5" />
-              Cancel
-            </button>
-          </div>
+        <!-- Tags -->
+        <section class="surface-panel p-5">
+          <h2 class="text-kicker mb-3">Tags</h2>
+          {#if visibleTags.length > 0}
+            <div class="flex flex-wrap gap-1.5">
+              {#each visibleTags as tag (tag.id)}
+                <a
+                  href={`/tags/${encodeURIComponent(tag.name)}`}
+                  class="tag-chip tag-chip-default transition-colors hover:tag-chip-accent"
+                >
+                  {tag.name}
+                </a>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-[0.72rem] text-text-disabled italic">No tags</p>
+          {/if}
         </section>
       {/if}
     </div>

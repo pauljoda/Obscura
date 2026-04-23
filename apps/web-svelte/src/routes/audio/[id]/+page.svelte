@@ -8,11 +8,13 @@
     Building2,
     HardDrive,
     Edit2,
-    Save,
-    XCircle,
     CheckCircle2,
     FolderPlus,
     MoreVertical,
+    Users,
+    Tag as TagIcon,
+    Star,
+    AlertTriangle,
     Loader2,
   } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
@@ -29,7 +31,6 @@
   } from "$lib/api/entities";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
-  import ChipInput from "$lib/components/ChipInput.svelte";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import PerformersSection from "$lib/components/PerformersSection.svelte";
@@ -37,6 +38,18 @@
   import TagsSection from "$lib/components/TagsSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import TrackListRow from "$lib/components/TrackListRow.svelte";
+  import {
+    DateField,
+    EditFormShell,
+    FormField,
+    SearchSelect,
+    TagSelect,
+    TextAreaField,
+    TextField,
+    ToggleChip,
+    type SearchOption,
+    type TagOption,
+  } from "$lib/components/forms";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -112,16 +125,22 @@
   const collectionItems = $derived(
     visibleTracks.map((track) => ({ entityType: "audio-track" as const, entityId: track.id })),
   );
-  const performerSuggestions = $derived(
+  const performerSuggestions = $derived<TagOption[]>(
     performerOptions.map((performer) => ({
       name: performer.name,
       count: performer.videoCount,
     })),
   );
-  const tagSuggestions = $derived(
+  const tagSuggestions = $derived<TagOption[]>(
     tagOptions.map((tag) => ({
       name: tag.name,
       count: tag.videoCount + (tag.imageCount ?? 0),
+    })),
+  );
+  const studioSearchOptions = $derived<SearchOption[]>(
+    studioOptions.map((studio) => ({
+      id: studio.id,
+      name: studio.name,
     })),
   );
 
@@ -365,280 +384,228 @@
               {#if library.isNsfw}
                 <span class="ml-1"><Badge variant="warning">NSFW</Badge></span>
               {/if}
+              {#if editMode}
+                <span class="ml-1 inline-flex items-center gap-1 border border-border-accent bg-accent-950/70 px-1.5 py-0.5 text-[0.6rem] font-mono tracking-wider text-accent-200">
+                  EDITING
+                </span>
+              {/if}
             </div>
-            {#if editMode}
-              <input
-                bind:value={title}
-                class="w-full min-w-0 border border-border-subtle bg-surface-2/70 px-3 py-2 text-2xl font-heading font-semibold text-text-primary backdrop-blur-sm focus:border-border-accent focus:outline-none sm:text-3xl"
-                placeholder="Library title"
-              />
-            {:else}
-              <h1 class="font-heading text-3xl font-semibold leading-tight text-text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-4xl md:text-5xl">
-                {library.title}
-              </h1>
-            {/if}
+            <h1 class="font-heading text-3xl font-semibold leading-tight text-text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-4xl md:text-5xl">
+              {library.title}
+            </h1>
           </div>
 
           <div class="relative flex flex-shrink-0 items-center gap-1">
-            {#if editMode}
+            <button
+              type="button"
+              onclick={() => (editMode ? cancelEdit() : void beginEdit())}
+              aria-label={editMode ? "Close edit form" : "Edit library"}
+              aria-pressed={editMode}
+              class={cn(
+                "inline-flex items-center gap-1.5 border px-3 py-2 text-[0.78rem] backdrop-blur-sm transition-colors",
+                editMode
+                  ? "border-border-accent bg-accent-950/70 text-accent-200"
+                  : "border-border-subtle bg-surface-2/70 text-text-muted hover:border-border-accent hover:text-text-primary",
+              )}
+            >
+              <Edit2 class="h-4 w-4" />
+              <span class="hidden sm:inline">{editMode ? "Editing" : "Edit"}</span>
+            </button>
+            {#if visibleTracks.length > 0}
               <button
                 type="button"
-                onclick={cancelEdit}
-                disabled={saving}
-                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-3 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:text-text-primary disabled:opacity-50"
+                onclick={() => (moreActionsOpen = !moreActionsOpen)}
+                aria-label="More library actions"
+                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-2.5 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
               >
-                <XCircle class="h-4 w-4" />
-                Cancel
+                <MoreVertical class="h-4 w-4" />
               </button>
+            {/if}
+            {#if moreActionsOpen}
               <button
                 type="button"
-                onclick={() => void handleSave()}
-                disabled={saving || !title.trim()}
-                aria-label="Save changes"
-                class="inline-flex items-center gap-1.5 border border-border-accent bg-gradient-to-r from-accent-900 via-accent-800 to-accent-900 px-3 py-2 text-[0.78rem] text-accent-100 shadow-[var(--shadow-glow-accent)] transition-all disabled:opacity-50"
-              >
-                {#if saving}
-                  <Loader2 class="h-4 w-4 animate-spin" />
-                {:else}
-                  <Save class="h-4 w-4" />
-                {/if}
-                Save
-              </button>
-            {:else}
-              <button
-                type="button"
-                onclick={() => void beginEdit()}
-                aria-label="Edit library"
-                class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-3 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
-              >
-                <Edit2 class="h-4 w-4" />
-                <span class="hidden sm:inline">Edit</span>
-              </button>
-              {#if visibleTracks.length > 0}
+                class="fixed inset-0 z-40 cursor-default bg-transparent"
+                onclick={() => (moreActionsOpen = false)}
+                aria-label="Close library actions"
+              ></button>
+              <div class="absolute right-0 top-full z-50 mt-1 min-w-56 surface-elevated py-1">
                 <button
                   type="button"
-                  onclick={() => (moreActionsOpen = !moreActionsOpen)}
-                  aria-label="More library actions"
-                  class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/70 px-2.5 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
+                  onclick={() => {
+                    moreActionsOpen = false;
+                    collectionModalOpen = true;
+                  }}
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.78rem] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
                 >
-                  <MoreVertical class="h-4 w-4" />
+                  <FolderPlus class="h-4 w-4" />
+                  Add tracks to collection
                 </button>
-              {/if}
-              {#if moreActionsOpen}
-                <button
-                  type="button"
-                  class="fixed inset-0 z-40 cursor-default bg-transparent"
-                  onclick={() => (moreActionsOpen = false)}
-                  aria-label="Close library actions"
-                ></button>
-                <div class="absolute right-0 top-full z-50 mt-1 min-w-56 surface-elevated py-1">
-                  <button
-                    type="button"
-                    onclick={() => {
-                      moreActionsOpen = false;
-                      collectionModalOpen = true;
-                    }}
-                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.78rem] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-                  >
-                    <FolderPlus class="h-4 w-4" />
-                    Add tracks to collection
-                  </button>
-                </div>
-              {/if}
+              </div>
             {/if}
           </div>
         </div>
 
-        {#if !editMode}
-          <!-- Meta strip -->
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-text-secondary">
-            <span class="inline-flex items-center gap-1 font-medium text-text-primary">
-              <Music class="h-3 w-3" />
-              {visibleTrackCount} track{visibleTrackCount === 1 ? "" : "s"}
+        <!-- Meta strip -->
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-text-secondary">
+          <span class="inline-flex items-center gap-1 font-medium text-text-primary">
+            <Music class="h-3 w-3" />
+            {visibleTrackCount} track{visibleTrackCount === 1 ? "" : "s"}
+          </span>
+          {#if visibleDuration > 0}
+            <span class="text-text-disabled">•</span>
+            <span class="inline-flex items-center gap-1 font-mono tabular-nums text-text-muted">
+              {formatDuration(visibleDuration)}
             </span>
-            {#if visibleDuration > 0}
-              <span class="text-text-disabled">•</span>
-              <span class="inline-flex items-center gap-1 font-mono tabular-nums text-text-muted">
-                {formatDuration(visibleDuration)}
-              </span>
-            {/if}
-            {#if library.studio}
-              <span class="text-text-disabled">•</span>
-              <a
-                href={`/studios/${encodeURIComponent(library.studio.name)}`}
-                class="inline-flex items-center gap-1 text-text-accent transition-colors hover:text-accent-200"
-              >
-                <Building2 class="h-3 w-3" />
-                {library.studio.name}
-              </a>
-            {/if}
-            {#if library.date}
-              <span class="text-text-disabled">•</span>
-              <span class="inline-flex items-center gap-1 text-text-muted">
-                <Calendar class="h-3 w-3" />
-                {library.date.slice(0, 10)}
-              </span>
-            {/if}
-            {#if library.organized}
-              <span class="text-text-disabled">•</span>
-              <span class="inline-flex items-center gap-1 text-accent-300">
-                <CheckCircle2 class="h-3 w-3" />
-                Organized
-              </span>
-            {/if}
-          </div>
-
-          {#if library.rating != null || library.details}
-            <div class="space-y-2">
-              {#if library.rating != null}
-                <StarRatingPicker value={library.rating} readOnly />
-              {/if}
-              {#if library.details}
-                <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
-                  {library.details}
-                </p>
-              {/if}
-            </div>
           {/if}
+          {#if library.studio}
+            <span class="text-text-disabled">•</span>
+            <a
+              href={`/studios/${encodeURIComponent(library.studio.name)}`}
+              class="inline-flex items-center gap-1 text-text-accent transition-colors hover:text-accent-200"
+            >
+              <Building2 class="h-3 w-3" />
+              {library.studio.name}
+            </a>
+          {/if}
+          {#if library.date}
+            <span class="text-text-disabled">•</span>
+            <span class="inline-flex items-center gap-1 text-text-muted">
+              <Calendar class="h-3 w-3" />
+              {library.date.slice(0, 10)}
+            </span>
+          {/if}
+          {#if library.organized}
+            <span class="text-text-disabled">•</span>
+            <span class="inline-flex items-center gap-1 text-accent-300">
+              <CheckCircle2 class="h-3 w-3" />
+              Organized
+            </span>
+          {/if}
+        </div>
 
-          <!-- Action strip -->
-          <div class="flex flex-wrap items-center gap-2 pt-1">
-            <button
-              type="button"
-              onclick={() => visibleTracks[0] && playTrack(visibleTracks[0].id)}
-              disabled={visibleTracks.length === 0}
-              class="inline-flex items-center gap-2 border border-border-accent bg-gradient-to-br from-accent-500 to-accent-700 px-5 py-2 text-[0.82rem] font-medium text-bg shadow-[var(--shadow-glow-accent-strong)] transition-all duration-normal disabled:cursor-not-allowed disabled:opacity-40 hover:from-accent-400 hover:to-accent-600"
-            >
-              <Play class="h-4 w-4" fill="currentColor" />
-              Play All
-            </button>
-            <button
-              type="button"
-              onclick={() => {
-                if (visibleTracks.length > 0) shufflePlayKey += 1;
-              }}
-              disabled={visibleTracks.length === 0}
-              class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/60 px-4 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-40"
-            >
-              <Shuffle class="h-3.5 w-3.5" />
-              Shuffle
-            </button>
+        {#if library.rating != null || library.details}
+          <div class="space-y-2">
+            {#if library.rating != null}
+              <StarRatingPicker value={library.rating} readOnly />
+            {/if}
+            {#if library.details}
+              <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
+                {library.details}
+              </p>
+            {/if}
           </div>
         {/if}
+
+        <!-- Action strip -->
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            onclick={() => visibleTracks[0] && playTrack(visibleTracks[0].id)}
+            disabled={visibleTracks.length === 0}
+            class="inline-flex items-center gap-2 border border-border-accent bg-gradient-to-br from-accent-500 to-accent-700 px-5 py-2 text-[0.82rem] font-medium text-bg shadow-[var(--shadow-glow-accent-strong)] transition-all duration-normal disabled:cursor-not-allowed disabled:opacity-40 hover:from-accent-400 hover:to-accent-600"
+          >
+            <Play class="h-4 w-4" fill="currentColor" />
+            Play All
+          </button>
+          <button
+            type="button"
+            onclick={() => {
+              if (visibleTracks.length > 0) shufflePlayKey += 1;
+            }}
+            disabled={visibleTracks.length === 0}
+            class="inline-flex items-center gap-1.5 border border-border-subtle bg-surface-2/60 px-4 py-2 text-[0.78rem] text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-40"
+          >
+            <Shuffle class="h-3.5 w-3.5" />
+            Shuffle
+          </button>
+        </div>
       </div>
     </div>
   </section>
 
   {#if editMode}
-    <!-- Edit form below hero -->
-    <section class="surface-panel p-5 space-y-4">
-      <div>
-        <div class="mb-1.5 text-kicker">Description</div>
-        <textarea
-          bind:value={details}
-          rows="4"
-          class="min-h-[5rem] w-full resize-y border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-        ></textarea>
+    <EditFormShell
+      title="Edit library"
+      description="Changes apply to the library only — track-level metadata is edited from each track."
+      onSave={() => void handleSave()}
+      onCancel={cancelEdit}
+      {saving}
+      saveDisabled={!title.trim()}
+      saveLabel="Save changes"
+      error={editError ?? loadError}
+    >
+      <TextField
+        label="Title"
+        icon={Music}
+        value={title}
+        onChange={(v) => (title = v)}
+        placeholder="Library title"
+        required
+      />
+      <TextAreaField
+        label="Description"
+        value={details}
+        onChange={(v) => (details = v)}
+        placeholder="Notes, liner copy, source info…"
+      />
+      <div class="grid gap-4 md:grid-cols-2">
+        <DateField
+          label="Date"
+          icon={Calendar}
+          value={date}
+          onChange={(v) => (date = v)}
+        />
+        <SearchSelect
+          label="Studio"
+          icon={Building2}
+          value={studioName}
+          onChange={(v) => (studioName = v)}
+          options={studioSearchOptions}
+          placeholder={suggestionsReady ? "Pick a studio…" : "Loading…"}
+          disabled={!suggestionsReady}
+          canAddNew
+        />
       </div>
-      <div class="grid gap-3 md:grid-cols-2">
-        <label class="space-y-1.5">
-          <span class="text-kicker inline-flex items-center gap-2">
-            <Calendar class="h-3.5 w-3.5" />
-            Date
-          </span>
-          <input
-            type="date"
-            bind:value={date}
-            class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-          />
-        </label>
-        <label class="space-y-1.5">
-          <span class="text-kicker inline-flex items-center gap-2">
-            <Building2 class="h-3.5 w-3.5" />
-            Studio
-          </span>
-          <input
-            bind:value={studioName}
-            list="audio-library-studio-options"
-            class="w-full border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-primary focus:border-border-accent focus:outline-none"
-            placeholder="Studio name"
-            disabled={!suggestionsReady}
-          />
-          <datalist id="audio-library-studio-options">
-            {#each studioOptions as studio (studio.id)}
-              <option value={studio.name}></option>
-            {/each}
-          </datalist>
-        </label>
-      </div>
-      <div class="space-y-1.5">
-        <div class="text-kicker">Rating</div>
+      <FormField label="Rating" icon={Star}>
         <StarRatingPicker value={rating} onChange={(next) => (rating = next)} />
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onclick={() => (organized = !organized)}
-          class={cn(
-            "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-            organized
-              ? "bg-accent-950 text-accent-300 border border-border-accent"
-              : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
-          )}
-        >
-          <CheckCircle2 class="h-4 w-4" />
-          {organized ? "Marked organized" : "Mark as organized"}
-        </button>
-        <button
-          type="button"
-          onclick={() => (isNsfw = !isNsfw)}
-          class={cn(
-            "inline-flex items-center gap-2 px-3 py-2 text-[0.78rem] transition-colors",
-            isNsfw
-              ? "bg-error-muted/60 text-error-text border border-error/40"
-              : "bg-surface-2 text-text-muted border border-border-subtle hover:text-text-primary",
-          )}
-        >
-          {isNsfw ? "Marked NSFW" : "Mark as NSFW"}
-        </button>
-      </div>
-      {#if loadError}
-        <p class="text-[0.72rem] text-amber-300">{loadError}</p>
-      {/if}
-      {#if editError}
-        <p class="text-[0.72rem] text-error-text">{editError}</p>
-      {/if}
-    </section>
-  {/if}
-
-  {#if library.folderPath}
-    <p class="flex items-center gap-2 break-all font-mono text-[0.68rem] text-text-disabled" title={library.folderPath}>
-      <HardDrive class="h-3 w-3 flex-shrink-0" />
-      {library.folderPath}
-    </p>
-  {/if}
-
-  {#if editMode}
-    <section class="space-y-3">
-      <div>
-        <h2 class="mb-2 text-kicker">Artists</h2>
-        <ChipInput
-          values={performerNames}
-          onChange={(next) => (performerNames = next)}
-          suggestions={performerSuggestions}
-          placeholder="Add artist..."
-        />
-      </div>
-      <div>
-        <h2 class="mb-2 text-kicker">Tags</h2>
-        <ChipInput
-          values={tagNames}
-          onChange={(next) => (tagNames = next)}
-          suggestions={tagSuggestions}
-          placeholder="Add tag..."
-        />
-      </div>
-    </section>
+      </FormField>
+      <TagSelect
+        label="Artists"
+        icon={Users}
+        values={performerNames}
+        onChange={(next) => (performerNames = next)}
+        options={performerSuggestions}
+        placeholder="Add artist…"
+        helper="Comma or Enter to add. Backspace removes the last chip."
+      />
+      <TagSelect
+        label="Tags"
+        icon={TagIcon}
+        values={tagNames}
+        onChange={(next) => (tagNames = next)}
+        options={tagSuggestions}
+        placeholder="Add tag…"
+      />
+      <FormField label="Flags">
+        <div class="flex flex-wrap gap-2">
+          <ToggleChip
+            value={organized}
+            onChange={(v) => (organized = v)}
+            onLabel="Organized"
+            offLabel="Mark as organized"
+            icon={CheckCircle2}
+          />
+          <ToggleChip
+            value={isNsfw}
+            onChange={(v) => (isNsfw = v)}
+            onLabel="Marked NSFW"
+            offLabel="Mark as NSFW"
+            icon={AlertTriangle}
+            variant="warning"
+          />
+        </div>
+      </FormField>
+    </EditFormShell>
   {:else}
     <div class="grid gap-5 lg:grid-cols-[1fr_1fr]">
       <PerformersSection
@@ -648,6 +615,13 @@
       />
       <TagsSection tags={library.tags} />
     </div>
+  {/if}
+
+  {#if library.folderPath}
+    <p class="flex items-center gap-2 break-all font-mono text-[0.68rem] text-text-disabled" title={library.folderPath}>
+      <HardDrive class="h-3 w-3 flex-shrink-0" />
+      {library.folderPath}
+    </p>
   {/if}
 
   {#if library.children.length > 0}
