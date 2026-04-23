@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Image as ImageIcon, FileText, HardDrive, Calendar } from "@lucide/svelte";
+  import { invalidate } from "$app/navigation";
+  import { Image as ImageIcon, FileText, HardDrive, Calendar, Pencil } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { updateImage } from "$lib/api/media";
   import InlineRating from "$lib/components/InlineRating.svelte";
+  import ImageEdit from "$lib/components/ImageEdit.svelte";
 
   let { data } = $props();
   let overrideRating = $state<number | null | undefined>(undefined);
@@ -31,6 +33,8 @@
     tags: { id: string; name: string; isNsfw: boolean }[];
   });
 
+  let editing = $state(false);
+
   async function handleRatingSave(next: number | null) {
     const previous = (data.image as { rating: number | null }).rating ?? null;
     overrideRating = next;
@@ -40,6 +44,11 @@
       overrideRating = previous;
       throw new Error("Failed to update rating");
     }
+  }
+
+  async function refreshImage() {
+    await invalidate(`/images/${data.image.id}`);
+    editing = false;
   }
 
   function formatSize(bytes: number | null): string {
@@ -88,14 +97,32 @@
         {/if}
       </div>
     </div>
-    <div class="shrink-0 pt-1">
+    <div class="flex items-center gap-3 shrink-0 pt-1">
       <InlineRating
         value={img.rating}
         onSave={handleRatingSave}
         ariaLabelPrefix="Rate image with"
       />
+      {#if !editing}
+        <button
+          type="button"
+          onclick={() => (editing = true)}
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
+        >
+          <Pencil class="h-3.5 w-3.5" />
+          Edit
+        </button>
+      {/if}
     </div>
   </div>
+
+  {#if editing}
+    <ImageEdit
+      image={data.image}
+      onSaved={() => void refreshImage()}
+      onCancel={() => (editing = false)}
+    />
+  {/if}
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
     <!-- Main preview -->

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Images } from "@lucide/svelte";
+  import { invalidate } from "$app/navigation";
+  import { Images, Pencil } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { fetchGalleryImages, updateGallery } from "$lib/api/media";
@@ -7,6 +8,7 @@
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
 
@@ -36,10 +38,16 @@
 
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
+  let editing = $state(false);
 
   function openAt(i: number) {
     lightboxIndex = i;
     lightboxOpen = true;
+  }
+
+  async function refreshGallery() {
+    await invalidate(`/galleries/${data.gallery.id}`);
+    editing = false;
   }
 
   async function loadMore() {
@@ -107,7 +115,25 @@
         </p>
       {/if}
     </div>
+    {#if !editing}
+      <button
+        type="button"
+        onclick={() => (editing = true)}
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
+      >
+        <Pencil class="h-3.5 w-3.5" />
+        Edit
+      </button>
+    {/if}
   </div>
+
+  {#if editing}
+    <GalleryEdit
+      gallery={data.gallery}
+      onSaved={() => void refreshGallery()}
+      onCancel={() => (editing = false)}
+    />
+  {/if}
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
     <div class="space-y-6 min-w-0">
