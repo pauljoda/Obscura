@@ -1,253 +1,377 @@
 <script lang="ts">
+  import { goto, invalidate } from "$app/navigation";
+  import { page } from "$app/state";
   import {
+    CheckSquare,
     Edit,
     FolderOpen,
-    Film,
+    Grid3X3,
+    Hand,
     Images,
     Image as ImageIcon,
+    List,
+    Loader2,
     Music,
+    Play,
+    RefreshCw,
+    Shuffle,
+    Trash2,
+    X,
+    Zap,
+    Film,
   } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
+  import type {
+    CollectionEntityType,
+    CollectionItemDto,
+    CollectionMode,
+  } from "@obscura/contracts";
+  import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
+  import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
+  import { usePlaylist } from "$lib/stores/playlist.svelte";
+
+  type ViewMode = "mixed" | "by-type";
 
   let { data } = $props();
+  const playlist = usePlaylist();
   const c = $derived(data.collection);
-  const items = $derived(data.items);
+  const initialItems = $derived(data.items as CollectionItemDto[]);
+  let items = $derived(initialItems);
+  let viewMode = $state<ViewMode>("mixed");
+  let selectMode = $state(false);
+  let selectedItemIds = $state<string[]>([]);
+  let refreshing = $state(false);
+  let deleting = $state(false);
+  let removing = $state(false);
 
-  type ItemEntry = (typeof items)[number];
+  const typeOrder: CollectionEntityType[] = ["video", "gallery", "image", "audio-track"];
+  const modeIcons: Record<CollectionMode, typeof Hand> = {
+    manual: Hand,
+    dynamic: Zap,
+    hybrid: Shuffle,
+  };
+  const modeLabels: Record<CollectionMode, string> = {
+    manual: "Manual",
+    dynamic: "Dynamic",
+    hybrid: "Hybrid",
+  };
+  const typeLabels: Record<CollectionEntityType, string> = {
+    video: "Videos",
+    gallery: "Galleries",
+    image: "Images",
+    "audio-track": "Audio",
+  };
+  const typeIcons: Record<CollectionEntityType, typeof Film> = {
+    video: Film,
+    gallery: Images,
+    image: ImageIcon,
+    "audio-track": Music,
+  };
 
-  function bucket(t: "video" | "gallery" | "image" | "audio_track"): ItemEntry[] {
-    return items.filter((it) => it.entityType === t);
+  const ModeIcon = $derived(modeIcons[c.mode as CollectionMode]);
+  const hasManualItems = $derived(items.some((item) => item.source === "manual"));
+  const selectedCount = $derived(selectedItemIds.length);
+  const currentPath = $derived(page.url.pathname);
+  const itemsByType = $derived.by(() => {
+    const grouped: Record<CollectionEntityType, CollectionItemDto[]> = {
+      video: [],
+      gallery: [],
+      image: [],
+      "audio-track": [],
+    };
+    for (const item of items) grouped[item.entityType].push(item);
+    return grouped;
+  });
+
+  function slideshowDuration() {
+    return c.slideshowAutoAdvance ? c.slideshowDurationSeconds : 0;
   }
-  const videoItems = $derived(bucket("video"));
-  const galleryItems = $derived(bucket("gallery"));
-  const imageItems = $derived(bucket("image"));
-  const trackItems = $derived(bucket("audio_track"));
+
+  function startPlayback(shuffle = false) {
+    if (items.length === 0) return;
+    playlist.startPlaylist(items, c.name, 0, {
+      shuffle,
+      slideshowDurationSeconds: slideshowDuration(),
+    });
+  }
+
+  async function refreshDynamicRules() {
+    if (refreshing) return;
+    refreshing = true;
+    try {
+      await refreshCollection(c.id);
+      await invalidate(`collections:${c.id}`);
+      const fresh = await fetchCollectionItems(c.id, { limit: 200 });
+      items = fresh.items;
+      selectedItemIds = selectedItemIds.filter((id) => fresh.items.some((item) => item.id === id));
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  async function deleteThisCollection() {
+    if (deleting) return;
+    if (!confirm("Delete this collection? This cannot be undone.")) return;
+    deleting = true;
+    try {
+      await deleteCollection(c.id);
+      await invalidate("collections");
+      await goto("/collections");
+    } finally {
+      deleting = false;
+    }
+  }
+
+  function toggleSelection(itemId: string) {
+    if (selectedItemIds.includes(itemId)) {
+      selectedItemIds = selectedItemIds.filter((id) => id !== itemId);
+      return;
+    }
+    selectedItemIds = [...selectedItemIds, itemId];
+  }
+
+  async function removeSelectedItems() {
+    if (selectedItemIds.length === 0 || removing) return;
+    const ids = selectedItemIds;
+    const previous = items;
+    removing = true;
+    items = items.filter((item) => !ids.includes(item.id));
+    selectedItemIds = [];
+    selectMode = false;
+    try {
+      await removeCollectionItems(c.id, { itemIds: ids });
+      await invalidate(`collections:${c.id}`);
+      await invalidate("collections");
+    } catch (err) {
+      items = previous;
+      throw err;
+    } finally {
+      removing = false;
+    }
+  }
+
+  function exitSelectMode() {
+    selectMode = false;
+    selectedItemIds = [];
+  }
 </script>
 
 <svelte:head>
-  <title>Obscura</title>
+  <title>{c.name} — Obscura</title>
 </svelte:head>
 
-<div class="space-y-6">
-  <div class="flex items-start justify-between gap-4 flex-wrap">
-    <div class="flex-1 space-y-1.5 min-w-0">
-      <h1 class="flex items-center gap-2.5 text-text-primary">
-        <FolderOpen class="h-5 w-5 text-text-accent" />
-        {c.name}
-      </h1>
-      <div class="flex flex-wrap items-center gap-2 text-[0.78rem] text-text-muted">
-        <span>{c.itemCount} item{c.itemCount === 1 ? "" : "s"}</span>
-        <Badge>
-          {#snippet children()}{c.mode}{/snippet}
-        </Badge>
-        {#if c.slideshowAutoAdvance}
-          <Badge>
-            {#snippet children()}auto-advance {c.slideshowDurationSeconds}s{/snippet}
-          </Badge>
+<div class="space-y-5">
+  <header class="space-y-3">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0 flex-1 space-y-1.5">
+        <h1 class="flex items-center gap-2.5 text-text-primary">
+          <FolderOpen class="h-5 w-5 text-text-accent" />
+          {c.name}
+        </h1>
+        <div class="flex flex-wrap items-center gap-3 text-[0.75rem] text-text-muted">
+          <span class="inline-flex items-center gap-1 font-mono">
+            <ModeIcon class="h-3 w-3" />
+            {modeLabels[c.mode as CollectionMode]}
+          </span>
+          <span>{items.length} item{items.length === 1 ? "" : "s"}</span>
+          {#if c.lastRefreshedAt}
+            <span class="text-text-disabled">
+              Last refreshed {new Date(c.lastRefreshedAt).toLocaleDateString()}
+            </span>
+          {/if}
+          {#if c.slideshowAutoAdvance}
+            <Badge>auto-advance {c.slideshowDurationSeconds}s</Badge>
+          {/if}
+        </div>
+        {#if c.description}
+          <p class="max-w-2xl whitespace-pre-wrap text-[0.78rem] leading-relaxed text-text-muted">
+            {c.description}
+          </p>
         {/if}
       </div>
-      {#if c.description}
-        <p class="mt-2 text-[0.82rem] text-text-secondary leading-relaxed whitespace-pre-wrap max-w-2xl">
-          {c.description}
-        </p>
-      {/if}
     </div>
-    <a href={`/collections/${c.id}/edit`}>
-      <Button variant="secondary" size="md">
-        {#snippet children()}
-          <Edit class="h-3.5 w-3.5" />
-          Edit
-        {/snippet}
-      </Button>
-    </a>
-  </div>
 
-  {#if c.coverImagePath}
-    <div class="surface-panel overflow-hidden aspect-[21/9] bg-surface-1">
-      <img src={toApiUrl(c.coverImagePath)} alt="" class="h-full w-full object-cover" />
+    <div class="flex flex-wrap items-center gap-1.5">
+      {#if items.length > 0}
+        <Button size="sm" onclick={() => startPlayback(false)}>
+          <Play class="h-3.5 w-3.5" />
+          Play All
+        </Button>
+        <Button size="sm" variant="secondary" onclick={() => startPlayback(true)}>
+          <Shuffle class="h-3.5 w-3.5" />
+          Shuffle All
+        </Button>
+      {/if}
+
+      <div class="min-w-3 flex-1"></div>
+
+      {#if c.mode !== "manual"}
+        <button
+          type="button"
+          class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-text-accent disabled:opacity-50"
+          aria-label="Refresh dynamic rules"
+          title="Refresh dynamic rules"
+          disabled={refreshing}
+          onclick={refreshDynamicRules}
+        >
+          <RefreshCw class={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        </button>
+      {/if}
+      <a
+        href={`/collections/${c.id}/edit`}
+        class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-text-accent"
+        aria-label="Edit collection"
+        title="Edit collection"
+      >
+        <Edit class="h-4 w-4" />
+      </a>
+      <button
+        type="button"
+        class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-error-text disabled:opacity-50"
+        aria-label="Delete collection"
+        title="Delete collection"
+        disabled={deleting}
+        onclick={deleteThisCollection}
+      >
+        {#if deleting}
+          <Loader2 class="h-4 w-4 animate-spin" />
+        {:else}
+          <Trash2 class="h-4 w-4" />
+        {/if}
+      </button>
     </div>
-  {/if}
+  </header>
 
   {#if Object.values(c.typeCounts).some((n) => n > 0)}
-    <div class="flex flex-wrap gap-2">
-      {#each Object.entries(c.typeCounts) as [type, count]}
+    <div class="flex flex-wrap gap-4">
+      {#each typeOrder as type (type)}
+        {@const count = c.typeCounts[type] ?? 0}
         {#if count > 0}
-          <div class="surface-stat px-3 py-2">
-            <span class="text-kicker !text-text-disabled capitalize">
-              {type.replaceAll("_", " ")}
-            </span>
-            <div class="text-lg font-semibold text-text-primary leading-tight">
-              {count}
-            </div>
-          </div>
+          {@const Icon = typeIcons[type]}
+          <span class="inline-flex items-center gap-1.5 text-[0.75rem] text-text-secondary">
+            <Icon class="h-3.5 w-3.5 text-text-muted" />
+            {count} {typeLabels[type]}
+          </span>
         {/if}
       {/each}
     </div>
   {/if}
 
-  {#if items.length === 0}
-    <div class="surface-well flex flex-col items-center justify-center py-16 text-center">
-      <FolderOpen class="h-8 w-8 text-text-disabled mb-2" />
-      <p class="text-text-muted text-sm">
-        {c.mode === "manual"
-          ? "This collection is empty. Add items from any entity page."
-          : "No items match the current rules."}
-      </p>
+  <div class="flex items-center gap-1 border-b border-border-subtle pb-2">
+    <button
+      type="button"
+      onclick={() => (viewMode = "mixed")}
+      class={`px-3 py-1.5 text-[0.78rem] font-medium transition-colors ${
+        viewMode === "mixed"
+          ? "border-b-2 border-accent-brass text-text-accent shadow-[0_8px_20px_rgba(196,154,90,0.12)]"
+          : "text-text-muted hover:text-text-secondary"
+      }`}
+      aria-pressed={viewMode === "mixed"}
+    >
+      <Grid3X3 class="mr-1 inline h-3.5 w-3.5" />
+      Mixed
+    </button>
+    <button
+      type="button"
+      onclick={() => (viewMode = "by-type")}
+      class={`px-3 py-1.5 text-[0.78rem] font-medium transition-colors ${
+        viewMode === "by-type"
+          ? "border-b-2 border-accent-brass text-text-accent shadow-[0_8px_20px_rgba(196,154,90,0.12)]"
+          : "text-text-muted hover:text-text-secondary"
+      }`}
+      aria-pressed={viewMode === "by-type"}
+    >
+      <List class="mr-1 inline h-3.5 w-3.5" />
+      By Type
+    </button>
+
+    <div class="flex-1"></div>
+
+    {#if hasManualItems && !selectMode}
+      <button
+        type="button"
+        onclick={() => (selectMode = true)}
+        class="px-2 py-1 text-[0.72rem] text-text-muted transition-colors hover:text-text-secondary"
+      >
+        <CheckSquare class="mr-1 inline h-3.5 w-3.5" />
+        Select
+      </button>
+    {/if}
+  </div>
+
+  {#if selectMode}
+    <div class="flex items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2">
+      <div class="flex items-center gap-3">
+        <span class="text-[0.75rem] text-text-secondary">{selectedCount} selected</span>
+        {#if selectedCount > 0}
+          <Button variant="danger" size="sm" disabled={removing} onclick={removeSelectedItems}>
+            {#if removing}
+              <Loader2 class="h-3.5 w-3.5 animate-spin" />
+            {:else}
+              <Trash2 class="h-3.5 w-3.5" />
+            {/if}
+            Remove from Collection
+          </Button>
+        {/if}
+      </div>
+      <button
+        type="button"
+        onclick={exitSelectMode}
+        class="p-1 text-text-muted transition-colors hover:text-text-secondary"
+        aria-label="Exit selection mode"
+      >
+        <X class="h-4 w-4" />
+      </button>
     </div>
   {/if}
 
-  {#if videoItems.length > 0}
-    <HierarchySection title={`Videos — ${videoItems.length}`}>
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {#each videoItems as item (item.id)}
-            {@const e = item.entity as { title?: string; thumbnailPath?: string | null; durationFormatted?: string | null; isNsfw?: boolean } | null}
-            {#if e}
-              <a
-                href={`/videos/${item.entityId}`}
-                class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-              >
-                <NsfwBlur isNsfw={e.isNsfw ?? false} class="block">
-                  <div class="aspect-video bg-surface-1 relative">
-                    {#if e.thumbnailPath}
-                      <img
-                        src={toApiUrl(e.thumbnailPath)}
-                        alt=""
-                        loading="lazy"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div class="flex h-full items-center justify-center">
-                        <Film class="h-8 w-8 text-text-disabled" />
-                      </div>
-                    {/if}
-                    {#if e.durationFormatted}
-                      <span class="absolute bottom-1 right-1 bg-black/70 text-white/90 text-[0.6rem] px-1 py-0.5">
-                        {e.durationFormatted}
-                      </span>
-                    {/if}
-                  </div>
-                </NsfwBlur>
-                <div class="p-2">
-                  <h4 class="truncate text-[0.78rem] font-medium text-text-primary">
-                    {e.title ?? "Untitled"}
-                  </h4>
-                </div>
-              </a>
-            {/if}
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if galleryItems.length > 0}
-    <HierarchySection title={`Galleries — ${galleryItems.length}`}>
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {#each galleryItems as item (item.id)}
-            {@const e = item.entity as { title?: string; coverImagePath?: string | null; imageCount?: number; isNsfw?: boolean } | null}
-            {#if e}
-              <a
-                href={`/galleries/${item.entityId}`}
-                class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-              >
-                <NsfwBlur isNsfw={e.isNsfw ?? false} class="block">
-                  <div class="aspect-[3/4] bg-surface-1">
-                    {#if e.coverImagePath}
-                      <img
-                        src={toApiUrl(e.coverImagePath)}
-                        alt=""
-                        loading="lazy"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div class="flex h-full items-center justify-center">
-                        <Images class="h-8 w-8 text-text-disabled" />
-                      </div>
-                    {/if}
-                  </div>
-                </NsfwBlur>
-                <div class="p-2.5">
-                  <h3 class="truncate text-sm font-medium">{e.title ?? "Untitled"}</h3>
-                  <p class="text-xs text-text-muted mt-0.5">
-                    {e.imageCount ?? 0} image{e.imageCount === 1 ? "" : "s"}
-                  </p>
-                </div>
-              </a>
-            {/if}
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if imageItems.length > 0}
-    <HierarchySection title={`Images — ${imageItems.length}`}>
-      {#snippet children()}
-        <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5">
-          {#each imageItems as item (item.id)}
-            {@const e = item.entity as { title?: string; thumbnailPath?: string | null; isNsfw?: boolean } | null}
-            {#if e}
-              <a
-                href={`/images/${item.entityId}`}
-                class="aspect-square bg-surface-1 overflow-hidden block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
-              >
-                <NsfwBlur isNsfw={e.isNsfw ?? false} class="block h-full w-full">
-                  {#if e.thumbnailPath}
-                    <img
-                      src={toApiUrl(e.thumbnailPath)}
-                      alt={e.title ?? ""}
-                      loading="lazy"
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div class="flex h-full items-center justify-center">
-                      <ImageIcon class="h-5 w-5 text-text-disabled" />
-                    </div>
-                  {/if}
-                </NsfwBlur>
-              </a>
-            {/if}
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if trackItems.length > 0}
-    <HierarchySection title={`Tracks — ${trackItems.length}`}>
-      {#snippet children()}
-        <ul class="surface-panel divide-y divide-border-subtle">
-          {#each trackItems as item (item.id)}
-            {@const e = item.entity as { title?: string; embeddedArtist?: string | null; embeddedAlbum?: string | null } | null}
-            {#if e}
-              <li class="flex items-center gap-3 px-4 py-2 hover:bg-surface-2 transition-colors duration-fast">
-                <Music class="h-3.5 w-3.5 text-text-disabled shrink-0" />
-                <a
-                  href={`/audio/tracks/${item.entityId}`}
-                  class="flex-1 min-w-0 text-[0.82rem] text-text-primary hover:text-text-accent truncate"
-                >
-                  {e.title ?? "Untitled"}
-                </a>
-                {#if e.embeddedArtist}
-                  <span class="text-[0.72rem] text-text-muted truncate max-w-[240px]">
-                    {e.embeddedArtist}
-                  </span>
-                {/if}
-                {#if e.embeddedAlbum}
-                  <span class="text-[0.72rem] text-text-disabled truncate max-w-[200px] hidden md:inline">
-                    {e.embeddedAlbum}
-                  </span>
-                {/if}
-              </li>
-            {/if}
-          {/each}
-        </ul>
-      {/snippet}
-    </HierarchySection>
+  {#if items.length === 0}
+    <div class="surface-well flex flex-col items-center justify-center py-16 text-center">
+      <FolderOpen class="mb-3 h-10 w-10 text-text-disabled" />
+      <p class="text-sm text-text-muted">
+        {c.mode === "manual"
+          ? "This collection is empty. Add items from video, gallery, image, or audio pages."
+          : "No items match the current rules. Try refreshing the dynamic rules."}
+      </p>
+    </div>
+  {:else if viewMode === "mixed"}
+    <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {#each items as item (item.id)}
+        <CollectionItemCard
+          {item}
+          selectable={selectMode}
+          selected={selectedItemIds.includes(item.id)}
+          onSelect={toggleSelection}
+          from={currentPath}
+        />
+      {/each}
+    </div>
+  {:else}
+    <div class="space-y-6">
+      {#each typeOrder as type (type)}
+        {@const typeItems = itemsByType[type]}
+        {#if typeItems.length > 0}
+          {@const Icon = typeIcons[type]}
+          <section>
+            <h2 class="mb-3 flex items-center gap-2 text-sm font-heading font-medium text-text-secondary">
+              <Icon class="h-4 w-4 text-text-muted" />
+              {typeLabels[type]}
+              <span class="font-mono text-[0.7rem] text-text-disabled">{typeItems.length}</span>
+            </h2>
+            <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {#each typeItems as item (item.id)}
+                <CollectionItemCard
+                  {item}
+                  selectable={selectMode}
+                  selected={selectedItemIds.includes(item.id)}
+                  onSelect={toggleSelection}
+                  from={currentPath}
+                />
+              {/each}
+            </div>
+          </section>
+        {/if}
+      {/each}
+    </div>
   {/if}
 </div>

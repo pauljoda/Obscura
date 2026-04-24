@@ -22,14 +22,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
 
   const itemsQs = buildQueryString({ limit: ITEM_LIMIT, nsfw });
   const itemsRes = await serverFetch<{
-    items: Array<{
-      id: string;
-      entityType: "video" | "gallery" | "image" | "audio_track";
-      entityId: string;
-      sortOrder: number;
-      addedAt: string;
-      entity: Record<string, unknown> | null;
-    }>;
+    items: import("@obscura/contracts").CollectionItemDto[];
     total: number;
     limit: number;
     offset: number;

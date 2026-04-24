@@ -40,6 +40,7 @@
   const href = $derived(getEntityHref(item, from));
   const thumbnailUrl = $derived(toApiUrl(thumbnailPath));
   const isManual = $derived(item.source === "manual");
+  const sourceLabel = $derived(isManual ? "Direct" : "Scoped");
 </script>
 
 {#snippet card()}
@@ -70,7 +71,7 @@
         {:else}
           <Zap class="h-2.5 w-2.5" />
         {/if}
-        {item.source}
+        {sourceLabel}
       </div>
       {#if selectable && isManual}
         <div

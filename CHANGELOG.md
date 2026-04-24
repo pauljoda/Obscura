@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Collections can play, shuffle, and manage their items again in the Svelte app.** Collection detail pages now start playlist playback from Play All / Shuffle All, switch between Mixed and By Type views, show Direct vs Scoped badges on item thumbnails, refresh dynamic rules, and remove selected direct items.
 - **Library list views are now consistent across Actors, Studios, Tags, Galleries, Images, Audio, Collections, Videos, and Series.** The thumbnail-size slider is now integrated directly into the filter bar — on desktop it sits inline next to the sort / filter / preset controls, and on mobile it drops to its own row below the controls so it has room to breathe. The stray "Actor filters" chip row that used to hang below the bar on `/performers` is gone; those filters (Favorites, Has photo, In videos, Gender, Country) now live inside the same Filters drawer everyone else uses, which keeps the page quieter while scrolling.
 - **Studios, Tags, Audio, and Collections pages gained the same toolbar kit as everything else.** All four now have the thumbnail-size slider, saved filter presets, and (where applicable) a proper Filters drawer (favorites, has-image yes/no, min rating, organized, etc.). Preset and size choices save to Obscura's database so they follow you across devices and browsers.
 - **Tags got a visual redesign.** Each tag now renders as a richer card — a per-tag color gradient derived from its name (or the cover image when one is set), large initials, a glass-panel usage badge in the corner, and the video/image counters as compact monospace chips under the name. Scales from a dense 8-column wall down to 2 fat cards on phones.
@@ -218,6 +219,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Plugin scrape results for audio (MusicBrainz) were not populating `proposedPerformerNames` because the plugin emits a comma-joined `artist` string rather than a `performerNames` array. The accept path now splits the `artist` field on comma / feat. / & / x so the performer list lands in the database as individual rows and the "Artist" field toggle on the Accept drawer does the right thing.
 
 ### Changed
+
+- Collections detail pages in the Svelte app now match the legacy mixed/by-type collection workflow, including playlist launch controls, dynamic refresh, delete, and direct-item selection/removal.
 
 - `/videos` and `/series` list-pref storage moved from cookies (`obscura-videos-list` / `obscura-series-list`) + localStorage (`obscura-videos-filter-presets` / `obscura-series-filter-presets`) to the `ui_prefs` DB table under keys `videos:listPrefs` / `series:listPrefs` and `videos:filterPresets` / `series:filterPresets`. Server load functions read the record via `getUiPrefRead` instead of parsing a cookie; the client writes via `PUT /api/ui-prefs/...` and awaits the response before `invalidate()` so the SSR re-fetch sees the fresh state. The old cookies are no longer read or written.
 - Actor thumbnails now render through one shared Svelte component everywhere first-party actor cards appear, with nav-matching media chips for video, Series, gallery, image, and audio appearance counts.
