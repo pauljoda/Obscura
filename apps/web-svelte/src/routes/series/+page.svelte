@@ -415,6 +415,8 @@
     {@const series = data.activeSeries}
     {@const backdrop = toApiUrl(series.backdropImagePath, series.updatedAt)}
     {@const cover = toApiUrl(series.coverImagePath, series.updatedAt)}
+    {@const hasHeroImage = Boolean(backdrop || cover)}
+    {@const hasPoster = Boolean(cover)}
 
     <HierarchyShell>
       {#snippet breadcrumbs()}
@@ -431,7 +433,11 @@
       {/snippet}
 
       {#snippet children()}
-        <div class="relative overflow-hidden border border-border-subtle bg-surface-1">
+          <div
+            class={hasHeroImage
+              ? "relative min-h-[320px] overflow-hidden border border-border-subtle bg-surface-1 sm:min-h-[360px] lg:min-h-[420px]"
+              : "relative min-h-[240px] overflow-hidden border border-border-subtle bg-surface-1 sm:min-h-[260px] lg:min-h-[280px]"}
+          >
           {#if backdrop}
             <img
               src={backdrop}
@@ -444,14 +450,27 @@
               alt=""
               class="absolute inset-0 h-full w-full scale-105 object-cover object-center opacity-60 blur-lg"
             />
+          {:else}
+            <div
+              class="absolute inset-0 bg-gradient-to-br from-accent-950/70 via-surface-1 to-surface-bg"
+              aria-hidden="true"
+            ></div>
           {/if}
-          <div class="absolute inset-0 bg-gradient-to-r from-bg/90 via-bg/60 to-bg/20"></div>
-          <div class="absolute inset-0 bg-gradient-to-t from-bg via-bg/30 to-black/10"></div>
-          <div class="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-bg to-transparent"></div>
+          {#if hasHeroImage}
+            <div class="absolute inset-0 bg-gradient-to-r from-bg/90 via-bg/60 to-bg/20"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-bg via-bg/30 to-black/10"></div>
+          {:else}
+            <div
+              class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-[var(--color-surface-bg)]"
+              aria-hidden="true"
+            ></div>
+          {/if}
 
-          <div class="relative flex min-h-[420px] flex-col justify-end gap-5 p-4 sm:min-h-[460px] sm:p-6 lg:min-h-[520px] lg:flex-row lg:items-end lg:gap-8 lg:p-8">
+          <div
+            class="relative flex min-h-full w-full flex-col justify-start gap-5 p-4 sm:p-6 lg:flex-row lg:items-start lg:gap-8 lg:p-8"
+          >
             {#if cover}
-              <div class="w-[124px] flex-shrink-0 sm:w-[190px] lg:w-[230px]">
+              <div class="relative w-[124px] flex-shrink-0 sm:w-[190px] lg:w-[230px]">
                 <img
                   src={cover}
                   alt={series.displayTitle}
@@ -510,8 +529,10 @@
               {/if}
 
               {#if series.tags.length > 0}
-                <div class="mt-5 flex flex-wrap items-center gap-1.5">
-                  <span class="text-[0.65rem] uppercase tracking-[0.14em] text-text-muted">Tags:</span>
+                <div
+                  class="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1.5"
+                >
+                  <span class="text-[0.65rem] uppercase tracking-[0.14em] text-white/50">Tags:</span>
                   {#each series.tags as tag (tag.id)}
                     <a
                       href={`/tags/${encodeURIComponent(tag.name)}`}
