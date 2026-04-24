@@ -210,6 +210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Media-core path-resolution tests no longer depend on ignored local demo videos, so clean CI checkouts can run them without `big_buck_bunny.mp4` or other large fixture assets.
 - GitHub Actions Playwright smoke tests now use the host-visible fixture media path, so the library-root existence check passes before the app scans test videos.
 - SvelteKit web checks now pass in clean CI environments without a local `.env` file. Optional public API/app URL settings fall back to their defaults instead of requiring `PUBLIC_API_URL` and `PUBLIC_APP_URL` to exist during `svelte-kit sync`.
 - Preview jobs now save thumbnail and hover-preview paths as soon as those files are generated, so video cards stop looking empty while the slower trickplay sprite sheet is still building. Active job progress updates also keep their target labels instead of blanking the Operations dashboard row.
