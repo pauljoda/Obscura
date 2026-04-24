@@ -9,8 +9,8 @@
     type ActiveFilter,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
+  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -251,50 +251,10 @@
           href={`/studios/${studio.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <div class="aspect-[4/3] bg-surface-1 relative">
-            {#if studio.imagePath || studio.imageUrl}
-              <img
-                src={toApiUrl(studio.imagePath) ?? studio.imageUrl ?? undefined}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <div class="flex h-full items-center justify-center">
-                <Building2 class="h-8 w-8 text-text-disabled" />
-              </div>
-            {/if}
-            {#if studio.favorite}
-              <Star
-                class="absolute top-1.5 right-1.5 h-3 w-3 text-accent-500 fill-current drop-shadow-[0_0_4px_rgba(199,155,92,0.5)]"
-              />
-            {/if}
-          </div>
+          <StudioThumbnail {studio} />
           <div class="p-2.5 space-y-1.5">
             <h4 class="truncate text-body font-medium text-text-primary">{studio.name}</h4>
             <div class="flex flex-wrap items-center gap-1">
-              {#if studio.videoCount > 0}
-                <Badge>
-                  {#snippet children()}
-                    {studio.videoCount} video{studio.videoCount === 1 ? "" : "s"}
-                  {/snippet}
-                </Badge>
-              {/if}
-              {#if studio.imageAppearanceCount > 0}
-                <Badge>
-                  {#snippet children()}
-                    {studio.imageAppearanceCount} image{studio.imageAppearanceCount === 1 ? "" : "s"}
-                  {/snippet}
-                </Badge>
-              {/if}
-              {#if studio.audioLibraryCount > 0}
-                <Badge>
-                  {#snippet children()}
-                    {studio.audioLibraryCount} album{studio.audioLibraryCount === 1 ? "" : "s"}
-                  {/snippet}
-                </Badge>
-              {/if}
               {#if studio.isNsfw}
                 <Badge variant="warning">
                   {#snippet children()}NSFW{/snippet}

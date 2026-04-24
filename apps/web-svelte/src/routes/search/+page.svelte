@@ -22,6 +22,7 @@
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
+  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -577,28 +578,20 @@
                   </div>
                 </a>
               {:else if item.kind === "studio"}
-                {@const gradient = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
                 <a
                   href={buildHrefWithFrom(item.href, currentPath)}
                   class="surface-card-sharp flex items-center gap-3 overflow-hidden p-2 transition-colors duration-fast hover:border-border-accent"
                 >
-                  <div class="h-12 w-20 shrink-0 overflow-hidden bg-surface-1">
-                    {#if item.imagePath}
-                      <img
-                        src={toApiUrl(item.imagePath)}
-                        alt=""
-                        loading="lazy"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      {@const Icon = SEARCH_KIND_CONFIG.studio.icon}
-                      <div
-                        class={gradient +
-                          " flex h-full w-full items-center justify-center"}
-                      >
-                        <Icon class="h-5 w-5 text-white/20" />
-                      </div>
-                    {/if}
+                  <div class="h-16 w-20 shrink-0">
+                    <StudioThumbnail
+                      studio={{
+                        name: item.title,
+                        imagePath: item.imagePath,
+                        isNsfw: isNsfwItem(item),
+                      }}
+                      aspectClass="aspect-[4/3] h-full w-full"
+                      showChips={false}
+                    />
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="truncate text-sm text-text-primary">{item.title}</div>

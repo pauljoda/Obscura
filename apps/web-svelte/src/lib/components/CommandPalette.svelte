@@ -10,6 +10,7 @@
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
+  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -352,6 +353,17 @@
                             compact
                             showChips={false}
                             class="h-full w-full"
+                          />
+                        {:else if item.kind === "studio"}
+                          <StudioThumbnail
+                            studio={{
+                              name: item.title,
+                              imagePath: item.imagePath,
+                              isNsfw: item.meta?.isNsfw === true,
+                            }}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showChips={false}
                           />
                         {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />

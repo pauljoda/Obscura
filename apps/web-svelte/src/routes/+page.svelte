@@ -20,6 +20,7 @@
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
+  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -400,27 +401,9 @@
                   href={`/studios/${encodeURIComponent(s.name)}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <div class="aspect-[16/7] bg-surface-1">
-                    {#if s.imagePath || s.imageUrl}
-                      <img
-                        src={toApiUrl(s.imagePath) ?? s.imageUrl ?? undefined}
-                        alt={s.name}
-                        loading="lazy"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <div class="flex h-full items-center justify-center">
-                        <Building2 class="h-8 w-8 text-text-disabled" />
-                      </div>
-                    {/if}
-                  </div>
+                  <StudioThumbnail studio={s} />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{s.name}</h3>
-                    {#if s.videoCount > 0}
-                      <p class="text-xs text-text-muted">
-                        {s.videoCount} video{s.videoCount === 1 ? "" : "s"}
-                      </p>
-                    {/if}
                   </div>
                 </a>
               </div>

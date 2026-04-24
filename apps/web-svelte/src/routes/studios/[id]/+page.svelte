@@ -23,6 +23,7 @@
     AudioLibraryListItemDto,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
@@ -345,22 +346,12 @@
               href={`/galleries/${g.id}`}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
-              <NsfwBlur isNsfw={g.isNsfw} class="block">
-                <div class="aspect-[3/4] bg-surface-1 relative">
-                  {#if g.coverImagePath}
-                    <img
-                      src={toApiUrl(g.coverImagePath)}
-                      alt=""
-                      loading="lazy"
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div class="flex h-full items-center justify-center">
-                      <Images class="h-8 w-8 text-text-disabled" />
-                    </div>
-                  {/if}
-                </div>
-              </NsfwBlur>
+              <GalleryThumbnail
+                title={g.title}
+                coverImagePath={g.coverImagePath}
+                imageCount={g.imageCount}
+                isNsfw={g.isNsfw}
+              />
               <div class="p-2.5">
                 <h3 class="truncate text-sm font-medium">{g.title}</h3>
                 <p class="text-xs text-text-muted mt-0.5">
