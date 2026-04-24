@@ -4,10 +4,10 @@
  * Each entity (videos, galleries, performers, etc.) defines its own prefs
  * type and validation logic. The factory provides the shared boilerplate:
  * JSON parse/encode with URI encoding, cookie read/write/clear, and
- * default-comparison helpers. Ported from apps/web with no framework
- * coupling so the same module runs in SvelteKit load functions (which
- * call `parse` with `cookies.get(...)`) and browser code (which call
- * `writeCookie`/`clearCookie`).
+ * default-comparison helpers. No framework coupling, so the same
+ * module runs in SvelteKit load functions (which call `parse` with
+ * `cookies.get(...)`) and browser code (which call `writeCookie` /
+ * `clearCookie`).
  */
 
 export function isRecord(v: unknown): v is Record<string, unknown> {
