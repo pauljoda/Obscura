@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **StashDB and hash-oriented Identify controls now stay on the entity types they actually belong to.** The Identify provider picker only presents Stash-Box sources for Videos, Images, Actors, Studios, and Tags, so Series, Galleries, Albums, and Tracks no longer show remote StashDB choices that cannot service those rows.
+
 - **Cross-referenced galleries, audio libraries, and performers now all use their shared thumbnail component.** Performer detail pages now show galleries and audio libraries through `GalleryThumbnail` / `AudioLibraryThumbnail`, and the `PerformersSection` component (used on the video, gallery, and audio-track detail pages) now renders each performer chip through `PerformerThumbnail` instead of an inline `<img>` or initials-fallback. Every entity finally looks the same wherever it's referenced.
 
 - **Studios now use the same thumbnail component everywhere they appear.** A new `StudioThumbnail` replaces the hand-rolled studio cards on `/studios`, the homepage "Studios" row, global search results, the command palette, and the galleries section of a studio detail page. Thumbnails share the same aspect ratio, fallback icon, favorite star, NSFW chip, and optional content-count chips so studios look identical whether you see them in a list, in search, or wherever else they're referenced.
@@ -198,6 +200,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Stash-Box providers no longer appear in the Identify provider picker for Series, Galleries, Albums, or Tracks.
 - Dynamic collection rules targeting videos now preview and refresh matches correctly after the old `scene` rule entity value is migrated to `video`.
 - Tag counts shown in the collection rule picker now include gallery and audio-track tag usage instead of only videos and loose images.
 - Docked audio players no longer overlap page content or the global collection playlist controller; the shell now tracks bottom dock height and shifts scrollable pages out of the way.

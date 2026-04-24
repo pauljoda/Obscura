@@ -39,6 +39,18 @@ export type Tab =
   | "tags"
   | "phashes";
 
+const STASH_BOX_PROVIDER_TABS = new Set<Tab>([
+  "videos",
+  "images",
+  "performers",
+  "studios",
+  "tags",
+]);
+
+export function tabSupportsStashBoxProvider(tab: Tab): boolean {
+  return STASH_BOX_PROVIDER_TABS.has(tab);
+}
+
 export const VIDEO_FIELDS = [
   "title",
   "date",
@@ -121,10 +133,28 @@ export function perfFieldsFromResult(result: NormalizedPerformerScrapeResult): S
 }
 
 export function tabEntityLabel(t: Tab): string {
-  if (t === "videos") return entityTerms.videos.toLowerCase();
-  if (t === "performers") return entityTerms.performers.toLowerCase();
-  if (t === "studios") return "studios";
-  return "tags";
+  switch (t) {
+    case "videos":
+      return entityTerms.videos.toLowerCase();
+    case "video-series":
+      return entityTerms.series.toLowerCase();
+    case "galleries":
+      return "galleries";
+    case "images":
+      return "images";
+    case "audio-libraries":
+      return "albums";
+    case "audio-tracks":
+      return "tracks";
+    case "performers":
+      return entityTerms.performers.toLowerCase();
+    case "studios":
+      return entityTerms.studios.toLowerCase();
+    case "tags":
+      return entityTerms.tags.toLowerCase();
+    case "phashes":
+      return "pHashes";
+  }
 }
 
 export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

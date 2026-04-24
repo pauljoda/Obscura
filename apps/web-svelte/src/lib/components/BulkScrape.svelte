@@ -50,7 +50,11 @@
     TagItem,
     Tab,
   } from "$lib/identify/scrape-types";
-  import { VIDEO_FIELDS, tabEntityLabel } from "$lib/identify/scrape-types";
+  import {
+    VIDEO_FIELDS,
+    tabEntityLabel,
+    tabSupportsStashBoxProvider,
+  } from "$lib/identify/scrape-types";
   import type {
     VideoSeriesRow,
     GalleryRow,
@@ -164,6 +168,12 @@
 
   function collapseAll() {
     expandedIds = new Set();
+  }
+
+  function switchTab(nextTab: Tab) {
+    if (running) return;
+    tab = nextTab;
+    selectedScraperId = "";
   }
 
   async function loadData() {
@@ -438,6 +448,9 @@
   );
   const nsfwAwarePlugins = $derived(filterNsfwAware(plugins));
   const nsfwAwareStashBoxEndpoints = $derived(filterNsfwAware(stashBoxEndpoints));
+  const stashBoxEndpointsForTab = $derived(
+    tabSupportsStashBoxProvider(tab) ? nsfwAwareStashBoxEndpoints : [],
+  );
 
   const pluginsForTab = $derived(
     nsfwAwarePlugins.filter((p) => {
@@ -464,7 +477,7 @@
   );
 
   const providersForTab = $derived<Provider[]>([
-    ...nsfwAwareStashBoxEndpoints.map((ep) => ({
+    ...stashBoxEndpointsForTab.map((ep) => ({
       id: `stashbox:${ep.id}`,
       name: ep.name,
       type: "stashbox" as const,
@@ -504,7 +517,7 @@
         videoRows,
         setVideoRows: (updater) => (videoRows = updater(videoRows)),
         videoScrapers,
-        stashBoxEndpoints,
+        stashBoxEndpoints: stashBoxEndpointsForTab,
         selectedScraperId,
         autoAccept,
         abortRef,
@@ -546,7 +559,7 @@
         perfRows,
         setPerfRows: (updater) => (perfRows = updater(perfRows)),
         perfScrapers,
-        stashBoxEndpoints,
+        stashBoxEndpoints: stashBoxEndpointsForTab,
         selectedScraperId,
         autoAccept,
         abortRef,
@@ -556,7 +569,7 @@
       void runStudioScrape({
         studioRows,
         setStudioRows: (updater) => (studioRows = updater(studioRows)),
-        stashBoxEndpoints,
+        stashBoxEndpoints: stashBoxEndpointsForTab,
         selectedScraperId,
         autoAccept,
         abortRef,
@@ -566,7 +579,7 @@
       void runTagScrape({
         tagRows,
         setTagRows: (updater) => (tagRows = updater(tagRows)),
-        stashBoxEndpoints,
+        stashBoxEndpoints: stashBoxEndpointsForTab,
         selectedScraperId,
         autoAccept,
         abortRef,
@@ -666,9 +679,7 @@
           {@const Icon = meta.icon}
           <button
             type="button"
-            onclick={() => {
-              if (!running) tab = meta.key;
-            }}
+            onclick={() => switchTab(meta.key)}
             class={cn(
               "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-fast",
               tab === meta.key
@@ -750,11 +761,11 @@
                       },
                     ]
                   : []),
-                ...(nsfwAwareStashBoxEndpoints.length > 0
+                ...(stashBoxEndpointsForTab.length > 0
                   ? [
                       {
                         label: "Stash-Box",
-                        options: nsfwAwareStashBoxEndpoints.map((ep) => ({
+                        options: stashBoxEndpointsForTab.map((ep) => ({
                           value: `stashbox:${ep.id}`,
                           label: ep.name,
                         })),
@@ -900,7 +911,11 @@
             No metadata providers configured for {tabEntityLabel(tab)}.
           </p>
           <p class="text-text-disabled text-xs mt-1">
-            Add a Stash-Box endpoint or install scrapers in Settings.
+            {#if tabSupportsStashBoxProvider(tab)}
+              Add a Stash-Box endpoint or install scrapers in Settings.
+            {:else}
+              Install an identification plugin in Settings.
+            {/if}
           </p>
         </div>
       {/if}
@@ -954,9 +969,9 @@
                     ? videoScrapers
                     : [];
                 const sb = isStashBox
-                  ? stashBoxEndpoints.filter((e) => e.id === realId)
+                  ? stashBoxEndpointsForTab.filter((e) => e.id === realId)
                   : selectedScraperId === ""
-                    ? stashBoxEndpoints
+                    ? stashBoxEndpointsForTab
                     : [];
                 const pl = isPlugin
                   ? pluginsForTab.filter((p) => p.id === realId)
