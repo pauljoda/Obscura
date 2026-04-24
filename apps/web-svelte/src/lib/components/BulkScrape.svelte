@@ -87,17 +87,23 @@
     runAudioLibraryIdentify,
     seekAudioLibrarySingle,
     acceptAllAudioLibraries,
+  } from "$lib/identify/audio-library-runner";
+  import {
     runAudioTrackIdentify,
     seekAudioTrackSingle,
     acceptAllAudioTracks,
+  } from "$lib/identify/audio-track-runner";
+  import {
     runGalleryIdentify,
     seekGallerySingle,
     acceptAllGalleries,
+  } from "$lib/identify/gallery-runner";
+  import {
     runImageIdentify,
     seekImageSingle,
     acceptAllImages,
-    type MutableFlag,
-  } from "$lib/identify/identify-runners";
+  } from "$lib/identify/image-runner";
+  import type { MutableFlag } from "$lib/identify/runner-utils";
   import { entityTerms } from "$lib/terminology";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";

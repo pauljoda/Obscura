@@ -5,7 +5,7 @@ import {
   rejectScrapeResult,
   executePlugin,
 } from "$lib/api/scrapers";
-import type { MutableFlag, RowUpdater } from "./identify-runners";
+import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";
 import type {
   VideoRow,

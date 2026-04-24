@@ -5,7 +5,7 @@ import {
   findOrCreateStudio,
 } from "$lib/api/entities";
 import { autoSaveStashId } from "./stash-id";
-import type { MutableFlag, RowUpdater } from "./identify-runners";
+import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";
 import type {
   StudioRow,

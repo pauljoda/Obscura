@@ -3,7 +3,7 @@ import {
   fetchVideoSeriesLibraryDetail,
   type VideoSeriesLibraryDetail,
 } from "$lib/api/videos";
-import type { MutableFlag, RowUpdater } from "./identify-runners";
+import type { MutableFlag, RowUpdater } from "./runner-utils";
 import { SEEK_TIMEOUT_MS, withTimeout } from "./scrape-types";
 import type {
   VideoSeriesRow,

@@ -5,7 +5,7 @@ import {
   scrapePerformerApi,
   applyPerformerScrape,
 } from "$lib/api/entities";
-import type { MutableFlag, RowUpdater } from "./identify-runners";
+import type { MutableFlag, RowUpdater } from "./runner-utils";
 import {
   SEEK_TIMEOUT_MS,
   withTimeout,
