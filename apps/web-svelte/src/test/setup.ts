@@ -19,3 +19,11 @@ Object.defineProperty(globalThis.HTMLMediaElement.prototype, "pause", {
   writable: true,
   value() {},
 });
+
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

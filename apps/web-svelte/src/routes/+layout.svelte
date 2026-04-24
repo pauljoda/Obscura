@@ -29,11 +29,22 @@
   $effect(() => {
     void playlist.hydrate();
   });
+
+  const bottomDockPadding = $derived(
+    chrome.bottomDockInsetPx > 0 ? `${chrome.bottomDockInsetPx + 16}px` : "0px",
+  );
+  const playlistOffset = $derived(playlist.isActive ? "3.5rem" : "0px");
 </script>
 
 <BreakingUpgradeGate awaitingConsent={data.awaitingBreakingConsent}>
   {#snippet children()}
-    <div class="flex min-h-dvh">
+    <div
+      class="flex min-h-dvh"
+      style:--obscura-bottom-dock-padding={bottomDockPadding}
+      style:--obscura-playlist-offset={playlistOffset}
+      style:--obscura-mobile-bottom-clearance="calc(3.5rem + var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
+      style:--obscura-desktop-bottom-clearance="calc(var(--obscura-playlist-offset) + var(--obscura-bottom-dock-padding))"
+    >
       <!-- Desktop sidebar -->
       <div class="hidden md:block">
         <Sidebar collapsed={chrome.sidebarCollapsed} onToggle={() => chrome.toggleSidebar()} />
@@ -42,8 +53,7 @@
       <main
         class={cn(
           "flex flex-1 flex-col transition-[margin-left] duration-moderate",
-          playlist.isActive ? "pb-28 md:pb-14" : "pb-14 md:pb-0",
-          "h-dvh overflow-y-auto",
+          "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",
           chrome.sidebarCollapsed ? "md:ml-14" : "md:ml-60",
         )}
         style:transition-timing-function="var(--ease-mechanical)"

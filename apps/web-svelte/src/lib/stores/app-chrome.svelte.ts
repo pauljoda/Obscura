@@ -12,6 +12,8 @@ function writeSidebarCookie(collapsed: boolean) {
 
 export class AppChromeStore {
   sidebarCollapsed = $state(false);
+  bottomDockInsetPx = $state(0);
+  private bottomDocks = new Map<string, number>();
 
   constructor(initialCollapsed: boolean) {
     this.sidebarCollapsed = initialCollapsed;
@@ -20,6 +22,18 @@ export class AppChromeStore {
   toggleSidebar() {
     this.sidebarCollapsed = !this.sidebarCollapsed;
     writeSidebarCookie(this.sidebarCollapsed);
+  }
+
+  setBottomDockInset(id: string, heightPx: number) {
+    const height = Math.max(0, Math.ceil(heightPx));
+    if (height === 0) this.bottomDocks.delete(id);
+    else this.bottomDocks.set(id, height);
+    this.bottomDockInsetPx = Math.max(0, ...this.bottomDocks.values());
+  }
+
+  clearBottomDockInset(id: string) {
+    this.bottomDocks.delete(id);
+    this.bottomDockInsetPx = Math.max(0, ...this.bottomDocks.values());
   }
 }
 

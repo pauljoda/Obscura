@@ -112,6 +112,7 @@
     { id: string; name: string; isNsfw: boolean; videoCount: number; imageCount?: number | null }[]
   >([]);
   let studioOptions = $state<{ id: string; name: string; url: string | null }[]>([]);
+  let audioDockEl: HTMLDivElement | undefined = $state();
 
   const visibleTracks = $derived(
     library.tracks.filter((track) => nsfw.mode !== "off" || !track.isNsfw),
@@ -141,6 +142,23 @@
       name: studio.name,
     })),
   );
+
+  $effect(() => {
+    if (!audioDockEl) return;
+    const updateDockInset = () => {
+      appChrome.setBottomDockInset(
+        "audio-player",
+        audioDockEl?.getBoundingClientRect().height ?? 0,
+      );
+    };
+    updateDockInset();
+    const resizeObserver = new ResizeObserver(updateDockInset);
+    resizeObserver.observe(audioDockEl);
+    return () => {
+      resizeObserver.disconnect();
+      appChrome.clearBottomDockInset("audio-player");
+    };
+  });
 
   function resetFormFromLibrary(source = library) {
     title = source.title;
@@ -784,9 +802,10 @@
 </div>
 
 <div
+  bind:this={audioDockEl}
   class={cn(
     "pointer-events-none fixed left-0 right-0 z-[35] max-w-[100vw] px-2 pt-1",
-    "bottom-[calc(3.5rem+6px)] md:bottom-4 md:px-5",
+    "bottom-[calc(3.5rem+6px+var(--obscura-playlist-offset))] md:bottom-[calc(1rem+var(--obscura-playlist-offset))] md:px-5",
     appChrome.sidebarCollapsed ? "md:left-14" : "md:left-60",
   )}
   role="region"

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Docked audio playback now reserves page space globally.** The Svelte shell measures bottom-docked page players and adds the needed bottom padding to the main scroll area, so audio players and collection playlist bars stack instead of covering track lists or page controls.
 - **Collections can now have custom cover images.** The collection editor includes a cover preview with upload and clear controls; custom covers appear through the existing collection cover asset URL while collections without one keep the default gradient look.
 - **Collection image playback now uses the lightbox slideshow flow.** Image items opened from a collection playlist now enter the full-screen lightbox automatically, advance after the collection's slideshow timer, and use the global previous / next queue controls instead of getting stuck on the same still image.
 - **Collection playback now survives a page refresh.** The global bottom playlist stores its active collection queue, shuffle / loop state, cursor, and slideshow timer in Obscura's database, so refreshing a video, image, gallery, or track no longer loses the session or lets the bottom bar overlap the page after hydration.
@@ -182,6 +183,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Docked audio players no longer overlap page content or the global collection playlist controller; the shell now tracks bottom dock height and shifts scrollable pages out of the way.
 - Collection playlist image items now open in the lightbox and auto-advance after the configured slideshow duration; lightbox previous / next controls move through the global collection queue when playlist playback is active.
 
 - Actor detail Known For cards now use the current `sourceType` / `sourceId` DTO fields for keys and links instead of stale `entityType` / `entityId` fields, preventing `each_key_volatile` crashes and `/videos/undefined` appearance links.

@@ -40,7 +40,11 @@ vi.mock("$lib/stores/nsfw.svelte", () => ({
 }));
 
 vi.mock("$lib/stores/app-chrome.svelte", () => ({
-  useAppChrome: () => ({ sidebarCollapsed: false }),
+  useAppChrome: () => ({
+    sidebarCollapsed: false,
+    setBottomDockInset: vi.fn(),
+    clearBottomDockInset: vi.fn(),
+  }),
 }));
 
 function makeLibrary(): AudioLibraryDetailDto {
