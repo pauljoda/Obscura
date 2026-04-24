@@ -27,6 +27,7 @@
     CollectionMode,
   } from "@obscura/contracts";
   import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
+  import { toApiUrl } from "$lib/api/core";
   import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
@@ -69,6 +70,7 @@
   };
 
   const ModeIcon = $derived(modeIcons[c.mode as CollectionMode]);
+  const coverUrl = $derived(toApiUrl(c.coverImagePath, c.updatedAt));
   const hasManualItems = $derived(items.some((item) => item.source === "manual"));
   const selectedCount = $derived(selectedItemIds.length);
   const currentPath = $derived(page.url.pathname);
@@ -161,86 +163,125 @@
 </svelte:head>
 
 <div class="space-y-5">
-  <header class="space-y-3">
-    <div class="flex items-start justify-between gap-4">
-      <div class="min-w-0 flex-1 space-y-1.5">
-        <h1 class="flex items-center gap-2.5 text-text-primary">
-          <FolderOpen class="h-5 w-5 text-text-accent" />
-          {c.name}
-        </h1>
-        <div class="flex flex-wrap items-center gap-3 text-[0.75rem] text-text-muted">
-          <span class="inline-flex items-center gap-1 font-mono">
+  <section class="relative isolate overflow-hidden border border-border-subtle">
+    <div class="pointer-events-none absolute inset-0 -z-10">
+      {#if coverUrl}
+        <img
+          src={coverUrl}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          class="h-full w-full scale-110 object-cover opacity-40 blur-3xl"
+        />
+      {:else}
+        <div class="h-full w-full bg-gradient-to-br from-accent-950/70 via-surface-1 to-surface-bg"></div>
+      {/if}
+      <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-black/65 to-[var(--color-surface-bg)]"></div>
+    </div>
+
+    <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:gap-7 sm:p-7">
+      <div class="relative aspect-[4/3] w-full max-w-52 flex-shrink-0 overflow-hidden border border-border-default bg-surface-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:w-48 md:w-56">
+        {#if coverUrl}
+          <img
+            src={coverUrl}
+            alt={c.name}
+            decoding="async"
+            class="h-full w-full object-cover"
+          />
+        {:else}
+          <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent-900/45 via-surface-2 to-surface-3">
+            <FolderOpen class="h-16 w-16 text-accent-400/40" />
+          </div>
+        {/if}
+      </div>
+
+      <div class="min-w-0 flex-1 space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1 space-y-2">
+            <div class="flex items-center gap-2 text-kicker">
+              <FolderOpen class="h-3 w-3" />
+              Collection
+              <span class="ml-1"><Badge>{modeLabels[c.mode as CollectionMode]}</Badge></span>
+            </div>
+            <h1 class="font-heading text-3xl font-semibold leading-tight text-text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)] sm:text-4xl md:text-5xl">
+              {c.name}
+            </h1>
+          </div>
+
+          <div class="flex flex-shrink-0 items-center gap-1">
+            {#if c.mode !== "manual"}
+              <button
+                type="button"
+                class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-50"
+                aria-label="Refresh dynamic rules"
+                title="Refresh dynamic rules"
+                disabled={refreshing}
+                onclick={refreshDynamicRules}
+              >
+                <RefreshCw class={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              </button>
+            {/if}
+            <a
+              href={`/collections/${c.id}/edit`}
+              class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-border-accent hover:text-text-primary"
+              aria-label="Edit collection"
+              title="Edit collection"
+            >
+              <Edit class="h-4 w-4" />
+            </a>
+            <button
+              type="button"
+              class="inline-flex h-9 w-9 items-center justify-center border border-border-subtle bg-surface-2/70 text-text-muted backdrop-blur-sm transition-colors hover:border-error/40 hover:text-error-text disabled:opacity-50"
+              aria-label="Delete collection"
+              title="Delete collection"
+              disabled={deleting}
+              onclick={deleteThisCollection}
+            >
+              {#if deleting}
+                <Loader2 class="h-4 w-4 animate-spin" />
+              {:else}
+                <Trash2 class="h-4 w-4" />
+              {/if}
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.78rem] text-text-secondary">
+          <span class="inline-flex items-center gap-1 font-medium text-text-primary">
             <ModeIcon class="h-3 w-3" />
-            {modeLabels[c.mode as CollectionMode]}
+            {items.length} item{items.length === 1 ? "" : "s"}
           </span>
-          <span>{items.length} item{items.length === 1 ? "" : "s"}</span>
           {#if c.lastRefreshedAt}
-            <span class="text-text-disabled">
-              Last refreshed {new Date(c.lastRefreshedAt).toLocaleDateString()}
+            <span class="text-text-disabled">•</span>
+            <span class="text-text-muted">
+              Refreshed {new Date(c.lastRefreshedAt).toLocaleDateString()}
             </span>
           {/if}
           {#if c.slideshowAutoAdvance}
+            <span class="text-text-disabled">•</span>
             <Badge>auto-advance {c.slideshowDurationSeconds}s</Badge>
           {/if}
         </div>
+
         {#if c.description}
-          <p class="max-w-2xl whitespace-pre-wrap text-[0.78rem] leading-relaxed text-text-muted">
+          <p class="max-w-2xl whitespace-pre-wrap text-[0.82rem] leading-relaxed text-text-secondary">
             {c.description}
           </p>
         {/if}
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <Button size="sm" disabled={items.length === 0} onclick={() => startPlayback(false)}>
+            <Play class="h-3.5 w-3.5" />
+            Play All
+          </Button>
+          <Button size="sm" variant="secondary" disabled={items.length === 0} onclick={() => startPlayback(true)}>
+            <Shuffle class="h-3.5 w-3.5" />
+            Shuffle All
+          </Button>
+        </div>
       </div>
     </div>
-
-    <div class="flex flex-wrap items-center gap-1.5">
-      {#if items.length > 0}
-        <Button size="sm" onclick={() => startPlayback(false)}>
-          <Play class="h-3.5 w-3.5" />
-          Play All
-        </Button>
-        <Button size="sm" variant="secondary" onclick={() => startPlayback(true)}>
-          <Shuffle class="h-3.5 w-3.5" />
-          Shuffle All
-        </Button>
-      {/if}
-
-      <div class="min-w-3 flex-1"></div>
-
-      {#if c.mode !== "manual"}
-        <button
-          type="button"
-          class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-text-accent disabled:opacity-50"
-          aria-label="Refresh dynamic rules"
-          title="Refresh dynamic rules"
-          disabled={refreshing}
-          onclick={refreshDynamicRules}
-        >
-          <RefreshCw class={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
-      {/if}
-      <a
-        href={`/collections/${c.id}/edit`}
-        class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-text-accent"
-        aria-label="Edit collection"
-        title="Edit collection"
-      >
-        <Edit class="h-4 w-4" />
-      </a>
-      <button
-        type="button"
-        class="flex h-8 w-8 items-center justify-center text-text-muted transition-colors hover:text-error-text disabled:opacity-50"
-        aria-label="Delete collection"
-        title="Delete collection"
-        disabled={deleting}
-        onclick={deleteThisCollection}
-      >
-        {#if deleting}
-          <Loader2 class="h-4 w-4 animate-spin" />
-        {:else}
-          <Trash2 class="h-4 w-4" />
-        {/if}
-      </button>
-    </div>
-  </header>
+  </section>
 
   {#if Object.values(c.typeCounts).some((n) => n > 0)}
     <div class="flex flex-wrap gap-4">
