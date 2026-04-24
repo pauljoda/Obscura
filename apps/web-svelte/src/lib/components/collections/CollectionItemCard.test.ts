@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import type { CollectionItemDto } from "@obscura/contracts";
-import CollectionItemCard from "./CollectionItemCard.svelte";
+import CollectionItemCard from "./CollectionItemCard.test-harness.svelte";
 
 function buildItem(overrides: Partial<CollectionItemDto> = {}): CollectionItemDto {
   return {
