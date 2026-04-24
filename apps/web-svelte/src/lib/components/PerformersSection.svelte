@@ -1,7 +1,6 @@
 <script lang="ts">
   import { User, Star } from "@lucide/svelte";
-  import { toApiUrl } from "$lib/api/core";
-  import NsfwBlur from "./NsfwBlur.svelte";
+  import PerformerThumbnail from "./PerformerThumbnail.svelte";
   import { entityTerms } from "$lib/terminology";
 
   export interface PerformerEmbed {
@@ -24,15 +23,6 @@
   let { performers, parentIsNsfw = false, headingLabel }: Props = $props();
 
   const heading = $derived(headingLabel ?? entityTerms.performers);
-
-  function initials(name: string): string {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  }
 </script>
 
 <section>
@@ -45,27 +35,23 @@
   {:else}
     <div class="flex flex-wrap gap-2">
       {#each performers as p (p.id)}
-        {@const imgUrl = toApiUrl(p.imagePath)}
         <a
           href={`/performers/${p.id}`}
           class="surface-card-sharp flex items-center gap-3 p-2.5 pr-4 hover:border-border-accent transition-colors"
         >
-          <NsfwBlur
-            isNsfw={parentIsNsfw || (p.isNsfw ?? false)}
-            class="flex-shrink-0 h-12 w-9 overflow-hidden bg-surface-3 border border-border-subtle"
-          >
-            <div class="h-12 w-9 overflow-hidden bg-surface-3">
-              {#if imgUrl}
-                <img src={imgUrl} alt={p.name} class="w-full h-full object-cover" loading="lazy" />
-              {:else}
-                <div
-                  class="w-full h-full flex items-center justify-center text-[0.6rem] font-mono font-medium text-text-muted"
-                >
-                  {initials(p.name)}
-                </div>
-              {/if}
-            </div>
-          </NsfwBlur>
+          <div class="h-12 w-9 flex-shrink-0">
+            <PerformerThumbnail
+              performer={{
+                name: p.name,
+                imagePath: p.imagePath,
+                favorite: p.favorite,
+                isNsfw: parentIsNsfw || (p.isNsfw ?? false),
+              }}
+              showChips={false}
+              compact
+              class="h-full w-full"
+            />
+          </div>
           <div>
             <p class="text-sm font-medium text-text-primary">{p.name}</p>
             <div class="mt-0.5 space-y-1">

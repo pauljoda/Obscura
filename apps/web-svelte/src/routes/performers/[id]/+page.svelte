@@ -3,7 +3,6 @@
     Users,
     Star,
     Film,
-    Images,
     Music,
     FolderOpen,
     Image as ImageIcon,
@@ -35,6 +34,8 @@
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
   import {
     DateField,
     EditFormShell,
@@ -483,22 +484,12 @@
               href={`/galleries/${g.id}`}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
-              <NsfwBlur isNsfw={g.isNsfw} class="block">
-                <div class="aspect-[3/4] bg-surface-1 relative">
-                  {#if g.coverImagePath}
-                    <img
-                      src={toApiUrl(g.coverImagePath)}
-                      alt=""
-                      loading="lazy"
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div class="flex h-full items-center justify-center">
-                      <Images class="h-8 w-8 text-text-disabled" />
-                    </div>
-                  {/if}
-                </div>
-              </NsfwBlur>
+              <GalleryThumbnail
+                title={g.title}
+                coverImagePath={g.coverImagePath}
+                imageCount={g.imageCount}
+                isNsfw={g.isNsfw}
+              />
               <div class="p-2.5">
                 <h3 class="truncate text-sm font-medium">{g.title}</h3>
                 <p class="text-xs text-text-muted mt-0.5">
@@ -547,27 +538,12 @@
     <HierarchySection title="Audio">
       {#snippet children()}
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {#each audioLibraries as a (a.id)}
+          {#each audioLibraries as a, i (a.id)}
             <a
               href={`/audio/${a.id}`}
-              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
+              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block group/card"
             >
-              <NsfwBlur isNsfw={a.isNsfw} class="block">
-                <div class="aspect-square bg-surface-1">
-                  {#if a.coverImagePath}
-                    <img
-                      src={toApiUrl(a.coverImagePath)}
-                      alt=""
-                      loading="lazy"
-                      class="h-full w-full object-cover"
-                    />
-                  {:else}
-                    <div class="flex h-full items-center justify-center">
-                      <Music class="h-8 w-8 text-text-disabled" />
-                    </div>
-                  {/if}
-                </div>
-              </NsfwBlur>
+              <AudioLibraryThumbnail library={a} gradientIndex={i} />
               <div class="p-2.5">
                 <h3 class="truncate text-sm font-medium">{a.title}</h3>
                 <p class="text-xs text-text-muted mt-0.5">
