@@ -59,7 +59,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     limit: AUDIO_LIMIT,
   });
 
-  const [videosRes, seriesRes, galleriesRes, audioRes] = await Promise.all([
+  const [videosRes, seriesRes, galleriesRes, audioRes, studiosRes] = await Promise.all([
     serverFetch<{ videos: unknown[]; total: number }>(`/videos${videoQs}`, { fetch }).catch(
       () => ({ videos: [], total: 0 }),
     ),
@@ -72,6 +72,9 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     serverFetch<{ items: unknown[]; total: number }>(`/audio-libraries${audioQs}`, {
       fetch,
     }).catch(() => ({ items: [], total: 0 })),
+    serverFetch<{
+      studios: Array<{ id: string; name: string; videoCount?: number }>;
+    }>(`/studios${buildQueryString({ nsfw })}`, { fetch }).catch(() => ({ studios: [] })),
   ]);
 
   return {
@@ -84,5 +87,6 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     totalGalleries: galleriesRes.total,
     audioLibraries: audioRes.items,
     totalAudioLibraries: audioRes.total,
+    allStudios: studiosRes.studios.filter((candidate) => candidate.id !== studio.id),
   };
 };

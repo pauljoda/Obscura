@@ -12,9 +12,10 @@ type TagDetail = {
   id: string;
   name: string;
   description?: string | null;
-  aliases?: string[];
+  aliases?: string | null;
   isNsfw?: boolean;
   favorite?: boolean;
+  ignoreAutoTag?: boolean;
   imagePath?: string | null;
   videoCount?: number;
   imageCount?: number;

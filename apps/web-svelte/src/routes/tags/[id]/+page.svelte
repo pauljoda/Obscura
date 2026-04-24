@@ -1,19 +1,88 @@
 <script lang="ts">
-  import { Tag as TagIcon, Star, Film, Images, Image as ImageIcon } from "@lucide/svelte";
+  import {
+    AlertTriangle,
+    Edit3,
+    FileText,
+    Film,
+    Images,
+    Image as ImageIcon,
+    Star,
+    Tag as TagIcon,
+    X,
+  } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { updateTag } from "$lib/api/entities";
   import type { VideoListItem } from "$lib/api/types";
   import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import {
+    EditFormShell,
+    FormField,
+    TextAreaField,
+    TextField,
+    ToggleChip,
+  } from "$lib/components/forms";
+  import { buildTagEditPatch } from "$lib/entity-edit-patch";
 
   let { data } = $props();
-  const t = $derived(data.tag);
+  let localPatch = $state<Record<string, unknown>>({});
+  let editing = $state(false);
+  let savingEdit = $state(false);
+  let editError = $state<string | null>(null);
+  let editName = $state("");
+  let editDescription = $state("");
+  let editAliases = $state("");
+  let editFavorite = $state(false);
+  let editIsNsfw = $state(false);
+  let editIgnoreAutoTag = $state(false);
+
+  const baseTag = $derived(data.tag);
+  const t = $derived({
+    ...(baseTag as Record<string, unknown>),
+    ...localPatch,
+  } as typeof baseTag);
   const videos = $derived(data.videos as VideoListItem[]);
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
   const images = $derived(data.images as ImageListItemDto[]);
+
+  function beginEdit() {
+    editName = t.name ?? "";
+    editDescription = t.description ?? "";
+    editAliases = t.aliases ?? "";
+    editFavorite = t.favorite ?? false;
+    editIsNsfw = t.isNsfw ?? false;
+    editIgnoreAutoTag = t.ignoreAutoTag ?? false;
+    editError = null;
+    editing = true;
+  }
+
+  async function saveEdit() {
+    if (!editName.trim() || savingEdit) return;
+    savingEdit = true;
+    editError = null;
+    const patch = buildTagEditPatch({
+      name: editName,
+      description: editDescription,
+      aliases: editAliases,
+      favorite: editFavorite,
+      isNsfw: editIsNsfw,
+      ignoreAutoTag: editIgnoreAutoTag,
+    });
+
+    try {
+      await updateTag(t.id, patch);
+      localPatch = { ...localPatch, ...patch };
+      editing = false;
+    } catch (err) {
+      editError = err instanceof Error ? err.message : "Failed to save tag";
+    } finally {
+      savingEdit = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -28,13 +97,29 @@
       </div>
     {/if}
     <div class="flex-1 min-w-0 space-y-2">
-      <h1 class="flex items-center gap-2.5 text-text-primary flex-wrap">
-        <TagIcon class="h-5 w-5 text-text-accent" />
-        {t.name}
-        {#if t.favorite}
-          <Star class="h-4 w-4 text-accent-500 fill-current" />
-        {/if}
-      </h1>
+      <div class="flex items-start justify-between gap-3">
+        <h1 class="flex items-center gap-2.5 text-text-primary flex-wrap">
+          <TagIcon class="h-5 w-5 text-text-accent" />
+          {t.name}
+          {#if t.favorite}
+            <Star class="h-4 w-4 text-accent-500 fill-current" />
+          {/if}
+        </h1>
+
+        <button
+          type="button"
+          aria-label={editing ? "Cancel tag edit" : "Edit tag"}
+          title={editing ? "Cancel tag edit" : "Edit tag"}
+          onclick={() => (editing ? (editing = false) : beginEdit())}
+          class="flex h-8 w-8 shrink-0 items-center justify-center border border-border-subtle bg-surface-2 text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-accent"
+        >
+          {#if editing}
+            <X class="h-4 w-4" />
+          {:else}
+            <Edit3 class="h-4 w-4" />
+          {/if}
+        </button>
+      </div>
 
       <div class="flex flex-wrap gap-1">
         {#if (t.videoCount ?? 0) > 0}
@@ -64,11 +149,53 @@
         </p>
       {/if}
 
-      {#if t.aliases && t.aliases.length > 0}
-        <p class="text-[0.72rem] text-text-muted">Aliases: {t.aliases.join(", ")}</p>
+      {#if t.aliases}
+        <p class="text-[0.72rem] text-text-muted">Aliases: {t.aliases}</p>
       {/if}
     </div>
   </div>
+
+  {#if editing}
+    <div class="max-w-4xl">
+      <EditFormShell
+        title="Tag metadata"
+        onSave={saveEdit}
+        onCancel={() => (editing = false)}
+        saving={savingEdit}
+        saveDisabled={!editName.trim()}
+        saveLabel="Save tag"
+        error={editError}
+      >
+        <TextField label="Name" icon={TagIcon} value={editName} onChange={(v) => (editName = v)} required />
+        <TextAreaField
+          label="Description"
+          icon={FileText}
+          value={editDescription}
+          onChange={(v) => (editDescription = v)}
+          rows={4}
+        />
+        <TextField label="Aliases" value={editAliases} onChange={(v) => (editAliases = v)} />
+        <FormField label="Flags">
+          <div class="flex flex-wrap gap-2">
+            <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
+            <ToggleChip
+              value={editIsNsfw}
+              onChange={(v) => (editIsNsfw = v)}
+              onLabel="NSFW"
+              icon={AlertTriangle}
+              variant="warning"
+            />
+            <ToggleChip
+              value={editIgnoreAutoTag}
+              onChange={(v) => (editIgnoreAutoTag = v)}
+              onLabel="Ignored for auto-tag"
+              offLabel="Ignore for auto-tag"
+            />
+          </div>
+        </FormField>
+      </EditFormShell>
+    </div>
+  {/if}
 
   {#if videos.length > 0}
     <HierarchySection title={`${data.totalVideos} ${data.totalVideos === 1 ? "video" : "videos"}`}>

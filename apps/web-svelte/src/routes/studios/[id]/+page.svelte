@@ -1,7 +1,21 @@
 <script lang="ts">
-  import { Building2, Star, ExternalLink, Film, Images, Music } from "@lucide/svelte";
+  import {
+    AlertTriangle,
+    Building2,
+    Edit3,
+    ExternalLink,
+    FileText,
+    Film,
+    Images,
+    Link,
+    Music,
+    Star,
+    Tag as TagIcon,
+    X,
+  } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { updateStudio } from "$lib/api/entities";
   import type { VideoListItem } from "$lib/api/types";
   import type {
     VideoSeriesListItemDto,
@@ -13,14 +27,120 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import {
+    EditFormShell,
+    FormField,
+    SearchSelect,
+    TextAreaField,
+    TextField,
+    ToggleChip,
+  } from "$lib/components/forms";
+  import { buildStudioEditPatch } from "$lib/entity-edit-patch";
+
+  type StudioPageStudio = {
+    id: string;
+    name: string;
+    description?: string | null;
+    url?: string | null;
+    imagePath?: string | null;
+    imageUrl?: string | null;
+    aliases?: string | null;
+    favorite?: boolean;
+    rating?: number | null;
+    isNsfw?: boolean;
+    videoCount?: number;
+    imageAppearanceCount?: number;
+    audioLibraryCount?: number;
+    parentId?: string | null;
+    parent?: { id: string; name: string } | null;
+  };
 
   let { data } = $props();
-  const s = $derived(data.studio);
+  let localPatch = $state<Record<string, unknown>>({});
+  let editing = $state(false);
+  let savingEdit = $state(false);
+  let editError = $state<string | null>(null);
+  let editName = $state("");
+  let editDescription = $state("");
+  let editAliases = $state("");
+  let editUrl = $state("");
+  let editParentId = $state<string | null>(null);
+  let editParentName = $state("");
+  let editFavorite = $state(false);
+  let editIsNsfw = $state(false);
+
+  const baseStudio = $derived(data.studio);
+  const s = $derived({
+    ...(baseStudio as Record<string, unknown>),
+    ...localPatch,
+  } as StudioPageStudio);
+  const studioOptions = $derived(
+    (data.allStudios as Array<{ id: string; name: string; videoCount?: number }>).map((studio) => ({
+      id: studio.id,
+      name: studio.name,
+      count: studio.videoCount,
+    })),
+  );
 
   const videos = $derived(data.videos as VideoListItem[]);
   const series = $derived(data.series as VideoSeriesListItemDto[]);
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
   const audioLibraries = $derived(data.audioLibraries as AudioLibraryListItemDto[]);
+
+  function beginEdit() {
+    editName = s.name ?? "";
+    editDescription = s.description ?? "";
+    editAliases = s.aliases ?? "";
+    editUrl = s.url ?? "";
+    editParentId = s.parentId ?? null;
+    editParentName = s.parent?.name ?? "";
+    editFavorite = s.favorite ?? false;
+    editIsNsfw = s.isNsfw ?? false;
+    editError = null;
+    editing = true;
+  }
+
+  function handleParentChange(name: string) {
+    editParentName = name;
+    editParentId = studioOptions.find((option) => option.name === name)?.id ?? null;
+  }
+
+  async function saveEdit() {
+    if (!editName.trim() || savingEdit) return;
+    savingEdit = true;
+    editError = null;
+    const patch = buildStudioEditPatch({
+      name: editName,
+      description: editDescription,
+      aliases: editAliases,
+      url: editUrl,
+      parentId: editParentId,
+      favorite: editFavorite,
+      isNsfw: editIsNsfw,
+    });
+
+    try {
+      await updateStudio(s.id, patch);
+      localPatch = {
+        ...localPatch,
+        ...patch,
+        parentId: patch.parentId,
+        parent: patch.parentId
+          ? {
+              id: patch.parentId,
+              name: editParentName,
+              imagePath: null,
+              imageUrl: null,
+            }
+          : null,
+      };
+      editing = false;
+    } catch (err) {
+      editError = err instanceof Error ? err.message : "Failed to save studio";
+    } finally {
+      savingEdit = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -43,13 +163,36 @@
       {/if}
     </div>
     <div class="flex-1 min-w-0 space-y-2">
-      <h1 class="flex items-center gap-2.5 text-text-primary">
-        <Building2 class="h-5 w-5 text-text-accent" />
-        {s.name}
-        {#if s.favorite}
-          <Star class="h-4 w-4 text-accent-500 fill-current" />
-        {/if}
-      </h1>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="flex items-center gap-2.5 text-text-primary">
+            <Building2 class="h-5 w-5 text-text-accent" />
+            {s.name}
+            {#if s.favorite}
+              <Star class="h-4 w-4 text-accent-500 fill-current" />
+            {/if}
+          </h1>
+          {#if s.parent}
+            <p class="mt-1 text-[0.72rem] text-text-muted">
+              Parent studio: <a href={`/studios/${s.parent.id}`} class="text-text-accent hover:text-accent-400">{s.parent.name}</a>
+            </p>
+          {/if}
+        </div>
+
+        <button
+          type="button"
+          aria-label={editing ? "Cancel studio edit" : "Edit studio"}
+          title={editing ? "Cancel studio edit" : "Edit studio"}
+          onclick={() => (editing ? (editing = false) : beginEdit())}
+          class="flex h-8 w-8 shrink-0 items-center justify-center border border-border-subtle bg-surface-2 text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-accent"
+        >
+          {#if editing}
+            <X class="h-4 w-4" />
+          {:else}
+            <Edit3 class="h-4 w-4" />
+          {/if}
+        </button>
+      </div>
 
       {#if s.url}
         <a
@@ -102,6 +245,56 @@
       {/if}
     </div>
   </div>
+
+  {#if editing}
+    <div class="max-w-4xl">
+      <EditFormShell
+        title="Studio metadata"
+        onSave={saveEdit}
+        onCancel={() => (editing = false)}
+        saving={savingEdit}
+        saveDisabled={!editName.trim()}
+        saveLabel="Save studio"
+        error={editError}
+      >
+        <div class="grid gap-4 md:grid-cols-2">
+          <TextField label="Name" icon={Building2} value={editName} onChange={(v) => (editName = v)} required />
+          <TextField label="URL" icon={Link} value={editUrl} onChange={(v) => (editUrl = v)} type="url" />
+        </div>
+        <TextAreaField
+          label="Description"
+          icon={FileText}
+          value={editDescription}
+          onChange={(v) => (editDescription = v)}
+          rows={4}
+        />
+        <div class="grid gap-4 md:grid-cols-2">
+          <TextField label="Aliases" icon={TagIcon} value={editAliases} onChange={(v) => (editAliases = v)} />
+          <SearchSelect
+            label="Parent Studio"
+            icon={Building2}
+            value={editParentName}
+            onChange={handleParentChange}
+            options={studioOptions}
+            placeholder="No parent studio"
+            emptyText="No matching studios"
+          />
+        </div>
+        <FormField label="Flags">
+          <div class="flex flex-wrap gap-2">
+            <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
+            <ToggleChip
+              value={editIsNsfw}
+              onChange={(v) => (editIsNsfw = v)}
+              onLabel="NSFW"
+              icon={AlertTriangle}
+              variant="warning"
+            />
+          </div>
+        </FormField>
+      </EditFormShell>
+    </div>
+  {/if}
 
   {#if series.length > 0}
     <HierarchySection title="Series">
