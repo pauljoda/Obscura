@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Gallery thumbnails now show how many previews you can scrub through.** When a gallery has multiple interior images, a thin segmented progress strip along the bottom of the cover tells you at a glance that scrubbing is available — each segment is one preview, and the active segment lights up in brass as you move the cursor across the thumbnail.
+
 - **Galleries and images now remember your view size.** A thumbnail-size slider lives next to the filter bar on `/galleries`, `/galleries/[id]`, and `/images`. Drag it to set how many columns the grid or interior masonry uses; the choice is saved to the Obscura database and follows you across devices and sessions.
 - **Your saved filter presets on galleries and images are now stored in Obscura itself** instead of the browser's localStorage, so clearing site data or switching browsers won't lose them.
 - **Image lightbox no longer zooms in on open.** Opening an image in the lightbox now pops directly to the fit size — the previous brief scale-up animation (from natural-size to fit-to-viewport) is gone.

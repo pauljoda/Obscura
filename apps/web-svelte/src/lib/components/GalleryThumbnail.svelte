@@ -184,7 +184,7 @@
 
     {#if showCount && imageCount != null && (size === "grid" || size === "hero" || size === "list")}
       <div
-        class="pointer-events-none absolute bottom-1 left-1 z-10 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.6rem] font-mono text-white/85"
+        class="pointer-events-none absolute top-1 left-1 z-10 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.6rem] font-mono text-white/85"
       >
         <Images class="h-2.5 w-2.5" />
         {imageCount}
@@ -193,7 +193,38 @@
 
     <NsfwShowModeChip
       {isNsfw}
-      class="pointer-events-none absolute bottom-1 right-1 z-10"
+      class="pointer-events-none absolute top-1 right-1 z-10"
     />
+
+    {#if previews.length > 1 && (size === "grid" || size === "hero" || size === "list")}
+      <!-- Scrub hint: segmented dots at the bottom. Visible at low opacity
+           even before hover so the user sees that scrubbing is available,
+           and lights up in brass as the cursor moves across the thumb. -->
+      <div
+        class={cn(
+          "pointer-events-none absolute inset-x-0 bottom-0 z-10 transition-opacity duration-fast",
+          hovering ? "opacity-100" : "opacity-70",
+        )}
+      >
+        <div
+          class="flex items-center gap-[2px] px-1.5 pb-1 pt-4 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
+        >
+          {#each previews as _preview, i (i)}
+            <div
+              class={cn(
+                "h-[2px] flex-1 transition-colors duration-fast",
+                hovering
+                  ? i === hoverIndex
+                    ? "bg-accent-400 shadow-[0_0_6px_rgba(196,154,90,0.55)]"
+                    : i < hoverIndex
+                      ? "bg-accent-700/70"
+                      : "bg-white/25"
+                  : "bg-white/30",
+              )}
+            ></div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
