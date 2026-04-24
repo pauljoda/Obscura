@@ -68,7 +68,7 @@ function createDb(filePath: string): AppDb {
         },
       };
     },
-  } as AppDb;
+  } as unknown as AppDb;
 }
 
 describe("serveVideoSource", () => {

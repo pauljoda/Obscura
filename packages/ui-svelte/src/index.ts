@@ -2,7 +2,7 @@
 export { colors } from "./tokens/colors";
 export { typography } from "./tokens/typography";
 export { animation } from "./tokens/animation";
-export { spacing, radii } from "./tokens/spacing";
+export { spacing } from "./tokens/spacing";
 
 // Utilities
 export { cn } from "./lib/utils";
