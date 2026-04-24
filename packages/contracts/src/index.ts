@@ -1610,7 +1610,9 @@ export interface TagListItemDto {
   id: string;
   name: string;
   videoCount: number;
+  galleryCount?: number;
   imageCount: number;
+  audioTrackCount?: number;
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;

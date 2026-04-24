@@ -17,7 +17,11 @@ export function buildTagSuggestions(tags: TagListItemDto[]): SuggestionItem[] {
   return tags
     .map((t) => ({
       name: t.name,
-      count: (t.videoCount ?? 0) + (t.imageCount ?? 0),
+      count:
+        (t.videoCount ?? 0) +
+        (t.galleryCount ?? 0) +
+        (t.imageCount ?? 0) +
+        (t.audioTrackCount ?? 0),
     }))
     .filter((s) => (s.count ?? 0) > 0)
     .sort(sortByCount);

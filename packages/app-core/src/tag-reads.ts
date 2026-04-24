@@ -11,9 +11,21 @@ import {
   tagSfwSceneCountExpr,
   tagTotalSceneCountExpr,
 } from "./appearance-count-expressions";
-import { imageVisibleSql } from "./library-root-visibility";
+import {
+  audioTrackVisibleSql,
+  galleryVisibleSql,
+  imageVisibleSql,
+} from "./library-root-visibility";
 
-const { tags, imageTags, images } = schema;
+const {
+  tags,
+  galleryTags,
+  galleries,
+  imageTags,
+  images,
+  audioTrackTags,
+  audioTracks,
+} = schema;
 
 export interface TagDetail {
   id: string;
@@ -75,7 +87,9 @@ export interface TagListEntry {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  galleryCount: number;
   imageCount: number;
+  audioTrackCount: number;
 }
 
 export async function listTagsRead(
@@ -107,6 +121,54 @@ export async function listTagsRead(
         .groupBy(imageTags.tagId);
   const imageMap = new Map(imageAgg.map((r) => [r.tagId, Number(r.cnt)]));
 
+  const galleryAgg = sfwOnly
+    ? await db
+        .select({
+          tagId: galleryTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(galleryTags)
+        .innerJoin(galleries, eq(galleries.id, galleryTags.galleryId))
+        .where(
+          sql`${galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)}
+            AND ${ne(galleries.isNsfw, true)}`,
+        )
+        .groupBy(galleryTags.tagId)
+    : await db
+        .select({
+          tagId: galleryTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(galleryTags)
+        .innerJoin(galleries, eq(galleries.id, galleryTags.galleryId))
+        .where(galleryVisibleSql(galleries.folderPath, galleries.zipFilePath))
+        .groupBy(galleryTags.tagId);
+  const galleryMap = new Map(galleryAgg.map((r) => [r.tagId, Number(r.cnt)]));
+
+  const audioTrackAgg = sfwOnly
+    ? await db
+        .select({
+          tagId: audioTrackTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(audioTrackTags)
+        .innerJoin(audioTracks, eq(audioTracks.id, audioTrackTags.trackId))
+        .where(
+          sql`${audioTrackVisibleSql(audioTracks.filePath)}
+            AND ${ne(audioTracks.isNsfw, true)}`,
+        )
+        .groupBy(audioTrackTags.tagId)
+    : await db
+        .select({
+          tagId: audioTrackTags.tagId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(audioTrackTags)
+        .innerJoin(audioTracks, eq(audioTracks.id, audioTrackTags.trackId))
+        .where(audioTrackVisibleSql(audioTracks.filePath))
+        .groupBy(audioTrackTags.tagId);
+  const audioTrackMap = new Map(audioTrackAgg.map((r) => [r.tagId, Number(r.cnt)]));
+
   const tagRows = await db
     .select({
       id: tags.id,
@@ -125,10 +187,16 @@ export async function listTagsRead(
   const mapped: TagListEntry[] = tagRows.map((tag) => ({
     ...tag,
     videoCount: Number(tag.videoCount ?? 0),
+    galleryCount: galleryMap.get(tag.id) ?? 0,
     imageCount: imageMap.get(tag.id) ?? 0,
+    audioTrackCount: audioTrackMap.get(tag.id) ?? 0,
   }));
 
-  mapped.sort((a, b) => b.videoCount - a.videoCount);
+  mapped.sort(
+    (a, b) =>
+      b.videoCount + b.galleryCount + b.imageCount + b.audioTrackCount -
+      (a.videoCount + a.galleryCount + a.imageCount + a.audioTrackCount),
+  );
 
   return { tags: mapped };
 }

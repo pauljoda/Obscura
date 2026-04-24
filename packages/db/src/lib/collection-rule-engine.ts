@@ -85,8 +85,8 @@ interface EntityTableMeta {
 
 /**
  * Episodes and movies live in two physical tables but surface as a
- * single "scene" entity type externally. Both metas are evaluated when
- * a rule targets "scene", and their results are merged.
+ * single "video" entity type externally. Both metas are evaluated when
+ * a rule targets "video", and their results are merged.
  */
 const VIDEO_EPISODE_META: EntityTableMeta = {
   table: videoEpisodes,

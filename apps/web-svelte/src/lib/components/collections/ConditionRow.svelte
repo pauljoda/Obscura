@@ -29,6 +29,13 @@
     availableStudios = [],
   }: Props = $props();
 
+  const entityTypeOptions: { value: CollectionEntityType; label: string }[] = [
+    { value: "video", label: "Video" },
+    { value: "gallery", label: "Gallery" },
+    { value: "image", label: "Image" },
+    { value: "audio-track", label: "Audio" },
+  ];
+
   const operatorLabels: Record<CollectionOperator, string> = {
     equals: "equals",
     not_equals: "not equals",
@@ -109,19 +116,18 @@
 
 <div class="flex items-start gap-1.5 flex-wrap">
   <div class="flex items-center gap-0.5 pt-1">
-    {#each ["scene", "gallery", "image", "audio-track"] as type (type)}
-      {@const active = condition.entityTypes.includes(type as CollectionEntityType)}
-      {@const label = type === "audio-track" ? "Audio" : type.charAt(0).toUpperCase() + type.slice(1)}
+    {#each entityTypeOptions as option (option.value)}
+      {@const active = condition.entityTypes.includes(option.value)}
       <button
         type="button"
-        onclick={() => toggleEntityType(type as CollectionEntityType)}
+        onclick={() => toggleEntityType(option.value)}
         class={`px-1.5 py-0.5 text-[0.6rem] font-mono uppercase transition-colors ${
           active
             ? "bg-accent-brass/20 text-text-accent border border-accent-brass/30"
             : "bg-surface-2 text-text-disabled border border-border-subtle hover:text-text-muted"
         }`}
       >
-        {label}
+        {option.label}
       </button>
     {/each}
   </div>
