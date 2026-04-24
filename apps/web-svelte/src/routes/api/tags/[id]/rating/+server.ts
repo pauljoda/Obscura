@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import { setTagRatingWrite } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapTagErrorToJson } from "$lib/server/tag-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const db = await getWebDb();
@@ -9,6 +9,6 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   try {
     return json(await setTagRatingWrite(db, params.id!, rating));
   } catch (err) {
-    return mapTagErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

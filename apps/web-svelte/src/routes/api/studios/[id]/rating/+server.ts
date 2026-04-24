@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import { setStudioRatingWrite } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapStudioErrorToJson } from "$lib/server/studio-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
   const db = await getWebDb();
@@ -9,6 +9,6 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   try {
     return json(await setStudioRatingWrite(db, params.id!, rating));
   } catch (err) {
-    return mapStudioErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

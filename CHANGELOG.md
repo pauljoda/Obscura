@@ -289,6 +289,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Thumbnail components (`VideoThumbnail`, `GalleryThumbnail`, `ImageThumbnail`, `PerformerThumbnail`, `StudioThumbnail`, `SeriesThumbnail`, `TagThumbnail`, `CollectionThumbnail`, `AudioLibraryThumbnail`, `AudioTrackThumbnail`) moved from the flat `apps/web-svelte/src/lib/components/` root into a dedicated `components/thumbnails/` subdirectory. Imports updated throughout; no behavior change.
+- Unified entity-specific error mappers (`performer-error-mapper`, `studio-error-mapper`, `tag-error-mapper`) into the single `$lib/server/error-mapper` helper. All 21 API routes now call `mapAppCoreErrorToJson` regardless of entity; the per-entity sentinels are handled alongside the generic ones (same 404/400/502 status codes as before).
 - Extracted the `apiRoutes` constant (134 lines) from `packages/contracts/src/index.ts` into its own `routes.ts`, re-exported from the barrel. Zero behavior change; makes the contracts barrel easier to navigate.
 - Moved the stateful rune stores `recent-searches.svelte` and `selection.svelte` out of `src/lib/hooks/` into `src/lib/stores/`. `hooks/` now holds only stateless composables (`current-path`, `element-in-view`).
 - Video-player helpers consolidated under `apps/web-svelte/src/lib/player/`: `flyout-layout`, `subtitle-appearance`, `video-player-load`, and `trickplay-scrub.svelte` (previously scattered between `src/lib/` and `src/lib/components/`). Tests colocated with source. Imports updated throughout; no behavior change.

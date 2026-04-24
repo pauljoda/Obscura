@@ -6,7 +6,7 @@ import {
   type UpdateTagBody,
 } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapTagErrorToJson } from "$lib/server/tag-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const GET: RequestHandler = async ({ params, url }) => {
   const sfwOnly = url.searchParams.get("nsfw") === "off";
@@ -22,7 +22,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   try {
     return json(await updateTagWrite(db, params.id!, body));
   } catch (err) {
-    return mapTagErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };
 
@@ -31,6 +31,6 @@ export const DELETE: RequestHandler = async ({ params }) => {
   try {
     return json(await deleteTagWrite(db, params.id!));
   } catch (err) {
-    return mapTagErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

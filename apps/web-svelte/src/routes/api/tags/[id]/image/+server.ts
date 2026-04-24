@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
 import { deleteTagImageWrite, uploadTagImageWrite } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapTagErrorToJson } from "$lib/server/tag-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const POST: RequestHandler = async ({ params, request }) => {
   const db = await getWebDb();
@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   try {
     return json(await uploadTagImageWrite(db, params.id!, buffer));
   } catch (err) {
-    return mapTagErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };
 
@@ -23,6 +23,6 @@ export const DELETE: RequestHandler = async ({ params }) => {
   try {
     return json(await deleteTagImageWrite(db, params.id!));
   } catch (err) {
-    return mapTagErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

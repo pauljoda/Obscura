@@ -5,7 +5,7 @@ import {
   type CreateStudioBody,
 } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapStudioErrorToJson } from "$lib/server/studio-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const GET: RequestHandler = async ({ url }) => {
   const sfwOnly = url.searchParams.get("nsfw") === "off";
@@ -19,6 +19,6 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     return json(await createStudioWrite(db, body), { status: 201 });
   } catch (err) {
-    return mapStudioErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

@@ -6,7 +6,7 @@ import {
   type ListPerformersQuery,
 } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapPerformerErrorToJson } from "$lib/server/performer-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 const QUERY_KEYS = [
   "search",
@@ -41,6 +41,6 @@ export const POST: RequestHandler = async ({ request }) => {
   try {
     return json(await createPerformerWrite(db, body), { status: 201 });
   } catch (err) {
-    return mapPerformerErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };

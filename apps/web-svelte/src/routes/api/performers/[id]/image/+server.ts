@@ -4,7 +4,7 @@ import {
   uploadPerformerImageWrite,
 } from "@obscura/app-core";
 import { getWebDb } from "$lib/server/db";
-import { mapPerformerErrorToJson } from "$lib/server/performer-error-mapper";
+import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const POST: RequestHandler = async ({ params, request }) => {
   const db = await getWebDb();
@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
   try {
     return json(await uploadPerformerImageWrite(db, params.id!, buffer));
   } catch (err) {
-    return mapPerformerErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };
 
@@ -26,6 +26,6 @@ export const DELETE: RequestHandler = async ({ params }) => {
   try {
     return json(await deletePerformerImageWrite(db, params.id!));
   } catch (err) {
-    return mapPerformerErrorToJson(err);
+    return mapAppCoreErrorToJson(err);
   }
 };
