@@ -12,6 +12,7 @@
 import { sql } from "drizzle-orm";
 import {
   audioLibraryVisibleSql,
+  audioTrackVisibleSql,
   galleryVisibleSql,
   imageVisibleSql,
   videoEpisodeVisibleSql,
@@ -145,6 +146,63 @@ export function performerImageAppearanceCountExpr(sfwOnly: boolean) {
   return sql<number>`(${galleryPart} + ${imagePart})`;
 }
 
+export function performerSeriesCountExpr(sfwOnly: boolean) {
+  return sfwOnly
+    ? sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT vsp.series_id)::int
+        FROM video_series_performers vsp
+        INNER JOIN video_series vs ON vs.id = vsp.series_id
+        WHERE vsp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${videoSeriesVisibleSql(sql.raw("vs.library_root_id"))}
+          AND (vs.is_nsfw IS NOT TRUE)
+      ), 0)`
+    : sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT vsp.series_id)::int
+        FROM video_series_performers vsp
+        INNER JOIN video_series vs ON vs.id = vsp.series_id
+        WHERE vsp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${videoSeriesVisibleSql(sql.raw("vs.library_root_id"))}
+      ), 0)`;
+}
+
+export function performerGalleryCountExpr(sfwOnly: boolean) {
+  return sfwOnly
+    ? sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT gp.gallery_id)::int
+        FROM gallery_performers gp
+        INNER JOIN galleries g ON g.id = gp.gallery_id
+        WHERE gp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${galleryVisibleSql(sql.raw("g.folder_path"), sql.raw("g.zip_file_path"))}
+          AND (g.is_nsfw IS NOT TRUE)
+      ), 0)`
+    : sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT gp.gallery_id)::int
+        FROM gallery_performers gp
+        INNER JOIN galleries g ON g.id = gp.gallery_id
+        WHERE gp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${galleryVisibleSql(sql.raw("g.folder_path"), sql.raw("g.zip_file_path"))}
+      ), 0)`;
+}
+
+export function performerImageCountExpr(sfwOnly: boolean) {
+  return sfwOnly
+    ? sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT ip.image_id)::int
+        FROM image_performers ip
+        INNER JOIN images i ON i.id = ip.image_id
+        WHERE ip.performer_id = ${PERFORMERS_ID_REF}
+          AND ${imageVisibleSql(sql.raw("i.file_path"))}
+          AND (i.is_nsfw IS NOT TRUE)
+      ), 0)`
+    : sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT ip.image_id)::int
+        FROM image_performers ip
+        INNER JOIN images i ON i.id = ip.image_id
+        WHERE ip.performer_id = ${PERFORMERS_ID_REF}
+          AND ${imageVisibleSql(sql.raw("i.file_path"))}
+      ), 0)`;
+}
+
 export function performerAudioLibraryCountExpr(sfwOnly: boolean) {
   return sfwOnly
     ? sql<number>`COALESCE((
@@ -161,6 +219,25 @@ export function performerAudioLibraryCountExpr(sfwOnly: boolean) {
         INNER JOIN audio_libraries al ON al.id = alp.library_id
         WHERE alp.performer_id = ${PERFORMERS_ID_REF}
           AND ${audioLibraryVisibleSql(sql.raw("al.folder_path"))}
+      ), 0)`;
+}
+
+export function performerAudioTrackCountExpr(sfwOnly: boolean) {
+  return sfwOnly
+    ? sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT atp.track_id)::int
+        FROM audio_track_performers atp
+        INNER JOIN audio_tracks atr ON atr.id = atp.track_id
+        WHERE atp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${audioTrackVisibleSql(sql.raw("atr.file_path"))}
+          AND (atr.is_nsfw IS NOT TRUE)
+      ), 0)`
+    : sql<number>`COALESCE((
+        SELECT COUNT(DISTINCT atp.track_id)::int
+        FROM audio_track_performers atp
+        INNER JOIN audio_tracks atr ON atr.id = atp.track_id
+        WHERE atp.performer_id = ${PERFORMERS_ID_REF}
+          AND ${audioTrackVisibleSql(sql.raw("atr.file_path"))}
       ), 0)`;
 }
 

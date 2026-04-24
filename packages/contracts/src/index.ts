@@ -924,7 +924,12 @@ export interface PerformerListItemDto {
   videoCount: number;
   /** Linked galleries plus standalone images (SFW mode excludes NSFW entities). */
   imageAppearanceCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
   audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
   country: string | null;
   createdAt: string;
 }
@@ -954,6 +959,13 @@ export interface PerformerDetailDto {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
   knownFor: PerformerKnownForDto[];
   tags: TagEmbedDto[];
   createdAt: string;

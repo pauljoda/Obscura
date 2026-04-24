@@ -9,6 +9,7 @@
   import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -334,6 +335,23 @@
                             size="compact"
                             aspectClass="h-full w-full"
                             showChips={false}
+                          />
+                        {:else if item.kind === "performer"}
+                          <PerformerThumbnail
+                            performer={{
+                              name: item.title,
+                              imagePath: item.imagePath,
+                              isNsfw: item.meta?.isNsfw === true,
+                              videoCount: typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
+                              seriesCount: typeof item.meta?.seriesCount === "number" ? item.meta.seriesCount : 0,
+                              galleryCount: typeof item.meta?.galleryCount === "number" ? item.meta.galleryCount : 0,
+                              imageCount: typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
+                              audioLibraryCount: typeof item.meta?.audioLibraryCount === "number" ? item.meta.audioLibraryCount : 0,
+                              audioTrackCount: typeof item.meta?.audioTrackCount === "number" ? item.meta.audioTrackCount : 0,
+                            }}
+                            compact
+                            showChips={false}
+                            class="h-full w-full"
                           />
                         {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />

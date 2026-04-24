@@ -8,7 +8,6 @@
     Loader2,
     SlidersHorizontal,
     Star,
-    Users,
     Layers,
     Image as ImageIcon,
   } from "@lucide/svelte";
@@ -22,8 +21,7 @@
   import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
+  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -553,29 +551,20 @@
                   href={buildHrefWithFrom(item.href, currentPath)}
                   class="surface-card-sharp flex flex-col overflow-hidden transition-colors duration-fast hover:border-border-accent"
                 >
-                  <NsfwBlur isNsfw={isNsfwItem(item)} class="block">
-                    <div class="relative aspect-[3/4] bg-surface-1">
-                      {#if item.imagePath}
-                        <img
-                          src={toApiUrl(item.imagePath)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div
-                          class={gradient +
-                            " flex h-full w-full items-center justify-center"}
-                        >
-                          <Users class="h-8 w-8 text-white/20" />
-                        </div>
-                      {/if}
-                      <div class="pointer-events-none absolute bottom-1 right-1 z-10">
-                        <NsfwShowModeChip isNsfw={isNsfwItem(item)} />
-                      </div>
-                    </div>
-                  </NsfwBlur>
+                  <PerformerThumbnail
+                    performer={{
+                      name: item.title,
+                      imagePath: item.imagePath,
+                      isNsfw: isNsfwItem(item),
+                      videoCount: typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
+                      seriesCount: typeof item.meta?.seriesCount === "number" ? item.meta.seriesCount : 0,
+                      galleryCount: typeof item.meta?.galleryCount === "number" ? item.meta.galleryCount : 0,
+                      imageCount: typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
+                      audioLibraryCount: typeof item.meta?.audioLibraryCount === "number" ? item.meta.audioLibraryCount : 0,
+                      audioTrackCount: typeof item.meta?.audioTrackCount === "number" ? item.meta.audioTrackCount : 0,
+                    }}
+                    gradientFallback={gradient}
+                  />
                   <div class="space-y-0.5 p-2">
                     <h4 class="truncate text-[0.8rem] font-medium leading-tight text-text-primary">
                       {item.title}

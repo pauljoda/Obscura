@@ -72,6 +72,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Actor Known For links now open the right appearance.** Movie and episode roles on an actor page now link to their video detail pages, Series roles link to the Series browser, and actors with saved roles no longer trip a Svelte navigation error.
 - **Actor pages now show the rest of an actor's appearances.** Known For cards can use the linked video's own thumbnail, video appearances are queried correctly by actor name, and actor detail pages now include linked images and audio tracks alongside videos, Series, galleries, and audio libraries.
 - **Actor detail pages now have inline editing.** The detail header gained an Edit action for updating the actor's name, bio, aliases, demographics, physical metadata, Favorite flag, and NSFW flag without leaving the page.
+- **Actor browsing now focuses on appearances instead of vanity stats.** The actor list dropped the old total cards, gained server-backed filter presets and card-size preferences, defaults to a cross-media appearance sort, and each actor card now shows compact chips for videos, Series, galleries, images, and audio using the same thumbnail component across actor grids, dashboard rows, search results, and the command palette.
 - **Long cast role names now stay readable in Series cast strips.** Character subtitles in the Cast & Crew rail now wrap to a second line instead of being cut off after a few words, so long role names remain visible on smaller cards.
 
 - **Plugin and scraper dropdowns are now searchable.** The metadata provider selection dropdowns on the Identify page and on individual edit pages (Video, Studio, Performer, Tag) have been upgraded from native system selects to a custom searchable dropdown. This makes it much easier to find and select a specific plugin, StashBox endpoint, or community scraper when you have many installed.
@@ -207,6 +208,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Actor thumbnails now render through one shared Svelte component everywhere first-party actor cards appear, with nav-matching media chips for video, Series, gallery, image, and audio appearance counts.
 - Image lightbox no longer animates the initial fit transform. The stage now stays invisible until the image's natural dimensions have loaded and `applyFit` has computed the correct scale; at that point the viewer pops to its resting size. Subsequent zoom operations are also instant instead of transitioning.
 - `/galleries` and `/images` filter presets now persist in the new `ui_prefs` table instead of `localStorage`, so clearing site data or switching browsers no longer loses them.
 - Galleries and images now render through the new shared `GalleryThumbnail` / `ImageThumbnail` components on every surface that shows them: `/galleries`, `/galleries/[id]` (interior + sub-galleries), `/images`, home dashboard's Recent Galleries / Recent Images rows, `/search` results, and the command palette. Hover cycling (for galleries) and hover video preview (for animated images) now work everywhere those thumbnails appear.

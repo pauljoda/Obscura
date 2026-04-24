@@ -18,8 +18,12 @@ import {
 } from "drizzle-orm";
 import {
   performerAudioLibraryCountExpr,
+  performerAudioTrackCountExpr,
+  performerGalleryCountExpr,
+  performerImageCountExpr,
   performerImageAppearanceCountExpr,
   performerSfwSceneCountExpr,
+  performerSeriesCountExpr,
   performerTotalSceneCountExpr,
 } from "./appearance-count-expressions";
 
@@ -58,8 +62,13 @@ export interface PerformerListEntry {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
   imageAppearanceCount: number;
   audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
   country: string | null;
   createdAt: string;
 }
@@ -165,6 +174,20 @@ export async function listPerformersRead(
   const sceneCountSelect = sfwOnly
     ? sfwPerformerSceneCountExpr
     : totalPerformerSceneCountExpr;
+  const seriesCountSelect = performerSeriesCountExpr(sfwOnly);
+  const galleryCountSelect = performerGalleryCountExpr(sfwOnly);
+  const imageCountSelect = performerImageCountExpr(sfwOnly);
+  const imageAppearanceCountSelect = performerImageAppearanceCountExpr(sfwOnly);
+  const audioLibraryCountSelect = performerAudioLibraryCountExpr(sfwOnly);
+  const audioTrackCountSelect = performerAudioTrackCountExpr(sfwOnly);
+  const appearanceCountSelect = sql<number>`(
+    ${sceneCountSelect}
+    + ${seriesCountSelect}
+    + ${galleryCountSelect}
+    + ${imageCountSelect}
+    + ${audioLibraryCountSelect}
+    + ${audioTrackCountSelect}
+  )`;
 
   const sortDir = query.order === "asc" ? asc : desc;
   const sortAsc = query.order === "asc" ? asc : null;
@@ -176,6 +199,10 @@ export async function listPerformersRead(
     case "videos":
       orderBy =
         query.order === "asc" ? asc(sceneCountSelect) : desc(sceneCountSelect);
+      break;
+    case "appearances":
+      orderBy =
+        query.order === "asc" ? asc(appearanceCountSelect) : desc(appearanceCountSelect);
       break;
     case "rating":
       orderBy = sortDir(performers.rating);
@@ -198,8 +225,13 @@ export async function listPerformersRead(
         rating: performers.rating,
         isNsfw: performers.isNsfw,
         videoCount: sceneCountSelect,
-        imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
-        audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
+        seriesCount: seriesCountSelect,
+        galleryCount: galleryCountSelect,
+        imageCount: imageCountSelect,
+        imageAppearanceCount: imageAppearanceCountSelect,
+        audioLibraryCount: audioLibraryCountSelect,
+        audioTrackCount: audioTrackCountSelect,
+        appearanceCount: appearanceCountSelect,
         country: performers.country,
         createdAt: performers.createdAt,
       })
@@ -218,8 +250,13 @@ export async function listPerformersRead(
     performers: rows.map((r) => ({
       ...r,
       videoCount: Number(r.videoCount ?? 0),
+      seriesCount: Number(r.seriesCount ?? 0),
+      galleryCount: Number(r.galleryCount ?? 0),
+      imageCount: Number(r.imageCount ?? 0),
       imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
       audioLibraryCount: Number(r.audioLibraryCount ?? 0),
+      audioTrackCount: Number(r.audioTrackCount ?? 0),
+      appearanceCount: Number(r.appearanceCount ?? 0),
       createdAt: r.createdAt.toISOString(),
     })),
     total: countResult[0]?.count ?? 0,
@@ -436,6 +473,13 @@ export interface PerformerDetail {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
   knownFor: PerformerKnownForEntry[];
   tags: Array<{ id: string; name: string; isNsfw: boolean }>;
   createdAt: string;
@@ -463,10 +507,22 @@ export async function getPerformerByIdRead(
       n: sfwOnly
         ? performerSfwSceneCountExpr()
         : performerTotalSceneCountExpr(),
+      seriesCount: performerSeriesCountExpr(sfwOnly),
+      galleryCount: performerGalleryCountExpr(sfwOnly),
+      imageCount: performerImageCountExpr(sfwOnly),
+      imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
+      audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
+      audioTrackCount: performerAudioTrackCountExpr(sfwOnly),
     })
     .from(performers)
     .where(eq(performers.id, id));
   const videoCount = Number(cnt?.n ?? 0);
+  const seriesCount = Number(cnt?.seriesCount ?? 0);
+  const galleryCount = Number(cnt?.galleryCount ?? 0);
+  const imageCount = Number(cnt?.imageCount ?? 0);
+  const imageAppearanceCount = Number(cnt?.imageAppearanceCount ?? 0);
+  const audioLibraryCount = Number(cnt?.audioLibraryCount ?? 0);
+  const audioTrackCount = Number(cnt?.audioTrackCount ?? 0);
   const knownFor = await listPerformerKnownFor(db, id, sfwOnly);
 
   return {
@@ -494,6 +550,14 @@ export async function getPerformerByIdRead(
     rating: row.rating,
     isNsfw: row.isNsfw,
     videoCount,
+    seriesCount,
+    galleryCount,
+    imageCount,
+    imageAppearanceCount,
+    audioLibraryCount,
+    audioTrackCount,
+    appearanceCount:
+      videoCount + seriesCount + galleryCount + imageCount + audioLibraryCount + audioTrackCount,
     knownFor,
     tags: row.performerTags.map((pt) => ({
       id: pt.tag.id,

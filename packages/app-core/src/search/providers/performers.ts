@@ -8,8 +8,12 @@ import type {
 } from "../types";
 import {
   performerAudioLibraryCountExpr,
+  performerAudioTrackCountExpr,
+  performerGalleryCountExpr,
+  performerImageCountExpr,
   performerImageAppearanceCountExpr,
   performerSfwSceneCountExpr,
+  performerSeriesCountExpr,
   performerTotalSceneCountExpr,
 } from "../../appearance-count-expressions";
 
@@ -54,6 +58,12 @@ export const createPerformersSearchProvider: SearchProviderFactory = (
     const sceneCountSelect = sfwOnly
       ? performerSfwSceneCountExpr()
       : performerTotalSceneCountExpr();
+    const seriesCountSelect = performerSeriesCountExpr(sfwOnly);
+    const galleryCountSelect = performerGalleryCountExpr(sfwOnly);
+    const imageCountSelect = performerImageCountExpr(sfwOnly);
+    const imageAppearanceCountSelect = performerImageAppearanceCountExpr(sfwOnly);
+    const audioLibraryCountSelect = performerAudioLibraryCountExpr(sfwOnly);
+    const audioTrackCountSelect = performerAudioTrackCountExpr(sfwOnly);
 
     const [rows, countResult] = await Promise.all([
       db
@@ -64,9 +74,14 @@ export const createPerformersSearchProvider: SearchProviderFactory = (
           gender: performers.gender,
           imagePath: performers.imagePath,
           rating: performers.rating,
+          isNsfw: performers.isNsfw,
           videoCount: sceneCountSelect,
-          imageAppearanceCount: performerImageAppearanceCountExpr(sfwOnly),
-          audioLibraryCount: performerAudioLibraryCountExpr(sfwOnly),
+          seriesCount: seriesCountSelect,
+          galleryCount: galleryCountSelect,
+          imageCount: imageCountSelect,
+          imageAppearanceCount: imageAppearanceCountSelect,
+          audioLibraryCount: audioLibraryCountSelect,
+          audioTrackCount: audioTrackCountSelect,
           score: scoreExpr,
         })
         .from(performers)
@@ -83,13 +98,23 @@ export const createPerformersSearchProvider: SearchProviderFactory = (
       total,
       items: rows.map((r) => {
         const videoCount = Number(r.videoCount ?? 0);
+        const seriesCount = Number(r.seriesCount ?? 0);
+        const galleryCount = Number(r.galleryCount ?? 0);
+        const imageCount = Number(r.imageCount ?? 0);
         const imageAppearanceCount = Number(r.imageAppearanceCount ?? 0);
         const audioLibraryCount = Number(r.audioLibraryCount ?? 0);
+        const audioTrackCount = Number(r.audioTrackCount ?? 0);
+        const appearanceCount =
+          videoCount + seriesCount + galleryCount + imageCount + audioLibraryCount + audioTrackCount;
         const bits = [
           r.gender,
           videoCount > 0 ? `${videoCount} videos` : null,
-          imageAppearanceCount > 0 ? `${imageAppearanceCount} images` : null,
-          audioLibraryCount > 0 ? `${audioLibraryCount} audio` : null,
+          seriesCount > 0 ? `${seriesCount} series` : null,
+          galleryCount > 0 ? `${galleryCount} galleries` : null,
+          imageCount > 0 ? `${imageCount} images` : null,
+          audioLibraryCount + audioTrackCount > 0
+            ? `${audioLibraryCount + audioTrackCount} audio`
+            : null,
         ].filter(Boolean);
         return {
           id: r.id,
@@ -103,8 +128,14 @@ export const createPerformersSearchProvider: SearchProviderFactory = (
           meta: {
             gender: r.gender,
             videoCount,
+            seriesCount,
+            galleryCount,
+            imageCount,
             imageAppearanceCount,
             audioLibraryCount,
+            audioTrackCount,
+            appearanceCount,
+            isNsfw: r.isNsfw,
             disambiguation: r.disambiguation,
           },
         };

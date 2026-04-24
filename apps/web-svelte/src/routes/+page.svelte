@@ -19,6 +19,7 @@
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -180,7 +181,7 @@
 
           {#if featuredVideos.length > 1}
             <div class="absolute bottom-8 right-8 md:bottom-16 md:right-16 flex items-center gap-1">
-              {#each featuredVideos as _, index}
+              {#each featuredVideos as _, index (index)}
                 <button
                   type="button"
                   onclick={() => (currentIndex = index)}
@@ -367,27 +368,15 @@
                   href={`/performers/${p.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <NsfwBlur isNsfw={p.isNsfw} class="block">
-                    <div class="aspect-[3/4] bg-surface-1 relative">
-                      {#if p.imagePath}
-                        <img
-                          src={toApiUrl(p.imagePath)}
-                          alt={p.name}
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class="flex h-full items-center justify-center">
-                          <Users class="h-8 w-8 text-text-disabled" />
-                        </div>
-                      {/if}
-                    </div>
-                  </NsfwBlur>
+                  <PerformerThumbnail
+                    performer={p}
+                    gradientFallback={VIDEO_CARD_GRADIENTS[0]}
+                  />
                   <div class="p-2">
                     <h3 class="truncate text-[0.8rem] font-medium">{p.name}</h3>
-                    {#if p.videoCount > 0}
+                    {#if (p.appearanceCount ?? p.videoCount) > 0}
                       <p class="text-[0.65rem] text-text-disabled">
-                        {p.videoCount} video{p.videoCount === 1 ? "" : "s"}
+                        {p.appearanceCount ?? p.videoCount} appearance{(p.appearanceCount ?? p.videoCount) === 1 ? "" : "s"}
                       </p>
                     {/if}
                   </div>
