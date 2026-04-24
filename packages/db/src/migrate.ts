@@ -12,6 +12,7 @@
  * legacy-install bridges or a staging/finalize framework.
  */
 
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
@@ -24,7 +25,72 @@ export { BreakingGateAwaitingConsentError };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MIGRATIONS_FOLDER = path.resolve(__dirname, "../drizzle");
+const MIGRATION_JOURNAL_PATH = path.join("meta", "_journal.json");
+
+type ResolveMigrationsFolderOptions = {
+  cwd?: string;
+  env?: Partial<
+    Record<"OBSCURA_DB_MIGRATIONS_DIR" | "OBSCURA_MIGRATIONS_DIR", string>
+  >;
+  exists?: (candidate: string) => boolean;
+  moduleDir?: string;
+};
+
+function ancestors(start: string): string[] {
+  const folders: string[] = [];
+  let current = path.resolve(start);
+  while (true) {
+    folders.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return folders;
+    }
+    current = parent;
+  }
+}
+
+export function resolveMigrationsFolder(
+  options: ResolveMigrationsFolderOptions = {},
+): string {
+  const cwd = options.cwd ?? process.cwd();
+  const env = options.env ?? process.env;
+  const exists = options.exists ?? existsSync;
+  const moduleDir = options.moduleDir ?? __dirname;
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+
+  const addCandidate = (candidate: string | undefined) => {
+    if (!candidate) {
+      return;
+    }
+    const resolved = path.resolve(candidate);
+    if (!seen.has(resolved)) {
+      seen.add(resolved);
+      candidates.push(resolved);
+    }
+  };
+
+  addCandidate(env.OBSCURA_DB_MIGRATIONS_DIR ?? env.OBSCURA_MIGRATIONS_DIR);
+  addCandidate(path.resolve(moduleDir, "../drizzle"));
+  addCandidate(path.resolve(cwd, "packages/db/drizzle"));
+  addCandidate(path.resolve(cwd, "../packages/db/drizzle"));
+  addCandidate(path.resolve(cwd, "../../packages/db/drizzle"));
+
+  for (const base of [...ancestors(cwd), ...ancestors(moduleDir)]) {
+    addCandidate(path.join(base, "packages/db/drizzle"));
+  }
+
+  for (const candidate of candidates) {
+    if (exists(path.join(candidate, MIGRATION_JOURNAL_PATH))) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    "[obscura migrate] Can't find Drizzle migrations journal. Checked:\n" +
+      candidates.map((candidate) => `- ${candidate}`).join("\n"),
+  );
+}
 
 export async function runMigrations(databaseUrl: string): Promise<void> {
   const gate = await checkBreakingGate(databaseUrl);
@@ -35,7 +101,7 @@ export async function runMigrations(databaseUrl: string): Promise<void> {
   const client = postgres(databaseUrl, { max: 1 });
   try {
     const db = drizzle(client);
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+    await migrate(db, { migrationsFolder: resolveMigrationsFolder() });
     console.log("[obscura migrate] Migrations up to date");
   } finally {
     await client.end();

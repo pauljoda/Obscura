@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- **The deployed Docker image can load library pages again.** Videos, Series, Galleries, Audio, Actors, Studios, Tags, Collections, and Settings no longer crash on startup because scraper-only XPath/jsdom code was being imported by every server route.
+- **The deployed Docker image can load library pages again.** Videos, Series, Galleries, Audio, Actors, Studios, Tags, Collections, and Settings no longer crash on startup because scraper-only XPath/jsdom code was being imported by every server route, and the built SvelteKit server now finds the packaged Drizzle migrations instead of looking inside its build chunks.
 
 - **Thumbnail grids now open at your saved size.** Videos, Series, Galleries, Images, Actors, Studios, Tags, Audio, Collections, and gallery interiors read saved thumbnail-size preferences during the first page load instead of flashing the default grid and snapping after hydration.
 
@@ -213,6 +213,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - Deployed SvelteKit routes no longer import the scraper runtime through the default `@obscura/app-core` barrel, preventing jsdom's CommonJS internals from crashing unrelated Docker image pages with `require is not defined`.
+- Built SvelteKit Docker routes now resolve Drizzle migrations from the real `packages/db/drizzle` folder, preventing `Can't find meta/_journal.json file` 500s after startup.
 - Worker integration tests now create their own legacy-path fixture media, so clean CI checkouts can verify stale media path recovery without ignored demo videos.
 - Media-core path-resolution tests no longer depend on ignored local demo videos, so clean CI checkouts can run them without `big_buck_bunny.mp4` or other large fixture assets.
 - GitHub Actions Playwright smoke tests now use the host-visible fixture media path, so the library-root existence check passes before the app scans test videos.
