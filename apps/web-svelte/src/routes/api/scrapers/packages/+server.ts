@@ -1,8 +1,6 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import {
-  installScraperPackageWrite,
-  mapInstalledScraperPackages,
-} from "@obscura/app-core";
+import { mapInstalledScraperPackages } from "@obscura/app-core";
+import { installScraperPackageWrite } from "@obscura/app-core/scraper-runtime";
 import { schema } from "@obscura/db";
 import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";

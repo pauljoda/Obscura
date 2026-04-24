@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The deployed Docker image can load library pages again.** Videos, Series, Galleries, Audio, Actors, Studios, Tags, Collections, and Settings no longer crash on startup because scraper-only XPath/jsdom code was being imported by every server route.
+
 - **Thumbnail grids now open at your saved size.** Videos, Series, Galleries, Images, Actors, Studios, Tags, Audio, Collections, and gallery interiors read saved thumbnail-size preferences during the first page load instead of flashing the default grid and snapping after hydration.
 
 - **Library settings now show a single "Videos" toggle per library root.** The watched-libraries panel's Videos button reflects and saves correctly again — previously the UI sent `scanVideos` but the database stored separate `scan_movies` / `scan_series` flags, so the toggle never rendered the saved state. **Breaking:** the `scan_movies` and `scan_series` columns are dropped on upgrade and replaced by a single `scan_videos` column (preserved as `scan_movies OR scan_series` from your existing rows). No action needed if you've kept both toggles on; otherwise re-check your library roots' Videos toggle in Settings after upgrading.
@@ -210,6 +212,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Deployed SvelteKit routes no longer import the scraper runtime through the default `@obscura/app-core` barrel, preventing jsdom's CommonJS internals from crashing unrelated Docker image pages with `require is not defined`.
 - Worker integration tests now create their own legacy-path fixture media, so clean CI checkouts can verify stale media path recovery without ignored demo videos.
 - Media-core path-resolution tests no longer depend on ignored local demo videos, so clean CI checkouts can run them without `big_buck_bunny.mp4` or other large fixture assets.
 - GitHub Actions Playwright smoke tests now use the host-visible fixture media path, so the library-root existence check passes before the app scans test videos.

@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from "@sveltejs/kit";
-import { listScrapeResultsRead } from "@obscura/app-core";
+import { listScrapeResultsRead } from "@obscura/app-core/scraper-runtime";
 import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 

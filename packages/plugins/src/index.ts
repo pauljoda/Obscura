@@ -52,12 +52,6 @@ export {
 // TypeScript Loader
 export { loadTypeScriptPlugin } from "./ts-loader";
 
-// Stash Adapter
-export {
-  executeStashScraper,
-  StashAdapterError,
-} from "./stash-adapter";
-
 // Normalizers
 export {
   normalizeVideoResult,

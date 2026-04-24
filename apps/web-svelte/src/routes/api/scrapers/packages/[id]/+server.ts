@@ -2,7 +2,7 @@ import { json, type RequestHandler } from "@sveltejs/kit";
 import {
   deleteScraperPackageWrite,
   updateScraperPackageWrite,
-} from "@obscura/app-core";
+} from "@obscura/app-core/scraper-runtime";
 import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 

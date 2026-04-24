@@ -9,7 +9,6 @@ import type {
   StashScrapedPerformer,
 } from "./types";
 import { resolveScriptDef, resolveActionDef } from "./yaml-parser";
-import { runXPathScraper } from "./xpath-scraper";
 
 export class ScraperExecutionError extends Error {
   constructor(
@@ -192,6 +191,7 @@ export async function scrapeScene(
 
   // Route to the correct engine
   if (actionDef.action === "scrapeXPath") {
+    const { runXPathScraper } = await import("./xpath-scraper");
     return runXPathScraper(definition, action, input, {
       timeoutMs: options?.timeoutMs,
     });

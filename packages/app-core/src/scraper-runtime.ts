@@ -9,17 +9,23 @@ import { getCacheRootDir, getGeneratedPerformerDir, getGeneratedVideoDir } from 
 import { schema, type AppDb } from "@obscura/db";
 import {
   ScraperExecutionError,
+  scrapePerformer,
+  scrapeScene,
+} from "@obscura/stash-import/executor";
+import type {
+  ScraperPerformerFragment,
+  ScraperSceneFragment,
+  StashScrapedPerformer,
+  StashScrapedScene,
+} from "@obscura/stash-import/types";
+import {
   hasUsableNormalizedSceneResult,
   normalizePerformerResult,
   normalizeSceneResult,
+} from "@obscura/stash-import/normalizer";
+import {
   parseScraperYaml,
-  scrapePerformer,
-  scrapeScene,
-  type ScraperPerformerFragment,
-  type ScraperSceneFragment,
-  type StashScrapedPerformer,
-  type StashScrapedScene,
-} from "@obscura/stash-import";
+} from "@obscura/stash-import/yaml-parser";
 import {
   ConflictError,
   InternalError,

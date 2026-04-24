@@ -21,6 +21,10 @@ vi.mock("@obscura/app-core", async () => {
   };
 });
 
+vi.mock("@obscura/app-core/scraper-runtime", () => ({
+  applyPerformerScrapeWrite,
+}));
+
 describe("/api/performers/[id]/apply-scrape route", () => {
   beforeEach(() => {
     getWebDb.mockResolvedValue(db);

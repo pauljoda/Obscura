@@ -52,6 +52,19 @@ vi.mock("@obscura/app-core", async () => {
   };
 });
 
+vi.mock("@obscura/app-core/scraper-runtime", () => ({
+  fetchCommunityScraperIndexRead,
+  installScraperPackageWrite,
+  deleteScraperPackageWrite,
+  updateScraperPackageWrite,
+  scrapeVideoWrite,
+  scrapePerformerWrite,
+  listScrapeResultsRead,
+  getScrapeResultRead,
+  acceptScrapeResultWrite,
+  rejectScrapeResultWrite,
+}));
+
 describe("/api/scrapers routes", () => {
   beforeEach(() => {
     getWebDb.mockResolvedValue(db);

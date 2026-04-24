@@ -3,12 +3,12 @@ import { schema, type AppDb } from "@obscura/db";
 import {
   StashBoxClient,
   StashBoxError,
-  hasUsableNormalizedSceneResult,
   normalizeStashBoxPerformer,
   normalizeStashBoxScene,
   stashBoxSceneToRawResult,
   type StashBoxFingerprint,
-} from "@obscura/stash-import";
+} from "@obscura/stash-import/stashbox";
+import { hasUsableNormalizedSceneResult } from "@obscura/stash-import/normalizer";
 import {
   NotFoundError,
   UnprocessableError,

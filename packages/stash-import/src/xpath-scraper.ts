@@ -1,4 +1,4 @@
-import { JSDOM } from "jsdom";
+import { createRequire } from "node:module";
 import type {
   ScraperYamlDef,
   ScraperXPathDef,
@@ -13,6 +13,9 @@ import type {
 } from "./types";
 import { resolveActionDef } from "./yaml-parser";
 import { ScraperExecutionError } from "./executor";
+
+const require = createRequire(import.meta.url);
+const { JSDOM } = require("jsdom") as typeof import("jsdom");
 
 /**
  * Run an XPath-based scraper action.

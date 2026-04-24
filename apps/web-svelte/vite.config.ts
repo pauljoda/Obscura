@@ -16,7 +16,7 @@ export default defineConfig({
   ssr: {
     // Don't attempt to SSR-import jassub — it has browser-only globals.
     noExternal: [],
-    external: ["jassub"],
+    external: ["jassub", "jsdom"],
   },
   define: {
     // @obscura/contracts reads these env keys at module scope. Vite does
