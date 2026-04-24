@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from "./$types";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { fetchLibraryConfig } from "$lib/server/system";
 
 /**

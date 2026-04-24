@@ -29,7 +29,7 @@
     updateLibrarySettings,
   } from "$lib/api/library";
   import { fetchInstalledScrapers } from "$lib/api/scrapers";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import ToggleCard from "$lib/components/settings/ToggleCard.svelte";
   import NumberStepper from "$lib/components/settings/NumberStepper.svelte";
   import QualitySlider from "$lib/components/settings/QualitySlider.svelte";

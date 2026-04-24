@@ -5,7 +5,7 @@ import {
   fetchSeries,
   fetchSeriesDetail,
 } from "$lib/server/videos";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import {
   SERIES_LIST_PREFS_KEY,
   defaultSeriesListPrefs,

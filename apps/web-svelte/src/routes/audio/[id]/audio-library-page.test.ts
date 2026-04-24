@@ -35,7 +35,7 @@ vi.mock("$lib/api/entities", async () => {
   };
 });
 
-vi.mock("$lib/stores/nsfw.svelte", () => ({
+vi.mock("$lib/nsfw/store.svelte", () => ({
   useNsfw: () => ({ mode: "show" }),
 }));
 

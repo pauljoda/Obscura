@@ -1,6 +1,6 @@
 import { getContext, setContext } from "svelte";
 import { browser } from "$app/environment";
-import { isModK } from "../nsfw-hotkey";
+import { isModK } from "../nsfw/hotkey";
 
 const KEY = Symbol("search");
 

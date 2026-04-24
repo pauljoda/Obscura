@@ -2,7 +2,7 @@ import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { getUiPrefRead } from "@obscura/app-core";
 import { fetchVideoCards } from "$lib/server/videos";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import {
   VIDEOS_LIST_PREFS_KEY,
   defaultVideosListPrefs,

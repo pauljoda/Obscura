@@ -12,7 +12,7 @@ vi.mock("$lib/server/core", () => ({
   serverFetch,
 }));
 
-vi.mock("$lib/nsfw-cookie", () => ({
+vi.mock("$lib/nsfw/cookie", () => ({
   parseNsfwModeCookie,
 }));
 

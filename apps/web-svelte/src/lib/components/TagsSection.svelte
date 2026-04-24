@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Tag as TagIcon } from "@lucide/svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
-  import NsfwTagLabel from "./NsfwTagLabel.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
+  import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
 
   export interface TagEmbed {
     id: string;

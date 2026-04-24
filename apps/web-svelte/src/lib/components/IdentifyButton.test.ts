@@ -15,7 +15,7 @@ vi.mock("$lib/api/videos", () => ({
   fetchVideoSeriesLibraryDetail: vi.fn(),
 }));
 
-vi.mock("$lib/hooks/nsfw-aware-providers", () => ({
+vi.mock("$lib/nsfw/aware-providers", () => ({
   filterNsfwAware: <T,>(items: T[]) => items,
 }));
 

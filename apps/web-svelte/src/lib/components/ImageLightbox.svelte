@@ -15,7 +15,7 @@
   import { isVideoImage } from "@obscura/contracts";
   import { toApiUrl } from "$lib/api/core";
   import { updateImage } from "$lib/api/media";
-  import NsfwBlur from "./NsfwBlur.svelte";
+  import NsfwBlur from "./nsfw/NsfwBlur.svelte";
 
   interface Props {
     images: ImageListItemDto[];

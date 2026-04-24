@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { garbleTagLabelText } from "$lib/nsfw-tags";
+  import { garbleTagLabelText } from "$lib/nsfw/tags";
 
   interface Props {
     isNsfw: boolean;

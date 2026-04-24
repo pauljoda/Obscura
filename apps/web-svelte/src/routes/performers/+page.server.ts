@@ -1,6 +1,6 @@
 import type { PageServerLoad } from "./$types";
 import { fetchPerformers } from "$lib/server/media";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { loadUiPrefObject } from "$lib/server/ui-prefs";
 
 const PAGE_SIZE = 120;

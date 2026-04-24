@@ -1,7 +1,7 @@
 import type { PageServerLoad } from "./$types";
 import { fetchCollectionDetail } from "$lib/server/media";
 import { serverFetch } from "$lib/server/core";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
 

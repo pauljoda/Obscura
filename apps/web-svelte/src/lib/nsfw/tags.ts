@@ -1,4 +1,4 @@
-import type { NsfwMode } from "./nsfw-cookie";
+import type { NsfwMode } from "./cookie";
 
 /**
  * In SFW (off) mode, NSFW-tagged rows are omitted from chip rows so only

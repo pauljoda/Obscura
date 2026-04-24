@@ -99,8 +99,8 @@
     type MutableFlag,
   } from "$lib/identify/identify-runners";
   import { entityTerms } from "$lib/terminology";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import { filterNsfwAware } from "$lib/hooks/nsfw-aware-providers";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import { filterNsfwAware } from "$lib/nsfw/aware-providers";
   import ProviderSelector from "./ProviderSelector.svelte";
   import VideosTab from "./scrape/VideosTab.svelte";
   import PerformersTab from "./scrape/PerformersTab.svelte";

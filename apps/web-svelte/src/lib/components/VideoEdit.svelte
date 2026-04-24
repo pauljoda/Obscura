@@ -31,10 +31,10 @@
     generateVideoThumbnailFromFrame,
   } from "$lib/api/videos";
   import { fetchTags, fetchPerformers, fetchStudios } from "$lib/api/entities";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { toApiUrl } from "$lib/api/core";
   import { entityTerms } from "$lib/terminology";
-  import NsfwTagLabel from "./NsfwTagLabel.svelte";
+  import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
   import {
     DateField,
     EditFormShell,

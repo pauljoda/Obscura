@@ -24,9 +24,9 @@
     uploadGalleryCover,
   } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import GalleryThumbnail from "./thumbnails/GalleryThumbnail.svelte";
-  import NsfwBlur from "./NsfwBlur.svelte";
+  import NsfwBlur from "./nsfw/NsfwBlur.svelte";
   import {
     DateField,
     EditFormShell,

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AlertTriangle, Loader2, RefreshCw, Trash2, Wrench } from "@lucide/svelte";
   import { backfillPhashes, clearAllMetadata, rebuildPreviews } from "$lib/api/library";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
 
   const nsfw = useNsfw();

@@ -7,7 +7,7 @@
     type InstalledPlugin,
   } from "$lib/api/scrapers";
   import { fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
-  import { filterNsfwAware } from "$lib/hooks/nsfw-aware-providers";
+  import { filterNsfwAware } from "$lib/nsfw/aware-providers";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
   import { portal } from "$lib/actions/portal";
   import {

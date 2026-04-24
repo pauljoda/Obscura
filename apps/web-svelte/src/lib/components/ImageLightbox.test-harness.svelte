@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ImageListItemDto } from "@obscura/contracts";
   import ImageLightbox from "./ImageLightbox.svelte";
-  import { provideNsfw } from "$lib/stores/nsfw.svelte";
+  import { provideNsfw } from "$lib/nsfw/store.svelte";
 
   interface Props {
     images: ImageListItemDto[];

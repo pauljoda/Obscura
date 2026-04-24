@@ -56,8 +56,8 @@
     Building2,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
   import type { Snippet } from "svelte";
   import FilterChip from "./FilterChip.svelte";
   import FilterSection from "./FilterSection.svelte";

@@ -32,8 +32,8 @@
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import PerformersSection from "$lib/components/PerformersSection.svelte";
   import TagsSection from "$lib/components/TagsSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
@@ -51,7 +51,7 @@
     type TagOption,
   } from "$lib/components/forms";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
 
   let { data } = $props();
   const appChrome = useAppChrome();

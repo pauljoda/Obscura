@@ -30,7 +30,7 @@
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";

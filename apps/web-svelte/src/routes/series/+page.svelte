@@ -17,7 +17,7 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
-  import NsfwTagLabel from "$lib/components/NsfwTagLabel.svelte";
+  import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import {

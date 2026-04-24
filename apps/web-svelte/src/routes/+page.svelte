@@ -13,8 +13,8 @@
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
@@ -23,7 +23,7 @@
   import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
 
   let { data } = $props();
   const nsfw = useNsfw();

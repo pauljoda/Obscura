@@ -25,12 +25,12 @@
   } from "$lib/api/videos";
   import { fetchLibraryConfig, rebuildVideoPreview } from "$lib/api/library";
   import type { LibrarySettings } from "$lib/api/types";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import { entityTerms } from "$lib/terminology";
   import BackLink from "$lib/components/BackLink.svelte";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
-  import NsfwChip from "$lib/components/NsfwChip.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
+  import NsfwChip from "$lib/components/nsfw/NsfwChip.svelte";
   import VideoPlayer, {
     type VideoPlayerHandle,
   } from "$lib/components/VideoPlayer.svelte";

@@ -22,11 +22,11 @@
   import { fetchPerformers, fetchTags } from "$lib/api/entities";
   import { updateAudioTrack } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
-  import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
+  import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
   import { entityTerms } from "$lib/terminology";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
-  import NsfwChip from "$lib/components/NsfwChip.svelte";
+  import NsfwChip from "$lib/components/nsfw/NsfwChip.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import {
     EditFormShell,
@@ -36,7 +36,7 @@
     type TagOption,
   } from "$lib/components/forms";
   import { useAppChrome } from "$lib/stores/app-chrome.svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   let { data } = $props();

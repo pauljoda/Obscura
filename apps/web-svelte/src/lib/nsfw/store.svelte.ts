@@ -1,8 +1,8 @@
 import { getContext, setContext } from "svelte";
 import { browser } from "$app/environment";
 import { invalidateAll } from "$app/navigation";
-import { isModShiftZ } from "../nsfw-hotkey";
-import { type NsfwMode } from "../nsfw-cookie";
+import { isModShiftZ } from "./hotkey";
+import { type NsfwMode } from "./cookie";
 
 const COOKIE_NAME = "obscura-nsfw-mode";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;

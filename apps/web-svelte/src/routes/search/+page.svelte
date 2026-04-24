@@ -28,7 +28,7 @@
   import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import { buildHrefWithFrom } from "$lib/back-navigation";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";

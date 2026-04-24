@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import type { NsfwMode } from "$lib/nsfw-cookie";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
+  import type { NsfwMode } from "$lib/nsfw/cookie";
 
   interface Props {
     class?: string;

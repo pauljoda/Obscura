@@ -22,7 +22,7 @@ vi.mock("$lib/server/videos", () => ({
   fetchSeriesDetail,
 }));
 
-vi.mock("$lib/nsfw-cookie", () => ({
+vi.mock("$lib/nsfw/cookie", () => ({
   parseNsfwModeCookie,
 }));
 

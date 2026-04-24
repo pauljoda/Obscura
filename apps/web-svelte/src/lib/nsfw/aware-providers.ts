@@ -1,4 +1,4 @@
-import { useNsfw } from "$lib/stores/nsfw.svelte";
+import { useNsfw } from "$lib/nsfw/store.svelte";
 
 /**
  * Filter a list of providers by NSFW classification against the

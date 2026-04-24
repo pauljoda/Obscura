@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("$lib/stores/nsfw.svelte", () => ({
+vi.mock("$lib/nsfw/store.svelte", () => ({
   useNsfw: () => ({ mode: "show" }),
 }));
 

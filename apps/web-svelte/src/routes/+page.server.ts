@@ -7,7 +7,7 @@ import {
   fetchPerformers,
   fetchStudios,
 } from "$lib/server/media";
-import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import type {
   GalleryListItemDto,
   ImageListItemDto,

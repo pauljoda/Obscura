@@ -6,8 +6,8 @@
   import { Image as ImageIcon, Video as VideoIcon } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
-  import NsfwBlur from "../NsfwBlur.svelte";
-  import NsfwShowModeChip from "../NsfwShowModeChip.svelte";
+  import NsfwBlur from "../nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
 
   interface Props {
     title?: string;

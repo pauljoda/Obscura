@@ -19,7 +19,7 @@
     runQueue,
   } from "$lib/api/library";
   import type { JobRun, JobsDashboard } from "$lib/api/types";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { groupQueuesForJobDashboard } from "$lib/jobs/queue-sections";
   import { describeRunResult, displayJobHeading } from "$lib/jobs/helpers";
   import OverviewStat from "$lib/components/jobs/OverviewStat.svelte";

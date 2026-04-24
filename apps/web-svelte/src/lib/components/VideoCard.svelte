@@ -5,15 +5,15 @@
 <script lang="ts">
   import { Captions, Clock, Eye, Film, HardDrive, Star } from "@lucide/svelte";
   import { cn, Checkbox } from "@obscura/ui-svelte";
-  import NsfwBlur from "./NsfwBlur.svelte";
-  import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
-  import NsfwText from "./NsfwText.svelte";
-  import NsfwTagLabel from "./NsfwTagLabel.svelte";
+  import NsfwBlur from "./nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "./nsfw/NsfwShowModeChip.svelte";
+  import NsfwText from "./nsfw/NsfwText.svelte";
+  import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
   import VideoThumbnail from "./thumbnails/VideoThumbnail.svelte";
   import { VIDEO_TAG_COLORS } from "$lib/video-tag-colors";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
 
   interface Props {

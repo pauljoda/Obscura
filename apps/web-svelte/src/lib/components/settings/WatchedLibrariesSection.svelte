@@ -23,7 +23,7 @@
     runQueue,
     updateLibraryRoot,
   } from "$lib/api/library";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import ToggleCard from "./ToggleCard.svelte";
 

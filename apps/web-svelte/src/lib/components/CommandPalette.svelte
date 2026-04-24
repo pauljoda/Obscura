@@ -16,7 +16,7 @@
   import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import { fetchSearch } from "$lib/api/media";
   import { recentSearches } from "$lib/hooks/recent-searches.svelte";

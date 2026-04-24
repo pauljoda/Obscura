@@ -1,7 +1,7 @@
 <script lang="ts">
   import { MoreHorizontal } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { useNsfw } from "$lib/stores/nsfw.svelte";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
 
   interface Props {
     isMoreActive: boolean;
