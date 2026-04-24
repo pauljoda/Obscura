@@ -28,6 +28,7 @@
     fetchStudios,
     fetchTags,
   } from "$lib/api/entities";
+  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
@@ -648,28 +649,12 @@
     <section class="space-y-3">
       <h2 class="text-kicker">Sub-Libraries</h2>
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {#each library.children.filter((child) => nsfw.mode !== "off" || !child.isNsfw) as child (child.id)}
+        {#each library.children.filter((child) => nsfw.mode !== "off" || !child.isNsfw) as child, i (child.id)}
           <a
             href={`/audio/${child.id}`}
-            class="overflow-hidden surface-card-sharp transition-colors hover:border-border-accent"
+            class="overflow-hidden surface-card-sharp transition-colors hover:border-border-accent group/card"
           >
-            <NsfwBlur isNsfw={child.isNsfw} class="relative aspect-square overflow-hidden">
-              {#if child.coverImagePath}
-                <img
-                  src={toApiUrl(child.coverImagePath)}
-                  alt={child.title}
-                  class="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              {:else}
-                <div class="flex h-full w-full items-center justify-center bg-surface-2">
-                  <Music class="h-10 w-10 text-text-disabled" />
-                </div>
-              {/if}
-              <div class="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-1">
-                <NsfwShowModeChip isNsfw={child.isNsfw} />
-              </div>
-            </NsfwBlur>
+            <AudioLibraryThumbnail library={child} gradientIndex={i} />
             <div class="space-y-1 p-2">
               <h3 class="truncate text-sm font-medium text-text-primary">{child.title}</h3>
               <p class="text-[0.68rem] text-text-muted">

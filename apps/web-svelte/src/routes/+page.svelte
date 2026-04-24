@@ -21,6 +21,7 @@
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 
@@ -302,31 +303,12 @@
           </h2>
           <div class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hidden">
             {#each audioLibraries as a, i (a.id)}
-              {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
               <div class="flex-none w-48 md:w-56 snap-start">
                 <a
                   href={`/audio/${a.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
+                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block group/card"
                 >
-                  <NsfwBlur isNsfw={a.isNsfw} class="block relative">
-                    <div class="aspect-square bg-surface-1 relative">
-                      {#if a.coverImagePath}
-                        <img
-                          src={toApiUrl(a.coverImagePath)}
-                          alt={a.title}
-                          loading="lazy"
-                          class="h-full w-full object-cover"
-                        />
-                      {:else}
-                        <div class={cn("w-full h-full flex items-center justify-center", gradient)}>
-                          <Music class="h-10 w-10 text-white/20" />
-                        </div>
-                      {/if}
-                      <div class="pointer-events-none absolute bottom-1 right-1 z-10">
-                        <NsfwShowModeChip isNsfw={a.isNsfw} />
-                      </div>
-                    </div>
-                  </NsfwBlur>
+                  <AudioLibraryThumbnail library={a} gradientIndex={i} />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{a.title}</h3>
                     <p class="text-xs text-text-muted mt-0.5">

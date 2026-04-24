@@ -24,6 +24,8 @@
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import TagThumbnail from "$lib/components/TagThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import AudioTrackThumbnail from "$lib/components/AudioTrackThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -620,23 +622,56 @@
                     }}
                   />
                 </a>
-              {:else}
-                {@const Icon = SEARCH_KIND_CONFIG[item.kind].icon}
+              {:else if item.kind === "audio-library"}
                 <a
                   href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex items-center gap-3 p-2 transition-colors duration-fast hover:border-border-accent"
+                  class="surface-card-sharp flex items-center gap-3 p-2 transition-colors duration-fast hover:border-border-accent group/card"
                 >
-                  <div class="flex h-12 w-20 shrink-0 items-center justify-center overflow-hidden bg-surface-1">
-                    {#if item.imagePath}
-                      <img
-                        src={toApiUrl(item.imagePath)}
-                        alt=""
-                        loading="lazy"
-                        class="h-full w-full object-cover"
-                      />
-                    {:else}
-                      <Icon class="h-4 w-4 text-text-disabled" />
+                  <div class="h-16 w-16 shrink-0">
+                    <AudioLibraryThumbnail
+                      library={{
+                        title: item.title,
+                        coverImagePath: item.imagePath,
+                        isNsfw: isNsfwItem(item),
+                        trackCount:
+                          typeof item.meta?.trackCount === "number"
+                            ? item.meta.trackCount
+                            : null,
+                      }}
+                      aspectClass="h-full w-full"
+                      showPlayOverlay={false}
+                      gradientIndex={index}
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm text-text-primary">{item.title}</div>
+                    {#if item.subtitle}
+                      <div class="truncate text-[0.65rem] text-text-muted">
+                        {item.subtitle}
+                      </div>
                     {/if}
+                  </div>
+                </a>
+              {:else if item.kind === "audio-track"}
+                <a
+                  href={buildHrefWithFrom(item.href, currentPath)}
+                  class="surface-card-sharp flex items-center gap-3 p-2 transition-colors duration-fast hover:border-border-accent group/card"
+                >
+                  <div class="h-16 w-16 shrink-0">
+                    <AudioTrackThumbnail
+                      track={{
+                        title: item.title,
+                        coverImagePath: item.imagePath,
+                        isNsfw: isNsfwItem(item),
+                        trackNumber:
+                          typeof item.meta?.trackNumber === "number"
+                            ? item.meta.trackNumber
+                            : null,
+                      }}
+                      aspectClass="h-full w-full"
+                      showPlayOverlay={false}
+                      gradientIndex={index}
+                    />
                   </div>
                   <div class="min-w-0 flex-1">
                     <div class="truncate text-sm text-text-primary">{item.title}</div>

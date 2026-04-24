@@ -12,6 +12,8 @@
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import TagThumbnail from "$lib/components/TagThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import AudioTrackThumbnail from "$lib/components/AudioTrackThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -376,6 +378,30 @@
                             size="compact"
                             aspectClass="h-full w-full"
                             showLabel={false}
+                          />
+                        {:else if item.kind === "audio-library"}
+                          <AudioLibraryThumbnail
+                            library={{
+                              title: item.title,
+                              coverImagePath: item.imagePath,
+                              isNsfw: item.meta?.isNsfw === true,
+                            }}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showChips={false}
+                            showPlayOverlay={false}
+                          />
+                        {:else if item.kind === "audio-track"}
+                          <AudioTrackThumbnail
+                            track={{
+                              title: item.title,
+                              coverImagePath: item.imagePath,
+                              isNsfw: item.meta?.isNsfw === true,
+                            }}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showChips={false}
+                            showPlayOverlay={false}
                           />
                         {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />
