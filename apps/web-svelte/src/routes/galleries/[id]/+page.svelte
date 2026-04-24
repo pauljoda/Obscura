@@ -58,7 +58,7 @@
   }
 
   async function refreshGallery() {
-    await invalidate(`/galleries/${data.gallery.id}`);
+    await invalidate(`galleries:${data.gallery.id}`);
     editing = false;
   }
 

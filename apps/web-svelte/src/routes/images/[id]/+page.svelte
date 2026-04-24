@@ -47,7 +47,7 @@
   }
 
   async function refreshImage() {
-    await invalidate(`/images/${data.image.id}`);
+    await invalidate(`images:${data.image.id}`);
     editing = false;
   }
 
