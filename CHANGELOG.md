@@ -250,6 +250,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Dropped the stale `apps/web/public/media/...` and `apps/web/public/jassub/` entries from `.gitignore` and `.dockerignore`. These paths pointed at the retired Next.js workspace and had no effect after the Svelte cutover.
 - The `/tags` grid now splits tags into "Tagged content" and "Unused tags" sections; both apply the current search, sort, and filter settings independently. Tag cards were reworked as a single 4:3 typography-first surface: the tag name is the centered focal element on a per-tag color gradient (or the custom image with a scrim when one is set), with the usage count rendered as compact monospace metadata below. The old initials, separate footer strip, and per-type video/image chips were removed.
 - Studio and tag detail pages in the Svelte app now use the shared edit form kit for inline metadata updates.
 - Collection detail headers now use the same artwork-led hero structure as audio library detail pages, including cover fallback art and top-level playback/edit controls.
