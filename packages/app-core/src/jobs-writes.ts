@@ -371,12 +371,11 @@ async function collectMissingVideoTargets(
       targets.push({ kind: "video_movie", ...row });
     }
   } else if (queueName === "preview") {
+    const settings = await ensureLibrarySettingsRow(db);
     const previewMissing = (kind: "episode" | "movie") => {
       const table = kind === "episode" ? videoEpisodes : videoMovies;
-      return or(
+      const previewAssetsMissing = or(
         isNull(table.previewPath),
-        isNull(table.spritePath),
-        isNull(table.trickplayVttPath),
         and(
           or(
             isNull(table.thumbnailPath),
@@ -384,23 +383,44 @@ async function collectMissingVideoTargets(
           ),
           or(isNull(table.thumbnailPath), isNull(table.cardThumbnailPath)),
         ),
-      )!;
+      );
+      const trickplayAssetsMissing = or(
+        isNull(table.spritePath),
+        isNull(table.trickplayVttPath),
+      );
+
+      if (settings.autoGeneratePreview && settings.generateTrickplay) {
+        return or(previewAssetsMissing, trickplayAssetsMissing)!;
+      }
+      if (settings.autoGeneratePreview) {
+        return previewAssetsMissing!;
+      }
+      if (settings.generateTrickplay) {
+        return trickplayAssetsMissing!;
+      }
+      return undefined;
     };
 
-    const episodeRows = await db
-      .select({ id: videoEpisodes.id, title: videoEpisodes.title })
-      .from(videoEpisodes)
-      .where(andEpisodeSfw(previewMissing("episode"), sfwOnly));
-    for (const row of episodeRows) {
-      targets.push({ kind: "video_episode", ...row });
+    const episodeFilter = previewMissing("episode");
+    if (episodeFilter) {
+      const episodeRows = await db
+        .select({ id: videoEpisodes.id, title: videoEpisodes.title })
+        .from(videoEpisodes)
+        .where(andEpisodeSfw(episodeFilter, sfwOnly));
+      for (const row of episodeRows) {
+        targets.push({ kind: "video_episode", ...row });
+      }
     }
 
-    const movieRows = await db
-      .select({ id: videoMovies.id, title: videoMovies.title })
-      .from(videoMovies)
-      .where(andMovieSfw(previewMissing("movie"), sfwOnly));
-    for (const row of movieRows) {
-      targets.push({ kind: "video_movie", ...row });
+    const movieFilter = previewMissing("movie");
+    if (movieFilter) {
+      const movieRows = await db
+        .select({ id: videoMovies.id, title: videoMovies.title })
+        .from(videoMovies)
+        .where(andMovieSfw(movieFilter, sfwOnly));
+      for (const row of movieRows) {
+        targets.push({ kind: "video_movie", ...row });
+      }
     }
   } else if (queueName === "metadata-import") {
     const episodeRows = await db

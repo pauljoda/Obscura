@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Library scans now do far less surprise work.** Scan follow-up jobs respect the generation toggles in Settings, pHash stays off unless explicitly enabled, and trickplay sprites are generated in one FFmpeg atlas pass instead of launching FFmpeg once per tile.
+
 - **UI elements across the Svelte app now follow the sharp-corner design rule consistently.** The empty-library logo chip, changelog inline code blocks, identify review drawer navigation, image picker modal tiles and buttons, and the performer scrape action row no longer render with rounded corners — they match the Dark Room "sharp corners everywhere" rule the rest of the app has always used.
 
 - **StashDB and hash-oriented Identify controls now stay on the entity types they actually belong to.** The Identify provider picker only presents Stash-Box sources for Videos, Images, Actors, Studios, and Tags, so Series, Galleries, Albums, and Tracks no longer show remote StashDB choices that cannot service those rows.
@@ -252,6 +254,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Library scans now only enqueue technical metadata, fingerprint, and preview/trickplay jobs when the corresponding generation settings are enabled.
+- Video trickplay generation now uses a single FFmpeg `fps + scale + pad + tile` command for each sprite sheet instead of extracting and stitching every frame through separate processes.
 - Dropped the stale `apps/web/public/media/...` and `apps/web/public/jassub/` entries from `.gitignore` and `.dockerignore`. These paths pointed at the retired Next.js workspace and had no effect after the Svelte cutover.
 - Removed rounded-corner utilities (`rounded-full`, `rounded`, `rounded-sm`, `rounded-[3px]`) that had crept into the SvelteKit port in `routes/+page.svelte` (empty-library logo chip), `ChangelogDialog.svelte` (inline code), `ImagePickerModal.svelte` (image preview, thumbnail tiles, action button), `identify/ReviewDrawer.svelte` (Prev/Next nav), and `performers/scrape/+page.svelte` (action chips and avatar tile). Every affected surface now matches the Dark Room sharp-corner rule.
 - Dropped the unused `radii` token export (and its `Radii` type) from `@obscura/ui-svelte`. Nothing consumed it, and the design system requires `border-radius: 0` everywhere, so shipping the table invited future drift.

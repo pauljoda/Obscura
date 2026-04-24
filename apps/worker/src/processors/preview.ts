@@ -1,7 +1,5 @@
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
@@ -36,7 +34,7 @@ const MAX_TRICKPLAY_FRAME_HEIGHT = 180;
 const MIN_TRICKPLAY_FRAME_WIDTH = 48;
 const MIN_TRICKPLAY_FRAME_HEIGHT = 27;
 
-function planTrickplaySheet(input: {
+export function planTrickplaySheet(input: {
   duration: number;
   frameInterval: number;
   frameWidth: number;
@@ -104,6 +102,68 @@ function trickplayJpegQuality(quality: number) {
   const clamped = Math.max(1, Math.min(31, quality));
   const t = (clamped - 1) / 30;
   return Math.round(68 - t * 30);
+}
+
+export function buildTrickplayFfmpegArgs(input: {
+  filePath: string;
+  spriteFile: string;
+  frameInterval: number;
+  frameWidth: number;
+  frameHeight: number;
+  gridColumns: number;
+  gridRows: number;
+  jpegQuality: number;
+}) {
+  const vf = [
+    `fps=1/${input.frameInterval}`,
+    `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease`,
+    `pad=${input.frameWidth}:${input.frameHeight}:(ow-iw)/2:(oh-ih)/2`,
+    `tile=${input.gridColumns}x${input.gridRows}`,
+  ].join(",");
+
+  return [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    input.filePath,
+    "-vf",
+    vf,
+    "-frames:v",
+    "1",
+    "-q:v",
+    String(input.jpegQuality),
+    input.spriteFile,
+  ];
+}
+
+export function buildTrickplayVtt(input: {
+  assetUrl: string;
+  frameCount: number;
+  frameInterval: number;
+  frameWidth: number;
+  frameHeight: number;
+  gridColumns: number;
+}) {
+  const vttLines = ["WEBVTT", ""];
+
+  for (let index = 0; index < input.frameCount; index += 1) {
+    const start = index * input.frameInterval;
+    const end = start + input.frameInterval;
+    const column = index % input.gridColumns;
+    const row = Math.floor(index / input.gridColumns);
+    const x = column * input.frameWidth;
+    const y = row * input.frameHeight;
+
+    vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
+    vttLines.push(
+      `${input.assetUrl}#xywh=${x},${y},${input.frameWidth},${input.frameHeight}`
+    );
+    vttLines.push("");
+  }
+
+  return vttLines.join("\n");
 }
 
 export async function processPreview(job: Job) {
@@ -180,6 +240,8 @@ export async function processPreview(job: Job) {
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
   const previewStart = duration > previewDuration ? Math.max(0, duration * 0.1) : 0;
   const thumbnailAt = duration > 0 ? Math.min(duration - 0.5, Math.max(1, duration * 0.18)) : 0;
+  const shouldGeneratePreviewAssets = settings.autoGeneratePreview === true;
+  const shouldGenerateTrickplay = settings.generateTrickplay === true;
   const requestedFrameInterval = Math.max(3, settings.trickplayIntervalSeconds);
   // Resolution scales with the quality slider:
   //   quality 1  -> native video resolution (no downscale)
@@ -221,171 +283,112 @@ export async function processPreview(job: Job) {
 
   const thumbQuality = String(thumbQualityClamped);
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(thumbnailAt),
-    "-i",
-    filePath,
-    "-frames:v",
-    "1",
-    "-vf",
-    `scale=${thumbWidth}:${thumbHeight}`,
-    "-q:v",
-    thumbQuality,
-    thumbnailFile,
-  ]);
+  const assetPatch: Record<string, unknown> = { updatedAt: new Date() };
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(thumbnailAt),
-    "-i",
-    filePath,
-    "-frames:v",
-    "1",
-    "-vf",
-    `scale=${cardWidth}:${cardHeight}`,
-    "-q:v",
-    thumbQuality,
-    cardFile,
-  ]);
-  await markJobProgress(job, "preview", 30);
+  if (shouldGeneratePreviewAssets) {
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(thumbnailAt),
+      "-i",
+      filePath,
+      "-frames:v",
+      "1",
+      "-vf",
+      `scale=${thumbWidth}:${thumbHeight}`,
+      "-q:v",
+      thumbQuality,
+      thumbnailFile,
+    ]);
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(previewStart),
-    "-t",
-    String(previewDuration),
-    "-i",
-    filePath,
-    "-vf",
-    "scale=960:-2",
-    "-an",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    "24",
-    "-movflags",
-    "+faststart",
-    previewFile,
-  ]);
-  await markJobProgress(job, "preview", 65);
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(thumbnailAt),
+      "-i",
+      filePath,
+      "-frames:v",
+      "1",
+      "-vf",
+      `scale=${cardWidth}:${cardHeight}`,
+      "-q:v",
+      thumbQuality,
+      cardFile,
+    ]);
+    await markJobProgress(job, "preview", shouldGenerateTrickplay ? 30 : 50);
 
-  // Extract individual frames via separate ffmpeg calls (robust against
-  // mid-stream format changes), then stitch into a sprite with sharp.
-  const tmpFrameDir = path.join(tmpdir(), `obscura-sprite-${video.id}-${Date.now()}`);
-  await mkdir(tmpFrameDir, { recursive: true });
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(previewStart),
+      "-t",
+      String(previewDuration),
+      "-i",
+      filePath,
+      "-vf",
+      "scale=960:-2",
+      "-an",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "24",
+      "-movflags",
+      "+faststart",
+      previewFile,
+    ]);
+    await markJobProgress(job, "preview", shouldGenerateTrickplay ? 65 : 100);
 
-  try {
-    for (let index = 0; index < frameCount; index += 1) {
-      const seekTime = Math.min(index * frameInterval, duration - 0.5);
-      const frameFile = path.join(tmpFrameDir, `frame-${String(index).padStart(4, "0")}.png`);
-      try {
-        await runProcess("ffmpeg", [
-          "-hide_banner",
-          "-loglevel",
-          "error",
-          "-y",
-          "-ss",
-          String(seekTime),
-          "-i",
-          filePath,
-          "-frames:v",
-          "1",
-          "-vf",
-          `scale=${plannedSpriteThumbWidth}:${plannedSpriteThumbHeight}`,
-          frameFile,
-        ]);
-      } catch {
-        // Create a black placeholder so grid stays aligned
-        await sharp({
-          create: {
-            width: plannedSpriteThumbWidth,
-            height: plannedSpriteThumbHeight,
-            channels: 3,
-            background: { r: 0, g: 0, b: 0 },
-          },
-        })
-          .toFormat("png")
-          .toFile(frameFile);
-      }
-    }
-
-    // Read extracted frames in order
-    const frameFiles = (await readdir(tmpFrameDir))
-      .filter((f) => f.startsWith("frame-"))
-      .sort()
-      .map((f) => path.join(tmpFrameDir, f));
-
-    const actualFrameCount = frameFiles.length;
-    const gridColumns = Math.min(5, actualFrameCount);
-    const gridRows = Math.max(1, Math.ceil(actualFrameCount / gridColumns));
-
-    // Stitch frames into a single sprite sheet
-    const composites: sharp.OverlayOptions[] = frameFiles.map((file, i) => ({
-      input: file,
-      left: (i % gridColumns) * plannedSpriteThumbWidth,
-      top: Math.floor(i / gridColumns) * plannedSpriteThumbHeight,
-    }));
-
-    await sharp({
-      create: {
-        width: gridColumns * plannedSpriteThumbWidth,
-        height: gridRows * plannedSpriteThumbHeight,
-        channels: 3,
-        background: { r: 0, g: 0, b: 0 },
-      },
-    })
-      .composite(composites)
-      .jpeg({
-        quality: trickplayJpegQuality(trickQualityClamped),
-        mozjpeg: true,
-      })
-      .toFile(spriteFile);
-
-    // Generate VTT from actual extracted frames
-    const vttLines = ["WEBVTT", ""];
-    for (let index = 0; index < actualFrameCount; index += 1) {
-      const start = index * frameInterval;
-      const end = start + frameInterval;
-      const column = index % gridColumns;
-      const row = Math.floor(index / gridColumns);
-      const x = column * plannedSpriteThumbWidth;
-      const y = row * plannedSpriteThumbHeight;
-
-      vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-      vttLines.push(
-        `${videoAssetUrl(video.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
-      );
-      vttLines.push("");
-    }
-
-    await writeFile(trickplayFile, vttLines.join("\n"), "utf8");
-  } finally {
-    await rm(tmpFrameDir, { recursive: true, force: true });
+    assetPatch.thumbnailPath = videoAssetUrl(video.id, "thumb");
+    assetPatch.cardThumbnailPath = videoAssetUrl(video.id, "card");
+    assetPatch.previewPath = videoAssetUrl(video.id, "preview");
   }
 
-  const assetPatch = {
-    thumbnailPath: videoAssetUrl(video.id, "thumb"),
-    cardThumbnailPath: videoAssetUrl(video.id, "card"),
-    previewPath: videoAssetUrl(video.id, "preview"),
-    spritePath: videoAssetUrl(video.id, "sprite"),
-    trickplayVttPath: videoAssetUrl(video.id, "trickplay"),
-    updatedAt: new Date(),
-  };
+  if (shouldGenerateTrickplay) {
+    const gridColumns = Math.min(5, frameCount);
+    const gridRows = Math.max(1, Math.ceil(frameCount / gridColumns));
+
+    await runProcess(
+      "ffmpeg",
+      buildTrickplayFfmpegArgs({
+        filePath,
+        spriteFile,
+        frameInterval,
+        frameWidth: plannedSpriteThumbWidth,
+        frameHeight: plannedSpriteThumbHeight,
+        gridColumns,
+        gridRows,
+        jpegQuality: trickplayJpegQuality(trickQualityClamped),
+      }),
+    );
+
+    await writeFile(
+      trickplayFile,
+      buildTrickplayVtt({
+        assetUrl: videoAssetUrl(video.id, "sprite"),
+        frameCount,
+        frameInterval,
+        frameWidth: plannedSpriteThumbWidth,
+        frameHeight: plannedSpriteThumbHeight,
+        gridColumns,
+      }),
+      "utf8",
+    );
+
+    assetPatch.spritePath = videoAssetUrl(video.id, "sprite");
+    assetPatch.trickplayVttPath = videoAssetUrl(video.id, "trickplay");
+    await markJobProgress(job, "preview", 100);
+  }
 
   if (entityKind === "video_episode") {
     await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, video.id));

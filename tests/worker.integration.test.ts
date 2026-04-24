@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import * as schema from "../packages/db/src/schema.ts";
 import { buildWorkerRuntime } from "../apps/worker/src/runtime.js";
 import { processLibraryScan } from "../apps/worker/src/processors/library-scan-video.js";
@@ -66,6 +68,59 @@ describe("worker integration", () => {
     expect(queuedJobs.some((row) => row.queueName === "media-probe")).toBe(true);
     expect(queuedJobs.some((row) => row.queueName === "fingerprint")).toBe(true);
     expect(queuedJobs.some((row) => row.queueName === "preview")).toBe(true);
+  });
+
+  it("honors generation toggles when queueing scan follow-up jobs", async () => {
+    const gatedDir = path.join(mediaDir, "gated");
+    await mkdir(gatedDir, { recursive: true });
+    await createSampleVideoFile(gatedDir, "GatedTarget.mp4");
+    const [root] = await database.db
+      .insert(libraryRoots)
+      .values({
+        path: gatedDir,
+        label: "Gated Root",
+        recursive: true,
+        scanImages: false,
+        scanAudio: false,
+      })
+      .returning();
+    await database.db
+      .update(librarySettings)
+      .set({
+        autoGenerateMetadata: false,
+        autoGenerateFingerprints: false,
+        autoGeneratePreview: false,
+        generateTrickplay: false,
+      });
+
+    await processLibraryScan({
+      id: "scan-gated",
+      data: { libraryRootId: root.id },
+    });
+
+    const [movie] = await database.db
+      .select()
+      .from(videoMovies)
+      .where(eq(videoMovies.libraryRootId, root.id))
+      .limit(1);
+    expect(movie?.filePath).toContain("GatedTarget.mp4");
+
+    const queuedJobs = await database.db
+      .select()
+      .from(jobRuns)
+      .where(eq(jobRuns.targetId, movie!.id));
+    expect(queuedJobs.map((row) => row.queueName).sort()).toEqual([
+      "extract-subtitles",
+    ]);
+
+    await database.db
+      .update(librarySettings)
+      .set({
+        autoGenerateMetadata: true,
+        autoGenerateFingerprints: true,
+        autoGeneratePreview: true,
+        generateTrickplay: true,
+      });
   });
 
   it("prunes stale movies that no longer exist on disk", async () => {

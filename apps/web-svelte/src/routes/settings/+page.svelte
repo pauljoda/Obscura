@@ -45,6 +45,7 @@
   function normalizeSettings(s: LibrarySettings): LibrarySettings {
     return {
       ...s,
+      generatePhash: s.generatePhash ?? false,
       thumbnailQuality: s.thumbnailQuality ?? 2,
       trickplayQuality: s.trickplayQuality ?? 2,
       backgroundWorkerConcurrency: s.backgroundWorkerConcurrency ?? 1,

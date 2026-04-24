@@ -315,17 +315,23 @@ export async function processLibraryScan(job: Job): Promise<void> {
       );
     }
 
-    // Enqueue downstream processors for the episode (media-probe,
-    // fingerprint, preview, extract-subtitles). Each processor
-    // dispatches on entityKind.
+    // Enqueue downstream processors for the episode. The expensive generation
+    // queues honor library settings so scans can stay cheap when enrichment is
+    // disabled.
     const epTrigger = {
       by: "library-scan" as const,
       label: `Queued during ${root.label} scan`,
     };
     try {
-      await enqueuePendingVideoJob("media-probe", "video_episode", episodeId, epTrigger);
-      await enqueuePendingVideoJob("fingerprint", "video_episode", episodeId, epTrigger);
-      await enqueuePendingVideoJob("preview", "video_episode", episodeId, epTrigger);
+      if (settings.autoGenerateMetadata) {
+        await enqueuePendingVideoJob("media-probe", "video_episode", episodeId, epTrigger);
+      }
+      if (settings.autoGenerateFingerprints || settings.generatePhash) {
+        await enqueuePendingVideoJob("fingerprint", "video_episode", episodeId, epTrigger);
+      }
+      if (settings.autoGeneratePreview || settings.generateTrickplay) {
+        await enqueuePendingVideoJob("preview", "video_episode", episodeId, epTrigger);
+      }
       await enqueuePendingVideoJob(
         "extract-subtitles",
         "video_episode",
@@ -449,9 +455,15 @@ export async function processLibraryScan(job: Job): Promise<void> {
       label: `Queued during ${root.label} scan`,
     };
     try {
-      await enqueuePendingVideoJob("media-probe", "video_movie", movieId, mvTrigger);
-      await enqueuePendingVideoJob("fingerprint", "video_movie", movieId, mvTrigger);
-      await enqueuePendingVideoJob("preview", "video_movie", movieId, mvTrigger);
+      if (settings.autoGenerateMetadata) {
+        await enqueuePendingVideoJob("media-probe", "video_movie", movieId, mvTrigger);
+      }
+      if (settings.autoGenerateFingerprints || settings.generatePhash) {
+        await enqueuePendingVideoJob("fingerprint", "video_movie", movieId, mvTrigger);
+      }
+      if (settings.autoGeneratePreview || settings.generateTrickplay) {
+        await enqueuePendingVideoJob("preview", "video_movie", movieId, mvTrigger);
+      }
       await enqueuePendingVideoJob(
         "extract-subtitles",
         "video_movie",
@@ -566,10 +578,6 @@ export async function processLibraryScan(job: Job): Promise<void> {
     by: "library-scan",
     label: `Queued during ${root.label} scan`,
   });
-
-  // Silence unused import warning (settings is not currently read; retained
-  // so future probe/preview gating has a single place to plug in).
-  void settings;
 }
 
 /**
