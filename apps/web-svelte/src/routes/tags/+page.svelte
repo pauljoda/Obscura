@@ -174,15 +174,6 @@
     return `linear-gradient(135deg, hsl(${h1} 35% 22%) 0%, hsl(${h2} 40% 14%) 100%)`;
   }
 
-  function initialsFor(name: string): string {
-    const parts = name
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .split(/\s+/)
-      .filter(Boolean);
-    if (parts.length === 0) return name.slice(0, 2).toUpperCase();
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
 </script>
 
 <svelte:head>
@@ -295,40 +286,39 @@
         href={`/tags/${encodeURIComponent(tag.name)}`}
         class="tag-card group"
         title={`${tag.name} — ${usage} uses`}
+        style:--tag-gradient={gradientFor(tag.name)}
       >
-        <div class="tag-card-art" style:background={gradientFor(tag.name)}>
+        <div class="tag-card-bg">
           {#if tag.imagePath}
             <img
               src={toApiUrl(tag.imagePath)}
               alt=""
               loading="lazy"
               decoding="async"
-              class="h-full w-full object-cover"
+              class="tag-card-image"
             />
-          {:else}
-            <span class="tag-card-initials">{initialsFor(tag.name)}</span>
+            <div class="tag-card-image-scrim"></div>
           {/if}
-          <div class="tag-card-scrim"></div>
+        </div>
 
-          {#if tag.favorite}
-            <Star
-              class="tag-card-fav h-3.5 w-3.5 text-accent-400 fill-current drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
-            />
-          {/if}
-          {#if tag.isNsfw}
-            <span class="tag-card-nsfw">NSFW</span>
-          {/if}
-
+        <div class="tag-card-content">
+          <span class="tag-card-name" title={tag.name}>{tag.name}</span>
           {#if usage > 0}
-            <span class="tag-card-usage">
-              <span class="tag-card-usage-num">{usage.toLocaleString()}</span>
-              <span class="tag-card-usage-label">{usage === 1 ? "use" : "uses"}</span>
+            <span class="tag-card-meta">
+              {usage.toLocaleString()}
+              <span class="tag-card-meta-label">{usage === 1 ? "use" : "uses"}</span>
             </span>
           {/if}
         </div>
-        <div class="tag-card-body">
-          <span class="tag-card-name" title={tag.name}>{tag.name}</span>
-        </div>
+
+        {#if tag.favorite}
+          <Star
+            class="tag-card-fav h-3.5 w-3.5 text-accent-400 fill-current drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
+          />
+        {/if}
+        {#if tag.isNsfw}
+          <span class="tag-card-nsfw">NSFW</span>
+        {/if}
       </a>
     {/snippet}
 
@@ -379,61 +369,112 @@
 
   .tag-card {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    background: var(--color-surface-1, #181818);
+    display: block;
+    aspect-ratio: 4 / 3;
     border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--tag-gradient);
     overflow: hidden;
-    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    container-type: inline-size;
+    transition:
+      border-color 0.18s ease,
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
   }
   .tag-card:hover {
     border-color: var(--color-border-accent, #c49a5a);
-    box-shadow: 0 0 14px rgba(196, 154, 90, 0.25);
+    box-shadow: 0 0 18px rgba(196, 154, 90, 0.3);
     transform: translateY(-1px);
   }
 
-  .tag-card-art {
-    position: relative;
-    aspect-ratio: 5 / 4;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .tag-card-bg {
+    position: absolute;
+    inset: 0;
     overflow: hidden;
   }
-
-  .tag-card-initials {
-    font-family: "Geist", "Inter", system-ui, sans-serif;
-    font-size: clamp(1.35rem, 4.5cqw, 2.25rem);
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: rgba(255, 255, 255, 0.68);
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
-    container-type: inline-size;
-  }
-
-  .tag-card-scrim {
+  .tag-card-bg::before {
+    content: "";
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 55%),
       radial-gradient(
-        circle at 50% 40%,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(0, 0, 0, 0) 70%
-      );
+        circle at 30% 20%,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(0, 0, 0, 0) 55%
+      ),
+      linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
     pointer-events: none;
+  }
+  .tag-card-image {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  .tag-card:hover .tag-card-image {
+    transform: scale(1.04);
+  }
+  .tag-card-image-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.72) 100%);
+    pointer-events: none;
+  }
+
+  .tag-card-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .tag-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    font-family: "Geist", "Inter", system-ui, sans-serif;
+    font-size: clamp(0.85rem, 7cqw, 1.6rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.55),
+      0 2px 14px rgba(0, 0, 0, 0.45);
+    word-break: break-word;
+  }
+  .tag-card-meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: clamp(0.58rem, 2.6cqw, 0.78rem);
+    font-weight: 600;
+    color: var(--color-accent-300, #e9cfa3);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  }
+  .tag-card-meta-label {
+    font-size: 0.82em;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
   }
 
   .tag-card-fav {
     position: absolute;
-    top: 0.375rem;
-    left: 0.375rem;
+    top: 0.4rem;
+    left: 0.4rem;
   }
-
   .tag-card-nsfw {
     position: absolute;
-    top: 0.375rem;
-    right: 0.375rem;
+    top: 0.4rem;
+    right: 0.4rem;
     font-family: "JetBrains Mono", ui-monospace, monospace;
     font-size: 0.55rem;
     letter-spacing: 0.08em;
@@ -442,56 +483,12 @@
     color: rgba(255, 255, 255, 0.95);
   }
 
-  .tag-card-usage {
-    position: absolute;
-    bottom: 0.375rem;
-    right: 0.375rem;
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25rem;
-    padding: 0.15rem 0.4rem;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .tag-card-usage-num {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--color-accent-300, #e9cfa3);
-  }
-  .tag-card-usage-label {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .tag-card-body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 0.6rem;
-    min-height: 2rem;
-  }
-  .tag-card-name {
-    min-width: 0;
-    max-width: 100%;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--color-text-primary, #e8e8e8);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.005em;
-    text-align: center;
-  }
-
   .tag-grid-muted .tag-card {
-    opacity: 0.78;
+    opacity: 0.72;
+  }
+  .tag-grid-muted .tag-card .tag-card-name {
+    color: rgba(255, 255, 255, 0.82);
+    font-weight: 500;
   }
   .tag-grid-muted .tag-card:hover {
     opacity: 1;

@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
-- **The Tags grid is easier to read and upload images from.** Tags are now split into "Tagged content" and "Unused tags" sections so tags with actual videos/images/galleries always surface first, while empty tags still show (dimmed) under their own header — both sections still respond to the same search, sort, and filter controls. Tag names now center under each card for a calmer layout, and the tag edit form gained an Upload / Remove control so you can attach a custom image to any tag instead of relying only on the generated initials.
+- **The Tags grid is easier to read and upload images from.** Tags are now split into "Tagged content" and "Unused tags" sections so tags with actual videos/images/galleries always surface first, while empty tags still show (dimmed) under their own header — both sections still respond to the same search, sort, and filter controls. Tag cards dropped the separate footer strip for a typography-first design where the tag name itself is the centerpiece of a per-tag color gradient (or the custom image, when set), with the usage count as small metadata beneath. The tag edit form also gained an Upload / Remove control so you can attach a custom image to any tag.
 - **Collection rules now use Video terminology end to end.** The dynamic rule builder's old Scene chip is now Video, saved rule trees are upgraded to the current entity value, and tag suggestions count videos, galleries, images, and audio tracks the same way collection previews do.
 - **Docked audio playback now reserves page space globally.** The Svelte shell measures bottom-docked page players and adds the needed bottom padding to the main scroll area, so audio players and collection playlist bars stack instead of covering track lists or page controls.
 - **Collections can now have custom cover images.** The collection editor includes a cover preview with upload and clear controls; custom covers appear through the existing collection cover asset URL while collections without one keep the default gradient look.
@@ -236,7 +236,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- The `/tags` grid now splits tags into "Tagged content" and "Unused tags" sections; both apply the current search, sort, and filter settings independently. Tag cards drop the redundant footer icon and per-type counters and center the tag name under the art, which pairs with the existing corner usage badge for a calmer composition.
+- The `/tags` grid now splits tags into "Tagged content" and "Unused tags" sections; both apply the current search, sort, and filter settings independently. Tag cards were reworked as a single 4:3 typography-first surface: the tag name is the centered focal element on a per-tag color gradient (or the custom image with a scrim when one is set), with the usage count rendered as compact monospace metadata below. The old initials, separate footer strip, and per-type video/image chips were removed.
 - Studio and tag detail pages in the Svelte app now use the shared edit form kit for inline metadata updates.
 - Collection detail headers now use the same artwork-led hero structure as audio library detail pages, including cover fallback art and top-level playback/edit controls.
 - Collections detail pages in the Svelte app now match the legacy mixed/by-type collection workflow, including playlist launch controls, dynamic refresh, delete, and direct-item selection/removal.
