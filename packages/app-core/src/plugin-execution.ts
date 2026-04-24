@@ -9,7 +9,9 @@ import {
   type OscuraPluginManifest,
   type PluginInput,
 } from "@obscura/plugins";
-import { updateAudioLibraryWrite, updateAudioTrackWrite, updateGalleryWrite, updateImageWrite } from "./media";
+import { updateGalleryWrite, updateImageWrite } from "./gallery-media";
+import { updateAudioLibraryWrite } from "./audio-libraries";
+import { updateAudioTrackWrite } from "./audio-tracks";
 import { setVideoSeriesCoverFromUrlWrite, updateVideoSeriesWrite } from "./video-series";
 import { InternalError, NotFoundError, ValidationError, ConflictError } from "./errors";
 import { deriveProposedResultFromPluginOutput } from "./plugin-proposed-result";

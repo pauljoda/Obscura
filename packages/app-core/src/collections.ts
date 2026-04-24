@@ -33,11 +33,8 @@ import {
 } from "@obscura/db/src/lib/collection-rule-engine";
 import { NotFoundError, ValidationError } from "./errors";
 import { buildOrderBy, parsePagination, type SortConfig } from "./media-query-helpers";
-import {
-  getGalleriesByIdsRead,
-  getImagesByIdsRead,
-  getTracksByIdsRead,
-} from "./media";
+import { getGalleriesByIdsRead, getImagesByIdsRead } from "./gallery-media";
+import { getTracksByIdsRead } from "./audio-tracks";
 import { getVideosByIdsRead } from "./video-collection-reads";
 
 const { collections, collectionItems } = schema;
