@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Users, Star, Film, Images, Music, FolderOpen } from "@lucide/svelte";
+  import { Users, Star, Film, Images, Music, FolderOpen, Image as ImageIcon } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { updatePerformer } from "$lib/api/entities";
@@ -7,7 +7,9 @@
   import type {
     VideoSeriesListItemDto,
     GalleryListItemDto,
+    ImageListItemDto,
     AudioLibraryListItemDto,
+    AudioTrackListItemDto,
     PerformerKnownForDto,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
@@ -16,6 +18,7 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import { formatVideoCount } from "$lib/terminology";
 
   let { data } = $props();
@@ -49,7 +52,9 @@
   const videos = $derived(data.videos as VideoListItem[]);
   const series = $derived(data.series as VideoSeriesListItemDto[]);
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
+  const images = $derived(data.images as ImageListItemDto[]);
   const audioLibraries = $derived(data.audioLibraries as AudioLibraryListItemDto[]);
+  const audioTracks = $derived(data.audioTracks as AudioTrackListItemDto[]);
 
   function knownForHref(entry: PerformerKnownForDto) {
     return entry.sourceType === "series"
@@ -224,9 +229,18 @@
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
               <div class="aspect-[2/3] bg-surface-2">
-                <div class="flex h-full w-full items-center justify-center text-text-disabled">
-                  <FolderOpen class="h-8 w-8" />
-                </div>
+                {#if entry.thumbnailPath || entry.cardThumbnailPath}
+                  <img
+                    src={toApiUrl(entry.cardThumbnailPath ?? entry.thumbnailPath)}
+                    alt=""
+                    loading="lazy"
+                    class="h-full w-full object-cover"
+                  />
+                {:else}
+                  <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                    <FolderOpen class="h-8 w-8" />
+                  </div>
+                {/if}
               </div>
               <div class="p-2 space-y-0.5">
                 <h4 class="truncate text-[0.78rem] font-medium text-text-primary">
@@ -322,6 +336,37 @@
     </HierarchySection>
   {/if}
 
+  {#if images.length > 0}
+    <HierarchySection title={`Images — ${data.totalImages}`}>
+      {#snippet children()}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5">
+          {#each images as img (img.id)}
+            <a
+              href={`/images/${img.id}`}
+              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
+            >
+              <ImageThumbnail
+                title={img.title}
+                thumbnailPath={img.thumbnailPath}
+                previewPath={img.previewPath}
+                isVideo={img.isVideo}
+                isNsfw={img.isNsfw}
+                width={img.width}
+                height={img.height}
+                size="grid"
+              />
+              <div class="p-2">
+                <h3 class="truncate text-[0.78rem] font-medium text-text-primary">
+                  {img.title}
+                </h3>
+              </div>
+            </a>
+          {/each}
+        </div>
+      {/snippet}
+    </HierarchySection>
+  {/if}
+
   {#if audioLibraries.length > 0}
     <HierarchySection title="Audio">
       {#snippet children()}
@@ -351,6 +396,33 @@
                 <h3 class="truncate text-sm font-medium">{a.title}</h3>
                 <p class="text-xs text-text-muted mt-0.5">
                   {a.trackCount} track{a.trackCount === 1 ? "" : "s"}
+                </p>
+              </div>
+            </a>
+          {/each}
+        </div>
+      {/snippet}
+    </HierarchySection>
+  {/if}
+
+  {#if audioTracks.length > 0}
+    <HierarchySection title={`Tracks — ${data.totalAudioTracks}`}>
+      {#snippet children()}
+        <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+          {#each audioTracks as track (track.id)}
+            <a
+              href={`/audio/tracks/${track.id}`}
+              class="flex items-center gap-3 px-3 py-2 hover:bg-surface-2 transition-colors duration-fast"
+            >
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center bg-surface-2 text-text-accent">
+                <Music class="h-4 w-4" />
+              </span>
+              <div class="min-w-0 flex-1">
+                <h3 class="truncate text-[0.82rem] font-medium text-text-primary">
+                  {track.title}
+                </h3>
+                <p class="truncate text-[0.65rem] text-text-muted">
+                  {track.embeddedAlbum ?? "Audio track"}
                 </p>
               </div>
             </a>

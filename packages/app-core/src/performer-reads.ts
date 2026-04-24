@@ -234,6 +234,8 @@ export type PerformerKnownForEntry =
       sourceId: string;
       sourceTitle: string;
       character: string | null;
+      thumbnailPath: string | null;
+      cardThumbnailPath: string | null;
       seriesId: string;
       seriesTitle: string;
       seasonNumber: null;
@@ -244,6 +246,8 @@ export type PerformerKnownForEntry =
       sourceId: string;
       sourceTitle: string;
       character: string | null;
+      thumbnailPath: string | null;
+      cardThumbnailPath: string | null;
       seriesId: null;
       seriesTitle: null;
       seasonNumber: null;
@@ -254,6 +258,8 @@ export type PerformerKnownForEntry =
       sourceId: string;
       sourceTitle: string | null;
       character: string | null;
+      thumbnailPath: string | null;
+      cardThumbnailPath: string | null;
       seriesId: string;
       seriesTitle: string;
       seasonNumber: number | null;
@@ -271,6 +277,7 @@ export async function listPerformerKnownFor(
         sourceId: schema.videoSeries.id,
         title: schema.videoSeries.title,
         customName: schema.videoSeries.customName,
+        thumbnailPath: schema.videoSeries.posterPath,
         character: schema.videoSeriesPerformers.character,
         isNsfw: schema.videoSeries.isNsfw,
       })
@@ -284,6 +291,8 @@ export async function listPerformerKnownFor(
       .select({
         sourceId: schema.videoMovies.id,
         title: schema.videoMovies.title,
+        thumbnailPath: schema.videoMovies.thumbnailPath,
+        cardThumbnailPath: schema.videoMovies.cardThumbnailPath,
         character: schema.videoMoviePerformers.character,
         isNsfw: schema.videoMovies.isNsfw,
       })
@@ -297,6 +306,8 @@ export async function listPerformerKnownFor(
       .select({
         sourceId: schema.videoEpisodes.id,
         title: schema.videoEpisodes.title,
+        thumbnailPath: schema.videoEpisodes.thumbnailPath,
+        cardThumbnailPath: schema.videoEpisodes.cardThumbnailPath,
         character: schema.videoEpisodePerformers.character,
         seasonNumber: schema.videoEpisodes.seasonNumber,
         episodeNumber: schema.videoEpisodes.episodeNumber,
@@ -337,6 +348,8 @@ export async function listPerformerKnownFor(
         sourceId: row.sourceId,
         sourceTitle: row.customName ?? row.title,
         character: normalizeRole(row.character),
+        thumbnailPath: row.thumbnailPath,
+        cardThumbnailPath: null,
         seriesId: row.sourceId,
         seriesTitle: row.customName ?? row.title,
         seasonNumber: null,
@@ -350,6 +363,8 @@ export async function listPerformerKnownFor(
         sourceId: row.sourceId,
         sourceTitle: row.title,
         character: normalizeRole(row.character),
+        thumbnailPath: row.thumbnailPath,
+        cardThumbnailPath: row.cardThumbnailPath,
         seriesId: null,
         seriesTitle: null,
         seasonNumber: null,
@@ -366,6 +381,8 @@ export async function listPerformerKnownFor(
           sourceId: row.sourceId,
           sourceTitle: row.title,
           character,
+          thumbnailPath: row.thumbnailPath,
+          cardThumbnailPath: row.cardThumbnailPath,
           seriesId: row.seriesId,
           seriesTitle: row.seriesCustomName ?? row.seriesTitle,
           seasonNumber: row.seasonNumber,

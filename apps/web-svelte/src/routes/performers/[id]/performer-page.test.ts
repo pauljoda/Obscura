@@ -59,6 +59,7 @@ function makePerformer(): PerformerDetailDto {
         sourceId: "episode-1",
         sourceTitle: "Pilot",
         character: "Guest",
+        thumbnailPath: "/assets/videos/episode-1/thumb",
         seriesId: "series-1",
         seriesTitle: "Late Show",
         seasonNumber: 1,
@@ -90,8 +91,31 @@ describe("performer detail page", () => {
           totalSeries: 0,
           galleries: [],
           totalGalleries: 0,
+          images: [
+            {
+              id: "image-1",
+              title: "Still Frame",
+              thumbnailPath: "/assets/images/image-1/thumb",
+              previewPath: null,
+              isNsfw: false,
+              width: 1200,
+              height: 800,
+              format: "jpg",
+            },
+          ],
+          totalImages: 1,
           audioLibraries: [],
           totalAudioLibraries: 0,
+          audioTracks: [
+            {
+              id: "track-1",
+              title: "Theme Song",
+              duration: 184,
+              libraryId: "library-1",
+              isNsfw: false,
+            },
+          ],
+          totalAudioTracks: 1,
         },
       },
     });
@@ -104,6 +128,19 @@ describe("performer detail page", () => {
       "href",
       "/series?series=series-1",
     );
-    expect(screen.getByText("Pilot").closest("a")).toHaveAttribute("href", "/videos/episode-1");
+    const episodeLink = screen.getByText("Pilot").closest("a");
+    expect(episodeLink).toHaveAttribute("href", "/videos/episode-1");
+    expect(episodeLink?.querySelector("img")).toHaveAttribute(
+      "src",
+      "/api/assets/videos/episode-1/thumb",
+    );
+    expect(screen.getByText("Still Frame").closest("a")).toHaveAttribute(
+      "href",
+      "/images/image-1",
+    );
+    expect(screen.getByText("Theme Song").closest("a")).toHaveAttribute(
+      "href",
+      "/audio/tracks/track-1",
+    );
   });
 });

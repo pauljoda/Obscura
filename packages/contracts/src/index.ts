@@ -967,6 +967,8 @@ export interface PerformerKnownForDto {
   sourceId: string;
   sourceTitle: string;
   character: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
   seriesId: string | null;
   seriesTitle: string | null;
   seasonNumber: number | null;

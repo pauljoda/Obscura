@@ -6,7 +6,9 @@ import { error } from "@sveltejs/kit";
 
 const VIDEO_LIMIT = 60;
 const GALLERY_LIMIT = 24;
+const IMAGE_LIMIT = 36;
 const AUDIO_LIMIT = 24;
+const AUDIO_TRACK_LIMIT = 36;
 const SERIES_LIMIT = 24;
 
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
@@ -29,37 +31,56 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
   // Fetch performer appearances in parallel. Errors fall back to empty
   // collections so a stale link to a broken endpoint still renders the
   // performer's own profile.
+  const performerName = performer.name;
   const performerFilterQs = buildQueryString({
-    performer: params.id,
+    performer: performerName,
     nsfw,
     limit: VIDEO_LIMIT,
     sort: "recent",
     order: "desc",
   });
   const seriesQs = buildQueryString({
-    performer: params.id,
+    performer: performerName,
     nsfw,
     limit: SERIES_LIMIT,
   });
   const galleriesQs = buildQueryString({
-    performer: params.id,
+    performer: performerName,
     nsfw,
     limit: GALLERY_LIMIT,
   });
+  const imagesQs = buildQueryString({
+    performer: performerName,
+    nsfw,
+    limit: IMAGE_LIMIT,
+    sort: "recent",
+    order: "desc",
+  });
   const audioQs = buildQueryString({
-    performer: params.id,
+    performer: performerName,
     nsfw,
     limit: AUDIO_LIMIT,
   });
+  const audioTracksQs = buildQueryString({
+    performer: performerName,
+    nsfw,
+    limit: AUDIO_TRACK_LIMIT,
+    sort: "recent",
+    order: "desc",
+  });
 
-  const [videosRes, seriesRes, galleriesRes, audioRes] = await Promise.all([
+  const [videosRes, seriesRes, galleriesRes, imagesRes, audioRes, audioTracksRes] = await Promise.all([
     serverFetch<{ videos: unknown[]; total: number }>(`/videos${performerFilterQs}`, { fetch })
       .catch(() => ({ videos: [], total: 0 })),
     serverFetch<{ items: unknown[]; total: number }>(`/video-series${seriesQs}`, { fetch })
       .catch(() => ({ items: [], total: 0 })),
     serverFetch<{ galleries: unknown[]; total: number }>(`/galleries${galleriesQs}`, { fetch })
       .catch(() => ({ galleries: [], total: 0 })),
+    serverFetch<{ images: unknown[]; total: number }>(`/images${imagesQs}`, { fetch })
+      .catch(() => ({ images: [], total: 0 })),
     serverFetch<{ items: unknown[]; total: number }>(`/audio-libraries${audioQs}`, { fetch })
+      .catch(() => ({ items: [], total: 0 })),
+    serverFetch<{ items: unknown[]; total: number }>(`/audio-tracks${audioTracksQs}`, { fetch })
       .catch(() => ({ items: [], total: 0 })),
   ]);
 
@@ -71,7 +92,11 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     totalSeries: seriesRes.total,
     galleries: galleriesRes.galleries,
     totalGalleries: galleriesRes.total,
+    images: imagesRes.images,
+    totalImages: imagesRes.total,
     audioLibraries: audioRes.items,
     totalAudioLibraries: audioRes.total,
+    audioTracks: audioTracksRes.items,
+    totalAudioTracks: audioTracksRes.total,
   };
 };
