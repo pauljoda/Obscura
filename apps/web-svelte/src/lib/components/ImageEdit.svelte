@@ -22,7 +22,7 @@
   } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import ImageThumbnail from "./ImageThumbnail.svelte";
+  import ImageThumbnail from "./thumbnails/ImageThumbnail.svelte";
   import {
     DateField,
     EditFormShell,

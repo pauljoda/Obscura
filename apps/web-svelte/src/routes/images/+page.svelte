@@ -6,7 +6,7 @@
   import { Checkbox } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import { deleteImage, updateImage } from "$lib/api/media";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";

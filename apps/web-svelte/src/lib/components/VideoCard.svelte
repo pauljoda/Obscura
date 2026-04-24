@@ -9,7 +9,7 @@
   import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
   import NsfwText from "./NsfwText.svelte";
   import NsfwTagLabel from "./NsfwTagLabel.svelte";
-  import VideoThumbnail from "./VideoThumbnail.svelte";
+  import VideoThumbnail from "./thumbnails/VideoThumbnail.svelte";
   import { VIDEO_TAG_COLORS } from "$lib/video-tag-colors";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";

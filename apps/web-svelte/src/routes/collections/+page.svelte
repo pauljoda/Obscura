@@ -6,7 +6,7 @@
   import { Badge, Button, Checkbox } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import CollectionThumbnail from "$lib/components/CollectionThumbnail.svelte";
+  import CollectionThumbnail from "$lib/components/thumbnails/CollectionThumbnail.svelte";
   import { deleteCollection } from "$lib/api/media";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";

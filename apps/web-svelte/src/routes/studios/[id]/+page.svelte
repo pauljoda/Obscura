@@ -21,8 +21,8 @@
     AudioLibraryListItemDto,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";

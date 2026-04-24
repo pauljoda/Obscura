@@ -3,7 +3,7 @@
   import type { VideoSeriesListItemDto } from "@obscura/contracts";
   import { cn } from "@obscura/ui-svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
-  import SeriesThumbnail from "./SeriesThumbnail.svelte";
+  import SeriesThumbnail from "./thumbnails/SeriesThumbnail.svelte";
 
   interface Props {
     series: VideoSeriesListItemDto;

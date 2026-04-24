@@ -24,9 +24,9 @@
   import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import {
     EditFormShell,

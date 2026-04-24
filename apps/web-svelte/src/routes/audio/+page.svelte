@@ -11,7 +11,7 @@
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import { deleteAudioLibrary, updateAudioLibrary } from "$lib/api/media";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";

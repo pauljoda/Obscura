@@ -18,7 +18,7 @@
   } from "$lib/api/entities";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
-  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
+  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 

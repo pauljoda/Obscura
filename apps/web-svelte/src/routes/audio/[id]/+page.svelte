@@ -28,7 +28,7 @@
     fetchStudios,
     fetchTags,
   } from "$lib/api/entities";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";

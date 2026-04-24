@@ -10,7 +10,7 @@
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
+  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import { deleteTag, updateTag } from "$lib/api/entities";

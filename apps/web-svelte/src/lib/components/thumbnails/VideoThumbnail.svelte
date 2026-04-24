@@ -5,9 +5,9 @@
 <script lang="ts">
   import { Captions, Clock, Film } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
+  import NsfwShowModeChip from "../NsfwShowModeChip.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
-  import { createTrickplayScrub } from "./trickplay-scrub.svelte";
+  import { createTrickplayScrub } from "../trickplay-scrub.svelte";
 
   interface Props {
     video: VideoCardData;

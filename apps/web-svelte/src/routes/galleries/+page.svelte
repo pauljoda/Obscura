@@ -6,7 +6,7 @@
   import { Badge, Checkbox } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
   import { deleteGallery, updateGallery } from "$lib/api/media";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";

@@ -17,11 +17,11 @@
   import NsfwShowModeChip from "$lib/components/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
-  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
+  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
 

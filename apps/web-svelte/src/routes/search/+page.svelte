@@ -18,14 +18,14 @@
     SearchResultItem,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
-  import SeriesThumbnail from "$lib/components/SeriesThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
-  import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
-  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
-  import AudioTrackThumbnail from "$lib/components/AudioTrackThumbnail.svelte";
+  import SeriesThumbnail from "$lib/components/thumbnails/SeriesThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
+  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
+  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
+  import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/stores/nsfw.svelte";

@@ -7,8 +7,8 @@
   import { fetchGalleryImages, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";

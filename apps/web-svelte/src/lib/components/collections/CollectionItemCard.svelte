@@ -1,10 +1,10 @@
 <script lang="ts">
   import { Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
   import type { CollectionItemDto, CollectionEntityType } from "@obscura/contracts";
-  import VideoThumbnail from "$lib/components/VideoThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import AudioTrackThumbnail from "$lib/components/AudioTrackThumbnail.svelte";
+  import VideoThumbnail from "$lib/components/thumbnails/VideoThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     getEntityHref,

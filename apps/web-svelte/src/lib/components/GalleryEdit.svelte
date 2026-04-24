@@ -25,7 +25,7 @@
   } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
-  import GalleryThumbnail from "./GalleryThumbnail.svelte";
+  import GalleryThumbnail from "./thumbnails/GalleryThumbnail.svelte";
   import NsfwBlur from "./NsfwBlur.svelte";
   import {
     DateField,

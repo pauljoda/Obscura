@@ -33,9 +33,9 @@
   import NsfwBlur from "$lib/components/NsfwBlur.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/AudioLibraryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import {
     DateField,
     EditFormShell,
