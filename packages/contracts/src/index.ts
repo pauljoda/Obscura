@@ -75,6 +75,7 @@ export const apiRoutes = {
   collectionPreviewRules: "/collections/preview-rules",
   collectionCover: "/collections/:id/cover",
   collectionCoverAsset: "/assets/collections/:id/cover",
+  playlistSession: "/playlist-session",
   // Plugins
   pluginPackages: "/plugins/packages",
   pluginPackageDetail: "/plugins/packages/:id",
@@ -134,8 +135,8 @@ export const apiRoutes = {
 
 export const API_BASE_URL =
   typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000")
-    : (process.env.API_URL ?? "http://localhost:4000");
+    ? (process.env.PUBLIC_API_URL ?? "/api")
+    : (process.env.API_URL ?? process.env.PUBLIC_API_URL ?? "http://localhost:8008/api");
 
 export {
   canUseInlineVideoPreview,
@@ -287,7 +288,7 @@ export type SubtitleSourceFormat = "vtt" | "srt" | "ass" | "ssa";
 
 export interface VideoSubtitleTrackDto {
   id: string;
-  sceneId: string;
+  videoId: string;
   language: string;
   label: string | null;
   format: "vtt";
@@ -495,14 +496,14 @@ export interface StorageStatsDto {
   totalBytes: number;
 }
 
-/** Tag embedded on scenes, images, galleries, and performers in list/detail payloads. */
+/** Tag embedded on videos, images, galleries, and performers in list/detail payloads. */
 export interface TagEmbedDto {
   id: string;
   name: string;
   isNsfw: boolean;
 }
 
-// ─── Scene Folder DTOs ───────────────────────────────────────────
+// ─── Video Series DTOs ───────────────────────────────────────────
 
 export interface VideoSeriesListItemDto {
   id: string;
@@ -564,11 +565,12 @@ export interface VideoSeriesDetailDto extends VideoSeriesListItemDto {
     gender: string | null;
     imagePath: string | null;
     isNsfw: boolean;
+    character?: string | null;
   }[];
   tags: TagEmbedDto[];
   breadcrumbs: VideoSeriesBreadcrumbDto[];
   children: VideoSeriesListItemDto[];
-  /** Seasons under this series. Empty for movie-style folders. */
+  /** Seasons under this series. Empty for movie-style series. */
   seasons: VideoSeriesSeasonDto[];
   /**
    * `"flat"` when the UI should render the series as a single
@@ -783,7 +785,6 @@ export interface CommunityIndexEntryDto {
 
 export interface ScrapeResultDto {
   id: string;
-  sceneId: string | null;
   entityType: string;
   entityId: string | null;
   scraperPackageId: string | null;
@@ -884,6 +885,12 @@ export interface StashBoxEndpointDto {
   /** Masked — only last 4 chars shown */
   apiKeyPreview: string;
   enabled: boolean;
+  /**
+   * Always true. Every StashBox-protocol endpoint (StashDB, FansDB,
+   * ThePornDB, MetadataAPI, etc.) is treated as NSFW so the SFW mode
+   * filter hides them from the identify / bulk-scrape provider list.
+   */
+  isNsfw: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -918,7 +925,12 @@ export interface PerformerListItemDto {
   videoCount: number;
   /** Linked galleries plus standalone images (SFW mode excludes NSFW entities). */
   imageAppearanceCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
   audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
   country: string | null;
   createdAt: string;
 }
@@ -948,9 +960,32 @@ export interface PerformerDetailDto {
   rating: number | null;
   isNsfw: boolean;
   videoCount: number;
+  seriesCount: number;
+  galleryCount: number;
+  imageCount: number;
+  imageAppearanceCount: number;
+  audioLibraryCount: number;
+  audioTrackCount: number;
+  appearanceCount: number;
+  knownFor: PerformerKnownForDto[];
   tags: TagEmbedDto[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type PerformerKnownForSourceType = "movie" | "series" | "episode";
+
+export interface PerformerKnownForDto {
+  sourceType: PerformerKnownForSourceType;
+  sourceId: string;
+  sourceTitle: string;
+  character: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  seriesId: string | null;
+  seriesTitle: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
 }
 
 export interface PerformerUpdateDto {
@@ -1360,6 +1395,29 @@ export interface CollectionRulePreviewDto {
   sample: CollectionItemDto[];
 }
 
+export interface PlaylistSessionDto {
+  collectionId: string | null;
+  collectionName: string;
+  items: CollectionItemDto[];
+  playOrder: number[];
+  orderPosition: number;
+  shuffle: boolean;
+  loop: boolean;
+  slideshowDurationSeconds: number;
+  updatedAt: string;
+}
+
+export interface PlaylistSessionWriteDto {
+  collectionId: string | null;
+  collectionName: string;
+  items: CollectionItemDto[];
+  playOrder: number[];
+  orderPosition: number;
+  shuffle: boolean;
+  loop: boolean;
+  slideshowDurationSeconds: number;
+}
+
 // ─── Scene DTOs ─────────────────────────────────────────────────
 
 export interface VideoListItemDto {
@@ -1406,6 +1464,39 @@ export interface VideoListItemDto {
     isNsfw?: boolean;
     /** Role name from the join table (e.g. "Ron Trosper"). */
     character?: string | null;
+    /** Whether the displayed role came from the direct entity row or inherited series cast. */
+    roleSource?: "episode" | "series" | "movie" | null;
+  }[];
+  tags: TagEmbedDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoCardListItemDto {
+  id: string;
+  title: string;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  duration: number | null;
+  durationFormatted: string | null;
+  resolution: string | null;
+  codec: string | null;
+  fileSizeFormatted: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
+  playCount: number;
+  videoSeriesId: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  hasSubtitles: boolean;
+  performers: {
+    id: string;
+    name: string;
+    imagePath?: string | null;
+    isNsfw?: boolean;
   }[];
   tags: TagEmbedDto[];
   createdAt: string;
@@ -1519,7 +1610,9 @@ export interface TagListItemDto {
   id: string;
   name: string;
   videoCount: number;
+  galleryCount?: number;
   imageCount: number;
+  audioTrackCount?: number;
   imagePath: string | null;
   favorite: boolean;
   rating: number | null;
@@ -1607,4 +1700,3 @@ export type {
   NormalizedSeasonResult,
   NormalizedEpisodeResult,
 } from "./normalized-video";
-

@@ -3,7 +3,7 @@ import { copyFile, mkdir, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { isNotNull } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { getSceneVideoGeneratedDiskPaths } from "@obscura/media-core";
+import { getVideoGeneratedDiskPaths } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 
@@ -37,7 +37,7 @@ export async function processLibraryMaintenance(job: Job) {
 
   await markJobActive(job, "library-maintenance", {
     type: "library",
-    id: "scene-asset-layout",
+    id: "video-asset-layout",
     label: sfwRedact
       ? "Relocate video generated files"
       : targetDedicated
@@ -67,8 +67,8 @@ export async function processLibraryMaintenance(job: Job) {
 
   for (const row of rows) {
     if (!row.filePath) continue;
-    const fromPaths = getSceneVideoGeneratedDiskPaths(row.id, row.filePath, fromLayout);
-    const toPaths = getSceneVideoGeneratedDiskPaths(row.id, row.filePath, toLayout);
+    const fromPaths = getVideoGeneratedDiskPaths(row.id, row.filePath, fromLayout);
+    const toPaths = getVideoGeneratedDiskPaths(row.id, row.filePath, toLayout);
     for (const key of ASSET_KEYS) {
       await consolidateGeneratedFile(fromPaths[key], toPaths[key]);
     }

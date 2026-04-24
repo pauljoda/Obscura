@@ -1,62 +1,40 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { ensureFixtureLibraryRoot } from "./fixture-library";
 
-const API_BASE = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:4000";
-const FIXTURE_ROOT = process.env.OBSCURA_E2E_LIBRARY_ROOT ?? "/app/apps/web/public/media/scenes";
+const API_BASE = process.env.OBSCURA_E2E_API_URL ?? "http://127.0.0.1:8008/api";
 
-async function ensureLibraryRoot(request: APIRequestContext) {
-  const existing = await request.get(`${API_BASE}/libraries?scanVideos=true&enabled=true`);
-  const existingJson = (await existing.json()) as { roots: Array<{ id: string; path: string }> };
-  const match = existingJson.roots.find((root) => root.path === FIXTURE_ROOT);
-  if (match) {
-    return match;
-  }
+type VideosResponse = {
+  videos: Array<{ id: string; title: string }>;
+};
 
-  const created = await request.post(`${API_BASE}/libraries`, {
-    data: {
-      path: FIXTURE_ROOT,
-      label: "Fixture Scenes",
-      enabled: true,
-      recursive: true,
-      scanVideos: true,
-      scanImages: false,
-      scanAudio: false,
-    },
-  });
-
-  expect(created.ok()).toBeTruthy();
-  return (await created.json()) as { id: string; path: string };
-}
-
-async function waitForScenes(request: APIRequestContext) {
+async function waitForVideos(request: APIRequestContext) {
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline) {
-    const response = await request.get(`${API_BASE}/scenes?limit=20`);
+    const response = await request.get(`${API_BASE}/videos?limit=20&offset=0`);
     expect(response.ok()).toBeTruthy();
-    const body = (await response.json()) as {
-      scenes: Array<{ id: string; title: string }>;
-    };
-    if (body.scenes.length > 0) {
-      return body.scenes;
+    const body = (await response.json()) as VideosResponse;
+    if (body.videos.length > 0) {
+      return body.videos;
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
 
-  throw new Error("Timed out waiting for fixture scenes to appear");
+  throw new Error("Timed out waiting for fixture videos to appear");
 }
 
-test("dashboard, scenes, scene detail, subtitles, and jobs are reachable", async ({
+test("dashboard, videos, video detail, subtitles, and jobs are reachable", async ({
   page,
   request,
 }) => {
-  await ensureLibraryRoot(request);
+  await ensureFixtureLibraryRoot(request);
 
   const scanResponse = await request.post(`${API_BASE}/jobs/queues/library-scan/run`);
   expect(scanResponse.ok()).toBeTruthy();
 
-  const scenes = await waitForScenes(request);
-  const firstScene = scenes[0]!;
+  const videos = await waitForVideos(request);
+  const firstVideo = videos[0]!;
 
-  const subtitleUpload = await request.post(`${API_BASE}/scenes/${firstScene.id}/subtitles`, {
+  const subtitleUpload = await request.post(`${API_BASE}/videos/${firstVideo.id}/subtitles`, {
     multipart: {
       language: "en",
       label: "Fixture",
@@ -82,12 +60,12 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Fixture subtitle
   expect(subtitleUpload.ok()).toBeTruthy();
 
   await page.goto("/");
-  await expect(page.getByLabel("Dashboard")).toBeVisible();
+  await expect(page.getByText("Recent Videos").first()).toBeVisible();
 
-  await page.goto("/scenes");
-  await expect(page.getByText(new RegExp(firstScene.title, "i")).first()).toBeVisible();
+  await page.goto("/videos");
+  await expect(page.getByRole("heading", { name: "Videos", level: 1 })).toBeVisible();
 
-  await page.goto(`/scenes/${firstScene.id}`);
+  await page.goto(`/videos/${firstVideo.id}`);
   await expect(page.getByText("Transcript").first()).toBeVisible();
 
   await page.goto("/jobs");

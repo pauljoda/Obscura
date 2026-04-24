@@ -10,17 +10,12 @@ ones that don't.
 
 ---
 
-## The two toggles
+## The video toggle
 
-Each library root has two video toggles configured in **Library settings**:
-
-| Toggle       | Default | What it does                                                 |
-|--------------|---------|--------------------------------------------------------------|
-| `scanMovies` | on      | Files **at the library root** become movies.                  |
-| `scanSeries` | on      | Files **inside subfolders** become episodes of a series.      |
-
-Both can be on simultaneously (mixed library) or only one can be on
-(pure-movie library or pure-series library).
+Each library root has a single **Videos** toggle configured in **Library
+settings**. When on, every video file under the root is classified by its
+folder depth (see below). When off, the root is skipped during video
+scans.
 
 ---
 
@@ -54,7 +49,7 @@ recognized season folder, the whole series is treated as **seasoned**.
 └── No Country for Old Men (2007).mkv
 ```
 
-All three files are depth 0 → movies. `scanMovies` must be on.
+All three files are depth 0 → movies. The Videos toggle must be on.
 
 ### Flat series (Case A)
 
@@ -98,8 +93,7 @@ placed into Season 1 / Season 2 accordingly.
         └── S02E01.mkv       ← episode (depth 2)
 ```
 
-Both toggles on. Files at the root become movies, files in nested folders
-become episodes.
+Files at the root become movies, files in nested folders become episodes.
 
 ### Specials folder
 
@@ -126,17 +120,6 @@ Case B series also fall back to Season 0.
 
 `clip.mkv` is depth 3. Obscura rejects it and logs a warning. Move it up
 or remove it from the library.
-
-### Loose file with `scanMovies` off
-
-```
-/library
-└── orphan.mkv
-```
-
-If `scanMovies` is off and `scanSeries` is on, `orphan.mkv` is silently
-skipped. Either turn `scanMovies` on or move the file under a series
-folder.
 
 ### File outside the library root
 

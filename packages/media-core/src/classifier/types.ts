@@ -60,6 +60,4 @@ export interface VideoClassificationRejected {
 
 export interface LibraryClassificationConfig {
   libraryRootPath: string;
-  scanMovies: boolean;
-  scanSeries: boolean;
 }

@@ -5,10 +5,9 @@ export default defineConfig({
     environment: "node",
     include: [
       "tests/**/*.integration.test.ts",
-      "apps/api/src/**/*.integration.test.ts",
       "apps/worker/src/**/*.integration.test.ts",
     ],
-    exclude: ["**/.next/**", "**/dist/**"],
+    exclude: ["**/dist/**"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
     coverage: {

@@ -1,19 +1,18 @@
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
-  getSceneVideoGeneratedDiskPaths,
+  getVideoGeneratedDiskPaths,
   probeVideoFile,
   runProcess,
-  sceneVideoGeneratedLayoutFromDedicated,
+  videoGeneratedLayoutFromDedicated,
 } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
-import { sceneAssetUrl } from "../lib/helpers.js";
+import { videoAssetUrl } from "../lib/helpers.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 import { applyVideoProbeToVideoEntity } from "./media-probe.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -36,7 +35,7 @@ const MAX_TRICKPLAY_FRAME_HEIGHT = 180;
 const MIN_TRICKPLAY_FRAME_WIDTH = 48;
 const MIN_TRICKPLAY_FRAME_HEIGHT = 27;
 
-function planTrickplaySheet(input: {
+export function planTrickplaySheet(input: {
   duration: number;
   frameInterval: number;
   frameWidth: number;
@@ -106,13 +105,104 @@ function trickplayJpegQuality(quality: number) {
   return Math.round(68 - t * 30);
 }
 
+export function buildTrickplayFfmpegArgs(input: {
+  filePath: string;
+  spriteFile: string;
+  frameInterval: number;
+  frameWidth: number;
+  frameHeight: number;
+  gridColumns: number;
+  gridRows: number;
+  jpegQuality: number;
+}) {
+  const vf = [
+    `fps=1/${input.frameInterval}`,
+    `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease`,
+    `pad=${input.frameWidth}:${input.frameHeight}:(ow-iw)/2:(oh-ih)/2`,
+    `tile=${input.gridColumns}x${input.gridRows}`,
+  ].join(",");
+
+  return [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    input.filePath,
+    "-vf",
+    vf,
+    "-frames:v",
+    "1",
+    "-q:v",
+    String(input.jpegQuality),
+    input.spriteFile,
+  ];
+}
+
+export function buildTrickplayVtt(input: {
+  assetUrl: string;
+  frameCount: number;
+  frameInterval: number;
+  frameWidth: number;
+  frameHeight: number;
+  gridColumns: number;
+}) {
+  const vttLines = ["WEBVTT", ""];
+
+  for (let index = 0; index < input.frameCount; index += 1) {
+    const start = index * input.frameInterval;
+    const end = start + input.frameInterval;
+    const column = index % input.gridColumns;
+    const row = Math.floor(index / input.gridColumns);
+    const x = column * input.frameWidth;
+    const y = row * input.frameHeight;
+
+    vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
+    vttLines.push(
+      `${input.assetUrl}#xywh=${x},${y},${input.frameWidth},${input.frameHeight}`
+    );
+    vttLines.push("");
+  }
+
+  return vttLines.join("\n");
+}
+
+export function buildPreviewAssetPatch(videoId: string) {
+  return {
+    thumbnailPath: videoAssetUrl(videoId, "thumb"),
+    cardThumbnailPath: videoAssetUrl(videoId, "card"),
+    previewPath: videoAssetUrl(videoId, "preview"),
+    updatedAt: new Date(),
+  };
+}
+
+export function buildTrickplayAssetPatch(videoId: string) {
+  return {
+    spritePath: videoAssetUrl(videoId, "sprite"),
+    trickplayVttPath: videoAssetUrl(videoId, "trickplay"),
+    updatedAt: new Date(),
+  };
+}
+
+async function updateVideoAssetPaths(
+  entityKind: VideoEntityKind,
+  videoId: string,
+  patch: Record<string, unknown>,
+) {
+  if (entityKind === "video_episode") {
+    await db.update(videoEpisodes).set(patch).where(eq(videoEpisodes.id, videoId));
+  } else {
+    await db.update(videoMovies).set(patch).where(eq(videoMovies.id, videoId));
+  }
+}
+
 export async function processPreview(job: Job) {
   const entityKind =
     (job.data.entityKind as VideoEntityKind | undefined) ?? null;
 
   if (entityKind !== "video_episode" && entityKind !== "video_movie") {
     throw new Error(
-      `preview processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+      `preview processor received unsupported payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
     );
   }
 
@@ -133,7 +223,7 @@ export async function processPreview(job: Job) {
   if (!row?.filePath) {
     throw new Error("Video file not found");
   }
-  const scene: {
+  const video: {
     id: string;
     title: string | null;
     filePath: string | null;
@@ -145,29 +235,29 @@ export async function processPreview(job: Job) {
 
   await markJobActive(job, "preview", {
     type: targetType,
-    id: scene.id,
-    label: scene.title ?? undefined,
+    id: video.id,
+    label: video.title ?? undefined,
   });
 
   const payload = job.data as JobPayload;
   const settings = await ensureLibrarySettingsRow();
 
-  const filePath = scene.filePath!;
+  const filePath = resolveRequiredMediaPath(video.filePath!);
   const metadata =
     payload.jobKind === "force-rebuild"
-      ? await applyVideoProbeToVideoEntity(entityKind, scene.id, filePath)
-      : scene.duration && scene.width && scene.height
-        ? scene
+      ? await applyVideoProbeToVideoEntity(entityKind, video.id, filePath)
+      : video.duration && video.width && video.height
+        ? video
         : await probeVideoFile(filePath);
 
   if (payload.jobKind === "force-rebuild") {
     await markJobProgress(job, "preview", 12);
   }
 
-  const layout = sceneVideoGeneratedLayoutFromDedicated(
+  const layout = videoGeneratedLayoutFromDedicated(
     settings.metadataStorageDedicated ?? true
   );
-  const genPaths = getSceneVideoGeneratedDiskPaths(scene.id, filePath, layout);
+  const genPaths = getVideoGeneratedDiskPaths(video.id, filePath, layout);
 
   const thumbnailFile = genPaths.thumb;
   const previewFile = genPaths.preview;
@@ -180,6 +270,8 @@ export async function processPreview(job: Job) {
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
   const previewStart = duration > previewDuration ? Math.max(0, duration * 0.1) : 0;
   const thumbnailAt = duration > 0 ? Math.min(duration - 0.5, Math.max(1, duration * 0.18)) : 0;
+  const shouldGeneratePreviewAssets = settings.autoGeneratePreview === true;
+  const shouldGenerateTrickplay = settings.generateTrickplay === true;
   const requestedFrameInterval = Math.max(3, settings.trickplayIntervalSeconds);
   // Resolution scales with the quality slider:
   //   quality 1  -> native video resolution (no downscale)
@@ -221,175 +313,108 @@ export async function processPreview(job: Job) {
 
   const thumbQuality = String(thumbQualityClamped);
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(thumbnailAt),
-    "-i",
-    filePath,
-    "-frames:v",
-    "1",
-    "-vf",
-    `scale=${thumbWidth}:${thumbHeight}`,
-    "-q:v",
-    thumbQuality,
-    thumbnailFile,
-  ]);
+  let assetPatch: Record<string, unknown> = { updatedAt: new Date() };
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(thumbnailAt),
-    "-i",
-    filePath,
-    "-frames:v",
-    "1",
-    "-vf",
-    `scale=${cardWidth}:${cardHeight}`,
-    "-q:v",
-    thumbQuality,
-    cardFile,
-  ]);
-  await markJobProgress(job, "preview", 30);
+  if (shouldGeneratePreviewAssets) {
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(thumbnailAt),
+      "-i",
+      filePath,
+      "-frames:v",
+      "1",
+      "-vf",
+      `scale=${thumbWidth}:${thumbHeight}`,
+      "-q:v",
+      thumbQuality,
+      thumbnailFile,
+    ]);
 
-  await runProcess("ffmpeg", [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-ss",
-    String(previewStart),
-    "-t",
-    String(previewDuration),
-    "-i",
-    filePath,
-    "-vf",
-    "scale=960:-2",
-    "-an",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    "24",
-    "-movflags",
-    "+faststart",
-    previewFile,
-  ]);
-  await markJobProgress(job, "preview", 65);
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(thumbnailAt),
+      "-i",
+      filePath,
+      "-frames:v",
+      "1",
+      "-vf",
+      `scale=${cardWidth}:${cardHeight}`,
+      "-q:v",
+      thumbQuality,
+      cardFile,
+    ]);
+    await markJobProgress(job, "preview", shouldGenerateTrickplay ? 30 : 50);
 
-  // Extract individual frames via separate ffmpeg calls (robust against
-  // mid-stream format changes), then stitch into a sprite with sharp.
-  const tmpFrameDir = path.join(tmpdir(), `obscura-sprite-${scene.id}-${Date.now()}`);
-  await mkdir(tmpFrameDir, { recursive: true });
-
-  try {
-    for (let index = 0; index < frameCount; index += 1) {
-      const seekTime = Math.min(index * frameInterval, duration - 0.5);
-      const frameFile = path.join(tmpFrameDir, `frame-${String(index).padStart(4, "0")}.png`);
-      try {
-        await runProcess("ffmpeg", [
-          "-hide_banner",
-          "-loglevel",
-          "error",
-          "-y",
-          "-ss",
-          String(seekTime),
-          "-i",
-          filePath,
-          "-frames:v",
-          "1",
-          "-vf",
-          `scale=${plannedSpriteThumbWidth}:${plannedSpriteThumbHeight}`,
-          frameFile,
-        ]);
-      } catch {
-        // Create a black placeholder so grid stays aligned
-        await sharp({
-          create: {
-            width: plannedSpriteThumbWidth,
-            height: plannedSpriteThumbHeight,
-            channels: 3,
-            background: { r: 0, g: 0, b: 0 },
-          },
-        })
-          .toFormat("png")
-          .toFile(frameFile);
-      }
-    }
-
-    // Read extracted frames in order
-    const frameFiles = (await readdir(tmpFrameDir))
-      .filter((f) => f.startsWith("frame-"))
-      .sort()
-      .map((f) => path.join(tmpFrameDir, f));
-
-    const actualFrameCount = frameFiles.length;
-    const gridColumns = Math.min(5, actualFrameCount);
-    const gridRows = Math.max(1, Math.ceil(actualFrameCount / gridColumns));
-
-    // Stitch frames into a single sprite sheet
-    const composites: sharp.OverlayOptions[] = frameFiles.map((file, i) => ({
-      input: file,
-      left: (i % gridColumns) * plannedSpriteThumbWidth,
-      top: Math.floor(i / gridColumns) * plannedSpriteThumbHeight,
-    }));
-
-    await sharp({
-      create: {
-        width: gridColumns * plannedSpriteThumbWidth,
-        height: gridRows * plannedSpriteThumbHeight,
-        channels: 3,
-        background: { r: 0, g: 0, b: 0 },
-      },
-    })
-      .composite(composites)
-      .jpeg({
-        quality: trickplayJpegQuality(trickQualityClamped),
-        mozjpeg: true,
-      })
-      .toFile(spriteFile);
-
-    // Generate VTT from actual extracted frames
-    const vttLines = ["WEBVTT", ""];
-    for (let index = 0; index < actualFrameCount; index += 1) {
-      const start = index * frameInterval;
-      const end = start + frameInterval;
-      const column = index % gridColumns;
-      const row = Math.floor(index / gridColumns);
-      const x = column * plannedSpriteThumbWidth;
-      const y = row * plannedSpriteThumbHeight;
-
-      vttLines.push(`${toTimestamp(start)} --> ${toTimestamp(end)}`);
-      vttLines.push(
-        `${sceneAssetUrl(scene.id, "sprite")}#xywh=${x},${y},${plannedSpriteThumbWidth},${plannedSpriteThumbHeight}`
-      );
-      vttLines.push("");
-    }
-
-    await writeFile(trickplayFile, vttLines.join("\n"), "utf8");
-  } finally {
-    await rm(tmpFrameDir, { recursive: true, force: true });
+    await runProcess("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-ss",
+      String(previewStart),
+      "-t",
+      String(previewDuration),
+      "-i",
+      filePath,
+      "-vf",
+      "scale=960:-2",
+      "-an",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "24",
+      "-movflags",
+      "+faststart",
+      previewFile,
+    ]);
+    assetPatch = { ...assetPatch, ...buildPreviewAssetPatch(video.id) };
+    await updateVideoAssetPaths(entityKind, video.id, assetPatch);
+    await markJobProgress(job, "preview", shouldGenerateTrickplay ? 65 : 100);
   }
 
-  const assetPatch = {
-    thumbnailPath: sceneAssetUrl(scene.id, "thumb"),
-    cardThumbnailPath: sceneAssetUrl(scene.id, "card"),
-    previewPath: sceneAssetUrl(scene.id, "preview"),
-    spritePath: sceneAssetUrl(scene.id, "sprite"),
-    trickplayVttPath: sceneAssetUrl(scene.id, "trickplay"),
-    updatedAt: new Date(),
-  };
+  if (shouldGenerateTrickplay) {
+    const gridColumns = Math.min(5, frameCount);
+    const gridRows = Math.max(1, Math.ceil(frameCount / gridColumns));
 
-  if (entityKind === "video_episode") {
-    await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, scene.id));
-  } else {
-    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, scene.id));
+    await runProcess(
+      "ffmpeg",
+      buildTrickplayFfmpegArgs({
+        filePath,
+        spriteFile,
+        frameInterval,
+        frameWidth: plannedSpriteThumbWidth,
+        frameHeight: plannedSpriteThumbHeight,
+        gridColumns,
+        gridRows,
+        jpegQuality: trickplayJpegQuality(trickQualityClamped),
+      }),
+    );
+
+    await writeFile(
+      trickplayFile,
+      buildTrickplayVtt({
+        assetUrl: videoAssetUrl(video.id, "sprite"),
+        frameCount,
+        frameInterval,
+        frameWidth: plannedSpriteThumbWidth,
+        frameHeight: plannedSpriteThumbHeight,
+        gridColumns,
+      }),
+      "utf8",
+    );
+
+    assetPatch = { ...assetPatch, ...buildTrickplayAssetPatch(video.id) };
+    await updateVideoAssetPaths(entityKind, video.id, assetPatch);
+    await markJobProgress(job, "preview", 100);
   }
 }

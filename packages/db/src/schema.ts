@@ -144,12 +144,7 @@ export const libraryRoots = pgTable(
     label: text("label").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
-    // scan_videos retired in favor of scan_movies + scan_series.
-    // The column is dropped by drizzle migration 0014; no code reads
-    // it anymore. Kept out of this schema so SELECT * doesn't include
-    // a column that may not exist on finalized installs.
-    scanMovies: boolean("scan_movies").default(true).notNull(),
-    scanSeries: boolean("scan_series").default(true).notNull(),
+    scanVideos: boolean("scan_videos").default(true).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
     scanAudio: boolean("scan_audio").default(true).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
@@ -197,6 +192,19 @@ export const librarySettings = pgTable("library_settings", {
   /** Default playback mode for the video player. "direct" streams the source file; "hls" uses the adaptive HLS pipeline. */
   defaultPlaybackMode: text("default_playback_mode").default("direct").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ─── UI Preferences ─────────────────────────────────────────────
+/**
+ * Generic key-value store for per-page UI view settings (thumbnail
+ * size sliders, saved filter presets, etc.). Single-user app so no
+ * user id column. The value is a JSON blob the client owns — the
+ * server only reads and writes opaque bytes.
+ */
+export const uiPrefs = pgTable("ui_prefs", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -1112,6 +1120,29 @@ export const collectionItemsRelations = relations(
   })
 );
 
+// ─── Playlist Session ───────────────────────────────────────────
+/**
+ * Single-user global playback queue. The web UI writes the current
+ * collection-backed queue here so refreshes and device-local navigation keep
+ * the bottom playback bar and queue cursor intact.
+ */
+export const playlistSessions = pgTable("playlist_sessions", {
+  key: text("key").primaryKey(),
+  collectionId: uuid("collection_id").references(() => collections.id, {
+    onDelete: "set null",
+  }),
+  collectionName: text("collection_name").notNull(),
+  items: jsonb("items").notNull(),
+  playOrder: jsonb("play_order").notNull(),
+  orderPosition: integer("order_position").default(0).notNull(),
+  shuffle: boolean("shuffle").default(false).notNull(),
+  loop: boolean("loop").default(false).notNull(),
+  slideshowDurationSeconds: integer("slideshow_duration_seconds")
+    .default(0)
+    .notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // ─── Video Series Model ─────────────────────────────────────────────
 // Typed tables for the Series → Season → Episode / Movie reshape.
 
@@ -1210,6 +1241,7 @@ export const videoEpisodes = pgTable(
     airDate: text("air_date"),
     stillPath: text("still_path"),
     runtime: integer("runtime"),
+    url: text("url"),
     externalIds: jsonb("external_ids")
       .$type<Record<string, string>>()
       .default({})
@@ -1267,6 +1299,7 @@ export const videoMovies = pgTable(
     posterPath: text("poster_path"),
     backdropPath: text("backdrop_path"),
     logoPath: text("logo_path"),
+    url: text("url"),
     studioId: uuid("studio_id").references(() => studios.id, {
       onDelete: "set null",
     }),

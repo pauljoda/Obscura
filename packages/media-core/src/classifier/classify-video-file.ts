@@ -47,33 +47,10 @@ export function classifyVideoFile(
   }
 
   if (depth === 0) {
-    if (config.scanMovies) {
-      return {
-        kind: "movie",
-        filePath: normalizedFile,
-        libraryRootPath: normalizedRoot,
-      };
-    }
-    if (config.scanSeries) {
-      return {
-        kind: "skipped",
-        filePath,
-        reason:
-          "loose file at library root but only scanSeries is enabled; enable scanMovies or move the file into a series folder",
-      };
-    }
     return {
-      kind: "skipped",
-      filePath,
-      reason: "both scanMovies and scanSeries are disabled",
-    };
-  }
-
-  if (!config.scanSeries) {
-    return {
-      kind: "skipped",
-      filePath,
-      reason: "file is inside a folder but scanSeries is disabled",
+      kind: "movie",
+      filePath: normalizedFile,
+      libraryRootPath: normalizedRoot,
     };
   }
 

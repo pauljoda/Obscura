@@ -60,15 +60,16 @@ Obscura is a private self-hosted media browser. It is video-first, but supports 
 ## Project Structure
 
 ```
-apps/web/          — Next.js 15 App Router frontend (port 8008)
-apps/api/          — Fastify 5 HTTP API (port 4000)
+apps/web-svelte/   — SvelteKit full-stack app and HTTP ingress (port 8008)
 apps/worker/       — pg-boss background worker
 
-packages/ui/       — Design tokens, shared components (shadcn/ui base)
+packages/app-core/ — Shared reads, writes, orchestration, and system runtime
 packages/contracts/ — Typed DTOs, route constants, job identifiers
 packages/db/       — Shared Drizzle schema and database utilities
 packages/media-core/ — File discovery, fingerprint, scan primitives
+packages/plugins/  — Plugin runtime helpers and contracts
 packages/stash-import/ — Stash migration adapter
+packages/ui-svelte/ — Shared Svelte design tokens and UI primitives
 
 infra/docker/      — Dockerfiles and dev compose stack
 scripts/release/   — Version validation tooling
@@ -78,31 +79,31 @@ docs/              — Architecture and design language docs
 ## Architecture
 
 - Monorepo with `pnpm` workspaces and `turbo`.
-- Three services: web (Next.js), api (Fastify), worker (pg-boss).
+- Runtime processes: SvelteKit web app/HTTP ingress and the pg-boss worker.
 - PostgreSQL 16 is the sole stateful dependency — used for both application data and the job queue.
 - All services share typed contracts via `@obscura/contracts`.
 
 ## Key Architectural Decisions
 
-1. **Separate services** — UI, API, and worker run as independent processes. This keeps concerns isolated and allows independent scaling.
-2. **PostgreSQL + Drizzle ORM** — Typed schema with push-based migrations during development, SQL migration files for production.
+1. **Full-stack SvelteKit + worker** — SvelteKit owns the UI, same-origin `/api` endpoints, and lightweight server orchestration. The worker handles restart-safe background jobs.
+2. **PostgreSQL + Drizzle ORM** — Typed schema with versioned SQL migrations managed from `packages/db`.
 3. **pg-boss job queue** — Postgres-backed job queues for scan, probe, thumbnail, sprite, HLS, and import jobs. Job state is mirrored into the `job_runs` table, which is the single source of truth for the Operations dashboard. No Redis.
-4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the API.
+4. **HLS streaming** — Videos are transcoded to HLS on demand via ffmpeg. Cached renditions are served by the SvelteKit app.
 5. **Stash as import source** — Stash is a migration/import source, not the application schema. Imported data is normalized into Obscura-owned tables.
 6. **Typed contracts** — All DTOs, route paths, and job identifiers live in `@obscura/contracts` and are shared across all apps.
 
 ## Database
 
 - PostgreSQL 16 via `postgres` driver and `drizzle-orm`.
-- Schema defined in `packages/db/src/schema.ts` and re-exported from `apps/api/src/db/schema.ts`.
+- Schema defined in `packages/db/src/schema.ts` and consumed via `@obscura/db`.
 - Core entities: videos (series/seasons/episodes/movies), performers, studios, tags, fingerprints, library_roots, settings.
-- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `apps/api/drizzle/` and are applied by `apps/api/src/db/migrate.ts`, which runs automatically inside the API server at boot (`apps/api/src/server.ts`). Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
+- **Versioned migrations, not `push`, ship in releases.** Migration SQL files live under `packages/db/drizzle/` and are applied by `packages/db/src/migrate.ts`, which runs automatically from the shared runtime used by SvelteKit and the worker. Each file records a row in `drizzle.__drizzle_migrations` so migrations apply exactly once per database.
 - **Adding a schema change:**
   1. Edit `packages/db/src/schema.ts`.
-  2. Run `pnpm --filter @obscura/api db:generate` to produce a new `drizzle/NNNN_<name>.sql` file.
+  2. Run `pnpm --filter @obscura/db db:generate` to produce a new `drizzle/NNNN_<name>.sql` file.
   3. **Open the file and read it.** drizzle-kit is conservative but will emit destructive SQL (drops, column renames seen as drop+add) when it can't tell your intent — fix it by hand before committing. Use `DROP TABLE IF EXISTS` when the drop needs to be safe on installs that may already lack the table.
   4. Commit the `.sql` file, the new `drizzle/meta/NNNN_snapshot.json`, and the updated `drizzle/meta/_journal.json` alongside the schema edit.
-  5. Apply locally by restarting the API (or running `pnpm --filter @obscura/api db:migrate`) and verify.
+  5. Apply locally by restarting the web app or worker (or running `pnpm --filter @obscura/db db:migrate`) and verify.
 - **Never run `db:push` against a deployment you care about.** It bypasses the migration ledger and can apply destructive drops silently.
 
 ### Breaking-change policy
@@ -111,7 +112,7 @@ Obscura is pre-1.0. We do not maintain a staging/finalize data-migration framewo
 
 1. Ship the change as a normal drizzle migration with `DROP TABLE IF EXISTS` / idempotent SQL.
 2. Call out the break in `CHANGELOG.md` under `### What's New` — describe what breaks, what the user should do (usually "rescan your library roots"), and why.
-3. If the data loss is severe enough that we want explicit consent before it happens, add a single-purpose one-time break-gate next to the migration. See `apps/api/src/db/breaking-gate.ts` (the v0.20 scenes→videos gate) for the pattern: marker file on disk, gate check runs before the migrator, a consent UI (`apps/web/src/components/system/breaking-upgrade-gate.tsx`) takes over the app shell until the user clicks through. Don't abstract this into a framework — copy the pattern if a future break needs it, or delete the old gate when it's no longer relevant.
+3. If the data loss is severe enough that we want explicit consent before it happens, add a single-purpose one-time break-gate next to the migration. See `packages/db/src/breaking-gate.ts` for the pattern: marker file on disk, gate check runs before the migrator, and the consent UI lives in `apps/web-svelte/src/lib/components/BreakingUpgradeGate.svelte`. Don't abstract this into a framework — copy the pattern if a future break needs it, or delete the old gate when it's no longer relevant.
 
 No bridges, no staging tables, no legacy-schema snapshots. Early users expect breakage; make it loud and move on.
 
@@ -140,14 +141,14 @@ No bridges, no staging tables, no legacy-schema snapshots. Early users expect br
 - TypeScript is required across apps and packages.
 - Prefer typed contracts over ad hoc object shapes.
 - Add tests with new logic when behavior can regress.
-- Keep app boundaries explicit: UI in `apps/web`, transport in `apps/api`, heavy work in `apps/worker`, shared logic in `packages/*`.
+- Keep app boundaries explicit: UI and HTTP ingress in `apps/web-svelte`, heavy work in `apps/worker`, shared logic in `packages/*`.
 
 ## Docker
 
-- Development: `docker compose -f infra/docker/docker-compose.yml up` runs all services with hot reload.
-- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, nginx, ffmpeg, and all three services.
+- Development: `docker compose -f infra/docker/docker-compose.yml up` runs SvelteKit, worker, and PostgreSQL with hot reload.
+- Production: single unified image (`ghcr.io/pauljoda/obscura`) bundles PostgreSQL, ffmpeg, SvelteKit, and the worker.
 - Per-service Dockerfiles remain in `infra/docker/` for development; the unified build uses `infra/docker/unified.Dockerfile`.
-- nginx reverse proxy on port 8008 routes `/api/*` to Fastify (4000) and everything else to Next.js (3000) internally.
+- SvelteKit listens directly on port 8008 and serves same-origin `/api/*` routes alongside the UI.
 - Volumes: `/data` (database, cache, thumbnails) and `/media` (user media library).
 
 ## CI/CD

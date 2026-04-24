@@ -135,15 +135,14 @@ describe("pruneUntrackedLibraryReferences", () => {
     const mediaDir = await createTempDir("obscura-prune-safety-");
     const outsideDir = await createTempDir("obscura-prune-safety-outside-");
     try {
-      // Root exists but has scan_movies = false, scan_series = false, so the
-      // function treats videoRootPaths as empty and skips orphan-by-root.
+      // Root exists but has scan_videos = false, so the function treats
+      // videoRootPaths as empty and skips orphan-by-root.
       const [root] = await database.db
         .insert(libraryRoots)
         .values({
           path: mediaDir,
           label: "non-video root",
-          scanMovies: false,
-          scanSeries: false,
+          scanVideos: false,
         })
         .returning();
 

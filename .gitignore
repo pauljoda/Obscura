@@ -19,11 +19,6 @@ test-results
 # Generated media & cache (dev/test data)
 .cache/
 .obscura-cache/
-apps/web/public/media/scenes/
-apps/web/public/media/performers/
-
-# JASSUB worker/wasm assets copied from node_modules by predev/prebuild
-apps/web/public/jassub/
 
 # OS
 .DS_Store
@@ -31,6 +26,7 @@ Thumbs.db
 
 # IDE
 .idea/
+.cursor/
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json

@@ -3,7 +3,7 @@ import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import {
   discoverSubtitleSidecars,
-  getSceneSubtitlesDir,
+  getVideoSubtitlesDir,
   normalizeSubtitleToVtt,
   type SidecarSubtitle,
 } from "@obscura/media-core";
@@ -30,7 +30,7 @@ export async function ingestSidecarSubtitlesForVideoEntity(
 
   if (sidecars.length === 0) return 0;
 
-  const outDir = getSceneSubtitlesDir(entityId);
+  const outDir = getVideoSubtitlesDir(entityId);
   await mkdir(outDir, { recursive: true });
 
   let ingested = 0;

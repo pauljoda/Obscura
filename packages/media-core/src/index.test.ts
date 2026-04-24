@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it, expect } from "vitest";
@@ -8,14 +8,16 @@ import {
   fileNameToTitle,
   normalizeNfoRating,
   getSidecarPaths,
-  getSceneVideoGeneratedDiskPaths,
-  allSceneVideoGeneratedDiskPaths,
-  sceneVideoGeneratedLayoutFromDedicated,
+  getVideoGeneratedDiskPaths,
+  allVideoGeneratedDiskPaths,
+  videoGeneratedLayoutFromDedicated,
   isAnimatedFormat,
   computePhash,
   runProcess,
   isCorruptMediaError,
   CorruptMediaError,
+  resolveExistingMediaPath,
+  getGeneratedCollectionDir,
 } from "./index";
 
 async function hasBinary(name: string): Promise<boolean> {
@@ -24,6 +26,23 @@ async function hasBinary(name: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+function findTestWorkspaceRoot() {
+  let current = process.cwd();
+
+  while (true) {
+    if (existsSync(path.join(current, "pnpm-workspace.yaml"))) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return process.cwd();
+    }
+
+    current = parent;
   }
 }
 
@@ -139,25 +158,25 @@ describe("getSidecarPaths", () => {
   });
 });
 
-describe("getSceneVideoGeneratedDiskPaths", () => {
-  const sceneId = "550e8400-e29b-41d4-a716-446655440000";
-  const videoPath = "/media/videos/scene.mp4";
+describe("getVideoGeneratedDiskPaths", () => {
+  const videoId = "550e8400-e29b-41d4-a716-446655440000";
+  const videoPath = "/media/videos/video.mp4";
 
   it("sidecar layout matches getSidecarPaths stems", () => {
-    const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "sidecar");
-    expect(p.thumb).toBe("/media/videos/scene-thumb.jpg");
-    expect(p.card).toBe("/media/videos/scene-card.jpg");
-    expect(p.preview).toBe("/media/videos/scene-preview.mp4");
-    expect(p.sprite).toBe("/media/videos/scene-sprite.jpg");
-    expect(p.trickplay).toBe("/media/videos/scene-trickplay.vtt");
+    const p = getVideoGeneratedDiskPaths(videoId, videoPath, "sidecar");
+    expect(p.thumb).toBe("/media/videos/video-thumb.jpg");
+    expect(p.card).toBe("/media/videos/video-card.jpg");
+    expect(p.preview).toBe("/media/videos/video-preview.mp4");
+    expect(p.sprite).toBe("/media/videos/video-sprite.jpg");
+    expect(p.trickplay).toBe("/media/videos/video-trickplay.vtt");
   });
 
-  it("dedicated layout uses cache root scenes/<id>/ and fixed filenames", () => {
+  it("dedicated layout uses cache root videos/<id>/ and fixed filenames", () => {
     const prev = process.env.OBSCURA_CACHE_DIR;
     process.env.OBSCURA_CACHE_DIR = "/data/cache";
     try {
-      const p = getSceneVideoGeneratedDiskPaths(sceneId, videoPath, "dedicated");
-      const base = `/data/cache/scenes/${sceneId}`;
+      const p = getVideoGeneratedDiskPaths(videoId, videoPath, "dedicated");
+      const base = `/data/cache/videos/${videoId}`;
       expect(p.thumb).toBe(`${base}/thumbnail.jpg`);
       expect(p.card).toBe(`${base}/card.jpg`);
       expect(p.preview).toBe(`${base}/preview.mp4`);
@@ -169,11 +188,11 @@ describe("getSceneVideoGeneratedDiskPaths", () => {
     }
   });
 
-  it("allSceneVideoGeneratedDiskPaths dedupes across layouts", () => {
+  it("allVideoGeneratedDiskPaths dedupes across layouts", () => {
     const prev = process.env.OBSCURA_CACHE_DIR;
     process.env.OBSCURA_CACHE_DIR = "/c";
     try {
-      const all = allSceneVideoGeneratedDiskPaths(sceneId, videoPath);
+      const all = allVideoGeneratedDiskPaths(videoId, videoPath);
       expect(all.length).toBe(10);
       expect(new Set(all).size).toBe(10);
     } finally {
@@ -182,9 +201,24 @@ describe("getSceneVideoGeneratedDiskPaths", () => {
     }
   });
 
-  it("sceneVideoGeneratedLayoutFromDedicated maps booleans", () => {
-    expect(sceneVideoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
-    expect(sceneVideoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
+  it("videoGeneratedLayoutFromDedicated maps booleans", () => {
+    expect(videoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
+    expect(videoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
+  });
+});
+
+describe("getGeneratedCollectionDir", () => {
+  it("stores collection assets under the cache collections directory", () => {
+    const prev = process.env.OBSCURA_CACHE_DIR;
+    process.env.OBSCURA_CACHE_DIR = "/data/cache";
+    try {
+      expect(getGeneratedCollectionDir("collection-1")).toBe(
+        path.join("/data/cache", "collections", "collection-1"),
+      );
+    } finally {
+      if (prev === undefined) delete process.env.OBSCURA_CACHE_DIR;
+      else process.env.OBSCURA_CACHE_DIR = prev;
+    }
   });
 });
 
@@ -282,5 +316,51 @@ describe("isAnimatedFormat", () => {
     expect(isAnimatedFormat("photo.jpg")).toBe(false);
     expect(isAnimatedFormat("photo.png")).toBe(false);
     expect(isAnimatedFormat("photo.tiff")).toBe(false);
+  });
+});
+
+describe("resolveExistingMediaPath", () => {
+  it("maps deleted legacy sample-media paths to the fixture media that still exists in the repo", () => {
+    const workspaceRoot = findTestWorkspaceRoot();
+    const fixtureFile = path.join(
+      workspaceRoot,
+      "tests",
+      "fixtures",
+      "media",
+      "videos",
+      "Resolve Existing Media Path",
+      "synthetic.mp4",
+    );
+    const legacyPath = path.join(
+      workspaceRoot,
+      "apps",
+      "web",
+      "public",
+      "media",
+      "scenes",
+      "Resolve Existing Media Path",
+      "synthetic.mp4",
+    );
+
+    mkdirSync(path.dirname(fixtureFile), { recursive: true });
+    writeFileSync(fixtureFile, "");
+
+    try {
+      expect(resolveExistingMediaPath(legacyPath)).toBe(fixtureFile);
+    } finally {
+      rmSync(path.dirname(fixtureFile), { recursive: true, force: true });
+    }
+  });
+
+  it("returns the original path when the file already exists", () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), "obscura-media-path-"));
+    const existingPath = path.join(tempDir, "synthetic.mp4");
+    writeFileSync(existingPath, "");
+
+    try {
+      expect(resolveExistingMediaPath(existingPath)).toBe(existingPath);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

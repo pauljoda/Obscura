@@ -6,10 +6,10 @@ RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
-COPY apps/web/package.json apps/web/package.json
-COPY apps/api/package.json apps/api/package.json
+COPY apps/web-svelte/package.json apps/web-svelte/package.json
 COPY apps/worker/package.json apps/worker/package.json
-COPY packages/ui/package.json packages/ui/package.json
+COPY packages/ui-svelte/package.json packages/ui-svelte/package.json
+COPY packages/app-core/package.json packages/app-core/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/media-core/package.json packages/media-core/package.json
@@ -29,8 +29,6 @@ WORKDIR /app
 COPY --from=deps /app ./
 COPY . .
 
-# Build web with API URL pointing to the nginx /api proxy
-ENV NEXT_PUBLIC_API_URL=/api
 # RELEASE_STRICT=1 enforces that package.json version matches a versioned
 # CHANGELOG heading (set for release builds only). Dev builds only run the
 # lightweight structural check.
@@ -39,15 +37,7 @@ RUN if [ "$RELEASE_STRICT" = "1" ]; then \
       pnpm release:check --release; \
     else \
       pnpm release:check; \
-    fi && pnpm turbo run build
-
-# Prepare standalone web in a separate location so it doesn't
-# clobber node_modules when copied into the runner
-RUN mkdir -p /web-standalone && \
-    cp -r apps/web/.next/standalone/apps/web /web-standalone/web && \
-    cp -r apps/web/.next/static /web-standalone/web/.next/static && \
-    cp -r apps/web/public /web-standalone/web/public && \
-    cp CHANGELOG.md /web-standalone/web/CHANGELOG.md
+    fi && pnpm --filter @obscura/web-svelte build
 
 # ── Stage 3a: Build obscura-phash (Stash-compatible video pHash) ──
 FROM golang:1.23-alpine AS phash-builder
@@ -86,7 +76,6 @@ RUN apk add --no-cache \
     libheif \
     postgresql16 \
     postgresql16-contrib \
-    nginx \
     su-exec \
     libmad libid3tag libsndfile libgd \
     boost1.84-filesystem boost1.84-program_options boost1.84-regex \
@@ -103,19 +92,13 @@ ENV OBSCURA_PHASH_BIN=/usr/local/bin/obscura-phash
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV INTERNAL_API_URL=http://localhost:4000
 # Explicit path so the changelog API route never has to guess
 ENV CHANGELOG_PATH=/app/CHANGELOG.md
+ENV PUBLIC_APP_URL=http://localhost:8008
+ENV PUBLIC_API_URL=/api
 
 # Copy the ENTIRE built workspace — pnpm virtual store and symlinks intact
 COPY --from=builder /app ./
-
-# Replace apps/web with the optimized standalone build
-RUN rm -rf apps/web
-COPY --from=builder /web-standalone/web ./apps/web
-
-# nginx config and entrypoint
-COPY infra/docker/nginx.conf /etc/nginx/nginx.conf
 COPY infra/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

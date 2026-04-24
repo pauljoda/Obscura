@@ -37,7 +37,7 @@ export interface VideoListQuery extends ListQuery {
   performer?: string | string[];
   studio?: string | string[];
   videoSeriesId?: string;
-  folderScope?: "direct" | "subtree";
+  seriesScope?: "direct" | "subtree";
   uncategorized?: boolean;
   resolution?: string | string[];
   codec?: string | string[];
@@ -71,6 +71,14 @@ export interface GalleryListQuery extends ListQuery {
 export interface VideoSeriesListQuery extends ListQuery {
   parent?: string;
   root?: string;
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string | string[];
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: boolean;
 }
 
 export interface PerformerListQuery extends ListQuery {
@@ -80,7 +88,7 @@ export interface PerformerListQuery extends ListQuery {
   ratingMin?: number;
   ratingMax?: number;
   hasImage?: boolean;
-  sceneCountMin?: number;
+  videoCountMin?: number;
 }
 
 export interface ImageListQuery extends ListQuery {
@@ -100,13 +108,13 @@ export interface StudioListQuery extends ListQuery {
   favorite?: boolean;
   ratingMin?: number;
   ratingMax?: number;
-  sceneCountMin?: number;
+  videoCountMin?: number;
   hasImage?: boolean;
 }
 
 export interface TagListQuery extends ListQuery {
   letter?: string;
-  sceneCountMin?: number;
+  videoCountMin?: number;
 }
 
 // ─── Audio Queries ──────────────────────────────────────────────

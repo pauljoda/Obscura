@@ -3,8 +3,8 @@ import {
   resolveQueueWorkerConcurrency,
   type QueueName,
 } from "@obscura/contracts";
-import { runMigrations } from "../../api/src/db/migrate.js";
-import { BreakingGateAwaitingConsentError } from "../../api/src/db/breaking-gate.js";
+import { BreakingGateAwaitingConsentError } from "@obscura/app-core";
+import { runMigrations } from "@obscura/db";
 import {
   closeDatabase,
   configureDatabase,

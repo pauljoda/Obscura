@@ -3,7 +3,7 @@ import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
-  getSceneSubtitlesDir,
+  getVideoSubtitlesDir,
   runProcess,
 } from "@obscura/media-core";
 import {
@@ -13,6 +13,7 @@ import {
   videoSubtitles,
 } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
 
@@ -49,7 +50,7 @@ export async function processExtractSubtitles(job: Job) {
 
   if (entityKind !== "video_episode" && entityKind !== "video_movie") {
     throw new Error(
-      `extract-subtitles processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+      `extract-subtitles processor received unsupported payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
     );
   }
 
@@ -71,6 +72,8 @@ export async function processExtractSubtitles(job: Job) {
     label: row.title ?? undefined,
   });
 
+  const filePath = resolveRequiredMediaPath(row.filePath);
+
   // List subtitle streams with ffprobe.
   const { stdout } = await runProcess("ffprobe", [
     "-v",
@@ -81,7 +84,7 @@ export async function processExtractSubtitles(job: Job) {
     "stream=index,codec_name,codec_type:stream_tags=language,title",
     "-of",
     "json",
-    row.filePath,
+    filePath,
   ]);
 
   let parsed: FfprobeResult = {};
@@ -100,7 +103,7 @@ export async function processExtractSubtitles(job: Job) {
     return;
   }
 
-  const outDir = getSceneSubtitlesDir(row.id);
+  const outDir = getVideoSubtitlesDir(row.id);
   await mkdir(outDir, { recursive: true });
 
   for (const [idx, stream] of streams.entries()) {
@@ -134,7 +137,7 @@ export async function processExtractSubtitles(job: Job) {
         "-v",
         "error",
         "-i",
-        row.filePath,
+        filePath,
         "-map",
         `0:${streamIndex}`,
         "-c:s",
@@ -155,7 +158,7 @@ export async function processExtractSubtitles(job: Job) {
           "-v",
           "error",
           "-i",
-          row.filePath,
+          filePath,
           "-map",
           `0:${streamIndex}`,
           "-c:s",

@@ -4,27 +4,15 @@ services:
       context: ../..
       dockerfile: infra/docker/web.Dockerfile
       target: builder
-    command: pnpm --filter @obscura/web dev
-    env_file:
-      - ../../.env.example
-    ports:
-      - "8008:8008"
-    depends_on:
-      - api
-
-  api:
-    build:
-      context: ../..
-      dockerfile: infra/docker/api.Dockerfile
-      target: builder
-    command: pnpm --filter @obscura/api dev
+    command: pnpm --filter @obscura/web-svelte dev
     env_file:
       - ../../.env.example
     environment:
+      DATABASE_URL: postgresql://obscura:obscura@postgres:5432/obscura
       OBSCURA_CACHE_DIR: /data/cache
-      OBSCURA_PLUGIN_INDEX_PATH: ${OBSCURA_PLUGIN_INDEX_PATH:-}
+      OBSCURA_DATA_DIR: /data
     ports:
-      - "4000:4000"
+      - "8008:8008"
     depends_on:
       - postgres
     volumes:
@@ -39,7 +27,9 @@ services:
     env_file:
       - ../../.env.example
     environment:
+      DATABASE_URL: postgresql://obscura:obscura@postgres:5432/obscura
       OBSCURA_CACHE_DIR: /data/cache
+      OBSCURA_DATA_DIR: /data
     depends_on:
       - postgres
     volumes:

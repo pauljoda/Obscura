@@ -3,6 +3,7 @@ import type { JobLike as Job } from "../lib/job-tracking.js";
 import { CorruptMediaError, probeVideoFile } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
 
@@ -15,7 +16,7 @@ export async function applyVideoProbeToVideoEntity(
   entityId: string,
   filePath: string,
 ) {
-  const metadata = await probeVideoFile(filePath);
+  const metadata = await probeVideoFile(resolveRequiredMediaPath(filePath));
   const table = kind === "video_episode" ? videoEpisodes : videoMovies;
   await db
     .update(table)
@@ -40,7 +41,7 @@ export async function processMediaProbe(job: Job) {
 
   if (entityKind !== "video_episode" && entityKind !== "video_movie") {
     throw new Error(
-      `media-probe processor received legacy payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
+      `media-probe processor received unsupported payload ${JSON.stringify(job.data)} — expected entityKind video_episode or video_movie`,
     );
   }
 

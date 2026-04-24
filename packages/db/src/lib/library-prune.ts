@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { eq, inArray } from "drizzle-orm";
-import { getGeneratedImageDir, getGeneratedSceneDir } from "@obscura/media-core";
+import { getGeneratedImageDir, getGeneratedVideoDir } from "@obscura/media-core";
 import type { AppDb } from "../types";
 import * as schema from "../schema";
 
@@ -30,12 +30,10 @@ function isPathWithinAnyRoot(filePath: string, rootPaths: string[]) {
   return rootPaths.some((rootPath) => isPathWithinRoot(filePath, rootPath));
 }
 
-/** Generated asset directories for video entities use the same naming
- * convention as the old scene asset dirs — keyed by the entity id.
- */
+/** Generated asset directories for video entities are keyed by the entity id. */
 export async function removeGeneratedVideoDirs(entityIds: string[]) {
   for (const id of entityIds) {
-    await rm(getGeneratedSceneDir(id), { recursive: true, force: true });
+    await rm(getGeneratedVideoDir(id), { recursive: true, force: true });
   }
 }
 
@@ -55,26 +53,21 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
   const allRoots = await db
     .select({
       path: libraryRoots.path,
-      scanMovies: libraryRoots.scanMovies,
-      scanSeries: libraryRoots.scanSeries,
+      scanVideos: libraryRoots.scanVideos,
       scanImages: libraryRoots.scanImages,
     })
     .from(libraryRoots)
     .where(eq(libraryRoots.enabled, true));
 
-  const videoRootPaths = allRoots
-    .filter((r) => r.scanMovies || r.scanSeries)
-    .map((r) => r.path);
+  const videoRootPaths = allRoots.filter((r) => r.scanVideos).map((r) => r.path);
   const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
 
   // Safety: if there are no video-enabled roots at all, skip the
   // orphan-delete step entirely. An empty `videoRootPaths` would
   // classify every existing row as "orphaned" and wipe the entire
   // video library in a single call — almost always a misconfiguration
-  // (scan_movies/scan_series defaulted to false on a legacy install,
-  // the user hasn't opted into the new scan toggles yet, etc.) rather
-  // than a legitimate prune. Missing-file pruning still runs because
-  // those deletions are per-row and tied to actual disk state.
+  // rather than a legitimate prune. Missing-file pruning still runs
+  // because those deletions are per-row and tied to actual disk state.
   const pruneOrphansByRoot = videoRootPaths.length > 0;
 
   // ── Video episodes ──────────────────────────────────────────────

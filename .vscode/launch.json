@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Obscura: Full Stack",
+      "name": "Obscura: Dev Stack",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
@@ -11,6 +11,75 @@
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "Obscura: Docker Up"
+    },
+    {
+      "name": "Obscura: Web + Worker",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "turbo",
+        "run",
+        "dev",
+        "--parallel",
+        "--filter=@obscura/web-svelte",
+        "--filter=@obscura/worker"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Obscura: Docker Up",
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Obscura: Web",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@obscura/web-svelte", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Obscura: Docker Up",
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Obscura: Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8008",
+      "webRoot": "${workspaceFolder}/apps/web-svelte",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${webRoot}/*",
+        "webpack:///src/*": "${webRoot}/src/*"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Obscura: Web + Chrome",
+      "configurations": [
+        "Obscura: Web",
+        "Obscura: Chrome"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Obscura: Dev Stack + Chrome",
+      "configurations": [
+        "Obscura: Dev Stack",
+        "Obscura: Chrome"
+      ],
+      "stopAll": true
     }
   ]
 }

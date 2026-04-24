@@ -62,6 +62,8 @@ export async function upsertJobRun(
 ) {
   const payload = (patch.payload ?? (job.data as JobPayload) ?? {}) as JobPayload;
   const attempts = patch.attempts ?? job.attemptsMade ?? 0;
+  const hasPatch = (key: keyof typeof patch) =>
+    Object.prototype.hasOwnProperty.call(patch, key);
 
   await db
     .insert(jobRuns)
@@ -86,9 +88,9 @@ export async function upsertJobRun(
         status: patch.status ?? "waiting",
         attempts,
         progress: patch.progress ?? 0,
-        targetType: patch.targetType ?? null,
-        targetId: patch.targetId ?? null,
-        targetLabel: patch.targetLabel ?? null,
+        ...(hasPatch("targetType") ? { targetType: patch.targetType ?? null } : {}),
+        ...(hasPatch("targetId") ? { targetId: patch.targetId ?? null } : {}),
+        ...(hasPatch("targetLabel") ? { targetLabel: patch.targetLabel ?? null } : {}),
         payload,
         error: patch.error ?? null,
         startedAt: patch.startedAt ?? undefined,

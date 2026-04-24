@@ -4,8 +4,7 @@
 
 Obscura is organized as a Docker-first monorepo with three primary services:
 
-- `web` - Next.js App Router frontend
-- `api` - Fastify service exposing typed HTTP endpoints
+- `web-svelte` - SvelteKit full-stack frontend and HTTP ingress
 - `worker` - background process for scan, fingerprint, preview, and import jobs
 
 Supporting services:
@@ -14,19 +13,14 @@ Supporting services:
 
 ## Responsibility Boundaries
 
-### apps/web
+### apps/web-svelte
 
 - user interface
 - responsive layout and navigation
 - asset browsing, metadata workflows, settings surfaces
-- server state consumption through typed contracts
-
-### apps/api
-
-- transport layer
+- same-origin `/api` transport layer
 - request validation and route composition
-- orchestration of writes, reads, and job scheduling
-- health, diagnostics, and admin endpoints
+- orchestration of reads, writes, and local streaming endpoints
 
 ### apps/worker
 
@@ -38,7 +32,7 @@ Supporting services:
 
 - media discovery primitives
 - file fingerprint taxonomy
-- future scan and normalization logic shared by API and worker
+- future scan and normalization logic shared by SvelteKit and worker
 
 ### packages/stash-import
 
@@ -51,17 +45,17 @@ Supporting services:
 - DTOs and transport contracts
 - shared job and queue identifiers
 
-### packages/ui
+### packages/ui-svelte
 
 - design tokens
 - shared component helpers
-- visual language primitives and future shadcn wrappers
+- visual language primitives for the Svelte app
 
 ## Domain Direction
 
 The application schema is intentionally not a direct copy of stash.
 
-Planned core entities:
+Core entities:
 
 - `Asset`
 - `FileVariant`
@@ -93,4 +87,3 @@ Initial queue families:
 - `metadata-import`
 
 Queues must be durable, restart-safe, and visible in the UI.
-

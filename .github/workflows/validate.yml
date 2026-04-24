@@ -86,8 +86,8 @@ jobs:
       - name: Run Playwright smoke
         env:
           OBSCURA_E2E_WEB_URL: http://127.0.0.1:8008
-          OBSCURA_E2E_API_URL: http://127.0.0.1:4000
-          OBSCURA_E2E_LIBRARY_ROOT: /app/apps/web/public/media/scenes
+          OBSCURA_E2E_API_URL: http://127.0.0.1:8008/api
+          OBSCURA_E2E_LIBRARY_ROOT: tests/fixtures/media/videos
         run: pnpm test:e2e
 
       - name: Upload Playwright report
