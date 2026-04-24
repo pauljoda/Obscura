@@ -6,7 +6,6 @@
   import { Badge } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
-  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -189,44 +188,38 @@
     <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
   </div>
 
-  <div class="flex items-stretch gap-2">
-    <div class="flex-1 min-w-0">
-      <FilterBar
-        viewMode={data.view}
-        onViewModeChange={(v: ViewMode) => updateUrl({ view: v === "grid" ? null : v })}
-        sortBy={data.sort}
-        sortDir={data.order}
-        {sortOptions}
-        onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
-        searchQuery={data.search}
-        onSearchChange={(q) => updateUrl({ search: q || null })}
-        searchPlaceholder="Search galleries..."
-        filterSections={["rating", "date"]}
-        {activeFilters}
-        {onAddFilter}
-        {onRemoveFilter}
-        {onClearFiltersAndSort}
-        {canClearFiltersAndSort}
-        presets={presetsApi.presets}
-        {activePresetId}
-        onApplyPreset={applyPreset}
-        onSavePreset={savePreset}
-        onOverwritePreset={overwritePreset}
-        onDeletePreset={deletePreset}
-      />
-    </div>
-    {#if data.view !== "list"}
-      <div class="surface-well flex items-center">
-        <ThumbSizeSlider
-          value={viewPrefs.current.cols}
-          min={2}
-          max={8}
-          onChange={(n) => viewPrefs.update({ cols: n })}
-          label="Gallery card size"
-        />
-      </div>
-    {/if}
-  </div>
+  <FilterBar
+    viewMode={data.view}
+    onViewModeChange={(v: ViewMode) => updateUrl({ view: v === "grid" ? null : v })}
+    sortBy={data.sort}
+    sortDir={data.order}
+    {sortOptions}
+    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+    searchQuery={data.search}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    searchPlaceholder="Search galleries..."
+    filterSections={["rating", "date"]}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
+    presets={presetsApi.presets}
+    {activePresetId}
+    onApplyPreset={applyPreset}
+    onSavePreset={savePreset}
+    onOverwritePreset={overwritePreset}
+    onDeletePreset={deletePreset}
+    thumbSize={data.view !== "list"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Gallery card size",
+        }
+      : undefined}
+  />
 
   {#if data.galleries.length === 0}
     <div class="surface-panel p-8 text-center">

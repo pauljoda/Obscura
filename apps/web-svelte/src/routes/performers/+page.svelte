@@ -7,9 +7,10 @@
     type SortDir,
     type ActiveFilter,
   } from "$lib/components/FilterBar.svelte";
+  import FilterSection from "$lib/components/FilterSection.svelte";
+  import { cn } from "@obscura/ui-svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
-  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
@@ -219,93 +220,138 @@
     <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
   </div>
 
-  <div class="flex items-stretch gap-2">
-    <div class="flex-1 min-w-0">
-      <FilterBar
-        {sortOptions}
-        sortBy={data.sort}
-        sortDir={data.order}
-        onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? data.order })}
-        searchQuery={data.search}
-        onSearchChange={(q) => updateUrl({ search: q || null })}
-        searchPlaceholder="Search actors..."
-        showViewToggle={false}
-        filterSections={["rating"]}
-        {activeFilters}
-        {onAddFilter}
-        {onRemoveFilter}
-        {onClearFiltersAndSort}
-        {canClearFiltersAndSort}
-        presets={presetsApi.presets}
-        {activePresetId}
-        onApplyPreset={applyPreset}
-        onSavePreset={savePreset}
-        onOverwritePreset={overwritePreset}
-        onDeletePreset={deletePreset}
-      />
-    </div>
-    <div class="surface-well flex items-center">
-      <ThumbSizeSlider
-        value={viewPrefs.current.cols}
-        min={3}
-        max={8}
-        onChange={(n) => viewPrefs.update({ cols: n })}
-        label="Actor card size"
-      />
-    </div>
-  </div>
+  <FilterBar
+    {sortOptions}
+    sortBy={data.sort}
+    sortDir={data.order}
+    onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? data.order })}
+    searchQuery={data.search}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    searchPlaceholder="Search actors..."
+    showViewToggle={false}
+    filterSections={["rating"]}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
+    presets={presetsApi.presets}
+    {activePresetId}
+    onApplyPreset={applyPreset}
+    onSavePreset={savePreset}
+    onOverwritePreset={overwritePreset}
+    onDeletePreset={deletePreset}
+    thumbSize={{
+      value: viewPrefs.current.cols,
+      min: 3,
+      max: 8,
+      onChange: (n) => viewPrefs.update({ cols: n }),
+      label: "Actor card size",
+    }}
+  >
+    {#snippet customFilterSections({ panelFilters })}
+      <FilterSection title="Actor">
+        {#snippet children()}
+          <div class="flex flex-wrap gap-1">
+            <button
+              type="button"
+              onclick={() => onAddFilter("favorite", "Favorite", "true")}
+              class={cn(
+                "tag-chip cursor-pointer transition-colors duration-fast",
+                panelFilters.some((f) => f.type === "favorite" && f.value === "true")
+                  ? "tag-chip-accent"
+                  : "tag-chip-default hover:tag-chip-accent",
+              )}
+            >
+              <Star class="h-3 w-3" /> Favorites
+            </button>
+            <button
+              type="button"
+              onclick={() => onAddFilter("hasImage", "Photo", "true")}
+              class={cn(
+                "tag-chip cursor-pointer transition-colors duration-fast",
+                panelFilters.some((f) => f.type === "hasImage" && f.value === "true")
+                  ? "tag-chip-accent"
+                  : "tag-chip-default hover:tag-chip-accent",
+              )}
+            >
+              <ImageIcon class="h-3 w-3" /> Has photo
+            </button>
+            <button
+              type="button"
+              onclick={() => onAddFilter("hasImage", "Photo", "false")}
+              class={cn(
+                "tag-chip cursor-pointer transition-colors duration-fast",
+                panelFilters.some((f) => f.type === "hasImage" && f.value === "false")
+                  ? "tag-chip-accent"
+                  : "tag-chip-default hover:tag-chip-accent",
+              )}
+            >
+              No photo
+            </button>
+            <button
+              type="button"
+              onclick={() => onAddFilter("videoCountMin", "Videos", "1")}
+              class={cn(
+                "tag-chip cursor-pointer transition-colors duration-fast",
+                panelFilters.some((f) => f.type === "videoCountMin" && f.value === "1")
+                  ? "tag-chip-accent"
+                  : "tag-chip-default hover:tag-chip-accent",
+              )}
+            >
+              <Film class="h-3 w-3" /> In videos
+            </button>
+          </div>
+        {/snippet}
+      </FilterSection>
 
-  <div class="surface-well p-2">
-    <div class="flex flex-wrap items-center gap-1.5">
-      <span class="text-kicker !text-text-disabled mr-1">Actor filters</span>
-      <button
-        type="button"
-        onclick={() => onAddFilter("favorite", "Favorite", "true")}
-        class="tag-chip tag-chip-default hover:tag-chip-accent"
-      >
-        <Star class="h-3 w-3" /> Favorites
-      </button>
-      <button
-        type="button"
-        onclick={() => onAddFilter("hasImage", "Photo", "true")}
-        class="tag-chip tag-chip-default hover:tag-chip-accent"
-      >
-        <ImageIcon class="h-3 w-3" /> Has photo
-      </button>
-      <button
-        type="button"
-        onclick={() => onAddFilter("hasImage", "Photo", "false")}
-        class="tag-chip tag-chip-default hover:tag-chip-accent"
-      >
-        No photo
-      </button>
-      <button
-        type="button"
-        onclick={() => onAddFilter("videoCountMin", "Videos", "1")}
-        class="tag-chip tag-chip-default hover:tag-chip-accent"
-      >
-        <Film class="h-3 w-3" /> In videos
-      </button>
-      {#each genders as gender (gender)}
-        <button
-          type="button"
-          onclick={() => onAddFilter("gender", "Gender", gender)}
-          class="tag-chip tag-chip-default hover:tag-chip-accent"
-        >
-          {gender.replaceAll("_", " ")}
-        </button>
-      {/each}
-      {#each countries.slice(0, 12) as country (country)}
-        <button
-          type="button"
-          onclick={() => onAddFilter("country", "Country", country)}
-          class="tag-chip tag-chip-default hover:tag-chip-accent"
-        >
-          {country}
-        </button>
-      {/each}
-    </div>
-  </div>
+      {#if genders.length > 0}
+        <FilterSection title="Gender">
+          {#snippet children()}
+            <div class="flex flex-wrap gap-1">
+              {#each genders as gender (gender)}
+                <button
+                  type="button"
+                  onclick={() => onAddFilter("gender", "Gender", gender)}
+                  class={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    panelFilters.some((f) => f.type === "gender" && f.value === gender)
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  {gender.replaceAll("_", " ")}
+                </button>
+              {/each}
+            </div>
+          {/snippet}
+        </FilterSection>
+      {/if}
+
+      {#if countries.length > 0}
+        <FilterSection title="Country">
+          {#snippet children()}
+            <div class="flex flex-wrap gap-1 max-h-40 overflow-y-auto tag-scroll-area">
+              {#each countries as country (country)}
+                <button
+                  type="button"
+                  onclick={() => onAddFilter("country", "Country", country)}
+                  class={cn(
+                    "tag-chip cursor-pointer transition-colors duration-fast",
+                    panelFilters.some((f) => f.type === "country" && f.value === country)
+                      ? "tag-chip-accent"
+                      : "tag-chip-default hover:tag-chip-accent",
+                  )}
+                >
+                  {country}
+                </button>
+              {/each}
+            </div>
+          {/snippet}
+        </FilterSection>
+      {/if}
+    {/snippet}
+  </FilterBar>
 
   {#if data.performers.length === 0}
     <div class="surface-panel p-8 text-center">

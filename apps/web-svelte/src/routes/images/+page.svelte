@@ -5,7 +5,6 @@
   import { Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
-  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
@@ -188,41 +187,35 @@
     <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
   </div>
 
-  <div class="flex items-stretch gap-2">
-    <div class="flex-1 min-w-0">
-      <FilterBar
-        {sortOptions}
-        sortBy={data.sort}
-        sortDir={data.order}
-        onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
-        searchQuery={data.search}
-        onSearchChange={(q) => updateUrl({ search: q || null })}
-        searchPlaceholder="Search images..."
-        filterSections={["rating", "date"]}
-        showViewToggle={false}
-        {activeFilters}
-        {onAddFilter}
-        {onRemoveFilter}
-        {onClearFiltersAndSort}
-        {canClearFiltersAndSort}
-        presets={presetsApi.presets}
-        {activePresetId}
-        onApplyPreset={applyPreset}
-        onSavePreset={savePreset}
-        onOverwritePreset={overwritePreset}
-        onDeletePreset={deletePreset}
-      />
-    </div>
-    <div class="surface-well flex items-center">
-      <ThumbSizeSlider
-        value={viewPrefs.current.cols}
-        min={3}
-        max={14}
-        onChange={(n) => viewPrefs.update({ cols: n })}
-        label="Thumbnail size"
-      />
-    </div>
-  </div>
+  <FilterBar
+    {sortOptions}
+    sortBy={data.sort}
+    sortDir={data.order}
+    onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
+    searchQuery={data.search}
+    onSearchChange={(q) => updateUrl({ search: q || null })}
+    searchPlaceholder="Search images..."
+    filterSections={["rating", "date"]}
+    showViewToggle={false}
+    {activeFilters}
+    {onAddFilter}
+    {onRemoveFilter}
+    {onClearFiltersAndSort}
+    {canClearFiltersAndSort}
+    presets={presetsApi.presets}
+    {activePresetId}
+    onApplyPreset={applyPreset}
+    onSavePreset={savePreset}
+    onOverwritePreset={overwritePreset}
+    onDeletePreset={deletePreset}
+    thumbSize={{
+      value: viewPrefs.current.cols,
+      min: 3,
+      max: 14,
+      onChange: (n) => viewPrefs.update({ cols: n }),
+      label: "Thumbnail size",
+    }}
+  />
 
   {#if data.images.length === 0}
     <div class="surface-panel p-8 text-center">

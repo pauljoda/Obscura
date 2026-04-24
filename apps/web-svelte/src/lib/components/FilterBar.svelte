@@ -58,12 +58,22 @@
   import { cn } from "@obscura/ui-svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw-tags";
+  import type { Snippet } from "svelte";
   import FilterChip from "./FilterChip.svelte";
   import FilterSection from "./FilterSection.svelte";
+  import ThumbSizeSlider from "./ThumbSizeSlider.svelte";
   import AlphabeticalFilterSection, {
     type AlphabeticalFilterSectionItem,
   } from "./AlphabeticalFilterSection.svelte";
   import FilterPresetDropdown, { type FilterPreset } from "./FilterPresetDropdown.svelte";
+
+  export interface ThumbSizeConfig {
+    value: number;
+    min: number;
+    max: number;
+    onChange: (next: number) => void;
+    label?: string;
+  }
 
   interface Props {
     viewMode?: ViewMode;
@@ -97,6 +107,10 @@
     showInteractiveFilter?: boolean;
     /** Placeholder text for the search box. */
     searchPlaceholder?: string;
+    /** Integrated thumbnail-size slider. Renders inline on desktop and on its own row on mobile. */
+    thumbSize?: ThumbSizeConfig;
+    /** Extra sections rendered at the top of the filter drawer. */
+    customFilterSections?: Snippet<[{ panelFilters: (ActiveFilter | RawActiveFilter)[] }]>;
   }
 
   let {
@@ -141,6 +155,8 @@
     ],
     showInteractiveFilter = true,
     searchPlaceholder = "Search videos...",
+    thumbSize,
+    customFilterSections,
   }: Props = $props();
 
   let sortOpen = $state(false);
@@ -172,7 +188,8 @@
   });
 
   const hasFilterPanel = $derived(
-    Boolean(onAddFilter) ||
+    Boolean(customFilterSections) ||
+      Boolean(onAddFilter) ||
       availableTags.length + availablePerformers.length + availableStudios.length > 0,
   );
   const enabledSections = $derived(new Set(filterSections));
@@ -302,6 +319,18 @@
         </div>
       {/if}
 
+      {#if thumbSize}
+        <div class="hidden sm:flex items-center border-l border-border-subtle pl-1">
+          <ThumbSizeSlider
+            value={thumbSize.value}
+            min={thumbSize.min}
+            max={thumbSize.max}
+            onChange={thumbSize.onChange}
+            label={thumbSize.label ?? "Thumbnail size"}
+          />
+        </div>
+      {/if}
+
       {#if showViewToggle && onViewModeChange}
         <div class="flex items-center border border-border-subtle overflow-hidden">
           <button
@@ -402,11 +431,34 @@
         </button>
       {/if}
     </div>
+
+    {#if thumbSize}
+      <!-- Size slider — own row on mobile for comfortable touch targets -->
+      <div class="sm:hidden flex items-center gap-2 pt-1.5 border-t border-border-subtle">
+        <span
+          class="text-[0.6rem] font-mono uppercase tracking-wider text-text-disabled shrink-0"
+        >
+          {thumbSize.label ?? "Size"}
+        </span>
+        <div class="flex-1 flex items-center justify-end">
+          <ThumbSizeSlider
+            value={thumbSize.value}
+            min={thumbSize.min}
+            max={thumbSize.max}
+            onChange={thumbSize.onChange}
+            label={thumbSize.label ?? "Thumbnail size"}
+          />
+        </div>
+      </div>
+    {/if}
   </div>
 
   {#if filterPanelOpen}
     <div class="surface-well mt-px p-3">
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {#if customFilterSections}
+          {@render customFilterSections({ panelFilters })}
+        {/if}
         {#if enabledSections.has("resolution")}
           <FilterSection title="Resolution">
             {#snippet children()}

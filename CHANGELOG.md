@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Library list views are now consistent across Actors, Studios, Tags, Galleries, and Images.** The thumbnail-size slider is now integrated directly into the filter bar — on desktop it sits inline next to the sort / filter / preset controls, and on mobile it drops to its own row below the controls so it has room to breathe. The stray "Actor filters" chip row that used to hang below the bar on `/performers` is gone; those filters (Favorites, Has photo, In videos, Gender, Country) now live inside the same Filters drawer everyone else uses, which keeps the page quieter while scrolling.
+- **Studios and Tags pages gained the same toolbar kit as everything else.** Both now have the thumbnail-size slider, saved filter presets, and a proper Filters drawer (favorites, has-image yes/no, min rating). Preset and size choices save to Obscura's database so they follow you across devices and browsers.
+- **Tags got a visual redesign.** Each tag now renders as a richer card — a per-tag color gradient derived from its name (or the cover image when one is set), large initials, a glass-panel usage badge in the corner, and the video/image counters as compact monospace chips under the name. Scales from a dense 8-column wall down to 2 fat cards on phones.
+- **Gallery and image filter bars no longer have the tall side-car holding the size slider.** The slider is built into the main bar now, so the Filters drawer opens straight off the bar without a gap on the right.
+
 - **Gallery thumbnails now show how many previews you can scrub through.** When a gallery has multiple interior images, a thin segmented progress strip along the bottom of the cover tells you at a glance that scrubbing is available — each segment is one preview, and the active segment lights up in brass as you move the cursor across the thumbnail.
 
 - **Galleries and images now remember your view size.** A thumbnail-size slider lives next to the filter bar on `/galleries`, `/galleries/[id]`, and `/images`. Drag it to set how many columns the grid or interior masonry uses; the choice is saved to the Obscura database and follows you across devices and sessions.
@@ -92,6 +97,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `FilterBar` now supports an integrated `thumbSize` prop and a `customFilterSections` snippet. The size slider renders inline in the toolbar on desktop and drops to its own row on mobile; pages pass extra drawer sections as a snippet so every page's Filters panel stays in sync visually. Adopted by `/performers`, `/studios`, `/tags`, `/galleries`, and `/images`.
+- Saved view prefs + filter presets on `/studios` and `/tags`. New ui-prefs keys `studios:view` / `studios:filterPresets` / `tags:view` / `tags:filterPresets`.
 - New `ui_prefs` table (`key TEXT PRIMARY KEY`, `value JSONB`, `updated_at`) for per-page UI view settings and saved filter presets. Backed by `GET/PUT/DELETE /api/ui-prefs/[key]` and the Svelte helpers `createServerPrefs<T>(key, defaults)` + `createServerPresets(key)`. Keys used so far: `galleries:view` / `galleries:interiorView` / `images:view` / `galleries:filterPresets` / `images:filterPresets`. The helper debounces writes (250 ms) so dragging a slider does not flood the server.
 - `ThumbSizeSlider` component — a compact range slider that drives a `--col-count` CSS variable. Used on `/galleries` (cover grid), `/galleries/[id]` (interior masonry), and `/images` (flat grid). Each page caps the slider range against sensible min/max per breakpoint so mobile layouts stay usable even if the user set a desktop-tuned value.
 - Saved filter-preset support on `/galleries` and `/images`. Presets use the shared `FilterPresetDropdown` component and the new server-backed store.
