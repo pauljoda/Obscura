@@ -210,6 +210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- GitHub Actions Playwright smoke tests now use the host-visible fixture media path, so the library-root existence check passes before the app scans test videos.
 - SvelteKit web checks now pass in clean CI environments without a local `.env` file. Optional public API/app URL settings fall back to their defaults instead of requiring `PUBLIC_API_URL` and `PUBLIC_APP_URL` to exist during `svelte-kit sync`.
 - Preview jobs now save thumbnail and hover-preview paths as soon as those files are generated, so video cards stop looking empty while the slower trickplay sprite sheet is still building. Active job progress updates also keep their target labels instead of blanking the Operations dashboard row.
 - Thumbnail-size sliders now hydrate from server-loaded saved preferences, preventing list and gallery grids from briefly rendering at their default column count before snapping to the user's saved size.
