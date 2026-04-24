@@ -210,6 +210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Worker integration tests now create their own legacy-path fixture media, so clean CI checkouts can verify stale media path recovery without ignored demo videos.
 - Media-core path-resolution tests no longer depend on ignored local demo videos, so clean CI checkouts can run them without `big_buck_bunny.mp4` or other large fixture assets.
 - GitHub Actions Playwright smoke tests now use the host-visible fixture media path, so the library-root existence check passes before the app scans test videos.
 - SvelteKit web checks now pass in clean CI environments without a local `.env` file. Optional public API/app URL settings fall back to their defaults instead of requiring `PUBLIC_API_URL` and `PUBLIC_APP_URL` to exist during `svelte-kit sync`.

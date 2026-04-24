@@ -17,6 +17,7 @@ import {
   cleanupTempDir,
   createSampleVideoFile,
   createTempDir,
+  writeFixtureFile,
 } from "./support/files.ts";
 
 const { libraryRoots, videoMovies, jobRuns, librarySettings } = schema;
@@ -125,6 +126,15 @@ describe("worker integration", () => {
   });
 
   it("resolves stale legacy media paths before preview probing", async () => {
+    const legacyRelativePath = path.join(
+      "Legacy Integration Videos",
+      "synthetic.mp4",
+    );
+    const mappedFixturePath = await writeFixtureFile(
+      path.join(process.cwd(), "tests", "fixtures", "media", "videos"),
+      legacyRelativePath,
+      "fake-video-bytes",
+    );
     const legacyPath = path.join(
       process.cwd(),
       "apps",
@@ -132,8 +142,7 @@ describe("worker integration", () => {
       "public",
       "media",
       "scenes",
-      "Demo Videos",
-      "tears_of_steel.mp4",
+      legacyRelativePath,
     );
     const [root] = await database.db
       .insert(libraryRoots)
@@ -149,6 +158,9 @@ describe("worker integration", () => {
         libraryRootId: root.id,
         title: "Legacy Tears",
         filePath: legacyPath,
+        duration: 10,
+        width: 1280,
+        height: 720,
       })
       .returning();
     await database.db
@@ -158,19 +170,22 @@ describe("worker integration", () => {
         generateTrickplay: false,
       });
 
-    await expect(
-      processPreview({
-        id: "preview-legacy",
-        data: { entityKind: "video_movie", entityId: movie.id },
-      }),
-    ).resolves.toBeUndefined();
-
-    await database.db
-      .update(librarySettings)
-      .set({
-        autoGeneratePreview: true,
-        generateTrickplay: true,
-      });
+    try {
+      await expect(
+        processPreview({
+          id: "preview-legacy",
+          data: { entityKind: "video_movie", entityId: movie.id },
+        }),
+      ).resolves.toBeUndefined();
+    } finally {
+      await database.db
+        .update(librarySettings)
+        .set({
+          autoGeneratePreview: true,
+          generateTrickplay: true,
+        });
+      await cleanupTempDir(path.dirname(mappedFixturePath));
+    }
   });
 
   it("prunes stale movies that no longer exist on disk", async () => {
