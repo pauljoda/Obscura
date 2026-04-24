@@ -1,7 +1,20 @@
 import { render, screen } from "@testing-library/svelte";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, waitFor } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Page from "./+page.svelte";
 import type { PerformerDetailDto } from "@obscura/contracts";
+
+const { updatePerformer } = vi.hoisted(() => ({
+  updatePerformer: vi.fn(),
+}));
+
+vi.mock("$lib/api/entities", async () => {
+  const actual = await vi.importActual<typeof import("$lib/api/entities")>("$lib/api/entities");
+  return {
+    ...actual,
+    updatePerformer,
+  };
+});
 
 vi.mock("$lib/stores/nsfw.svelte", () => ({
   useNsfw: () => ({ mode: "show" }),
@@ -73,6 +86,11 @@ function makePerformer(): PerformerDetailDto {
 }
 
 describe("performer detail page", () => {
+  beforeEach(() => {
+    updatePerformer.mockReset();
+    updatePerformer.mockResolvedValue({ ok: true, id: "performer-1" });
+  });
+
   it("links known-for appearances with stable DTO keys", () => {
     render(Page, {
       props: {
@@ -142,5 +160,55 @@ describe("performer detail page", () => {
       "href",
       "/audio/tracks/track-1",
     );
+  });
+
+  it("edits actor metadata from the detail page", async () => {
+    render(Page, {
+      props: {
+        data: {
+          initialCollapsed: false,
+          initialNsfwMode: "show",
+          lanAutoEnable: false,
+          awaitingBreakingConsent: false,
+          performer: makePerformer() as unknown as Record<string, unknown> & {
+            id: string;
+            name: string;
+          },
+          videos: [],
+          totalVideos: 0,
+          series: [],
+          totalSeries: 0,
+          galleries: [],
+          totalGalleries: 0,
+          images: [],
+          totalImages: 0,
+          audioLibraries: [],
+          totalAudioLibraries: 0,
+          audioTracks: [],
+          totalAudioTracks: 0,
+        },
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: /edit actor/i }));
+    await screen.findByText("Actor metadata");
+    await fireEvent.input(screen.getByLabelText(/name/i), {
+      target: { value: "Alice Actor Updated" },
+    });
+    await fireEvent.input(screen.getByLabelText(/details/i), {
+      target: { value: "Updated biography." },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: /save actor/i }));
+
+    await waitFor(() => {
+      expect(updatePerformer).toHaveBeenCalledWith(
+        "performer-1",
+        expect.objectContaining({
+          name: "Alice Actor Updated",
+          details: "Updated biography.",
+        }),
+      );
+    });
+    expect(screen.getByText("Alice Actor Updated")).toBeInTheDocument();
   });
 });
