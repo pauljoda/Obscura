@@ -23,6 +23,10 @@
     onClose: () => void;
     onIndexChange?: (index: number) => void;
     onRatingChange?: (imageId: string, rating: number | null) => void;
+    autoAdvanceSeconds?: number;
+    onAutoAdvance?: () => void;
+    onPreviousRequest?: () => void;
+    onNextRequest?: () => void;
   }
 
   let {
@@ -31,6 +35,10 @@
     onClose,
     onIndexChange,
     onRatingChange,
+    autoAdvanceSeconds = 0,
+    onAutoAdvance,
+    onPreviousRequest,
+    onNextRequest,
   }: Props = $props();
 
   const MIN_SCALE = 0.3;
@@ -97,14 +105,34 @@
   });
 
   function goPrev() {
+    if (onPreviousRequest) {
+      onPreviousRequest();
+      return;
+    }
     if (images.length === 0) return;
     index = (index - 1 + images.length) % images.length;
   }
 
   function goNext() {
+    if (onNextRequest) {
+      onNextRequest();
+      return;
+    }
     if (images.length === 0) return;
     index = (index + 1) % images.length;
   }
+
+  $effect(() => {
+    if (!current || autoAdvanceSeconds <= 0) return;
+    const timeout = window.setTimeout(() => {
+      if (onAutoAdvance) {
+        onAutoAdvance();
+      } else {
+        goNext();
+      }
+    }, autoAdvanceSeconds * 1000);
+    return () => window.clearTimeout(timeout);
+  });
 
   function resetTransform() {
     scale = fitScale || 1;

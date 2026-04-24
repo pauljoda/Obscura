@@ -2,38 +2,27 @@
   import { invalidate } from "$app/navigation";
   import { Image as ImageIcon, FileText, HardDrive, Calendar, Pencil } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
+  import type { ImageDetailDto } from "@obscura/contracts";
   import { toApiUrl } from "$lib/api/core";
   import { updateImage } from "$lib/api/media";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import ImageEdit from "$lib/components/ImageEdit.svelte";
+  import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+  import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   let { data } = $props();
+  const playlist = usePlaylist();
   let overrideRating = $state<number | null | undefined>(undefined);
   const img = $derived((overrideRating === undefined
     ? data.image
-    : { ...(data.image as unknown as Record<string, unknown>), rating: overrideRating }) as {
-    id: string;
-    title: string;
-    details: string | null;
-    date: string | null;
-    rating: number | null;
-    organized: boolean;
-    isNsfw: boolean;
-    width: number | null;
-    height: number | null;
-    format: string | null;
-    fileSize: number | null;
-    thumbnailPath: string | null;
-    previewPath: string | null;
-    fullPath: string | null;
-    galleryId: string | null;
-    filePath: string;
-    studio: { id: string; name: string } | null;
-    performers: { id: string; name: string }[];
-    tags: { id: string; name: string; isNsfw: boolean }[];
-  });
+    : { ...(data.image as ImageDetailDto), rating: overrideRating }) as ImageDetailDto);
 
   let editing = $state(false);
+  let playlistLightboxDismissedFor = $state<string | null>(null);
+  const isCurrentPlaylistItem = $derived(playlist.isPlaylistItem("image", img.id));
+  const showPlaylistLightbox = $derived(
+    isCurrentPlaylistItem && playlistLightboxDismissedFor !== img.id,
+  );
 
   async function handleRatingSave(next: number | null) {
     const previous = (data.image as { rating: number | null }).rating ?? null;
@@ -225,3 +214,18 @@
     </aside>
   </div>
 </div>
+
+{#if showPlaylistLightbox}
+  <ImageLightbox
+    images={[img]}
+    initialIndex={0}
+    onClose={() => (playlistLightboxDismissedFor = img.id)}
+    onRatingChange={(imageId, rating) => {
+      if (imageId === img.id) overrideRating = rating;
+    }}
+    autoAdvanceSeconds={playlist.slideshowDurationSeconds}
+    onAutoAdvance={() => playlist.reportContentEnded("image", img.id)}
+    onPreviousRequest={() => playlist.previous()}
+    onNextRequest={() => playlist.next()}
+  />
+{/if}

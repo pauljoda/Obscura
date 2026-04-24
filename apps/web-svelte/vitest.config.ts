@@ -20,6 +20,7 @@ export default defineConfig({
     alias: {
       $lib: resolve("./src/lib"),
       "$app/navigation": resolve("./src/test/mocks/app-navigation.ts"),
+      "$app/environment": resolve("./src/test/mocks/app-environment.ts"),
       "$env/static/public": resolve("./src/test/mocks/env-static-public.ts"),
     },
   },

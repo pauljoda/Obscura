@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Collection image playback now uses the lightbox slideshow flow.** Image items opened from a collection playlist now enter the full-screen lightbox automatically, advance after the collection's slideshow timer, and use the global previous / next queue controls instead of getting stuck on the same still image.
 - **Collection playback now survives a page refresh.** The global bottom playlist stores its active collection queue, shuffle / loop state, cursor, and slideshow timer in Obscura's database, so refreshing a video, image, gallery, or track no longer loses the session or lets the bottom bar overlap the page after hydration.
 - **Studios and Tags can now be edited from their Svelte detail pages.** Each page has an inline edit panel for name, description, aliases, favorite / NSFW flags, and tag auto-tag behavior; studios also support URL and parent-studio edits.
 - **Collections can play, shuffle, and manage their items again in the Svelte app.** Collection detail pages now start playlist playback from Play All / Shuffle All, switch between Mixed and By Type views, show Direct vs Scoped badges on item thumbnails, refresh dynamic rules, and remove selected direct items.
@@ -178,6 +179,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - SvelteKit `/identify` and `/scrape` are now fully functional — the React `BulkScrape` stack is ported in its entirety. Every tab — **Videos / Series / Galleries / Images / Albums / Tracks / Performers / Studios / Tags / pHashes** — runs through the same ported runners and surfaces the same per-row controls as the Next.js app (Accept, Reject, Dismiss, single-row Identify, per-field masking in the Review drawer, Accept-All, Auto-accept, Stop mid-run, Load more). The per-entity **Identify** button (`IdentifyButton.svelte`) is also ported for series/movie/episode detail-page entry points — it lists eligible plugins, runs the right action per entity kind (seriesCascade / movieByName / episodeByFragment / …), and opens the new `CascadeReviewDrawer`. First-pass cascade drawer covers the accept flow with field masks; the detailed per-season / per-episode editor surface remains a follow-up.
 
 ### Fixed
+
+- Collection playlist image items now open in the lightbox and auto-advance after the configured slideshow duration; lightbox previous / next controls move through the global collection queue when playlist playback is active.
 
 - Actor detail Known For cards now use the current `sourceType` / `sourceId` DTO fields for keys and links instead of stale `entityType` / `entityId` fields, preventing `each_key_volatile` crashes and `/videos/undefined` appearance links.
 - Actor detail appearance queries now pass the actor name expected by media filters instead of the actor UUID, so linked videos, Series, galleries, images, audio libraries, and tracks populate consistently.
