@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Tag as TagIcon, Star, Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
+    type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import TagThumbnail from "$lib/components/TagThumbnail.svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import { deleteTag, updateTag } from "$lib/api/entities";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -26,6 +29,8 @@
   const sortDir: SortDir = $derived(
     page.url.searchParams.get("order") === "asc" ? "asc" : "desc",
   );
+  let bulkBusy = $state(false);
+  let selectedTagIds = $state.raw(new Set<string>());
   const searchQuery = $derived(page.url.searchParams.get("search") ?? "");
   const favoriteFilter = $derived(page.url.searchParams.get("favorite"));
   const hasImageFilter = $derived(page.url.searchParams.get("hasImage"));
@@ -69,11 +74,12 @@
 
   const presetsApi = createServerPresets("tags:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "tags:view",
-    { cols: 5 },
+    { cols: 5, viewMode: "grid" },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
 
   onMount(() => {
     void presetsApi.load();
@@ -166,6 +172,51 @@
   const withoutContent = $derived(
     filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) === 0),
   );
+  const visibleTagIds = $derived(filtered.map((tag) => tag.id));
+  const allVisibleSelected = $derived(
+    visibleTagIds.length > 0 && visibleTagIds.every((id) => selectedTagIds.has(id)),
+  );
+
+  function toggleSelectedTag(id: string) {
+    const next = new Set(selectedTagIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedTagIds = next;
+  }
+
+  function selectAllVisibleTags() {
+    selectedTagIds = allVisibleSelected ? new Set() : new Set(visibleTagIds);
+  }
+
+  function clearSelectedTags() {
+    selectedTagIds = new Set();
+  }
+
+  async function markSelectedTagsNsfw() {
+    const ids = [...selectedTagIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updateTag(id, { isNsfw: true })));
+      clearSelectedTags();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedTags() {
+    const ids = [...selectedTagIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteTag(id)));
+      clearSelectedTags();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -186,13 +237,15 @@
 
   <FilterBar
     {sortOptions}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     {sortBy}
     {sortDir}
     onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? sortDir })}
     {searchQuery}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search tags..."
-    showViewToggle={false}
     filterSections={["rating"]}
     {activeFilters}
     {onAddFilter}
@@ -205,13 +258,15 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={{
-      value: viewPrefs.current.cols,
-      min: 2,
-      max: 8,
-      onChange: (n) => viewPrefs.update({ cols: n }),
-      label: "Tag card size",
-    }}
+    thumbSize={viewMode === "grid"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Tag card size",
+        }
+      : undefined}
   >
     {#snippet customFilterSections({ panelFilters })}
       <FilterSection title="Tag">
@@ -259,6 +314,20 @@
     {/snippet}
   </FilterBar>
 
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedTagIds.size}
+      visibleCount={visibleTagIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="tags"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisibleTags}
+      onClear={clearSelectedTags}
+      onMarkNsfw={markSelectedTagsNsfw}
+      onDelete={deleteSelectedTags}
+    />
+  {/if}
+
   {#if filtered.length === 0}
     <div class="surface-panel p-8 text-center">
       <TagIcon class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
@@ -270,6 +339,34 @@
           Tags you create from the Identify or Edit flows will appear here.
         </p>
       {/if}
+    </div>
+  {:else if viewMode === "list"}
+    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+      {#each filtered as tag (tag.id)}
+        <div class="flex items-center gap-3 px-3 py-2">
+          <Checkbox
+            checked={selectedTagIds.has(tag.id)}
+            onchange={() => toggleSelectedTag(tag.id)}
+          />
+          <a href={`/tags/${encodeURIComponent(tag.name)}`} class="w-16 shrink-0">
+            <TagThumbnail {tag} size="list" showLabel={false} />
+          </a>
+          <a
+            href={`/tags/${encodeURIComponent(tag.name)}`}
+            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          >
+            {tag.name}
+          </a>
+          <span class="text-[0.68rem] text-text-muted">
+            {(
+              (tag.videoCount ?? 0) +
+              (tag.imageCount ?? 0) +
+              (tag.galleryCount ?? 0) +
+              (tag.audioTrackCount ?? 0)
+            ).toLocaleString()} uses
+          </span>
+        </div>
+      {/each}
     </div>
   {:else}
     <div class="space-y-6">

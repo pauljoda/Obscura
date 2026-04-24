@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { FolderOpen, Plus } from "@lucide/svelte";
-  import { Badge, Button } from "@obscura/ui-svelte";
-  import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
+  import { Badge, Button, Checkbox } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import CollectionThumbnail from "$lib/components/CollectionThumbnail.svelte";
+  import { deleteCollection } from "$lib/api/media";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -38,11 +40,12 @@
 
   const presetsApi = createServerPresets("collections:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "collections:view",
-    { cols: 5 },
+    { cols: 5, viewMode: "grid" },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
 
   onMount(() => {
     void presetsApi.load();
@@ -93,6 +96,42 @@
   }
 
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  let bulkBusy = $state(false);
+  let selectedCollectionIds = $state.raw(new Set<string>());
+  const visibleCollectionIds = $derived(data.collections.map((collection) => collection.id));
+  const allVisibleSelected = $derived(
+    visibleCollectionIds.length > 0 &&
+      visibleCollectionIds.every((id) => selectedCollectionIds.has(id)),
+  );
+
+  function toggleSelectedCollection(id: string) {
+    const next = new Set(selectedCollectionIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedCollectionIds = next;
+  }
+
+  function selectAllVisibleCollections() {
+    selectedCollectionIds = allVisibleSelected ? new Set() : new Set(visibleCollectionIds);
+  }
+
+  function clearSelectedCollections() {
+    selectedCollectionIds = new Set();
+  }
+
+  async function deleteSelectedCollections() {
+    const ids = [...selectedCollectionIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteCollection(id)));
+      clearSelectedCollections();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
     if (p > 1) params.set("page", String(p));
@@ -127,13 +166,15 @@
 
   <FilterBar
     {sortOptions}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     sortBy={data.sort}
     sortDir={data.order}
     onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search collections..."
-    showViewToggle={false}
     {onClearFiltersAndSort}
     {canClearFiltersAndSort}
     presets={presetsApi.presets}
@@ -142,19 +183,59 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={{
-      value: viewPrefs.current.cols,
-      min: 2,
-      max: 8,
-      onChange: (n) => viewPrefs.update({ cols: n }),
-      label: "Collection card size",
-    }}
+    thumbSize={viewMode === "grid"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Collection card size",
+        }
+      : undefined}
   />
+
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedCollectionIds.size}
+      visibleCount={visibleCollectionIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="collections"
+      busy={bulkBusy}
+      canMarkNsfw={false}
+      onSelectAll={selectAllVisibleCollections}
+      onClear={clearSelectedCollections}
+      onDelete={deleteSelectedCollections}
+    />
+  {/if}
 
   {#if data.collections.length === 0}
     <div class="surface-panel p-8 text-center">
       <FolderOpen class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No collections yet.</p>
+    </div>
+  {:else if viewMode === "list"}
+    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+      {#each data.collections as c, i (c.id)}
+        <div class="flex items-center gap-3 px-3 py-2">
+          <Checkbox
+            checked={selectedCollectionIds.has(c.id)}
+            onchange={() => toggleSelectedCollection(c.id)}
+          />
+          <a href={`/collections/${c.id}`} class="w-16 shrink-0">
+            <CollectionThumbnail collection={c} gradientIndex={i} size="list" />
+          </a>
+          <a
+            href={`/collections/${c.id}`}
+            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          >
+            {c.name}
+          </a>
+          <span class="text-[0.68rem] text-text-muted">
+            {c.itemCount} item{c.itemCount === 1 ? "" : "s"}
+          </span>
+          <Badge>{c.mode}</Badge>
+        </div>
+      {/each}
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>

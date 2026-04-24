@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
+  import { Checkbox } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, {
     type AvailableItem,
     type FilterSectionKey,
@@ -19,8 +21,11 @@
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import {
+    deleteVideo,
     fetchSeries as fetchMoreSeriesItems,
     fetchVideoCards as fetchMoreVideoCards,
+    updateSeries,
+    updateVideo,
   } from "$lib/api/videos";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
@@ -93,6 +98,8 @@
   let loadedTotal = $state(listTotal);
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
+  let bulkBusy = $state(false);
+  let selectedItemIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
   const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
   const loadedStart = $derived((data.page - 1) * data.pageSize);
@@ -103,6 +110,24 @@
   );
   const nextPageNumber = $derived(
     Math.floor((loadedStart + loadedItemCount) / data.pageSize) + 1,
+  );
+  // svelte-ignore state_referenced_locally
+  let seriesViewMode = $state<ViewMode>(data.prefs.viewMode);
+  const currentViewMode = $derived(usesRootPrefs ? seriesViewMode : data.view);
+  const selectionKind = $derived(
+    currentViewMode === "list"
+      ? (usesRootPrefs ? "series" : showsVideos ? "videos" : null)
+      : null,
+  );
+  const visibleSelectionIds = $derived(
+    selectionKind === "series"
+      ? loadedSeries.map((series) => series.id)
+      : selectionKind === "videos"
+        ? loadedVideos.map((video) => video.id)
+        : [],
+  );
+  const allVisibleSelected = $derived(
+    visibleSelectionIds.length > 0 && visibleSelectionIds.every((id) => selectedItemIds.has(id)),
   );
 
   // svelte-ignore state_referenced_locally
@@ -145,6 +170,7 @@
 
   const canClearSeriesFiltersAndSort = $derived(
     !isDefaultSeriesListPrefs({
+      viewMode: seriesViewMode === "list" ? "list" : "grid",
       sortBy: seriesSortBy,
       sortDir: seriesSortDir,
       search: seriesSearchQuery,
@@ -167,6 +193,7 @@
 
   $effect(() => {
     const prefs: SeriesListPrefs = {
+      viewMode: seriesViewMode === "list" ? "list" : "grid",
       sortBy: seriesSortBy,
       sortDir: seriesSortDir,
       search: seriesSearchQuery,
@@ -183,6 +210,7 @@
     const searchOnly =
       prefs.sortBy === serverPrefs.sortBy &&
       prefs.sortDir === serverPrefs.sortDir &&
+      prefs.viewMode === serverPrefs.viewMode &&
       JSON.stringify(prefs.activeFilters) === JSON.stringify(serverPrefs.activeFilters) &&
       (prefs.activePresetId ?? null) === (serverPrefs.activePresetId ?? null) &&
       prefs.search !== serverPrefs.search;
@@ -219,6 +247,7 @@
     loadedTotal = listTotal;
     loadingMore = false;
     loadMoreError = null;
+    selectedItemIds = new Set();
   });
 
   $effect(() => {
@@ -283,12 +312,18 @@
   }
 
   function onViewModeChange(v: ViewMode) {
-    updateUrl({ view: v === "grid" ? null : v });
+    if (usesRootPrefs) {
+      seriesViewMode = v === "list" ? "list" : "grid";
+      seriesActivePresetId = null;
+    } else {
+      updateUrl({ view: v === "grid" ? null : v });
+    }
   }
 
   function onClearFiltersAndSort() {
     if (usesRootPrefs) {
       const d = defaultSeriesListPrefs();
+      seriesViewMode = d.viewMode;
       seriesSortBy = d.sortBy;
       seriesSortDir = d.sortDir;
       seriesSearchQuery = d.search;
@@ -404,6 +439,7 @@
         const response = await fetchMoreSeriesItems({
           ...seriesListPrefsToFetchParams(
             {
+              viewMode: seriesViewMode === "list" ? "list" : "grid",
               sortBy: seriesSortBy,
               sortDir: seriesSortDir,
               search: seriesSearchQuery,
@@ -445,6 +481,54 @@
       loadingMore = false;
     }
   }
+
+  function toggleSelectedItem(id: string) {
+    const next = new Set(selectedItemIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedItemIds = next;
+  }
+
+  function selectAllVisibleItems() {
+    selectedItemIds = allVisibleSelected ? new Set() : new Set(visibleSelectionIds);
+  }
+
+  function clearSelectedItems() {
+    selectedItemIds = new Set();
+  }
+
+  async function markSelectedItemsNsfw() {
+    const ids = [...selectedItemIds];
+    if (ids.length === 0 || !selectionKind || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      if (selectionKind === "series") {
+        await Promise.all(ids.map((id) => updateSeries(id, { isNsfw: true })));
+      } else {
+        await Promise.all(ids.map((id) => updateVideo(id, { isNsfw: true })));
+      }
+      clearSelectedItems();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedVideos() {
+    const ids = [...selectedItemIds];
+    if (ids.length === 0 || selectionKind !== "videos" || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteVideo(id)));
+      const idSet = new Set(ids);
+      loadedVideos = loadedVideos.filter((video) => !idSet.has(video.id));
+      loadedTotal = Math.max(0, loadedTotal - ids.length);
+      clearSelectedItems();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -465,7 +549,7 @@
   </div>
 
   <FilterBar
-    viewMode={data.view}
+    viewMode={currentViewMode}
     {onViewModeChange}
     sortBy={usesRootPrefs ? seriesSortBy : data.sort}
     sortDir={usesRootPrefs ? seriesSortDir : data.order}
@@ -473,7 +557,7 @@
     {onSortChange}
     searchQuery={usesRootPrefs ? seriesSearchQuery : data.search}
     {onSearchChange}
-    showViewToggle={showsVideos}
+    showViewToggle={usesRootPrefs || showsVideos}
     showSortControls={usesRootPrefs || showsVideos}
     searchPlaceholder={showsVideos
       ? "Search videos in this series..."
@@ -496,7 +580,7 @@
     defaultSortDir={usesRootPrefs ? defaultSeriesSortDir : undefined}
     filterSections={usesRootPrefs ? seriesFilterSections : undefined}
     showInteractiveFilter={!usesRootPrefs}
-    thumbSize={data.view !== "list"
+    thumbSize={currentViewMode !== "list"
       ? {
           value: viewPrefs.current.cols,
           min: 2,
@@ -506,6 +590,21 @@
         }
       : undefined}
   />
+
+  {#if selectionKind}
+    <BulkActionBar
+      selectedCount={selectedItemIds.size}
+      visibleCount={visibleSelectionIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel={selectionKind === "series" ? entityTerms.series.toLowerCase() : entityTerms.videos.toLowerCase()}
+      busy={bulkBusy}
+      canDelete={selectionKind === "videos"}
+      onSelectAll={selectAllVisibleItems}
+      onClear={clearSelectedItems}
+      onMarkNsfw={markSelectedItemsNsfw}
+      onDelete={selectionKind === "videos" ? deleteSelectedVideos : undefined}
+    />
+  {/if}
 
   {#if data.activeSeries}
     {@const series = data.activeSeries}
@@ -759,13 +858,15 @@
                     No {entityTerms.videos.toLowerCase()} in this {entityTerms.seriesSingular.toLowerCase()}.
                   </p>
                 </div>
-              {:else if data.view === "list"}
+              {:else if currentViewMode === "list"}
                 <div class="space-y-1.5">
                   {#each loadedVideos as video, index (video.id)}
                     <VideoCard
                       video={videoListItemToCardData(video, currentPath)}
                       variant="list"
                       index={index}
+                      selected={selectedItemIds.has(video.id)}
+                      onToggleSelect={toggleSelectedItem}
                     />
                   {/each}
                 </div>
@@ -801,11 +902,36 @@
         {#if loadedSeries.length > 0}
           <HierarchySection title={entityTerms.series}>
             {#snippet children()}
-              <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-                {#each loadedSeries as series (series.id)}
-                  <SeriesCard series={series} href={`/series?series=${series.id}`} compact />
-                {/each}
-              </div>
+              {#if currentViewMode === "list"}
+                <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+                  {#each loadedSeries as series (series.id)}
+                    <div class="flex items-center gap-3 px-3 py-2">
+                      <Checkbox
+                        checked={selectedItemIds.has(series.id)}
+                        onchange={() => toggleSelectedItem(series.id)}
+                      />
+                      <a
+                        href={`/series?series=${series.id}`}
+                        class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+                      >
+                        {series.displayTitle}
+                      </a>
+                      <span class="text-[0.68rem] text-text-muted">
+                        {formatVideoCount(series.visibleSfwVideoCount)}
+                      </span>
+                      {#if series.isNsfw}
+                        <span class="tag-chip tag-chip-default text-[0.6rem]">NSFW</span>
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
+                  {#each loadedSeries as series (series.id)}
+                    <SeriesCard series={series} href={`/series?series=${series.id}`} compact />
+                  {/each}
+                </div>
+              {/if}
             {/snippet}
           </HierarchySection>
         {:else}

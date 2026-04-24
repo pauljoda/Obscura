@@ -6,6 +6,7 @@
   import { Images, Layers } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "./NsfwBlur.svelte";
   import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
 
@@ -23,6 +24,7 @@
     gradientFallback?: string;
     showCount?: boolean;
     stacked?: boolean;
+    gradientIndex?: number;
   }
 
   let {
@@ -39,6 +41,7 @@
     gradientFallback,
     showCount = true,
     stacked = false,
+    gradientIndex,
   }: Props = $props();
 
   const coverSrc = $derived(toApiUrl(coverImagePath, updatedAt ?? undefined));
@@ -106,6 +109,18 @@
   const showStackedPreview = $derived(
     stacked && (size === "grid" || size === "hero") && previews.length >= 2,
   );
+
+  function fallbackGradient(titleValue: string) {
+    if (gradientFallback) return gradientFallback;
+    if (gradientIndex != null) {
+      return VIDEO_CARD_GRADIENTS[gradientIndex % VIDEO_CARD_GRADIENTS.length];
+    }
+    let hash = 0;
+    for (let i = 0; i < titleValue.length; i += 1) {
+      hash = (hash * 31 + titleValue.charCodeAt(i)) >>> 0;
+    }
+    return VIDEO_CARD_GRADIENTS[hash % VIDEO_CARD_GRADIENTS.length];
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -142,7 +157,7 @@
     class={cn(
       "relative overflow-hidden bg-surface-1",
       aspect,
-      !coverSrc && previews.length === 0 && gradientFallback,
+      !coverSrc && previews.length === 0 && fallbackGradient(title),
     )}
     onmouseenter={startHover}
     onmouseleave={endHover}
@@ -166,7 +181,7 @@
           class="absolute inset-0 h-full w-full object-cover"
         />
       {:else}
-        <div class="flex h-full w-full items-center justify-center text-text-disabled">
+        <div class="flex h-full w-full items-center justify-center text-white/25">
           <Layers class={iconSize} />
         </div>
       {/if}

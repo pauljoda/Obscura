@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Image as ImageIcon } from "@lucide/svelte";
-  import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
+  import { Checkbox } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import { deleteImage, updateImage } from "$lib/api/media";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
@@ -75,14 +78,22 @@
 
   const presetsApi = createServerPresets("images:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "images:view",
     {
       cols: 8,
+      viewMode: "grid",
     },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
   let activePresetId = $state<string | null>(null);
+  let bulkBusy = $state(false);
+  let selectedImageIds = $state.raw(new Set<string>());
+  const visibleImageIds = $derived(data.images.map((image) => image.id));
+  const allVisibleSelected = $derived(
+    visibleImageIds.length > 0 && visibleImageIds.every((id) => selectedImageIds.has(id)),
+  );
 
   onMount(() => {
     void presetsApi.load();
@@ -155,6 +166,47 @@
     presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
   }
 
+  function toggleSelectedImage(id: string) {
+    const next = new Set(selectedImageIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedImageIds = next;
+  }
+
+  function selectAllVisibleImages() {
+    selectedImageIds = allVisibleSelected ? new Set() : new Set(visibleImageIds);
+  }
+
+  function clearSelectedImages() {
+    selectedImageIds = new Set();
+  }
+
+  async function markSelectedImagesNsfw() {
+    const ids = [...selectedImageIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updateImage(id, { isNsfw: true })));
+      clearSelectedImages();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedImages() {
+    const ids = [...selectedImageIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteImage(id)));
+      clearSelectedImages();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
   function updateUrl(patch: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(page.url.searchParams);
     for (const [k, v] of Object.entries(patch)) {
@@ -194,6 +246,9 @@
 
   <FilterBar
     {sortOptions}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     sortBy={data.sort}
     sortDir={data.order}
     onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
@@ -201,7 +256,6 @@
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search images..."
     filterSections={["rating", "date"]}
-    showViewToggle={false}
     {activeFilters}
     {onAddFilter}
     {onRemoveFilter}
@@ -213,19 +267,70 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={{
-      value: viewPrefs.current.cols,
-      min: 3,
-      max: 14,
-      onChange: (n) => viewPrefs.update({ cols: n }),
-      label: "Thumbnail size",
-    }}
+    thumbSize={viewMode === "grid"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 3,
+          max: 14,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Thumbnail size",
+        }
+      : undefined}
   />
+
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedImageIds.size}
+      visibleCount={visibleImageIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="images"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisibleImages}
+      onClear={clearSelectedImages}
+      onMarkNsfw={markSelectedImagesNsfw}
+      onDelete={deleteSelectedImages}
+    />
+  {/if}
 
   {#if data.images.length === 0}
     <div class="surface-panel p-8 text-center">
       <ImageIcon class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No images match.</p>
+    </div>
+  {:else if viewMode === "list"}
+    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+      {#each data.images as img (img.id)}
+        <div class="flex items-center gap-3 px-3 py-2">
+          <Checkbox
+            checked={selectedImageIds.has(img.id)}
+            onchange={() => toggleSelectedImage(img.id)}
+          />
+          <a href={`/images/${img.id}`} class="w-14 shrink-0">
+            <ImageThumbnail
+              title={img.title}
+              thumbnailPath={img.thumbnailPath}
+              previewPath={img.previewPath}
+              isNsfw={img.isNsfw}
+              isVideo={img.isVideo}
+              width={img.width}
+              height={img.height}
+              size="list"
+              showChips={false}
+            />
+          </a>
+          <a
+            href={`/images/${img.id}`}
+            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          >
+            {img.title}
+          </a>
+          {#if img.width && img.height}
+            <span class="hidden text-[0.68rem] text-text-muted sm:inline">
+              {img.width}x{img.height}
+            </span>
+          {/if}
+        </div>
+      {/each}
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>

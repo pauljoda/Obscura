@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Layers } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
+  import { Badge, Checkbox } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import { deleteGallery, updateGallery } from "$lib/api/media";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -87,14 +89,22 @@
 
   const presetsApi = createServerPresets("galleries:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "galleries:view",
     {
       cols: 4,
+      viewMode: "grid",
     },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
   let activePresetId = $state<string | null>(null);
+  let bulkBusy = $state(false);
+  let selectedGalleryIds = $state.raw(new Set<string>());
+  const visibleGalleryIds = $derived(data.galleries.map((gallery) => gallery.id));
+  const allVisibleSelected = $derived(
+    visibleGalleryIds.length > 0 && visibleGalleryIds.every((id) => selectedGalleryIds.has(id)),
+  );
 
   onMount(() => {
     void presetsApi.load();
@@ -167,6 +177,47 @@
     presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
   }
 
+  function toggleSelectedGallery(id: string) {
+    const next = new Set(selectedGalleryIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedGalleryIds = next;
+  }
+
+  function selectAllVisibleGalleries() {
+    selectedGalleryIds = allVisibleSelected ? new Set() : new Set(visibleGalleryIds);
+  }
+
+  function clearSelectedGalleries() {
+    selectedGalleryIds = new Set();
+  }
+
+  async function markSelectedGalleriesNsfw() {
+    const ids = [...selectedGalleryIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updateGallery(id, { isNsfw: true })));
+      clearSelectedGalleries();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedGalleries() {
+    const ids = [...selectedGalleryIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteGallery(id)));
+      clearSelectedGalleries();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
   const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
@@ -194,8 +245,9 @@
   </div>
 
   <FilterBar
-    viewMode={data.view}
-    onViewModeChange={(v: ViewMode) => updateUrl({ view: v === "grid" ? null : v })}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     sortBy={data.sort}
     sortDir={data.order}
     {sortOptions}
@@ -215,7 +267,7 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={data.view !== "list"
+    thumbSize={viewMode === "grid"
       ? {
           value: viewPrefs.current.cols,
           min: 2,
@@ -226,18 +278,40 @@
       : undefined}
   />
 
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedGalleryIds.size}
+      visibleCount={visibleGalleryIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="galleries"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisibleGalleries}
+      onClear={clearSelectedGalleries}
+      onMarkNsfw={markSelectedGalleriesNsfw}
+      onDelete={deleteSelectedGalleries}
+    />
+  {/if}
+
   {#if data.galleries.length === 0}
     <div class="surface-panel p-8 text-center">
       <Layers class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No galleries match.</p>
     </div>
-  {:else if data.view === "list"}
+  {:else if viewMode === "list"}
     <ul class="surface-panel divide-y divide-border-subtle overflow-hidden">
       {#each data.galleries as g, i (g.id)}
-        <li>
+        <li class="relative">
+          <button
+            type="button"
+            class="absolute left-2 top-1/2 z-10 -translate-y-1/2 glass-2 border border-border-subtle p-1"
+            onclick={() => toggleSelectedGallery(g.id)}
+            aria-label={`Select ${g.title}`}
+          >
+            <Checkbox checked={selectedGalleryIds.has(g.id)} />
+          </button>
           <a
             href={`/galleries/${g.id}`}
-            class="flex items-center gap-3 px-3 py-2 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
+            class="flex items-center gap-3 py-2 pl-11 pr-3 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
           >
             <div class="w-20 shrink-0">
               <GalleryThumbnail

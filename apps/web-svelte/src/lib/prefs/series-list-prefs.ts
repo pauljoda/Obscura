@@ -21,6 +21,7 @@ export interface SeriesListPrefsActiveFilter {
 }
 
 export interface SeriesListPrefs {
+  viewMode: "grid" | "list";
   sortBy: SeriesSortOption;
   sortDir: SortDir;
   search: string;
@@ -77,6 +78,7 @@ function parseActiveFilters(raw: unknown): SeriesListPrefsActiveFilter[] | null 
 
 export function defaultSeriesListPrefs(): SeriesListPrefs {
   return {
+    viewMode: "grid",
     sortBy: "recent",
     sortDir: "desc",
     search: "",
@@ -92,12 +94,14 @@ export function validateSeriesListPrefs(raw: unknown): SeriesListPrefs | null {
   if (!isRecord(raw)) return null;
   const sortBy = raw.sortBy;
   const sortDir = raw.sortDir;
+  const viewMode = raw.viewMode;
   const search = raw.search;
   const activeFilters = parseActiveFilters(raw.activeFilters);
 
   if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SeriesSortOption)) {
     return null;
   }
+  const parsedViewMode = viewMode === "list" ? "list" : "grid";
   if (sortDir !== "asc" && sortDir !== "desc") return null;
   if (typeof search !== "string" || search.length > 500) return null;
   if (activeFilters === null) return null;
@@ -106,6 +110,7 @@ export function validateSeriesListPrefs(raw: unknown): SeriesListPrefs | null {
     typeof raw.activePresetId === "string" ? raw.activePresetId : undefined;
 
   return {
+    viewMode: parsedViewMode,
     sortBy: sortBy as SeriesSortOption,
     sortDir,
     search,

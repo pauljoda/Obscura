@@ -1,16 +1,22 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Users, Star, Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
+    type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn } from "@obscura/ui-svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import { fetchPerformers as fetchMorePerformers } from "$lib/api/entities";
+  import {
+    deletePerformer,
+    fetchPerformers as fetchMorePerformers,
+    updatePerformer,
+  } from "$lib/api/entities";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
@@ -109,15 +115,18 @@
   let loadedTotal = $state(data.total);
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
+  let bulkBusy = $state(false);
+  let selectedPerformerIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
 
   const presetsApi = createServerPresets("performers:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "performers:view",
-    { cols: 5 },
+    { cols: 5, viewMode: "grid" },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
 
   onMount(() => {
     void presetsApi.load();
@@ -211,6 +220,11 @@
   const nextPageNumber = $derived(
     Math.floor((loadedStart + loadedPerformers.length) / data.pageSize) + 1,
   );
+  const visiblePerformerIds = $derived(loadedPerformers.map((performer) => performer.id));
+  const allVisibleSelected = $derived(
+    visiblePerformerIds.length > 0 &&
+      visiblePerformerIds.every((id) => selectedPerformerIds.has(id)),
+  );
 
   $effect(() => {
     const nextSignature = `${data.page}:${data.total}:${data.performers.map((p) => p.id).join("|")}`;
@@ -220,6 +234,11 @@
     loadedTotal = data.total;
     loadingMore = false;
     loadMoreError = null;
+    selectedPerformerIds = new Set(
+      [...selectedPerformerIds].filter((id) =>
+        data.performers.some((performer) => performer.id === id),
+      ),
+    );
   });
 
   function pageHref(p: number): string {
@@ -267,6 +286,50 @@
       loadingMore = false;
     }
   }
+
+  function toggleSelectedPerformer(id: string) {
+    const next = new Set(selectedPerformerIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedPerformerIds = next;
+  }
+
+  function selectAllVisiblePerformers() {
+    selectedPerformerIds = allVisibleSelected ? new Set() : new Set(visiblePerformerIds);
+  }
+
+  function clearSelectedPerformers() {
+    selectedPerformerIds = new Set();
+  }
+
+  async function markSelectedPerformersNsfw() {
+    const ids = [...selectedPerformerIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updatePerformer(id, { isNsfw: true })));
+      clearSelectedPerformers();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedPerformers() {
+    const ids = [...selectedPerformerIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deletePerformer(id)));
+      const idSet = new Set(ids);
+      loadedPerformers = loadedPerformers.filter((performer) => !idSet.has(performer.id));
+      loadedTotal = Math.max(0, loadedTotal - ids.length);
+      clearSelectedPerformers();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -287,13 +350,15 @@
 
   <FilterBar
     {sortOptions}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     sortBy={data.sort}
     sortDir={data.order}
     onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? data.order })}
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search actors..."
-    showViewToggle={false}
     filterSections={["rating"]}
     {activeFilters}
     {onAddFilter}
@@ -306,13 +371,15 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={{
-      value: viewPrefs.current.cols,
-      min: 3,
-      max: 8,
-      onChange: (n) => viewPrefs.update({ cols: n }),
-      label: "Actor card size",
-    }}
+    thumbSize={viewMode === "grid"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 3,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Actor card size",
+        }
+      : undefined}
   >
     {#snippet customFilterSections({ panelFilters })}
       <FilterSection title="Actor">
@@ -406,10 +473,53 @@
     {/snippet}
   </FilterBar>
 
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedPerformerIds.size}
+      visibleCount={visiblePerformerIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="actors"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisiblePerformers}
+      onClear={clearSelectedPerformers}
+      onMarkNsfw={markSelectedPerformersNsfw}
+      onDelete={deleteSelectedPerformers}
+    />
+  {/if}
+
   {#if loadedPerformers.length === 0}
     <div class="surface-panel p-8 text-center">
       <Users class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No actors match those filters.</p>
+    </div>
+  {:else if viewMode === "list"}
+    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+      {#each loadedPerformers as p, i (p.id)}
+        {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
+        <div class="flex items-center gap-3 px-3 py-2">
+          <Checkbox
+            checked={selectedPerformerIds.has(p.id)}
+            onchange={() => toggleSelectedPerformer(p.id)}
+          />
+          <a href={`/performers/${p.id}`} class="w-12 shrink-0">
+            <PerformerThumbnail
+              performer={p}
+              gradientFallback={gradient}
+              showChips={false}
+              compact
+            />
+          </a>
+          <a
+            href={`/performers/${p.id}`}
+            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          >
+            {p.name}
+          </a>
+          {#if p.country}
+            <span class="hidden text-[0.68rem] text-text-muted sm:inline">{p.country}</span>
+          {/if}
+        </div>
+      {/each}
     </div>
   {:else if data.sort === "name"}
     <!-- Alphabetical grouping when name sort is active -->

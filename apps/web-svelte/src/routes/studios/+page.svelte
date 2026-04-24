@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Building2, Star } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
+  import { Badge, Checkbox } from "@obscura/ui-svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
+    type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
+  import { deleteStudio, updateStudio } from "$lib/api/entities";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -26,6 +29,8 @@
   const sortDir: SortDir = $derived(
     page.url.searchParams.get("order") === "desc" ? "desc" : "asc",
   );
+  let bulkBusy = $state(false);
+  let selectedStudioIds = $state.raw(new Set<string>());
   const searchQuery = $derived(page.url.searchParams.get("search") ?? "");
   const favoriteFilter = $derived(page.url.searchParams.get("favorite"));
   const hasImageFilter = $derived(page.url.searchParams.get("hasImage"));
@@ -65,11 +70,12 @@
 
   const presetsApi = createServerPresets("studios:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "studios:view",
-    { cols: 4 },
+    { cols: 4, viewMode: "grid" },
     data.viewPrefs,
   );
+  const viewMode = $derived(viewPrefs.current.viewMode);
 
   onMount(() => {
     void presetsApi.load();
@@ -148,6 +154,51 @@
     });
     return list;
   });
+  const visibleStudioIds = $derived(filtered.map((studio) => studio.id));
+  const allVisibleSelected = $derived(
+    visibleStudioIds.length > 0 && visibleStudioIds.every((id) => selectedStudioIds.has(id)),
+  );
+
+  function toggleSelectedStudio(id: string) {
+    const next = new Set(selectedStudioIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedStudioIds = next;
+  }
+
+  function selectAllVisibleStudios() {
+    selectedStudioIds = allVisibleSelected ? new Set() : new Set(visibleStudioIds);
+  }
+
+  function clearSelectedStudios() {
+    selectedStudioIds = new Set();
+  }
+
+  async function markSelectedStudiosNsfw() {
+    const ids = [...selectedStudioIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updateStudio(id, { isNsfw: true })));
+      clearSelectedStudios();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedStudios() {
+    const ids = [...selectedStudioIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteStudio(id)));
+      clearSelectedStudios();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -170,13 +221,15 @@
 
   <FilterBar
     {sortOptions}
+    {viewMode}
+    onViewModeChange={(v: ViewMode) =>
+      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     {sortBy}
     {sortDir}
     onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? sortDir })}
     {searchQuery}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search studios..."
-    showViewToggle={false}
     {activeFilters}
     {onAddFilter}
     {onRemoveFilter}
@@ -188,13 +241,15 @@
     onSavePreset={savePreset}
     onOverwritePreset={overwritePreset}
     onDeletePreset={deletePreset}
-    thumbSize={{
-      value: viewPrefs.current.cols,
-      min: 2,
-      max: 6,
-      onChange: (n) => viewPrefs.update({ cols: n }),
-      label: "Studio card size",
-    }}
+    thumbSize={viewMode === "grid"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 6,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Studio card size",
+        }
+      : undefined}
   >
     {#snippet customFilterSections({ panelFilters })}
       <FilterSection title="Studio">
@@ -242,6 +297,20 @@
     {/snippet}
   </FilterBar>
 
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedStudioIds.size}
+      visibleCount={visibleStudioIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="studios"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisibleStudios}
+      onClear={clearSelectedStudios}
+      onMarkNsfw={markSelectedStudiosNsfw}
+      onDelete={deleteSelectedStudios}
+    />
+  {/if}
+
   {#if filtered.length === 0}
     <div class="surface-panel p-8 text-center">
       <Building2 class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
@@ -249,14 +318,39 @@
         {searchQuery ? "No studios match that search." : "No studios yet."}
       </p>
     </div>
+  {:else if viewMode === "list"}
+    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
+      {#each filtered as studio, i (studio.id)}
+        <div class="flex items-center gap-3 px-3 py-2">
+          <Checkbox
+            checked={selectedStudioIds.has(studio.id)}
+            onchange={() => toggleSelectedStudio(studio.id)}
+          />
+          <a href={`/studios/${studio.id}`} class="w-16 shrink-0">
+            <StudioThumbnail {studio} gradientIndex={i} size="list" showChips={false} />
+          </a>
+          <a
+            href={`/studios/${studio.id}`}
+            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          >
+            {studio.name}
+          </a>
+          {#if studio.isNsfw}
+            <Badge variant="warning">
+              {#snippet children()}NSFW{/snippet}
+            </Badge>
+          {/if}
+        </div>
+      {/each}
+    </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each filtered as studio (studio.id)}
+      {#each filtered as studio, i (studio.id)}
         <a
           href={`/studios/${studio.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <StudioThumbnail {studio} />
+          <StudioThumbnail {studio} gradientIndex={i} />
           <div class="p-2.5 space-y-1.5">
             <h4 class="truncate text-body font-medium text-text-primary">{studio.name}</h4>
             <div class="flex flex-wrap items-center gap-1">

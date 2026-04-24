@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Main library pages now support saved grid/list views with bulk actions in list mode.** Actors, Studios, Tags, Galleries, Images, Audio, Collections, Videos, and Series keep their clean grid-first browsing by default, but list mode now exposes a second action row for selecting visible entries and applying bulk actions such as Mark NSFW or Delete where supported.
+
+- **Identify's chooser and tab bar now stay lightweight and stable.** The tab counts are gone, the home chooser is available from a home icon in the tab bar, pHash tools are hidden unless NSFW mode is explicitly shown, and selecting a tab no longer causes the landing choices/tab alignment to jump around.
+
+- **More missing artwork now falls back to Obscura gradients.** Studios without icons and sub-galleries without cover images now render through the same gradient fallback treatment as the rest of the library instead of showing broken or flat empty thumbnail panels.
+
 - **Large library pages load in smaller bites again.** Videos, Series, and Actors now append more cards as you scroll instead of forcing page-by-page navigation, Series without artwork use the same gradient fallback as the rest of the library, and Actor cards no longer calculate or display cross-media appearance counts just to draw the grid.
 
 - **Identify now opens to a lightweight chooser instead of the heavy Videos queue.** Each Identify area loads only when you enter it; the Videos area uses slim card rows, Load More appends correctly, and running Identify All on Videos first pulls the remaining slim rows so large libraries can still be processed intentionally.
@@ -132,6 +138,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `BulkActionBar.svelte` — shared list-mode bulk action row used by the main library pages for visible-item selection, Mark NSFW, Delete, and Clear actions.
 - `InfiniteLoadTrigger.svelte` — shared IntersectionObserver load trigger used by Videos, Series, and Actors to append the next page while keeping a real Load More link/button fallback.
 - `StudioThumbnail.svelte` — shared studio thumbnail with size variants, favorite star, NSFW handling, and optional content-count chips. Used on `/studios`, the homepage Studios row, `/search` (studio cards), the command palette, and the galleries section of `/studios/[id]`.
 - `TagThumbnail.svelte` — shared tag thumbnail exposing the existing name-gradient + optional cover image treatment (with a `gradientFor()` helper exported from the module). Used on `/tags`, the hero of `/tags/[id]`, `/search` tag results, and the command palette. Galleries and images on a tag detail page now delegate to `GalleryThumbnail` / `ImageThumbnail`.
@@ -217,6 +224,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Studios and sub-galleries without artwork now render deterministic gradient thumbnail fallbacks instead of broken/flat empty thumbnail panels.
+- Identify's tab row no longer shifts when changing areas, pHash tools are hidden in SFW mode, and the tab bar now includes a home action to return to the lightweight chooser.
 - Videos, Series, and Actors now append additional pages from the current filters as you scroll; the visible Load More/Next link remains available as a non-JavaScript fallback.
 - Identify's Videos Load More action now appends slim video rows from the correct offset, and Identify All on Videos loads the remaining slim rows before starting the run.
 - Series thumbnails without cover or preview artwork now render Obscura's gradient thumbnail fallback instead of a flat empty icon panel.
@@ -279,6 +288,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Actors, Studios, Tags, Galleries, Images, Audio, Collections, Videos, and Series now keep bulk selection and bulk actions in list mode only; grid mode remains the default browsing view. Grid/list choices on the grid-first entity pages are saved through the existing `ui_prefs` view preference records.
 - `/identify` now starts on a media-type chooser and lazy-loads each tab's rows only after you open that tab. The Videos tab uses the slimmer card payload for identification queues, and the Actor browser requests count-free performer rows by default so large libraries avoid unnecessary appearance-count joins.
 - **Breaking schema change.** The `library_roots.scan_movies` and `library_roots.scan_series` columns are gone, replaced by a single `library_roots.scan_videos` column (drizzle migration `0024_collapse_video_scan_toggle`). Existing rows are backfilled as `scan_movies OR scan_series`. The `scanMovies` / `scanSeries` fields on `CreateLibraryRootBody` / `UpdateLibraryRootBody` and the `videoMovieVisibleSql` / `videoSeriesVisibleSql` overloads were collapsed to a single `scanVideos` flag, the classifier no longer takes per-kind toggles, and `summarizeActiveLibraryRoots` returns one `videoRootIds` array instead of split `movie`/`series` arrays.
 - Library scans now only enqueue technical metadata, fingerprint, and preview/trickplay jobs when the corresponding generation settings are enabled.

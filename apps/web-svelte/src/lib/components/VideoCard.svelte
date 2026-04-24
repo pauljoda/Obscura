@@ -204,7 +204,25 @@
   <!-- grid (default) -->
   <NsfwBlur isNsfw={video.isNsfw ?? false} class="h-full">
     <a href={video.href} class="block h-full">
-      <article class="surface-card-sharp media-card-shell group h-full overflow-hidden">
+      <article class="surface-card-sharp media-card-shell group relative h-full overflow-hidden">
+        {#if onToggleSelect}
+          <div
+            onclick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            role="presentation"
+            class="absolute left-2 top-2 z-20 glass-2 border border-border-subtle p-1 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+          >
+            <Checkbox
+              checked={selected ?? false}
+              onchange={(e) => {
+                e.preventDefault();
+                onToggleSelect?.(video.id);
+              }}
+            />
+          </div>
+        {/if}
         <VideoThumbnail
           {video}
           {imageLoading}

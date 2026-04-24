@@ -7,6 +7,7 @@
   import type { Component } from "svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "./NsfwBlur.svelte";
   import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
 
@@ -28,6 +29,7 @@
     loading?: "eager" | "lazy";
     class?: string;
     showChips?: boolean;
+    gradientIndex?: number;
   }
 
   let {
@@ -37,6 +39,7 @@
     loading = "lazy",
     class: className,
     showChips = true,
+    gradientIndex,
   }: Props = $props();
 
   const imageSrc = $derived(toApiUrl(studio.imagePath) ?? studio.imageUrl ?? null);
@@ -90,6 +93,17 @@
   });
 
   const showChipRow = $derived(showChips && (size === "grid" || size === "hero"));
+
+  function fallbackGradient(name: string) {
+    if (gradientIndex != null) {
+      return VIDEO_CARD_GRADIENTS[gradientIndex % VIDEO_CARD_GRADIENTS.length];
+    }
+    let hash = 0;
+    for (let i = 0; i < name.length; i += 1) {
+      hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    }
+    return VIDEO_CARD_GRADIENTS[hash % VIDEO_CARD_GRADIENTS.length];
+  }
 </script>
 
 <div class={cn("relative overflow-hidden bg-surface-1", aspect, className)}>
@@ -103,7 +117,12 @@
         class="absolute inset-0 h-full w-full object-cover"
       />
     {:else}
-      <div class="flex h-full w-full items-center justify-center text-text-disabled">
+      <div
+        class={cn(
+          fallbackGradient(studio.name),
+          "flex h-full w-full items-center justify-center text-white/25",
+        )}
+      >
         <Building2 class={iconSize} />
       </div>
     {/if}

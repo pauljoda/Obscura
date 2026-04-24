@@ -4,6 +4,7 @@
     Check,
     Loader2,
     ScanSearch,
+    Home,
     Play,
     Square,
     SkipForward,
@@ -177,6 +178,12 @@
     tab = nextTab;
     selectedScraperId = "";
     void loadTabData(nextTab);
+  }
+
+  function goHome() {
+    if (running) return;
+    tab = "home";
+    selectedScraperId = "";
   }
 
   function activeTabLabel() {
@@ -539,6 +546,12 @@
   ]);
   const totalProviderCount = $derived(providersForTab.length);
 
+  $effect(() => {
+    if (tab === "phashes" && nsfw.mode !== "show") {
+      tab = "home";
+    }
+  });
+
   function pluginListForSeek() {
     if (selectedScraperId.startsWith("plugin:")) {
       const realId = selectedScraperId.replace(/^plugin:/, "");
@@ -684,18 +697,19 @@
     key: Tab;
     label: string;
     icon: typeof Film;
-    count: number | null;
   }> = $derived([
-    { key: "videos", label: entityTerms.videos, icon: Film, count: videoRows.length },
-    { key: "video-series", label: entityTerms.series, icon: FolderOpen, count: seriesRows.length },
-    { key: "galleries", label: "Galleries", icon: Images, count: galleryRows.length },
-    { key: "images", label: "Images", icon: Image, count: imageRows.length },
-    { key: "audio-libraries", label: "Albums", icon: Library, count: audioLibraryRows.length },
-    { key: "audio-tracks", label: "Tracks", icon: Music, count: audioTrackRows.length },
-    { key: "performers", label: entityTerms.performers, icon: Users, count: perfRows.length },
-    { key: "studios", label: "Studios", icon: Building2, count: studioRows.length },
-    { key: "tags", label: "Tags", icon: Tag, count: tagRows.length },
-    { key: "phashes", label: "pHashes", icon: Fingerprint, count: null },
+    { key: "videos", label: entityTerms.videos, icon: Film },
+    { key: "video-series", label: entityTerms.series, icon: FolderOpen },
+    { key: "galleries", label: "Galleries", icon: Images },
+    { key: "images", label: "Images", icon: Image },
+    { key: "audio-libraries", label: "Albums", icon: Library },
+    { key: "audio-tracks", label: "Tracks", icon: Music },
+    { key: "performers", label: entityTerms.performers, icon: Users },
+    { key: "studios", label: "Studios", icon: Building2 },
+    { key: "tags", label: "Tags", icon: Tag },
+    ...(nsfw.mode === "show"
+      ? [{ key: "phashes" as Tab, label: "pHashes", icon: Fingerprint }]
+      : []),
   ]);
 </script>
 
@@ -713,31 +727,37 @@
     </div>
 
     <div class="flex items-center gap-1 overflow-x-auto scrollbar-hidden">
+      <button
+        type="button"
+        title="Identify home"
+        aria-label="Identify home"
+        onclick={goHome}
+        class={cn(
+          "flex h-9 w-9 flex-shrink-0 items-center justify-center text-sm font-medium transition-all duration-fast",
+          tab === "home"
+            ? "bg-accent-950 text-text-accent border border-border-accent shadow-[var(--shadow-glow-accent)]"
+            : "text-text-muted border border-transparent hover:text-text-secondary hover:bg-surface-3/40",
+          running && "opacity-40 cursor-not-allowed",
+        )}
+      >
+        <Home class="h-3.5 w-3.5" />
+      </button>
       {#each TAB_META as meta (meta.key)}
-        {@const isHiddenEmpty =
-          ["video-series", "galleries", "images", "audio-libraries", "audio-tracks"].includes(
-            meta.key,
-          ) && meta.count === 0 && tab !== meta.key && tab !== "home"}
-        {#if !isHiddenEmpty}
-          {@const Icon = meta.icon}
-          <button
-            type="button"
-            onclick={() => switchTab(meta.key)}
-            class={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-fast",
-              tab === meta.key
-                ? "bg-accent-950 text-text-accent border border-border-accent shadow-[var(--shadow-glow-accent)]"
-                : "text-text-muted border border-transparent hover:text-text-secondary hover:bg-surface-3/40",
-              running && tab !== meta.key && "opacity-40 cursor-not-allowed",
-            )}
-          >
-            <Icon class="h-3.5 w-3.5" />
-            {meta.label}
-            {#if meta.count !== null}
-              <span class="text-mono-sm text-text-disabled ml-1">{meta.count}</span>
-            {/if}
-          </button>
-        {/if}
+        {@const Icon = meta.icon}
+        <button
+          type="button"
+          onclick={() => switchTab(meta.key)}
+          class={cn(
+            "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-fast",
+            tab === meta.key
+              ? "bg-accent-950 text-text-accent border border-border-accent shadow-[var(--shadow-glow-accent)]"
+              : "text-text-muted border border-transparent hover:text-text-secondary hover:bg-surface-3/40",
+            running && tab !== meta.key && "opacity-40 cursor-not-allowed",
+          )}
+        >
+          <Icon class="h-3.5 w-3.5" />
+          {meta.label}
+        </button>
       {/each}
     </div>
 

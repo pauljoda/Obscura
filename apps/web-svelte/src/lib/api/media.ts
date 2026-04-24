@@ -295,6 +295,10 @@ export async function updateAudioLibrary(
   });
 }
 
+export async function deleteAudioLibrary(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/audio-libraries/${id}`, { method: "DELETE" });
+}
+
 export async function uploadAudioLibraryCover(
   id: string,
   file: File,

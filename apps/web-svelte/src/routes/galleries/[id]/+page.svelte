@@ -155,7 +155,7 @@
         <HierarchySection title="Sub-galleries">
           {#snippet children()}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {#each visibleChildGalleries as child (child.id)}
+              {#each visibleChildGalleries as child, i (child.id)}
                 <a
                   href={`/galleries/${child.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
@@ -167,6 +167,7 @@
                     imageCount={child.imageCount}
                     isNsfw={child.isNsfw}
                     size="hero"
+                    gradientIndex={i}
                   />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{child.title}</h3>

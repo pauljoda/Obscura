@@ -1,14 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { Film } from "@lucide/svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, {
     type AvailableItem,
   } from "$lib/components/FilterBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
-  import { fetchVideoCards as fetchMoreVideoCards } from "$lib/api/videos";
+  import {
+    deleteVideo,
+    fetchVideoCards as fetchMoreVideoCards,
+    updateVideo,
+  } from "$lib/api/videos";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     EXCLUSIVE_FILTER_TYPES,
@@ -74,6 +79,8 @@
   let loadedTotal = $state(data.total);
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
+  let bulkBusy = $state(false);
+  let selectedVideoIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
 
   // Mirror the server-side prefs snapshot in a derived view so the
@@ -254,6 +261,10 @@
   const nextPageNumber = $derived(
     Math.floor((loadedStart + loadedVideos.length) / data.pageSize) + 1,
   );
+  const visibleVideoIds = $derived(loadedVideos.map((video) => video.id));
+  const allVisibleSelected = $derived(
+    visibleVideoIds.length > 0 && visibleVideoIds.every((id) => selectedVideoIds.has(id)),
+  );
 
   $effect(() => {
     const nextSignature = `${data.page}:${data.total}:${data.videos.map((v) => v.id).join("|")}`;
@@ -263,6 +274,9 @@
     loadedTotal = data.total;
     loadingMore = false;
     loadMoreError = null;
+    selectedVideoIds = new Set(
+      [...selectedVideoIds].filter((id) => data.videos.some((video) => video.id === id)),
+    );
   });
 
   const canClearFiltersAndSort = $derived(
@@ -365,6 +379,50 @@
       loadingMore = false;
     }
   }
+
+  function toggleSelectedVideo(id: string) {
+    const next = new Set(selectedVideoIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selectedVideoIds = next;
+  }
+
+  function selectAllVisibleVideos() {
+    selectedVideoIds = allVisibleSelected ? new Set() : new Set(visibleVideoIds);
+  }
+
+  function clearSelectedVideos() {
+    selectedVideoIds = new Set();
+  }
+
+  async function markSelectedVideosNsfw() {
+    const ids = [...selectedVideoIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => updateVideo(id, { isNsfw: true })));
+      clearSelectedVideos();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function deleteSelectedVideos() {
+    const ids = [...selectedVideoIds];
+    if (ids.length === 0 || bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(ids.map((id) => deleteVideo(id)));
+      const idSet = new Set(ids);
+      loadedVideos = loadedVideos.filter((video) => !idSet.has(video.id));
+      loadedTotal = Math.max(0, loadedTotal - ids.length);
+      clearSelectedVideos();
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -424,6 +482,20 @@
       : undefined}
   />
 
+  {#if viewMode === "list"}
+    <BulkActionBar
+      selectedCount={selectedVideoIds.size}
+      visibleCount={visibleVideoIds.length}
+      allSelected={allVisibleSelected}
+      itemLabel="videos"
+      busy={bulkBusy}
+      onSelectAll={selectAllVisibleVideos}
+      onClear={clearSelectedVideos}
+      onMarkNsfw={markSelectedVideosNsfw}
+      onDelete={deleteSelectedVideos}
+    />
+  {/if}
+
   {#if loadedVideos.length === 0}
     <div class="surface-panel p-8 text-center">
       <Film class="mx-auto mb-3 h-10 w-10 text-text-disabled" />
@@ -436,6 +508,8 @@
           video={videoListItemToCardData(video, "/videos")}
           variant="list"
           index={index}
+          selected={selectedVideoIds.has(video.id)}
+          onToggleSelect={toggleSelectedVideo}
         />
       {/each}
     </div>
