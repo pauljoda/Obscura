@@ -80,7 +80,7 @@
 {#if !hasAnyContent}
   <div class="min-h-[80vh] flex flex-col items-center justify-center text-center p-8">
     <div
-      class="w-24 h-24 mb-8 text-accent-500/20 flex items-center justify-center rounded-full bg-surface-2 border border-border-subtle"
+      class="w-24 h-24 mb-8 text-accent-500/20 flex items-center justify-center bg-surface-2 border border-border-subtle"
     >
       <Film class="w-10 h-10" />
     </div>

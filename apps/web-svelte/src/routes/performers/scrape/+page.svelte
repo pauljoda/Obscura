@@ -212,7 +212,7 @@
           onclick={() => void runBulkScrape()}
           disabled={!selectedScraperId || rows.length === 0}
           class={cn(
-            "flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium transition-all duration-fast",
+            "flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium transition-all duration-fast",
             "bg-accent-950 text-text-accent border border-border-accent",
             "hover:bg-accent-900 disabled:opacity-50",
           )}
@@ -224,7 +224,7 @@
         <button
           type="button"
           onclick={() => (aborted = true)}
-          class="flex items-center gap-1.5 px-4 py-1.5 rounded text-xs font-medium text-status-error border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
+          class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-status-error border border-status-error/30 hover:bg-status-error/10 transition-all duration-fast"
         >
           <Square class="h-3 w-3" />
           Stop
@@ -235,7 +235,7 @@
         <button
           type="button"
           onclick={acceptAll}
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs text-status-success border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-status-success border border-status-success/30 hover:bg-status-success/10 transition-all duration-fast"
         >
           <Check class="h-3 w-3" />
           Accept All ({found})
@@ -270,7 +270,7 @@
               row.status === "rejected" && "opacity-40",
             )}
           >
-            <div class="flex-shrink-0 h-10 w-8 rounded overflow-hidden bg-surface-3">
+            <div class="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
               {#if row.performer.imagePath}
                 <img src={toApiUrl(row.performer.imagePath)!} alt="" class="w-full h-full object-cover" />
               {:else}
@@ -296,7 +296,7 @@
                 <button
                   type="button"
                   onclick={() => void acceptRow(i)}
-                  class="flex items-center gap-1 px-2 py-1 rounded text-[0.65rem] text-status-success border border-status-success/30 hover:bg-status-success/10 transition-colors"
+                  class="flex items-center gap-1 px-2 py-1 text-[0.65rem] text-status-success border border-status-success/30 hover:bg-status-success/10 transition-colors"
                 >
                   <Check class="h-2.5 w-2.5" />
                   Accept
@@ -305,7 +305,7 @@
                   type="button"
                   onclick={() => rejectRow(i)}
                   aria-label="Reject"
-                  class="flex items-center gap-1 px-2 py-1 rounded text-[0.65rem] text-text-muted hover:text-status-error transition-colors"
+                  class="flex items-center gap-1 px-2 py-1 text-[0.65rem] text-text-muted hover:text-status-error transition-colors"
                 >
                   <X class="h-2.5 w-2.5" />
                 </button>

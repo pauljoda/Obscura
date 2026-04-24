@@ -83,7 +83,7 @@
         <img
           src={images[selectedIndex] ?? images[0]}
           alt={`Image ${selectedIndex + 1}`}
-          class="max-w-full max-h-[60vh] object-contain rounded"
+          class="max-w-full max-h-[60vh] object-contain"
         />
       </div>
 
@@ -94,7 +94,7 @@
               type="button"
               onclick={() => onSelect(i)}
               class={cn(
-                "aspect-[3/4] rounded overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
+                "aspect-[3/4] overflow-hidden bg-surface-3 border-2 transition-all duration-fast",
                 i === selectedIndex
                   ? "border-border-accent ring-2 ring-accent-500/30"
                   : "border-transparent hover:border-border-subtle opacity-60 hover:opacity-100",
@@ -114,7 +114,7 @@
             type="button"
             onclick={onClose}
             class={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all duration-fast",
+              "flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-all duration-fast",
               "bg-accent-950 text-text-accent border border-border-accent hover:bg-accent-900",
             )}
           >

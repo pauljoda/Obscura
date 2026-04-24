@@ -52,7 +52,7 @@
               type="button"
               onclick={onPrev}
               disabled={!hasPrev}
-              class="p-1.5 text-text-muted hover:bg-surface-2/40 hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-sm"
+              class="p-1.5 text-text-muted hover:bg-surface-2/40 hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Previous"
             >
               <ChevronUp class="h-4 w-4" />
@@ -61,7 +61,7 @@
               type="button"
               onclick={onNext}
               disabled={!hasNext}
-              class="p-1.5 text-text-muted hover:bg-surface-2/40 hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors rounded-sm"
+              class="p-1.5 text-text-muted hover:bg-surface-2/40 hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Next"
             >
               <ChevronDown class="h-4 w-4" />

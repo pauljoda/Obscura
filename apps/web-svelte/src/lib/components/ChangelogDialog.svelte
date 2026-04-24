@@ -193,7 +193,7 @@
                 {#if part.kind === "strong"}
                   <strong class="text-text-primary">{part.value}</strong>
                 {:else if part.kind === "code"}
-                  <code class="rounded-[3px] bg-surface-3/60 px-1 py-0.5 font-mono text-[10px] break-all">
+                  <code class="bg-surface-3/60 px-1 py-0.5 font-mono text-[10px] break-all">
                     {part.value}
                   </code>
                 {:else if part.kind === "link"}
@@ -222,7 +222,7 @@
                     {#if part.kind === "strong"}
                       <strong class="text-text-primary">{part.value}</strong>
                     {:else if part.kind === "code"}
-                      <code class="rounded-[3px] bg-surface-3/60 px-1 py-0.5 font-mono text-[10px] break-all">
+                      <code class="bg-surface-3/60 px-1 py-0.5 font-mono text-[10px] break-all">
                         {part.value}
                       </code>
                     {:else if part.kind === "link"}

@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **UI elements across the Svelte app now follow the sharp-corner design rule consistently.** The empty-library logo chip, changelog inline code blocks, identify review drawer navigation, image picker modal tiles and buttons, and the performer scrape action row no longer render with rounded corners — they match the Dark Room "sharp corners everywhere" rule the rest of the app has always used.
+
 - **StashDB and hash-oriented Identify controls now stay on the entity types they actually belong to.** The Identify provider picker only presents Stash-Box sources for Videos, Images, Actors, Studios, and Tags, so Series, Galleries, Albums, and Tracks no longer show remote StashDB choices that cannot service those rows.
 
 - **Cross-referenced galleries, audio libraries, and performers now all use their shared thumbnail component.** Performer detail pages now show galleries and audio libraries through `GalleryThumbnail` / `AudioLibraryThumbnail`, and the `PerformersSection` component (used on the video, gallery, and audio-track detail pages) now renders each performer chip through `PerformerThumbnail` instead of an inline `<img>` or initials-fallback. Every entity finally looks the same wherever it's referenced.
@@ -251,6 +253,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Dropped the stale `apps/web/public/media/...` and `apps/web/public/jassub/` entries from `.gitignore` and `.dockerignore`. These paths pointed at the retired Next.js workspace and had no effect after the Svelte cutover.
+- Removed rounded-corner utilities (`rounded-full`, `rounded`, `rounded-sm`, `rounded-[3px]`) that had crept into the SvelteKit port in `routes/+page.svelte` (empty-library logo chip), `ChangelogDialog.svelte` (inline code), `ImagePickerModal.svelte` (image preview, thumbnail tiles, action button), `identify/ReviewDrawer.svelte` (Prev/Next nav), and `performers/scrape/+page.svelte` (action chips and avatar tile). Every affected surface now matches the Dark Room sharp-corner rule.
 - The `/tags` grid now splits tags into "Tagged content" and "Unused tags" sections; both apply the current search, sort, and filter settings independently. Tag cards were reworked as a single 4:3 typography-first surface: the tag name is the centered focal element on a per-tag color gradient (or the custom image with a scrim when one is set), with the usage count rendered as compact monospace metadata below. The old initials, separate footer strip, and per-type video/image chips were removed.
 - Studio and tag detail pages in the Svelte app now use the shared edit form kit for inline metadata updates.
 - Collection detail headers now use the same artwork-led hero structure as audio library detail pages, including cover fallback art and top-level playback/edit controls.
