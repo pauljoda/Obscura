@@ -5,15 +5,13 @@ export interface LibraryRootVisibilityRow {
   id: string;
   path: string;
   enabled: boolean;
-  scanMovies: boolean;
-  scanSeries: boolean;
+  scanVideos: boolean;
   scanImages: boolean;
   scanAudio: boolean;
 }
 
 export interface ActiveLibraryRootsSummary {
-  movieRootIds: string[];
-  seriesRootIds: string[];
+  videoRootIds: string[];
   imageRootPaths: string[];
   audioRootPaths: string[];
 }
@@ -40,11 +38,8 @@ export function summarizeActiveLibraryRoots(
   const enabledRoots = roots.filter((root) => root.enabled);
 
   return {
-    movieRootIds: unique(
-      enabledRoots.filter((root) => root.scanMovies).map((root) => root.id),
-    ),
-    seriesRootIds: unique(
-      enabledRoots.filter((root) => root.scanSeries).map((root) => root.id),
+    videoRootIds: unique(
+      enabledRoots.filter((root) => root.scanVideos).map((root) => root.id),
     ),
     imageRootPaths: unique(
       enabledRoots.filter((root) => root.scanImages).map((root) => root.path),
@@ -72,24 +67,22 @@ export function isPathVisibleForRoots(
   });
 }
 
-export function videoMovieVisibleSql(libraryRootIdColumn: Column | SQL) {
+function videoVisibleByRootSql(libraryRootIdColumn: Column | SQL) {
   return sql`EXISTS (
     SELECT 1
     FROM library_roots lr
     WHERE lr.id = ${libraryRootIdColumn}
       AND lr.enabled IS TRUE
-      AND lr.scan_movies IS TRUE
+      AND lr.scan_videos IS TRUE
   )`;
 }
 
+export function videoMovieVisibleSql(libraryRootIdColumn: Column | SQL) {
+  return videoVisibleByRootSql(libraryRootIdColumn);
+}
+
 export function videoSeriesVisibleSql(libraryRootIdColumn: Column | SQL) {
-  return sql`EXISTS (
-    SELECT 1
-    FROM library_roots lr
-    WHERE lr.id = ${libraryRootIdColumn}
-      AND lr.enabled IS TRUE
-      AND lr.scan_series IS TRUE
-  )`;
+  return videoVisibleByRootSql(libraryRootIdColumn);
 }
 
 export function videoEpisodeVisibleSql(seriesIdColumn: Column | SQL) {
@@ -99,7 +92,7 @@ export function videoEpisodeVisibleSql(seriesIdColumn: Column | SQL) {
     INNER JOIN library_roots lr ON lr.id = vs.library_root_id
     WHERE vs.id = ${seriesIdColumn}
       AND lr.enabled IS TRUE
-      AND lr.scan_series IS TRUE
+      AND lr.scan_videos IS TRUE
   )`;
 }
 

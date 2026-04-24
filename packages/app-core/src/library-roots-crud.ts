@@ -4,7 +4,7 @@
  * needed, though the shared `verifyDirectory` helper is the default.
  */
 import { schema, type AppDb } from "@obscura/db";
-import { and, asc, eq, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL } from "drizzle-orm";
 import path from "node:path";
 import { labelForPath, verifyDirectory } from "./library-browse";
 import { syncMediaNsfwWithLibraryRoot } from "./library-root-nsfw-sync";
@@ -37,24 +37,7 @@ export async function listLibraryRootsRead(
   const enabled = parseBool(query.enabled);
 
   const filters: SQL[] = [];
-  // Legacy `scanVideos` alias: `=true` matches roots with at least one of
-  // scan_movies / scan_series on (OR), `=false` requires both off (AND).
-  if (scanVideos === true) {
-    filters.push(
-      or(
-        eq(libraryRoots.scanMovies, true),
-        eq(libraryRoots.scanSeries, true),
-      )!,
-    );
-  }
-  if (scanVideos === false) {
-    filters.push(
-      and(
-        eq(libraryRoots.scanMovies, false),
-        eq(libraryRoots.scanSeries, false),
-      )!,
-    );
-  }
+  if (scanVideos != null) filters.push(eq(libraryRoots.scanVideos, scanVideos));
   if (scanImages != null) filters.push(eq(libraryRoots.scanImages, scanImages));
   if (scanAudio != null) filters.push(eq(libraryRoots.scanAudio, scanAudio));
   if (enabled != null) filters.push(eq(libraryRoots.enabled, enabled));
@@ -74,8 +57,6 @@ export interface CreateLibraryRootBody {
   enabled?: boolean;
   recursive?: boolean;
   scanVideos?: boolean;
-  scanMovies?: boolean;
-  scanSeries?: boolean;
   scanImages?: boolean;
   scanAudio?: boolean;
 }
@@ -87,7 +68,6 @@ export async function createLibraryRootWrite(
   const resolvedPath = path.resolve(body.path);
   await verifyDirectory(resolvedPath);
 
-  const videoAlias = body.scanVideos;
   const [created] = await db
     .insert(libraryRoots)
     .values({
@@ -95,8 +75,7 @@ export async function createLibraryRootWrite(
       label: body.label?.trim() || labelForPath(resolvedPath),
       enabled: body.enabled ?? true,
       recursive: body.recursive ?? true,
-      scanMovies: body.scanMovies ?? videoAlias ?? true,
-      scanSeries: body.scanSeries ?? videoAlias ?? true,
+      scanVideos: body.scanVideos ?? true,
       scanImages: body.scanImages ?? true,
       scanAudio: body.scanAudio ?? true,
     })
@@ -110,8 +89,6 @@ export interface UpdateLibraryRootBody {
   enabled?: boolean;
   recursive?: boolean;
   scanVideos?: boolean;
-  scanMovies?: boolean;
-  scanSeries?: boolean;
   scanImages?: boolean;
   scanAudio?: boolean;
   isNsfw?: boolean;
@@ -140,8 +117,6 @@ export async function updateLibraryRootWrite(
     await verifyDirectory(nextPath);
   }
 
-  const videoAlias = body.scanVideos;
-
   const [updated] = await db
     .update(libraryRoots)
     .set({
@@ -149,8 +124,7 @@ export async function updateLibraryRootWrite(
       label: body.label?.trim() || existing.label,
       enabled: body.enabled ?? existing.enabled,
       recursive: body.recursive ?? existing.recursive,
-      scanMovies: body.scanMovies ?? videoAlias ?? existing.scanMovies,
-      scanSeries: body.scanSeries ?? videoAlias ?? existing.scanSeries,
+      scanVideos: body.scanVideos ?? existing.scanVideos,
       scanImages: body.scanImages ?? existing.scanImages,
       scanAudio: body.scanAudio ?? existing.scanAudio,
       isNsfw: body.isNsfw ?? existing.isNsfw,

@@ -169,6 +169,13 @@
       "when": 1777041600000,
       "tag": "0023_rule_tree_video_entities",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777680000000,
+      "tag": "0024_collapse_video_scan_toggle",
+      "breakpoints": true
     }
   ]
 }

@@ -3,36 +3,17 @@ import { classifyVideoFile } from "./classify-video-file";
 
 const root = {
   libraryRootPath: "/media/library",
-  scanMovies: true,
-  scanSeries: true,
 };
 
 describe("classifyVideoFile", () => {
   describe("depth 0 — files at library root", () => {
-    it("classifies as movie when scanMovies is on", () => {
+    it("classifies as movie", () => {
       const result = classifyVideoFile("/media/library/Blade Runner (1982).mkv", root);
       expect(result).toEqual({
         kind: "movie",
         filePath: "/media/library/Blade Runner (1982).mkv",
         libraryRootPath: "/media/library",
       });
-    });
-
-    it("skips with warning when scanMovies is off and scanSeries is on", () => {
-      const result = classifyVideoFile("/media/library/Loose.mkv", { ...root, scanMovies: false });
-      expect(result.kind).toBe("skipped");
-      if (result.kind === "skipped") {
-        expect(result.reason).toMatch(/loose file at library root/i);
-      }
-    });
-
-    it("skips silently when both toggles off", () => {
-      const result = classifyVideoFile("/media/library/File.mkv", {
-        ...root,
-        scanMovies: false,
-        scanSeries: false,
-      });
-      expect(result.kind).toBe("skipped");
     });
   });
 
@@ -50,14 +31,6 @@ describe("classifyVideoFile", () => {
         expect(result.seasonFolderName).toBeNull();
         expect(result.placementSeasonNumber).toBe(0);
       }
-    });
-
-    it("skips when scanSeries is off", () => {
-      const result = classifyVideoFile(
-        "/media/library/The Expanse/S01E01.mkv",
-        { ...root, scanSeries: false },
-      );
-      expect(result.kind).toBe("skipped");
     });
   });
 

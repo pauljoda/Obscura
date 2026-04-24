@@ -119,10 +119,7 @@ export async function processLibraryScan(job: Job): Promise<void> {
   const settings = await ensureLibrarySettingsRow();
 
   // Classify files. Classification is pure and fast.
-  const scanMovies = root.scanMovies ?? true;
-  const scanSeries = root.scanSeries ?? true;
-  const scanVideos = scanMovies || scanSeries;
-  const files = scanVideos
+  const files = root.scanVideos
     ? await discoverVideoFiles(root.path, root.recursive)
     : [];
 
@@ -136,8 +133,6 @@ export async function processLibraryScan(job: Job): Promise<void> {
   for (const filePath of files) {
     const classified: VideoClassification = classifyVideoFile(filePath, {
       libraryRootPath: root.path,
-      scanMovies,
-      scanSeries,
     });
 
     if (classified.kind === "movie") {

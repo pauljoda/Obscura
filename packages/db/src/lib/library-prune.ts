@@ -53,26 +53,21 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
   const allRoots = await db
     .select({
       path: libraryRoots.path,
-      scanMovies: libraryRoots.scanMovies,
-      scanSeries: libraryRoots.scanSeries,
+      scanVideos: libraryRoots.scanVideos,
       scanImages: libraryRoots.scanImages,
     })
     .from(libraryRoots)
     .where(eq(libraryRoots.enabled, true));
 
-  const videoRootPaths = allRoots
-    .filter((r) => r.scanMovies || r.scanSeries)
-    .map((r) => r.path);
+  const videoRootPaths = allRoots.filter((r) => r.scanVideos).map((r) => r.path);
   const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
 
   // Safety: if there are no video-enabled roots at all, skip the
   // orphan-delete step entirely. An empty `videoRootPaths` would
   // classify every existing row as "orphaned" and wipe the entire
   // video library in a single call — almost always a misconfiguration
-  // (scan_movies/scan_series defaulted to false on a legacy install,
-  // the user hasn't opted into the new scan toggles yet, etc.) rather
-  // than a legitimate prune. Missing-file pruning still runs because
-  // those deletions are per-row and tied to actual disk state.
+  // rather than a legitimate prune. Missing-file pruning still runs
+  // because those deletions are per-row and tied to actual disk state.
   const pruneOrphansByRoot = videoRootPaths.length > 0;
 
   // ── Video episodes ──────────────────────────────────────────────

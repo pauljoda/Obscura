@@ -15,8 +15,7 @@ interface LibraryRootsResponse {
   roots: Array<
     LibraryRoot & {
       enabled?: boolean;
-      scanMovies?: boolean;
-      scanSeries?: boolean;
+      scanVideos?: boolean;
     }
   >;
 }

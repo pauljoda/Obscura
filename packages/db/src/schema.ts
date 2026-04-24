@@ -144,12 +144,7 @@ export const libraryRoots = pgTable(
     label: text("label").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     recursive: boolean("recursive").default(true).notNull(),
-    // scan_videos retired in favor of scan_movies + scan_series.
-    // The column is dropped by drizzle migration 0014; no code reads
-    // it anymore. Kept out of this schema so SELECT * doesn't include
-    // a column that may not exist on finalized installs.
-    scanMovies: boolean("scan_movies").default(true).notNull(),
-    scanSeries: boolean("scan_series").default(true).notNull(),
+    scanVideos: boolean("scan_videos").default(true).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
     scanAudio: boolean("scan_audio").default(true).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),

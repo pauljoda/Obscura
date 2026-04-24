@@ -2002,7 +2002,7 @@ export async function uploadVideoMovieWrite(
     .where(eq(libraryRoots.id, libraryRootId))
     .limit(1);
   if (!root) throw new NotFoundError("Library root not found");
-  if (!root.scanMovies && !root.scanSeries) {
+  if (!root.scanVideos) {
     throw new ValidationError(
       "Selected library root is not configured to receive video uploads",
     );

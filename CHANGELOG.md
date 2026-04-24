@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Library settings now show a single "Videos" toggle per library root.** The watched-libraries panel's Videos button reflects and saves correctly again — previously the UI sent `scanVideos` but the database stored separate `scan_movies` / `scan_series` flags, so the toggle never rendered the saved state. **Breaking:** the `scan_movies` and `scan_series` columns are dropped on upgrade and replaced by a single `scan_videos` column (preserved as `scan_movies OR scan_series` from your existing rows). No action needed if you've kept both toggles on; otherwise re-check your library roots' Videos toggle in Settings after upgrading.
+
 - **Library scans now do far less surprise work.** Scan follow-up jobs respect the generation toggles in Settings, pHash stays off unless explicitly enabled, and trickplay sprites are generated in one FFmpeg atlas pass instead of launching FFmpeg once per tile.
 
 - **UI elements across the Svelte app now follow the sharp-corner design rule consistently.** The empty-library logo chip, changelog inline code blocks, identify review drawer navigation, image picker modal tiles and buttons, and the performer scrape action row no longer render with rounded corners — they match the Dark Room "sharp corners everywhere" rule the rest of the app has always used.
@@ -254,6 +256,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Breaking schema change.** The `library_roots.scan_movies` and `library_roots.scan_series` columns are gone, replaced by a single `library_roots.scan_videos` column (drizzle migration `0024_collapse_video_scan_toggle`). Existing rows are backfilled as `scan_movies OR scan_series`. The `scanMovies` / `scanSeries` fields on `CreateLibraryRootBody` / `UpdateLibraryRootBody` and the `videoMovieVisibleSql` / `videoSeriesVisibleSql` overloads were collapsed to a single `scanVideos` flag, the classifier no longer takes per-kind toggles, and `summarizeActiveLibraryRoots` returns one `videoRootIds` array instead of split `movie`/`series` arrays.
 - Library scans now only enqueue technical metadata, fingerprint, and preview/trickplay jobs when the corresponding generation settings are enabled.
 - Video trickplay generation now uses a single FFmpeg `fps + scale + pad + tile` command for each sprite sheet instead of extracting and stitching every frame through separate processes.
 - Dropped the stale `apps/web/public/media/...` and `apps/web/public/jassub/` entries from `.gitignore` and `.dockerignore`. These paths pointed at the retired Next.js workspace and had no effect after the Svelte cutover.
