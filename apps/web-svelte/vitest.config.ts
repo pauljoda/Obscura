@@ -22,6 +22,7 @@ export default defineConfig({
       "$app/navigation": resolve("./src/test/mocks/app-navigation.ts"),
       "$app/environment": resolve("./src/test/mocks/app-environment.ts"),
       "$env/static/public": resolve("./src/test/mocks/env-static-public.ts"),
+      "$env/dynamic/public": resolve("./src/test/mocks/env-dynamic-public.ts"),
       "$env/dynamic/private": resolve("./src/test/mocks/env-dynamic-private.ts"),
     },
   },

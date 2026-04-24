@@ -1,12 +1,12 @@
 /**
- * Client-side API fetch wrapper. Reads `PUBLIC_API_URL` from SvelteKit's
- * `$env/static/public` and defaults to same-origin `/api`.
+ * Client-side API fetch wrapper. Reads optional `PUBLIC_API_URL` from
+ * SvelteKit's public environment and defaults to same-origin `/api`.
  */
-import { PUBLIC_API_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 
 export { buildQueryString } from "../query-string";
 
-const API_BASE = PUBLIC_API_URL || "/api";
+const API_BASE = env.PUBLIC_API_URL || "/api";
 
 export async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);

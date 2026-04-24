@@ -21,15 +21,15 @@
  *   // URL, so we read PUBLIC_APP_URL to know where to call:
  *   const videos = await serverFetch<VideoListItemDto[]>("/videos");
  */
-import { PUBLIC_APP_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 
 export { buildQueryString } from "../query-string";
 
 // When no event fetch is supplied we need an absolute URL back to the
 // SvelteKit server.
 const ABSOLUTE_BASE =
-  (typeof PUBLIC_APP_URL === "string" && PUBLIC_APP_URL.length > 0
-    ? PUBLIC_APP_URL.replace(/\/$/, "")
+  (typeof env.PUBLIC_APP_URL === "string" && env.PUBLIC_APP_URL.length > 0
+    ? env.PUBLIC_APP_URL.replace(/\/$/, "")
     : "http://localhost:8008");
 
 type FetchLike = typeof fetch;
