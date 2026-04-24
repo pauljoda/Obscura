@@ -11,6 +11,19 @@
 </p>
 
 <p align="center">
+  <a href="https://pauljoda.github.io/Obscura/">
+    <img alt="Read the docs" src="https://img.shields.io/badge/Read_the_Docs-Obscura-c49a5a?style=for-the-badge&logo=gitbook&logoColor=white" />
+  </a>
+  <a href="https://pauljoda.github.io/Obscura/docs/users/quick-start">
+    <img alt="Quick start guide" src="https://img.shields.io/badge/Quick_Start-Docker-1f6feb?style=for-the-badge&logo=docker&logoColor=white" />
+  </a>
+  <a href="https://pauljoda.github.io/Obscura/docs/developers/plugin-development">
+    <img alt="Plugin author guide" src="https://img.shields.io/badge/Plugin_Guide-Developers-24292f?style=for-the-badge&logo=typescript&logoColor=white" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://pauljoda.github.io/Obscura/">Docs</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#highlights">Highlights</a> &middot;
   <a href="#features">Features</a> &middot;

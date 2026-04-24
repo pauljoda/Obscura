@@ -102,6 +102,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Docs
 
 - Added a Docusaurus documentation site under `documentation-site/`, wired for GitHub Pages deployment and local VS Code launch/build commands.
+- Added prominent README badge links to the live documentation site, quick start guide, and plugin author guide.
 - `docs/library-organization.md` — how files under a library root are classified into movies, flat series, and seasoned series, with good / bad layout examples and filename convention tips.
 - `docs/design-language.md` — refreshed Dark Room design direction reference.
 
