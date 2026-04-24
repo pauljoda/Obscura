@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SubtitleAppearance } from "@obscura/contracts";
   import { cn } from "@obscura/ui-svelte";
-  import { captionClassName } from "$lib/subtitle-appearance";
+  import { captionClassName } from "$lib/player/subtitle-appearance";
 
   interface Props {
     text: string | null;

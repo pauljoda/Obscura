@@ -54,13 +54,13 @@
     computeVideoLoadState,
     requestedModeFromQualityMode,
     type QualityMode,
-  } from "./video-player-load";
+  } from "$lib/player/video-player-load";
   import { fetchVideoSubtitleCues } from "$lib/api/videos";
   import { portal } from "$lib/actions/portal";
   import {
     layoutPlayerMobileFlyout,
     playerFlyoutStyleToString,
-  } from "$lib/player-flyout-layout";
+  } from "$lib/player/flyout-layout";
   import type { VideoSubtitleTrackDto, SubtitleCueDto } from "$lib/api/types";
   import {
     captionClassName,
@@ -68,7 +68,7 @@
     readLocalSubtitleAppearance,
     resolveSubtitleAppearance,
     writeLocalSubtitleAppearance,
-  } from "$lib/subtitle-appearance";
+  } from "$lib/player/subtitle-appearance";
 
   interface Props {
     src?: string;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   layoutPlayerMobileFlyout,
   playerFlyoutStyleToString,
-} from "./player-flyout-layout";
+} from "./flyout-layout";
 
 function rect(top: number, bottom: number, right = 300): DOMRect {
   return {

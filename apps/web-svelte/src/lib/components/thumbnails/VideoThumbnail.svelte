@@ -7,7 +7,7 @@
   import { cn } from "@obscura/ui-svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
-  import { createTrickplayScrub } from "../trickplay-scrub.svelte";
+  import { createTrickplayScrub } from "$lib/player/trickplay-scrub.svelte";
 
   interface Props {
     video: VideoCardData;

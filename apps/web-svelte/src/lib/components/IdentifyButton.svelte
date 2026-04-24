@@ -13,7 +13,7 @@
   import {
     layoutPlayerMobileFlyout,
     playerFlyoutStyleToString,
-  } from "$lib/player-flyout-layout";
+  } from "$lib/player/flyout-layout";
   import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
 
   type EntityKind = "video_series" | "video_movie" | "video_episode";
