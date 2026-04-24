@@ -1,9 +1,13 @@
-export * from "./appearance-count-expressions";
+// Public surface of @obscura/app-core. Internal helpers
+// (appearance-count-expressions, hierarchy, library-root-visibility,
+// media-query-helpers, media-shared, upload-utils) are deliberately
+// not re-exported — they are SQL/upload primitives meant for use
+// inside this package only.
+
 export * from "./breaking-gate";
 export * from "./changelog";
 export * from "./collections";
 export * from "./errors";
-export * from "./hierarchy";
 export * from "./hls";
 export * from "./hls-virtual";
 export * from "./image-media";
@@ -12,14 +16,12 @@ export * from "./jobs-writes";
 export * from "./library-browse";
 export * from "./library-config";
 export * from "./library-root-nsfw-sync";
-export * from "./library-root-visibility";
 export * from "./library-roots-crud";
 export * from "./library-settings-writes";
 export * from "./gallery-media";
 export * from "./audio-libraries";
 export * from "./audio-tracks";
 export * from "./network";
-export * from "./media-query-helpers";
 export * from "./performer-reads";
 export * from "./performer-writes";
 export * from "./plugin-execution";
@@ -35,7 +37,6 @@ export * from "./stashbox-runtime";
 export * from "./tag-reads";
 export * from "./tag-writes";
 export * from "./ui-prefs";
-export * from "./upload-utils";
 export * from "./video-markers";
 export * from "./video-collection-reads";
 export * from "./video-core";
