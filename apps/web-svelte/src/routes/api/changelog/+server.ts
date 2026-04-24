@@ -1,6 +1,7 @@
+import { json, type RequestHandler } from "@sveltejs/kit";
 import { readChangelogText } from "@obscura/app-core";
 
-export async function GET() {
+export const GET: RequestHandler = async () => {
   try {
     const content = await readChangelogText();
     return new Response(content, {
@@ -9,6 +10,6 @@ export async function GET() {
       },
     });
   } catch {
-    return Response.json({ error: "Changelog not found" }, { status: 404 });
+    return json({ error: "Changelog not found" }, { status: 404 });
   }
-}
+};
