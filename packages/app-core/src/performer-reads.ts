@@ -303,6 +303,181 @@ export type PerformerKnownForEntry =
       episodeNumber: number | null;
     };
 
+export interface PerformerKnownForSeriesRow {
+  sourceId: string;
+  title: string;
+  customName: string | null;
+  thumbnailPath: string | null;
+  character: string | null;
+  isNsfw: boolean | null;
+}
+
+export interface PerformerKnownForMovieRow {
+  sourceId: string;
+  title: string;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  character: string | null;
+  isNsfw: boolean | null;
+}
+
+export interface PerformerKnownForEpisodeRow {
+  sourceId: string;
+  title: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  character: string | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  isNsfw: boolean | null;
+  seriesId: string;
+  seriesTitle: string;
+  seriesCustomName: string | null;
+  seriesThumbnailPath: string | null;
+  seriesIsNsfw: boolean | null;
+  seriesCharacter: string | null;
+}
+
+function seriesRoleKey(seriesId: string, character: string): string {
+  return `${seriesId}\u0000${character}`;
+}
+
+export function buildPerformerKnownForEntries({
+  seriesRows,
+  movieRows,
+  episodeRows,
+  sfwOnly,
+}: {
+  seriesRows: PerformerKnownForSeriesRow[];
+  movieRows: PerformerKnownForMovieRow[];
+  episodeRows: PerformerKnownForEpisodeRow[];
+  sfwOnly: boolean;
+}): PerformerKnownForEntry[] {
+  const seriesEntries = seriesRows
+    .filter((row) => !sfwOnly || !row.isNsfw)
+    .map((row) => ({
+      sourceType: "series" as const,
+      sourceId: row.sourceId,
+      sourceTitle: row.customName ?? row.title,
+      character: normalizeRole(row.character),
+      thumbnailPath: row.thumbnailPath,
+      cardThumbnailPath: null,
+      seriesId: row.sourceId,
+      seriesTitle: row.customName ?? row.title,
+      seasonNumber: null,
+      episodeNumber: null,
+    }))
+    .filter((row) => row.character);
+
+  const seriesRoleKeys = new Set(
+    seriesEntries.map((row) => seriesRoleKey(row.seriesId, row.character!)),
+  );
+
+  const movieEntries = movieRows
+    .filter((row) => !sfwOnly || !row.isNsfw)
+    .map((row) => ({
+      sourceType: "movie" as const,
+      sourceId: row.sourceId,
+      sourceTitle: row.title,
+      character: normalizeRole(row.character),
+      thumbnailPath: row.thumbnailPath,
+      cardThumbnailPath: row.cardThumbnailPath,
+      seriesId: null,
+      seriesTitle: null,
+      seasonNumber: null,
+      episodeNumber: null,
+    }))
+    .filter((row) => row.character);
+
+  const episodeCandidates = episodeRows
+    .filter((row) => !sfwOnly || (!row.isNsfw && !row.seriesIsNsfw))
+    .map((row) => {
+      const character = normalizeRole(row.character);
+      const seriesCharacter = normalizeRole(row.seriesCharacter);
+      return {
+        sourceType: "episode" as const,
+        sourceId: row.sourceId,
+        sourceTitle: row.title,
+        character,
+        thumbnailPath: row.thumbnailPath,
+        cardThumbnailPath: row.cardThumbnailPath,
+        seriesId: row.seriesId,
+        seriesTitle: row.seriesCustomName ?? row.seriesTitle,
+        seriesThumbnailPath: row.seriesThumbnailPath,
+        seasonNumber: row.seasonNumber,
+        episodeNumber: row.episodeNumber,
+        coveredByExplicitSeriesRole:
+          character !== null &&
+          seriesCharacter !== null &&
+          character === seriesCharacter,
+      };
+    })
+    .filter((row) => row.character);
+
+  const groupedEpisodes = new Map<string, typeof episodeCandidates>();
+  for (const row of episodeCandidates) {
+    if (
+      row.coveredByExplicitSeriesRole ||
+      seriesRoleKeys.has(seriesRoleKey(row.seriesId, row.character!))
+    ) {
+      continue;
+    }
+    const key = seriesRoleKey(row.seriesId, row.character!);
+    const group = groupedEpisodes.get(key);
+    if (group) {
+      group.push(row);
+    } else {
+      groupedEpisodes.set(key, [row]);
+    }
+  }
+
+  const episodeEntries: PerformerKnownForEntry[] = [];
+  for (const group of groupedEpisodes.values()) {
+    const first = group[0]!;
+    if (group.length > 1) {
+      episodeEntries.push({
+        sourceType: "series",
+        sourceId: first.seriesId,
+        sourceTitle: first.seriesTitle,
+        character: first.character,
+        thumbnailPath: first.seriesThumbnailPath ?? first.thumbnailPath,
+        cardThumbnailPath: null,
+        seriesId: first.seriesId,
+        seriesTitle: first.seriesTitle,
+        seasonNumber: null,
+        episodeNumber: null,
+      });
+      continue;
+    }
+
+    const {
+      coveredByExplicitSeriesRole: _covered,
+      seriesThumbnailPath: _seriesThumbnail,
+      ...episodeEntry
+    } = first;
+    episodeEntries.push(episodeEntry);
+  }
+
+  const knownFor: PerformerKnownForEntry[] = [
+    ...seriesEntries,
+    ...movieEntries,
+    ...episodeEntries,
+  ];
+
+  const sourceRank = { series: 0, movie: 1, episode: 2 } as const;
+  knownFor.sort((a, b) => {
+    const bySource = sourceRank[a.sourceType] - sourceRank[b.sourceType];
+    if (bySource !== 0) return bySource;
+    const bySeries = (a.seriesTitle ?? "").localeCompare(b.seriesTitle ?? "");
+    if (bySeries !== 0) return bySeries;
+    const byTitle = (a.sourceTitle ?? "").localeCompare(b.sourceTitle ?? "");
+    if (byTitle !== 0) return byTitle;
+    return (a.character ?? "").localeCompare(b.character ?? "");
+  });
+
+  return knownFor;
+}
+
 export async function listPerformerKnownFor(
   db: AppDb,
   performerId: string,
@@ -352,6 +527,7 @@ export async function listPerformerKnownFor(
         seriesId: schema.videoSeries.id,
         seriesTitle: schema.videoSeries.title,
         seriesCustomName: schema.videoSeries.customName,
+        seriesThumbnailPath: schema.videoSeries.posterPath,
         seriesIsNsfw: schema.videoSeries.isNsfw,
         seriesCharacter: schema.videoSeriesPerformers.character,
       })
@@ -377,75 +553,12 @@ export async function listPerformerKnownFor(
       .where(eq(schema.videoEpisodePerformers.performerId, performerId)),
   ]);
 
-  const knownFor: PerformerKnownForEntry[] = [
-    ...seriesRows
-      .filter((row) => !sfwOnly || !row.isNsfw)
-      .map((row) => ({
-        sourceType: "series" as const,
-        sourceId: row.sourceId,
-        sourceTitle: row.customName ?? row.title,
-        character: normalizeRole(row.character),
-        thumbnailPath: row.thumbnailPath,
-        cardThumbnailPath: null,
-        seriesId: row.sourceId,
-        seriesTitle: row.customName ?? row.title,
-        seasonNumber: null,
-        episodeNumber: null,
-      }))
-      .filter((row) => row.character),
-    ...movieRows
-      .filter((row) => !sfwOnly || !row.isNsfw)
-      .map((row) => ({
-        sourceType: "movie" as const,
-        sourceId: row.sourceId,
-        sourceTitle: row.title,
-        character: normalizeRole(row.character),
-        thumbnailPath: row.thumbnailPath,
-        cardThumbnailPath: row.cardThumbnailPath,
-        seriesId: null,
-        seriesTitle: null,
-        seasonNumber: null,
-        episodeNumber: null,
-      }))
-      .filter((row) => row.character),
-    ...episodeRows
-      .filter((row) => !sfwOnly || (!row.isNsfw && !row.seriesIsNsfw))
-      .map((row) => {
-        const character = normalizeRole(row.character);
-        const seriesCharacter = normalizeRole(row.seriesCharacter);
-        return {
-          sourceType: "episode" as const,
-          sourceId: row.sourceId,
-          sourceTitle: row.title,
-          character,
-          thumbnailPath: row.thumbnailPath,
-          cardThumbnailPath: row.cardThumbnailPath,
-          seriesId: row.seriesId,
-          seriesTitle: row.seriesCustomName ?? row.seriesTitle,
-          seasonNumber: row.seasonNumber,
-          episodeNumber: row.episodeNumber,
-          duplicateOfSeriesRole:
-            character !== null &&
-            seriesCharacter !== null &&
-            character === seriesCharacter,
-        };
-      })
-      .filter((row) => row.character && !row.duplicateOfSeriesRole)
-      .map(({ duplicateOfSeriesRole: _duplicate, ...row }) => row),
-  ];
-
-  const sourceRank = { series: 0, movie: 1, episode: 2 } as const;
-  knownFor.sort((a, b) => {
-    const bySource = sourceRank[a.sourceType] - sourceRank[b.sourceType];
-    if (bySource !== 0) return bySource;
-    const bySeries = (a.seriesTitle ?? "").localeCompare(b.seriesTitle ?? "");
-    if (bySeries !== 0) return bySeries;
-    const byTitle = (a.sourceTitle ?? "").localeCompare(b.sourceTitle ?? "");
-    if (byTitle !== 0) return byTitle;
-    return (a.character ?? "").localeCompare(b.character ?? "");
+  return buildPerformerKnownForEntries({
+    seriesRows,
+    movieRows,
+    episodeRows,
+    sfwOnly,
   });
-
-  return knownFor;
 }
 
 export interface PerformerDetail {
