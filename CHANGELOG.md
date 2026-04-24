@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Animated images now play back at the best available quality in the lightbox.** Video-backed images and gallery items try the original file first, keep the generated MP4 as a Safari-friendly fallback, and show explicit play/mute controls when mobile autoplay needs a tap.
+
 - **Main library pages now support saved grid/list views with bulk actions in list mode.** Actors, Studios, Tags, Galleries, Images, Audio, Collections, Videos, and Series keep their clean grid-first browsing by default, but list mode now exposes a second action row for selecting visible entries and applying bulk actions such as Mark NSFW or Delete where supported.
 
 - **Identify's chooser and tab bar now stay lightweight and stable.** The tab counts are gone, the home chooser is available from a home icon in the tab bar, pHash tools are hidden unless NSFW mode is explicitly shown, and selecting a tab no longer causes the landing choices/tab alignment to jump around.
@@ -224,6 +226,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Image and gallery lightbox playback for animated/video-format images now prefers the original source, advertises browser MIME types for fallback selection, and exposes tap-to-play controls for browsers that block autoplay.
 - Studios and sub-galleries without artwork now render deterministic gradient thumbnail fallbacks instead of broken/flat empty thumbnail panels.
 - Identify's tab row no longer shifts when changing areas, pHash tools are hidden in SFW mode, and the tab bar now includes a home action to return to the lightweight chooser.
 - Videos, Series, and Actors now append additional pages from the current filters as you scroll; the visible Load More/Next link remains available as a non-JavaScript fallback.

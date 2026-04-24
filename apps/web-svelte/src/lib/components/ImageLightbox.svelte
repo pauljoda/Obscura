@@ -10,11 +10,16 @@
     Download,
     Info,
     Star,
+    Play,
+    Pause,
+    Volume2,
+    VolumeX,
   } from "@lucide/svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
   import { isVideoImage } from "@obscura/contracts";
   import { toApiUrl } from "$lib/api/core";
   import { updateImage } from "$lib/api/media";
+  import { buildLightboxImageSource, buildLightboxVideoSources } from "./image-lightbox-media";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
 
   interface Props {
@@ -59,6 +64,10 @@
   let naturalW = $state(0);
   let naturalH = $state(0);
   let ready = $state(false);
+  let videoPlaying = $state(false);
+  let videoMuted = $state(true);
+  let videoNeedsGesture = $state(false);
+  let videoError = $state<string | null>(null);
 
   const current = $derived(images[index]);
   const currentRating = $derived.by(() => {
@@ -67,23 +76,13 @@
     return override !== undefined ? override : current.rating;
   });
   const isCurrentVideo = $derived(current ? isVideoImage(current) : false);
-  const src = $derived.by(() => {
+  const videoSources = $derived.by(() => (current && isCurrentVideo ? buildLightboxVideoSources(current) : []));
+  const imageSrc = $derived.by(() => {
     if (!current) return null;
-    if (isCurrentVideo) {
-      return (
-        toApiUrl(current.previewPath) ??
-        toApiUrl(current.fullPath) ??
-        toApiUrl(current.thumbnailPath) ??
-        null
-      );
-    }
-    return (
-      toApiUrl(current.fullPath) ??
-      toApiUrl(current.previewPath) ??
-      toApiUrl(current.thumbnailPath) ??
-      null
-    );
+    return toApiUrl(buildLightboxImageSource(current));
   });
+  const posterSrc = $derived(current ? toApiUrl(current.thumbnailPath) : null);
+  const hasMediaSource = $derived(isCurrentVideo ? videoSources.length > 0 : !!imageSrc);
 
   $effect(() => {
     onIndexChange?.(index);
@@ -101,6 +100,9 @@
       translateY = 0;
       scale = 1;
       fitScale = 1;
+      videoPlaying = false;
+      videoNeedsGesture = false;
+      videoError = null;
     }
   });
 
@@ -180,6 +182,48 @@
       naturalH = el.videoHeight || 720;
     }
     applyFit();
+  }
+
+  function handleVideoLoadedMetadata(event: Event) {
+    handleImageLoad(event);
+    videoError = null;
+    void requestVideoPlay(event.currentTarget as HTMLVideoElement);
+  }
+
+  async function requestVideoPlay(video: HTMLVideoElement) {
+    video.muted = videoMuted;
+    try {
+      await video.play();
+      videoPlaying = true;
+      videoNeedsGesture = false;
+    } catch {
+      videoPlaying = false;
+      videoNeedsGesture = true;
+    }
+  }
+
+  function toggleVideoPlayback() {
+    const video = imgEl instanceof HTMLVideoElement ? imgEl : null;
+    if (!video) return;
+    if (video.paused) {
+      void requestVideoPlay(video);
+    } else {
+      video.pause();
+      videoPlaying = false;
+      videoNeedsGesture = false;
+    }
+  }
+
+  function toggleVideoMute() {
+    const video = imgEl instanceof HTMLVideoElement ? imgEl : null;
+    videoMuted = !videoMuted;
+    if (video) video.muted = videoMuted;
+  }
+
+  function handleVideoError() {
+    videoPlaying = false;
+    videoNeedsGesture = false;
+    videoError = "This animated file could not be played in this browser.";
   }
 
   function zoomBy(delta: number, centerX?: number, centerY?: number) {
@@ -377,7 +421,6 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm" role="dialog" aria-modal="true">
   <!-- Top bar -->
   <div class="relative z-20 flex items-center gap-2 border-b border-border-subtle bg-black/70 backdrop-blur-md px-3 py-2">
@@ -466,7 +509,7 @@
         </button>
       {/if}
 
-      {#if current && src}
+      {#if current && hasMediaSource}
         <div
           class="absolute inset-0 flex items-center justify-center"
           style:transform="translate({translateX}px, {translateY}px) scale({scale})"
@@ -475,26 +518,41 @@
         >
           <NsfwBlur isNsfw={current.isNsfw}>
             {#if isCurrentVideo}
-              <!-- svelte-ignore a11y_media_has_caption -->
-              <video
-                data-lightbox-image
-                bind:this={imgEl as HTMLVideoElement}
-                src={src}
-                autoplay
-                loop
-                muted
-                playsinline
-                class="max-w-none"
-                style:width="{naturalW}px"
-                style:height="{naturalH}px"
-                onloadedmetadata={handleImageLoad}
-                draggable="false"
-              ></video>
+              {#key current.id}
+                <video
+                  data-lightbox-image
+                  bind:this={imgEl as HTMLVideoElement}
+                  autoplay
+                  loop
+                  muted={videoMuted}
+                  playsinline
+                  preload="metadata"
+                  poster={posterSrc ?? undefined}
+                  class="max-w-none"
+                  style:width="{naturalW}px"
+                  style:height="{naturalH}px"
+                  onloadedmetadata={handleVideoLoadedMetadata}
+                  onplay={() => {
+                    videoPlaying = true;
+                    videoNeedsGesture = false;
+                  }}
+                  onpause={() => (videoPlaying = false)}
+                  onerror={handleVideoError}
+                  draggable="false"
+                >
+                  {#each videoSources as source (source.src)}
+                    {@const sourceUrl = toApiUrl(source.src)}
+                    {#if sourceUrl}
+                      <source src={sourceUrl} type={source.type} />
+                    {/if}
+                  {/each}
+                </video>
+              {/key}
             {:else}
               <img
                 data-lightbox-image
                 bind:this={imgEl as HTMLImageElement}
-                src={src}
+                src={imageSrc ?? ""}
                 alt={current.title ?? ""}
                 class="max-w-none pointer-events-none"
                 style:width="{naturalW || "auto"}px"
@@ -505,6 +563,54 @@
             {/if}
           </NsfwBlur>
         </div>
+      {/if}
+
+      {#if isCurrentVideo}
+        <div
+          class="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2"
+          onpointerdown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            onclick={toggleVideoPlayback}
+            class="lightbox-video-button"
+            aria-label={videoPlaying ? "Pause animated image" : "Play animated image"}
+          >
+            {#if videoPlaying}
+              <Pause class="h-4 w-4" />
+            {:else}
+              <Play class="h-4 w-4" />
+            {/if}
+            <span class="hidden sm:inline">{videoPlaying ? "Pause" : videoNeedsGesture ? "Tap to play" : "Play"}</span>
+          </button>
+          <button
+            type="button"
+            onclick={toggleVideoMute}
+            class="lightbox-video-button"
+            aria-label={videoMuted ? "Unmute animated image" : "Mute animated image"}
+          >
+            {#if videoMuted}
+              <VolumeX class="h-4 w-4" />
+            {:else}
+              <Volume2 class="h-4 w-4" />
+            {/if}
+          </button>
+        </div>
+        {#if videoError}
+          <div class="pointer-events-none absolute left-1/2 top-1/2 z-20 w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 border border-error/35 bg-black/80 px-3 py-2 text-center text-[0.78rem] text-error-text shadow-[0_0_18px_rgba(168,72,80,0.28)]">
+            {videoError}
+          </div>
+        {:else if videoNeedsGesture}
+          <button
+            type="button"
+            onclick={toggleVideoPlayback}
+            class="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 border border-accent-500/45 bg-black/75 px-4 py-2 text-sm font-medium text-accent-100 shadow-[0_0_22px_rgba(196,154,90,0.32)] backdrop-blur-md"
+            onpointerdown={(event) => event.stopPropagation()}
+          >
+            <Play class="h-4 w-4" />
+            Tap to play
+          </button>
+        {/if}
       {/if}
 
       <!-- Keyboard hints (desktop) -->
@@ -649,3 +755,30 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .lightbox-video-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    background: rgb(0 0 0 / 0.68);
+    padding: 0.45rem 0.65rem;
+    color: rgb(255 255 255 / 0.82);
+    font-size: 0.72rem;
+    line-height: 1;
+    backdrop-filter: blur(12px);
+    transition:
+      border-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .lightbox-video-button:hover,
+  .lightbox-video-button:focus-visible {
+    border-color: rgb(196 154 90 / 0.5);
+    color: rgb(250 232 198);
+    box-shadow: 0 0 18px rgb(196 154 90 / 0.24);
+    outline: none;
+  }
+</style>
