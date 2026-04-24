@@ -8,6 +8,7 @@
     VideoSeriesListItemDto,
     GalleryListItemDto,
     AudioLibraryListItemDto,
+    PerformerKnownForDto,
   } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
@@ -42,19 +43,30 @@
     imageAppearanceCount?: number;
     audioLibraryCount?: number;
     details?: string | null;
-    knownFor?: Array<{
-      entityType: "video_movie" | "video_episode" | "video_series";
-      entityId: string;
-      title: string;
-      character: string | null;
-      thumbnailPath: string | null;
-    }>;
+    knownFor?: PerformerKnownForDto[];
   });
 
   const videos = $derived(data.videos as VideoListItem[]);
   const series = $derived(data.series as VideoSeriesListItemDto[]);
   const galleries = $derived(data.galleries as GalleryListItemDto[]);
   const audioLibraries = $derived(data.audioLibraries as AudioLibraryListItemDto[]);
+
+  function knownForHref(entry: PerformerKnownForDto) {
+    return entry.sourceType === "series"
+      ? `/series?series=${entry.sourceId}`
+      : `/videos/${entry.sourceId}`;
+  }
+
+  function knownForContext(entry: PerformerKnownForDto) {
+    if (entry.sourceType === "movie") return "Movie";
+    if (entry.sourceType === "series") return "Series";
+
+    const episodeNumber =
+      entry.seasonNumber !== null && entry.episodeNumber !== null
+        ? `S${entry.seasonNumber} E${entry.episodeNumber}`
+        : null;
+    return [entry.seriesTitle, episodeNumber].filter(Boolean).join(" · ");
+  }
 
   async function handleRatingSave(next: number | null) {
     const previous = (data.performer as { rating?: number | null }).rating ?? null;
@@ -205,31 +217,24 @@
     <HierarchySection title="Known For">
       {#snippet children()}
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {#each p.knownFor as entry (entry.entityType + entry.entityId)}
-            {@const href =
-              entry.entityType === "video_series"
-                ? `/series?series=${entry.entityId}`
-                : `/videos/${entry.entityId}`}
+          {#each p.knownFor as entry (`${entry.sourceType}:${entry.sourceId}`)}
+            {@const href = knownForHref(entry)}
             <a
               {href}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
               <div class="aspect-[2/3] bg-surface-2">
-                {#if entry.thumbnailPath}
-                  <img
-                    src={toApiUrl(entry.thumbnailPath)}
-                    alt=""
-                    loading="lazy"
-                    class="h-full w-full object-cover"
-                  />
-                {:else}
-                  <div class="flex h-full w-full items-center justify-center text-text-disabled">
-                    <FolderOpen class="h-8 w-8" />
-                  </div>
-                {/if}
+                <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                  <FolderOpen class="h-8 w-8" />
+                </div>
               </div>
               <div class="p-2 space-y-0.5">
-                <h4 class="truncate text-[0.78rem] font-medium text-text-primary">{entry.title}</h4>
+                <h4 class="truncate text-[0.78rem] font-medium text-text-primary">
+                  {entry.sourceTitle}
+                </h4>
+                <p class="truncate text-[0.65rem] text-text-disabled">
+                  {knownForContext(entry)}
+                </p>
                 {#if entry.character}
                   <p class="truncate text-[0.65rem] text-text-muted">as {entry.character}</p>
                 {/if}

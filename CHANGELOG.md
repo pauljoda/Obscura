@@ -69,6 +69,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **New "Clear all metadata" diagnostic in /settings.** Wipes every scrape-derived custom field (overview, tagline, air / release date, runtime, rating, studio, performers, tags, posters, URLs, external IDs) across series, movies, and episodes, drops the scrape-results history, and queues a fresh library scan on every enabled library root so the tree gets rediscovered. Technical probe data (duration, codecs, fingerprints, generated thumbnails) stays intact. Gated behind a confirm dialog. Irreversible.
 - **Web UI is being rewritten in SvelteKit.** The frontend port from Next.js + React to SvelteKit + Svelte 5 (runes) is underway on the `port/sveltekit` branch. No user-facing change yet — the live app still ships the Next.js build. Tracking: Linear project *Web Port: Next.js → SvelteKit* (APP-31..103). The swap happens when the port reaches full parity.
 - **Actors now show who they played across Videos and Series.** Episode and Series cast lists now render character names, episode detail falls back to the Series role when no episode-specific role was saved, and Actor detail pages now include a new **Known For** section that lists saved movie / series / unique episode roles with their source.
+- **Actor Known For links now open the right appearance.** Movie and episode roles on an actor page now link to their video detail pages, Series roles link to the Series browser, and actors with saved roles no longer trip a Svelte navigation error.
 - **Long cast role names now stay readable in Series cast strips.** Character subtitles in the Cast & Crew rail now wrap to a second line instead of being cut off after a few words, so long role names remain visible on smaller cards.
 
 - **Plugin and scraper dropdowns are now searchable.** The metadata provider selection dropdowns on the Identify page and on individual edit pages (Video, Studio, Performer, Tag) have been upgraded from native system selects to a custom searchable dropdown. This makes it much easier to find and select a specific plugin, StashBox endpoint, or community scraper when you have many installed.
@@ -161,6 +162,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Actor detail Known For cards now use the current `sourceType` / `sourceId` DTO fields for keys and links instead of stale `entityType` / `entityId` fields, preventing `each_key_volatile` crashes and `/videos/undefined` appearance links.
 - Series Identify now serves `GET /api/video/series/:id` with local seasons and episodes, so plugin cascade inputs include the user's actual episode files instead of starting with a 404.
 - TypeScript plugins compiled as CommonJS now load through Node's CommonJS runtime, even under the SvelteKit dev server, so TMDB and similar plugins no longer fail with `exports is not defined`.
 - Identify plugin menus now portal above the page and anchor to their button with viewport-aware placement, so they no longer get clipped by the series header or appear detached from the control.
