@@ -287,12 +287,11 @@ async function handleCollectionCover(
     return notFound("No cover image");
   }
 
-  return serveFileIfExists(
-    firstExistingPath(cacheCandidates("collections", id, "cover.webp")) ??
-      path.join("__missing__", "cover.webp"),
-    {
-      "Content-Type": "image/webp",
-    },
+  return serveFirstMatchingFile(
+    [
+      ...cacheCandidates("collections", id, "cover-custom.jpg"),
+      ...cacheCandidates("collections", id, "cover.webp"),
+    ],
     "Cover file not found",
   );
 }

@@ -8,6 +8,9 @@
     Hand,
     Zap,
     Shuffle,
+    Upload,
+    X,
+    Image as ImageIcon,
   } from "@lucide/svelte";
   import type {
     CollectionDetailDto,
@@ -17,7 +20,13 @@
     CollectionCreateDto,
   } from "@obscura/contracts";
   import { Button } from "@obscura/ui-svelte";
-  import { createCollection, updateCollection } from "$lib/api/media";
+  import {
+    createCollection,
+    deleteCollectionCover,
+    updateCollection,
+    uploadCollectionCover,
+  } from "$lib/api/media";
+  import { toApiUrl } from "$lib/api/core";
   import ConditionBuilder from "./collections/ConditionBuilder.svelte";
   import type { SuggestionItem } from "$lib/collection-suggestions";
 
@@ -72,6 +81,11 @@
   let ruleTree = $state<CollectionRuleGroup | null>(null);
   let slideshowDuration = $state(5);
   let slideshowAutoAdvance = $state(true);
+  let coverImagePath = $state<string | null>(null);
+  let coverInput: HTMLInputElement | undefined = $state();
+  let isCoverSaving = $state(false);
+  let coverError = $state<string | null>(null);
+  let coverCacheBust = $state("");
 
   $effect(() => {
     name = collection?.name ?? "New Collection";
@@ -80,6 +94,8 @@
     ruleTree = collection?.ruleTree ?? null;
     slideshowDuration = collection?.slideshowDurationSeconds ?? 5;
     slideshowAutoAdvance = collection?.slideshowAutoAdvance ?? true;
+    coverImagePath = collection?.coverImagePath ?? null;
+    coverCacheBust = collection?.updatedAt ?? "";
   });
 
   async function handleSave() {
@@ -121,6 +137,42 @@
       console.error("Save failed:", err);
       saveError = err instanceof Error ? err.message : "Failed to save collection";
       isSaving = false;
+    }
+  }
+
+  async function handleCoverUpload(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file || !collection) return;
+
+    isCoverSaving = true;
+    coverError = null;
+    try {
+      const result = await uploadCollectionCover(collection.id, file);
+      coverImagePath = result.coverImagePath;
+      coverCacheBust = new Date().toISOString();
+      await invalidate(`collections:${collection.id}`);
+    } catch (err) {
+      coverError = err instanceof Error ? err.message : "Failed to upload cover";
+    } finally {
+      isCoverSaving = false;
+    }
+  }
+
+  async function handleCoverClear() {
+    if (!collection) return;
+    isCoverSaving = true;
+    coverError = null;
+    try {
+      await deleteCollectionCover(collection.id);
+      coverImagePath = null;
+      coverCacheBust = new Date().toISOString();
+      await invalidate(`collections:${collection.id}`);
+    } catch (err) {
+      coverError = err instanceof Error ? err.message : "Failed to clear cover";
+    } finally {
+      isCoverSaving = false;
     }
   }
 </script>
@@ -221,6 +273,68 @@
     </div>
 
     <div class="space-y-6">
+      {#if collection}
+        <section class="surface-well p-4 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-sm font-heading font-medium text-text-secondary">Cover Image</h2>
+            {#if isCoverSaving}
+              <Loader2 class="h-4 w-4 animate-spin text-text-muted" />
+            {/if}
+          </div>
+
+          <div class="aspect-[4/3] overflow-hidden border border-border-default bg-gradient-to-br from-surface-2 via-surface-3 to-accent-950/30">
+            {#if coverImagePath}
+              <img
+                src={toApiUrl(coverImagePath, coverCacheBust)}
+                alt=""
+                class="h-full w-full object-cover"
+              />
+            {:else}
+              <div class="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
+                <ImageIcon class="h-8 w-8 text-text-accent" />
+                <span class="text-[0.7rem] font-mono uppercase tracking-[0.14em]">
+                  Default cover
+                </span>
+              </div>
+            {/if}
+          </div>
+
+          {#if coverError}
+            <p class="text-[0.72rem] text-error-text">{coverError}</p>
+          {/if}
+
+          <div class="flex flex-wrap gap-2">
+            <input
+              bind:this={coverInput}
+              class="hidden"
+              type="file"
+              accept="image/*"
+              onchange={handleCoverUpload}
+            />
+            <button
+              type="button"
+              onclick={() => coverInput?.click()}
+              disabled={isCoverSaving}
+              class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-border-accent hover:text-text-accent disabled:opacity-50"
+            >
+              <Upload class="h-3.5 w-3.5" />
+              Upload
+            </button>
+            {#if coverImagePath}
+              <button
+                type="button"
+                onclick={() => void handleCoverClear()}
+                disabled={isCoverSaving}
+                class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-error/40 hover:text-error-text disabled:opacity-50"
+              >
+                <X class="h-3.5 w-3.5" />
+                Clear
+              </button>
+            {/if}
+          </div>
+        </section>
+      {/if}
+
       <section class="surface-well p-4 space-y-3">
         <h2 class="text-sm font-heading font-medium text-text-secondary">Slideshow</h2>
         <p class="text-[0.7rem] text-text-muted leading-relaxed">

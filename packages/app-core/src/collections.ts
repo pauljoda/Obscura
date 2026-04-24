@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
 import {
   and,
   asc,
@@ -23,11 +26,12 @@ import type {
 } from "@obscura/contracts";
 import type { AppDb } from "@obscura/db";
 import { schema } from "@obscura/db";
+import { getGeneratedCollectionDir } from "@obscura/media-core";
 import {
   evaluateRuleTree,
   previewRuleTree,
 } from "@obscura/db/src/lib/collection-rule-engine";
-import { NotFoundError } from "./errors";
+import { NotFoundError, ValidationError } from "./errors";
 import { buildOrderBy, parsePagination, type SortConfig } from "./media-query-helpers";
 import {
   getGalleriesByIdsRead,
@@ -37,6 +41,7 @@ import {
 import { getVideosByIdsRead } from "./video-collection-reads";
 
 const { collections, collectionItems } = schema;
+const COLLECTION_COVER_FILE = "cover-custom.jpg";
 
 const collectionSortConfig: SortConfig = {
   columns: {
@@ -317,6 +322,67 @@ export async function deleteCollectionWrite(db: AppDb, id: string) {
     .returning({ id: collections.id });
   if (!row) throw new NotFoundError("Collection not found");
   return { id: row.id };
+}
+
+export async function uploadCollectionCoverWrite(
+  db: AppDb,
+  id: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const [collection] = await db
+    .select({ id: collections.id })
+    .from(collections)
+    .where(eq(collections.id, id))
+    .limit(1);
+  if (!collection) throw new NotFoundError("Collection not found");
+
+  const dir = getGeneratedCollectionDir(id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, COLLECTION_COVER_FILE), buffer);
+
+  const coverImagePath = `/assets/collections/${id}/cover`;
+  await db
+    .update(collections)
+    .set({
+      coverMode: "custom",
+      coverImagePath,
+      coverItemId: null,
+      coverItemType: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(collections.id, id));
+
+  return { ok: true as const, coverImagePath };
+}
+
+export async function deleteCollectionCoverWrite(db: AppDb, id: string) {
+  const [collection] = await db
+    .select({ id: collections.id })
+    .from(collections)
+    .where(eq(collections.id, id))
+    .limit(1);
+  if (!collection) throw new NotFoundError("Collection not found");
+
+  const filePath = path.join(getGeneratedCollectionDir(id), COLLECTION_COVER_FILE);
+  try {
+    if (existsSync(filePath)) await unlink(filePath);
+  } catch {
+    /* non-fatal */
+  }
+
+  await db
+    .update(collections)
+    .set({
+      coverMode: "mosaic",
+      coverImagePath: null,
+      coverItemId: null,
+      coverItemType: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(collections.id, id));
+
+  return { ok: true as const };
 }
 
 export async function addCollectionItemsWrite(

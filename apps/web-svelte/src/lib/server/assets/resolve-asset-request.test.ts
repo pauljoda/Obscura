@@ -128,6 +128,32 @@ describe("resolveAssetRequest", () => {
     );
   });
 
+  it("prefers custom collection cover uploads over generated covers", async () => {
+    cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
+    process.env.OBSCURA_CACHE_DIR = cacheDir;
+
+    const dir = path.join(cacheDir, "collections", "collection-1");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "cover.webp"), "generated-cover");
+    await writeFile(path.join(dir, "cover-custom.jpg"), "custom-cover");
+
+    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const response = await resolveAssetRequest(
+      createDeps({
+        getCollectionDetail: async () => ({
+          coverImagePath: "/assets/collections/collection-1/cover",
+        }),
+      }),
+      "collections/collection-1/cover",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/jpeg");
+    expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
+      "custom-cover",
+    );
+  });
+
   it("serves audio waveform json assets", async () => {
     cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
     process.env.OBSCURA_CACHE_DIR = cacheDir;

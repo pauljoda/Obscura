@@ -17,6 +17,7 @@ import {
   isCorruptMediaError,
   CorruptMediaError,
   resolveExistingMediaPath,
+  getGeneratedCollectionDir,
 } from "./index";
 
 async function hasBinary(name: string): Promise<boolean> {
@@ -186,6 +187,21 @@ describe("getVideoGeneratedDiskPaths", () => {
   it("videoGeneratedLayoutFromDedicated maps booleans", () => {
     expect(videoGeneratedLayoutFromDedicated(true)).toBe("dedicated");
     expect(videoGeneratedLayoutFromDedicated(false)).toBe("sidecar");
+  });
+});
+
+describe("getGeneratedCollectionDir", () => {
+  it("stores collection assets under the cache collections directory", () => {
+    const prev = process.env.OBSCURA_CACHE_DIR;
+    process.env.OBSCURA_CACHE_DIR = "/data/cache";
+    try {
+      expect(getGeneratedCollectionDir("collection-1")).toBe(
+        path.join("/data/cache", "collections", "collection-1"),
+      );
+    } finally {
+      if (prev === undefined) delete process.env.OBSCURA_CACHE_DIR;
+      else process.env.OBSCURA_CACHE_DIR = prev;
+    }
   });
 });
 

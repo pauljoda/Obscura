@@ -431,6 +431,17 @@ export async function updateCollection(id: string, dto: CollectionPatchDto) {
   });
 }
 
+export async function uploadCollectionCover(
+  id: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/collections/${id}/cover`, file);
+}
+
+export async function deleteCollectionCover(id: string): Promise<{ ok: true }> {
+  return fetchApi(`/collections/${id}/cover`, { method: "DELETE" });
+}
+
 export async function deleteCollection(id: string) {
   return fetchApi<{ id: string }>(`/collections/${id}`, {
     method: "DELETE",

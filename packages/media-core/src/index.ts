@@ -1098,6 +1098,10 @@ export function getGeneratedGalleryDir(galleryId: string) {
   return path.join(getCacheRootDir(), "galleries", galleryId);
 }
 
+export function getGeneratedCollectionDir(collectionId: string) {
+  return path.join(getCacheRootDir(), "collections", collectionId);
+}
+
 /**
  * Parse a zip/cbz/cbr file and return sorted member paths for image entries.
  */
