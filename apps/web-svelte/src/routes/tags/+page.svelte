@@ -2,12 +2,13 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { Tag as TagIcon, Star, Image as ImageIcon, Film } from "@lucide/svelte";
+  import { Tag as TagIcon, Star, Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
+  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -154,6 +155,13 @@
     return list;
   });
 
+  const withContent = $derived(
+    filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) > 0),
+  );
+  const withoutContent = $derived(
+    filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) === 0),
+  );
+
   // Generate a stable HSL gradient from tag name — gives each tag a
   // consistent identity color when no image is set.
   function gradientFor(name: string): string {
@@ -281,64 +289,73 @@
       {/if}
     </div>
   {:else}
-    <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each filtered as tag (tag.id)}
-        {@const usage = (tag.videoCount ?? 0) + (tag.imageCount ?? 0)}
-        <a
-          href={`/tags/${encodeURIComponent(tag.name)}`}
-          class="tag-card group"
-          title={`${tag.name} — ${usage} uses`}
-        >
-          <div class="tag-card-art" style:background={gradientFor(tag.name)}>
-            {#if tag.imagePath}
-              <img
-                src={toApiUrl(tag.imagePath)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <span class="tag-card-initials">{initialsFor(tag.name)}</span>
-            {/if}
-            <div class="tag-card-scrim"></div>
+    {#snippet tagCard(tag: (typeof filtered)[number])}
+      {@const usage = (tag.videoCount ?? 0) + (tag.imageCount ?? 0)}
+      <a
+        href={`/tags/${encodeURIComponent(tag.name)}`}
+        class="tag-card group"
+        title={`${tag.name} — ${usage} uses`}
+      >
+        <div class="tag-card-art" style:background={gradientFor(tag.name)}>
+          {#if tag.imagePath}
+            <img
+              src={toApiUrl(tag.imagePath)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              class="h-full w-full object-cover"
+            />
+          {:else}
+            <span class="tag-card-initials">{initialsFor(tag.name)}</span>
+          {/if}
+          <div class="tag-card-scrim"></div>
 
-            {#if tag.favorite}
-              <Star
-                class="tag-card-fav h-3.5 w-3.5 text-accent-400 fill-current drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
-              />
-            {/if}
-            {#if tag.isNsfw}
-              <span class="tag-card-nsfw">NSFW</span>
-            {/if}
+          {#if tag.favorite}
+            <Star
+              class="tag-card-fav h-3.5 w-3.5 text-accent-400 fill-current drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
+            />
+          {/if}
+          {#if tag.isNsfw}
+            <span class="tag-card-nsfw">NSFW</span>
+          {/if}
 
-            {#if usage > 0}
-              <span class="tag-card-usage">
-                <span class="tag-card-usage-num">{usage.toLocaleString()}</span>
-                <span class="tag-card-usage-label">uses</span>
-              </span>
-            {/if}
-          </div>
-          <div class="tag-card-body">
-            <TagIcon class="h-3 w-3 shrink-0 text-accent-500/80" />
-            <span class="tag-card-name" title={tag.name}>{tag.name}</span>
-            <span class="tag-card-counts">
-              {#if tag.videoCount > 0}
-                <span class="tag-card-count" title="{tag.videoCount} videos">
-                  <Film class="h-2.5 w-2.5" />
-                  {tag.videoCount}
-                </span>
-              {/if}
-              {#if tag.imageCount > 0}
-                <span class="tag-card-count" title="{tag.imageCount} images">
-                  <ImageIcon class="h-2.5 w-2.5" />
-                  {tag.imageCount}
-                </span>
-              {/if}
+          {#if usage > 0}
+            <span class="tag-card-usage">
+              <span class="tag-card-usage-num">{usage.toLocaleString()}</span>
+              <span class="tag-card-usage-label">{usage === 1 ? "use" : "uses"}</span>
             </span>
-          </div>
-        </a>
-      {/each}
+          {/if}
+        </div>
+        <div class="tag-card-body">
+          <span class="tag-card-name" title={tag.name}>{tag.name}</span>
+        </div>
+      </a>
+    {/snippet}
+
+    <div class="space-y-6">
+      {#if withContent.length > 0}
+        <HierarchySection title={`Tagged content · ${withContent.length}`}>
+          {#snippet children()}
+            <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
+              {#each withContent as tag (tag.id)}
+                {@render tagCard(tag)}
+              {/each}
+            </div>
+          {/snippet}
+        </HierarchySection>
+      {/if}
+
+      {#if withoutContent.length > 0}
+        <HierarchySection title={`Unused tags · ${withoutContent.length}`}>
+          {#snippet children()}
+            <div class="tag-grid tag-grid-muted" style:--col-count={viewPrefs.current.cols}>
+              {#each withoutContent as tag (tag.id)}
+                {@render tagCard(tag)}
+              {/each}
+            </div>
+          {/snippet}
+        </HierarchySection>
+      {/if}
     </div>
   {/if}
 </div>
@@ -456,13 +473,13 @@
   .tag-card-body {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 0.5rem;
+    justify-content: center;
+    padding: 0.5rem 0.6rem;
     min-height: 2rem;
   }
   .tag-card-name {
-    flex: 1;
     min-width: 0;
+    max-width: 100%;
     font-size: 0.78rem;
     font-weight: 500;
     color: var(--color-text-primary, #e8e8e8);
@@ -470,19 +487,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: 0.005em;
+    text-align: center;
   }
-  .tag-card-counts {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: var(--color-text-disabled, #777);
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.6rem;
-    flex-shrink: 0;
+
+  .tag-grid-muted .tag-card {
+    opacity: 0.78;
   }
-  .tag-card-count {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.15rem;
+  .tag-grid-muted .tag-card:hover {
+    opacity: 1;
   }
 </style>

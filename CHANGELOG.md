@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **The Tags grid is easier to read and upload images from.** Tags are now split into "Tagged content" and "Unused tags" sections so tags with actual videos/images/galleries always surface first, while empty tags still show (dimmed) under their own header — both sections still respond to the same search, sort, and filter controls. Tag names now center under each card for a calmer layout, and the tag edit form gained an Upload / Remove control so you can attach a custom image to any tag instead of relying only on the generated initials.
 - **Collection rules now use Video terminology end to end.** The dynamic rule builder's old Scene chip is now Video, saved rule trees are upgraded to the current entity value, and tag suggestions count videos, galleries, images, and audio tracks the same way collection previews do.
 - **Docked audio playback now reserves page space globally.** The Svelte shell measures bottom-docked page players and adds the needed bottom padding to the main scroll area, so audio players and collection playlist bars stack instead of covering track lists or page controls.
 - **Collections can now have custom cover images.** The collection editor includes a cover preview with upload and clear controls; custom covers appear through the existing collection cover asset URL while collections without one keep the default gradient look.
@@ -105,6 +106,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Custom image upload/clear controls in the tag edit form on `/tags/[id]`, wired to the existing `POST` / `DELETE /api/tags/:id/image` endpoints.
 - Collection cover upload and clear controls in the Svelte collection editor, backed by `POST` / `DELETE /api/collections/:id/cover` and cached `cover-custom.jpg` assets under the collection cache directory.
 - `playlist_sessions` table plus `GET` / `PUT` / `DELETE /api/playlist-session`, allowing the Svelte playlist controller to persist the collection-backed queue, play order, cursor, shuffle, loop, and slideshow timing across refreshes.
 - `FilterBar` now supports an integrated `thumbSize` prop and a `customFilterSections` snippet. The size slider renders inline in the toolbar on desktop and drops to its own row on mobile; pages pass extra drawer sections as a snippet so every page's Filters panel stays in sync visually. Adopted by every list view (`/videos`, `/series`, `/galleries`, `/images`, `/audio`, `/performers`, `/studios`, `/tags`, `/collections`).
@@ -233,6 +235,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- The `/tags` grid now splits tags into "Tagged content" and "Unused tags" sections; both apply the current search, sort, and filter settings independently. Tag cards drop the redundant footer icon and per-type counters and center the tag name under the art, which pairs with the existing corner usage badge for a calmer composition.
 - Studio and tag detail pages in the Svelte app now use the shared edit form kit for inline metadata updates.
 - Collections detail pages in the Svelte app now match the legacy mixed/by-type collection workflow, including playlist launch controls, dynamic refresh, delete, and direct-item selection/removal.
 

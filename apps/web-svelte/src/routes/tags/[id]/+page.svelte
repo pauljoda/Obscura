@@ -6,13 +6,21 @@
     Film,
     Images,
     Image as ImageIcon,
+    Loader2,
     Star,
     Tag as TagIcon,
+    Trash2,
+    Upload,
     X,
   } from "@lucide/svelte";
+  import { invalidate } from "$app/navigation";
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
-  import { updateTag } from "$lib/api/entities";
+  import {
+    deleteTagImage,
+    updateTag,
+    uploadTagImage,
+  } from "$lib/api/entities";
   import type { VideoListItem } from "$lib/api/types";
   import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
@@ -39,6 +47,10 @@
   let editFavorite = $state(false);
   let editIsNsfw = $state(false);
   let editIgnoreAutoTag = $state(false);
+  let imageInput = $state<HTMLInputElement | null>(null);
+  let imageUploading = $state(false);
+  let imageError = $state<string | null>(null);
+  let imageCacheBust = $state<string>("");
 
   const baseTag = $derived(data.tag);
   const t = $derived({
@@ -83,6 +95,41 @@
       savingEdit = false;
     }
   }
+
+  async function handleImageUpload(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    imageUploading = true;
+    imageError = null;
+    try {
+      const result = await uploadTagImage(t.id, file);
+      localPatch = { ...localPatch, imagePath: result.imagePath };
+      imageCacheBust = new Date().toISOString();
+      await invalidate(`tags:${t.id}`);
+    } catch (err) {
+      imageError = err instanceof Error ? err.message : "Failed to upload image";
+    } finally {
+      imageUploading = false;
+    }
+  }
+
+  async function handleImageClear() {
+    imageUploading = true;
+    imageError = null;
+    try {
+      await deleteTagImage(t.id);
+      localPatch = { ...localPatch, imagePath: null };
+      imageCacheBust = new Date().toISOString();
+      await invalidate(`tags:${t.id}`);
+    } catch (err) {
+      imageError = err instanceof Error ? err.message : "Failed to clear image";
+    } finally {
+      imageUploading = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -93,7 +140,7 @@
   <div class="flex flex-col sm:flex-row gap-4 items-start">
     {#if t.imagePath}
       <div class="w-24 h-24 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
-        <img src={toApiUrl(t.imagePath)} alt="" class="h-full w-full object-cover" />
+        <img src={toApiUrl(t.imagePath, imageCacheBust)} alt="" class="h-full w-full object-cover" />
       </div>
     {/if}
     <div class="flex-1 min-w-0 space-y-2">
@@ -175,6 +222,63 @@
           rows={4}
         />
         <TextField label="Aliases" value={editAliases} onChange={(v) => (editAliases = v)} />
+        <FormField label="Image" icon={ImageIcon}>
+          <div class="flex items-start gap-3">
+            <div class="w-24 h-24 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden flex items-center justify-center">
+              {#if t.imagePath}
+                <img
+                  src={toApiUrl(t.imagePath, imageCacheBust)}
+                  alt=""
+                  class="h-full w-full object-cover"
+                />
+              {:else}
+                <ImageIcon class="h-7 w-7 text-text-disabled" />
+              {/if}
+            </div>
+            <div class="flex-1 min-w-0 space-y-2">
+              <div class="flex flex-wrap gap-2">
+                <input
+                  bind:this={imageInput}
+                  class="hidden"
+                  type="file"
+                  accept="image/*"
+                  onchange={handleImageUpload}
+                />
+                <button
+                  type="button"
+                  onclick={() => imageInput?.click()}
+                  disabled={imageUploading}
+                  class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-border-accent hover:text-text-accent disabled:opacity-50"
+                >
+                  {#if imageUploading}
+                    <Loader2 class="h-3.5 w-3.5 animate-spin" />
+                  {:else}
+                    <Upload class="h-3.5 w-3.5" />
+                  {/if}
+                  Upload
+                </button>
+                {#if t.imagePath}
+                  <button
+                    type="button"
+                    onclick={() => void handleImageClear()}
+                    disabled={imageUploading}
+                    class="inline-flex items-center gap-1.5 border border-border-default px-3 py-1.5 text-[0.75rem] text-text-secondary transition-colors hover:border-error/40 hover:text-error-text disabled:opacity-50"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                    Remove
+                  </button>
+                {/if}
+              </div>
+              {#if imageError}
+                <p class="text-[0.72rem] text-error-text">{imageError}</p>
+              {:else}
+                <p class="text-[0.7rem] text-text-disabled">
+                  Upload a custom image to represent this tag in grids and detail pages.
+                </p>
+              {/if}
+            </div>
+          </div>
+        </FormField>
         <FormField label="Flags">
           <div class="flex flex-wrap gap-2">
             <ToggleChip value={editFavorite} onChange={(v) => (editFavorite = v)} onLabel="Favorite" icon={Star} />
