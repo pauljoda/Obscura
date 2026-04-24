@@ -14,6 +14,7 @@ import {
 } from "$lib/prefs/series-list-prefs";
 import { getWebDb } from "$lib/server/db";
 import { serverFetch } from "$lib/server/core";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
 const PAGE_SIZE = 60;
@@ -147,6 +148,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     order,
     view,
     prefs,
+    viewPrefs: await loadUiPrefObject("series:view", { cols: 5 }),
     streamed: {
       studios: studiosPromise,
       tags: tagsPromise,

@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types";
 import { fetchAudioLibraries } from "$lib/server/media";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 
 const PAGE_SIZE = 60;
 
@@ -45,5 +46,6 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    viewPrefs: await loadUiPrefObject("audio:view", { cols: 5 }),
   };
 };

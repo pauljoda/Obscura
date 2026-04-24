@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types";
 import { fetchImages } from "$lib/server/media";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 
 const PAGE_SIZE = 120;
 
@@ -27,5 +28,6 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    viewPrefs: await loadUiPrefObject("images:view", { cols: 8 }),
   };
 };

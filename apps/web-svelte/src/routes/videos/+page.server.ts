@@ -11,6 +11,7 @@ import {
 } from "$lib/prefs/videos-list-prefs";
 import { getWebDb } from "$lib/server/db";
 import { serverFetch } from "$lib/server/core";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
 const PAGE_SIZE = 60;
@@ -84,6 +85,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     page,
     pageSize: PAGE_SIZE,
     prefs,
+    viewPrefs: await loadUiPrefObject("videos:view", { cols: 5 }),
     // Streamed — render the page skeleton immediately, fill in the
     // filter panel on arrival.
     streamed: {

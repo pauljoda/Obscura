@@ -65,7 +65,12 @@
   );
 
   const presetsApi = createServerPresets("audio:filterPresets");
-  const viewPrefs = createServerPrefs<{ cols: number }>("audio:view", { cols: 5 });
+  // svelte-ignore state_referenced_locally
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "audio:view",
+    { cols: 5 },
+    data.viewPrefs,
+  );
 
   onMount(() => {
     void presetsApi.load();

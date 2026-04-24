@@ -9,6 +9,12 @@ const { fetchVideoCards, fetchSeries, fetchSeriesDetail } = vi.hoisted(() => ({
 const { parseNsfwModeCookie } = vi.hoisted(() => ({
   parseNsfwModeCookie: vi.fn(() => "show"),
 }));
+const { getUiPrefRead } = vi.hoisted(() => ({
+  getUiPrefRead: vi.fn(() => Promise.resolve(null)),
+}));
+const { getWebDb } = vi.hoisted(() => ({
+  getWebDb: vi.fn(() => Promise.resolve({})),
+}));
 
 vi.mock("$lib/server/videos", () => ({
   fetchVideoCards,
@@ -18,6 +24,14 @@ vi.mock("$lib/server/videos", () => ({
 
 vi.mock("$lib/nsfw-cookie", () => ({
   parseNsfwModeCookie,
+}));
+
+vi.mock("@obscura/app-core", () => ({
+  getUiPrefRead,
+}));
+
+vi.mock("$lib/server/db", () => ({
+  getWebDb,
 }));
 
 function makeSeries(overrides: Record<string, unknown> = {}) {
@@ -67,6 +81,9 @@ describe("/series page server load", () => {
     fetchSeries.mockReset();
     fetchSeriesDetail.mockReset();
     parseNsfwModeCookie.mockClear();
+    getUiPrefRead.mockReset();
+    getUiPrefRead.mockResolvedValue(null);
+    getWebDb.mockClear();
 
     fetchSeries.mockResolvedValue({ items: [], total: 0, limit: 200, offset: 0 });
   });

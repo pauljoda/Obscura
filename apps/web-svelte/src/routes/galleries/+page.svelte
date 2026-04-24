@@ -86,9 +86,14 @@
   );
 
   const presetsApi = createServerPresets("galleries:filterPresets");
-  const viewPrefs = createServerPrefs<{ cols: number }>("galleries:view", {
-    cols: 4,
-  });
+  // svelte-ignore state_referenced_locally
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "galleries:view",
+    {
+      cols: 4,
+    },
+    data.viewPrefs,
+  );
   let activePresetId = $state<string | null>(null);
 
   onMount(() => {

@@ -95,7 +95,12 @@
   let seriesActivePresetId = $state<string | null>(data.prefs.activePresetId ?? null);
   const serverPrefs = $derived(data.prefs);
   const presetsApi = createServerPresets(SERIES_PRESETS_KEY);
-  const viewPrefs = createServerPrefs<{ cols: number }>("series:view", { cols: 5 });
+  // svelte-ignore state_referenced_locally
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "series:view",
+    { cols: 5 },
+    data.viewPrefs,
+  );
   let studiosList = $state<AvailableItem[]>([]);
   let tagsList = $state<AvailableItem[]>([]);
   let performersList = $state<AvailableItem[]>([]);

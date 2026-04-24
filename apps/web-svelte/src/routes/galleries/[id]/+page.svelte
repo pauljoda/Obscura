@@ -43,9 +43,11 @@
   let lightboxIndex = $state(0);
   let editing = $state(false);
 
+  // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
     "galleries:interiorView",
     { cols: 6 },
+    data.viewPrefs,
   );
 
   onMount(() => {

@@ -72,7 +72,12 @@
   const serverPrefs = $derived(data.prefs);
 
   const presetsApi = createServerPresets(VIDEOS_PRESETS_KEY);
-  const viewPrefs = createServerPrefs<{ cols: number }>("videos:view", { cols: 5 });
+  // svelte-ignore state_referenced_locally
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "videos:view",
+    { cols: 5 },
+    data.viewPrefs,
+  );
 
   onMount(() => {
     void presetsApi.load();

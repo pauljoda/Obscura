@@ -36,8 +36,9 @@ const DEBOUNCE_MS = 250;
 export function createServerPrefs<T extends object>(
   key: string,
   defaults: T,
+  initial?: Partial<T> | null,
 ): ServerPrefs<T> {
-  let value = $state<T>({ ...defaults });
+  let value = $state<T>({ ...defaults, ...(initial ?? {}) });
   let loaded = $state(false);
   let pendingTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingWrite: Promise<void> | null = null;

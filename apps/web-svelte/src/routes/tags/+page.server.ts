@@ -1,6 +1,7 @@
 import type { PageServerLoad } from "./$types";
 import { fetchTags } from "$lib/server/media";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 
 export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
   depends("tags");
@@ -11,5 +12,6 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
 
   return {
     tags: response.tags,
+    viewPrefs: await loadUiPrefObject("tags:view", { cols: 5 }),
   };
 };

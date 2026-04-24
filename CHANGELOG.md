@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Thumbnail grids now open at your saved size.** Videos, Series, Galleries, Images, Actors, Studios, Tags, Audio, Collections, and gallery interiors read saved thumbnail-size preferences during the first page load instead of flashing the default grid and snapping after hydration.
+
 - **Library settings now show a single "Videos" toggle per library root.** The watched-libraries panel's Videos button reflects and saves correctly again — previously the UI sent `scanVideos` but the database stored separate `scan_movies` / `scan_series` flags, so the toggle never rendered the saved state. **Breaking:** the `scan_movies` and `scan_series` columns are dropped on upgrade and replaced by a single `scan_videos` column (preserved as `scan_movies OR scan_series` from your existing rows). No action needed if you've kept both toggles on; otherwise re-check your library roots' Videos toggle in Settings after upgrading.
 
 - **Preview rebuilds now recover old demo-library paths before probing.** Rows that still point at the retired `apps/web/public/media/scenes/...` tree are resolved to the current fixture/library path before FFmpeg or ffprobe runs, so preview, probe, fingerprint, and subtitle jobs no longer fail just because the stored path is stale.
@@ -208,6 +210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Thumbnail-size sliders now hydrate from server-loaded saved preferences, preventing list and gallery grids from briefly rendering at their default column count before snapping to the user's saved size.
 - Preview, media-probe, fingerprint, and embedded-subtitle worker jobs now resolve legacy media paths before invoking ffprobe, ffmpeg, or file hash readers.
 - Stash-Box providers no longer appear in the Identify provider picker for Series, Galleries, Albums, or Tracks.
 - Dynamic collection rules targeting videos now preview and refresh matches correctly after the old `scene` rule entity value is migrated to `video`.

@@ -64,7 +64,12 @@
   );
 
   const presetsApi = createServerPresets("studios:filterPresets");
-  const viewPrefs = createServerPrefs<{ cols: number }>("studios:view", { cols: 4 });
+  // svelte-ignore state_referenced_locally
+  const viewPrefs = createServerPrefs<{ cols: number }>(
+    "studios:view",
+    { cols: 4 },
+    data.viewPrefs,
+  );
 
   onMount(() => {
     void presetsApi.load();

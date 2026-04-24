@@ -1,5 +1,6 @@
 import type { PageServerLoad } from "./$types";
 import { fetchCollections } from "$lib/server/media";
+import { loadUiPrefObject } from "$lib/server/ui-prefs";
 
 const PAGE_SIZE = 60;
 
@@ -25,5 +26,6 @@ export const load: PageServerLoad = async ({ url, depends, fetch }) => {
     search: search ?? "",
     sort,
     order,
+    viewPrefs: await loadUiPrefObject("collections:view", { cols: 5 }),
   };
 };
