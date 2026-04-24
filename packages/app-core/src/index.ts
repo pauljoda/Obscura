@@ -39,6 +39,8 @@ export * from "./upload-utils";
 export * from "./video-markers";
 export * from "./video-collection-reads";
 export * from "./video-core";
+export * from "./video-playback";
+export * from "./video-previews";
 export * from "./video-scrape-accept";
 export * from "./video-series";
 export * from "./video-subtitles";
