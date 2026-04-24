@@ -1,3 +1,10 @@
+// TODO(refactor): consider splitting this 1,500-line schema by
+// domain (`schema/social.ts`, `schema/media-galleries.ts`,
+// `schema/media-audio.ts`, `schema/media-video.ts`, `schema/plugins.ts`,
+// `schema/system.ts`). Deferred because drizzle-kit reads this file as
+// the migration source and the cost of a broken split (silently missing
+// tables in a generated migration) is high — the split needs an
+// end-to-end migration-generation check before landing.
 import {
   pgTable,
   uuid,
