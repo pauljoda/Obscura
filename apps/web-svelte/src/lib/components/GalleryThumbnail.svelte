@@ -54,12 +54,12 @@
       case "compact":
         return "aspect-square";
       case "list":
-        return "aspect-[3/4]";
+        return "aspect-square";
       case "hero":
         return "aspect-[4/3]";
       case "grid":
       default:
-        return "aspect-[3/4]";
+        return "aspect-square";
     }
   });
 
