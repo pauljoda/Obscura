@@ -29,6 +29,7 @@
   import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
+  import CollectionThumbnail from "$lib/components/CollectionThumbnail.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   type ViewMode = "mixed" | "by-type";
@@ -180,19 +181,8 @@
     </div>
 
     <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:gap-7 sm:p-7">
-      <div class="relative aspect-[4/3] w-full max-w-52 flex-shrink-0 overflow-hidden border border-border-default bg-surface-2 shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:w-48 md:w-56">
-        {#if coverUrl}
-          <img
-            src={coverUrl}
-            alt={c.name}
-            decoding="async"
-            class="h-full w-full object-cover"
-          />
-        {:else}
-          <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent-900/45 via-surface-2 to-surface-3">
-            <FolderOpen class="h-16 w-16 text-accent-400/40" />
-          </div>
-        {/if}
+      <div class="relative w-full max-w-52 flex-shrink-0 border border-border-default shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:w-48 md:w-56">
+        <CollectionThumbnail collection={c} size="hero" loading="eager" />
       </div>
 
       <div class="min-w-0 flex-1 space-y-4">

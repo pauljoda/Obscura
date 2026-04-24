@@ -5,8 +5,7 @@
   import { FolderOpen, Plus } from "@lucide/svelte";
   import { Badge, Button } from "@obscura/ui-svelte";
   import FilterBar, { type SortDir } from "$lib/components/FilterBar.svelte";
-  import { toApiUrl } from "$lib/api/core";
-  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
+  import CollectionThumbnail from "$lib/components/CollectionThumbnail.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -155,26 +154,11 @@
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
       {#each data.collections as c, i (c.id)}
-        {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
           href={`/collections/${c.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
         >
-          <div class="aspect-video bg-surface-1 relative">
-            {#if c.coverImagePath}
-              <img
-                src={toApiUrl(c.coverImagePath)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-cover"
-              />
-            {:else}
-              <div class={gradient + " h-full w-full flex items-center justify-center"}>
-                <FolderOpen class="h-10 w-10 text-white/20" />
-              </div>
-            {/if}
-          </div>
+          <CollectionThumbnail collection={c} gradientIndex={i} />
           <div class="p-2.5 space-y-1">
             <h4 class="truncate text-body font-medium text-text-primary">{c.name}</h4>
             <div class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">

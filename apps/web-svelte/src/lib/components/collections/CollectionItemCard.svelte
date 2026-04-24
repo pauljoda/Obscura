@@ -1,11 +1,14 @@
 <script lang="ts">
   import { Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
   import type { CollectionItemDto, CollectionEntityType } from "@obscura/contracts";
-  import { toApiUrl } from "$lib/api/core";
+  import VideoThumbnail from "$lib/components/VideoThumbnail.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import AudioTrackThumbnail from "$lib/components/AudioTrackThumbnail.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     getEntityHref,
     getEntityTitle,
-    getEntityThumbnail,
     getEntityMeta,
   } from "./collection-item-helpers";
 
@@ -35,32 +38,92 @@
   const Icon = $derived(typeIcons[item.entityType]);
   const colorClass = $derived(typeColors[item.entityType]);
   const title = $derived(getEntityTitle(item));
-  const thumbnailPath = $derived(getEntityThumbnail(item));
   const meta = $derived(getEntityMeta(item));
   const href = $derived(getEntityHref(item, from));
-  const thumbnailUrl = $derived(toApiUrl(thumbnailPath));
   const isManual = $derived(item.source === "manual");
   const sourceLabel = $derived(isManual ? "Direct" : "Scoped");
+
+  // The entity payload matches the shape of the respective list-item DTO.
+  const entity = $derived(
+    (item.entity ?? {}) as Record<string, unknown>,
+  );
 </script>
 
 {#snippet card()}
   <div class="surface-card media-card-shell group relative h-full overflow-hidden">
-    <div class="relative aspect-video overflow-hidden bg-surface-2">
-      {#if thumbnailUrl}
-        <img src={thumbnailUrl} alt={title} class="h-full w-full object-cover" />
-      {:else}
-        <div class="flex h-full w-full items-center justify-center">
-          <Icon class="h-8 w-8 text-text-disabled" />
-        </div>
+    <div class="relative">
+      {#if item.entityType === "video"}
+        <VideoThumbnail
+          video={videoListItemToCardData({
+            id: item.entityId,
+            title,
+            thumbnailPath: (entity.thumbnailPath as string | null | undefined) ?? null,
+            cardThumbnailPath: (entity.cardThumbnailPath as string | null | undefined) ?? null,
+            spritePath: (entity.spritePath as string | null | undefined) ?? null,
+            trickplayVttPath: (entity.trickplayVttPath as string | null | undefined) ?? null,
+            duration: (entity.duration as number | null | undefined) ?? null,
+            durationFormatted:
+              (entity.durationFormatted as string | null | undefined) ?? null,
+            resolution: (entity.resolution as string | null | undefined) ?? null,
+            codec: (entity.codec as string | null | undefined) ?? null,
+            isNsfw: (entity.isNsfw as boolean | undefined) ?? false,
+            hasSubtitles: (entity.hasSubtitles as boolean | undefined) ?? false,
+            seasonNumber: (entity.seasonNumber as number | null | undefined) ?? null,
+            episodeNumber: (entity.episodeNumber as number | null | undefined) ?? null,
+            updatedAt: entity.updatedAt as string | undefined,
+          })}
+          size="grid"
+        />
+      {:else if item.entityType === "gallery"}
+        <GalleryThumbnail
+          title={title}
+          coverImagePath={(entity.coverImagePath as string | null | undefined) ?? null}
+          previewImagePaths={
+            (entity.previewImagePaths as string[] | null | undefined) ?? []
+          }
+          imageCount={(entity.imageCount as number | null | undefined) ?? null}
+          isNsfw={(entity.isNsfw as boolean | undefined) ?? false}
+          updatedAt={(entity.updatedAt as string | null | undefined) ?? null}
+          aspectClass="aspect-video"
+          showCount={false}
+        />
+      {:else if item.entityType === "image"}
+        <ImageThumbnail
+          title={title}
+          thumbnailPath={(entity.thumbnailPath as string | null | undefined) ?? null}
+          previewPath={(entity.previewPath as string | null | undefined) ?? null}
+          isVideo={!!(entity.previewPath as string | null | undefined)}
+          isNsfw={(entity.isNsfw as boolean | undefined) ?? false}
+          width={(entity.width as number | null | undefined) ?? null}
+          height={(entity.height as number | null | undefined) ?? null}
+          updatedAt={(entity.updatedAt as string | null | undefined) ?? null}
+          aspectClass="aspect-video"
+          showChips={false}
+        />
+      {:else if item.entityType === "audio-track"}
+        <AudioTrackThumbnail
+          track={{
+            title,
+            coverImagePath: (entity.coverImagePath as string | null | undefined) ?? null,
+            libraryCoverImagePath:
+              (entity.libraryCoverImagePath as string | null | undefined) ?? null,
+            trackNumber: (entity.trackNumber as number | null | undefined) ?? null,
+            isNsfw: (entity.isNsfw as boolean | undefined) ?? false,
+          }}
+          aspectClass="aspect-video"
+          showChips={false}
+          showPlayOverlay={false}
+        />
       {/if}
+
       <div
-        class={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.6rem] font-mono uppercase ${colorClass}`}
+        class={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.6rem] font-mono uppercase ${colorClass} z-20`}
       >
         <Icon class="h-2.5 w-2.5" />
         {item.entityType === "audio-track" ? "audio" : item.entityType}
       </div>
       <div
-        class={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[0.6rem] font-mono uppercase tracking-wider backdrop-blur-md ${
+        class={`absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[0.6rem] font-mono uppercase tracking-wider backdrop-blur-md z-20 ${
           isManual
             ? "bg-surface-1/90 text-accent-400 border border-accent-brass/30"
             : "bg-surface-1/90 text-text-secondary border border-border-default"
@@ -75,7 +138,7 @@
       </div>
       {#if selectable && isManual}
         <div
-          class={`absolute top-1.5 left-1.5 h-5 w-5 flex items-center justify-center border pointer-events-none transition-colors ${
+          class={`absolute top-1.5 left-1.5 h-5 w-5 flex items-center justify-center border pointer-events-none transition-colors z-20 ${
             selected
               ? "border-accent-brass/50 bg-accent-brass/30"
               : "border-border-default bg-surface-1/60"
@@ -89,7 +152,7 @@
         </div>
       {/if}
       {#if meta}
-        <div class="absolute bottom-1.5 right-1.5 px-1 py-0.5 text-[0.6rem] font-mono bg-surface-1/80 backdrop-blur-sm text-text-secondary">
+        <div class="absolute bottom-1.5 right-1.5 px-1 py-0.5 text-[0.6rem] font-mono bg-surface-1/80 backdrop-blur-sm text-text-secondary z-20">
           {meta}
         </div>
       {/if}
