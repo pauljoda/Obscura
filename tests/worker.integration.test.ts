@@ -5,6 +5,7 @@ import path from "node:path";
 import * as schema from "../packages/db/src/schema.ts";
 import { buildWorkerRuntime } from "../apps/worker/src/runtime.js";
 import { processLibraryScan } from "../apps/worker/src/processors/library-scan-video.js";
+import { processPreview } from "../apps/worker/src/processors/preview.js";
 import {
   closeDatabase as closeWorkerDatabase,
   configureDatabase as configureWorkerDatabase,
@@ -118,6 +119,55 @@ describe("worker integration", () => {
       .set({
         autoGenerateMetadata: true,
         autoGenerateFingerprints: true,
+        autoGeneratePreview: true,
+        generateTrickplay: true,
+      });
+  });
+
+  it("resolves stale legacy media paths before preview probing", async () => {
+    const legacyPath = path.join(
+      process.cwd(),
+      "apps",
+      "web",
+      "public",
+      "media",
+      "scenes",
+      "Demo Videos",
+      "tears_of_steel.mp4",
+    );
+    const [root] = await database.db
+      .insert(libraryRoots)
+      .values({
+        path: path.dirname(legacyPath),
+        label: "Legacy Root",
+        recursive: true,
+      })
+      .returning();
+    const [movie] = await database.db
+      .insert(videoMovies)
+      .values({
+        libraryRootId: root.id,
+        title: "Legacy Tears",
+        filePath: legacyPath,
+      })
+      .returning();
+    await database.db
+      .update(librarySettings)
+      .set({
+        autoGeneratePreview: false,
+        generateTrickplay: false,
+      });
+
+    await expect(
+      processPreview({
+        id: "preview-legacy",
+        data: { entityKind: "video_movie", entityId: movie.id },
+      }),
+    ).resolves.toBeUndefined();
+
+    await database.db
+      .update(librarySettings)
+      .set({
         autoGeneratePreview: true,
         generateTrickplay: true,
       });

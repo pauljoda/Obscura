@@ -3,6 +3,7 @@ import type { JobLike as Job } from "../lib/job-tracking.js";
 import { computeMd5, computeOsHash, computePhash } from "@obscura/media-core";
 import { db, librarySettings, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 /**
  * Recognize obscura-phash helper output that means a frame could not be
@@ -65,16 +66,17 @@ export async function processFingerprint(job: Job) {
     label: row.title ?? undefined,
   });
 
+  const filePath = resolveRequiredMediaPath(row.filePath);
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (!phashOnly) {
-    update.checksumMd5 = await computeMd5(row.filePath);
+    update.checksumMd5 = await computeMd5(filePath);
     await markJobProgress(job, "fingerprint", phashEnabled ? 33 : 50);
-    update.oshash = await computeOsHash(row.filePath);
+    update.oshash = await computeOsHash(filePath);
     await markJobProgress(job, "fingerprint", phashEnabled ? 66 : 100);
   }
   if (phashEnabled || phashOnly) {
     try {
-      const phash = await computePhash(row.filePath, row.duration);
+      const phash = await computePhash(filePath, row.duration);
       if (phash) update.phash = phash;
     } catch (err) {
       if (isPhashSkipError(err)) {

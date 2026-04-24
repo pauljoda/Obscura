@@ -12,6 +12,7 @@ import { db, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress, type JobPayload } from "../lib/job-tracking.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { videoAssetUrl } from "../lib/helpers.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 import { applyVideoProbeToVideoEntity } from "./media-probe.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -212,7 +213,7 @@ export async function processPreview(job: Job) {
   const payload = job.data as JobPayload;
   const settings = await ensureLibrarySettingsRow();
 
-  const filePath = video.filePath!;
+  const filePath = resolveRequiredMediaPath(video.filePath!);
   const metadata =
     payload.jobKind === "force-rebuild"
       ? await applyVideoProbeToVideoEntity(entityKind, video.id, filePath)

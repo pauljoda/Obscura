@@ -13,6 +13,7 @@ import {
   videoSubtitles,
 } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
 
@@ -71,6 +72,8 @@ export async function processExtractSubtitles(job: Job) {
     label: row.title ?? undefined,
   });
 
+  const filePath = resolveRequiredMediaPath(row.filePath);
+
   // List subtitle streams with ffprobe.
   const { stdout } = await runProcess("ffprobe", [
     "-v",
@@ -81,7 +84,7 @@ export async function processExtractSubtitles(job: Job) {
     "stream=index,codec_name,codec_type:stream_tags=language,title",
     "-of",
     "json",
-    row.filePath,
+    filePath,
   ]);
 
   let parsed: FfprobeResult = {};
@@ -134,7 +137,7 @@ export async function processExtractSubtitles(job: Job) {
         "-v",
         "error",
         "-i",
-        row.filePath,
+        filePath,
         "-map",
         `0:${streamIndex}`,
         "-c:s",
@@ -155,7 +158,7 @@ export async function processExtractSubtitles(job: Job) {
           "-v",
           "error",
           "-i",
-          row.filePath,
+          filePath,
           "-map",
           `0:${streamIndex}`,
           "-c:s",

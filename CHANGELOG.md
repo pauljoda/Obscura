@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Library settings now show a single "Videos" toggle per library root.** The watched-libraries panel's Videos button reflects and saves correctly again — previously the UI sent `scanVideos` but the database stored separate `scan_movies` / `scan_series` flags, so the toggle never rendered the saved state. **Breaking:** the `scan_movies` and `scan_series` columns are dropped on upgrade and replaced by a single `scan_videos` column (preserved as `scan_movies OR scan_series` from your existing rows). No action needed if you've kept both toggles on; otherwise re-check your library roots' Videos toggle in Settings after upgrading.
 
+- **Preview rebuilds now recover old demo-library paths before probing.** Rows that still point at the retired `apps/web/public/media/scenes/...` tree are resolved to the current fixture/library path before FFmpeg or ffprobe runs, so preview, probe, fingerprint, and subtitle jobs no longer fail just because the stored path is stale.
+
 - **Library scans now do far less surprise work.** Scan follow-up jobs respect the generation toggles in Settings, pHash stays off unless explicitly enabled, and trickplay sprites are generated in one FFmpeg atlas pass instead of launching FFmpeg once per tile.
 
 - **UI elements across the Svelte app now follow the sharp-corner design rule consistently.** The empty-library logo chip, changelog inline code blocks, identify review drawer navigation, image picker modal tiles and buttons, and the performer scrape action row no longer render with rounded corners — they match the Dark Room "sharp corners everywhere" rule the rest of the app has always used.
@@ -206,6 +208,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Preview, media-probe, fingerprint, and embedded-subtitle worker jobs now resolve legacy media paths before invoking ffprobe, ffmpeg, or file hash readers.
 - Stash-Box providers no longer appear in the Identify provider picker for Series, Galleries, Albums, or Tracks.
 - Dynamic collection rules targeting videos now preview and refresh matches correctly after the old `scene` rule entity value is migrated to `video`.
 - Tag counts shown in the collection rule picker now include gallery and audio-track tag usage instead of only videos and loose images.
