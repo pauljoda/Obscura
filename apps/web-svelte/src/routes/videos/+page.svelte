@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { invalidate } from "$app/navigation";
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { Film } from "@lucide/svelte";
@@ -11,19 +10,20 @@
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     EXCLUSIVE_FILTER_TYPES,
-    clearVideosListPrefsCookie,
+    VIDEOS_LIST_PREFS_KEY,
+    VIDEOS_PRESETS_KEY,
     defaultVideosListPrefs,
     formatFilterValue,
     isDefaultVideosListPrefs,
-    videosPresets,
-    writeVideosListPrefsCookie,
     type SortDir,
     type SortOption,
     type ViewMode,
     type VideosListPrefs,
     type VideosListPrefsActiveFilter,
   } from "$lib/prefs/videos-list-prefs";
-  import type { FilterPreset } from "$lib/filter-presets";
+  import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
+  import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
 
@@ -71,18 +71,19 @@
   // Svelte 5's "referenced locally" warning.
   const serverPrefs = $derived(data.prefs);
 
-  let presets = $state<FilterPreset[]>([]);
+  const presetsApi = createServerPresets(VIDEOS_PRESETS_KEY);
+  const viewPrefs = createServerPrefs<{ cols: number }>("videos:view", { cols: 5 });
 
   onMount(() => {
-    presets = videosPresets.load();
+    void presetsApi.load();
+    void viewPrefs.load();
   });
 
-  // ── Cookie writeback + refetch ────────────────────────────────
-  // Single source-of-truth effect: whenever any pref changes, write
-  // the cookie (or clear it if we're at defaults) and ask SvelteKit to
-  // re-run the server load so the listing reflects the new state. The
-  // search field is debounced on top of this so typing doesn't slam
-  // the server; filter/sort changes fire instantly.
+  // ── Prefs writeback + refetch ────────────────────────────────
+  // Single source-of-truth effect: whenever any pref changes, write to
+  // ui_prefs (DB) and ask SvelteKit to re-run the server load so the
+  // listing reflects the new state. The search field is debounced so
+  // typing doesn't slam the server; filter/sort changes fire instantly.
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   let isInitialized = false;
 
@@ -102,10 +103,6 @@
       return;
     }
 
-    // Debounce only when the search string is the thing changing. We
-    // detect that by comparing the server's current search to ours —
-    // if other fields match the server already, the in-flight change
-    // must be the search.
     const searchOnly =
       prefs.viewMode === serverPrefs.viewMode &&
       prefs.sortBy === serverPrefs.sortBy &&
@@ -115,12 +112,7 @@
       prefs.search !== serverPrefs.search;
 
     const flush = () => {
-      if (isDefaultVideosListPrefs(prefs)) {
-        clearVideosListPrefsCookie();
-      } else {
-        writeVideosListPrefsCookie(prefs);
-      }
-      void invalidate("videos");
+      void writeListPrefsAndInvalidate(VIDEOS_LIST_PREFS_KEY, prefs, "videos");
     };
 
     if (searchTimer) {
@@ -220,26 +212,22 @@
       sortBy,
       sortDir,
     };
-    const updated = [...presets, preset];
-    presets = updated;
-    videosPresets.save(updated);
+    presetsApi.save([...presetsApi.presets, preset]);
     activePresetId = preset.id;
   }
 
   function onOverwritePreset(id: string) {
-    const updated = presets.map((p) =>
-      p.id === id
-        ? { ...p, filters: activeFilters.map((f) => ({ ...f })), sortBy, sortDir }
-        : p,
+    presetsApi.save(
+      presetsApi.presets.map((p) =>
+        p.id === id
+          ? { ...p, filters: activeFilters.map((f) => ({ ...f })), sortBy, sortDir }
+          : p,
+      ),
     );
-    presets = updated;
-    videosPresets.save(updated);
   }
 
   function onDeletePreset(id: string) {
-    const updated = presets.filter((p) => p.id !== id);
-    presets = updated;
-    videosPresets.save(updated);
+    presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
     if (activePresetId === id) activePresetId = null;
   }
 
@@ -349,7 +337,7 @@
     availableStudios={studiosList}
     availableTags={tagsList}
     availablePerformers={performersList}
-    {presets}
+    presets={presetsApi.presets}
     {activePresetId}
     {onApplyPreset}
     {onSavePreset}
@@ -357,6 +345,15 @@
     {onDeletePreset}
     {defaultSortDir}
     searchPlaceholder="Search videos..."
+    thumbSize={viewMode !== "list"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Video card size",
+        }
+      : undefined}
   />
 
   {#if data.videos.length === 0}
@@ -375,9 +372,7 @@
       {/each}
     </div>
   {:else}
-    <div
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-    >
+    <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
       {#each data.videos as video, index (video.id)}
         <VideoCard
           video={videoListItemToCardData(video, "/videos")}
@@ -413,3 +408,21 @@
     </nav>
   {/if}
 </div>
+
+<style>
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(max(1, min(var(--col-count, 5), 2)), minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .thumb-grid {
+      grid-template-columns: repeat(max(1, min(var(--col-count, 5), 4)), minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .thumb-grid {
+      grid-template-columns: repeat(var(--col-count, 5), minmax(0, 1fr));
+    }
+  }
+</style>

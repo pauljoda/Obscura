@@ -1,14 +1,15 @@
 /**
  * View preferences for the `/series` root browser. Series filters share
  * the same filter-chip shape as videos, but translate into the
- * `/video-series` API query instead of video-card params.
+ * `/video-series` API query instead of video-card params. Prefs and
+ * presets are persisted to the `ui_prefs` DB table so they follow you
+ * across devices.
  */
 
-import { createFilterPresets } from "$lib/filter-presets";
-import { createListPrefs, isRecord } from "$lib/list-prefs";
+import { isRecord } from "$lib/list-prefs";
 
-export const SERIES_LIST_PREFS_COOKIE = "obscura-series-list";
-export const SERIES_PRESETS_STORAGE_KEY = "obscura-series-filter-presets";
+export const SERIES_LIST_PREFS_KEY = "series:listPrefs";
+export const SERIES_PRESETS_KEY = "series:filterPresets";
 
 export type SeriesSortOption = "recent" | "title" | "date" | "rating" | "videos";
 export type SortDir = "asc" | "desc";
@@ -74,48 +75,44 @@ function parseActiveFilters(raw: unknown): SeriesListPrefsActiveFilter[] | null 
   return out;
 }
 
-const seriesPrefs = createListPrefs<SeriesListPrefs>({
-  cookieName: SERIES_LIST_PREFS_COOKIE,
-  defaults: () => ({
+export function defaultSeriesListPrefs(): SeriesListPrefs {
+  return {
     sortBy: "recent",
     sortDir: "desc",
     search: "",
     activeFilters: [],
-  }),
-  validate: (parsed) => {
-    const sortBy = parsed.sortBy;
-    const sortDir = parsed.sortDir;
-    const search = parsed.search;
-    const activeFilters = parseActiveFilters(parsed.activeFilters);
+  };
+}
 
-    if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SeriesSortOption)) {
-      return null;
-    }
-    if (sortDir !== "asc" && sortDir !== "desc") return null;
-    if (typeof search !== "string" || search.length > 500) return null;
-    if (activeFilters === null) return null;
+export function isDefaultSeriesListPrefs(prefs: SeriesListPrefs): boolean {
+  return JSON.stringify(prefs) === JSON.stringify(defaultSeriesListPrefs());
+}
 
-    const activePresetId =
-      typeof parsed.activePresetId === "string" ? parsed.activePresetId : undefined;
+export function validateSeriesListPrefs(raw: unknown): SeriesListPrefs | null {
+  if (!isRecord(raw)) return null;
+  const sortBy = raw.sortBy;
+  const sortDir = raw.sortDir;
+  const search = raw.search;
+  const activeFilters = parseActiveFilters(raw.activeFilters);
 
-    return {
-      sortBy: sortBy as SeriesSortOption,
-      sortDir,
-      search,
-      activeFilters,
-      activePresetId,
-    };
-  },
-});
+  if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SeriesSortOption)) {
+    return null;
+  }
+  if (sortDir !== "asc" && sortDir !== "desc") return null;
+  if (typeof search !== "string" || search.length > 500) return null;
+  if (activeFilters === null) return null;
 
-export const defaultSeriesListPrefs = seriesPrefs.defaults;
-export const isDefaultSeriesListPrefs = seriesPrefs.isDefault;
-export const parseSeriesListPrefs = seriesPrefs.parse;
-export const serializeSeriesListPrefs = seriesPrefs.serialize;
-export const writeSeriesListPrefsCookie = seriesPrefs.writeCookie;
-export const clearSeriesListPrefsCookie = seriesPrefs.clearCookie;
+  const activePresetId =
+    typeof raw.activePresetId === "string" ? raw.activePresetId : undefined;
 
-export const seriesPresets = createFilterPresets(SERIES_PRESETS_STORAGE_KEY);
+  return {
+    sortBy: sortBy as SeriesSortOption,
+    sortDir,
+    search,
+    activeFilters,
+    activePresetId,
+  };
+}
 
 export function seriesListPrefsToFetchParams(
   p: SeriesListPrefs,

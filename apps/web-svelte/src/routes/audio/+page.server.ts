@@ -14,8 +14,26 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const pageParam = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
+  const studio = url.searchParams.get("studio") ?? undefined;
+  const organized = url.searchParams.get("organized") ?? undefined;
+  const ratingMinRaw = url.searchParams.get("ratingMin");
+  const ratingMin = ratingMinRaw ? Number(ratingMinRaw) : undefined;
+  const ratingMaxRaw = url.searchParams.get("ratingMax");
+  const ratingMax = ratingMaxRaw ? Number(ratingMaxRaw) : undefined;
+
   const response = await fetchAudioLibraries(
-    { search, sort, order, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, nsfw: nsfwMode },
+    {
+      search,
+      sort,
+      order,
+      studio,
+      organized,
+      ratingMin: Number.isFinite(ratingMin) ? ratingMin : undefined,
+      ratingMax: Number.isFinite(ratingMax) ? ratingMax : undefined,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      nsfw: nsfwMode,
+    },
     { fetch },
   ).catch(() => ({ items: [], total: 0 }));
 

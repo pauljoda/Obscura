@@ -1,4 +1,5 @@
 import type { PageServerLoad } from "./$types";
+import { getUiPrefRead } from "@obscura/app-core";
 import {
   fetchVideoCards,
   fetchSeries,
@@ -6,11 +7,12 @@ import {
 } from "$lib/server/videos";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
 import {
-  SERIES_LIST_PREFS_COOKIE,
+  SERIES_LIST_PREFS_KEY,
   defaultSeriesListPrefs,
-  parseSeriesListPrefs,
+  validateSeriesListPrefs,
   seriesListPrefsToFetchParams,
 } from "$lib/prefs/series-list-prefs";
+import { getWebDb } from "$lib/server/db";
 import { serverFetch } from "$lib/server/core";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
@@ -21,12 +23,13 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
 
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
   const seriesParam = url.searchParams.get("series");
-  const prefsCookie = cookies.get(SERIES_LIST_PREFS_COOKIE);
+  const db = await getWebDb();
+  const prefsRow = await getUiPrefRead(db, SERIES_LIST_PREFS_KEY).catch(() => null);
   const parsedPrefs =
-    parseSeriesListPrefs(prefsCookie) ?? defaultSeriesListPrefs();
+    validateSeriesListPrefs(prefsRow?.value) ?? defaultSeriesListPrefs();
   const rootSort = url.searchParams.get("sort");
   const rootOrder = url.searchParams.get("order");
-  const useUrlPrefs = !seriesParam && !prefsCookie;
+  const useUrlPrefs = !seriesParam && !prefsRow;
   const prefs = !useUrlPrefs
     ? parsedPrefs
     : {

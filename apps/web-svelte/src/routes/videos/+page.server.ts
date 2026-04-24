@@ -1,13 +1,15 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
+import { getUiPrefRead } from "@obscura/app-core";
 import { fetchVideoCards } from "$lib/server/videos";
 import { parseNsfwModeCookie } from "$lib/nsfw-cookie";
 import {
-  VIDEOS_LIST_PREFS_COOKIE,
+  VIDEOS_LIST_PREFS_KEY,
   defaultVideosListPrefs,
-  parseVideosListPrefs,
+  validateVideosListPrefs,
   videosListPrefsToFetchParams,
 } from "$lib/prefs/videos-list-prefs";
+import { getWebDb } from "$lib/server/db";
 import { serverFetch } from "$lib/server/core";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
@@ -17,13 +19,15 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   depends("videos");
 
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
-  const cookieRaw = cookies.get(VIDEOS_LIST_PREFS_COOKIE);
-  const prefs = parseVideosListPrefs(cookieRaw) ?? defaultVideosListPrefs();
 
-  // Navigation params — these stay on the URL; view prefs live on the cookie.
+  // Read view prefs directly from ui_prefs. Single indexed point-lookup.
+  const db = await getWebDb();
+  const row = await getUiPrefRead(db, VIDEOS_LIST_PREFS_KEY).catch(() => null);
+  const prefs = validateVideosListPrefs(row?.value) ?? defaultVideosListPrefs();
+
+  // Navigation params — these stay on the URL; view prefs live in ui_prefs.
   // `?view=series` is a legacy URL from the React build; redirect it to
-  // /series so deep links keep working even though the cookie now owns
-  // view mode.
+  // /series so deep links keep working even though prefs now own view mode.
   const seriesParam = url.searchParams.get("series");
   const legacyViewRaw = url.searchParams.get("view");
   if (seriesParam || legacyViewRaw === "series" || prefs.viewMode === "series") {

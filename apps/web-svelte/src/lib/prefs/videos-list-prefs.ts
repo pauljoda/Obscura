@@ -1,21 +1,21 @@
 /**
  * View preferences for the `/videos` route — sort, filters, search, and
- * view mode. Persisted in the `obscura-videos-list` cookie via the
- * generic `createListPrefs` factory so the server load function can read
- * prefs directly and the page component can write them when state
- * changes.
+ * view mode. Persisted to the `ui_prefs` DB table under the
+ * `videos:listPrefs` key via `createServerPrefs`, so the SvelteKit load
+ * function reads prefs via a single DB point-lookup (no cookie round
+ * trip) and the client writes them through `PUT /api/ui-prefs/...`
+ * before invalidating the load cache.
  *
- * Presets (save/apply named combinations of sort + filters) are tracked
- * by id on the cookie; the presets themselves live in localStorage via
- * `createFilterPresets("obscura-videos-filter-presets")`.
+ * Presets (save/apply named combinations of sort + filters) share the
+ * same ui_prefs backing under the `videos:filterPresets` key via
+ * `createServerPresets`, so they follow you across devices and browsers.
  */
 
 import type { FetchVideosParams } from "$lib/api/video-query";
-import { createListPrefs, isRecord } from "$lib/list-prefs";
-import { createFilterPresets } from "$lib/filter-presets";
+import { isRecord } from "$lib/list-prefs";
 
-export const VIDEOS_LIST_PREFS_COOKIE = "obscura-videos-list";
-export const VIDEOS_PRESETS_STORAGE_KEY = "obscura-videos-filter-presets";
+export const VIDEOS_LIST_PREFS_KEY = "videos:listPrefs";
+export const VIDEOS_PRESETS_KEY = "videos:filterPresets";
 
 export type ViewMode = "grid" | "list" | "series";
 export type SortOption =
@@ -76,54 +76,55 @@ function parseActiveFilters(raw: unknown): VideosListPrefsActiveFilter[] | null 
   return out;
 }
 
-const videosPrefs = createListPrefs<VideosListPrefs>({
-  cookieName: VIDEOS_LIST_PREFS_COOKIE,
-  defaults: () => ({
+export function defaultVideosListPrefs(): VideosListPrefs {
+  return {
     viewMode: "grid",
     sortBy: "recent",
     sortDir: "desc",
     search: "",
     activeFilters: [],
-  }),
-  validate: (parsed) => {
-    const viewMode = parsed.viewMode;
-    const sortBy = parsed.sortBy;
-    const sortDir = parsed.sortDir;
-    const search = parsed.search;
-    const activeFilters = parseActiveFilters(parsed.activeFilters);
+  };
+}
 
-    if (typeof viewMode !== "string" || !VIEW_MODES.includes(viewMode as ViewMode)) {
-      return null;
-    }
-    if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SortOption)) {
-      return null;
-    }
-    if (sortDir !== "asc" && sortDir !== "desc") return null;
-    if (typeof search !== "string" || search.length > 500) return null;
-    if (activeFilters === null) return null;
+export function isDefaultVideosListPrefs(prefs: VideosListPrefs): boolean {
+  return JSON.stringify(prefs) === JSON.stringify(defaultVideosListPrefs());
+}
 
-    const activePresetId =
-      typeof parsed.activePresetId === "string" ? parsed.activePresetId : undefined;
+/**
+ * Validate an opaque JSON blob (from `ui_prefs.value`) as a
+ * VideosListPrefs. Returns null if any field fails validation, which
+ * the caller should treat as "fall back to defaults".
+ */
+export function validateVideosListPrefs(raw: unknown): VideosListPrefs | null {
+  if (!isRecord(raw)) return null;
+  const viewMode = raw.viewMode;
+  const sortBy = raw.sortBy;
+  const sortDir = raw.sortDir;
+  const search = raw.search;
+  const activeFilters = parseActiveFilters(raw.activeFilters);
 
-    return {
-      viewMode: viewMode as ViewMode,
-      sortBy: sortBy as SortOption,
-      sortDir,
-      search,
-      activeFilters,
-      activePresetId,
-    };
-  },
-});
+  if (typeof viewMode !== "string" || !VIEW_MODES.includes(viewMode as ViewMode)) {
+    return null;
+  }
+  if (typeof sortBy !== "string" || !SORT_OPTIONS.includes(sortBy as SortOption)) {
+    return null;
+  }
+  if (sortDir !== "asc" && sortDir !== "desc") return null;
+  if (typeof search !== "string" || search.length > 500) return null;
+  if (activeFilters === null) return null;
 
-export const defaultVideosListPrefs = videosPrefs.defaults;
-export const isDefaultVideosListPrefs = videosPrefs.isDefault;
-export const parseVideosListPrefs = videosPrefs.parse;
-export const serializeVideosListPrefs = videosPrefs.serialize;
-export const writeVideosListPrefsCookie = videosPrefs.writeCookie;
-export const clearVideosListPrefsCookie = videosPrefs.clearCookie;
+  const activePresetId =
+    typeof raw.activePresetId === "string" ? raw.activePresetId : undefined;
 
-export const videosPresets = createFilterPresets(VIDEOS_PRESETS_STORAGE_KEY);
+  return {
+    viewMode: viewMode as ViewMode,
+    sortBy: sortBy as SortOption,
+    sortDir,
+    search,
+    activeFilters,
+    activePresetId,
+  };
+}
 
 const DURATION_PRESET_TO_API: Record<
   string,

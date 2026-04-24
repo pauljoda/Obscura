@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { goto, invalidate } from "$app/navigation";
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
   import FilterBar, {
@@ -18,15 +18,16 @@
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import { videoListItemToCardData } from "$lib/video-card-data";
-  import type { FilterPreset } from "$lib/filter-presets";
+  import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
+  import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
   import {
     SERIES_EXCLUSIVE_FILTER_TYPES,
-    clearSeriesListPrefsCookie,
+    SERIES_LIST_PREFS_KEY,
+    SERIES_PRESETS_KEY,
     defaultSeriesListPrefs,
     formatSeriesFilterValue,
     isDefaultSeriesListPrefs,
-    seriesPresets,
-    writeSeriesListPrefsCookie,
     type SeriesListPrefs,
     type SeriesListPrefsActiveFilter,
     type SeriesSortOption,
@@ -93,13 +94,15 @@
   // svelte-ignore state_referenced_locally
   let seriesActivePresetId = $state<string | null>(data.prefs.activePresetId ?? null);
   const serverPrefs = $derived(data.prefs);
-  let presets = $state<FilterPreset[]>([]);
+  const presetsApi = createServerPresets(SERIES_PRESETS_KEY);
+  const viewPrefs = createServerPrefs<{ cols: number }>("series:view", { cols: 5 });
   let studiosList = $state<AvailableItem[]>([]);
   let tagsList = $state<AvailableItem[]>([]);
   let performersList = $state<AvailableItem[]>([]);
 
   onMount(() => {
-    presets = seriesPresets.load();
+    void presetsApi.load();
+    void viewPrefs.load();
   });
 
   const seriesDisplayFilters = $derived(
@@ -156,12 +159,7 @@
       prefs.search !== serverPrefs.search;
 
     const flush = () => {
-      if (isDefaultSeriesListPrefs(prefs)) {
-        clearSeriesListPrefsCookie();
-      } else {
-        writeSeriesListPrefsCookie(prefs);
-      }
-      void invalidate("video-series");
+      void writeListPrefsAndInvalidate(SERIES_LIST_PREFS_KEY, prefs, "video-series");
     };
 
     if (searchTimer) {
@@ -315,31 +313,27 @@
       sortBy: seriesSortBy,
       sortDir: seriesSortDir,
     };
-    const updated = [...presets, preset];
-    presets = updated;
-    seriesPresets.save(updated);
+    presetsApi.save([...presetsApi.presets, preset]);
     seriesActivePresetId = preset.id;
   }
 
   function onOverwritePreset(id: string) {
-    const updated = presets.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            filters: seriesActiveFilters.map((f) => ({ ...f })),
-            sortBy: seriesSortBy,
-            sortDir: seriesSortDir,
-          }
-        : p,
+    presetsApi.save(
+      presetsApi.presets.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              filters: seriesActiveFilters.map((f) => ({ ...f })),
+              sortBy: seriesSortBy,
+              sortDir: seriesSortDir,
+            }
+          : p,
+      ),
     );
-    presets = updated;
-    seriesPresets.save(updated);
   }
 
   function onDeletePreset(id: string) {
-    const updated = presets.filter((p) => p.id !== id);
-    presets = updated;
-    seriesPresets.save(updated);
+    presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
     if (seriesActivePresetId === id) seriesActivePresetId = null;
   }
 
@@ -392,7 +386,7 @@
     availableStudios={usesRootPrefs ? studiosList : []}
     availableTags={usesRootPrefs ? tagsList : []}
     availablePerformers={usesRootPrefs ? performersList : []}
-    presets={usesRootPrefs ? presets : []}
+    presets={usesRootPrefs ? presetsApi.presets : []}
     activePresetId={usesRootPrefs ? seriesActivePresetId : null}
     onApplyPreset={usesRootPrefs ? onApplyPreset : undefined}
     onSavePreset={usesRootPrefs ? onSavePreset : undefined}
@@ -401,6 +395,15 @@
     defaultSortDir={usesRootPrefs ? defaultSeriesSortDir : undefined}
     filterSections={usesRootPrefs ? seriesFilterSections : undefined}
     showInteractiveFilter={!usesRootPrefs}
+    thumbSize={data.view !== "list"
+      ? {
+          value: viewPrefs.current.cols,
+          min: 2,
+          max: 8,
+          onChange: (n) => viewPrefs.update({ cols: n }),
+          label: "Series card size",
+        }
+      : undefined}
   />
 
   {#if data.activeSeries}
@@ -645,7 +648,7 @@
                   {/each}
                 </div>
               {:else}
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
                   {#each data.videos as video, index (video.id)}
                     <VideoCard
                       video={videoListItemToCardData(video, currentPath)}
@@ -676,7 +679,7 @@
         {#if data.series.length > 0}
           <HierarchySection title={entityTerms.series}>
             {#snippet children()}
-              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
                 {#each data.series as series (series.id)}
                   <SeriesCard series={series} href={`/series?series=${series.id}`} compact />
                 {/each}
@@ -717,3 +720,22 @@
     </nav>
   {/if}
 </div>
+
+
+<style>
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(max(1, min(var(--col-count, 5), 2)), minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  @media (min-width: 640px) {
+    .thumb-grid {
+      grid-template-columns: repeat(max(1, min(var(--col-count, 5), 4)), minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .thumb-grid {
+      grid-template-columns: repeat(var(--col-count, 5), minmax(0, 1fr));
+    }
+  }
+</style>
