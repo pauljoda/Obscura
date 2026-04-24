@@ -1,0 +1,115 @@
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/geist-sans/800.css';
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
+:root {
+  --obscura-brass: #c49a5a;
+  --obscura-bg: #050506;
+  --obscura-surface-1: #0d0e10;
+  --obscura-surface-2: #15161a;
+  --obscura-surface-3: #202126;
+  --ifm-color-primary: #c49a5a;
+  --ifm-color-primary-dark: #b48748;
+  --ifm-color-primary-darker: #a97e42;
+  --ifm-color-primary-darkest: #805d2f;
+  --ifm-color-primary-light: #d0ab70;
+  --ifm-color-primary-lighter: #d9b981;
+  --ifm-color-primary-lightest: #efd6aa;
+  --ifm-background-color: var(--obscura-bg);
+  --ifm-background-surface-color: var(--obscura-surface-1);
+  --ifm-font-color-base: #ece7df;
+  --ifm-font-color-secondary: #a8a29a;
+  --ifm-heading-color: #f7f2ea;
+  --ifm-navbar-background-color: rgba(5, 5, 6, 0.84);
+  --ifm-footer-background-color: #050506;
+  --ifm-card-background-color: var(--obscura-surface-1);
+  --ifm-font-family-base: 'Inter Variable', Inter, system-ui, sans-serif;
+  --ifm-heading-font-family: 'Geist Sans', 'Inter Variable', system-ui, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
+  --ifm-code-font-size: 95%;
+  --ifm-global-radius: 0;
+  --ifm-button-border-radius: 0;
+  --ifm-pagination-nav-border-radius: 0;
+  --ifm-breadcrumb-border-radius: 0;
+  --ifm-alert-border-radius: 0;
+  --docusaurus-highlighted-code-line-bg: rgba(196, 154, 90, 0.14);
+}
+
+[data-theme='dark'] {
+  --ifm-background-color: var(--obscura-bg);
+  --ifm-background-surface-color: var(--obscura-surface-1);
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+html {
+  background: var(--obscura-bg);
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(196, 154, 90, 0.05), transparent 360px),
+    var(--obscura-bg);
+}
+
+a {
+  text-underline-offset: 0.22em;
+}
+
+.navbar {
+  border-bottom: 1px solid rgba(196, 154, 90, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.navbar__title {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 800;
+}
+
+.menu,
+.theme-doc-sidebar-container,
+.table-of-contents {
+  background: rgba(13, 14, 16, 0.62);
+}
+
+.theme-doc-markdown {
+  font-size: 1rem;
+  line-height: 1.78;
+}
+
+.theme-doc-markdown h1,
+.theme-doc-markdown h2,
+.theme-doc-markdown h3 {
+  font-family: var(--ifm-heading-font-family);
+}
+
+.theme-doc-markdown h1 {
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+  line-height: 1.02;
+}
+
+.theme-doc-markdown img {
+  border: 1px solid rgba(196, 154, 90, 0.24);
+  box-shadow: 0 0 34px rgba(0, 0, 0, 0.38);
+}
+
+.theme-code-block,
+pre,
+code {
+  border-radius: 0 !important;
+}
+
+.button,
+.pagination-nav__link,
+.theme-admonition,
+.card {
+  border-radius: 0 !important;
+}
+
+.footer {
+  border-top: 1px solid rgba(196, 154, 90, 0.2);
+}

@@ -62,6 +62,51 @@
         "webpack:///./*": "${webRoot}/*",
         "webpack:///src/*": "${webRoot}/src/*"
       }
+    },
+    {
+      "name": "Obscura Docs: Dev Site",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "docs:dev",
+        "--",
+        "--port",
+        "3010",
+        "--host",
+        "127.0.0.1"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "pattern": "(https?://127\\.0\\.0\\.1:3010/Obscura/)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Obscura Docs: Preview Build",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "docs:serve",
+        "--",
+        "--port",
+        "3010",
+        "--host",
+        "127.0.0.1"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Obscura Docs: Build",
+      "serverReadyAction": {
+        "pattern": "(https?://127\\.0\\.0\\.1:3010/Obscura/)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
     }
   ],
   "compounds": [

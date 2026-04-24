@@ -44,6 +44,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Terminology cleanup.** "Scenes" and "folders" are gone from every user-visible surface — filter chips, tooltips, settings copy, empty states, search result groups, job dashboard sections, and performer / tag / studio labels all say **Videos** and **Series** now. Contracts, database schema, API routes, web routes, and component names were renamed to match.
 
+- **Obscura now has a dedicated documentation website scaffold.** The new Docusaurus site can be run locally from VS Code or pnpm, builds as a static site for GitHub Pages, and starts the docs with user setup, architecture, design-language, pHash, and plugin-authoring guides.
+
 ### Added
 
 - SvelteKit web app (`apps/web-svelte`) running on port 8008 with same-origin `/api/*` routes, replacing the Next.js + Fastify + nginx stack.
@@ -99,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Added a Docusaurus documentation site under `documentation-site/`, wired for GitHub Pages deployment and local VS Code launch/build commands.
 - `docs/library-organization.md` — how files under a library root are classified into movies, flat series, and seasoned series, with good / bad layout examples and filename convention tips.
 - `docs/design-language.md` — refreshed Dark Room design direction reference.
 

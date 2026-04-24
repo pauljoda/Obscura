@@ -33,6 +33,22 @@
       },
       "problemMatcher": [],
       "detail": "Runs the adapter-node output directly on :8008. Run the build task first."
+    },
+    {
+      "label": "Obscura Docs: Build",
+      "type": "shell",
+      "command": "pnpm docs:build",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Builds the Docusaurus documentation site into documentation-site/build."
+    },
+    {
+      "label": "Obscura Docs: Serve Build",
+      "type": "shell",
+      "command": "pnpm docs:serve -- --port 3010 --host 127.0.0.1",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "detail": "Serves the built Docusaurus site locally at http://127.0.0.1:3010/Obscura/. Run the build task first."
     }
   ]
 }

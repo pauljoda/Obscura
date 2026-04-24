@@ -8,6 +8,8 @@ dist
 coverage
 .turbo
 *.tsbuildinfo
+documentation-site/.docusaurus
+documentation-site/build
 playwright-report
 test-results
 

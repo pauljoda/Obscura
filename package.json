@@ -16,6 +16,10 @@
     "test:e2e": "playwright test",
     "test:ci": "pnpm test:unit && pnpm test:integration && pnpm test:web-svelte",
     "coverage": "pnpm test:unit -- --coverage && pnpm test:integration -- --coverage && pnpm test:web-svelte -- --coverage",
+    "docs:dev": "node scripts/docs-site.mjs start",
+    "docs:build": "pnpm --filter @obscura/documentation-site build",
+    "docs:serve": "node scripts/docs-site.mjs serve",
+    "docs:check": "pnpm --filter @obscura/documentation-site typecheck && pnpm --filter @obscura/documentation-site build",
     "release:check": "node scripts/release/check-version.mjs",
     "release:cut": "node scripts/release/cut.mjs"
   },
