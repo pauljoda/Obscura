@@ -19,7 +19,7 @@
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import { fetchSearch } from "$lib/api/media";
-  import { recentSearches } from "$lib/hooks/recent-searches.svelte";
+  import { recentSearches } from "$lib/stores/recent-searches.svelte";
   import { SEARCH_KIND_CONFIG } from "./search-kind-config";
   import { toApiUrl } from "$lib/api/core";
   import { buildHrefWithFrom } from "$lib/back-navigation";
