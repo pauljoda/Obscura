@@ -105,6 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added prominent README badge links to the live documentation site, quick start guide, and plugin author guide.
 - `docs/library-organization.md` — how files under a library root are classified into movies, flat series, and seasoned series, with good / bad layout examples and filename convention tips.
 - `docs/design-language.md` — refreshed Dark Room design direction reference.
+- Documentation site now follows the Dark Room design language end-to-end: cinematic homepage with hero, capability strip, three-track Pathways grid, six-card Features grid, alternating Showcase rows, and a CTA strip; brass-accented sidebar with glowing active markers, LED-style admonitions, instrument-panel tables, glass pagination cards, and a typographic rhythm tuned for long-form reading.
 
 ## [0.19.0] - 2026-04-12
 ### What's New
