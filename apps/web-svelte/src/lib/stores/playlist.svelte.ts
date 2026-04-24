@@ -4,7 +4,10 @@ import { page } from "$app/state";
 import type {
   CollectionItemDto,
   CollectionEntityType,
+  PlaylistSessionDto,
+  PlaylistSessionWriteDto,
 } from "@obscura/contracts";
+import { fetchApi } from "$lib/api/core";
 
 const KEY = Symbol("playlist");
 
@@ -54,6 +57,7 @@ export class PlaylistStore {
   shuffle = $state(false);
   loop = $state(false);
   slideshowDurationSeconds = $state(0);
+  hydrated = $state(false);
 
   readonly isActive = $derived(this.items.length > 0);
   readonly currentIndex = $derived(this.playOrder[this.orderPosition] ?? 0);
@@ -64,11 +68,70 @@ export class PlaylistStore {
   readonly isOnCurrentPage = $derived(
     this.currentItem ? page.url.pathname === getEntityHref(this.currentItem) : false,
   );
+  private mutationVersion = 0;
 
   private navigateToItem(item: CollectionItemDto) {
     const href = getEntityHref(item);
     const from = this.collectionId ? `/collections/${this.collectionId}` : undefined;
     void goto(from ? buildHrefWithFrom(href, from) : href);
+  }
+
+  private applySession(session: PlaylistSessionDto | PlaylistSessionWriteDto) {
+    this.items = session.items;
+    this.playOrder = session.playOrder;
+    this.orderPosition = session.orderPosition;
+    this.collectionName = session.collectionName;
+    this.collectionId = session.collectionId;
+    this.shuffle = session.shuffle;
+    this.loop = session.loop;
+    this.slideshowDurationSeconds = session.slideshowDurationSeconds;
+  }
+
+  private toSessionPayload(): PlaylistSessionWriteDto {
+    return {
+      collectionId: this.collectionId,
+      collectionName: this.collectionName,
+      items: this.items,
+      playOrder: this.playOrder,
+      orderPosition: this.orderPosition,
+      shuffle: this.shuffle,
+      loop: this.loop,
+      slideshowDurationSeconds: this.slideshowDurationSeconds,
+    };
+  }
+
+  async hydrate() {
+    if (this.hydrated) return;
+    this.hydrated = true;
+    const hydrateVersion = this.mutationVersion;
+    try {
+      const session = await fetchApi<PlaylistSessionDto | null>("/playlist-session");
+      if (session && this.mutationVersion === hydrateVersion) {
+        this.applySession(session);
+      }
+    } catch (err) {
+      console.warn("Unable to hydrate playlist session", err);
+    }
+  }
+
+  private persistSession() {
+    if (!this.hydrated) return;
+    const payload = this.toSessionPayload();
+    void fetchApi<PlaylistSessionDto | null>("/playlist-session", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }).catch((err) => {
+      console.warn("Unable to persist playlist session", err);
+    });
+  }
+
+  private deleteSession() {
+    if (!this.hydrated) return;
+    void fetchApi<{ ok: true }>("/playlist-session", { method: "DELETE" }).catch(
+      (err) => {
+        console.warn("Unable to clear playlist session", err);
+      },
+    );
   }
 
   startPlaylist(
@@ -77,6 +140,7 @@ export class PlaylistStore {
     startIndex = 0,
     options?: PlaylistStartOptions,
   ) {
+    this.mutationVersion += 1;
     this.items = newItems;
     this.collectionName = name;
     this.collectionId = newItems[0]?.collectionId ?? null;
@@ -103,22 +167,28 @@ export class PlaylistStore {
 
     this.playOrder = order;
     this.orderPosition = pos;
+    this.persistSession();
 
     const firstItem = newItems[order[pos]];
     if (firstItem) this.navigateToItem(firstItem);
   }
 
   clearPlaylist() {
+    this.mutationVersion += 1;
     this.items = [];
     this.playOrder = [];
     this.orderPosition = 0;
     this.collectionName = "";
     this.collectionId = null;
     this.slideshowDurationSeconds = 0;
+    this.shuffle = false;
+    this.loop = false;
+    this.deleteSession();
   }
 
   next() {
     if (this.items.length === 0) return;
+    this.mutationVersion += 1;
     let newPos = this.orderPosition + 1;
     if (newPos >= this.playOrder.length) {
       if (this.loop) {
@@ -132,11 +202,13 @@ export class PlaylistStore {
     }
     const newIndex = this.playOrder[newPos];
     this.orderPosition = newPos;
+    this.persistSession();
     this.navigateToItem(this.items[newIndex]);
   }
 
   previous() {
     if (this.items.length === 0) return;
+    this.mutationVersion += 1;
     let newPos = this.orderPosition - 1;
     if (newPos < 0) {
       if (this.loop) newPos = this.playOrder.length - 1;
@@ -144,17 +216,21 @@ export class PlaylistStore {
     }
     const newIndex = this.playOrder[newPos];
     this.orderPosition = newPos;
+    this.persistSession();
     this.navigateToItem(this.items[newIndex]);
   }
 
   jumpTo(position: number) {
     if (position < 0 || position >= this.playOrder.length) return;
+    this.mutationVersion += 1;
     this.orderPosition = position;
     const itemIndex = this.playOrder[position];
+    this.persistSession();
     this.navigateToItem(this.items[itemIndex]);
   }
 
   toggleShuffle() {
+    this.mutationVersion += 1;
     const newShuffle = !this.shuffle;
     if (newShuffle) {
       const shuffled = fisherYatesShuffle(this.items.map((_, i) => i));
@@ -169,10 +245,13 @@ export class PlaylistStore {
       this.orderPosition = this.currentIndex;
     }
     this.shuffle = newShuffle;
+    this.persistSession();
   }
 
   toggleLoop() {
+    this.mutationVersion += 1;
     this.loop = !this.loop;
+    this.persistSession();
   }
 
   reportContentEnded(entityType: CollectionEntityType, entityId: string) {

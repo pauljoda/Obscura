@@ -1125,6 +1125,29 @@ export const collectionItemsRelations = relations(
   })
 );
 
+// ─── Playlist Session ───────────────────────────────────────────
+/**
+ * Single-user global playback queue. The web UI writes the current
+ * collection-backed queue here so refreshes and device-local navigation keep
+ * the bottom playback bar and queue cursor intact.
+ */
+export const playlistSessions = pgTable("playlist_sessions", {
+  key: text("key").primaryKey(),
+  collectionId: uuid("collection_id").references(() => collections.id, {
+    onDelete: "set null",
+  }),
+  collectionName: text("collection_name").notNull(),
+  items: jsonb("items").notNull(),
+  playOrder: jsonb("play_order").notNull(),
+  orderPosition: integer("order_position").default(0).notNull(),
+  shuffle: boolean("shuffle").default(false).notNull(),
+  loop: boolean("loop").default(false).notNull(),
+  slideshowDurationSeconds: integer("slideshow_duration_seconds")
+    .default(0)
+    .notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // ─── Video Series Model ─────────────────────────────────────────────
 // Typed tables for the Series → Season → Episode / Movie reshape.
 

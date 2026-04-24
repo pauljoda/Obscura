@@ -23,6 +23,7 @@ export * from "./performer-writes";
 export * from "./plugin-execution";
 export * from "./plugin-packages";
 export * from "./plugin-registry";
+export * from "./playlist-session";
 export * from "./provider-lists";
 export * from "./scraper-runtime";
 export * from "./queue-writes";

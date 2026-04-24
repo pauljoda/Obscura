@@ -75,6 +75,7 @@ export const apiRoutes = {
   collectionPreviewRules: "/collections/preview-rules",
   collectionCover: "/collections/:id/cover",
   collectionCoverAsset: "/assets/collections/:id/cover",
+  playlistSession: "/playlist-session",
   // Plugins
   pluginPackages: "/plugins/packages",
   pluginPackageDetail: "/plugins/packages/:id",
@@ -1392,6 +1393,29 @@ export interface CollectionRulePreviewDto {
   total: number;
   byType: Record<CollectionEntityType, number>;
   sample: CollectionItemDto[];
+}
+
+export interface PlaylistSessionDto {
+  collectionId: string | null;
+  collectionName: string;
+  items: CollectionItemDto[];
+  playOrder: number[];
+  orderPosition: number;
+  shuffle: boolean;
+  loop: boolean;
+  slideshowDurationSeconds: number;
+  updatedAt: string;
+}
+
+export interface PlaylistSessionWriteDto {
+  collectionId: string | null;
+  collectionName: string;
+  items: CollectionItemDto[];
+  playOrder: number[];
+  orderPosition: number;
+  shuffle: boolean;
+  loop: boolean;
+  slideshowDurationSeconds: number;
 }
 
 // ─── Scene DTOs ─────────────────────────────────────────────────

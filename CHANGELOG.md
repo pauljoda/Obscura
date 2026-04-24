@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- **Collection playback now survives a page refresh.** The global bottom playlist stores its active collection queue, shuffle / loop state, cursor, and slideshow timer in Obscura's database, so refreshing a video, image, gallery, or track no longer loses the session or lets the bottom bar overlap the page after hydration.
 - **Studios and Tags can now be edited from their Svelte detail pages.** Each page has an inline edit panel for name, description, aliases, favorite / NSFW flags, and tag auto-tag behavior; studios also support URL and parent-studio edits.
 - **Collections can play, shuffle, and manage their items again in the Svelte app.** Collection detail pages now start playlist playback from Play All / Shuffle All, switch between Mixed and By Type views, show Direct vs Scoped badges on item thumbnails, refresh dynamic rules, and remove selected direct items.
 - **Library list views are now consistent across Actors, Studios, Tags, Galleries, Images, Audio, Collections, Videos, and Series.** The thumbnail-size slider is now integrated directly into the filter bar — on desktop it sits inline next to the sort / filter / preset controls, and on mobile it drops to its own row below the controls so it has room to breathe. The stray "Actor filters" chip row that used to hang below the bar on `/performers` is gone; those filters (Favorites, Has photo, In videos, Gender, Country) now live inside the same Filters drawer everyone else uses, which keeps the page quieter while scrolling.
@@ -100,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `playlist_sessions` table plus `GET` / `PUT` / `DELETE /api/playlist-session`, allowing the Svelte playlist controller to persist the collection-backed queue, play order, cursor, shuffle, loop, and slideshow timing across refreshes.
 - `FilterBar` now supports an integrated `thumbSize` prop and a `customFilterSections` snippet. The size slider renders inline in the toolbar on desktop and drops to its own row on mobile; pages pass extra drawer sections as a snippet so every page's Filters panel stays in sync visually. Adopted by every list view (`/videos`, `/series`, `/galleries`, `/images`, `/audio`, `/performers`, `/studios`, `/tags`, `/collections`).
 - Saved view prefs + filter presets on `/studios`, `/tags`, `/audio`, `/collections`, `/videos`, and `/series`. New ui-prefs keys `studios:view` / `studios:filterPresets` / `tags:view` / `tags:filterPresets` / `audio:view` / `audio:filterPresets` / `collections:view` / `collections:filterPresets` / `videos:view` / `videos:listPrefs` / `videos:filterPresets` / `series:view` / `series:listPrefs` / `series:filterPresets`.
 - `lib/prefs/ui-list-prefs-writer.ts` — `writeListPrefsAndInvalidate<T>(key, value, invalidateKey)` helper used by `/videos` and `/series` to flush a list-pref write before calling `invalidate()`, so the server load function re-runs with the new state instead of racing the PUT.

@@ -25,6 +25,10 @@
   const chrome = provideAppChrome(() => data.initialCollapsed);
   provideSearch();
   const playlist = providePlaylist();
+
+  $effect(() => {
+    void playlist.hydrate();
+  });
 </script>
 
 <BreakingUpgradeGate awaitingConsent={data.awaitingBreakingConsent}>
