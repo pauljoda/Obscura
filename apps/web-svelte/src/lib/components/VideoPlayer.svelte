@@ -17,6 +17,11 @@
 </script>
 
 <script lang="ts">
+  // TODO(refactor): split into a `VideoPlayer/` folder — Timeline,
+  // SubtitleManager, QualityMenu, SpeedMenu, hls-manager. Deferred
+  // because the reactive HLS/subtitle/quality state needs browser
+  // verification (subtitle switching, HLS↔direct fallback, fullscreen,
+  // mobile flyout) before the seams are safe to cut.
   import { onMount, untrack } from "svelte";
   import type Hls from "hls.js";
   import {
