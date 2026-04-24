@@ -6,7 +6,9 @@
   import FilterBar, {
     type AvailableItem,
   } from "$lib/components/FilterBar.svelte";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
+  import { fetchVideoCards as fetchMoreVideoCards } from "$lib/api/videos";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     EXCLUSIVE_FILTER_TYPES,
@@ -15,6 +17,7 @@
     defaultVideosListPrefs,
     formatFilterValue,
     isDefaultVideosListPrefs,
+    videosListPrefsToFetchParams,
     type SortDir,
     type SortOption,
     type ViewMode,
@@ -65,6 +68,13 @@
   let activeFilters = $state<VideosListPrefsActiveFilter[]>(data.prefs.activeFilters);
   // svelte-ignore state_referenced_locally
   let activePresetId = $state<string | null>(data.prefs.activePresetId ?? null);
+  // svelte-ignore state_referenced_locally
+  let loadedVideos = $state.raw(data.videos);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
+  let dataSignature = $state("");
 
   // Mirror the server-side prefs snapshot in a derived view so the
   // refetch effect below can compare against it without tripping
@@ -237,7 +247,23 @@
   }
 
   // ── Derived values ────────────────────────────────────────────
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedVideos.length));
+  const hasMoreVideos = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedVideos.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.videos.map((v) => v.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedVideos = data.videos;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+  });
 
   const canClearFiltersAndSort = $derived(
     !isDefaultVideosListPrefs({
@@ -302,6 +328,43 @@
     const qs = params.toString();
     return qs ? `/videos?${qs}` : "/videos";
   }
+
+  async function loadMoreVideos() {
+    if (loadingMore || !hasMoreVideos) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedVideos.length;
+    const seasonRaw = page.url.searchParams.get("season");
+    const seasonNumber =
+      seasonRaw != null && /^\d+$/.test(seasonRaw) ? seasonRaw : undefined;
+
+    try {
+      const response = await fetchMoreVideoCards({
+        ...videosListPrefsToFetchParams(
+          {
+            viewMode,
+            sortBy,
+            sortDir,
+            search: searchQuery,
+            activeFilters,
+            activePresetId: activePresetId ?? undefined,
+          },
+          data.initialNsfwMode,
+        ),
+        seasonNumber,
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedVideos.map((video) => video.id));
+      const nextVideos = response.videos.filter((video) => !existing.has(video.id));
+      loadedVideos = [...loadedVideos, ...nextVideos];
+      loadedTotal = response.videos.length === 0 ? loadedStart + loadedVideos.length : response.total;
+    } catch {
+      loadMoreError = "Could not load more videos.";
+    } finally {
+      loadingMore = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -320,7 +383,7 @@
       </p>
     </div>
     <span class="mt-1 text-mono-sm text-text-disabled">
-      {data.total.toLocaleString()} total
+      {loadedTotal.toLocaleString()} total
     </span>
   </div>
 
@@ -361,14 +424,14 @@
       : undefined}
   />
 
-  {#if data.videos.length === 0}
+  {#if loadedVideos.length === 0}
     <div class="surface-panel p-8 text-center">
       <Film class="mx-auto mb-3 h-10 w-10 text-text-disabled" />
       <p class="text-body text-text-muted">No videos match those filters.</p>
     </div>
   {:else if viewMode === "list"}
     <div class="space-y-1.5">
-      {#each data.videos as video, index (video.id)}
+      {#each loadedVideos as video, index (video.id)}
         <VideoCard
           video={videoListItemToCardData(video, "/videos")}
           variant="list"
@@ -378,7 +441,7 @@
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.videos as video, index (video.id)}
+      {#each loadedVideos as video, index (video.id)}
         <VideoCard
           video={videoListItemToCardData(video, "/videos")}
           variant="grid"
@@ -400,11 +463,11 @@
         </a>
       {/if}
       <span class="text-body-sm text-text-muted">
-        Page {data.page} of {totalPages}
+        Showing {loadedEnd.toLocaleString()} of {loadedTotal.toLocaleString()}
       </span>
       {#if data.page < totalPages}
         <a
-          href={pageHref(data.page + 1)}
+          href={pageHref(nextPageNumber)}
           class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
         >
           Next →
@@ -412,6 +475,15 @@
       {/if}
     </nav>
   {/if}
+
+  <InfiniteLoadTrigger
+    hasMore={hasMoreVideos}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more videos"
+    onLoad={loadMoreVideos}
+  />
 </div>
 
 <style>

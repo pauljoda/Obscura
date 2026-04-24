@@ -84,6 +84,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     total: response.total,
     page,
     pageSize: PAGE_SIZE,
+    nsfwMode,
     prefs,
     viewPrefs: await loadUiPrefObject("videos:view", { cols: 5 }),
     // Streamed — render the page skeleton immediately, fill in the

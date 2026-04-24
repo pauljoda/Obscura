@@ -8,6 +8,7 @@
     type FilterSectionKey,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
@@ -17,6 +18,10 @@
   import NsfwTagLabel from "$lib/components/NsfwTagLabel.svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
+  import {
+    fetchSeries as fetchMoreSeriesItems,
+    fetchVideoCards as fetchMoreVideoCards,
+  } from "$lib/api/videos";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
@@ -28,6 +33,7 @@
     defaultSeriesListPrefs,
     formatSeriesFilterValue,
     isDefaultSeriesListPrefs,
+    seriesListPrefsToFetchParams,
     type SeriesListPrefs,
     type SeriesListPrefsActiveFilter,
     type SeriesSortOption,
@@ -79,7 +85,25 @@
     ),
   );
   const listTotal = $derived(usesRootPrefs ? data.seriesTotal : data.total);
-  const totalPages = $derived(Math.max(1, Math.ceil(listTotal / data.pageSize)));
+  // svelte-ignore state_referenced_locally
+  let loadedVideos = $state.raw(data.videos);
+  // svelte-ignore state_referenced_locally
+  let loadedSeries = $state.raw(data.series);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(listTotal);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
+  let dataSignature = $state("");
+  const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedItemCount = $derived(usesRootPrefs ? loadedSeries.length : loadedVideos.length);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedItemCount));
+  const hasMoreItems = $derived(
+    (usesRootPrefs || showsVideos) && loadedEnd < loadedTotal,
+  );
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedItemCount) / data.pageSize) + 1,
+  );
 
   // svelte-ignore state_referenced_locally
   let seriesSortBy = $state<SeriesSortOption>(data.prefs.sortBy);
@@ -176,6 +200,25 @@
     } else {
       flush();
     }
+  });
+
+  $effect(() => {
+    const nextSignature = [
+      data.seriesId ?? "root",
+      data.activeSeasonNumber ?? "",
+      data.page,
+      data.total,
+      data.seriesTotal,
+      data.videos.map((v) => v.id).join("|"),
+      data.series.map((s) => s.id).join("|"),
+    ].join(":");
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedVideos = data.videos;
+    loadedSeries = data.series;
+    loadedTotal = listTotal;
+    loadingMore = false;
+    loadMoreError = null;
   });
 
   $effect(() => {
@@ -348,6 +391,59 @@
     else params.delete("page");
     const qs = params.toString();
     return qs ? `/series?${qs}` : "/series";
+  }
+
+  async function loadMoreItems() {
+    if (loadingMore || !hasMoreItems) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedItemCount;
+
+    try {
+      if (usesRootPrefs) {
+        const response = await fetchMoreSeriesItems({
+          ...seriesListPrefsToFetchParams(
+            {
+              sortBy: seriesSortBy,
+              sortDir: seriesSortDir,
+              search: seriesSearchQuery,
+              activeFilters: seriesActiveFilters,
+              activePresetId: seriesActivePresetId ?? undefined,
+            },
+            data.initialNsfwMode,
+          ),
+          root: "all",
+          limit: data.pageSize,
+          offset,
+        });
+        const existing = new Set(loadedSeries.map((series) => series.id));
+        const nextSeries = response.items.filter((series) => !existing.has(series.id));
+        loadedSeries = [...loadedSeries, ...nextSeries];
+        loadedTotal =
+          response.items.length === 0 ? loadedStart + loadedSeries.length : response.total;
+      } else if (showsVideos) {
+        const response = await fetchMoreVideoCards({
+          search: data.search || undefined,
+          sort: data.sort,
+          order: data.order,
+          videoSeriesId: data.seriesId ?? undefined,
+          seasonNumber:
+            data.activeSeasonNumber != null ? String(data.activeSeasonNumber) : undefined,
+          limit: data.pageSize,
+          offset,
+          nsfw: data.initialNsfwMode,
+        });
+        const existing = new Set(loadedVideos.map((video) => video.id));
+        const nextVideos = response.videos.filter((video) => !existing.has(video.id));
+        loadedVideos = [...loadedVideos, ...nextVideos];
+        loadedTotal =
+          response.videos.length === 0 ? loadedStart + loadedVideos.length : response.total;
+      }
+    } catch {
+      loadMoreError = "Could not load more items.";
+    } finally {
+      loadingMore = false;
+    }
   }
 </script>
 
@@ -656,7 +752,7 @@
             {/snippet}
 
             {#snippet children()}
-              {#if data.videos.length === 0}
+              {#if loadedVideos.length === 0}
                 <div class="surface-panel p-8 text-center">
                   <Film class="mx-auto mb-3 h-10 w-10 text-text-disabled" />
                   <p class="text-body text-text-muted">
@@ -665,7 +761,7 @@
                 </div>
               {:else if data.view === "list"}
                 <div class="space-y-1.5">
-                  {#each data.videos as video, index (video.id)}
+                  {#each loadedVideos as video, index (video.id)}
                     <VideoCard
                       video={videoListItemToCardData(video, currentPath)}
                       variant="list"
@@ -675,7 +771,7 @@
                 </div>
               {:else}
                 <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-                  {#each data.videos as video, index (video.id)}
+                  {#each loadedVideos as video, index (video.id)}
                     <VideoCard
                       video={videoListItemToCardData(video, currentPath)}
                       variant="grid"
@@ -702,11 +798,11 @@
       {/snippet}
 
       {#snippet children()}
-        {#if data.series.length > 0}
+        {#if loadedSeries.length > 0}
           <HierarchySection title={entityTerms.series}>
             {#snippet children()}
               <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-                {#each data.series as series (series.id)}
+                {#each loadedSeries as series (series.id)}
                   <SeriesCard series={series} href={`/series?series=${series.id}`} compact />
                 {/each}
               </div>
@@ -733,11 +829,11 @@
         </a>
       {/if}
       <span class="text-body-sm text-text-muted">
-        Page {data.page} of {totalPages}
+        Showing {loadedEnd.toLocaleString()} of {loadedTotal.toLocaleString()}
       </span>
       {#if data.page < totalPages}
         <a
-          href={pageHref(data.page + 1)}
+          href={pageHref(nextPageNumber)}
           class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
         >
           Next →
@@ -745,6 +841,15 @@
       {/if}
     </nav>
   {/if}
+
+  <InfiniteLoadTrigger
+    hasMore={hasMoreItems}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more"
+    onLoad={loadMoreItems}
+  />
 </div>
 
 

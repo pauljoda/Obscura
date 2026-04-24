@@ -2,7 +2,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { Users, Star, Image as ImageIcon, Film } from "@lucide/svelte";
+  import { Users, Star, Image as ImageIcon } from "@lucide/svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
@@ -10,6 +10,8 @@
   import FilterSection from "$lib/components/FilterSection.svelte";
   import { cn } from "@obscura/ui-svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
+  import { fetchPerformers as fetchMorePerformers } from "$lib/api/entities";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -17,8 +19,6 @@
   let { data } = $props();
 
   const sortOptions = [
-    { value: "appearances", label: "Appearances" },
-    { value: "videos", label: "Video Count" },
     { value: "name", label: "Name A–Z" },
     { value: "recent", label: "Recently Added" },
     { value: "rating", label: "Rating" },
@@ -42,7 +42,6 @@
     "hasImage",
     "ratingMin",
     "ratingMax",
-    "videoCountMin",
   ] as const;
   type FilterKey = (typeof FILTER_KEYS)[number];
 
@@ -60,8 +59,6 @@
         return "Min Rating";
       case "ratingMax":
         return "Max Rating";
-      case "videoCountMin":
-        return "Videos";
     }
   }
 
@@ -76,7 +73,7 @@
     const params = new URLSearchParams(page.url.searchParams);
     if (type === "favorite" || type === "hasImage" || type === "ratingMin") {
       params.set(type, value);
-    } else if (type === "ratingMax" || type === "videoCountMin") {
+    } else if (type === "ratingMax") {
       params.set(type, value);
     } else {
       const existing = params.getAll(type);
@@ -103,8 +100,16 @@
   }
 
   const canClearFiltersAndSort = $derived(
-    activeFilters.length > 0 || data.sort !== "appearances" || data.order !== "desc" || !!data.search,
+    activeFilters.length > 0 || data.sort !== "name" || data.order !== "asc" || !!data.search,
   );
+
+  // svelte-ignore state_referenced_locally
+  let loadedPerformers = $state.raw(data.performers);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
+  let dataSignature = $state("");
 
   const presetsApi = createServerPresets("performers:filterPresets");
   // svelte-ignore state_referenced_locally
@@ -134,8 +139,8 @@
 
   function applyPreset(preset: FilterPreset) {
     const params = new URLSearchParams();
-    if (preset.sortBy && preset.sortBy !== "appearances") params.set("sort", preset.sortBy);
-    if (preset.sortDir && preset.sortDir !== "desc") params.set("order", preset.sortDir);
+    if (preset.sortBy && preset.sortBy !== "name") params.set("sort", preset.sortBy);
+    if (preset.sortDir && preset.sortDir !== "asc") params.set("order", preset.sortDir);
     for (const filter of preset.filters) {
       if (filter.type === "gender" || filter.type === "country") params.append(filter.type, filter.value);
       else if (filter.type) params.set(filter.type, filter.value);
@@ -177,20 +182,20 @@
 
   const countries = $derived(
     Array.from(
-      new Set(data.performers.map((p) => p.country).filter((value): value is string => !!value)),
+      new Set(loadedPerformers.map((p) => p.country).filter((value): value is string => !!value)),
     ).sort(),
   );
   const genders = $derived(
     Array.from(
-      new Set(data.performers.map((p) => p.gender).filter((value): value is string => !!value)),
+      new Set(loadedPerformers.map((p) => p.gender).filter((value): value is string => !!value)),
     ).sort(),
   );
 
   // Group performers alphabetically
   const grouped = $derived.by(() => {
-    type Perf = (typeof data.performers)[number];
+    type Perf = (typeof loadedPerformers)[number];
     const map = new Map<string, Perf[]>();
-    for (const p of data.performers) {
+    for (const p of loadedPerformers) {
       const first = (p.name?.[0] ?? "?").toUpperCase();
       const key = /[A-Z]/.test(first) ? first : "#";
       if (!map.has(key)) map.set(key, []);
@@ -199,13 +204,68 @@
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   });
 
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedPerformers.length));
+  const hasMorePerformers = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedPerformers.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.performers.map((p) => p.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedPerformers = data.performers;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+  });
+
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
     if (p > 1) params.set("page", String(p));
     else params.delete("page");
     const qs = params.toString();
     return qs ? `/performers?${qs}` : "/performers";
+  }
+
+  async function loadMorePerformers() {
+    if (loadingMore || !hasMorePerformers) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedPerformers.length;
+
+    try {
+      const response = await fetchMorePerformers({
+        search: data.search || undefined,
+        sort: data.sort,
+        order: data.order,
+        gender: page.url.searchParams.get("gender") ?? undefined,
+        favorite: page.url.searchParams.get("favorite") ?? undefined,
+        country: page.url.searchParams.get("country") ?? undefined,
+        hasImage: page.url.searchParams.get("hasImage") ?? undefined,
+        ratingMin: Number(page.url.searchParams.get("ratingMin")) || undefined,
+        ratingMax: Number(page.url.searchParams.get("ratingMax")) || undefined,
+        nsfw: data.initialNsfwMode,
+        counts: "false",
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedPerformers.map((performer) => performer.id));
+      const nextPerformers = response.performers.filter(
+        (performer) => !existing.has(performer.id),
+      );
+      loadedPerformers = [...loadedPerformers, ...nextPerformers];
+      loadedTotal =
+        response.performers.length === 0
+          ? loadedStart + loadedPerformers.length
+          : response.total;
+    } catch {
+      loadMoreError = "Could not load more actors.";
+    } finally {
+      loadingMore = false;
+    }
   }
 </script>
 
@@ -222,7 +282,7 @@
       </h1>
       <p class="mt-1 text-[0.78rem] text-text-muted">Browse actors in your library</p>
     </div>
-    <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
+    <span class="mt-1 text-mono-sm text-text-disabled">{loadedTotal} total</span>
   </div>
 
   <FilterBar
@@ -294,18 +354,6 @@
             >
               No photo
             </button>
-            <button
-              type="button"
-              onclick={() => onAddFilter("videoCountMin", "Videos", "1")}
-              class={cn(
-                "tag-chip cursor-pointer transition-colors duration-fast",
-                panelFilters.some((f) => f.type === "videoCountMin" && f.value === "1")
-                  ? "tag-chip-accent"
-                  : "tag-chip-default hover:tag-chip-accent",
-              )}
-            >
-              <Film class="h-3 w-3" /> In videos
-            </button>
           </div>
         {/snippet}
       </FilterSection>
@@ -358,7 +406,7 @@
     {/snippet}
   </FilterBar>
 
-  {#if data.performers.length === 0}
+  {#if loadedPerformers.length === 0}
     <div class="surface-panel p-8 text-center">
       <Users class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No actors match those filters.</p>
@@ -377,7 +425,7 @@
               href={`/performers/${p.id}`}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast flex flex-col"
             >
-              <PerformerThumbnail performer={p} gradientFallback={gradient} />
+              <PerformerThumbnail performer={p} gradientFallback={gradient} showChips={false} />
               <div class="p-2 space-y-1">
                 <h4 class="truncate text-[0.8rem] font-medium text-text-primary leading-tight">
                   {p.name}
@@ -385,10 +433,9 @@
                 {#if p.disambiguation}
                   <p class="truncate text-[0.65rem] text-text-disabled">{p.disambiguation}</p>
                 {/if}
-                <div class="flex items-center justify-between gap-2 text-[0.62rem] text-text-muted">
-                  <span>{p.appearanceCount ?? 0} appearance{p.appearanceCount === 1 ? "" : "s"}</span>
-                  {#if p.country}<span class="truncate text-text-disabled">{p.country}</span>{/if}
-                </div>
+                {#if p.country}
+                  <div class="truncate text-[0.62rem] text-text-muted">{p.country}</div>
+                {/if}
               </div>
             </a>
           {/each}
@@ -397,22 +444,21 @@
     {/each}
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.performers as p, i (p.id)}
+      {#each loadedPerformers as p, i (p.id)}
         {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
           href={`/performers/${p.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast flex flex-col"
         >
-          <PerformerThumbnail performer={p} gradientFallback={gradient} />
+          <PerformerThumbnail performer={p} gradientFallback={gradient} showChips={false} />
           <div class="p-2 space-y-1">
             <h4 class="truncate text-[0.8rem] font-medium text-text-primary leading-tight">{p.name}</h4>
             {#if p.disambiguation}
               <p class="truncate text-[0.65rem] text-text-disabled">{p.disambiguation}</p>
             {/if}
-            <div class="flex items-center justify-between gap-2 text-[0.62rem] text-text-muted">
-              <span>{p.appearanceCount ?? 0} appearance{p.appearanceCount === 1 ? "" : "s"}</span>
-              {#if p.country}<span class="truncate text-text-disabled">{p.country}</span>{/if}
-            </div>
+            {#if p.country}
+              <div class="truncate text-[0.62rem] text-text-muted">{p.country}</div>
+            {/if}
           </div>
         </a>
       {/each}
@@ -426,14 +472,23 @@
           Prev
         </a>
       {/if}
-      <span class="text-body-sm text-text-muted">Page {data.page} of {totalPages}</span>
+      <span class="text-body-sm text-text-muted">Showing {loadedEnd.toLocaleString()} of {loadedTotal.toLocaleString()}</span>
       {#if data.page < totalPages}
-        <a href={pageHref(data.page + 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
+        <a href={pageHref(nextPageNumber)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
           Next
         </a>
       {/if}
     </nav>
   {/if}
+
+  <InfiniteLoadTrigger
+    hasMore={hasMorePerformers}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more actors"
+    onLoad={loadMorePerformers}
+  />
 </div>
 
 <style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import {
     Check,
     Loader2,
@@ -19,9 +19,9 @@
     Fingerprint,
   } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
-  import { fetchVideos } from "$lib/api/videos";
+  import { fetchVideoCards } from "$lib/api/videos";
   import {
-    fetchAllPerformers,
+    fetchPerformers,
   } from "$lib/api/entities";
   import { fetchStudios, fetchTags } from "$lib/api/entities";
   import {
@@ -114,9 +114,11 @@
 
   const nsfw = useNsfw();
 
-  let tab = $state<Tab>("videos");
+  let tab = $state<Tab | "home">("home");
   let stashBoxEndpoints = $state<StashBoxEndpoint[]>([]);
-  let loading = $state(true);
+  let loading = $state(false);
+  let loadingProviders = $state(true);
+  let loadedTabs = $state<Set<Tab>>(new Set());
 
   let videoRows = $state<VideoRow[]>([]);
   let videoScrapers = $state<ScraperPackage[]>([]);
@@ -174,80 +176,35 @@
     if (running) return;
     tab = nextTab;
     selectedScraperId = "";
+    void loadTabData(nextTab);
   }
 
-  async function loadData() {
-    loading = true;
+  function activeTabLabel() {
+    return tab === "home" ? "items" : tabEntityLabel(tab);
+  }
+
+  function activeTabSupportsStashBox() {
+    return tab !== "home" && tabSupportsStashBoxProvider(tab);
+  }
+
+  function markLoaded(nextTab: Tab) {
+    loadedTabs = new Set([...loadedTabs, nextTab]);
+  }
+
+  async function loadProviders() {
+    loadingProviders = true;
     try {
       const [
-        videosRes,
-        perfRes,
-        studiosRes,
-        tagsRes,
         scrapersRes,
         stashBoxRes,
-        seriesRes,
-        galleriesRes,
-        imagesRes,
-        audioRes,
         pluginsRes,
       ] = await Promise.all([
-        fetchVideos({ sort: "created_at", nsfw: nsfw.mode, limit: 500, offset: 0 }),
-        fetchAllPerformers({ sort: "name", order: "asc" }),
-        fetchStudios(),
-        fetchTags(),
         fetchInstalledScrapers(),
         fetchStashBoxEndpoints().catch(() => ({ endpoints: [] as StashBoxEndpoint[] })),
-        fetchSeries({ root: "all", limit: 500, nsfw: nsfw.mode }).catch(() => ({
-          items: [],
-          total: 0,
-          limit: 500,
-          offset: 0,
-        })),
-        fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 })),
-        fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 })),
-        fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 })),
         fetchInstalledPlugins().catch(() => [] as InstalledPlugin[]),
       ]);
 
       stashBoxEndpoints = stashBoxRes.endpoints.filter((e) => e.enabled);
-
-      const unorganized = videosRes.videos.filter((video) => !video.organized);
-      videoRows = unorganized.map((video) => ({
-        video,
-        status: "pending",
-        selectedFields: new Set(VIDEO_FIELDS),
-        excludedPerformers: new Set(),
-        excludedTags: new Set(),
-      }));
-
-      const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
-      perfRows = sparse.map((performer) => ({
-        performer,
-        status: "pending",
-        selectedFields: new Set<string>(),
-      }));
-
-      const sparseStudios = studiosRes.studios.filter((s) => !s.url || !s.imageUrl);
-      studioRows = sparseStudios.map((studio) => ({
-        studio,
-        status: "pending",
-        selectedFields: new Set<string>(),
-      }));
-
-      tagRows = tagsRes.tags.map((tag) => ({
-        tag,
-        status: "pending",
-        selectedFields: new Set<string>(),
-      }));
-
-      allVideos = videosRes.videos;
-      videoTotalAvailable = videosRes.total;
-      allPerformers = perfRes.performers;
-      performerTotalAvailable = perfRes.total;
-      allStudios = studiosRes.studios;
-      allTags = tagsRes.tags;
-
       const enabled = scrapersRes.packages.filter((s) => s.enabled);
       videoScrapers = enabled.filter((pkg) => {
         const caps = pkg.capabilities as Record<string, boolean> | null;
@@ -263,44 +220,118 @@
         );
       });
       plugins = pluginsRes.filter((p) => p.enabled);
+    } finally {
+      loadingProviders = false;
+    }
+  }
 
-      const libraryRootSeriesIds = new Set(
-        seriesRes.items
-          .filter((series) => series.relativePath === ".")
-          .map((series) => series.id),
-      );
-      const contentSeries = seriesRes.items.filter((series) => {
-        if (libraryRootSeriesIds.has(series.id)) return false;
-        if (series.parentId && libraryRootSeriesIds.has(series.parentId)) return true;
-        if (!series.parentId) return true;
-        return false;
-      });
-      seriesRows = contentSeries.map((series) => ({
-        series,
-        status: "pending",
-        selectedFields: new Set(VIDEO_SERIES_FIELDS),
-        wizardStep: "idle",
-      }));
-      galleryRows = galleriesRes.galleries.map((gallery) => ({
-        gallery,
-        status: "pending",
-        selectedFields: new Set(GALLERY_FIELDS),
-      }));
-      imageRows = imagesRes.images
-        .filter((img) => !img.organized)
-        .map((image) => ({
-          image,
+  async function loadTabData(nextTab: Tab) {
+    if (nextTab === "phashes" || loadedTabs.has(nextTab)) return;
+    loading = true;
+    try {
+      if (nextTab === "videos") {
+        const videosRes = await fetchVideoCards({
+          sort: "created_at",
+          nsfw: nsfw.mode,
+          limit: 500,
+          offset: 0,
+        });
+        const videos = videosRes.videos as unknown as VideoListItem[];
+        const unorganized = videos.filter((video) => !video.organized);
+        allVideos = videos;
+        videoTotalAvailable = videosRes.total;
+        videoRows = unorganized.map((video) => ({
+          video,
           status: "pending",
-          selectedFields: new Set(IMAGE_FIELDS),
+          selectedFields: new Set(VIDEO_FIELDS),
+          excludedPerformers: new Set(),
+          excludedTags: new Set(),
         }));
-      audioLibraryRows = audioRes.items.map((library) => ({
-        library,
-        status: "pending",
-        selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
-      }));
-      // Audio tracks populate when plugins return them, so start empty.
-      audioTrackRows = [];
-      void AUDIO_TRACK_FIELDS;
+      } else if (nextTab === "performers") {
+        const perfRes = await fetchPerformers({
+          sort: "name",
+          order: "asc",
+          counts: "false",
+          limit: 500,
+          offset: 0,
+        });
+        allPerformers = perfRes.performers;
+        performerTotalAvailable = perfRes.total;
+        const sparse = perfRes.performers.filter((p) => !p.imagePath || !p.gender);
+        perfRows = sparse.map((performer) => ({
+          performer,
+          status: "pending",
+          selectedFields: new Set<string>(),
+        }));
+      } else if (nextTab === "studios") {
+        const studiosRes = await fetchStudios();
+        allStudios = studiosRes.studios;
+        const sparseStudios = studiosRes.studios.filter((s) => !s.url || !s.imageUrl);
+        studioRows = sparseStudios.map((studio) => ({
+          studio,
+          status: "pending",
+          selectedFields: new Set<string>(),
+        }));
+      } else if (nextTab === "tags") {
+        const tagsRes = await fetchTags();
+        allTags = tagsRes.tags;
+        tagRows = tagsRes.tags.map((tag) => ({
+          tag,
+          status: "pending",
+          selectedFields: new Set<string>(),
+        }));
+      } else if (nextTab === "video-series") {
+        const seriesRes = await fetchSeries({ root: "all", limit: 500, nsfw: nsfw.mode }).catch(() => ({
+          items: [],
+          total: 0,
+          limit: 500,
+          offset: 0,
+        }));
+        const libraryRootSeriesIds = new Set(
+          seriesRes.items
+            .filter((series) => series.relativePath === ".")
+            .map((series) => series.id),
+        );
+        const contentSeries = seriesRes.items.filter((series) => {
+          if (libraryRootSeriesIds.has(series.id)) return false;
+          if (series.parentId && libraryRootSeriesIds.has(series.parentId)) return true;
+          if (!series.parentId) return true;
+          return false;
+        });
+        seriesRows = contentSeries.map((series) => ({
+          series,
+          status: "pending",
+          selectedFields: new Set(VIDEO_SERIES_FIELDS),
+          wizardStep: "idle",
+        }));
+      } else if (nextTab === "galleries") {
+        const galleriesRes = await fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 }));
+        galleryRows = galleriesRes.galleries.map((gallery) => ({
+          gallery,
+          status: "pending",
+          selectedFields: new Set(GALLERY_FIELDS),
+        }));
+      } else if (nextTab === "images") {
+        const imagesRes = await fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 }));
+        imageRows = imagesRes.images
+          .filter((img) => !img.organized)
+          .map((image) => ({
+            image,
+            status: "pending",
+            selectedFields: new Set(IMAGE_FIELDS),
+          }));
+      } else if (nextTab === "audio-libraries") {
+        const audioRes = await fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 }));
+        audioLibraryRows = audioRes.items.map((library) => ({
+          library,
+          status: "pending",
+          selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
+        }));
+      } else if (nextTab === "audio-tracks") {
+        audioTrackRows = [];
+        void AUDIO_TRACK_FIELDS;
+      }
+      markLoaded(nextTab);
     } finally {
       loading = false;
     }
@@ -310,7 +341,7 @@
     if (loadingMoreVideos || allVideos.length >= videoTotalAvailable) return;
     loadingMoreVideos = true;
     try {
-      const res = await fetchVideos({
+      const res = await fetchVideoCards({
         sort: "created_at",
         nsfw: nsfw.mode,
         limit: 500,
@@ -318,10 +349,19 @@
       });
       if (res.videos.length === 0) return;
       const seen = new Set(allVideos.map((v) => v.id));
-      allVideos = [...allVideos, ...res.videos.filter((v) => !seen.has(v.id))];
+      const nextVideos = res.videos as unknown as VideoListItem[];
+      allVideos = [...allVideos, ...nextVideos.filter((v) => !seen.has(v.id))];
       videoTotalAvailable = res.total;
     } finally {
       loadingMoreVideos = false;
+    }
+  }
+
+  async function loadAllVideos() {
+    while (allVideos.length < videoTotalAvailable) {
+      const before = allVideos.length;
+      await loadMoreVideos();
+      if (allVideos.length === before) break;
     }
   }
 
@@ -329,12 +369,16 @@
     if (loadingMorePerformers || allPerformers.length >= performerTotalAvailable) return;
     loadingMorePerformers = true;
     try {
-      const res = await fetchAllPerformers({
+      const res = await fetchPerformers({
         sort: "name",
         order: "asc",
+        counts: "false",
+        limit: 500,
+        offset: allPerformers.length,
       });
       if (res.performers.length === 0) return;
-      allPerformers = res.performers;
+      const seen = new Set(allPerformers.map((p) => p.id));
+      allPerformers = [...allPerformers, ...res.performers.filter((p) => !seen.has(p.id))];
       performerTotalAvailable = res.total;
     } finally {
       loadingMorePerformers = false;
@@ -342,7 +386,7 @@
   }
 
   onMount(() => {
-    void loadData();
+    void loadProviders();
   });
 
   // Rebuild rows when showAll toggles or when the source arrays change.
@@ -449,7 +493,7 @@
   const nsfwAwarePlugins = $derived(filterNsfwAware(plugins));
   const nsfwAwareStashBoxEndpoints = $derived(filterNsfwAware(stashBoxEndpoints));
   const stashBoxEndpointsForTab = $derived(
-    tabSupportsStashBoxProvider(tab) ? nsfwAwareStashBoxEndpoints : [],
+    activeTabSupportsStashBox() ? nsfwAwareStashBoxEndpoints : [],
   );
 
   const pluginsForTab = $derived(
@@ -503,7 +547,7 @@
     return pluginsForTab;
   }
 
-  function handleRun() {
+  async function handleRun() {
     const setRunningWrapped = (v: boolean) => (running = v);
     const pluginRunProps = {
       plugins: pluginsForTab,
@@ -513,6 +557,10 @@
       setRunning: setRunningWrapped,
     };
     if (tab === "videos") {
+      if (allVideos.length < videoTotalAvailable) {
+        await loadAllVideos();
+        await tick();
+      }
       void runVideoScrape({
         videoRows,
         setVideoRows: (updater) => (videoRows = updater(videoRows)),
@@ -651,12 +699,7 @@
   ]);
 </script>
 
-{#if loading}
-  <div class="flex items-center justify-center py-20">
-    <Loader2 class="h-6 w-6 animate-spin text-text-muted" />
-  </div>
-{:else}
-  <div class="space-y-6">
+<div class="space-y-6">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 class="flex items-center gap-2.5">
@@ -674,7 +717,7 @@
         {@const isHiddenEmpty =
           ["video-series", "galleries", "images", "audio-libraries", "audio-tracks"].includes(
             meta.key,
-          ) && meta.count === 0 && tab !== meta.key}
+          ) && meta.count === 0 && tab !== meta.key && tab !== "home"}
         {#if !isHiddenEmpty}
           {@const Icon = meta.icon}
           <button
@@ -698,7 +741,38 @@
       {/each}
     </div>
 
-    {#if tab === "phashes"}
+    {#if tab === "home"}
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {#each TAB_META as meta (meta.key)}
+          {@const Icon = meta.icon}
+          <button
+            type="button"
+            onclick={() => switchTab(meta.key)}
+            class="surface-card no-lift group flex min-h-28 items-start gap-3 p-4 text-left transition-colors duration-fast hover:border-border-accent"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center border border-border-subtle bg-surface-2 text-text-accent group-hover:border-border-accent group-hover:shadow-[var(--shadow-glow-accent)]">
+              <Icon class="h-5 w-5" />
+            </span>
+            <span class="min-w-0 space-y-1">
+              <span class="block text-sm font-medium text-text-primary">{meta.label}</span>
+              <span class="block text-[0.72rem] leading-relaxed text-text-muted">
+                {#if meta.key === "videos"}
+                  Load lightweight video rows only when you enter the video identifier.
+                {:else if meta.key === "phashes"}
+                  Inspect StashBox fingerprint links without loading library rows.
+                {:else}
+                  Open this identifier and fetch only this media type.
+                {/if}
+              </span>
+            </span>
+          </button>
+        {/each}
+      </div>
+    {:else if loading || loadingProviders}
+      <div class="flex items-center justify-center py-20">
+        <Loader2 class="h-6 w-6 animate-spin text-text-muted" />
+      </div>
+    {:else if tab === "phashes"}
       <PhashesTab />
     {:else}
       {#if processedCount > 0}
@@ -908,10 +982,10 @@
         <div class="surface-card no-lift p-12 text-center">
           <ScanSearch class="h-10 w-10 text-text-disabled mx-auto mb-3" />
           <p class="text-text-muted text-sm">
-            No metadata providers configured for {tabEntityLabel(tab)}.
+            No metadata providers configured for {activeTabLabel()}.
           </p>
           <p class="text-text-disabled text-xs mt-1">
-            {#if tabSupportsStashBoxProvider(tab)}
+            {#if activeTabSupportsStashBox()}
               Add a Stash-Box endpoint or install scrapers in Settings.
             {:else}
               Install an identification plugin in Settings.
@@ -1090,4 +1164,3 @@
       {/if}
     {/if}
   </div>
-{/if}

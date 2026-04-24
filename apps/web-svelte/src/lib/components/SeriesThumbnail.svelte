@@ -2,6 +2,7 @@
   import { FolderOpen, Images } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "./NsfwBlur.svelte";
   import NsfwShowModeChip from "./NsfwShowModeChip.svelte";
 
@@ -47,6 +48,14 @@
     hovering = false;
     hoverIndex = 0;
   }
+
+  function gradientFor(titleValue: string) {
+    let hash = 0;
+    for (let i = 0; i < titleValue.length; i += 1) {
+      hash = (hash * 31 + titleValue.charCodeAt(i)) >>> 0;
+    }
+    return VIDEO_CARD_GRADIENTS[hash % VIDEO_CARD_GRADIENTS.length];
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -80,7 +89,12 @@
         {loading}
       />
     {:else}
-      <div class="flex h-full w-full items-center justify-center text-text-disabled">
+      <div
+        class={cn(
+          gradientFor(title),
+          "flex h-full w-full items-center justify-center text-white/25",
+        )}
+      >
         <FolderOpen class="h-8 w-8" />
       </div>
     {/if}

@@ -176,6 +176,7 @@ export async function fetchPerformers(
     ratingMax?: number;
     hasImage?: string;
     videoCountMin?: number;
+    counts?: string;
     limit?: number;
     offset?: number;
     nsfw?: string;
@@ -193,6 +194,7 @@ export async function fetchPerformers(
     ratingMax: params?.ratingMax,
     hasImage: params?.hasImage,
     videoCountMin: params?.videoCountMin,
+    counts: params?.counts,
     limit: params?.limit,
     offset: params?.offset,
     nsfw: params?.nsfw,

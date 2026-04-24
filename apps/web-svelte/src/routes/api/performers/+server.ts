@@ -22,6 +22,7 @@ const QUERY_KEYS = [
   "ratingMax",
   "hasImage",
   "videoCountMin",
+  "counts",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

@@ -17,6 +17,11 @@ const KEYS = [
   "studio",
   "tag",
   "performer",
+  "ratingMin",
+  "ratingMax",
+  "dateFrom",
+  "dateTo",
+  "organized",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

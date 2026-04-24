@@ -50,6 +50,7 @@ export interface ListPerformersQuery {
   ratingMax?: string;
   hasImage?: string;
   videoCountMin?: string;
+  counts?: string;
 }
 
 export interface PerformerListEntry {
@@ -106,6 +107,11 @@ export async function listPerformersRead(
 
   const sfwPerformerSceneCountExpr = performerSfwSceneCountExpr();
   const totalPerformerSceneCountExpr = performerTotalSceneCountExpr();
+  const requiresCounts =
+    query.sort === "videos" ||
+    query.sort === "appearances" ||
+    query.videoCountMin !== undefined;
+  const includeCounts = query.counts !== "false" || requiresCounts;
 
   const conditions = [];
 
@@ -171,15 +177,24 @@ export async function listPerformersRead(
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const sceneCountSelect = sfwOnly
-    ? sfwPerformerSceneCountExpr
-    : totalPerformerSceneCountExpr;
-  const seriesCountSelect = performerSeriesCountExpr(sfwOnly);
-  const galleryCountSelect = performerGalleryCountExpr(sfwOnly);
-  const imageCountSelect = performerImageCountExpr(sfwOnly);
-  const imageAppearanceCountSelect = performerImageAppearanceCountExpr(sfwOnly);
-  const audioLibraryCountSelect = performerAudioLibraryCountExpr(sfwOnly);
-  const audioTrackCountSelect = performerAudioTrackCountExpr(sfwOnly);
+  const zeroCountSelect = sql<number>`0`;
+  const sceneCountSelect = includeCounts
+    ? sfwOnly
+      ? sfwPerformerSceneCountExpr
+      : totalPerformerSceneCountExpr
+    : zeroCountSelect;
+  const seriesCountSelect = includeCounts ? performerSeriesCountExpr(sfwOnly) : zeroCountSelect;
+  const galleryCountSelect = includeCounts ? performerGalleryCountExpr(sfwOnly) : zeroCountSelect;
+  const imageCountSelect = includeCounts ? performerImageCountExpr(sfwOnly) : zeroCountSelect;
+  const imageAppearanceCountSelect = includeCounts
+    ? performerImageAppearanceCountExpr(sfwOnly)
+    : zeroCountSelect;
+  const audioLibraryCountSelect = includeCounts
+    ? performerAudioLibraryCountExpr(sfwOnly)
+    : zeroCountSelect;
+  const audioTrackCountSelect = includeCounts
+    ? performerAudioTrackCountExpr(sfwOnly)
+    : zeroCountSelect;
   const appearanceCountSelect = sql<number>`(
     ${sceneCountSelect}
     + ${seriesCountSelect}
