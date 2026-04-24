@@ -210,6 +210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Preview jobs now save thumbnail and hover-preview paths as soon as those files are generated, so video cards stop looking empty while the slower trickplay sprite sheet is still building. Active job progress updates also keep their target labels instead of blanking the Operations dashboard row.
 - Thumbnail-size sliders now hydrate from server-loaded saved preferences, preventing list and gallery grids from briefly rendering at their default column count before snapping to the user's saved size.
 - Preview, media-probe, fingerprint, and embedded-subtitle worker jobs now resolve legacy media paths before invoking ffprobe, ffmpeg, or file hash readers.
 - Stash-Box providers no longer appear in the Identify provider picker for Series, Galleries, Albums, or Tracks.

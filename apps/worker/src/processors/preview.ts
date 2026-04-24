@@ -167,6 +167,35 @@ export function buildTrickplayVtt(input: {
   return vttLines.join("\n");
 }
 
+export function buildPreviewAssetPatch(videoId: string) {
+  return {
+    thumbnailPath: videoAssetUrl(videoId, "thumb"),
+    cardThumbnailPath: videoAssetUrl(videoId, "card"),
+    previewPath: videoAssetUrl(videoId, "preview"),
+    updatedAt: new Date(),
+  };
+}
+
+export function buildTrickplayAssetPatch(videoId: string) {
+  return {
+    spritePath: videoAssetUrl(videoId, "sprite"),
+    trickplayVttPath: videoAssetUrl(videoId, "trickplay"),
+    updatedAt: new Date(),
+  };
+}
+
+async function updateVideoAssetPaths(
+  entityKind: VideoEntityKind,
+  videoId: string,
+  patch: Record<string, unknown>,
+) {
+  if (entityKind === "video_episode") {
+    await db.update(videoEpisodes).set(patch).where(eq(videoEpisodes.id, videoId));
+  } else {
+    await db.update(videoMovies).set(patch).where(eq(videoMovies.id, videoId));
+  }
+}
+
 export async function processPreview(job: Job) {
   const entityKind =
     (job.data.entityKind as VideoEntityKind | undefined) ?? null;
@@ -284,7 +313,7 @@ export async function processPreview(job: Job) {
 
   const thumbQuality = String(thumbQualityClamped);
 
-  const assetPatch: Record<string, unknown> = { updatedAt: new Date() };
+  let assetPatch: Record<string, unknown> = { updatedAt: new Date() };
 
   if (shouldGeneratePreviewAssets) {
     await runProcess("ffmpeg", [
@@ -348,11 +377,9 @@ export async function processPreview(job: Job) {
       "+faststart",
       previewFile,
     ]);
+    assetPatch = { ...assetPatch, ...buildPreviewAssetPatch(video.id) };
+    await updateVideoAssetPaths(entityKind, video.id, assetPatch);
     await markJobProgress(job, "preview", shouldGenerateTrickplay ? 65 : 100);
-
-    assetPatch.thumbnailPath = videoAssetUrl(video.id, "thumb");
-    assetPatch.cardThumbnailPath = videoAssetUrl(video.id, "card");
-    assetPatch.previewPath = videoAssetUrl(video.id, "preview");
   }
 
   if (shouldGenerateTrickplay) {
@@ -386,14 +413,8 @@ export async function processPreview(job: Job) {
       "utf8",
     );
 
-    assetPatch.spritePath = videoAssetUrl(video.id, "sprite");
-    assetPatch.trickplayVttPath = videoAssetUrl(video.id, "trickplay");
+    assetPatch = { ...assetPatch, ...buildTrickplayAssetPatch(video.id) };
+    await updateVideoAssetPaths(entityKind, video.id, assetPatch);
     await markJobProgress(job, "preview", 100);
-  }
-
-  if (entityKind === "video_episode") {
-    await db.update(videoEpisodes).set(assetPatch).where(eq(videoEpisodes.id, video.id));
-  } else {
-    await db.update(videoMovies).set(assetPatch).where(eq(videoMovies.id, video.id));
   }
 }

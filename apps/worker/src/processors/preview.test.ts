@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPreviewAssetPatch,
+  buildTrickplayAssetPatch,
   buildTrickplayFfmpegArgs,
   buildTrickplayVtt,
   planTrickplaySheet,
 } from "./preview.js";
 
 describe("preview trickplay planning", () => {
+  it("builds preview asset paths separately from trickplay paths", () => {
+    expect(buildPreviewAssetPatch("video-1")).toMatchObject({
+      thumbnailPath: "/assets/videos/video-1/thumb",
+      cardThumbnailPath: "/assets/videos/video-1/card",
+      previewPath: "/assets/videos/video-1/preview",
+    });
+
+    expect(buildTrickplayAssetPatch("video-1")).toMatchObject({
+      spritePath: "/assets/videos/video-1/sprite",
+      trickplayVttPath: "/assets/videos/video-1/trickplay",
+    });
+  });
+
   it("builds a single ffmpeg tile command for the whole trickplay sheet", () => {
     const args = buildTrickplayFfmpegArgs({
       filePath: "/media/video.mp4",
