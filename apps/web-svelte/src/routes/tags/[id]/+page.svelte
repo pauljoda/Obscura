@@ -4,7 +4,6 @@
     Edit3,
     FileText,
     Film,
-    Images,
     Image as ImageIcon,
     Loader2,
     Star,
@@ -25,7 +24,9 @@
   import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
-  import NsfwBlur from "$lib/components/NsfwBlur.svelte";
+  import GalleryThumbnail from "$lib/components/GalleryThumbnail.svelte";
+  import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
+  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import {
     EditFormShell,
@@ -138,11 +139,9 @@
 
 <div class="space-y-6">
   <div class="flex flex-col sm:flex-row gap-4 items-start">
-    {#if t.imagePath}
-      <div class="w-24 h-24 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
-        <img src={toApiUrl(t.imagePath, imageCacheBust)} alt="" class="h-full w-full object-cover" />
-      </div>
-    {/if}
+    <div class="w-32 shrink-0">
+      <TagThumbnail tag={t} cacheBust={imageCacheBust || null} showLabel={false} />
+    </div>
     <div class="flex-1 min-w-0 space-y-2">
       <div class="flex items-start justify-between gap-3">
         <h1 class="flex items-center gap-2.5 text-text-primary flex-wrap">
@@ -327,17 +326,12 @@
               href={`/galleries/${g.id}`}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
-              <NsfwBlur isNsfw={g.isNsfw} class="block">
-                <div class="aspect-[3/4] bg-surface-1 relative">
-                  {#if g.coverImagePath}
-                    <img src={toApiUrl(g.coverImagePath)} alt="" loading="lazy" class="h-full w-full object-cover" />
-                  {:else}
-                    <div class="flex h-full items-center justify-center">
-                      <Images class="h-8 w-8 text-text-disabled" />
-                    </div>
-                  {/if}
-                </div>
-              </NsfwBlur>
+              <GalleryThumbnail
+                title={g.title}
+                coverImagePath={g.coverImagePath}
+                imageCount={g.imageCount}
+                isNsfw={g.isNsfw}
+              />
               <div class="p-2.5">
                 <h3 class="truncate text-sm font-medium">{g.title}</h3>
                 <p class="text-xs text-text-muted mt-0.5">
@@ -358,22 +352,19 @@
           {#each images as img (img.id)}
             <a
               href={`/images/${img.id}`}
-              class="aspect-square bg-surface-1 overflow-hidden block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+              class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
             >
-              <NsfwBlur isNsfw={img.isNsfw} class="block h-full w-full">
-                {#if img.thumbnailPath}
-                  <img
-                    src={toApiUrl(img.thumbnailPath)}
-                    alt={img.title}
-                    loading="lazy"
-                    class="h-full w-full object-cover"
-                  />
-                {:else}
-                  <div class="flex h-full w-full items-center justify-center">
-                    <ImageIcon class="h-6 w-6 text-text-disabled" />
-                  </div>
-                {/if}
-              </NsfwBlur>
+              <ImageThumbnail
+                title={img.title}
+                thumbnailPath={img.thumbnailPath}
+                previewPath={img.previewPath}
+                isVideo={!!img.previewPath}
+                isNsfw={img.isNsfw}
+                width={img.width}
+                height={img.height}
+                size="compact"
+                showChips={false}
+              />
             </a>
           {/each}
         </div>

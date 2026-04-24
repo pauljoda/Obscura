@@ -9,8 +9,8 @@
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -161,19 +161,6 @@
   const withoutContent = $derived(
     filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) === 0),
   );
-
-  // Generate a stable HSL gradient from tag name — gives each tag a
-  // consistent identity color when no image is set.
-  function gradientFor(name: string): string {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = (hash * 31 + name.charCodeAt(i)) | 0;
-    }
-    const h1 = Math.abs(hash) % 360;
-    const h2 = (h1 + 35) % 360;
-    return `linear-gradient(135deg, hsl(${h1} 35% 22%) 0%, hsl(${h2} 40% 14%) 100%)`;
-  }
-
 </script>
 
 <svelte:head>
@@ -280,55 +267,18 @@
       {/if}
     </div>
   {:else}
-    {#snippet tagCard(tag: (typeof filtered)[number])}
-      {@const usage = (tag.videoCount ?? 0) + (tag.imageCount ?? 0)}
-      <a
-        href={`/tags/${encodeURIComponent(tag.name)}`}
-        class="tag-card group"
-        title={`${tag.name} — ${usage} uses`}
-        style:--tag-gradient={gradientFor(tag.name)}
-      >
-        <div class="tag-card-bg">
-          {#if tag.imagePath}
-            <img
-              src={toApiUrl(tag.imagePath)}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              class="tag-card-image"
-            />
-            <div class="tag-card-image-scrim"></div>
-          {/if}
-        </div>
-
-        <div class="tag-card-content">
-          <span class="tag-card-name" title={tag.name}>{tag.name}</span>
-          {#if usage > 0}
-            <span class="tag-card-meta">
-              {usage.toLocaleString()}
-              <span class="tag-card-meta-label">{usage === 1 ? "use" : "uses"}</span>
-            </span>
-          {/if}
-        </div>
-
-        {#if tag.favorite}
-          <Star
-            class="tag-card-fav h-3.5 w-3.5 text-accent-400 fill-current drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
-          />
-        {/if}
-        {#if tag.isNsfw}
-          <span class="tag-card-nsfw">NSFW</span>
-        {/if}
-      </a>
-    {/snippet}
-
     <div class="space-y-6">
       {#if withContent.length > 0}
         <HierarchySection title={`Tagged content · ${withContent.length}`}>
           {#snippet children()}
             <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
               {#each withContent as tag (tag.id)}
-                {@render tagCard(tag)}
+                <a
+                  href={`/tags/${encodeURIComponent(tag.name)}`}
+                  title={`${tag.name} — ${(tag.videoCount ?? 0) + (tag.imageCount ?? 0)} uses`}
+                >
+                  <TagThumbnail {tag} />
+                </a>
               {/each}
             </div>
           {/snippet}
@@ -338,9 +288,14 @@
       {#if withoutContent.length > 0}
         <HierarchySection title={`Unused tags · ${withoutContent.length}`}>
           {#snippet children()}
-            <div class="tag-grid tag-grid-muted" style:--col-count={viewPrefs.current.cols}>
+            <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
               {#each withoutContent as tag (tag.id)}
-                {@render tagCard(tag)}
+                <a
+                  href={`/tags/${encodeURIComponent(tag.name)}`}
+                  title={tag.name}
+                >
+                  <TagThumbnail {tag} muted />
+                </a>
               {/each}
             </div>
           {/snippet}
@@ -365,132 +320,5 @@
     .tag-grid {
       grid-template-columns: repeat(var(--col-count, 5), minmax(0, 1fr));
     }
-  }
-
-  .tag-card {
-    position: relative;
-    display: block;
-    aspect-ratio: 4 / 3;
-    border: 1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08));
-    background: var(--tag-gradient);
-    overflow: hidden;
-    container-type: inline-size;
-    transition:
-      border-color 0.18s ease,
-      transform 0.18s ease,
-      box-shadow 0.18s ease;
-  }
-  .tag-card:hover {
-    border-color: var(--color-border-accent, #c49a5a);
-    box-shadow: 0 0 18px rgba(196, 154, 90, 0.3);
-    transform: translateY(-1px);
-  }
-
-  .tag-card-bg {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-  }
-  .tag-card-bg::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(
-        circle at 30% 20%,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(0, 0, 0, 0) 55%
-      ),
-      linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.3) 100%);
-    pointer-events: none;
-  }
-  .tag-card-image {
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-  .tag-card:hover .tag-card-image {
-    transform: scale(1.04);
-  }
-  .tag-card-image-scrim {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.72) 100%);
-    pointer-events: none;
-  }
-
-  .tag-card-content {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.75rem;
-    text-align: center;
-  }
-  .tag-card-name {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-    font-family: "Geist", "Inter", system-ui, sans-serif;
-    font-size: clamp(0.85rem, 7cqw, 1.6rem);
-    font-weight: 600;
-    line-height: 1.15;
-    letter-spacing: -0.01em;
-    color: rgba(255, 255, 255, 0.95);
-    text-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.55),
-      0 2px 14px rgba(0, 0, 0, 0.45);
-    word-break: break-word;
-  }
-  .tag-card-meta {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.3rem;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: clamp(0.58rem, 2.6cqw, 0.78rem);
-    font-weight: 600;
-    color: var(--color-accent-300, #e9cfa3);
-    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
-  }
-  .tag-card-meta-label {
-    font-size: 0.82em;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .tag-card-fav {
-    position: absolute;
-    top: 0.4rem;
-    left: 0.4rem;
-  }
-  .tag-card-nsfw {
-    position: absolute;
-    top: 0.4rem;
-    right: 0.4rem;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.08em;
-    padding: 0.1rem 0.3rem;
-    background: rgba(200, 80, 80, 0.78);
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .tag-grid-muted .tag-card {
-    opacity: 0.72;
-  }
-  .tag-grid-muted .tag-card .tag-card-name {
-    color: rgba(255, 255, 255, 0.82);
-    font-weight: 500;
-  }
-  .tag-grid-muted .tag-card:hover {
-    opacity: 1;
   }
 </style>

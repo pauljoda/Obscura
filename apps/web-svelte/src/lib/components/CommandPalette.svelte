@@ -11,6 +11,7 @@
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
+  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -364,6 +365,17 @@
                             size="compact"
                             aspectClass="h-full w-full"
                             showChips={false}
+                          />
+                        {:else if item.kind === "tag"}
+                          <TagThumbnail
+                            tag={{
+                              name: item.title,
+                              imagePath: item.imagePath,
+                              isNsfw: item.meta?.isNsfw === true,
+                            }}
+                            size="compact"
+                            aspectClass="h-full w-full"
+                            showLabel={false}
                           />
                         {:else if item.imagePath}
                           <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />

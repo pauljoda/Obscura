@@ -23,6 +23,7 @@
   import ImageThumbnail from "$lib/components/ImageThumbnail.svelte";
   import PerformerThumbnail from "$lib/components/PerformerThumbnail.svelte";
   import StudioThumbnail from "$lib/components/StudioThumbnail.svelte";
+  import TagThumbnail from "$lib/components/TagThumbnail.svelte";
   import { fetchSearch } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/stores/nsfw.svelte";
@@ -603,20 +604,21 @@
                   </div>
                 </a>
               {:else if item.kind === "tag"}
-                {@const TagIconEl = SEARCH_KIND_CONFIG.tag.icon}
                 <a
                   href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex items-center gap-2 px-2.5 py-2 transition-colors duration-fast hover:border-border-accent"
+                  class="block transition-transform duration-fast"
                 >
-                  <TagIconEl class="h-3.5 w-3.5 shrink-0 text-text-muted" />
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm text-text-primary">{item.title}</div>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.62rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
+                  <TagThumbnail
+                    tag={{
+                      name: item.title,
+                      imagePath: item.imagePath,
+                      isNsfw: isNsfwItem(item),
+                      videoCount:
+                        typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
+                      imageCount:
+                        typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
+                    }}
+                  />
                 </a>
               {:else}
                 {@const Icon = SEARCH_KIND_CONFIG[item.kind].icon}
