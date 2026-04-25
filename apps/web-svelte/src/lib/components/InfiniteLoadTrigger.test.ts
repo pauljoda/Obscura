@@ -95,4 +95,77 @@ describe("InfiniteLoadTrigger", () => {
 
     expect(onLoad).toHaveBeenCalledTimes(2);
   });
+
+  it("does not auto-fire while loading is true", async () => {
+    const onLoad = vi.fn();
+    render(InfiniteLoadTrigger, {
+      props: {
+        hasMore: true,
+        loading: true,
+        loadKey: 60,
+        nextHref: "/videos?page=2",
+        onLoad,
+      },
+    });
+
+    observers[0]?.enter();
+    await tick();
+
+    expect(onLoad).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-fire while error is set", async () => {
+    const onLoad = vi.fn();
+    render(InfiniteLoadTrigger, {
+      props: {
+        hasMore: true,
+        loading: false,
+        error: "boom",
+        loadKey: 60,
+        nextHref: "/videos?page=2",
+        onLoad,
+      },
+    });
+
+    observers[0]?.enter();
+    await tick();
+
+    expect(onLoad).not.toHaveBeenCalled();
+  });
+
+  it("does not auto-fire when hasMore is false", async () => {
+    const onLoad = vi.fn();
+    render(InfiniteLoadTrigger, {
+      props: {
+        hasMore: false,
+        loading: false,
+        loadKey: 60,
+        nextHref: "/videos?page=2",
+        onLoad,
+      },
+    });
+
+    // When hasMore is false, the component does not render the sentinel,
+    // so no observer is attached at all.
+    expect(observers.length).toBe(0);
+    expect(onLoad).not.toHaveBeenCalled();
+  });
+
+  it("Try again button calls onLoad even when loadKey is unchanged", async () => {
+    const onLoad = vi.fn();
+    render(InfiniteLoadTrigger, {
+      props: {
+        hasMore: true,
+        loading: false,
+        error: "Network error",
+        loadKey: 60,
+        nextHref: "/videos?page=2",
+        onLoad,
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(onLoad).toHaveBeenCalledOnce();
+  });
 });

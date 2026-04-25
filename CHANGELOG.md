@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Library state changes now feel continuous: the lightbox opens with a shared-element transition that grows the source thumbnail into the full image, modals fade in over a backdrop and dialog bodies fly up gently, the bulk action bar slides in when items are selected, filter chips scale on add and remove, and grid items fade in with a brief stagger and slide into their new positions when filters or sorts change.
 - Library infinite scroll no longer loads in a runaway cascade once the bottom of the list is reached. Newly loaded items now also fade in as they're appended, so it's clear something happened without the page jumping.
+- Library infinite scroll no longer stalls on tall viewports where the load sentinel never leaves the visible area. The footer continues fetching new pages as long as the cursor is advancing, so users with large monitors or filtered views that don't fully fill the screen now see the rest of the library instead of a stuck "Loading" footer.
 - Uploads are back on the main media pages. Videos, Series, Images, and Audio now accept drag-and-drop or the Import button, with root views prompting for the destination library or audio library when the current page does not already imply one; gallery and audio detail views still upload into the folder currently being viewed.
 - Images now has its own main navigation tab for a flat all-images view. Galleries remains the grouped folder-style browser.
 - The flat Images view now includes a vertical Feed mode for mobile browsing, showing one large bounded image after another with infinite scroll.
@@ -67,6 +68,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Infinite scroll on every grid no longer cascades into a runaway loop after the first auto-load. The trigger is now edge-triggered: the sentinel must leave and re-enter the viewport before another fetch fires, which also closes a race where two concurrent load-more calls could clobber each other and prematurely mark the list as exhausted.
 - Animated image previews and full-resolution clips served by `/api/assets/...` now respond to HTTP `Range` requests with `206 Partial Content` and advertise `Accept-Ranges: bytes`, which Safari requires before it will start playback. Image, image preview, and video preview-sidecar endpoints all stream byte ranges; Chromium browsers continue to work unchanged.
 - Bulk series Identify no longer carries a manually selected candidate's refetched scrape result into the next review row after using **Apply all & next**.
+- Library infinite scroll now uses a cursor-based gate keyed off the next page offset instead of an edge-triggered sentinel. The previous fix stopped the runaway cascade but introduced a stall when the sentinel never left the viewport (tall monitors, filtered views, or short result sets that didn't fill the screen); pages now keep flowing as long as the cursor is advancing, and the trigger goes quiet once the backend stops returning new items. The "Loading" status is also now announced to screen readers.
 
 ## [0.20.0] - 2026-04-24
 

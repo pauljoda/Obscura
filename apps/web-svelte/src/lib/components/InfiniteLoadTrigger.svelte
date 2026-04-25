@@ -23,24 +23,20 @@
     onLoad,
   }: Props = $props();
 
-  // Margin is intentionally smaller than before — a huge eager margin made
-  // the sentinel stay "in view" through every append, which combined with
-  // level-triggered firing produced a load-cascade. We now require the
-  // sentinel to exit and re-enter the viewport to fire again.
-  const sentinel = elementInView({ rootMargin: "600px 0px" });
+  // Bottom-only prefetch margin. Pages dedupe by passing a `loadKey` that
+  // strictly increases per appended page; the trigger fires once per
+  // distinct key while the sentinel is in view. A duplicate-only response
+  // (which `mergeUniquePage` collapses by zeroing `total`) flips `hasMore`
+  // off, so the trigger goes quiet without needing edge-detection state.
+  const sentinel = elementInView({ rootMargin: "0px 0px 320px 0px" });
 
-  let armed = true;
+  let lastFiredKey: typeof loadKey | undefined;
 
   $effect(() => {
-    const inView = sentinel.inView;
-    if (!inView) {
-      // Sentinel has scrolled out of view → re-arm for the next entry.
-      armed = true;
-      return;
-    }
-    if (!armed) return;
+    if (!sentinel.inView) return;
     if (!hasMore || loading || error) return;
-    armed = false;
+    if (loadKey !== undefined && loadKey === lastFiredKey) return;
+    lastFiredKey = loadKey;
     untrack(() => void onLoad());
   });
 </script>
@@ -56,8 +52,11 @@
         Try again
       </button>
     {:else if loading}
-      <div class="inline-flex items-center gap-2 text-body-sm text-text-muted">
-        <LoaderCircle class="h-4 w-4 animate-spin text-text-accent" />
+      <div
+        class="inline-flex items-center gap-2 text-body-sm text-text-muted"
+        aria-live="polite"
+      >
+        <LoaderCircle class="h-4 w-4 animate-spin text-text-accent" aria-hidden="true" />
         Loading
       </div>
     {:else}
