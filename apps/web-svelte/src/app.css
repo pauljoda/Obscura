@@ -300,6 +300,19 @@
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.30);
   }
 
+  /*
+   * Thumbnail scaling reflows dense media sections by design. Keep those
+   * sections from becoming scroll anchors so toolbar controls stay visually
+   * pinned while the grid below changes size.
+   */
+  .thumb-grid,
+  .tag-grid,
+  .image-masonry,
+  .gallery-masonry {
+    overflow-anchor: none;
+    contain: layout paint;
+  }
+
   /* Elevated: floating panels with glass blur */
   .surface-elevated {
     background: rgba(16, 20, 32, 0.82);
