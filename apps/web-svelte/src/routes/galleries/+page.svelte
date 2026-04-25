@@ -3,7 +3,9 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Layers } from "@lucide/svelte";
-  import { Badge, Checkbox } from "@obscura/ui-svelte";
+  import { Badge, Checkbox, dur, ease } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -382,7 +384,11 @@
   {:else if viewMode === "list"}
     <ul class="surface-panel divide-y divide-border-subtle overflow-hidden">
       {#each loadedGalleries as g, i (g.id)}
-        <li class="relative">
+        <li
+          class="relative"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
+        >
           <button
             type="button"
             class="absolute left-2 top-1/2 z-10 -translate-y-1/2 glass-2 border border-border-subtle p-1"
@@ -427,6 +433,8 @@
         <a
           href={`/galleries/${g.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
         >
           <GalleryThumbnail
             title={g.title}

@@ -3,6 +3,9 @@
   import { page } from "$app/state";
   import { goto, invalidateAll } from "$app/navigation";
   import { Film } from "@lucide/svelte";
+  import { dur, ease } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -522,24 +525,42 @@
   {:else if viewMode === "list"}
     <div class="space-y-1.5">
       {#each loadedVideos as video, index (video.id)}
-        <VideoCard
-          video={videoListItemToCardData(video, "/videos")}
-          variant="list"
-          index={index}
-          selected={selectedVideoIds.has(video.id)}
-          onToggleSelect={toggleSelectedVideo}
-        />
+        <div
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{
+            duration: dur.normal,
+            delay: Math.min(index * 12, 150),
+            easing: ease.enter,
+          }}
+        >
+          <VideoCard
+            video={videoListItemToCardData(video, "/videos")}
+            variant="list"
+            index={index}
+            selected={selectedVideoIds.has(video.id)}
+            onToggleSelect={toggleSelectedVideo}
+          />
+        </div>
       {/each}
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
       {#each loadedVideos as video, index (video.id)}
-        <VideoCard
-          video={videoListItemToCardData(video, "/videos")}
-          variant="grid"
-          index={index}
-          imageLoading={index < 6 ? "eager" : "lazy"}
-        />
+        <div
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{
+            duration: dur.normal,
+            delay: Math.min(index * 12, 150),
+            easing: ease.enter,
+          }}
+        >
+          <VideoCard
+            video={videoListItemToCardData(video, "/videos")}
+            variant="grid"
+            index={index}
+            imageLoading={index < 6 ? "eager" : "lazy"}
+          />
+        </div>
       {/each}
     </div>
   {/if}

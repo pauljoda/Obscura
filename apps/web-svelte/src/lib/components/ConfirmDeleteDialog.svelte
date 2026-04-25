@@ -10,6 +10,8 @@
 
 <script lang="ts">
   import { AlertTriangle, Loader2 } from "@lucide/svelte";
+  import { dur, ease, flyUp } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
 
   interface Props {
     open: boolean;
@@ -55,6 +57,7 @@
         if (!loading) onClose();
       }}
       aria-label="Close delete dialog"
+      transition:fade={{ duration: dur.normal, easing: ease.enter }}
     ></button>
 
     <div
@@ -62,6 +65,7 @@
       aria-modal="true"
       aria-label={`Delete ${noun}`}
       class="relative z-10 w-full max-w-md surface-elevated p-6"
+      transition:flyUp
     >
       <div class="flex items-start gap-3">
         <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-error/30 bg-error-muted/40">

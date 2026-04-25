@@ -3,7 +3,9 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Image as ImageIcon } from "@lucide/svelte";
-  import { Checkbox } from "@obscura/ui-svelte";
+  import { Checkbox, dur, ease, receiveThumb, sendThumb } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import type { ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
@@ -177,6 +179,7 @@
   let deleteDialogOpen = $state(false);
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
+  let lightboxSourceId = $state<string | null>(null);
   let activeFeedIndex = $state(0);
   let selectedImageIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
@@ -271,7 +274,17 @@
     const index = loadedImages.findIndex((image) => image.id === id);
     if (index < 0) return;
     lightboxIndex = index;
+    lightboxSourceId = id;
     lightboxOpen = true;
+  }
+
+  function closeLightbox() {
+    lightboxOpen = false;
+    // Keep lightboxSourceId until the close transition completes so the
+    // source thumbnail stays hidden during the shrink-back animation.
+    window.setTimeout(() => {
+      if (!lightboxOpen) lightboxSourceId = null;
+    }, dur.moderate + 40);
   }
 
   function setActiveFeedIndex(index: number) {
@@ -580,8 +593,16 @@
     </div>
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each loadedImages as img (img.id)}
-        <div class="flex items-center gap-3 px-3 py-2">
+      {#each loadedImages as img, index (img.id)}
+        <div
+          class="flex items-center gap-3 px-3 py-2"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{
+            duration: dur.normal,
+            delay: Math.min(index * 12, 150),
+            easing: ease.enter,
+          }}
+        >
           <Checkbox
             checked={selectedImageIds.has(img.id)}
             onchange={() => toggleSelectedImage(img.id)}
@@ -635,27 +656,41 @@
     <div class="image-masonry" style:--col-count={imageMasonryColumnCount}>
       {#each imageMasonryColumns as column, columnIndex (columnIndex)}
         <div class="image-masonry-column">
-          {#each column as item (item.image.id)}
+          {#each column as item, itemIndex (item.image.id)}
             {@const img = item.image}
-            <button
-              type="button"
-              onclick={() => openImage(img.id)}
-              class="image-masonry-item block border-0 p-0 hover:ring-1 hover:ring-border-accent transition-all duration-fast"
-              title={img.title}
+            <div
+              class="image-masonry-item block"
               style:aspect-ratio="{item.aspect}"
+              animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+              in:fade|global={{
+                duration: dur.normal,
+                delay: Math.min(itemIndex * 8, 120),
+                easing: ease.enter,
+              }}
             >
-              <ImageThumbnail
-                title={img.title}
-                thumbnailPath={img.thumbnailPath}
-                previewPath={img.previewPath}
-                isNsfw={img.isNsfw}
-                isVideo={img.isVideo}
-                width={img.width}
-                height={img.height}
-                size="grid"
-                aspectClass="h-full w-full"
-              />
-            </button>
+              {#if !(lightboxOpen && img.id === lightboxSourceId)}
+                <button
+                  type="button"
+                  onclick={() => openImage(img.id)}
+                  class="block h-full w-full border-0 p-0 hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+                  title={img.title}
+                  in:receiveThumb={{ key: img.id }}
+                  out:sendThumb={{ key: img.id }}
+                >
+                  <ImageThumbnail
+                    title={img.title}
+                    thumbnailPath={img.thumbnailPath}
+                    previewPath={img.previewPath}
+                    isNsfw={img.isNsfw}
+                    isVideo={img.isVideo}
+                    width={img.width}
+                    height={img.height}
+                    size="grid"
+                    aspectClass="h-full w-full"
+                  />
+                </button>
+              {/if}
+            </div>
           {/each}
         </div>
       {/each}
@@ -688,7 +723,8 @@
   <ImageLightbox
     images={loadedImages}
     initialIndex={lightboxIndex}
-    onClose={() => (lightboxOpen = false)}
+    sharedKey={lightboxSourceId ?? undefined}
+    onClose={closeLightbox}
     onIndexChange={(index) => (lightboxIndex = index)}
     onRatingChange={patchImageRating}
   />

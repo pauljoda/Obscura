@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ShieldAlert, Trash2, X } from "@lucide/svelte";
-  import { Checkbox, cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn, dur, ease } from "@obscura/ui-svelte";
+  import { fly } from "svelte/transition";
 
   interface Props {
     selectedCount: number;
@@ -33,7 +34,7 @@
 
 <div
   class={cn(
-    "glass-1 flex flex-wrap items-center gap-2 border border-border-subtle px-3 py-2",
+    "glass-1 flex flex-wrap items-center gap-2 border border-border-subtle px-3 py-2 transition-[border-color,box-shadow] duration-moderate",
     selectedCount > 0 && "border-border-accent shadow-[var(--shadow-glow-accent)]",
   )}
 >
@@ -53,36 +54,42 @@
   <div class="flex-1"></div>
 
   {#if selectedCount > 0}
-    {#if canMarkNsfw && onMarkNsfw}
-      <button
-        type="button"
-        class="inline-flex items-center gap-1.5 border border-border-subtle px-2.5 py-1 text-[0.68rem] text-text-muted transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-50"
-        disabled={busy}
-        onclick={() => void onMarkNsfw()}
-      >
-        <ShieldAlert class="h-3.5 w-3.5 text-text-accent" />
-        Mark NSFW
-      </button>
-    {/if}
-    {#if canDelete && onDelete}
-      <button
-        type="button"
-        class="inline-flex items-center gap-1.5 border border-status-error/30 px-2.5 py-1 text-[0.68rem] text-status-error-text transition-colors hover:bg-status-error/10 disabled:opacity-50"
-        disabled={busy}
-        onclick={() => void onDelete()}
-      >
-        <Trash2 class="h-3.5 w-3.5" />
-        Delete
-      </button>
-    {/if}
-    <button
-      type="button"
-      class="inline-flex items-center gap-1.5 border border-border-subtle px-2.5 py-1 text-[0.68rem] text-text-muted transition-colors hover:text-text-primary disabled:opacity-50"
-      disabled={busy}
-      onclick={onClear}
+    <div
+      class="flex flex-wrap items-center gap-2"
+      in:fly={{ y: 8, duration: dur.moderate, easing: ease.enter }}
+      out:fly={{ y: 8, duration: dur.normal, easing: ease.exit }}
     >
-      <X class="h-3.5 w-3.5" />
-      Clear
-    </button>
+      {#if canMarkNsfw && onMarkNsfw}
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 border border-border-subtle px-2.5 py-1 text-[0.68rem] text-text-muted transition-colors hover:border-border-accent hover:text-text-primary disabled:opacity-50"
+          disabled={busy}
+          onclick={() => void onMarkNsfw()}
+        >
+          <ShieldAlert class="h-3.5 w-3.5 text-text-accent" />
+          Mark NSFW
+        </button>
+      {/if}
+      {#if canDelete && onDelete}
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 border border-status-error/30 px-2.5 py-1 text-[0.68rem] text-status-error-text transition-colors hover:bg-status-error/10 disabled:opacity-50"
+          disabled={busy}
+          onclick={() => void onDelete()}
+        >
+          <Trash2 class="h-3.5 w-3.5" />
+          Delete
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 border border-border-subtle px-2.5 py-1 text-[0.68rem] text-text-muted transition-colors hover:text-text-primary disabled:opacity-50"
+        disabled={busy}
+        onclick={onClear}
+      >
+        <X class="h-3.5 w-3.5" />
+        Clear
+      </button>
+    </div>
   {/if}
 </div>

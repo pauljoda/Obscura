@@ -3,7 +3,9 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { FolderOpen, Plus } from "@lucide/svelte";
-  import { Badge, Button, Checkbox } from "@obscura/ui-svelte";
+  import { Badge, Button, Checkbox, dur, ease } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
@@ -276,7 +278,11 @@
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
       {#each loadedCollections as c, i (c.id)}
-        <div class="flex items-center gap-3 px-3 py-2">
+        <div
+          class="flex items-center gap-3 px-3 py-2"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
+        >
           <Checkbox
             checked={selectedCollectionIds.has(c.id)}
             onchange={() => toggleSelectedCollection(c.id)}
@@ -303,6 +309,8 @@
         <a
           href={`/collections/${c.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
         >
           <CollectionThumbnail collection={c} gradientIndex={i} />
           <div class="p-2.5 space-y-1">

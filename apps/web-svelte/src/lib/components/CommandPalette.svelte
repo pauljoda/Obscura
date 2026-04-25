@@ -3,7 +3,8 @@
   import { page } from "$app/state";
   import { browser } from "$app/environment";
   import { Search, X, Clock, ArrowRight, Trash2 } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { cn, dur, ease, flyDown } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
   import type { SearchResponseDto, SearchResultItem } from "@obscura/contracts";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesThumbnail from "$lib/components/thumbnails/SeriesThumbnail.svelte";
@@ -180,6 +181,7 @@
       class="absolute inset-0 bg-black/60 backdrop-blur-sm"
       aria-label="Close search"
       onclick={closePalette}
+      transition:fade={{ duration: dur.normal, easing: ease.enter }}
     ></button>
 
     <div
@@ -190,6 +192,7 @@
         "relative mx-4 flex max-h-[70vh] w-full max-w-2xl flex-col",
         "surface-elevated border border-border-subtle shadow-2xl",
       )}
+      transition:flyDown
     >
       <div class="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
         <Search class="h-4 w-4 shrink-0 text-text-muted" />

@@ -17,6 +17,8 @@
   } from "@lucide/svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
   import { isVideoImage } from "@obscura/contracts";
+  import { dur, ease, receiveThumb, sendThumb } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
   import { toApiUrl } from "$lib/api/core";
   import { updateImage } from "$lib/api/media";
   import { buildLightboxImageSource, buildLightboxVideoSources } from "./image-lightbox-media";
@@ -32,6 +34,9 @@
     onAutoAdvance?: () => void;
     onPreviousRequest?: () => void;
     onNextRequest?: () => void;
+    /** Shared-element transition key. When set, the central image animates
+        from / to the matching thumbnail in the parent grid (see crossfade). */
+    sharedKey?: string;
   }
 
   let {
@@ -44,6 +49,7 @@
     onAutoAdvance,
     onPreviousRequest,
     onNextRequest,
+    sharedKey,
   }: Props = $props();
 
   const MIN_SCALE = 0.3;
@@ -432,7 +438,13 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm" role="dialog" aria-modal="true">
+<div
+  class="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm"
+  role="dialog"
+  aria-modal="true"
+  in:fade={{ duration: dur.normal, easing: ease.enter }}
+  out:fade={{ duration: dur.fast, easing: ease.exit }}
+>
   <!-- Top bar -->
   <div class="relative z-20 flex items-center gap-2 border-b border-border-subtle bg-black/70 backdrop-blur-md px-3 py-2">
     <button
@@ -557,6 +569,8 @@
           style:transform="translate({translateX}px, {translateY}px) scale({scale})"
           style:transform-origin="center center"
           style:opacity={ready ? 1 : 0}
+          in:receiveThumb={{ key: sharedKey ?? "lightbox" }}
+          out:sendThumb={{ key: sharedKey ?? "lightbox" }}
         >
           <NsfwBlur isNsfw={current.isNsfw}>
             {#if isCurrentVideo}

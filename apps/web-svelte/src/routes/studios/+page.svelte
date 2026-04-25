@@ -3,7 +3,9 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { Building2, Star } from "@lucide/svelte";
-  import { Badge, Checkbox } from "@obscura/ui-svelte";
+  import { Badge, Checkbox, dur, ease } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, {
     type SortDir,
@@ -321,7 +323,11 @@
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
       {#each filtered as studio, i (studio.id)}
-        <div class="flex items-center gap-3 px-3 py-2">
+        <div
+          class="flex items-center gap-3 px-3 py-2"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
+        >
           <Checkbox
             checked={selectedStudioIds.has(studio.id)}
             onchange={() => toggleSelectedStudio(studio.id)}
@@ -349,6 +355,8 @@
         <a
           href={`/studios/${studio.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
         >
           <StudioThumbnail {studio} gradientIndex={i} />
           <div class="p-2.5 space-y-1.5">

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { LoaderCircle } from "@lucide/svelte";
+  import { untrack } from "svelte";
   import { elementInView } from "$lib/hooks/element-in-view.svelte";
 
   interface Props {
@@ -22,15 +23,25 @@
     onLoad,
   }: Props = $props();
 
-  const sentinel = elementInView({ rootMargin: "1800px 0px" });
-  const currentLoadKey = $derived(loadKey ?? nextHref);
-  let lastTriggeredKey: string | number | undefined;
+  // Margin is intentionally smaller than before — a huge eager margin made
+  // the sentinel stay "in view" through every append, which combined with
+  // level-triggered firing produced a load-cascade. We now require the
+  // sentinel to exit and re-enter the viewport to fire again.
+  const sentinel = elementInView({ rootMargin: "600px 0px" });
+
+  let armed = true;
 
   $effect(() => {
-    if (!sentinel.inView || !hasMore || loading || error) return;
-    if (lastTriggeredKey === currentLoadKey) return;
-    lastTriggeredKey = currentLoadKey;
-    void onLoad();
+    const inView = sentinel.inView;
+    if (!inView) {
+      // Sentinel has scrolled out of view → re-arm for the next entry.
+      armed = true;
+      return;
+    }
+    if (!armed) return;
+    if (!hasMore || loading || error) return;
+    armed = false;
+    untrack(() => void onLoad());
   });
 </script>
 

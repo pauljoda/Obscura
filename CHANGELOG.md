@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- Library state changes now feel continuous: the lightbox opens with a shared-element transition that grows the source thumbnail into the full image, modals fade in over a backdrop and dialog bodies fly up gently, the bulk action bar slides in when items are selected, filter chips scale on add and remove, and grid items fade in with a brief stagger and slide into their new positions when filters or sorts change.
+- Library infinite scroll no longer loads in a runaway cascade once the bottom of the list is reached. Newly loaded items now also fade in as they're appended, so it's clear something happened without the page jumping.
 - Uploads are back on the main media pages. Videos, Series, Images, and Audio now accept drag-and-drop or the Import button, with root views prompting for the destination library or audio library when the current page does not already imply one; gallery and audio detail views still upload into the folder currently being viewed.
 - Images now has its own main navigation tab for a flat all-images view. Galleries remains the grouped folder-style browser.
 - The flat Images view now includes a vertical Feed mode for mobile browsing, showing one large bounded image after another with infinite scroll.
@@ -22,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Shared motion helpers in `@obscura/ui-svelte/motion/transitions` (mechanical bezier easings, duration tokens, and `fadeIn` / `flyUp` / `flyDown` / `scaleIn` / `scaleChip` / `slideX` / `sheetUp` / shared-element `sendThumb` + `receiveThumb`) so all transitions speak the Dark Room motion vocabulary.
 - Drag-and-drop upload zones plus Import buttons for the Videos, Series, Images, Audio, gallery detail, and audio library detail views.
 - A Feed view mode on the flat Images page for full-height vertical image browsing.
 - A root image upload endpoint now writes selected files directly into an image library root as unorganized flat images.
@@ -30,6 +33,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- The image lightbox, confirm-delete dialog, add-to-collection modal, and command palette now fade and fly into place instead of cutting in. The image lightbox additionally crossfades from the source thumbnail using Svelte's shared-element transition.
+- The bulk action bar now animates its action buttons in when a selection becomes non-empty and out when cleared.
+- Active filter chips in the toolbar now scale in/out on add or remove and slide into place when their neighbors change.
+- Library grids on Videos, Images (list + masonry), Performers, Studios, Galleries, and Collections now reorder smoothly via FLIP when the result set changes (sort, filter, search) and fade in newly loaded cards with a brief, capped stagger.
 - Animated images in the Images Feed now autoplay muted at full quality while on screen, pause off screen, and preload the active item plus one neighbor on each side for smoother scrolling.
 
 ### Fixed
@@ -46,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library infinite scroll now guards each load target so the same page cannot be auto-requested repeatedly, and all major entity grids treat duplicate load-more responses as end-of-list instead of spinning at the footer.
 - Videos page no longer collapses to the first 60 cards mid-scroll on libraries that contain only episodes (or only movies). The merge-and-slice step in the videos read now honors the requested offset whenever both video kinds are queried, instead of skipping it whenever one side returned no rows.
 - Legacy `/assets/scenes/...` card, sprite, trickplay, and custom thumbnail URLs now resolve from old scene cache directories after the SvelteKit cutover.
+- Infinite scroll on every grid no longer cascades into a runaway loop after the first auto-load. The trigger is now edge-triggered: the sentinel must leave and re-enter the viewport before another fetch fires, which also closes a race where two concurrent load-more calls could clobber each other and prematurely mark the list as exhausted.
 
 ## [0.20.0] - 2026-04-24
 

@@ -21,7 +21,8 @@
     "./composed/Meter.svelte": "./src/composed/Meter.svelte",
     "./composed/StatusLed.svelte": "./src/composed/StatusLed.svelte",
     "./composed/Panel.svelte": "./src/composed/Panel.svelte",
-    "./navigation/app-shell-sections": "./src/navigation/app-shell-sections.ts"
+    "./navigation/app-shell-sections": "./src/navigation/app-shell-sections.ts",
+    "./motion/transitions": "./src/motion/transitions.ts"
   },
   "scripts": {
     "lint": "svelte-check --tsconfig ./tsconfig.json",

@@ -56,7 +56,8 @@
     CalendarRange,
     Building2,
   } from "@lucide/svelte";
-  import { cn } from "@obscura/ui-svelte";
+  import { cn, dur, ease, scaleChip } from "@obscura/ui-svelte";
+  import { flip } from "svelte/animate";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
   import type { Snippet } from "svelte";
@@ -244,12 +245,19 @@
       <!-- Active filter chips -->
       {#if activeFilters.length > 0}
         <div class="hidden sm:flex items-center gap-1.5 border-l border-border-subtle pl-2">
-          {#each activeFilters as filter, i (i + ":" + filter.value)}
-            <FilterChip
-              label={filter.label}
-              value={filter.value}
-              onRemove={() => onRemoveFilter?.(i)}
-            />
+          {#each activeFilters as filter, i (filter.type + ":" + filter.value)}
+            <span
+              class="inline-flex"
+              animate:flip={{ duration: dur.fast, easing: ease.mechanical }}
+              in:scaleChip
+              out:scaleChip
+            >
+              <FilterChip
+                label={filter.label}
+                value={filter.value}
+                onRemove={() => onRemoveFilter?.(i)}
+              />
+            </span>
           {/each}
         </div>
       {/if}
@@ -753,8 +761,15 @@
     <div
       class="flex sm:hidden items-center gap-1.5 px-3 py-1.5 overflow-x-auto scrollbar-hidden"
     >
-      {#each activeFilters as filter, i (i + ":" + filter.value)}
-        <FilterChip label={filter.label} value={filter.value} onRemove={() => onRemoveFilter?.(i)} />
+      {#each activeFilters as filter, i (filter.type + ":" + filter.value)}
+        <span
+          class="inline-flex"
+          animate:flip={{ duration: dur.fast, easing: ease.mechanical }}
+          in:scaleChip
+          out:scaleChip
+        >
+          <FilterChip label={filter.label} value={filter.value} onRemove={() => onRemoveFilter?.(i)} />
+        </span>
       {/each}
     </div>
   {/if}

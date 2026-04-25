@@ -9,7 +9,9 @@
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
-  import { Checkbox, cn } from "@obscura/ui-svelte";
+  import { Checkbox, cn, dur, ease } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import {
     deletePerformer,
@@ -495,7 +497,11 @@
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
       {#each loadedPerformers as p, i (p.id)}
         {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
-        <div class="flex items-center gap-3 px-3 py-2">
+        <div
+          class="flex items-center gap-3 px-3 py-2"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
+        >
           <Checkbox
             checked={selectedPerformerIds.has(p.id)}
             onchange={() => toggleSelectedPerformer(p.id)}
@@ -533,6 +539,8 @@
             <a
               href={`/performers/${p.id}`}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast flex flex-col"
+              animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+              in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
             >
               <PerformerThumbnail performer={p} gradientFallback={gradient} showChips={false} />
               <div class="p-2 space-y-1">
@@ -558,6 +566,8 @@
         <a
           href={`/performers/${p.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast flex flex-col"
+          animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
+          in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
         >
           <PerformerThumbnail performer={p} gradientFallback={gradient} showChips={false} />
           <div class="p-2 space-y-1">

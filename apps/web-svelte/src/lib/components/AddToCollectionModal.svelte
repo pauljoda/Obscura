@@ -14,7 +14,8 @@
     CollectionEntityType,
     CollectionListItemDto,
   } from "@obscura/contracts";
-  import { Button } from "@obscura/ui-svelte";
+  import { Button, dur, ease, flyUp } from "@obscura/ui-svelte";
+  import { fade } from "svelte/transition";
   import {
     addCollectionItems,
     createCollection,
@@ -157,9 +158,10 @@
       class="absolute inset-0 bg-black/60 backdrop-blur-sm"
       onclick={onClose}
       aria-label="Close add to collection modal"
+      transition:fade={{ duration: dur.normal, easing: ease.enter }}
     ></button>
 
-    <div class="relative z-10 w-full max-w-md surface-elevated">
+    <div class="relative z-10 w-full max-w-md surface-elevated" transition:flyUp>
       <div class="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <h2 class="text-sm font-heading font-medium text-text-primary">
           Add to Collection

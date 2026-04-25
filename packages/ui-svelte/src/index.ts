@@ -29,6 +29,25 @@ export { default as Badge } from "./primitives/Badge.svelte";
 export { badgeVariants, type BadgeVariant } from "./primitives/Badge.svelte";
 export { default as Checkbox } from "./primitives/Checkbox.svelte";
 
+// Motion
+export {
+  ease,
+  dur,
+  fadeIn,
+  fadeOut,
+  fadeQuick,
+  flyUp,
+  flyDown,
+  slideUp,
+  sheetUp,
+  scaleIn,
+  scaleChip,
+  slideX,
+  sendThumb,
+  receiveThumb,
+  prefersReducedMotion,
+} from "./motion/transitions";
+
 // Composed
 export { default as StatusLed } from "./composed/StatusLed.svelte";
 export { type LedStatus, type LedSize } from "./composed/StatusLed.svelte";
