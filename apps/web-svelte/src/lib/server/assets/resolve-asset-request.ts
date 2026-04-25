@@ -13,6 +13,7 @@ import {
   notFound,
   sendBuffer,
   streamFile,
+  streamFileWithRange,
 } from "./asset-response";
 
 const SIDECAR_MIME: Record<SidecarKind, string> = {
@@ -112,6 +113,7 @@ async function handleVideoAsset(
   deps: AssetResolverDeps,
   id: string,
   kind: string,
+  range: string | null,
 ): Promise<Response> {
   if (kind === "thumb-custom") {
     return serveFirstMatchingFile(
@@ -179,10 +181,14 @@ async function handleVideoAsset(
     return notFound("Asset not found");
   }
 
-  return streamFile(selectedPath, {
+  const sidecarHeaders = {
     "Cache-Control": "public, max-age=31536000, immutable",
     "Content-Type": SIDECAR_MIME[resolvedKind],
-  });
+  };
+  if (resolvedKind === "preview") {
+    return streamFileWithRange(selectedPath, sidecarHeaders, range);
+  }
+  return streamFile(selectedPath, sidecarHeaders);
 }
 
 async function handleGalleryCover(
@@ -225,6 +231,7 @@ async function handleImageAsset(
   deps: AssetResolverDeps,
   id: string,
   kind: string,
+  range: string | null,
 ): Promise<Response> {
   if (kind === "thumb") {
     const thumbPath = firstExistingPath([
@@ -245,10 +252,14 @@ async function handleImageAsset(
     if (!previewPath) {
       return notFound("Image preview not found");
     }
-    return streamFile(previewPath, {
-      "Cache-Control": "public, max-age=86400, immutable",
-      "Content-Type": "video/mp4",
-    });
+    return streamFileWithRange(
+      previewPath,
+      {
+        "Cache-Control": "public, max-age=86400, immutable",
+        "Content-Type": "video/mp4",
+      },
+      range,
+    );
   }
 
   if (kind !== "full") {
@@ -277,10 +288,15 @@ async function handleImageAsset(
     return notFound("Image file not found");
   }
 
-  return streamFile(image.filePath, {
+  const contentType = mimeForFile(image.filePath);
+  const headers = {
     "Cache-Control": "public, max-age=3600",
-    "Content-Type": mimeForFile(image.filePath),
-  });
+    "Content-Type": contentType,
+  };
+  if (contentType.startsWith("video/")) {
+    return streamFileWithRange(image.filePath, headers, range);
+  }
+  return streamFile(image.filePath, headers);
 }
 
 async function handleCollectionCover(
@@ -304,6 +320,7 @@ async function handleCollectionCover(
 export async function resolveAssetRequest(
   deps: AssetResolverDeps,
   assetPath: string,
+  range: string | null = null,
 ): Promise<Response> {
   const segments = assetPath.split("/").filter(Boolean);
   if (segments.length === 0) {
@@ -313,7 +330,7 @@ export async function resolveAssetRequest(
   const [family, id, kind] = segments;
 
   if ((family === "videos" || family === "scenes") && segments.length === 3) {
-    return handleVideoAsset(deps, id, kind);
+    return handleVideoAsset(deps, id, kind, range);
   }
 
   if (family === "performers" && segments.length === 3) {
@@ -351,7 +368,7 @@ export async function resolveAssetRequest(
   }
 
   if (family === "images" && segments.length === 3) {
-    return handleImageAsset(deps, id, kind);
+    return handleImageAsset(deps, id, kind, range);
   }
 
   if (family === "audio-libraries" && segments.length === 3 && kind === "cover") {

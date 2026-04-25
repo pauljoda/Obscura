@@ -48,6 +48,7 @@ describe("/api/assets/[...asset] route", () => {
 
     const response = await GET({
       params: { asset: "videos/video-1/card" },
+      request: new Request("http://localhost/api/assets/videos/video-1/card"),
     } as never);
 
     expect(getWebDb).toHaveBeenCalledOnce();
@@ -55,8 +56,26 @@ describe("/api/assets/[...asset] route", () => {
     expect(resolveAssetRequest).toHaveBeenCalledWith(
       { assetDeps: true },
       "videos/video-1/card",
+      null,
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("card-bytes");
+  });
+
+  it("forwards the Range header to resolveAssetRequest", async () => {
+    const { GET } = await import("./[...asset]/+server");
+
+    await GET({
+      params: { asset: "images/image-1/preview" },
+      request: new Request("http://localhost/api/assets/images/image-1/preview", {
+        headers: { Range: "bytes=0-1023" },
+      }),
+    } as never);
+
+    expect(resolveAssetRequest).toHaveBeenCalledWith(
+      { assetDeps: true },
+      "images/image-1/preview",
+      "bytes=0-1023",
+    );
   });
 });

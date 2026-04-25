@@ -188,6 +188,55 @@ describe("resolveAssetRequest", () => {
     );
   });
 
+  it("serves image previews with byte-range support for Safari", async () => {
+    cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
+    process.env.OBSCURA_CACHE_DIR = cacheDir;
+
+    const previewPath = path.join(cacheDir, "images", "image-1", "preview.mp4");
+    await mkdir(path.dirname(previewPath), { recursive: true });
+    const previewBytes = Buffer.from("0123456789abcdef");
+    await writeFile(previewPath, previewBytes);
+
+    const { resolveAssetRequest } = await import("./resolve-asset-request");
+
+    const fullResponse = await resolveAssetRequest(
+      createDeps(),
+      "images/image-1/preview",
+    );
+    expect(fullResponse.status).toBe(200);
+    expect(fullResponse.headers.get("content-type")).toBe("video/mp4");
+    expect(fullResponse.headers.get("accept-ranges")).toBe("bytes");
+    expect(fullResponse.headers.get("content-length")).toBe(
+      String(previewBytes.length),
+    );
+
+    const rangeResponse = await resolveAssetRequest(
+      createDeps(),
+      "images/image-1/preview",
+      "bytes=0-3",
+    );
+    expect(rangeResponse.status).toBe(206);
+    expect(rangeResponse.headers.get("content-type")).toBe("video/mp4");
+    expect(rangeResponse.headers.get("content-range")).toBe(
+      `bytes 0-3/${previewBytes.length}`,
+    );
+    expect(rangeResponse.headers.get("content-length")).toBe("4");
+    expect(rangeResponse.headers.get("accept-ranges")).toBe("bytes");
+    expect(Buffer.from(await rangeResponse.arrayBuffer()).toString("utf8")).toBe(
+      "0123",
+    );
+
+    const invalidRange = await resolveAssetRequest(
+      createDeps(),
+      "images/image-1/preview",
+      "bytes=999-1000",
+    );
+    expect(invalidRange.status).toBe(416);
+    expect(invalidRange.headers.get("content-range")).toBe(
+      `bytes */${previewBytes.length}`,
+    );
+  });
+
   it("serves audio waveform json assets", async () => {
     cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
     process.env.OBSCURA_CACHE_DIR = cacheDir;

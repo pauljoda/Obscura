@@ -1,4 +1,4 @@
-import { createReadStream, existsSync } from "node:fs";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { json } from "@sveltejs/kit";
@@ -24,6 +24,59 @@ export function streamFile(
 ): Response {
   const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
   return new Response(body, { headers });
+}
+
+export function streamFileWithRange(
+  filePath: string,
+  headers: Record<string, string>,
+  range: string | null,
+): Response {
+  const fileSize = statSync(filePath).size;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = Number.parseInt(parts[0] ?? "0", 10);
+    const end = parts[1] ? Number.parseInt(parts[1], 10) : fileSize - 1;
+
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      start < 0 ||
+      end < start ||
+      end >= fileSize
+    ) {
+      return new Response(null, {
+        status: 416,
+        headers: {
+          "Content-Range": `bytes */${fileSize}`,
+          "Accept-Ranges": "bytes",
+        },
+      });
+    }
+
+    const body = Readable.toWeb(
+      createReadStream(filePath, { start, end }),
+    ) as ReadableStream;
+    return new Response(body, {
+      status: 206,
+      headers: {
+        ...headers,
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(end - start + 1),
+      },
+    });
+  }
+
+  const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
+  return new Response(body, {
+    status: 200,
+    headers: {
+      ...headers,
+      "Accept-Ranges": "bytes",
+      "Content-Length": String(fileSize),
+    },
+  });
 }
 
 export function sendBuffer(

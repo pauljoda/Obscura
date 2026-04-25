@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library browsing now keeps loading more cards as you scroll across Videos, Series, Actors, Galleries, Images, Collections, and Audio Libraries, without page-number footers interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
 - Infinite scrolling now starts fetching farther before the bottom of library pages and stops cleanly if a backend page repeats already-loaded cards, so the list no longer sits forever on a visible Loading footer.
 - The Videos page now keeps loading past the first 60 cards on libraries that contain only episodes or only movies. Earlier the list would briefly show the full count and then collapse to 60 when scrolling, because the backend was handing the same first page back for every load-more request.
+- Animated images now play correctly in Safari (both iOS and macOS). Previously the asset endpoint did not advertise byte-range support, so Safari refused to start playback while Chromium browsers played fine.
 
 ### Added
 
@@ -54,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Videos page no longer collapses to the first 60 cards mid-scroll on libraries that contain only episodes (or only movies). The merge-and-slice step in the videos read now honors the requested offset whenever both video kinds are queried, instead of skipping it whenever one side returned no rows.
 - Legacy `/assets/scenes/...` card, sprite, trickplay, and custom thumbnail URLs now resolve from old scene cache directories after the SvelteKit cutover.
 - Infinite scroll on every grid no longer cascades into a runaway loop after the first auto-load. The trigger is now edge-triggered: the sentinel must leave and re-enter the viewport before another fetch fires, which also closes a race where two concurrent load-more calls could clobber each other and prematurely mark the list as exhausted.
+- Animated image previews and full-resolution clips served by `/api/assets/...` now respond to HTTP `Range` requests with `206 Partial Content` and advertise `Accept-Ranges: bytes`, which Safari requires before it will start playback. Image, image preview, and video preview-sidecar endpoints all stream byte ranges; Chromium browsers continue to work unchanged.
 
 ## [0.20.0] - 2026-04-24
 
