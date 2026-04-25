@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-04-24
+
 ### What's New
 
 - **The web app has been rewritten on SvelteKit.** Obscura's frontend moved from Next.js + React to SvelteKit + Svelte 5. The app now runs as a single SvelteKit process on port 8008 with same-origin `/api/*` routes — the old Next.js + Fastify + nginx stack is gone, which makes the production Docker image simpler and the app noticeably faster to navigate on a LAN. The Dark Room visual direction carries through unchanged.
