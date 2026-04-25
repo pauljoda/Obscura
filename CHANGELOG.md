@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- Video browsing now keeps loading more cards as you scroll, without the old page-number footer interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
+
+### Fixed
+
+- Videos infinite scroll now carries the current NSFW visibility mode into load-more requests and routes the visible fallback control through the same loader.
+- Legacy `/assets/scenes/...` card, sprite, trickplay, and custom thumbnail URLs now resolve from old scene cache directories after the SvelteKit cutover.
+
 ## [0.20.0] - 2026-04-24
 
 ### What's New

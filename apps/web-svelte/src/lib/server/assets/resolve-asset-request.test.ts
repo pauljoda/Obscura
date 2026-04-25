@@ -103,6 +103,40 @@ describe("resolveAssetRequest", () => {
     );
   });
 
+  it("serves legacy scene asset URLs from the old scene cache", async () => {
+    cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
+    process.env.OBSCURA_CACHE_DIR = cacheDir;
+
+    const legacyCardPath = path.join(
+      cacheDir,
+      "scenes",
+      "video-1",
+      "card.jpg",
+    );
+    await mkdir(path.dirname(legacyCardPath), { recursive: true });
+    await writeFile(legacyCardPath, "legacy-card-bytes");
+
+    const mediaDir = path.join(cacheDir, "media");
+    await mkdir(mediaDir, { recursive: true });
+    const videoPath = path.join(mediaDir, "clip.mp4");
+    await writeFile(videoPath, "video-bytes");
+
+    const { resolveAssetRequest } = await import("./resolve-asset-request");
+    const response = await resolveAssetRequest(
+      createDeps({
+        resolveVideoFilePath: async () => videoPath,
+        getMetadataStorageDedicated: async () => true,
+      }),
+      "scenes/video-1/card",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/jpeg");
+    expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
+      "legacy-card-bytes",
+    );
+  });
+
   it("serves collection cover assets from the cache directory", async () => {
     cacheDir = await mkdtemp(path.join(os.tmpdir(), "obscura-assets-"));
     process.env.OBSCURA_CACHE_DIR = cacheDir;

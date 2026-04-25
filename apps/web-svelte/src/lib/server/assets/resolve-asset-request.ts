@@ -4,7 +4,6 @@ import {
   VIDEO_GENERATED_FILENAMES,
   extractZipMember,
   getCacheRootCandidates,
-  getGeneratedVideoDir,
   getVideoGeneratedDiskPaths,
 } from "@obscura/media-core";
 import {
@@ -115,13 +114,13 @@ async function handleVideoAsset(
   kind: string,
 ): Promise<Response> {
   if (kind === "thumb-custom") {
-    return serveFileIfExists(
-      path.join(getGeneratedVideoDir(id), "thumbnail-custom.jpg"),
-      {
-        "Cache-Control": "no-cache",
-        "Content-Type": "image/jpeg",
-      },
+    return serveFirstMatchingFile(
+      [
+        ...cacheCandidates("videos", id, "thumbnail-custom.jpg"),
+        ...cacheCandidates("scenes", id, "thumbnail-custom.jpg"),
+      ],
       "Custom thumbnail not found",
+      "no-cache",
     );
   }
 
@@ -165,10 +164,16 @@ async function handleVideoAsset(
     id,
     legacyDedicatedFileName,
   );
+  const legacySceneDedicatedCandidates = cacheCandidates(
+    "scenes",
+    id,
+    legacyDedicatedFileName,
+  );
   const selectedPath = firstExistingPath([
     primaryPath,
     secondaryPath,
     ...legacyDedicatedCandidates,
+    ...legacySceneDedicatedCandidates,
   ]);
   if (!selectedPath) {
     return notFound("Asset not found");
@@ -307,7 +312,7 @@ export async function resolveAssetRequest(
 
   const [family, id, kind] = segments;
 
-  if (family === "videos" && segments.length === 3) {
+  if ((family === "videos" || family === "scenes") && segments.length === 3) {
     return handleVideoAsset(deps, id, kind);
   }
 

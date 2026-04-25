@@ -48,6 +48,10 @@
       <a
         href={nextHref}
         class="surface-well px-3 py-1 text-body-sm text-text-muted transition-colors hover:text-text-primary"
+        onclick={(event) => {
+          event.preventDefault();
+          void onLoad();
+        }}
       >
         {label}
       </a>
