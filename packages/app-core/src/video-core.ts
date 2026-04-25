@@ -213,6 +213,9 @@ interface VideoSourceRow extends VideoRow {
   playDuration: number | null;
   resumeTime: number | null;
   lastPlayedAt: Date | null;
+  phash: string | null;
+  oshash: string | null;
+  checksumMd5: string | null;
 }
 
 function normalizeRole(value: string | null | undefined): string | null {
@@ -545,6 +548,9 @@ async function loadEpisodeRow(
     playDuration: ep.playDuration,
     resumeTime: ep.resumeTime,
     lastPlayedAt: ep.lastPlayedAt,
+    phash: ep.phash,
+    oshash: ep.oshash,
+    checksumMd5: ep.checksumMd5,
   };
 }
 
@@ -596,6 +602,9 @@ async function loadMovieRow(
     playDuration: mv.playDuration,
     resumeTime: mv.resumeTime,
     lastPlayedAt: mv.lastPlayedAt,
+    phash: mv.phash,
+    oshash: mv.oshash,
+    checksumMd5: mv.checksumMd5,
   };
 }
 
@@ -1556,6 +1565,11 @@ export async function getVideoDetailRead(db: AppDb, id: string) {
     tags: tagRows,
     markers,
     subtitleTracks,
+    fingerprints: {
+      hasPhash: !!row.phash,
+      hasOshash: !!row.oshash,
+      hasChecksumMd5: !!row.checksumMd5,
+    },
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

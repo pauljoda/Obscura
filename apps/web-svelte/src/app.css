@@ -324,6 +324,29 @@
                 inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
+  /*
+   * Glass layers — see docs/design-language.md. Three escalating
+   * weights for floating surfaces above the material base.
+   */
+  .glass-1 {
+    background: rgba(12, 15, 21, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 0;
+  }
+  .glass-2 {
+    background: rgba(16, 20, 32, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 0;
+  }
+  .glass-3 {
+    background: rgba(21, 26, 40, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 0;
+  }
+
   /* Glass chip: aggressive blur for elements floating over media */
   .glass-chip {
     background: var(--color-overlay-glass-light);

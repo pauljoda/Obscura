@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Loader2, ScanSearch, AlertCircle } from "@lucide/svelte";
+  import { Loader2, ScanSearch, AlertCircle, Search, Info } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import {
     fetchInstalledScrapers,
@@ -15,6 +15,7 @@
     ScrapeResult,
     ScraperPackage,
     StashBoxEndpoint,
+    VideoDetail,
   } from "$lib/api/types";
   import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
@@ -36,6 +37,7 @@
     kind: ProviderKind;
     action?: string | null;
     version?: string | null;
+    helper?: string | null;
   }
 
   interface Props {
@@ -62,10 +64,12 @@
   let plugins = $state<InstalledPlugin[]>([]);
   let scrapers = $state<ScraperPackage[]>([]);
   let stashBoxEndpoints = $state<StashBoxEndpoint[]>([]);
+  let videoDetail = $state<VideoDetail | null>(null);
   let loadingProviders = $state(false);
   let open = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
+  let infoMessage = $state<string | null>(null);
   let drawerOpen = $state<string | null>(null);
   let legacyReview = $state<{
     result: ScrapeResult;
@@ -75,6 +79,10 @@
   let buttonEl: HTMLButtonElement | undefined = $state();
   let menuStyle = $state<string | null>(null);
   let menuIsWide = $state(false);
+  let searchQuery = $state("");
+  let searchInputEl: HTMLInputElement | undefined = $state();
+
+  const isVideoEntity = $derived(entityKind !== "video_series");
 
   $effect(() => {
     if (
@@ -86,15 +94,20 @@
     )
       return;
     loadingProviders = true;
+    const detailPromise = isVideoEntity
+      ? fetchVideoDetail(entityId).catch(() => null)
+      : Promise.resolve(null);
     Promise.all([
       fetchInstalledPlugins(),
       fetchInstalledScrapers(),
       fetchStashBoxEndpoints(),
+      detailPromise,
     ])
-      .then(([pluginList, scraperRes, stashBoxRes]) => {
+      .then(([pluginList, scraperRes, stashBoxRes, detail]) => {
         plugins = pluginList.filter((p) => p.enabled);
         scrapers = scraperRes.packages.filter((s) => s.enabled);
         stashBoxEndpoints = stashBoxRes.endpoints.filter((e) => e.enabled);
+        videoDetail = detail;
       })
       .catch((err) => {
         error = err instanceof Error ? err.message : "Failed to load identify providers";
@@ -102,6 +115,15 @@
       .finally(() => {
         loadingProviders = false;
       });
+  });
+
+  // Focus the search field when the flyout opens.
+  $effect(() => {
+    if (!open) {
+      searchQuery = "";
+      return;
+    }
+    queueMicrotask(() => searchInputEl?.focus());
   });
 
   const visiblePlugins = $derived(filterNsfwAware(plugins));
@@ -131,7 +153,31 @@
   const eligibleStashBoxEndpoints = $derived(
     supportsLegacyVideoProviders ? visibleStashBoxEndpoints : [],
   );
-  const providerGroups = $derived<
+
+  const hasPhash = $derived(videoDetail?.fingerprints?.hasPhash ?? null);
+  const hasAnyFingerprint = $derived(
+    videoDetail
+      ? !!(
+          videoDetail.fingerprints?.hasPhash ||
+          videoDetail.fingerprints?.hasOshash ||
+          videoDetail.fingerprints?.hasChecksumMd5
+        )
+      : null,
+  );
+
+  function stashBoxHelper(): string | null {
+    if (!isVideoEntity) return null;
+    if (!videoDetail) return "fingerprint / title";
+    if (!hasPhash && !hasAnyFingerprint) {
+      return "no fingerprint · title only";
+    }
+    if (!hasPhash) {
+      return "no phash · oshash/md5/title";
+    }
+    return "fingerprint / title";
+  }
+
+  const allProviderGroups = $derived<
     Array<{ label: string; providers: IdentifyProvider[] }>
   >([
     ...(eligiblePlugins.length > 0
@@ -144,6 +190,7 @@
               kind: "plugin" as const,
               action: actionFor(p),
               version: p.version,
+              helper: null,
             })),
           },
         ]
@@ -156,7 +203,10 @@
               id: `stashbox:${ep.id}`,
               name: ep.name,
               kind: "stashbox" as const,
-              action: "fingerprint / title",
+              action: stashBoxHelper(),
+              helper: !hasPhash && hasPhash !== null
+                ? "No phash on this video — fingerprint match unavailable"
+                : null,
             })),
           },
         ]
@@ -171,12 +221,34 @@
               kind: "scraper" as const,
               action: "auto",
               version: s.version,
+              helper: null,
             })),
           },
         ]
       : []),
   ]);
+
+  const normalizedQuery = $derived(searchQuery.trim().toLowerCase());
+  const providerGroups = $derived(
+    normalizedQuery
+      ? allProviderGroups
+          .map((g) => ({
+            label: g.label,
+            providers: g.providers.filter(
+              (p) =>
+                p.name.toLowerCase().includes(normalizedQuery) ||
+                g.label.toLowerCase().includes(normalizedQuery) ||
+                (p.action ?? "").toLowerCase().includes(normalizedQuery),
+            ),
+          }))
+          .filter((g) => g.providers.length > 0)
+      : allProviderGroups,
+  );
+
   const eligibleProviderCount = $derived(
+    allProviderGroups.reduce((count, group) => count + group.providers.length, 0),
+  );
+  const filteredProviderCount = $derived(
     providerGroups.reduce((count, group) => count + group.providers.length, 0),
   );
 
@@ -208,11 +280,11 @@
       const flyoutLayout = layoutPlayerMobileFlyout(rect, {
         vh: window.innerHeight,
         vw: window.innerWidth,
-        maxHeightVh: 0.7,
+        maxHeightVh: 0.72,
         gap: 10,
         gutter: 12,
-        preferredWidth: 336,
-        minWidth: 272,
+        preferredWidth: 360,
+        minWidth: 280,
       });
       if (mql.matches) {
         menuStyle = playerFlyoutStyleToString(flyoutLayout);
@@ -278,6 +350,7 @@
   async function runPlugin(plugin: InstalledPlugin) {
     busy = true;
     error = null;
+    infoMessage = null;
     try {
       const action = actionFor(plugin);
       if (!action) {
@@ -319,10 +392,15 @@
   async function runStashBox(endpoint: StashBoxEndpoint) {
     busy = true;
     error = null;
+    infoMessage = null;
     try {
       const res = await identifyViaStashBox(endpoint.id, entityId);
       if (!res.result || !res.normalized) {
-        throw new Error(res.message || `${endpoint.name} returned no result.`);
+        const tried = res.triedMethods?.length
+          ? ` Tried: ${res.triedMethods.join(" → ")}.`
+          : "";
+        infoMessage = `${endpoint.name}: ${res.message ?? "No results found."}${tried}`;
+        return;
       }
       showLegacyReview(res.result, res.normalized, endpoint.name);
     } catch (err) {
@@ -335,13 +413,18 @@
   async function runScraper(scraper: ScraperPackage) {
     busy = true;
     error = null;
+    infoMessage = null;
     try {
       const video = await fetchVideoDetail(entityId);
       const res = await scrapeVideo(scraper.id, entityId, "auto", {
         url: video.url ?? undefined,
       });
       if (!res.result || !res.normalized) {
-        throw new Error(res.message || `${scraper.name} returned no result.`);
+        const tried = res.triedActions?.length
+          ? ` Tried: ${res.triedActions.join(" → ")}.`
+          : "";
+        infoMessage = `${scraper.name}: ${res.message ?? "No results found."}${tried}`;
+        return;
       }
       showLegacyReview(res.result, res.normalized, scraper.name);
     } catch (err) {
@@ -415,55 +498,107 @@
     <div
       use:portal
       class={cn(
-        "fixed z-[180] surface-elevated overflow-y-auto overscroll-contain py-2",
-        menuIsWide && "min-w-[272px] max-w-[336px]",
+        "fixed z-[180] flex flex-col player-dropdown overscroll-contain",
+        menuIsWide && "min-w-[280px] max-w-[360px]",
+        menuStyle ? "opacity-100" : "opacity-0 pointer-events-none",
       )}
       style={menuStyle ?? undefined}
     >
-      <div class="px-3 pb-1 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
-        Identify from
-      </div>
-      {#if loadingProviders}
-        <div class="flex items-center gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
-          <Loader2 class="h-3 w-3 animate-spin" /> Loading providers…
+      <!-- Sticky header: title + search + alerts -->
+      <div class="flex flex-col border-b border-white/10">
+        <div class="px-3 pt-2 pb-1 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
+          Identify from
         </div>
-      {/if}
-      {#if !loadingProviders && eligibleProviderCount === 0}
-        <div class="flex items-start gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
-          <AlertCircle class="h-3 w-3 flex-shrink-0" />
-          <span>
-            No enabled provider supports
-            <code class="font-mono text-text-accent">{entityKindReadable(entityKind)}</code>
-            lookup. {providerEmptyMessage()}
-          </span>
-        </div>
-      {/if}
-      {#if !loadingProviders}
-        {#each providerGroups as group (group.label)}
-          <div class="px-3 pb-1 pt-2 text-[0.56rem] uppercase tracking-[0.14em] text-text-disabled">
-            {group.label}
+        {#if eligibleProviderCount > 0}
+          <div class="relative px-2 pb-2">
+            <Search
+              class="pointer-events-none absolute left-3.5 top-1/2 h-3 w-3 -translate-y-1/2 text-text-muted"
+            />
+            <input
+              bind:this={searchInputEl}
+              type="text"
+              bind:value={searchQuery}
+              placeholder="Search providers…"
+              class="w-full border border-white/10 bg-black/30 pl-7 pr-2 py-1.5 text-[0.72rem] text-text-primary placeholder:text-text-muted/70 focus:outline-none focus:border-border-accent"
+              onkeydown={(e) => {
+                if (e.key === "Escape") {
+                  e.stopPropagation();
+                  if (searchQuery) searchQuery = "";
+                  else open = false;
+                }
+              }}
+            />
           </div>
-          {#each group.providers as provider (provider.id)}
-            <button
-              type="button"
-              onclick={() => void runProvider(provider)}
-              disabled={busy}
-              class="w-full px-3 py-1.5 text-left text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
-            >
-              <div class="truncate font-medium text-text-primary">{provider.name}</div>
-              <div class="truncate text-[0.6rem] text-text-disabled">
-                {provider.action ?? "—"}
-                {provider.version ? ` · ${provider.version}` : ""}
-              </div>
-            </button>
+        {/if}
+        {#if error}
+          <div
+            class="mx-2 mb-2 flex items-start gap-1.5 border border-status-error/30 bg-status-error/10 px-2 py-1.5 text-[0.68rem] text-status-error-text"
+          >
+            <AlertCircle class="h-3 w-3 flex-shrink-0 mt-[1px]" />
+            <span class="min-w-0">{error}</span>
+          </div>
+        {/if}
+        {#if infoMessage}
+          <div
+            class="mx-2 mb-2 flex items-start gap-1.5 border border-white/15 bg-white/5 px-2 py-1.5 text-[0.68rem] text-text-muted"
+          >
+            <Info class="h-3 w-3 flex-shrink-0 mt-[1px]" />
+            <span class="min-w-0">{infoMessage}</span>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Scrollable provider list -->
+      <div class="min-h-0 flex-1 overflow-y-auto py-1">
+        {#if loadingProviders}
+          <div class="flex items-center gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
+            <Loader2 class="h-3 w-3 animate-spin" /> Loading providers…
+          </div>
+        {/if}
+        {#if !loadingProviders && eligibleProviderCount === 0}
+          <div class="flex items-start gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
+            <AlertCircle class="h-3 w-3 flex-shrink-0 mt-[1px]" />
+            <span>
+              No enabled provider supports
+              <code class="font-mono text-text-accent">{entityKindReadable(entityKind)}</code>
+              lookup. {providerEmptyMessage()}
+            </span>
+          </div>
+        {/if}
+        {#if !loadingProviders && eligibleProviderCount > 0 && filteredProviderCount === 0}
+          <div class="px-3 py-2 text-[0.7rem] text-text-muted">
+            No providers match
+            <span class="font-mono text-text-accent">"{searchQuery}"</span>.
+          </div>
+        {/if}
+        {#if !loadingProviders}
+          {#each providerGroups as group (group.label)}
+            <div class="px-3 pb-1 pt-2 text-[0.56rem] uppercase tracking-[0.14em] text-text-disabled">
+              {group.label}
+            </div>
+            {#each group.providers as provider (provider.id)}
+              <button
+                type="button"
+                onclick={() => void runProvider(provider)}
+                disabled={busy}
+                class="w-full px-3 py-1.5 text-left text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-white/8 transition-colors"
+              >
+                <div class="truncate font-medium text-text-primary">{provider.name}</div>
+                <div class="truncate text-[0.6rem] text-text-disabled">
+                  {provider.action ?? "—"}
+                  {provider.version ? ` · ${provider.version}` : ""}
+                </div>
+                {#if provider.helper}
+                  <div class="mt-0.5 flex items-start gap-1 text-[0.58rem] text-amber-300/85">
+                    <Info class="h-2.5 w-2.5 flex-shrink-0 mt-[1px]" />
+                    <span class="truncate">{provider.helper}</span>
+                  </div>
+                {/if}
+              </button>
+            {/each}
           {/each}
-        {/each}
-      {/if}
-      {#if error}
-        <div class="mx-3 my-2 border border-status-error/30 bg-status-error/10 px-2 py-1 text-[0.68rem] text-status-error-text">
-          {error}
-        </div>
-      {/if}
+        {/if}
+      </div>
     </div>
   {/if}
 </div>

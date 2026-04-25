@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Direct Identify on video entries now offers the full provider set: Obscura plugins, Stash-Box endpoints, and community database scrapers. Legacy scraper matches now open in the same flyout review experience as plugin matches, so accepting metadata feels consistent from entry pages and the review queue.
 - Animated images now play correctly in Safari (both iOS and macOS). Previously the asset endpoint did not advertise byte-range support, so Safari refused to start playback while Chromium browsers played fine.
 - Bulk series Identify review now advances cleanly after choosing from multiple candidate matches. After a candidate refetch, **Apply all & next** shows the next row's review details instead of keeping the previous candidate's panel content.
+- The video Identify flyout now feels like the player's subtitle/audio pickers: the panel is fully opaque so providers stay readable over playing video, a search field at the top filters Obscura plugins, Stash-Box endpoints, and community scrapers in one pass, and "no results" feedback shows at the top of the flyout where you'll actually see it instead of buried under a long provider list.
+- Stash-Box providers in the Identify flyout now warn with an inline note when the current video has no perceptual hash, so it's clear up front that the lookup will fall back to title search rather than a fingerprint match.
+- The scrape review drawer now has a solid backing again. Previously the drawer surface used a glass token that wasn't wired up in the stylesheet, leaving the title visible but the review fields rendered against the underlying video — fields are now legible.
 
 ### Added
 
@@ -33,6 +36,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - A root image upload endpoint now writes selected files directly into an image library root as unorganized flat images.
 - A `media_file_ignores` migration-backed table that records library-only deletes and keeps scan workers from reimporting ignored files.
 - A local `pnpm dev:seed-scroll` helper now seeds synthetic video rows for repeatable infinite-scroll testing in small development libraries.
+- `VideoDetailDto` now exposes a `fingerprints` block (`hasPhash` / `hasOshash` / `hasChecksumMd5`) so identify UIs can warn about Stash-Box providers when the current video has no fingerprint to query against.
+- Glass surface utilities `glass-1`, `glass-2`, and `glass-3` are now defined in `app.css`, matching the layered weights described in `docs/design-language.md`.
 
 ### Changed
 

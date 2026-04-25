@@ -37,7 +37,7 @@
     if (e.target === e.currentTarget) onClose();
   }}
 >
-  <div class="glass-1 flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
+  <div class="glass-3 flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
     <div class="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
       <div class="min-w-0 flex-1">
         <div class="text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
