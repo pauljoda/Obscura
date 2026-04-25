@@ -1,17 +1,5 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
-/**
- * Creating a sidebar enables you to:
- - create an ordered group of docs
- - render a sidebar for each doc of that group
- - provide next/previous navigation
-
- The sidebars can be generated from the filesystem, or explicitly defined here.
-
- Create as many sidebars as you want.
- */
 const sidebars: SidebarsConfig = {
   docsSidebar: [
     'intro',
@@ -19,7 +7,17 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Users',
       collapsed: false,
-      items: ['users/quick-start', 'users/library-organization'],
+      items: [
+        'users/quick-start',
+        'users/first-boot',
+        'users/library-organization',
+        'users/browsing',
+        'users/playback',
+        'users/identify-and-scrape',
+        'users/operations',
+        'users/settings',
+        'users/upgrading',
+      ],
     },
     {
       type: 'category',
@@ -27,9 +25,36 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'developers/architecture',
+        'developers/monorepo',
+        'developers/database',
+        'developers/api-and-jobs',
+        'developers/hls-streaming',
         'developers/design-language',
-        'developers/plugin-development',
-        'developers/phash-contribution',
+        'developers/contributing',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Plugins',
+      collapsed: false,
+      items: [
+        'plugins/overview',
+        'plugins/manifest',
+        'plugins/capabilities',
+        'plugins/typescript-plugin',
+        'plugins/python-plugin',
+        'plugins/stash-compat',
+        'plugins/publishing',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Advanced',
+      collapsed: false,
+      items: [
+        'advanced/phash-contribution',
+        'advanced/stashbox',
+        'advanced/troubleshooting',
       ],
     },
   ],

@@ -1,64 +1,151 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 title: Library Organization
-description: How Obscura classifies movies, flat series, and seasoned series.
+description: How Obscura classifies movies, flat series, and seasoned series from your folder layout.
 ---
 
 # Library Organization
 
-Obscura classifies video files by their depth under a library root. The root itself is depth `0`.
+Obscura's video classifier reads your folder layout, not your filenames, to decide whether a file is a **movie**, a **flat-series episode**, or a **seasoned-series episode**. Get the layout right up front and you'll spend almost no time fixing classifications later.
 
-| Depth | Example | Becomes |
+The classifier lives in `packages/media-core/src/classifier/classify-video-file.ts` if you want to read the source.
+
+## The depth rule
+
+Depth is measured from the library root (`depth = 0`).
+
+| Depth | Example path | Becomes |
 | --- | --- | --- |
-| `0` | `/library/Heat (1995).mkv` | Movie |
-| `1` | `/library/My Show/Episode 01.mkv` | Episode in a flat series |
-| `2` | `/library/My Show/Season 01/S01E01.mkv` | Episode in a seasoned series |
-| `3+` | `/library/My Show/Extras/Bonus/clip.mkv` | Rejected |
+| `0` | `/library/Heat (1995).mkv` | **Movie** |
+| `1` | `/library/My Show/Episode 01.mkv` | Episode in a **flat series** (synthetic season 0) |
+| `2` | `/library/My Show/Season 01/S01E01.mkv` | Episode in a **seasoned series** |
+| `3+` | `/library/My Show/Extras/Bonus/clip.mkv` | **Rejected** — too deep, ignored by the scanner |
+
+You can mix all three under the same root, as long as each file's depth is unambiguous. Most people find it easier to put movies and series under separate roots.
 
 ## Movies
 
 ```text
 /library/movies
-|-- Blade Runner (1982).mkv
-|-- Heat (1995).mp4
-`-- No Country for Old Men (2007).mkv
+├── Blade Runner (1982).mkv
+├── Heat (1995).mp4
+└── No Country for Old Men (2007).mkv
 ```
 
-Files directly under the root become movies.
+Anything directly inside the root is a movie. The filename parser picks up the title and year from `Title (YYYY).ext` patterns.
+
+Good filename forms:
+
+- `Blade Runner (1982).mkv`
+- `Blade Runner 1982.mkv`
+- `Blade.Runner.1982.1080p.BluRay.mkv`
+
+Bad forms (parser may guess wrong):
+
+- `BR.mkv` — no clue about the title
+- `1982 - Blade Runner.mkv` — leading year confuses the regex
+
+You can always edit the title after a scan; the filename parser is a starting point, not a contract.
 
 ## Flat series
 
 ```text
 /library/series
-`-- My Cool Show
-    |-- My Cool Show - 01.mkv
-    |-- My Cool Show - 02.mkv
-    `-- My Cool Show - 03.mkv
+└── My Cool Show
+    ├── My Cool Show - 01.mkv
+    ├── My Cool Show - 02.mkv
+    └── My Cool Show - 03.mkv
 ```
 
-Files one folder below the root become episodes in a flat series. Obscura stores them in a synthetic season.
+When files sit **one folder** below the root, that folder is the series and the files are episodes in a synthetic season `0`. Use this when you don't have season subfolders.
+
+The filename parser tries to extract an episode number from common patterns: `S01E03`, `s01e03`, `1x03`, ` - 03`, `Episode 03`.
 
 ## Seasoned series
 
 ```text
 /library/series
-`-- Another Show
-    |-- Season 01
-    |   |-- S01E01.mkv
-    |   `-- S01E02.mkv
-    `-- Season 02
-        |-- S02E01.mkv
-        `-- S02E02.mkv
+└── Another Show
+    ├── Season 01
+    │   ├── S01E01.mkv
+    │   └── S01E02.mkv
+    ├── Season 02
+    │   ├── S02E01.mkv
+    │   └── S02E02.mkv
+    └── Specials
+        └── christmas-special.mkv
 ```
 
-Files two folders below the root become episodes in their season folder. A `Specials` folder maps to season `0`.
+When files sit **two folders** below the root, the series is the outer folder and the season is the inner folder. Recognised season-folder forms:
+
+- `Season 01`, `Season 1`, `S01`, `S1`
+- `Season 0`, `Specials` (both map to season `0`)
+
+Files in `Specials` get season `0`, episode numbers parsed from the filename.
 
 ## Sidecar metadata
 
 When a file is imported, Obscura merges metadata in this order:
 
-1. Filename parser for fallback title, year, season, and episode numbers.
-2. JSON sidecar such as `<filename>.info.json`.
-3. NFO sidecar such as `<filename>.nfo`.
+1. **Filename parser** — fallback title, year, season number, episode number.
+2. **JSON sidecar** — `<filename>.info.json` next to the file. Keys mirror the YouTube-DL info-json format where applicable.
+3. **NFO sidecar** — Kodi/Jellyfin-style `<filename>.nfo`.
 
-User edits made in the UI are not overwritten by a normal rescan.
+User edits in the UI take precedence; **a normal rescan does not overwrite fields you've changed**. (The exception is the one-time breaking-gate rescan, which rebuilds the database from scratch.)
+
+## What the classifier ignores
+
+The video scanner skips anything it can identify as a generated artifact, sample, or non-media file:
+
+- Filenames containing `-preview`, `_preview`, `-sample`, `_sample`, `-trailer`, `_trailer`
+- Filenames matching `*.thumb.*`
+- Files at depth `3` or deeper inside a series root
+- Files whose extension isn't in `supportedVideoExtensions` (`.mp4`, `.mkv`, `.mov`, `.webm`, `.avi`, `.wmv`, `.flv`, `.ts`, `.m2ts`, `.mpg`, `.mpeg`)
+
+This means you can keep a `_samples/` folder next to a movie without it polluting the library — as long as the sample names contain `-sample` or `_sample`.
+
+## Galleries, images, and audio
+
+Video classification is depth-based; the other media types use simpler rules.
+
+### Galleries
+
+A **gallery** is either:
+
+- A **folder of images** under a root with `scan_galleries` enabled, or
+- A **zip / cbz / cbr archive** treated as a virtual gallery (file paths look like `/path/archive.cbz::member/file.jpg`).
+
+Images directly inside a root become loose images, not a gallery. Group them in a folder if you want gallery semantics.
+
+### Images
+
+Files matching the supported image formats (JPEG, PNG, WebP, AVIF, HEIF, GIF) are imported individually if they're not part of a gallery folder. They're scanned by roots with `scan_images` enabled.
+
+### Audio
+
+Audio scans look for **library folders**. The convention mirrors music libraries:
+
+```text
+/library/audio
+├── Some Album
+│   ├── 01 - Track One.mp3
+│   ├── 02 - Track Two.mp3
+│   └── cover.jpg
+└── Another Album
+    └── 01 - Single Track.flac
+```
+
+Each folder becomes an `audioLibrary`; tracks inside become `audioTracks`. ID3 tags and embedded cover art are read during the audio probe job.
+
+## When to rescan
+
+You don't need to rescan after every change. The scanner is idempotent on file paths — running it again is safe.
+
+Rescan when:
+
+- You added or removed files on disk
+- You moved files between folders (re-classification will pick up the new layout)
+- You enabled or disabled scan flags on a library root
+- You're recovering from a breaking-gate consent
+
+Trigger scans manually from the **Operations** page (sidebar → **Jobs** → **Library scan** queue → **Run**), or set **Auto-scan** in Settings.

@@ -206,7 +206,7 @@ function Pathways() {
               <em aria-hidden>→</em>
             </span>
           </Link>
-          <Link className={styles.pathItem} to="/docs/developers/plugin-development">
+          <Link className={styles.pathItem} to="/docs/plugins/overview">
             <span className={styles.pathKicker}>03 · Plugin authors</span>
             <strong className={styles.pathTitle}>Build a metadata provider</strong>
             <p className={styles.pathBody}>

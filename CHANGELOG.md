@@ -106,6 +106,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `docs/library-organization.md` — how files under a library root are classified into movies, flat series, and seasoned series, with good / bad layout examples and filename convention tips.
 - `docs/design-language.md` — refreshed Dark Room design direction reference.
 - Documentation site now follows the Dark Room design language end-to-end: cinematic homepage with hero, capability strip, three-track Pathways grid, six-card Features grid, alternating Showcase rows, and a CTA strip; brass-accented sidebar with glowing active markers, LED-style admonitions, instrument-panel tables, glass pagination cards, and a typographic rhythm tuned for long-form reading.
+- Documentation site fully fleshed out across four tracks (Users, Developers, Plugins, Advanced — 23 pages total): expanded Quick Start / First Boot / Library Organization / Browsing / Playback / Identify & Scrape / Operations / Settings / Upgrading; Architecture / Monorepo / Database / API & Jobs / HLS Streaming / Contributing; Plugin System Overview / Manifest Reference / Capabilities / TypeScript Plugin / Python Plugin / Stash Compatibility / Publishing; pHash Contribution / StashBox Endpoints / Troubleshooting. Every page is illustrated where it makes sense (28 app screenshots) and code-blocked where it teaches a contract.
 
 ## [0.19.0] - 2026-04-12
 ### What's New

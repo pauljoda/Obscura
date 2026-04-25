@@ -75,7 +75,7 @@ const config: Config = {
         },
         {to: '/docs/users/quick-start', label: 'Users', position: 'left'},
         {to: '/docs/developers/architecture', label: 'Developers', position: 'left'},
-        {to: '/docs/developers/plugin-development', label: 'Plugins', position: 'left'},
+        {to: '/docs/plugins/overview', label: 'Plugins', position: 'left'},
         {
           href: 'https://github.com/pauljoda/Obscura',
           label: 'GitHub',
@@ -108,7 +108,7 @@ const config: Config = {
             },
             {
               label: 'Plugin development',
-              to: '/docs/developers/plugin-development',
+              to: '/docs/plugins/overview',
             },
           ],
         },
