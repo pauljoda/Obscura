@@ -9,6 +9,7 @@
     items: T[];
     card: Component<CardProps<T>>;
     getKey?: (item: T) => string;
+    onActivate?: (item: T, index: number) => void;
     reducedMotion?: boolean;
   }
 
@@ -16,6 +17,7 @@
     items,
     card: Card,
     getKey = (item) => item.id,
+    onActivate,
     reducedMotion = false,
   }: Props = $props();
 </script>
@@ -37,6 +39,7 @@
         item={item}
         index={index}
         imageLoading={index < 3 ? "eager" : "lazy"}
+        onActivate={onActivate ? () => onActivate(item, index) : undefined}
         layout="feed"
       />
     </div>

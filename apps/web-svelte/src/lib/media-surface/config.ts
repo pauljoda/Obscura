@@ -165,6 +165,10 @@ export interface CardProps<T> {
   /** The body layout currently rendering this card; cards that render
    *  differently in list vs grid (e.g. a row vs a tile) read this. */
   layout?: BodyLayout;
+  /** Activate-the-card callback (used by image lightbox, audio queue
+   *  open, etc.). Cards that have natural <a href> navigation can ignore
+   *  this; cards that need to intercept primary click invoke it instead. */
+  onActivate?: () => void;
 }
 
 // ── Top-level config ──────────────────────────────────────────────────

@@ -357,6 +357,7 @@
       selectedIds={config.bulkActions ? selectedIds : undefined}
       onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
+      onActivate={config.onItemActivate}
     />
   {:else if currentLayout === "feed"}
     <FeedBody
@@ -364,6 +365,7 @@
       card={config.card}
       getKey={config.getKey}
       reducedMotion={reducedMotion.value}
+      onActivate={config.onItemActivate}
     />
   {:else if currentLayout === "masonry"}
     <MasonryBody
@@ -374,6 +376,7 @@
       selectedIds={config.bulkActions ? selectedIds : undefined}
       onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
+      onActivate={config.onItemActivate}
     />
   {:else}
     <ThumbnailGrid
@@ -384,6 +387,7 @@
       selectedIds={config.bulkActions ? selectedIds : undefined}
       onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
+      onActivate={config.onItemActivate}
     />
   {/if}
 

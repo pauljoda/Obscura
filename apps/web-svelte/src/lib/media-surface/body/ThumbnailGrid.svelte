@@ -15,6 +15,7 @@
     /** Selection set for bulk-action surfaces; passed through to the card. */
     selectedIds?: Set<string>;
     onToggleSelect?: (id: string) => void;
+    onActivate?: (item: T, index: number) => void;
     reducedMotion?: boolean;
   }
 
@@ -26,6 +27,7 @@
     eagerCount = 6,
     selectedIds,
     onToggleSelect,
+    onActivate,
     reducedMotion = false,
   }: Props = $props();
 </script>
@@ -49,6 +51,7 @@
         imageLoading={index < eagerCount ? "eager" : "lazy"}
         selected={selectedIds?.has(getKey(item))}
         onToggleSelect={onToggleSelect ? () => onToggleSelect(getKey(item)) : undefined}
+        onActivate={onActivate ? () => onActivate(item, index) : undefined}
         layout="grid"
       />
     </div>
