@@ -22,12 +22,10 @@
   } from "$lib/api/entities";
   import type { VideoListItem } from "$lib/api/types";
   import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
-  import VideoCard from "$lib/components/VideoCard.svelte";
-  import { videoListItemToCardData } from "$lib/video-card-data";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import { page } from "$app/state";
   import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
+  import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
   import {
     EditFormShell,
     FormField,
@@ -58,9 +56,22 @@
     ...(baseTag as Record<string, unknown>),
     ...localPatch,
   } as typeof baseTag);
-  const videos = $derived(data.videos as VideoListItem[]);
-  const galleries = $derived(data.galleries as GalleryListItemDto[]);
-  const images = $derived(data.images as ImageListItemDto[]);
+
+  const tabs = $derived(
+    detailTabsFor({
+      entityKind: "tag",
+      entityId: t.id,
+      entityName: t.name,
+      nsfwMode: "show",
+      initialActive: page.url.searchParams.get("tab") === null
+        ? {
+            tabId: "videos",
+            items: data.videos as unknown[],
+            total: data.totalVideos,
+          }
+        : undefined,
+    }),
+  );
 
   function beginEdit() {
     editName = t.name ?? "";
@@ -300,84 +311,5 @@
     </div>
   {/if}
 
-  {#if videos.length > 0}
-    <HierarchySection title={`${data.totalVideos} ${data.totalVideos === 1 ? "video" : "videos"}`}>
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {#each videos as v, i (v.id)}
-            <VideoCard
-              video={videoListItemToCardData(v, `/tags/${encodeURIComponent(t.name)}`)}
-              variant="grid"
-              index={i}
-              imageLoading={i < 6 ? "eager" : "lazy"}
-            />
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if galleries.length > 0}
-    <HierarchySection title="Galleries">
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {#each galleries as g (g.id)}
-            <a
-              href={`/galleries/${g.id}`}
-              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-            >
-              <GalleryThumbnail
-                title={g.title}
-                coverImagePath={g.coverImagePath}
-                imageCount={g.imageCount}
-                isNsfw={g.isNsfw}
-              />
-              <div class="p-2.5">
-                <h3 class="truncate text-sm font-medium">{g.title}</h3>
-                <p class="text-xs text-text-muted mt-0.5">
-                  {g.imageCount} image{g.imageCount === 1 ? "" : "s"}
-                </p>
-              </div>
-            </a>
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if images.length > 0}
-    <HierarchySection title="Images">
-      {#snippet children()}
-        <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5">
-          {#each images as img (img.id)}
-            <a
-              href={`/images/${img.id}`}
-              class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
-            >
-              <ImageThumbnail
-                title={img.title}
-                thumbnailPath={img.thumbnailPath}
-                previewPath={img.previewPath}
-                isVideo={!!img.previewPath}
-                isNsfw={img.isNsfw}
-                width={img.width}
-                height={img.height}
-                size="compact"
-                showChips={false}
-              />
-            </a>
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if videos.length === 0 && galleries.length === 0 && images.length === 0}
-    <div class="surface-panel p-8 text-center">
-      <Film class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
-      <p class="text-body text-text-muted">
-        Nothing tagged with “{t.name}” yet.
-      </p>
-    </div>
-  {/if}
+  <MediaTabs tabs={tabs} defaultTabId="videos" />
 </div>
