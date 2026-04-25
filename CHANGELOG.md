@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The video Identify flyout now feels like the player's subtitle/audio pickers: the panel is fully opaque so providers stay readable over playing video, a search field at the top filters Obscura plugins, Stash-Box endpoints, and community scrapers in one pass, and "no results" feedback shows at the top of the flyout where you'll actually see it instead of buried under a long provider list.
 - Stash-Box providers in the Identify flyout now warn with an inline note when the current video has no perceptual hash, so it's clear up front that the lookup will fall back to title search rather than a fingerprint match.
 - The scrape review drawer now has a solid backing again. Previously the drawer surface used a glass token that wasn't wired up in the stylesheet, leaving the title visible but the review fields rendered against the underlying video — fields are now legible.
+- The scrape review drawer no longer flickers, paints empty, or only partly draws over the video player. The drawer uses `position: fixed` to cover the viewport, but it was being rendered inline inside the player area where an ancestor's CSS transform redefined the containing block, so the drawer was being clipped to the player's bounds and would only repaint into view when the cursor moved. The drawer now portals to `<body>` like the identify provider flyout, so it always covers the viewport regardless of where it is invoked from.
 
 ### Added
 

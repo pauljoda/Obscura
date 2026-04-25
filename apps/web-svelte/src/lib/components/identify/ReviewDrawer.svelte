@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { X, ChevronUp, ChevronDown, Loader2, AlertCircle } from "@lucide/svelte";
+  import { portal } from "$lib/actions/portal";
 
   interface Props {
     label: string;
@@ -32,12 +33,13 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="fixed inset-0 z-[90] flex justify-end bg-bg/70 backdrop-blur-sm"
+  use:portal
+  class="fixed inset-0 z-[190] flex justify-end bg-bg/70"
   onclick={(e) => {
     if (e.target === e.currentTarget) onClose();
   }}
 >
-  <div class="glass-3 flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
+  <div class="review-drawer-panel flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
     <div class="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
       <div class="min-w-0 flex-1">
         <div class="text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
@@ -103,3 +105,17 @@
     {/if}
   </div>
 </div>
+
+<style>
+  /*
+   * Solid panel surface for the review drawer. We deliberately avoid
+   * backdrop-filter on this panel: the wrapper used to compound a
+   * second blur layer over the playing video, which triggered a Chrome
+   * compositor bug where the drawer body would render blank until the
+   * user moved the cursor or scrolled. A fully opaque panel is also
+   * easier to read against active video.
+   */
+  .review-drawer-panel {
+    background-color: rgb(13, 16, 23);
+  }
+</style>
