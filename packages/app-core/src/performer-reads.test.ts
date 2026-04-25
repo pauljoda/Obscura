@@ -84,8 +84,8 @@ describe("buildPerformerKnownForEntries", () => {
         sourceId: "episode-1",
         sourceTitle: "Pilot",
         character: "Brenda",
-        thumbnailPath: "/episodes/episode-1/thumb.jpg",
-        cardThumbnailPath: "/episodes/episode-1/card.jpg",
+        thumbnailPath: "/series/series-1/poster.jpg",
+        cardThumbnailPath: null,
         seriesId: "series-1",
         seriesTitle: "The Chair Company",
         seasonNumber: 1,
@@ -96,14 +96,29 @@ describe("buildPerformerKnownForEntries", () => {
         sourceId: "episode-2",
         sourceTitle: "Pilot",
         character: "Guest Host",
-        thumbnailPath: "/episodes/episode-1/thumb.jpg",
-        cardThumbnailPath: "/episodes/episode-1/card.jpg",
+        thumbnailPath: "/series/series-1/poster.jpg",
+        cardThumbnailPath: null,
         seriesId: "series-1",
         seriesTitle: "The Chair Company",
         seasonNumber: 1,
         episodeNumber: 2,
       },
     ]);
+  });
+
+  it("falls back to episode art when an episode role has no series poster", () => {
+    const entries = buildPerformerKnownForEntries({
+      seriesRows: baseSeriesRows,
+      movieRows: baseMovieRows,
+      episodeRows: [episodeRow({ seriesThumbnailPath: null })],
+      sfwOnly: false,
+    });
+
+    expect(entries[0]).toMatchObject({
+      sourceType: "episode",
+      thumbnailPath: "/episodes/episode-1/thumb.jpg",
+      cardThumbnailPath: "/episodes/episode-1/card.jpg",
+    });
   });
 
   it("lets explicit series roles cover matching episode roles", () => {

@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Actor Known For cards for episode roles now use the parent series poster when one is available instead of stretching the episode thumbnail into a poster card.
 - Image thumbnail resizing no longer shifts the whole Images page when moving between sizes that toggle vertical overflow.
 - Video page drag-and-drop now keeps the “Drop files to import” panel centered in the visible viewport instead of centering it somewhere down the full scrollable grid.
 - Flat Images uploads now prompt for an image-capable library root instead of asking for a child gallery, and the grouped Galleries root no longer offers a misleading image upload control.
