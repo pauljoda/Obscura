@@ -1097,6 +1097,9 @@ export interface ListImagesQuery {
   tag?: string | string[];
   performer?: string | string[];
   studio?: string;
+  format?: string | string[];
+  animated?: string;
+  dimension?: string | string[];
   limit?: string;
   offset?: string;
   nsfw?: string;
@@ -1106,6 +1109,73 @@ export interface ListImagesQuery {
   dateTo?: string;
   resolution?: string;
   organized?: string;
+}
+
+const imageFileTypeExtensions: Record<string, string[]> = {
+  jpg: ["jpg", "jpeg"],
+  jpeg: ["jpg", "jpeg"],
+  png: ["png"],
+  webp: ["webp"],
+  gif: ["gif"],
+  avif: ["avif"],
+  bmp: ["bmp"],
+  tiff: ["tiff", "tif"],
+  tif: ["tiff", "tif"],
+  mp4: ["mp4", "m4v"],
+  webm: ["webm"],
+  mov: ["mov"],
+  mkv: ["mkv"],
+};
+
+const animatedImageExtensions = [
+  "gif",
+  "webm",
+  "mp4",
+  "m4v",
+  "mkv",
+  "mov",
+  "avi",
+  "wmv",
+  "flv",
+];
+
+function imageExtensionCondition(ext: string): SQL {
+  return sql`lower(${images.filePath}) like ${`%.${ext}`}`;
+}
+
+function buildImageFormatCondition(values: string[]): SQL | undefined {
+  const clauses = values.flatMap((value) => {
+    const normalized = value.trim().toLowerCase();
+    return imageFileTypeExtensions[normalized]?.map(imageExtensionCondition) ?? [];
+  });
+  return clauses.length > 0 ? or(...clauses) : undefined;
+}
+
+function buildAnimatedImageCondition(animated: string | undefined): SQL | undefined {
+  const animatedCondition = or(...animatedImageExtensions.map(imageExtensionCondition));
+  if (animated === "true") return animatedCondition;
+  if (animated === "false") return sql`not (${animatedCondition})`;
+  return undefined;
+}
+
+function buildImageDimensionCondition(values: string[]): SQL | undefined {
+  const clauses = values.flatMap((value) => {
+    switch (value.trim().toLowerCase()) {
+      case "landscape":
+        return [sql`${images.width} is not null and ${images.height} is not null and ${images.width} > ${images.height}`];
+      case "portrait":
+        return [sql`${images.width} is not null and ${images.height} is not null and ${images.height} > ${images.width}`];
+      case "square":
+        return [sql`${images.width} is not null and ${images.height} is not null and ${images.width} = ${images.height}`];
+      case "hd":
+        return [sql`coalesce(${images.width}, 0) >= 1920 or coalesce(${images.height}, 0) >= 1080`];
+      case "4k":
+        return [sql`coalesce(${images.width}, 0) >= 3840 or coalesce(${images.height}, 0) >= 2160`];
+      default:
+        return [];
+    }
+  });
+  return clauses.length > 0 ? or(...clauses) : undefined;
 }
 
 export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
@@ -1124,6 +1194,12 @@ export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
   }
   if (query.gallery) conditions.push(eq(images.galleryId, query.gallery));
   if (query.studio) conditions.push(eq(images.studioId, query.studio));
+  const formatCond = buildImageFormatCondition(toArray(query.format));
+  if (formatCond) conditions.push(formatCond);
+  const animatedCond = buildAnimatedImageCondition(query.animated);
+  if (animatedCond) conditions.push(animatedCond);
+  const dimensionCond = buildImageDimensionCondition(toArray(query.dimension));
+  if (dimensionCond) conditions.push(dimensionCond);
 
   const tagEntityIds = await resolveTagIds(
     db,

@@ -17,6 +17,7 @@ const SCALAR_KEYS = [
   "dateTo",
   "resolution",
   "organized",
+  "animated",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -26,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
     const value = url.searchParams.get(key);
     if (value !== null) query[key] = value;
   }
-  for (const key of ["tag", "performer"] as const) {
+  for (const key of ["tag", "performer", "format", "dimension"] as const) {
     const values = url.searchParams.getAll(key);
     if (values.length === 1) query[key] = values[0];
     else if (values.length > 1) query[key] = values;

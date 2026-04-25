@@ -8,6 +8,7 @@
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
+  import FilterSection from "$lib/components/FilterSection.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
@@ -28,8 +29,55 @@
     { value: "rating", label: "Rating" },
   ];
 
-  const FILTER_KEYS = ["studio", "performer", "tag", "ratingMin"] as const;
+  const FILTER_KEYS = [
+    "studio",
+    "performer",
+    "tag",
+    "ratingMin",
+    "ratingMax",
+    "dateFrom",
+    "dateTo",
+    "resolution",
+    "organized",
+    "format",
+    "animated",
+    "dimension",
+  ] as const;
   type FilterKey = (typeof FILTER_KEYS)[number];
+
+  const scalarFilterKeys = new Set([
+    "ratingMin",
+    "ratingMax",
+    "dateFrom",
+    "dateTo",
+    "resolution",
+    "organized",
+    "animated",
+  ]);
+  const fileTypeFilters = [
+    { value: "jpg", label: "JPG" },
+    { value: "png", label: "PNG" },
+    { value: "webp", label: "WebP" },
+    { value: "gif", label: "GIF" },
+    { value: "avif", label: "AVIF" },
+    { value: "bmp", label: "BMP" },
+    { value: "tiff", label: "TIFF" },
+    { value: "mp4", label: "MP4" },
+    { value: "webm", label: "WebM" },
+    { value: "mov", label: "MOV" },
+    { value: "mkv", label: "MKV" },
+  ];
+  const animatedFilters = [
+    { value: "true", label: "Animated" },
+    { value: "false", label: "Static" },
+  ];
+  const dimensionFilters = [
+    { value: "landscape", label: "Landscape" },
+    { value: "portrait", label: "Portrait" },
+    { value: "square", label: "Square" },
+    { value: "hd", label: "HD+" },
+    { value: "4k", label: "4K+" },
+  ];
 
   function filterLabel(key: FilterKey): string {
     switch (key) {
@@ -41,6 +89,22 @@
         return "Tag";
       case "ratingMin":
         return "Min Rating";
+      case "ratingMax":
+        return "Max Rating";
+      case "dateFrom":
+        return "Date From";
+      case "dateTo":
+        return "Date To";
+      case "resolution":
+        return "Resolution";
+      case "organized":
+        return "Organized";
+      case "format":
+        return "File Type";
+      case "animated":
+        return "Animated";
+      case "dimension":
+        return "Dimensions";
     }
   }
 
@@ -53,7 +117,7 @@
 
   function onAddFilter(type: string, _label: string, value: string) {
     const params = new URLSearchParams(page.url.searchParams);
-    if (type === "ratingMin") params.set(type, value);
+    if (scalarFilterKeys.has(type)) params.set(type, value);
     else {
       const existing = params.getAll(type);
       if (!existing.includes(value)) params.append(type, value);
@@ -139,7 +203,7 @@
     if (preset.sortBy && preset.sortBy !== "recent") params.set("sort", preset.sortBy);
     if (preset.sortDir && preset.sortDir !== "desc") params.set("order", preset.sortDir);
     for (const f of preset.filters) {
-      if (f.type === "ratingMin") params.set(f.type, f.value);
+      if (scalarFilterKeys.has(f.type)) params.set(f.type, f.value);
       else params.append(f.type, f.value);
     }
     const qs = params.toString();
@@ -285,6 +349,9 @@
         studio: page.url.searchParams.get("studio") ?? undefined,
         tag: page.url.searchParams.getAll("tag"),
         performer: page.url.searchParams.getAll("performer"),
+        format: page.url.searchParams.getAll("format"),
+        animated: page.url.searchParams.get("animated") ?? undefined,
+        dimension: page.url.searchParams.getAll("dimension"),
         ratingMin: numericParam("ratingMin"),
         ratingMax: numericParam("ratingMax"),
         dateFrom: page.url.searchParams.get("dateFrom") ?? undefined,
@@ -342,7 +409,8 @@
     searchQuery={data.search}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search images..."
-    filterSections={["rating", "date"]}
+    filterSections={["resolution", "rating", "date", "libraryFlags"]}
+    showInteractiveFilter={false}
     {activeFilters}
     {onAddFilter}
     {onRemoveFilter}
@@ -363,7 +431,63 @@
           label: "Thumbnail size",
         }
       : undefined}
-  />
+  >
+    {#snippet customFilterSections({ panelFilters })}
+      <FilterSection title="File type">
+        {#snippet children()}
+          <div class="flex flex-wrap gap-1">
+            {#each fileTypeFilters as item (item.value)}
+              <button
+                type="button"
+                onclick={() => onAddFilter("format", "File Type", item.value)}
+                class={panelFilters.some((f) => f.type === "format" && f.value === item.value)
+                  ? "tag-chip tag-chip-accent cursor-pointer transition-colors duration-fast"
+                  : "tag-chip tag-chip-default cursor-pointer transition-colors duration-fast hover:tag-chip-accent"}
+              >
+                {item.label}
+              </button>
+            {/each}
+          </div>
+        {/snippet}
+      </FilterSection>
+
+      <FilterSection title="Animation">
+        {#snippet children()}
+          <div class="flex flex-wrap gap-1">
+            {#each animatedFilters as item (item.value)}
+              <button
+                type="button"
+                onclick={() => onAddFilter("animated", "Animated", item.value)}
+                class={panelFilters.some((f) => f.type === "animated" && f.value === item.value)
+                  ? "tag-chip tag-chip-accent cursor-pointer transition-colors duration-fast"
+                  : "tag-chip tag-chip-default cursor-pointer transition-colors duration-fast hover:tag-chip-accent"}
+              >
+                {item.label}
+              </button>
+            {/each}
+          </div>
+        {/snippet}
+      </FilterSection>
+
+      <FilterSection title="Dimensions">
+        {#snippet children()}
+          <div class="flex flex-wrap gap-1">
+            {#each dimensionFilters as item (item.value)}
+              <button
+                type="button"
+                onclick={() => onAddFilter("dimension", "Dimensions", item.value)}
+                class={panelFilters.some((f) => f.type === "dimension" && f.value === item.value)
+                  ? "tag-chip tag-chip-accent cursor-pointer transition-colors duration-fast"
+                  : "tag-chip tag-chip-default cursor-pointer transition-colors duration-fast hover:tag-chip-accent"}
+              >
+                {item.label}
+              </button>
+            {/each}
+          </div>
+        {/snippet}
+      </FilterSection>
+    {/snippet}
+  </FilterBar>
 
   {#if viewMode === "list"}
     <BulkActionBar

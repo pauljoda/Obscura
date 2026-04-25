@@ -218,6 +218,9 @@ export async function fetchImages(params?: {
   tag?: string[];
   performer?: string[];
   studio?: string;
+  format?: string[];
+  animated?: string;
+  dimension?: string[];
   nsfw?: string;
   ratingMin?: number;
   ratingMax?: number;
@@ -235,6 +238,7 @@ export async function fetchImages(params?: {
       order: params?.order,
       gallery: params?.gallery,
       studio: params?.studio,
+      animated: params?.animated,
       nsfw: params?.nsfw,
       ratingMin: params?.ratingMin,
       ratingMax: params?.ratingMax,
@@ -248,6 +252,8 @@ export async function fetchImages(params?: {
     {
       tag: params?.tag,
       performer: params?.performer,
+      format: params?.format,
+      dimension: params?.dimension,
     },
   );
 

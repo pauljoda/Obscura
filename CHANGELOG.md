@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Uploads are back on the main media pages. Videos, Series, Images, and Audio now accept drag-and-drop or the Import button, with root views prompting for the destination library or audio library when the current page does not already imply one; gallery and audio detail views still upload into the folder currently being viewed.
 - Images now has its own main navigation tab for a flat all-images view. Galleries remains the grouped folder-style browser.
+- The flat Images view can now filter by file type, animated/static media, and image dimensions, making mixed image libraries easier to narrow down.
 - Delete prompts now distinguish between removing items from Obscura and deleting the source files from disk. Library-only deletes blacklist the source path so the next scan does not import the same file again.
 - Library browsing now keeps loading more cards as you scroll across Videos, Series, Actors, Galleries, Images, Collections, and Audio Libraries, without page-number footers interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
 - Infinite scrolling now starts fetching farther before the bottom of library pages and stops cleanly if a backend page repeats already-loaded cards, so the list no longer sits forever on a visible Loading footer.
@@ -26,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Video page drag-and-drop now keeps the “Drop files to import” panel centered in the visible viewport instead of centering it somewhere down the full scrollable grid.
 - Flat Images uploads now prompt for an image-capable library root instead of asking for a child gallery, and the grouped Galleries root no longer offers a misleading image upload control.
+- Library scans no longer fail if the media-file ignore table is unavailable while an upgraded worker is still catching up on migrations.
 - Season-scoped series uploads now pass the active season number through the video upload route and write to the season folder when the user is viewing one.
 - Bulk delete actions for videos, images, galleries, and audio libraries now show the library-only vs. disk-delete confirmation flow where source files can be removed.
 - Videos infinite scroll now carries the current NSFW visibility mode into load-more requests and routes the visible fallback control through the same loader.
