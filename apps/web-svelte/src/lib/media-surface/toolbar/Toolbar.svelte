@@ -134,6 +134,10 @@
       (filterSections?.length ?? 0) > 0,
   );
 
+  const showInteractiveFilter = $derived(
+    Boolean(filterSections?.some((s) => s.filterType === "interactive")),
+  );
+
   // The chip strip wants `{label, value, type}`; map activeFilters
   // through the optional formatter to produce the displayed value.
   const displayFilters = $derived(
@@ -289,6 +293,7 @@
       tagItems={tagItems}
       performerItems={performerItems}
       studioItems={studioItems}
+      showInteractiveFilter={showInteractiveFilter}
     />
   {/if}
 

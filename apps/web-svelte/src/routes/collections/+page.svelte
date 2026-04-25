@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
+  import { invalidateAll } from "$app/navigation";
   import { FolderOpen, Plus } from "@lucide/svelte";
   import { Button } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
@@ -14,6 +15,7 @@
       pageSize: data.pageSize,
       page: data.page,
       mode: page.url.searchParams.get("mode") ?? undefined,
+      onMutated: () => invalidateAll(),
     }),
   );
 </script>

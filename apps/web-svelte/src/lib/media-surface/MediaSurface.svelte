@@ -21,6 +21,7 @@
   import FeedBody from "./body/FeedBody.svelte";
   import MasonryBody from "./body/MasonryBody.svelte";
   import EmptyState from "./body/EmptyState.svelte";
+  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
 
   interface Props {
     config: MediaSurfaceConfig<T, F>;
@@ -220,6 +221,7 @@
 
   // ── Bulk selection ───────────────────────────────────────────────────
   let selectedIds = $state.raw<Set<string>>(new Set());
+  let bulkBusy = $state(false);
   function toggleSelect(id: string) {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
@@ -227,6 +229,47 @@
     selectedIds = next;
     onSelectionChange?.(next);
   }
+  function clearSelection() {
+    selectedIds = new Set();
+    onSelectionChange?.(selectedIds);
+  }
+  function toggleSelectAllVisible() {
+    const visibleIds = coll.items.map((item) => (config.getKey ?? ((x: T) => x.id))(item));
+    const allSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    selectedIds = allSelected ? new Set() : new Set(visibleIds);
+    onSelectionChange?.(selectedIds);
+  }
+  async function runBulkAction(actionId: string) {
+    if (bulkBusy) return;
+    const action = config.bulkActions?.find((a) => a.id === actionId);
+    if (!action) return;
+    const ids = selectedIds;
+    const items = coll.items.filter((item) =>
+      ids.has((config.getKey ?? ((x: T) => x.id))(item)),
+    );
+    if (items.length === 0) return;
+    bulkBusy = true;
+    try {
+      await action.handler(items);
+      // Page is responsible for refreshing data; we just clear selection.
+      clearSelection();
+    } finally {
+      bulkBusy = false;
+    }
+  }
+  const visibleIdSet = $derived(
+    new Set(coll.items.map((item) => (config.getKey ?? ((x: T) => x.id))(item))),
+  );
+  const allVisibleSelected = $derived(
+    visibleIdSet.size > 0 && [...visibleIdSet].every((id) => selectedIds.has(id)),
+  );
+  const markNsfwAction = $derived(
+    config.bulkActions?.find((a) => a.id === "mark-nsfw"),
+  );
+  const deleteAction = $derived(
+    config.bulkActions?.find((a) => a.id === "delete"),
+  );
 
   // ── Layout ───────────────────────────────────────────────────────────
   const currentLayout = $derived<BodyLayout>(
@@ -282,6 +325,22 @@
     {onClearFiltersAndSort}
     extras={config.toolbarExtras}
   />
+
+  {#if config.bulkActions && config.bulkActions.length > 0}
+    <BulkActionBar
+      selectedCount={selectedIds.size}
+      visibleCount={visibleIdSet.size}
+      allSelected={allVisibleSelected}
+      itemLabel={config.bulkItemLabel ?? "items"}
+      busy={bulkBusy}
+      canMarkNsfw={Boolean(markNsfwAction)}
+      canDelete={Boolean(deleteAction)}
+      onSelectAll={toggleSelectAllVisible}
+      onClear={clearSelection}
+      onMarkNsfw={markNsfwAction ? () => runBulkAction(markNsfwAction.id) : undefined}
+      onDelete={deleteAction ? () => runBulkAction(deleteAction.id) : undefined}
+    />
+  {/if}
 
   {#if coll.items.length === 0 && !coll.loading}
     {#if config.emptyState}

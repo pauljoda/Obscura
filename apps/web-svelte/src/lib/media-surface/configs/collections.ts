@@ -1,7 +1,7 @@
 import { LayoutGrid, LayoutList } from "@lucide/svelte";
 import type { CollectionListItemDto } from "@obscura/contracts";
 import type { MediaSurfaceConfig } from "$lib/media-surface/config";
-import { fetchCollections } from "$lib/api/media";
+import { deleteCollection, fetchCollections } from "$lib/api/media";
 import CollectionCard from "./CollectionCard.svelte";
 
 type CollectionFilterType = never;
@@ -12,6 +12,8 @@ interface BuildArgs {
   page: number;
   /** Optional collection-mode filter forwarded as `?mode=` to the API. */
   mode?: string;
+  /** Called after a bulk delete; routes typically invalidate the page load. */
+  onMutated?: () => void | Promise<void>;
 }
 
 export function collectionsSurfaceConfig(
@@ -62,5 +64,17 @@ export function collectionsSurfaceConfig(
     ],
     searchPlaceholder: "Search collections...",
     thumbSize: { min: 2, max: 8, default: 5, label: "Collection card size" },
+    bulkItemLabel: "collections",
+    bulkActions: [
+      {
+        id: "delete",
+        label: "Delete",
+        variant: "danger",
+        handler: async (selected) => {
+          await Promise.all(selected.map((c) => deleteCollection(c.id)));
+          await args.onMutated?.();
+        },
+      },
+    ],
   };
 }

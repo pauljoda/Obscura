@@ -225,6 +225,8 @@ export interface MediaSurfaceConfig<T extends { id: string }, F extends string =
 
   // Bulk
   bulkActions?: BulkActionSpec<T>[];
+  /** Plural noun shown in the BulkActionBar's "Select N {label}" prompt. */
+  bulkItemLabel?: string;
 
   // Page-side extension points
   /** Extra controls rendered at the right edge of the toolbar (e.g. Import / Upload). */
