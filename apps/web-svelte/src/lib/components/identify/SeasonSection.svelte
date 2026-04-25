@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ChevronDown } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
-  import type { NormalizedSeasonResult } from "@obscura/contracts";
+  import type { NormalizedEpisodeResult, NormalizedSeasonResult } from "@obscura/contracts";
   import type { AcceptFieldMask } from "$lib/api/scrapers";
   import FieldMaskGrid from "./FieldMaskGrid.svelte";
   import ImagePicker from "./ImagePicker.svelte";
@@ -57,6 +57,11 @@
   );
   const acceptedCount = $derived(Object.values(seasonState.episodes).filter((e) => e.accepted).length);
   const totalCount = $derived(Object.values(seasonState.episodes).length);
+
+  function episodeReviewKey(episode: NormalizedEpisodeResult, index: number): string {
+    const externalId = Object.values(episode.externalIds)[0] ?? "";
+    return `${episode.seasonNumber}:${episode.episodeNumber}:${externalId}:${index}`;
+  }
 </script>
 
 <div class="border-b border-border-subtle/50">
@@ -110,7 +115,7 @@
       </div>
 
       <div class="space-y-1">
-        {#each season.episodes as ep (ep.episodeNumber)}
+        {#each season.episodes as ep, episodeIndex (episodeReviewKey(ep, episodeIndex))}
           {@const epState = seasonState.episodes[ep.episodeNumber]}
           {#if epState}
             <EpisodeRow

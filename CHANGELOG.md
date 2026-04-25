@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The scrape review drawer now has a solid backing again. Previously the drawer surface used a glass token that wasn't wired up in the stylesheet, leaving the title visible but the review fields rendered against the underlying video — fields are now legible.
 - The scrape review drawer no longer flickers, paints empty, or only partly draws over the video player. The drawer uses `position: fixed` to cover the viewport, but it was being rendered inline inside the player area where an ancestor's CSS transform redefined the containing block, so the drawer was being clipped to the player's bounds and would only repaint into view when the cursor moved. The drawer now portals to `<body>` like the identify provider flyout, so it always covers the viewport regardless of where it is invoked from.
 - The Obscura logo mark in the mobile header now shows its brass star fills again instead of rendering as a flat dark disc. The desktop sidebar and mobile header each render their own copy of the logo, and the SVG gradient definitions inside both copies shared identical ids — so on mobile, where the desktop copy is `display:none`, Chromium resolved `url(#brass)` into a hidden subtree and dropped the gradient. Each logo now scopes its gradient ids per-instance.
+- MovieDB identify reviews no longer crash when a show returns duplicate season, episode, candidate, cast, genre, or image rows. The review drawer now keeps those rows visible with stable review keys instead of hitting Svelte's duplicate-key runtime error.
 
 ### Added
 
@@ -70,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Animated image previews and full-resolution clips served by `/api/assets/...` now respond to HTTP `Range` requests with `206 Partial Content` and advertise `Accept-Ranges: bytes`, which Safari requires before it will start playback. Image, image preview, and video preview-sidecar endpoints all stream byte ranges; Chromium browsers continue to work unchanged.
 - Bulk series Identify no longer carries a manually selected candidate's refetched scrape result into the next review row after using **Apply all & next**.
 - Library infinite scroll now uses a cursor-based gate keyed off the next page offset instead of an edge-triggered sentinel. The previous fix stopped the runaway cascade but introduced a stall when the sentinel never left the viewport (tall monitors, filtered views, or short result sets that didn't fill the screen); pages now keep flowing as long as the cursor is advancing, and the trigger goes quiet once the backend stops returning new items. The "Loading" status is also now announced to screen readers.
+- MovieDB identify review drawers now tolerate duplicate rows from provider data instead of crashing with Svelte's `each_key_duplicate` error.
 
 ## [0.20.0] - 2026-04-24
 

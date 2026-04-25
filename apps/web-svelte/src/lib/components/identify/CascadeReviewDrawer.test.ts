@@ -163,4 +163,77 @@ describe("CascadeReviewDrawer", () => {
       screen.queryByRole("heading", { name: "Picked Candidate" }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders MovieDB cascade rows with duplicate season and episode numbers", async () => {
+    const row = scrapeResult("sr-duplicates", "Duplicate Number Show");
+    row.proposedResult = {
+      kind: "series",
+      series: {
+        ...seriesResult("Duplicate Number Show"),
+        posterCandidates: [
+          {
+            url: "https://image.tmdb.org/t/p/original/duplicate.jpg",
+            source: "tmdb",
+          },
+          {
+            url: "https://image.tmdb.org/t/p/original/duplicate.jpg",
+            language: "en",
+            source: "tmdb",
+          },
+        ],
+        seasons: [
+          {
+            seasonNumber: 1,
+            title: "Season One",
+            posterCandidates: [],
+            externalIds: { tmdb: "season-a" },
+            episodes: [
+              {
+                seasonNumber: 1,
+                episodeNumber: 1,
+                title: "Pilot Cut",
+                stillCandidates: [],
+                externalIds: { tmdb: "episode-a" },
+              },
+              {
+                seasonNumber: 1,
+                episodeNumber: 1,
+                title: "Pilot Broadcast",
+                stillCandidates: [],
+                externalIds: { tmdb: "episode-b" },
+              },
+            ],
+          },
+          {
+            seasonNumber: 1,
+            title: "Season One Alternate",
+            posterCandidates: [],
+            externalIds: { tmdb: "season-b" },
+            episodes: [],
+          },
+        ],
+      },
+    };
+    fetchScrapeResult.mockResolvedValue(row);
+
+    render(CascadeReviewDrawer, {
+      props: {
+        scrapeResultId: "sr-duplicates",
+        entityKind: "video_series",
+        entityId: "series-1",
+        label: "Duplicate Number Show",
+        onAccepted: vi.fn(),
+        onClose: vi.fn(),
+      },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Duplicate Number Show" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Pilot Cut")).toBeInTheDocument();
+    expect(screen.getByText("Pilot Broadcast")).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByTitle("Choose poster (2 available)"));
+    expect(await screen.findByText("2 of 2")).toBeInTheDocument();
+  });
 });

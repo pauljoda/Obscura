@@ -3,6 +3,8 @@
   import { Check, Loader2 } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type {
+    NormalizedCastMember,
+    NormalizedSeasonResult,
     NormalizedSeriesResult,
   } from "@obscura/contracts";
   import {
@@ -86,6 +88,15 @@
     }, {});
   }
 
+  function seasonReviewKey(season: NormalizedSeasonResult, index: number): string {
+    const externalId = Object.values(season.externalIds)[0] ?? "";
+    return `${season.seasonNumber}:${externalId}:${index}`;
+  }
+
+  function castReviewKey(member: NormalizedCastMember, index: number): string {
+    return `${member.name.toLowerCase()}:${member.character ?? ""}:${member.order ?? ""}:${index}`;
+  }
+
   let pickedCandidate = $state<string | null>(null);
 
   let existingTagNames = $state<Set<string>>(new Set());
@@ -123,6 +134,7 @@
           still: undefined,
         };
       }
+      if (init[s.seasonNumber]) continue;
       init[s.seasonNumber] = {
         accepted: true,
         expanded: s.seasonNumber !== 0,
@@ -288,7 +300,7 @@
         {/if}
         {#if result.genres.length > 0}
           <div class="flex flex-wrap gap-1">
-            {#each result.genres as g (g)}
+            {#each result.genres as g, index (`${g.toLowerCase()}:${index}`)}
               {@const isExisting = existingTagNames.has(g.toLowerCase())}
               <span
                 class={cn(
@@ -311,7 +323,7 @@
               Cast ({result.cast.length})
             </span>
             <div class="flex flex-wrap gap-1">
-              {#each result.cast.slice(0, 20) as c (c.name)}
+              {#each result.cast.slice(0, 20) as c, index (castReviewKey(c, index))}
                 {@const isExisting = existingPerformerNames.has(c.name.toLowerCase())}
                 <span
                   class={cn(
@@ -370,7 +382,7 @@
         The plugin did not return any season data.
       </div>
     {/if}
-    {#each result.seasons as season (season.seasonNumber)}
+    {#each result.seasons as season, seasonIndex (seasonReviewKey(season, seasonIndex))}
       {@const seasonState = seasons[season.seasonNumber]}
       {#if seasonState}
         <SeasonSection

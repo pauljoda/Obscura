@@ -83,6 +83,10 @@
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) open = false;
   }
+
+  function candidateKey(candidate: ImageCandidate, index: number): string {
+    return `${candidate.url}:${candidate.language ?? ""}:${candidate.width ?? ""}x${candidate.height ?? ""}:${index}`;
+  }
 </script>
 
 <div class={cn("space-y-1", className)}>
@@ -227,7 +231,7 @@
                 : "grid-cols-2 sm:grid-cols-3",
             )}
           >
-            {#each sorted as candidate (candidate.url)}
+            {#each sorted as candidate, index (candidateKey(candidate, index))}
               {@const isSelected = candidate.url === effectiveUrl}
               <button
                 type="button"

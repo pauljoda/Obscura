@@ -15,6 +15,10 @@
   function candidateId(c: NormalizedSeriesCandidate): string {
     return c.externalIds.tmdb ?? Object.values(c.externalIds)[0] ?? c.title + (c.year ?? "");
   }
+
+  function candidateReviewKey(c: NormalizedSeriesCandidate, index: number): string {
+    return `${candidateId(c)}:${c.title}:${c.year ?? ""}:${index}`;
+  }
 </script>
 
 <div class="border-b border-border-accent/30 bg-surface-2/40 p-4">
@@ -29,7 +33,7 @@
     {/if}
   </div>
   <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
-    {#each candidates as c (candidateId(c))}
+    {#each candidates as c, index (candidateReviewKey(c, index))}
       {@const id = candidateId(c)}
       {@const isPicked = id === picked}
       <button
