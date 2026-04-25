@@ -79,6 +79,9 @@
   .masonry {
     column-count: max(1, min(calc(var(--col-count, 5) - 1), 4));
     column-gap: 0.5rem;
+    /* CSS columns animate smoothly in modern browsers; the tweened
+     * value paces the integer step crossings. */
+    transition: column-count 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   @media (min-width: 640px) {
     .masonry {
@@ -93,5 +96,10 @@
   .masonry-item {
     break-inside: avoid;
     margin-bottom: 0.5rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .masonry {
+      transition: none;
+    }
   }
 </style>

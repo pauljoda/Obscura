@@ -95,6 +95,17 @@
       minmax(0, 1fr)
     );
     gap: 0.75rem;
+    /*
+     * grid-template-columns is interpolatable in modern browsers
+     * (Chrome 119+, Safari 17.4+, Firefox 137+). With this transition
+     * the grid track widths smoothly retarget when --col-count
+     * changes, so the cards inside grow and shrink continuously
+     * instead of snapping. The tweened JS store paces the value step
+     * across integers; the CSS transition fills in the continuous
+     * width animation between renders. Older browsers will simply
+     * snap (graceful degradation).
+     */
+    transition: grid-template-columns 240ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   @media (min-width: 640px) {
     .thumb-grid {
@@ -104,6 +115,11 @@
   @media (min-width: 1024px) {
     .thumb-grid {
       grid-template-columns: repeat(var(--col-count, 5), minmax(0, 1fr));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .thumb-grid {
+      transition: none;
     }
   }
 </style>
