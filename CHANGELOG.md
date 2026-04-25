@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library browsing now keeps loading more cards as you scroll across Videos, Series, Actors, Galleries, Images, Collections, and Audio Libraries, without page-number footers interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
 - Infinite scrolling now starts fetching farther before the bottom of library pages and stops cleanly if a backend page repeats already-loaded cards, so the list no longer sits forever on a visible Loading footer.
 - The Videos page now keeps loading past the first 60 cards on libraries that contain only episodes or only movies. Earlier the list would briefly show the full count and then collapse to 60 when scrolling, because the backend was handing the same first page back for every load-more request.
+- Direct Identify on video entries now offers the full provider set: Obscura plugins, Stash-Box endpoints, and community database scrapers. Legacy scraper matches now open in the same flyout review experience as plugin matches, so accepting metadata feels consistent from entry pages and the review queue.
 - Animated images now play correctly in Safari (both iOS and macOS). Previously the asset endpoint did not advertise byte-range support, so Safari refused to start playback while Chromium browsers played fine.
 
 ### Added
@@ -39,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Active filter chips in the toolbar now scale in/out on add or remove and slide into place when their neighbors change.
 - Library grids on Videos, Images (list + masonry), Performers, Studios, Galleries, and Collections now reorder smoothly via FLIP when the result set changes (sort, filter, search) and fade in newly loaded cards with a brief, capped stagger.
 - Animated images in the Images Feed now autoplay muted at full quality while on screen, pause off screen, and preload the active item plus one neighbor on each side for smoother scrolling.
+- Video entry Identify menus now group Obscura plugins, Stash-Box endpoints, and community scrapers, and pending scrape results use the shared review drawer instead of an inline-only card review.
 
 ### Fixed
 

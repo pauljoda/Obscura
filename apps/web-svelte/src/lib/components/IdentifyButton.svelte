@@ -2,11 +2,21 @@
   import { Loader2, ScanSearch, AlertCircle } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import {
+    fetchInstalledScrapers,
     executePlugin,
     fetchInstalledPlugins,
+    fetchStashBoxEndpoints,
+    identifyViaStashBox,
+    scrapeVideo,
     type InstalledPlugin,
   } from "$lib/api/scrapers";
-  import { fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
+  import type {
+    NormalizedScrapeResult,
+    ScrapeResult,
+    ScraperPackage,
+    StashBoxEndpoint,
+  } from "$lib/api/types";
+  import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
   import { portal } from "$lib/actions/portal";
@@ -15,8 +25,18 @@
     playerFlyoutStyleToString,
   } from "$lib/player/flyout-layout";
   import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
+  import LegacyVideoReviewDrawer from "./identify/LegacyVideoReviewDrawer.svelte";
 
   type EntityKind = "video_series" | "video_movie" | "video_episode";
+  type ProviderKind = "plugin" | "stashbox" | "scraper";
+
+  interface IdentifyProvider {
+    id: string;
+    name: string;
+    kind: ProviderKind;
+    action?: string | null;
+    version?: string | null;
+  }
 
   interface Props {
     entityKind: EntityKind;
@@ -40,37 +60,124 @@
   };
 
   let plugins = $state<InstalledPlugin[]>([]);
-  let loadingPlugins = $state(false);
+  let scrapers = $state<ScraperPackage[]>([]);
+  let stashBoxEndpoints = $state<StashBoxEndpoint[]>([]);
+  let loadingProviders = $state(false);
   let open = $state(false);
   let busy = $state(false);
   let error = $state<string | null>(null);
   let drawerOpen = $state<string | null>(null);
+  let legacyReview = $state<{
+    result: ScrapeResult;
+    normalized: NormalizedScrapeResult;
+    matchedScraper: string;
+  } | null>(null);
   let buttonEl: HTMLButtonElement | undefined = $state();
   let menuStyle = $state<string | null>(null);
   let menuIsWide = $state(false);
 
   $effect(() => {
-    if (!open || plugins.length > 0 || loadingPlugins) return;
-    loadingPlugins = true;
-    fetchInstalledPlugins()
-      .then((list) => {
-        plugins = list.filter((p) => p.enabled);
+    if (
+      !open ||
+      loadingProviders ||
+      plugins.length > 0 ||
+      scrapers.length > 0 ||
+      stashBoxEndpoints.length > 0
+    )
+      return;
+    loadingProviders = true;
+    Promise.all([
+      fetchInstalledPlugins(),
+      fetchInstalledScrapers(),
+      fetchStashBoxEndpoints(),
+    ])
+      .then(([pluginList, scraperRes, stashBoxRes]) => {
+        plugins = pluginList.filter((p) => p.enabled);
+        scrapers = scraperRes.packages.filter((s) => s.enabled);
+        stashBoxEndpoints = stashBoxRes.endpoints.filter((e) => e.enabled);
       })
       .catch((err) => {
-        error = err instanceof Error ? err.message : "Failed to load plugins";
+        error = err instanceof Error ? err.message : "Failed to load identify providers";
       })
       .finally(() => {
-        loadingPlugins = false;
+        loadingProviders = false;
       });
   });
 
   const visiblePlugins = $derived(filterNsfwAware(plugins));
+  const visibleScrapers = $derived(filterNsfwAware(scrapers));
+  const visibleStashBoxEndpoints = $derived(filterNsfwAware(stashBoxEndpoints));
   const eligibleCapabilities = $derived(CAPABILITY_BY_KIND[entityKind]);
-  const eligible = $derived(
+  const eligiblePlugins = $derived(
     visiblePlugins.filter((p) => {
       const caps = p.capabilities ?? {};
       return eligibleCapabilities.some((key) => !!caps[key]);
     }),
+  );
+  const supportsLegacyVideoProviders = $derived(entityKind !== "video_series");
+  const eligibleScrapers = $derived(
+    supportsLegacyVideoProviders
+      ? visibleScrapers.filter((s) => {
+          const caps = s.capabilities ?? {};
+          return (
+            !!caps.sceneByName ||
+            !!caps.sceneByURL ||
+            !!caps.sceneByFragment ||
+            !!caps.sceneByQueryFragment
+          );
+        })
+      : [],
+  );
+  const eligibleStashBoxEndpoints = $derived(
+    supportsLegacyVideoProviders ? visibleStashBoxEndpoints : [],
+  );
+  const providerGroups = $derived<
+    Array<{ label: string; providers: IdentifyProvider[] }>
+  >([
+    ...(eligiblePlugins.length > 0
+      ? [
+          {
+            label: "Obscura Plugins",
+            providers: eligiblePlugins.map((p) => ({
+              id: `plugin:${p.id}`,
+              name: p.name,
+              kind: "plugin" as const,
+              action: actionFor(p),
+              version: p.version,
+            })),
+          },
+        ]
+      : []),
+    ...(eligibleStashBoxEndpoints.length > 0
+      ? [
+          {
+            label: "Stash-Box",
+            providers: eligibleStashBoxEndpoints.map((ep) => ({
+              id: `stashbox:${ep.id}`,
+              name: ep.name,
+              kind: "stashbox" as const,
+              action: "fingerprint / title",
+            })),
+          },
+        ]
+      : []),
+    ...(eligibleScrapers.length > 0
+      ? [
+          {
+            label: "Community Scrapers",
+            providers: eligibleScrapers.map((s) => ({
+              id: `scraper:${s.id}`,
+              name: s.name,
+              kind: "scraper" as const,
+              action: "auto",
+              version: s.version,
+            })),
+          },
+        ]
+      : []),
+  ]);
+  const eligibleProviderCount = $derived(
+    providerGroups.reduce((count, group) => count + group.providers.length, 0),
   );
 
   const defaultLabel = $derived(
@@ -146,6 +253,28 @@
     return null;
   }
 
+  function shouldUseLegacyReview(action: string, res: { normalized?: unknown }) {
+    return action.startsWith("video") && !!res.normalized;
+  }
+
+  function savedScrapeResult(res: { result: unknown }, providerName: string): ScrapeResult {
+    const saved = res.result as ScrapeResult | null;
+    if (!saved?.id) {
+      throw new Error(`${providerName} did not persist a scrape result.`);
+    }
+    return saved;
+  }
+
+  function showLegacyReview(
+    result: ScrapeResult,
+    normalized: NormalizedScrapeResult,
+    matchedScraper: string,
+  ) {
+    legacyReview = { result, normalized, matchedScraper };
+    drawerOpen = null;
+    open = false;
+  }
+
   async function runPlugin(plugin: InstalledPlugin) {
     busy = true;
     error = null;
@@ -172,16 +301,83 @@
         entityId,
       });
       if (!res.ok) throw new Error(`${plugin.name} returned no result.`);
-      const saved = res.result as { id?: string } | null;
-      if (!saved?.id)
-        throw new Error(`${plugin.name} did not persist a scrape result.`);
-      drawerOpen = saved.id;
-      open = false;
+      const saved = savedScrapeResult(res, plugin.name);
+      if (shouldUseLegacyReview(action, res)) {
+        showLegacyReview(saved, res.normalized as NormalizedScrapeResult, plugin.name);
+      } else {
+        drawerOpen = saved.id;
+        legacyReview = null;
+        open = false;
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : "Identify failed";
     } finally {
       busy = false;
     }
+  }
+
+  async function runStashBox(endpoint: StashBoxEndpoint) {
+    busy = true;
+    error = null;
+    try {
+      const res = await identifyViaStashBox(endpoint.id, entityId);
+      if (!res.result || !res.normalized) {
+        throw new Error(res.message || `${endpoint.name} returned no result.`);
+      }
+      showLegacyReview(res.result, res.normalized, endpoint.name);
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Identify failed";
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function runScraper(scraper: ScraperPackage) {
+    busy = true;
+    error = null;
+    try {
+      const video = await fetchVideoDetail(entityId);
+      const res = await scrapeVideo(scraper.id, entityId, "auto", {
+        url: video.url ?? undefined,
+      });
+      if (!res.result || !res.normalized) {
+        throw new Error(res.message || `${scraper.name} returned no result.`);
+      }
+      showLegacyReview(res.result, res.normalized, scraper.name);
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Identify failed";
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function runProvider(provider: IdentifyProvider) {
+    const realId = provider.id.replace(/^(plugin|stashbox|scraper):/, "");
+    if (provider.kind === "plugin") {
+      const plugin = eligiblePlugins.find((p) => p.id === realId);
+      if (plugin) await runPlugin(plugin);
+      return;
+    }
+    if (provider.kind === "stashbox") {
+      const endpoint = eligibleStashBoxEndpoints.find((ep) => ep.id === realId);
+      if (endpoint) await runStashBox(endpoint);
+      return;
+    }
+    const scraper = eligibleScrapers.find((s) => s.id === realId);
+    if (scraper) await runScraper(scraper);
+  }
+
+  async function reloadAfterAccepted() {
+    legacyReview = null;
+    drawerOpen = null;
+    if (typeof window !== "undefined") window.location.reload();
+  }
+
+  function providerEmptyMessage() {
+    if (entityKind === "video_series") {
+      return "Install an enabled series-capable Obscura plugin and try again.";
+    }
+    return "Install an enabled Obscura plugin, Stash-Box endpoint, or community scraper and try again.";
   }
 
   function entityKindReadable(kind: EntityKind): string {
@@ -225,37 +421,42 @@
       style={menuStyle ?? undefined}
     >
       <div class="px-3 pb-1 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
-        Run identify plugin
+        Identify from
       </div>
-      {#if loadingPlugins}
+      {#if loadingProviders}
         <div class="flex items-center gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
-          <Loader2 class="h-3 w-3 animate-spin" /> Loading plugins…
+          <Loader2 class="h-3 w-3 animate-spin" /> Loading providers…
         </div>
       {/if}
-      {#if !loadingPlugins && eligible.length === 0}
+      {#if !loadingProviders && eligibleProviderCount === 0}
         <div class="flex items-start gap-2 px-3 py-2 text-[0.7rem] text-text-muted">
           <AlertCircle class="h-3 w-3 flex-shrink-0" />
           <span>
-            No enabled plugin supports
+            No enabled provider supports
             <code class="font-mono text-text-accent">{entityKindReadable(entityKind)}</code>
-            lookup. Install a compatible plugin and try again.
+            lookup. {providerEmptyMessage()}
           </span>
         </div>
       {/if}
-      {#if !loadingPlugins}
-        {#each eligible as plugin (plugin.id)}
-          <button
-            type="button"
-            onclick={() => void runPlugin(plugin)}
-            disabled={busy}
-            class="w-full px-3 py-1.5 text-left text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
-          >
-            <div class="truncate font-medium text-text-primary">{plugin.name}</div>
-            <div class="truncate text-[0.6rem] text-text-disabled">
-              {actionFor(plugin) ?? "—"}
-              {plugin.version ? ` · ${plugin.version}` : ""}
-            </div>
-          </button>
+      {#if !loadingProviders}
+        {#each providerGroups as group (group.label)}
+          <div class="px-3 pb-1 pt-2 text-[0.56rem] uppercase tracking-[0.14em] text-text-disabled">
+            {group.label}
+          </div>
+          {#each group.providers as provider (provider.id)}
+            <button
+              type="button"
+              onclick={() => void runProvider(provider)}
+              disabled={busy}
+              class="w-full px-3 py-1.5 text-left text-[0.72rem] text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors"
+            >
+              <div class="truncate font-medium text-text-primary">{provider.name}</div>
+              <div class="truncate text-[0.6rem] text-text-disabled">
+                {provider.action ?? "—"}
+                {provider.version ? ` · ${provider.version}` : ""}
+              </div>
+            </button>
+          {/each}
         {/each}
       {/if}
       {#if error}
@@ -273,10 +474,18 @@
     {entityKind}
     {entityId}
     label={title}
-    onAccepted={() => {
-      drawerOpen = null;
-      if (typeof window !== "undefined") window.location.reload();
-    }}
+    onAccepted={reloadAfterAccepted}
     onClose={() => (drawerOpen = null)}
+  />
+{/if}
+
+{#if legacyReview}
+  <LegacyVideoReviewDrawer
+    result={legacyReview.result}
+    normalized={legacyReview.normalized}
+    matchedScraper={legacyReview.matchedScraper}
+    onAccepted={reloadAfterAccepted}
+    onRejected={() => (legacyReview = null)}
+    onClose={() => (legacyReview = null)}
   />
 {/if}

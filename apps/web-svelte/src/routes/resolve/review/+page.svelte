@@ -4,9 +4,9 @@
     Check,
     X,
     GitCompareArrows,
-    Loader2,
     RefreshCw,
     Plus,
+    Eye,
   } from "@lucide/svelte";
   import { Badge, Button, cn } from "@obscura/ui-svelte";
   import {
@@ -16,6 +16,8 @@
   } from "$lib/api/scrapers";
   import type { ScrapeResult } from "$lib/api/types";
   import { entityTerms } from "$lib/terminology";
+  import CascadeReviewDrawer from "$lib/components/identify/CascadeReviewDrawer.svelte";
+  import LegacyVideoReviewDrawer from "$lib/components/identify/LegacyVideoReviewDrawer.svelte";
 
   let { data } = $props();
   let results = $state.raw<ScrapeResult[]>([]);
@@ -23,6 +25,7 @@
   let message = $state<string | null>(null);
   let refreshing = $state(false);
   let syncedInitialResults: ScrapeResult[] | null = $state(null);
+  let reviewingResult = $state<ScrapeResult | null>(null);
 
   $effect(() => {
     if (syncedInitialResults !== data.initialResults) {
@@ -42,20 +45,6 @@
     }
   }
 
-  async function handleAccept(result: ScrapeResult) {
-    processingId = result.id;
-    message = null;
-    try {
-      await acceptScrapeResult(result.id);
-      results = results.filter((r) => r.id !== result.id);
-      message = "Metadata applied successfully.";
-    } catch (err) {
-      message = err instanceof Error ? err.message : "Failed to apply";
-    } finally {
-      processingId = null;
-    }
-  }
-
   async function handleReject(result: ScrapeResult) {
     processingId = result.id;
     try {
@@ -66,6 +55,18 @@
     } finally {
       processingId = null;
     }
+  }
+
+  function handleReviewedAccepted(result: ScrapeResult) {
+    results = results.filter((r) => r.id !== result.id);
+    reviewingResult = null;
+    message = "Metadata applied successfully.";
+  }
+
+  function handleReviewedRejected(result: ScrapeResult) {
+    results = results.filter((r) => r.id !== result.id);
+    reviewingResult = null;
+    message = "Result rejected.";
   }
 
   async function handleAcceptAll() {
@@ -85,6 +86,23 @@
       failed.length > 0
         ? `Applied ${applied.length} result(s). ${failed.length} failed.`
         : `Applied ${applied.length} result(s).`;
+  }
+
+  function typedVideoEntityKind(
+    result: ScrapeResult,
+  ): "video_series" | "video_movie" | "video_episode" | null {
+    if (!result.proposedResult) return null;
+    if (result.entityType === "video_series") return "video_series";
+    if (result.entityType === "video_movie") return "video_movie";
+    if (result.entityType === "video_episode") return "video_episode";
+    return null;
+  }
+
+  function resultLabel(result: ScrapeResult) {
+    return (
+      result.proposedTitle ??
+      `${result.entityType.replace(/_/g, " ")} ${(result.entityId ?? result.id).slice(0, 8)}`
+    );
   }
 </script>
 
@@ -158,18 +176,14 @@
                 {/snippet}
               </Button>
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
-                onclick={() => void handleAccept(result)}
+                onclick={() => (reviewingResult = result)}
                 disabled={processingId === result.id}
               >
                 {#snippet children()}
-                  {#if processingId === result.id}
-                    <Loader2 class="h-3.5 w-3.5 animate-spin" />
-                  {:else}
-                    <Check class="h-3.5 w-3.5" />
-                  {/if}
-                  Accept
+                  <Eye class="h-3.5 w-3.5" />
+                  Review
                 {/snippet}
               </Button>
             </div>
@@ -241,3 +255,25 @@
     </div>
   {/if}
 </div>
+
+{#if reviewingResult}
+  {@const typedKind = typedVideoEntityKind(reviewingResult)}
+  {#if typedKind && reviewingResult.entityId}
+    <CascadeReviewDrawer
+      scrapeResultId={reviewingResult.id}
+      entityKind={typedKind}
+      entityId={reviewingResult.entityId}
+      label={resultLabel(reviewingResult)}
+      onAccepted={() => handleReviewedAccepted(reviewingResult!)}
+      onClose={() => (reviewingResult = null)}
+    />
+  {:else}
+    <LegacyVideoReviewDrawer
+      result={reviewingResult}
+      matchedScraper={resultLabel(reviewingResult)}
+      onAccepted={() => handleReviewedAccepted(reviewingResult!)}
+      onRejected={() => handleReviewedRejected(reviewingResult!)}
+      onClose={() => (reviewingResult = null)}
+    />
+  {/if}
+{/if}

@@ -2,16 +2,24 @@ import { fireEvent, render, screen } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import IdentifyButton from "./IdentifyButton.svelte";
 
-const { fetchInstalledPlugins } = vi.hoisted(() => ({
-  fetchInstalledPlugins: vi.fn(),
-}));
+const { fetchInstalledPlugins, fetchInstalledScrapers, fetchStashBoxEndpoints } =
+  vi.hoisted(() => ({
+    fetchInstalledPlugins: vi.fn(),
+    fetchInstalledScrapers: vi.fn(),
+    fetchStashBoxEndpoints: vi.fn(),
+  }));
 
 vi.mock("$lib/api/scrapers", () => ({
   executePlugin: vi.fn(),
   fetchInstalledPlugins,
+  fetchInstalledScrapers,
+  fetchStashBoxEndpoints,
+  identifyViaStashBox: vi.fn(),
+  scrapeVideo: vi.fn(),
 }));
 
 vi.mock("$lib/api/videos", () => ({
+  fetchVideoDetail: vi.fn(),
   fetchVideoSeriesLibraryDetail: vi.fn(),
 }));
 
@@ -22,6 +30,8 @@ vi.mock("$lib/nsfw/aware-providers", () => ({
 describe("IdentifyButton", () => {
   beforeEach(() => {
     fetchInstalledPlugins.mockReset();
+    fetchInstalledScrapers.mockReset();
+    fetchStashBoxEndpoints.mockReset();
     fetchInstalledPlugins.mockResolvedValue([
       {
         id: "plugin-1",
@@ -32,6 +42,8 @@ describe("IdentifyButton", () => {
         capabilities: { folderByName: true },
       },
     ]);
+    fetchInstalledScrapers.mockResolvedValue({ packages: [] });
+    fetchStashBoxEndpoints.mockResolvedValue({ endpoints: [] });
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       writable: true,
