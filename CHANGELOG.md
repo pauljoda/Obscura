@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Images now has its own main navigation tab for a flat all-images view. Galleries remains the grouped folder-style browser.
 - The flat Images view can now filter by file type, animated/static media, and image dimensions, making mixed image libraries easier to narrow down.
 - The flat Images grid now preserves each image's natural shape in a stable masonry layout, so tall and wide images are easier to recognize while more results load in without reshuffling the existing cards.
+- Selecting an image from the flat Images view now opens the in-page lightbox instead of navigating away, and animated image playback controls live in the lightbox top bar with Space and M keyboard shortcuts.
 - Delete prompts now distinguish between removing items from Obscura and deleting the source files from disk. Library-only deletes blacklist the source path so the next scan does not import the same file again.
 - Library browsing now keeps loading more cards as you scroll across Videos, Series, Actors, Galleries, Images, Collections, and Audio Libraries, without page-number footers interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
 - Infinite scrolling now starts fetching farther before the bottom of library pages and stops cleanly if a backend page repeats already-loaded cards, so the list no longer sits forever on a visible Loading footer.

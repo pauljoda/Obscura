@@ -10,6 +10,7 @@
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
+  import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
@@ -167,6 +168,8 @@
   let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
   let deleteDialogOpen = $state(false);
+  let lightboxOpen = $state(false);
+  let lightboxIndex = $state(0);
   let selectedImageIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
   let viewportWidth = $state(0);
@@ -254,6 +257,19 @@
 
   function deletePreset(id: string) {
     presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
+  }
+
+  function openImage(id: string) {
+    const index = loadedImages.findIndex((image) => image.id === id);
+    if (index < 0) return;
+    lightboxIndex = index;
+    lightboxOpen = true;
+  }
+
+  function patchImageRating(imageId: string, rating: number | null) {
+    loadedImages = loadedImages.map((image) =>
+      image.id === imageId ? { ...image, rating } : image,
+    );
   }
 
   function imageAspect(image: ImageListItemDto) {
@@ -557,7 +573,11 @@
             checked={selectedImageIds.has(img.id)}
             onchange={() => toggleSelectedImage(img.id)}
           />
-          <a href={`/images/${img.id}`} class="w-14 shrink-0">
+          <button
+            type="button"
+            onclick={() => openImage(img.id)}
+            class="w-14 shrink-0 border-0 bg-transparent p-0"
+          >
             <ImageThumbnail
               title={img.title}
               thumbnailPath={img.thumbnailPath}
@@ -569,13 +589,14 @@
               size="list"
               showChips={false}
             />
-          </a>
-          <a
-            href={`/images/${img.id}`}
-            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
+          </button>
+          <button
+            type="button"
+            onclick={() => openImage(img.id)}
+            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
           >
             {img.title}
-          </a>
+          </button>
           {#if img.width && img.height}
             <span class="hidden text-[0.68rem] text-text-muted sm:inline">
               {img.width}x{img.height}
@@ -590,9 +611,10 @@
         <div class="image-masonry-column">
           {#each column as item (item.image.id)}
             {@const img = item.image}
-            <a
-              href={`/images/${img.id}`}
-              class="image-masonry-item block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+            <button
+              type="button"
+              onclick={() => openImage(img.id)}
+              class="image-masonry-item block border-0 p-0 hover:ring-1 hover:ring-border-accent transition-all duration-fast"
               title={img.title}
               style:aspect-ratio="{item.aspect}"
             >
@@ -607,7 +629,7 @@
                 size="grid"
                 aspectClass="h-full w-full"
               />
-            </a>
+            </button>
           {/each}
         </div>
       {/each}
@@ -635,6 +657,16 @@
   onDeleteFromLibrary={() => void deleteSelectedImages(false)}
   onDeleteFromDisk={() => void deleteSelectedImages(true)}
 />
+
+{#if lightboxOpen}
+  <ImageLightbox
+    images={loadedImages}
+    initialIndex={lightboxIndex}
+    onClose={() => (lightboxOpen = false)}
+    onIndexChange={(index) => (lightboxIndex = index)}
+    onRatingChange={patchImageRating}
+  />
+{/if}
 
 <style>
   .image-masonry {

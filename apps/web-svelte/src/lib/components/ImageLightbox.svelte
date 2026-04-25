@@ -359,6 +359,17 @@
         target.isContentEditable;
       if (typing && e.key !== "Escape") return;
 
+      if ((e.key === " " || e.code === "Space") && isCurrentVideo) {
+        e.preventDefault();
+        toggleVideoPlayback();
+        return;
+      }
+      if ((e.key === "m" || e.key === "M") && isCurrentVideo) {
+        e.preventDefault();
+        toggleVideoMute();
+        return;
+      }
+
       switch (e.key) {
         case "Escape":
           e.preventDefault();
@@ -455,6 +466,37 @@
         </button>
       {/each}
     </div>
+    {#if isCurrentVideo}
+      <div class="flex items-center gap-1 border-l border-border-subtle pl-2">
+        <button
+          type="button"
+          onclick={toggleVideoPlayback}
+          class="lightbox-video-button"
+          aria-label={videoPlaying ? "Pause animated image" : "Play animated image"}
+          title={videoPlaying ? "Pause (Space)" : "Play (Space)"}
+        >
+          {#if videoPlaying}
+            <Pause class="h-4 w-4" />
+          {:else}
+            <Play class="h-4 w-4" />
+          {/if}
+          <span class="hidden lg:inline">{videoPlaying ? "Pause" : videoNeedsGesture ? "Tap to play" : "Play"}</span>
+        </button>
+        <button
+          type="button"
+          onclick={toggleVideoMute}
+          class="lightbox-video-button"
+          aria-label={videoMuted ? "Unmute animated image" : "Mute animated image"}
+          title={videoMuted ? "Unmute (M)" : "Mute (M)"}
+        >
+          {#if videoMuted}
+            <VolumeX class="h-4 w-4" />
+          {:else}
+            <Volume2 class="h-4 w-4" />
+          {/if}
+        </button>
+      </div>
+    {/if}
     <button
       type="button"
       onclick={() => (infoOpen = !infoOpen)}
@@ -566,57 +608,19 @@
       {/if}
 
       {#if isCurrentVideo}
-        <div
-          class="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2"
-          onpointerdown={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onclick={toggleVideoPlayback}
-            class="lightbox-video-button"
-            aria-label={videoPlaying ? "Pause animated image" : "Play animated image"}
-          >
-            {#if videoPlaying}
-              <Pause class="h-4 w-4" />
-            {:else}
-              <Play class="h-4 w-4" />
-            {/if}
-            <span class="hidden sm:inline">{videoPlaying ? "Pause" : videoNeedsGesture ? "Tap to play" : "Play"}</span>
-          </button>
-          <button
-            type="button"
-            onclick={toggleVideoMute}
-            class="lightbox-video-button"
-            aria-label={videoMuted ? "Unmute animated image" : "Mute animated image"}
-          >
-            {#if videoMuted}
-              <VolumeX class="h-4 w-4" />
-            {:else}
-              <Volume2 class="h-4 w-4" />
-            {/if}
-          </button>
-        </div>
         {#if videoError}
           <div class="pointer-events-none absolute left-1/2 top-1/2 z-20 w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 border border-error/35 bg-black/80 px-3 py-2 text-center text-[0.78rem] text-error-text shadow-[0_0_18px_rgba(168,72,80,0.28)]">
             {videoError}
           </div>
-        {:else if videoNeedsGesture}
-          <button
-            type="button"
-            onclick={toggleVideoPlayback}
-            class="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 border border-accent-500/45 bg-black/75 px-4 py-2 text-sm font-medium text-accent-100 shadow-[0_0_22px_rgba(196,154,90,0.32)] backdrop-blur-md"
-            onpointerdown={(event) => event.stopPropagation()}
-          >
-            <Play class="h-4 w-4" />
-            Tap to play
-          </button>
         {/if}
       {/if}
 
       <!-- Keyboard hints (desktop) -->
       <div class="hidden lg:block pointer-events-none absolute bottom-3 left-3 z-10">
         <div class="text-[0.55rem] font-mono uppercase tracking-[0.14em] text-white/25 leading-relaxed">
-          <div>← → navigate · +/- zoom · 0 reset · i info · 1-5 rate · esc close</div>
+          <div>
+            ← → navigate · +/- zoom · 0 reset · i info · 1-5 rate{isCurrentVideo ? " · space play/pause · m mute" : ""} · esc close
+          </div>
         </div>
       </div>
     </div>
