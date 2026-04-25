@@ -50,6 +50,11 @@
     onClearFiltersAndSort?: () => void;
     /** Extra controls rendered at the right edge (Import / Upload / etc.). */
     extras?: Snippet<[{ prefs: SurfacePrefs<F> }]>;
+    /** Extra rows at the top of the filter drawer (per-route custom filters). */
+    extraDrawerSections?: Snippet<[{
+      panelFilters: Array<{ type?: string; label: string; value: string }>;
+      onAddFilter: (type: F, label: string, value: string) => void;
+    }]>;
   }
 
   let {
@@ -77,6 +82,7 @@
     onDeletePreset,
     onClearFiltersAndSort,
     extras,
+    extraDrawerSections,
   }: Props = $props();
 
   let drawerOpen = $state(false);
@@ -286,6 +292,15 @@
   </div>
 
   {#if drawerOpen}
+    {#snippet drawerCustom({ panelFilters: pf }: { panelFilters: Array<{ type?: string; label: string; value: string }> })}
+      {#if extraDrawerSections}
+        {@render extraDrawerSections({
+          panelFilters: pf,
+          onAddFilter: (type, label, value) => onAddFilter(type, label, value),
+        })}
+      {/if}
+    {/snippet}
+
     <FilterDrawer
       enabledSections={enabledSections}
       panelFilters={prefs.activeFilters as Array<{ type?: string; label: string; value: string }>}
@@ -294,6 +309,7 @@
       performerItems={performerItems}
       studioItems={studioItems}
       showInteractiveFilter={showInteractiveFilter}
+      customSections={extraDrawerSections ? drawerCustom : undefined}
     />
   {/if}
 

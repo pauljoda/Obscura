@@ -324,6 +324,7 @@
     {onDeletePreset}
     {onClearFiltersAndSort}
     extras={config.toolbarExtras}
+    extraDrawerSections={config.extraFilterSections}
   />
 
   {#if config.bulkActions && config.bulkActions.length > 0}

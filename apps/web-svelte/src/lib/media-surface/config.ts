@@ -231,6 +231,12 @@ export interface MediaSurfaceConfig<T extends { id: string }, F extends string =
   // Page-side extension points
   /** Extra controls rendered at the right edge of the toolbar (e.g. Import / Upload). */
   toolbarExtras?: Snippet<[{ prefs: SurfacePrefs<F> }]>;
+  /** Extra rows rendered at the top of the filter drawer for per-route filters
+   *  that don't map to a built-in section kind (dynamic lists, compound toggles). */
+  extraFilterSections?: Snippet<[{
+    panelFilters: Array<{ type?: string; label: string; value: string }>;
+    onAddFilter: (type: F, label: string, value: string) => void;
+  }]>;
   /** Renders when items.length === 0 and loading === false. */
   emptyState?: Snippet<[{ prefs: SurfacePrefs<F> }]>;
 
