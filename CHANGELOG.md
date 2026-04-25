@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - A `media_file_ignores` migration-backed table that records library-only deletes and keeps scan workers from reimporting ignored files.
 - A local `pnpm dev:seed-scroll` helper now seeds synthetic video rows for repeatable infinite-scroll testing in small development libraries.
 
+### Changed
+
+- Animated images in the Images Feed now autoplay muted at full quality while on screen, pause off screen, and preload the active item plus one neighbor on each side for smoother scrolling.
+
 ### Fixed
 
 - Actor Known For cards for episode roles now use the parent series poster when one is available instead of stretching the episode thumbnail into a poster card.
