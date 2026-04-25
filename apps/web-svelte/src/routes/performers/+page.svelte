@@ -213,7 +213,6 @@
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   });
 
-  const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
   const loadedStart = $derived((data.page - 1) * data.pageSize);
   const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedPerformers.length));
   const hasMorePerformers = $derived(loadedEnd < loadedTotal);
@@ -573,22 +572,6 @@
         </a>
       {/each}
     </div>
-  {/if}
-
-  {#if totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 pt-4 border-t border-border-subtle">
-      {#if data.page > 1}
-        <a href={pageHref(data.page - 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">Showing {loadedEnd.toLocaleString()} of {loadedTotal.toLocaleString()}</span>
-      {#if data.page < totalPages}
-        <a href={pageHref(nextPageNumber)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Next
-        </a>
-      {/if}
-    </nav>
   {/if}
 
   <InfiniteLoadTrigger

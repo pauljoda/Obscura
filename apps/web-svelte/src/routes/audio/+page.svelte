@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { Music } from "@lucide/svelte";
   import { Badge, Checkbox, cn } from "@obscura/ui-svelte";
+  import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, {
     type SortDir,
@@ -12,11 +13,16 @@
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
-  import { deleteAudioLibrary, updateAudioLibrary } from "$lib/api/media";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import {
+    deleteAudioLibrary,
+    fetchAudioLibraries as fetchMoreAudioLibraries,
+    updateAudioLibrary,
+  } from "$lib/api/media";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
 
   const sortOptions = [
     { value: "recent", label: "Recently Added" },
@@ -131,13 +137,40 @@
     presetsApi.save(presetsApi.presets.filter((preset) => preset.id !== id));
   }
 
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  // svelte-ignore state_referenced_locally
+  let loadedLibraries = $state.raw(data.libraries);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
   let selectedLibraryIds = $state.raw(new Set<string>());
-  const visibleLibraryIds = $derived(data.libraries.map((library) => library.id));
+  let dataSignature = $state("");
+  const visibleLibraryIds = $derived(loadedLibraries.map((library) => library.id));
   const allVisibleSelected = $derived(
     visibleLibraryIds.length > 0 && visibleLibraryIds.every((id) => selectedLibraryIds.has(id)),
   );
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedLibraries.length));
+  const hasMoreLibraries = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedLibraries.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.libraries.map((library) => library.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedLibraries = data.libraries;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+    selectedLibraryIds = new Set(
+      [...selectedLibraryIds].filter((id) =>
+        data.libraries.some((library) => library.id === id),
+      ),
+    );
+  });
 
   function toggleSelectedLibrary(id: string) {
     const next = new Set(selectedLibraryIds);
@@ -187,6 +220,48 @@
     const qs = params.toString();
     return qs ? `/audio?${qs}` : "/audio";
   }
+
+  function numericParam(name: string): number | undefined {
+    const raw = page.url.searchParams.get(name);
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  async function loadMoreAudioLibraries() {
+    if (loadingMore || !hasMoreLibraries) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedLibraries.length;
+
+    try {
+      const response = await fetchMoreAudioLibraries({
+        search: data.search || undefined,
+        sort: data.sort,
+        order: data.order,
+        studio: page.url.searchParams.get("studio") ?? undefined,
+        tag: page.url.searchParams.getAll("tag"),
+        performer: page.url.searchParams.getAll("performer"),
+        ratingMin: numericParam("ratingMin"),
+        ratingMax: numericParam("ratingMax"),
+        dateFrom: page.url.searchParams.get("dateFrom") ?? undefined,
+        dateTo: page.url.searchParams.get("dateTo") ?? undefined,
+        organized: page.url.searchParams.get("organized") ?? undefined,
+        nsfw: data.nsfwMode,
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedLibraries.map((library) => library.id));
+      const nextLibraries = response.items.filter((library) => !existing.has(library.id));
+      loadedLibraries = [...loadedLibraries, ...nextLibraries];
+      loadedTotal =
+        response.items.length === 0 ? loadedStart + loadedLibraries.length : response.total;
+    } catch {
+      loadMoreError = "Could not load more audio libraries.";
+    } finally {
+      loadingMore = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -202,7 +277,7 @@
       </h1>
       <p class="text-text-muted text-[0.78rem] mt-1">Browse audio libraries in your collection</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
+    <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
   </div>
 
   <FilterBar
@@ -279,14 +354,14 @@
     />
   {/if}
 
-  {#if data.libraries.length === 0}
+  {#if loadedLibraries.length === 0}
     <div class="surface-panel p-8 text-center">
       <Music class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No audio libraries.</p>
     </div>
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each data.libraries as a, i (a.id)}
+      {#each loadedLibraries as a, i (a.id)}
         <div class="flex items-center gap-3 px-3 py-2">
           <Checkbox
             checked={selectedLibraryIds.has(a.id)}
@@ -320,7 +395,7 @@
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.libraries as a, i (a.id)}
+      {#each loadedLibraries as a, i (a.id)}
         <a
           href={`/audio/${a.id}`}
           class="group/card surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
@@ -342,21 +417,14 @@
     </div>
   {/if}
 
-  {#if totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 pt-4 border-t border-border-subtle">
-      {#if data.page > 1}
-        <a href={pageHref(data.page - 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          ← Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">Page {data.page} of {totalPages}</span>
-      {#if data.page < totalPages}
-        <a href={pageHref(data.page + 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Next →
-        </a>
-      {/if}
-    </nav>
-  {/if}
+  <InfiniteLoadTrigger
+    hasMore={hasMoreLibraries}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more audio libraries"
+    onLoad={loadMoreAudioLibraries}
+  />
 </div>
 
 <style>

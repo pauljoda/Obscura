@@ -4,15 +4,17 @@
   import { onMount } from "svelte";
   import { Layers } from "@lucide/svelte";
   import { Badge, Checkbox } from "@obscura/ui-svelte";
+  import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import { deleteGallery, updateGallery } from "$lib/api/media";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import { deleteGallery, fetchGalleries as fetchMoreGalleries, updateGallery } from "$lib/api/media";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
 
   const sortOptions = [
     { value: "recent", label: "Recently Added" },
@@ -99,9 +101,16 @@
   );
   const viewMode = $derived(viewPrefs.current.viewMode);
   let activePresetId = $state<string | null>(null);
+  // svelte-ignore state_referenced_locally
+  let loadedGalleries = $state.raw(data.galleries);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
   let selectedGalleryIds = $state.raw(new Set<string>());
-  const visibleGalleryIds = $derived(data.galleries.map((gallery) => gallery.id));
+  let dataSignature = $state("");
+  const visibleGalleryIds = $derived(loadedGalleries.map((gallery) => gallery.id));
   const allVisibleSelected = $derived(
     visibleGalleryIds.length > 0 && visibleGalleryIds.every((id) => selectedGalleryIds.has(id)),
   );
@@ -218,13 +227,75 @@
     }
   }
 
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedGalleries.length));
+  const hasMoreGalleries = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedGalleries.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.galleries.map((g) => g.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedGalleries = data.galleries;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+    selectedGalleryIds = new Set(
+      [...selectedGalleryIds].filter((id) =>
+        data.galleries.some((gallery) => gallery.id === id),
+      ),
+    );
+  });
+
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
     if (p > 1) params.set("page", String(p));
     else params.delete("page");
     const qs = params.toString();
     return qs ? `/galleries?${qs}` : "/galleries";
+  }
+
+  function numericParam(name: string): number | undefined {
+    const raw = page.url.searchParams.get(name);
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  async function loadMoreGalleries() {
+    if (loadingMore || !hasMoreGalleries) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedGalleries.length;
+
+    try {
+      const response = await fetchMoreGalleries({
+        search: data.search || undefined,
+        sort: data.sort,
+        order: data.order,
+        studio: page.url.searchParams.get("studio") ?? undefined,
+        tag: page.url.searchParams.getAll("tag"),
+        performer: page.url.searchParams.getAll("performer"),
+        ratingMin: numericParam("ratingMin"),
+        ratingMax: numericParam("ratingMax"),
+        dateFrom: page.url.searchParams.get("dateFrom") ?? undefined,
+        dateTo: page.url.searchParams.get("dateTo") ?? undefined,
+        nsfw: data.nsfwMode,
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedGalleries.map((gallery) => gallery.id));
+      const nextGalleries = response.galleries.filter((gallery) => !existing.has(gallery.id));
+      loadedGalleries = [...loadedGalleries, ...nextGalleries];
+      loadedTotal =
+        response.galleries.length === 0 ? loadedStart + loadedGalleries.length : response.total;
+    } catch {
+      loadMoreError = "Could not load more galleries.";
+    } finally {
+      loadingMore = false;
+    }
   }
 </script>
 
@@ -241,7 +312,7 @@
       </h1>
       <p class="text-text-muted text-[0.78rem] mt-1">Browse galleries in your library</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
+    <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
   </div>
 
   <FilterBar
@@ -292,14 +363,14 @@
     />
   {/if}
 
-  {#if data.galleries.length === 0}
+  {#if loadedGalleries.length === 0}
     <div class="surface-panel p-8 text-center">
       <Layers class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No galleries match.</p>
     </div>
   {:else if viewMode === "list"}
     <ul class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each data.galleries as g, i (g.id)}
+      {#each loadedGalleries as g, i (g.id)}
         <li class="relative">
           <button
             type="button"
@@ -340,7 +411,7 @@
     </ul>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.galleries as g, i (g.id)}
+      {#each loadedGalleries as g, i (g.id)}
         {@const gradient = VIDEO_CARD_GRADIENTS[i % VIDEO_CARD_GRADIENTS.length]}
         <a
           href={`/galleries/${g.id}`}
@@ -367,21 +438,14 @@
     </div>
   {/if}
 
-  {#if totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 pt-4 border-t border-border-subtle">
-      {#if data.page > 1}
-        <a href={pageHref(data.page - 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          ← Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">Page {data.page} of {totalPages}</span>
-      {#if data.page < totalPages}
-        <a href={pageHref(data.page + 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Next →
-        </a>
-      {/if}
-    </nav>
-  {/if}
+  <InfiniteLoadTrigger
+    hasMore={hasMoreGalleries}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more galleries"
+    onLoad={loadMoreGalleries}
+  />
 </div>
 
 <style>

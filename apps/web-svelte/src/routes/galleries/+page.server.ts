@@ -31,6 +31,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     sort,
     order,
     view,
+    nsfwMode,
     viewPrefs: await loadUiPrefObject("galleries:view", { cols: 4 }),
   };
 };

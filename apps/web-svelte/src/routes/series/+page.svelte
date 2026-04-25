@@ -101,7 +101,6 @@
   let bulkBusy = $state(false);
   let selectedItemIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
-  const totalPages = $derived(Math.max(1, Math.ceil(loadedTotal / data.pageSize)));
   const loadedStart = $derived((data.page - 1) * data.pageSize);
   const loadedItemCount = $derived(usesRootPrefs ? loadedSeries.length : loadedVideos.length);
   const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedItemCount));
@@ -942,30 +941,6 @@
         {/if}
       {/snippet}
     </HierarchyShell>
-  {/if}
-
-  {#if (usesRootPrefs || showsVideos) && totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 border-t border-border-subtle pt-4">
-      {#if data.page > 1}
-        <a
-          href={pageHref(data.page - 1)}
-          class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
-        >
-          ← Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">
-        Showing {loadedEnd.toLocaleString()} of {loadedTotal.toLocaleString()}
-      </span>
-      {#if data.page < totalPages}
-        <a
-          href={pageHref(nextPageNumber)}
-          class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary"
-        >
-          Next →
-        </a>
-      {/if}
-    </nav>
   {/if}
 
   <InfiniteLoadTrigger

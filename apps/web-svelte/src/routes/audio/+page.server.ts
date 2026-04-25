@@ -46,6 +46,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    nsfwMode,
     viewPrefs: await loadUiPrefObject("audio:view", { cols: 5 }),
   };
 };

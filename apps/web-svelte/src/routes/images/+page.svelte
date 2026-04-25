@@ -4,14 +4,16 @@
   import { onMount } from "svelte";
   import { Image as ImageIcon } from "@lucide/svelte";
   import { Checkbox } from "@obscura/ui-svelte";
+  import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import { deleteImage, updateImage } from "$lib/api/media";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import { deleteImage, fetchImages as fetchMoreImages, updateImage } from "$lib/api/media";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
 
   const sortOptions = [
     { value: "recent", label: "Recently Added" },
@@ -88,9 +90,16 @@
   );
   const viewMode = $derived(viewPrefs.current.viewMode);
   let activePresetId = $state<string | null>(null);
+  // svelte-ignore state_referenced_locally
+  let loadedImages = $state.raw(data.images);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
   let selectedImageIds = $state.raw(new Set<string>());
-  const visibleImageIds = $derived(data.images.map((image) => image.id));
+  let dataSignature = $state("");
+  const visibleImageIds = $derived(loadedImages.map((image) => image.id));
   const allVisibleSelected = $derived(
     visibleImageIds.length > 0 && visibleImageIds.every((id) => selectedImageIds.has(id)),
   );
@@ -218,13 +227,78 @@
     void goto(qs ? `/images?${qs}` : "/images", { keepFocus: true, noScroll: true });
   }
 
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedImages.length));
+  const hasMoreImages = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedImages.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.images.map((img) => img.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedImages = data.images;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+    selectedImageIds = new Set(
+      [...selectedImageIds].filter((id) =>
+        data.images.some((image) => image.id === id),
+      ),
+    );
+  });
+
   function pageHref(p: number): string {
     const params = new URLSearchParams(page.url.searchParams);
     if (p > 1) params.set("page", String(p));
     else params.delete("page");
     const qs = params.toString();
     return qs ? `/images?${qs}` : "/images";
+  }
+
+  function numericParam(name: string): number | undefined {
+    const raw = page.url.searchParams.get(name);
+    if (!raw) return undefined;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  async function loadMoreImages() {
+    if (loadingMore || !hasMoreImages) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedImages.length;
+
+    try {
+      const response = await fetchMoreImages({
+        search: data.search || undefined,
+        sort: data.sort,
+        order: data.order,
+        gallery: page.url.searchParams.get("gallery") ?? undefined,
+        studio: page.url.searchParams.get("studio") ?? undefined,
+        tag: page.url.searchParams.getAll("tag"),
+        performer: page.url.searchParams.getAll("performer"),
+        ratingMin: numericParam("ratingMin"),
+        ratingMax: numericParam("ratingMax"),
+        dateFrom: page.url.searchParams.get("dateFrom") ?? undefined,
+        dateTo: page.url.searchParams.get("dateTo") ?? undefined,
+        resolution: page.url.searchParams.get("resolution") ?? undefined,
+        organized: page.url.searchParams.get("organized") ?? undefined,
+        nsfw: data.nsfwMode,
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedImages.map((image) => image.id));
+      const nextImages = response.images.filter((image) => !existing.has(image.id));
+      loadedImages = [...loadedImages, ...nextImages];
+      loadedTotal =
+        response.images.length === 0 ? loadedStart + loadedImages.length : response.total;
+    } catch {
+      loadMoreError = "Could not load more images.";
+    } finally {
+      loadingMore = false;
+    }
   }
 </script>
 
@@ -241,7 +315,7 @@
       </h1>
       <p class="text-text-muted text-[0.78rem] mt-1">Browse images in your library</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{data.total.toLocaleString()} total</span>
+    <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
   </div>
 
   <FilterBar
@@ -292,14 +366,14 @@
     />
   {/if}
 
-  {#if data.images.length === 0}
+  {#if loadedImages.length === 0}
     <div class="surface-panel p-8 text-center">
       <ImageIcon class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No images match.</p>
     </div>
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each data.images as img (img.id)}
+      {#each loadedImages as img (img.id)}
         <div class="flex items-center gap-3 px-3 py-2">
           <Checkbox
             checked={selectedImageIds.has(img.id)}
@@ -334,7 +408,7 @@
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.images as img (img.id)}
+      {#each loadedImages as img (img.id)}
         <a
           href={`/images/${img.id}`}
           class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
@@ -355,21 +429,14 @@
     </div>
   {/if}
 
-  {#if totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 pt-4 border-t border-border-subtle">
-      {#if data.page > 1}
-        <a href={pageHref(data.page - 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          ← Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">Page {data.page} of {totalPages}</span>
-      {#if data.page < totalPages}
-        <a href={pageHref(data.page + 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Next →
-        </a>
-      {/if}
-    </nav>
-  {/if}
+  <InfiniteLoadTrigger
+    hasMore={hasMoreImages}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more images"
+    onLoad={loadMoreImages}
+  />
 </div>
 
 <style>

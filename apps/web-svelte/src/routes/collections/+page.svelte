@@ -4,14 +4,16 @@
   import { onMount } from "svelte";
   import { FolderOpen, Plus } from "@lucide/svelte";
   import { Badge, Button, Checkbox } from "@obscura/ui-svelte";
+  import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import CollectionThumbnail from "$lib/components/thumbnails/CollectionThumbnail.svelte";
-  import { deleteCollection } from "$lib/api/media";
+  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import { deleteCollection, fetchCollections as fetchMoreCollections } from "$lib/api/media";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
-  let { data } = $props();
+  let { data }: { data: PageData } = $props();
 
   const sortOptions = [
     { value: "recent", label: "Recently Added" },
@@ -95,14 +97,41 @@
     presetsApi.save(presetsApi.presets.filter((preset) => preset.id !== id));
   }
 
-  const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+  // svelte-ignore state_referenced_locally
+  let loadedCollections = $state.raw(data.collections);
+  // svelte-ignore state_referenced_locally
+  let loadedTotal = $state(data.total);
+  let loadingMore = $state(false);
+  let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
   let selectedCollectionIds = $state.raw(new Set<string>());
-  const visibleCollectionIds = $derived(data.collections.map((collection) => collection.id));
+  let dataSignature = $state("");
+  const visibleCollectionIds = $derived(loadedCollections.map((collection) => collection.id));
   const allVisibleSelected = $derived(
     visibleCollectionIds.length > 0 &&
       visibleCollectionIds.every((id) => selectedCollectionIds.has(id)),
   );
+  const loadedStart = $derived((data.page - 1) * data.pageSize);
+  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedCollections.length));
+  const hasMoreCollections = $derived(loadedEnd < loadedTotal);
+  const nextPageNumber = $derived(
+    Math.floor((loadedStart + loadedCollections.length) / data.pageSize) + 1,
+  );
+
+  $effect(() => {
+    const nextSignature = `${data.page}:${data.total}:${data.collections.map((c) => c.id).join("|")}`;
+    if (nextSignature === dataSignature) return;
+    dataSignature = nextSignature;
+    loadedCollections = data.collections;
+    loadedTotal = data.total;
+    loadingMore = false;
+    loadMoreError = null;
+    selectedCollectionIds = new Set(
+      [...selectedCollectionIds].filter((id) =>
+        data.collections.some((collection) => collection.id === id),
+      ),
+    );
+  });
 
   function toggleSelectedCollection(id: string) {
     const next = new Set(selectedCollectionIds);
@@ -138,6 +167,33 @@
     else params.delete("page");
     const qs = params.toString();
     return qs ? `/collections?${qs}` : "/collections";
+  }
+
+  async function loadMoreCollections() {
+    if (loadingMore || !hasMoreCollections) return;
+    loadingMore = true;
+    loadMoreError = null;
+    const offset = loadedStart + loadedCollections.length;
+
+    try {
+      const response = await fetchMoreCollections({
+        search: data.search || undefined,
+        sort: data.sort,
+        order: data.order,
+        mode: page.url.searchParams.get("mode") ?? undefined,
+        limit: data.pageSize,
+        offset,
+      });
+      const existing = new Set(loadedCollections.map((collection) => collection.id));
+      const nextCollections = response.items.filter((collection) => !existing.has(collection.id));
+      loadedCollections = [...loadedCollections, ...nextCollections];
+      loadedTotal =
+        response.items.length === 0 ? loadedStart + loadedCollections.length : response.total;
+    } catch {
+      loadMoreError = "Could not load more collections.";
+    } finally {
+      loadingMore = false;
+    }
   }
 </script>
 
@@ -208,14 +264,14 @@
     />
   {/if}
 
-  {#if data.collections.length === 0}
+  {#if loadedCollections.length === 0}
     <div class="surface-panel p-8 text-center">
       <FolderOpen class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
       <p class="text-body text-text-muted">No collections yet.</p>
     </div>
   {:else if viewMode === "list"}
     <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each data.collections as c, i (c.id)}
+      {#each loadedCollections as c, i (c.id)}
         <div class="flex items-center gap-3 px-3 py-2">
           <Checkbox
             checked={selectedCollectionIds.has(c.id)}
@@ -239,7 +295,7 @@
     </div>
   {:else}
     <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each data.collections as c, i (c.id)}
+      {#each loadedCollections as c, i (c.id)}
         <a
           href={`/collections/${c.id}`}
           class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast"
@@ -257,21 +313,14 @@
     </div>
   {/if}
 
-  {#if totalPages > 1}
-    <nav class="flex items-center justify-center gap-2 pt-4 border-t border-border-subtle">
-      {#if data.page > 1}
-        <a href={pageHref(data.page - 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          ← Prev
-        </a>
-      {/if}
-      <span class="text-body-sm text-text-muted">Page {data.page} of {totalPages}</span>
-      {#if data.page < totalPages}
-        <a href={pageHref(data.page + 1)} class="surface-well px-3 py-1 text-body-sm text-text-muted hover:text-text-primary">
-          Next →
-        </a>
-      {/if}
-    </nav>
-  {/if}
+  <InfiniteLoadTrigger
+    hasMore={hasMoreCollections}
+    loading={loadingMore}
+    error={loadMoreError}
+    nextHref={pageHref(nextPageNumber)}
+    label="Load more collections"
+    onLoad={loadMoreCollections}
+  />
 </div>
 
 <style>

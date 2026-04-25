@@ -28,6 +28,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    nsfwMode,
     viewPrefs: await loadUiPrefObject("images:view", { cols: 8 }),
   };
 };
