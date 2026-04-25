@@ -376,6 +376,29 @@ function compareCreatedAt(
   return dir === "asc" ? leftValue - rightValue : rightValue - leftValue;
 }
 
+/**
+ * Pick the right page out of merged episode + movie rows.
+ *
+ * `mixedFetch` is the *intent*, not the outcome: when both kinds were queried
+ * the SQL pulled `limit + offset` rows from each table starting at offset 0
+ * (so the local merge-sort could pick the global top-N). When only one kind
+ * was queried, the SQL itself already applied `limit`/`offset` and the rows
+ * are exactly the page.
+ *
+ * Gating on the intent (not on whether both arrays happened to be non-empty)
+ * is what fixes the "every load-more returns the same first page" bug on
+ * libraries that contain only episodes (or only movies).
+ */
+export function paginateMergedVideos<T>(
+  rows: T[],
+  options: { mixedFetch: boolean; limit: number; offset: number },
+): T[] {
+  const { mixedFetch, limit, offset } = options;
+  return mixedFetch
+    ? rows.slice(offset, offset + limit)
+    : rows.slice(0, limit);
+}
+
 export function sortMergedVideos<T extends MixedVideoSortRow>(
   rows: T[],
   query: Pick<ListVideosQuery, "sort" | "order">,
@@ -1084,11 +1107,11 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
     }));
   }
 
-  const mixedResults = episodes.length > 0 && movies.length > 0;
-  const merged = mixedResults
+  const mixedFetch = wantEpisodes && wantMovies;
+  const merged = mixedFetch
     ? sortMergedVideos([...episodes, ...movies], query)
     : [...episodes, ...movies];
-  const sliced = mixedResults ? merged.slice(offset, offset + limit) : merged.slice(0, limit);
+  const sliced = paginateMergedVideos(merged, { mixedFetch, limit, offset });
   if (cardView) {
     return {
       videos: sliced.map(toVideoCardListItem),
