@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildPreviewAssetPatch,
   buildTrickplayAssetPatch,
-  buildTrickplayFfmpegArgs,
+  buildTrickplayFrameFfmpegArgs,
   buildTrickplayVtt,
   planTrickplaySheet,
+  trickplayFrameTimestamp,
+  trickplaySharpQuality,
 } from "./preview.js";
 
 describe("preview trickplay planning", () => {
@@ -21,27 +23,45 @@ describe("preview trickplay planning", () => {
     });
   });
 
-  it("builds a single ffmpeg tile command for the whole trickplay sheet", () => {
-    const args = buildTrickplayFfmpegArgs({
+  it("builds an input-seek ffmpeg command for a single trickplay frame", () => {
+    const args = buildTrickplayFrameFfmpegArgs({
       filePath: "/media/video.mp4",
-      spriteFile: "/cache/video/sprite.jpg",
-      frameInterval: 10,
+      outputFile: "/tmp/frame_00007.jpg",
+      timestampSeconds: 75,
       frameWidth: 160,
       frameHeight: 90,
-      gridColumns: 5,
-      gridRows: 3,
-      jpegQuality: 62,
+      jpegQuality: 4,
     });
 
+    // -ss must come BEFORE -i so ffmpeg uses the fast input-seek path
+    // (jumps to the nearest keyframe via the demuxer index instead of
+    // decoding the entire prefix).
+    const ssIndex = args.indexOf("-ss");
+    const inputIndex = args.indexOf("-i");
+    expect(ssIndex).toBeGreaterThanOrEqual(0);
+    expect(inputIndex).toBeGreaterThan(ssIndex);
+
     expect(args).toContain("/media/video.mp4");
-    expect(args).toContain("/cache/video/sprite.jpg");
-    expect(args).toContain("-frames:v");
-    expect(args).toContain("1");
-    expect(args).toContain("-q:v");
-    expect(args).toContain("62");
+    expect(args).toContain("/tmp/frame_00007.jpg");
+    expect(args).toContain("75.000");
     expect(args).toContain(
-      "fps=1/10,scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2,tile=5x3",
+      "scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2",
     );
+    expect(args).toContain("-q:v");
+    expect(args).toContain("4");
+  });
+
+  it("centers each trickplay sample inside its VTT cue", () => {
+    expect(trickplayFrameTimestamp(0, 10)).toBe(5);
+    expect(trickplayFrameTimestamp(1, 10)).toBe(15);
+    expect(trickplayFrameTimestamp(6, 10)).toBe(65);
+  });
+
+  it("maps the 1..31 quality slider onto sharp's 1..100 jpeg scale", () => {
+    expect(trickplaySharpQuality(1)).toBe(90);
+    expect(trickplaySharpQuality(31)).toBe(60);
+    expect(trickplaySharpQuality(0)).toBe(90);
+    expect(trickplaySharpQuality(99)).toBe(60);
   });
 
   it("maps VTT cues onto the planned tile grid", () => {

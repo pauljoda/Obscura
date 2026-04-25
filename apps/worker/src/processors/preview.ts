@@ -1,5 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
@@ -105,21 +108,17 @@ function trickplayJpegQuality(quality: number) {
   return Math.round(68 - t * 30);
 }
 
-export function buildTrickplayFfmpegArgs(input: {
+export function buildTrickplayFrameFfmpegArgs(input: {
   filePath: string;
-  spriteFile: string;
-  frameInterval: number;
+  outputFile: string;
+  timestampSeconds: number;
   frameWidth: number;
   frameHeight: number;
-  gridColumns: number;
-  gridRows: number;
   jpegQuality: number;
 }) {
   const vf = [
-    `fps=1/${input.frameInterval}`,
     `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease`,
     `pad=${input.frameWidth}:${input.frameHeight}:(ow-iw)/2:(oh-ih)/2`,
-    `tile=${input.gridColumns}x${input.gridRows}`,
   ].join(",");
 
   return [
@@ -127,16 +126,70 @@ export function buildTrickplayFfmpegArgs(input: {
     "-loglevel",
     "error",
     "-y",
+    // Input-seek (-ss BEFORE -i): jumps to nearest keyframe via demuxer index
+    // without decoding the prefix. Orders of magnitude faster than the
+    // fps=1/N filter, which has to demux+decode the entire source.
+    "-ss",
+    input.timestampSeconds.toFixed(3),
     "-i",
     input.filePath,
-    "-vf",
-    vf,
     "-frames:v",
     "1",
+    "-vf",
+    vf,
     "-q:v",
     String(input.jpegQuality),
-    input.spriteFile,
+    input.outputFile,
   ];
+}
+
+export function trickplayFrameTimestamp(frameIndex: number, frameInterval: number) {
+  // Center the sample inside its VTT interval so keyframe-snapping doesn't
+  // push it outside the cue's time range.
+  return frameIndex * frameInterval + frameInterval / 2;
+}
+
+export function trickplaySharpQuality(quality: number) {
+  const clamped = Math.max(1, Math.min(31, quality));
+  const t = (clamped - 1) / 30;
+  // q=1 -> 90, q=31 -> 60. Mirrors the visual range of the previous
+  // ffmpeg -q:v 38..68 mapping.
+  return Math.round(90 - t * 30);
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+  onProgress?: (completed: number) => void | Promise<void>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  let completed = 0;
+  const poolSize = Math.min(Math.max(1, limit), items.length);
+
+  async function runner() {
+    while (true) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index]!, index);
+      completed += 1;
+      if (onProgress) {
+        await onProgress(completed);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: poolSize }, () => runner()));
+  return results;
+}
+
+export function trickplayConcurrency() {
+  // Half the cores, clamped to [2, 8]. The unified Docker image runs
+  // Postgres, the worker, and SvelteKit on the same host, so we leave
+  // headroom for everything else.
+  const cores = os.cpus().length || 2;
+  return Math.max(2, Math.min(8, Math.floor(cores / 2)));
 }
 
 export function buildTrickplayVtt(input: {
@@ -385,36 +438,85 @@ export async function processPreview(job: Job) {
   if (shouldGenerateTrickplay) {
     const gridColumns = Math.min(5, frameCount);
     const gridRows = Math.max(1, Math.ceil(frameCount / gridColumns));
+    const jpegQuality = trickplayJpegQuality(trickQualityClamped);
+    const sharpQuality = trickplaySharpQuality(trickQualityClamped);
 
-    await runProcess(
-      "ffmpeg",
-      buildTrickplayFfmpegArgs({
-        filePath,
-        spriteFile,
-        frameInterval,
-        frameWidth: plannedSpriteThumbWidth,
-        frameHeight: plannedSpriteThumbHeight,
-        gridColumns,
-        gridRows,
-        jpegQuality: trickplayJpegQuality(trickQualityClamped),
-      }),
+    const tmpDir = path.join(
+      os.tmpdir(),
+      `obscura-trickplay-${video.id}-${randomUUID()}`,
     );
+    await mkdir(tmpDir, { recursive: true });
 
-    await writeFile(
-      trickplayFile,
-      buildTrickplayVtt({
-        assetUrl: videoAssetUrl(video.id, "sprite"),
-        frameCount,
-        frameInterval,
-        frameWidth: plannedSpriteThumbWidth,
-        frameHeight: plannedSpriteThumbHeight,
-        gridColumns,
-      }),
-      "utf8",
-    );
+    try {
+      const frameIndexes = Array.from({ length: frameCount }, (_, index) => index);
+      const framePaths = frameIndexes.map((index) =>
+        path.join(tmpDir, `frame_${String(index).padStart(5, "0")}.jpg`),
+      );
 
-    assetPatch = { ...assetPatch, ...buildTrickplayAssetPatch(video.id) };
-    await updateVideoAssetPaths(entityKind, video.id, assetPatch);
-    await markJobProgress(job, "preview", 100);
+      const progressBase = shouldGeneratePreviewAssets ? 65 : 0;
+      const progressSpan = shouldGeneratePreviewAssets ? 30 : 95;
+
+      await mapWithConcurrency(
+        frameIndexes,
+        trickplayConcurrency(),
+        async (index) => {
+          await runProcess(
+            "ffmpeg",
+            buildTrickplayFrameFfmpegArgs({
+              filePath,
+              outputFile: framePaths[index]!,
+              timestampSeconds: trickplayFrameTimestamp(index, frameInterval),
+              frameWidth: plannedSpriteThumbWidth,
+              frameHeight: plannedSpriteThumbHeight,
+              jpegQuality,
+            }),
+          );
+        },
+        async (completed) => {
+          if (completed === frameCount || completed % 8 === 0) {
+            const pct =
+              progressBase + Math.floor((completed / frameCount) * progressSpan);
+            await markJobProgress(job, "preview", Math.min(95, pct));
+          }
+        },
+      );
+
+      const composites = framePaths.map((input, index) => ({
+        input,
+        left: (index % gridColumns) * plannedSpriteThumbWidth,
+        top: Math.floor(index / gridColumns) * plannedSpriteThumbHeight,
+      }));
+
+      await sharp({
+        create: {
+          width: plannedSpriteThumbWidth * gridColumns,
+          height: plannedSpriteThumbHeight * gridRows,
+          channels: 3,
+          background: { r: 0, g: 0, b: 0 },
+        },
+      })
+        .composite(composites)
+        .jpeg({ quality: sharpQuality, mozjpeg: true })
+        .toFile(spriteFile);
+
+      await writeFile(
+        trickplayFile,
+        buildTrickplayVtt({
+          assetUrl: videoAssetUrl(video.id, "sprite"),
+          frameCount,
+          frameInterval,
+          frameWidth: plannedSpriteThumbWidth,
+          frameHeight: plannedSpriteThumbHeight,
+          gridColumns,
+        }),
+        "utf8",
+      );
+
+      assetPatch = { ...assetPatch, ...buildTrickplayAssetPatch(video.id) };
+      await updateVideoAssetPaths(entityKind, video.id, assetPatch);
+      await markJobProgress(job, "preview", 100);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
   }
 }

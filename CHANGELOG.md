@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The scrape review drawer no longer flickers, paints empty, or only partly draws over the video player. The drawer uses `position: fixed` to cover the viewport, but it was being rendered inline inside the player area where an ancestor's CSS transform redefined the containing block, so the drawer was being clipped to the player's bounds and would only repaint into view when the cursor moved. The drawer now portals to `<body>` like the identify provider flyout, so it always covers the viewport regardless of where it is invoked from.
 - The Obscura logo mark in the mobile header now shows its brass star fills again instead of rendering as a flat dark disc. The desktop sidebar and mobile header each render their own copy of the logo, and the SVG gradient definitions inside both copies shared identical ids — so on mobile, where the desktop copy is `display:none`, Chromium resolved `url(#brass)` into a hidden subtree and dropped the gradient. Each logo now scopes its gradient ids per-instance.
 - MovieDB identify reviews no longer crash when a show returns duplicate season, episode, candidate, cast, genre, or image rows. The review drawer now keeps those rows visible with stable review keys instead of hitting Svelte's duplicate-key runtime error.
+- Trickplay sprite generation (the hover-scrub film strip on the video player) is now dramatically faster on long videos. The previous pipeline used a single ffmpeg invocation with the `fps=1/N` filter, which had to demux and decode every frame of the source from start to finish just to keep one every N seconds — a 2-hour movie at 24fps required ~172,000 wasted decodes to keep ~720 frames. The worker now seeks directly to each frame's keyframe in parallel and composites the results with `sharp`, cutting trickplay build time from minutes to seconds on long files. Sprite output, VTT format, on-disk paths, and the player consumption path are unchanged, so existing trickplay assets continue to work without rebuild.
 
 ### Added
 
@@ -52,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library grids on Videos, Images (list + masonry), Performers, Studios, Galleries, and Collections now reorder smoothly via FLIP when the result set changes (sort, filter, search) and fade in newly loaded cards with a brief, capped stagger.
 - Animated images in the Images Feed now autoplay muted at full quality while on screen, pause off screen, and preload the active item plus one neighbor on each side for smoother scrolling.
 - Video entry Identify menus now group Obscura plugins, Stash-Box endpoints, and community scrapers, and pending scrape results use the shared review drawer instead of an inline-only card review.
+- Trickplay sprite extraction in the worker now uses parallel input-seek (`ffmpeg -ss <ts> -i …`) per frame plus a `sharp` composite step instead of a single `fps=1/N + tile` filter chain. Concurrency defaults to half the available cores clamped to `[2, 8]`. Frames are written to a temp directory and cleaned up in a `finally` block.
 
 ### Fixed
 
