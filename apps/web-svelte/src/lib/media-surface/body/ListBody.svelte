@@ -1,6 +1,5 @@
 <script lang="ts" generics="T extends { id: string }">
   import { dur, ease } from "@obscura/ui-svelte";
-  import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";
   import type { Component } from "svelte";
   import type { CardProps } from "$lib/media-surface/config";
@@ -32,11 +31,6 @@
       animate:flip={{
         duration: reducedMotion ? 0 : dur.moderate,
         easing: ease.mechanical,
-      }}
-      in:fade|global={{
-        duration: reducedMotion ? 0 : dur.normal,
-        delay: reducedMotion ? 0 : Math.min(index * 8, 100),
-        easing: ease.enter,
       }}
     >
       <Card

@@ -27,3 +27,22 @@ if (!globalThis.ResizeObserver) {
     disconnect() {}
   };
 }
+
+// JSDOM doesn't implement matchMedia. Svelte 5's reactivity layer uses
+// it via tweened/spring stores and the prefers-reduced-motion hook.
+if (!globalThis.matchMedia) {
+  Object.defineProperty(globalThis, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}

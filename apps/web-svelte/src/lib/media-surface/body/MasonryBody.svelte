@@ -1,18 +1,16 @@
 <script lang="ts" generics="T extends { id: string }">
   import { dur, ease } from "@obscura/ui-svelte";
-  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
+  import { tweened } from "svelte/motion";
+  import { cubicOut } from "svelte/easing";
   import type { Component } from "svelte";
   import type { CardProps } from "$lib/media-surface/config";
 
   /**
    * CSS-columns masonry layout used by the flat Images view. Items keep
    * their natural aspect ratio and tile down columns instead of into a
-   * grid, so tall and wide images stay recognizable.
-   *
-   * Note: CSS columns reflow as items append; we deliberately skip
-   * `animate:flip` here because flip animations across multi-column
-   * reflow look jittery (each column shifts independently). Fade-in
-   * still runs.
+   * grid, so tall and wide images stay recognizable. Items render
+   * directly without fade-in to keep incremental loads snappy.
    */
   interface Props {
     items: T[];
@@ -35,16 +33,27 @@
     onActivate,
     reducedMotion = false,
   }: Props = $props();
+
+  // Tweened col-count for a smoother slider experience; CSS column-count
+  // is integer-only so the displayed value is rounded.
+  // svelte-ignore state_referenced_locally
+  const animatedCols = tweened(cols, {
+    duration: reducedMotion ? 0 : 240,
+    easing: cubicOut,
+  });
+  $effect(() => {
+    void animatedCols.set(cols, { duration: reducedMotion ? 0 : 240 });
+  });
+  const displayCols = $derived(Math.max(1, Math.round($animatedCols)));
 </script>
 
-<div class="masonry" style:--col-count={cols}>
+<div class="masonry" style:--col-count={displayCols}>
   {#each items as item, index (getKey(item))}
     <div
       class="masonry-item"
-      in:fade|global={{
-        duration: reducedMotion ? 0 : dur.normal,
-        delay: reducedMotion ? 0 : Math.min(index * 8, 120),
-        easing: ease.enter,
+      animate:flip={{
+        duration: reducedMotion ? 0 : dur.moderate,
+        easing: ease.mechanical,
       }}
     >
       <Card
@@ -61,13 +70,19 @@
 </div>
 
 <style>
+  /*
+   * Same mobile-aware mapping as the standard ThumbnailGrid: smallest
+   * slider value lands on 1 column on phones (largest cards), capped
+   * at 4 cols on phones / 6 on tablets so masonry items stay legible.
+   * Desktop is uncapped.
+   */
   .masonry {
-    column-count: max(2, min(var(--col-count, 5), 3));
+    column-count: max(1, min(calc(var(--col-count, 5) - 1), 4));
     column-gap: 0.5rem;
   }
   @media (min-width: 640px) {
     .masonry {
-      column-count: max(3, min(var(--col-count, 5), 5));
+      column-count: max(2, min(var(--col-count, 5), 6));
     }
   }
   @media (min-width: 1024px) {

@@ -327,7 +327,11 @@
     extraDrawerSections={config.extraFilterSections}
   />
 
-  {#if config.bulkActions && config.bulkActions.length > 0}
+  <!-- Bulk select is list-mode only. Grid/masonry/feed views drop the
+       per-card checkbox affordance so the visual hierarchy isn't
+       disrupted by selection state on every tile; bulk operations are
+       reachable by switching to List view. -->
+  {#if config.bulkActions && config.bulkActions.length > 0 && currentLayout === "list"}
     <BulkActionBar
       selectedCount={selectedIds.size}
       visibleCount={visibleIdSet.size}
@@ -373,8 +377,6 @@
       cols={cols}
       card={config.card}
       getKey={config.getKey}
-      selectedIds={config.bulkActions ? selectedIds : undefined}
-      onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
       onActivate={config.onItemActivate}
     />
@@ -384,8 +386,6 @@
       cols={cols}
       card={config.card}
       getKey={config.getKey}
-      selectedIds={config.bulkActions ? selectedIds : undefined}
-      onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
       onActivate={config.onItemActivate}
     />
