@@ -2,7 +2,7 @@
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { Image as ImageIcon } from "@lucide/svelte";
+  import { Image as ImageIcon, Video as VideoIcon } from "@lucide/svelte";
   import { Checkbox } from "@obscura/ui-svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
@@ -14,11 +14,15 @@
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
+  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
+  import { toApiUrl } from "$lib/api/core";
   import { deleteImage, fetchImages as fetchMoreImages, updateImage } from "$lib/api/media";
   import { mergeUniquePage } from "$lib/pagination/load-more";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
+
+  type ImageViewMode = "grid" | "list" | "feed";
 
   let { data }: { data: PageData } = $props();
 
@@ -150,7 +154,7 @@
 
   const presetsApi = createServerPresets("images:filterPresets");
   // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
+  const viewPrefs = createServerPrefs<{ cols: number; viewMode: ImageViewMode }>(
     "images:view",
     {
       cols: 8,
@@ -158,7 +162,11 @@
     },
     data.viewPrefs,
   );
-  const viewMode = $derived(viewPrefs.current.viewMode);
+  const viewMode = $derived(
+    viewPrefs.current.viewMode === "list" || viewPrefs.current.viewMode === "feed"
+      ? viewPrefs.current.viewMode
+      : "grid",
+  );
   let activePresetId = $state<string | null>(null);
   // svelte-ignore state_referenced_locally
   let loadedImages = $state.raw(data.images);
@@ -457,7 +465,8 @@
     {sortOptions}
     {viewMode}
     onViewModeChange={(v: ViewMode) =>
-      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
+      viewPrefs.update({ viewMode: v === "feed" ? "feed" : v === "list" ? "list" : "grid" })}
+    showFeedView
     sortBy={data.sort}
     sortDir={data.order}
     onSortChange={(s: string, d?: SortDir) => updateUrl({ sort: s, order: d ?? data.order })}
@@ -605,6 +614,53 @@
         </div>
       {/each}
     </div>
+  {:else if viewMode === "feed"}
+    <div class="image-feed" aria-label="Image feed">
+      {#each loadedImages as img, i (img.id)}
+        {@const src = toApiUrl(img.thumbnailPath)}
+        <article class="image-feed-item">
+          <button
+            type="button"
+            onclick={() => openImage(img.id)}
+            class="image-feed-media"
+            title={img.title}
+          >
+            {#if src}
+              <NsfwBlur isNsfw={img.isNsfw} class="flex h-full w-full items-center justify-center">
+                <img
+                  src={src}
+                  alt={img.title}
+                  loading={i < 2 ? "eager" : "lazy"}
+                  decoding="async"
+                  class="max-h-full max-w-full object-contain"
+                />
+              </NsfwBlur>
+            {:else}
+              <div class="flex h-full w-full items-center justify-center text-text-disabled">
+                <ImageIcon class="h-10 w-10" />
+              </div>
+            {/if}
+            {#if img.isVideo}
+              <span
+                class="pointer-events-none absolute left-2 top-2 z-10 inline-flex items-center gap-1 border border-accent-500/30 bg-black/70 px-1.5 py-1 text-[0.58rem] font-mono uppercase tracking-[0.12em] text-accent-100"
+                title="Animated image"
+              >
+                <VideoIcon class="h-3 w-3" />
+                Animated
+              </span>
+            {/if}
+          </button>
+          <div class="image-feed-caption">
+            <h3 class="truncate text-[0.78rem] font-medium text-text-primary">{img.title}</h3>
+            {#if img.width && img.height}
+              <span class="font-mono text-[0.62rem] text-text-disabled">
+                {img.width}x{img.height}
+              </span>
+            {/if}
+          </div>
+        </article>
+      {/each}
+    </div>
   {:else}
     <div class="image-masonry" style:--col-count={imageMasonryColumnCount}>
       {#each imageMasonryColumns as column, columnIndex (columnIndex)}
@@ -684,5 +740,52 @@
     width: 100%;
     overflow: hidden;
     background-color: var(--color-surface-1, #16161a);
+  }
+  .image-feed {
+    display: grid;
+    gap: 0.75rem;
+    overflow-anchor: none;
+  }
+  .image-feed-item {
+    display: grid;
+    gap: 0.35rem;
+    margin-inline: auto;
+    width: min(100%, 54rem);
+    scroll-margin-top: 4.5rem;
+  }
+  .image-feed-media {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: min(
+      48rem,
+      max(12rem, calc(100dvh - var(--obscura-mobile-bottom-clearance) - 4.5rem))
+    );
+    overflow: hidden;
+    border: 1px solid var(--color-border-subtle);
+    background: #040507;
+    box-shadow: var(--shadow-media-well);
+  }
+  .image-feed-caption {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-inline: 0.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .image-feed {
+      gap: 1rem;
+    }
+    .image-feed-media {
+      height: min(
+        52rem,
+        max(18rem, calc(100dvh - var(--obscura-desktop-bottom-clearance) - 5rem))
+      );
+    }
   }
 </style>

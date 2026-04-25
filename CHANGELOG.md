@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Uploads are back on the main media pages. Videos, Series, Images, and Audio now accept drag-and-drop or the Import button, with root views prompting for the destination library or audio library when the current page does not already imply one; gallery and audio detail views still upload into the folder currently being viewed.
 - Images now has its own main navigation tab for a flat all-images view. Galleries remains the grouped folder-style browser.
+- The flat Images view now includes a vertical Feed mode for mobile browsing, showing one large bounded image after another with infinite scroll.
 - The flat Images view can now filter by file type, animated/static media, and image dimensions, making mixed image libraries easier to narrow down.
 - The flat Images grid now preserves each image's natural shape in a stable masonry layout, so tall and wide images are easier to recognize while more results load in without reshuffling the existing cards.
 - Selecting an image from the flat Images view now opens the in-page lightbox instead of navigating away, and animated image playback controls live in the lightbox top bar with Space and M keyboard shortcuts.
@@ -22,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - Drag-and-drop upload zones plus Import buttons for the Videos, Series, Images, Audio, gallery detail, and audio library detail views.
+- A Feed view mode on the flat Images page for full-height vertical image browsing.
 - A root image upload endpoint now writes selected files directly into an image library root as unorganized flat images.
 - A `media_file_ignores` migration-backed table that records library-only deletes and keeps scan workers from reimporting ignored files.
 - A local `pnpm dev:seed-scroll` helper now seeds synthetic video rows for repeatable infinite-scroll testing in small development libraries.

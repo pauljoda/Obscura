@@ -8,6 +8,7 @@
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, {
     type AvailableItem,
+    type ViewMode as FilterViewMode,
   } from "$lib/components/FilterBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
@@ -165,7 +166,8 @@
     activePresetId = null;
   }
 
-  function onViewModeChange(v: ViewMode) {
+  function onViewModeChange(v: FilterViewMode) {
+    if (v === "feed") return;
     viewMode = v;
     activePresetId = null;
   }

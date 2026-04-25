@@ -1,6 +1,6 @@
 <script module lang="ts">
   export type SortDir = "asc" | "desc";
-  export type ViewMode = "grid" | "list" | "series";
+  export type ViewMode = "grid" | "list" | "series" | "feed";
 
   export interface SortOption<T extends string = string> {
     value: T;
@@ -45,6 +45,7 @@
     ArrowUpDown,
     LayoutGrid,
     LayoutList,
+    Rows3,
     FolderOpen,
     Search as SearchIcon,
     ChevronDown,
@@ -101,6 +102,7 @@
     onDeletePreset?: (id: string) => void;
     showViewToggle?: boolean;
     showSeriesView?: boolean;
+    showFeedView?: boolean;
     showSortControls?: boolean;
     defaultSortDir?: Record<string, SortDir>;
     filterSections?: FilterSectionKey[];
@@ -139,6 +141,7 @@
     onDeletePreset,
     showViewToggle = true,
     showSeriesView = false,
+    showFeedView = false,
     showSortControls = true,
     defaultSortDir = {},
     filterSections = [
@@ -361,6 +364,22 @@
           >
             <LayoutList class="h-3.5 w-3.5" />
           </button>
+          {#if showFeedView}
+            <button
+              type="button"
+              title="Feed view"
+              aria-label="Feed view"
+              onclick={() => onViewModeChange("feed")}
+              class={cn(
+                "flex h-7 w-7 items-center justify-center transition-colors duration-fast",
+                viewMode === "feed"
+                  ? "text-text-accent bg-accent-950"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-2",
+              )}
+            >
+              <Rows3 class="h-3.5 w-3.5" />
+            </button>
+          {/if}
           {#if showSeriesView}
             <button
               type="button"
