@@ -1,7 +1,6 @@
 import { invalidateAll } from "$app/navigation";
 import type {
   AudioLibraryListItemDto,
-  GalleryListItemDto,
   LibraryRootSummaryDto,
 } from "@obscura/contracts";
 import { fetchApi, uploadFile } from "$lib/api/core";
@@ -14,7 +13,6 @@ interface CreateUploaderOptions {
 
 type ExplicitDestination = {
   rootId?: string;
-  galleryId?: string;
   audioLibraryId?: string;
 };
 
@@ -22,21 +20,15 @@ export class Uploader {
   files = $state<UploadFileProgress[]>([]);
   isUploading = $state(false);
   candidateRoots = $state.raw<LibraryRootSummaryDto[]>([]);
-  candidateGalleries = $state.raw<GalleryListItemDto[]>([]);
   candidateAudioLibraries = $state.raw<AudioLibraryListItemDto[]>([]);
   private pendingFiles: File[] | null = null;
   private resolvedRootId: string | null = null;
-  private resolvedGalleryId: string | null = null;
   private resolvedAudioLibraryId: string | null = null;
 
   constructor(private options: CreateUploaderOptions) {}
 
   get needsRootPicker() {
     return this.candidateRoots.length > 0;
-  }
-
-  get needsGalleryPicker() {
-    return this.candidateGalleries.length > 0;
   }
 
   get needsAudioLibraryPicker() {
@@ -65,16 +57,16 @@ export class Uploader {
       return;
     }
 
-    if (target.kind === "image" && !target.galleryId) {
-      const galleries = await this.loadGalleries(files);
-      if (!galleries) return;
-      if (galleries.length === 1) {
-        this.resolvedGalleryId = galleries[0]!.id;
-        await this.runUploads(files, { galleryId: galleries[0]!.id });
+    if (target.kind === "image" && !target.galleryId && !target.libraryRootId) {
+      const roots = await this.loadImageRoots(files);
+      if (!roots) return;
+      if (roots.length === 1) {
+        this.resolvedRootId = roots[0]!.id;
+        await this.runUploads(files, { rootId: roots[0]!.id });
         return;
       }
       this.pendingFiles = files;
-      this.candidateGalleries = galleries;
+      this.candidateRoots = roots;
       return;
     }
 
@@ -104,19 +96,6 @@ export class Uploader {
   cancelRootPick = () => {
     this.pendingFiles = null;
     this.candidateRoots = [];
-    this.files = [];
-  };
-
-  confirmGalleryPick = async (galleryId: string) => {
-    const pending = this.consumePending();
-    this.candidateGalleries = [];
-    this.resolvedGalleryId = galleryId;
-    if (pending) await this.runUploads(pending, { galleryId });
-  };
-
-  cancelGalleryPick = () => {
-    this.pendingFiles = null;
-    this.candidateGalleries = [];
     this.files = [];
   };
 
@@ -156,19 +135,19 @@ export class Uploader {
     }
   }
 
-  private async loadGalleries(files: File[]) {
+  private async loadImageRoots(files: File[]) {
     try {
-      const resp = await fetchApi<{ galleries: GalleryListItemDto[] }>(
-        "/galleries?type=folder&limit=500",
+      const resp = await fetchApi<{ roots: LibraryRootSummaryDto[] }>(
+        "/libraries?scanImages=true&enabled=true",
       );
-      const galleries = resp.galleries ?? [];
-      if (galleries.length === 0) {
-        this.failAll(files, "No folder-backed gallery can receive image uploads");
+      const roots = resp.roots ?? [];
+      if (roots.length === 0) {
+        this.failAll(files, "No enabled image library root can receive uploads");
         return null;
       }
-      return galleries;
+      return roots;
     } catch (error) {
-      this.failAll(files, error instanceof Error ? error.message : "Could not load galleries");
+      this.failAll(files, error instanceof Error ? error.message : "Could not load libraries");
       return null;
     }
   }
@@ -246,9 +225,13 @@ export class Uploader {
     }
 
     if (target.kind === "image") {
-      const galleryId = explicit.galleryId ?? target.galleryId ?? this.resolvedGalleryId;
-      if (!galleryId) throw new Error("No gallery selected for image upload");
-      await uploadFile(`/galleries/${galleryId}/images/upload`, file);
+      if (target.galleryId) {
+        await uploadFile(`/galleries/${target.galleryId}/images/upload`, file);
+        return;
+      }
+      const libraryRootId = explicit.rootId ?? target.libraryRootId ?? this.resolvedRootId;
+      if (!libraryRootId) throw new Error("No library root selected for image upload");
+      await uploadFile("/images/upload", file, { libraryRootId });
       return;
     }
 

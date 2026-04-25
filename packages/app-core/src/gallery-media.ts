@@ -21,7 +21,7 @@ import {
   getGeneratedGalleryDir,
   getGeneratedImageDir,
 } from "@obscura/media-core";
-import { NotFoundError, ValidationError } from "./errors";
+import { InternalError, NotFoundError, ValidationError } from "./errors";
 import { buildHierarchyScopeConditions } from "./hierarchy";
 import { getImagePreviewPath, isVideoImageFormat } from "./image-media";
 import {
@@ -64,6 +64,7 @@ const {
   imagePerformers,
   imageTags,
   performers,
+  libraryRoots,
   tags,
   studios,
 } = schema;
@@ -1011,6 +1012,80 @@ export async function uploadImageWrite(
     title: created.title,
     filePath: created.filePath,
     galleryId: gallery.id,
+  };
+}
+
+export async function uploadRootImageWrite(
+  db: AppDb,
+  libraryRootId: string,
+  file: UploadFileInput,
+) {
+  const [root] = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.id, libraryRootId))
+    .limit(1);
+  if (!root) throw new NotFoundError("Library root not found");
+  if (!root.scanImages) {
+    throw new ValidationError(
+      "Selected library root is not configured to receive image uploads",
+    );
+  }
+  if (!root.enabled) {
+    throw new ValidationError("Selected library root is disabled");
+  }
+  if (!root.path) {
+    throw new InternalError("Library root is missing a filesystem path");
+  }
+
+  await assertDirExists(root.path);
+  const { safeName } = validateUploadInput(file, "image");
+  const dest = await resolveCollisionSafePath(root.path, safeName);
+  const { bytesWritten } = await writeUploadBuffer(dest, file.buffer);
+
+  const [created] = await db
+    .insert(images)
+    .values({
+      title: fileNameToTitle(dest),
+      filePath: dest,
+      fileSize: bytesWritten,
+      galleryId: null,
+      organized: false,
+      isNsfw: root.isNsfw ?? false,
+    })
+    .returning({ id: images.id, title: images.title, filePath: images.filePath });
+  if (!created) {
+    throw new InternalError("Failed to create image row after upload");
+  }
+
+  const target = {
+    type: "image" as const,
+    id: created.id,
+    label: created.title,
+  };
+  const trigger = {
+    by: "manual" as const,
+    label: `Queued after upload to ${root.label}`,
+  };
+  await enqueueQueueJob(db, {
+    queueName: "image-thumbnail",
+    data: { imageId: created.id },
+    target,
+    trigger,
+  });
+  await enqueueQueueJob(db, {
+    queueName: "image-fingerprint",
+    data: { imageId: created.id },
+    target,
+    trigger,
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    filePath: created.filePath,
+    libraryRootId: root.id,
+    galleryId: null,
   };
 }
 

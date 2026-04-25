@@ -53,18 +53,6 @@
   onCancel={uploader.cancelRootPick}
 />
 <DestinationPicker
-  open={uploader.needsGalleryPicker}
-  title="Choose a gallery"
-  description="Pick the folder-backed gallery these image files should land in."
-  items={uploader.candidateGalleries.map((gallery) => ({
-    id: gallery.id,
-    title: gallery.title,
-    subtitle: `${gallery.imageCount} image${gallery.imageCount === 1 ? "" : "s"}`,
-  }))}
-  onConfirm={uploader.confirmGalleryPick}
-  onCancel={uploader.cancelGalleryPick}
-/>
-<DestinationPicker
   open={uploader.needsAudioLibraryPicker}
   title="Choose an audio library"
   description="Pick the library these tracks should land in."

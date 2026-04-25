@@ -11,6 +11,7 @@ describe("upload target metadata", () => {
     const cases: [UploadTarget, string][] = [
       [{ kind: "video", libraryRootId: "root-1" }, "video"],
       [{ kind: "video", videoSeriesId: "series-1", seasonNumber: 2 }, "video"],
+      [{ kind: "image", libraryRootId: "root-1" }, "image"],
       [{ kind: "image", galleryId: "gallery-1" }, "image"],
       [{ kind: "audio", audioLibraryId: "audio-1" }, "audio"],
     ];

@@ -6,7 +6,7 @@ import type {
 
 export type UploadTarget =
   | { kind: "video"; libraryRootId?: string; videoSeriesId?: string; seasonNumber?: number | null }
-  | { kind: "image"; galleryId?: string }
+  | { kind: "image"; libraryRootId?: string; galleryId?: string }
   | { kind: "audio"; audioLibraryId?: string };
 
 export type UploadCategory = "video" | "image" | "audio";
