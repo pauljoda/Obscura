@@ -3,7 +3,6 @@
     AlertTriangle,
     Edit3,
     FileText,
-    Film,
     Image as ImageIcon,
     Loader2,
     Star,
@@ -20,8 +19,6 @@
     updateTag,
     uploadTagImage,
   } from "$lib/api/entities";
-  import type { VideoListItem } from "$lib/api/types";
-  import type { GalleryListItemDto, ImageListItemDto } from "@obscura/contracts";
   import { page } from "$app/state";
   import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
   import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
