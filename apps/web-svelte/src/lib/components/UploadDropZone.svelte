@@ -100,7 +100,7 @@
   {#if children}{@render children()}{/if}
 
   {#if isDragging && enabled}
-    <div class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-bg/80 backdrop-blur-sm">
+    <div class="pointer-events-none fixed inset-0 z-[80] flex items-center justify-center bg-bg/80 backdrop-blur-sm">
       <div class="flex flex-col items-center gap-3 border border-border-accent bg-surface-1/95 px-10 py-8 shadow-[var(--shadow-glow-accent-strong)]">
         <UploadCloud class="h-10 w-10 text-text-accent" />
         <div class="text-sm font-medium text-text-primary">

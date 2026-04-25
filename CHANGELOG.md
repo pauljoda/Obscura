@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Video page drag-and-drop now keeps the “Drop files to import” panel centered in the visible viewport instead of centering it somewhere down the full scrollable grid.
 - Season-scoped series uploads now pass the active season number through the video upload route and write to the season folder when the user is viewing one.
 - Bulk delete actions for videos, images, galleries, and audio libraries now show the library-only vs. disk-delete confirmation flow where source files can be removed.
 - Videos infinite scroll now carries the current NSFW visibility mode into load-more requests and routes the visible fallback control through the same loader.
