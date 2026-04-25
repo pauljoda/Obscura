@@ -107,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `docs/design-language.md` — refreshed Dark Room design direction reference.
 - Documentation site now follows the Dark Room design language end-to-end: cinematic homepage with hero, capability strip, three-track Pathways grid, six-card Features grid, alternating Showcase rows, and a CTA strip; brass-accented sidebar with glowing active markers, LED-style admonitions, instrument-panel tables, glass pagination cards, and a typographic rhythm tuned for long-form reading.
 - Documentation site fully fleshed out across four tracks (Users, Developers, Plugins, Advanced — 23 pages total): expanded Quick Start / First Boot / Library Organization / Browsing / Playback / Identify & Scrape / Operations / Settings / Upgrading; Architecture / Monorepo / Database / API & Jobs / HLS Streaming / Contributing; Plugin System Overview / Manifest Reference / Capabilities / TypeScript Plugin / Python Plugin / Stash Compatibility / Publishing; pHash Contribution / StashBox Endpoints / Troubleshooting. Every page is illustrated where it makes sense (28 app screenshots) and code-blocked where it teaches a contract.
+- Documentation site mobile navigation drawer now opens to full height with the Dark Room background — fixes a Chromium containing-block trap caused by `backdrop-filter` on the navbar.
 
 ## [0.19.0] - 2026-04-12
 ### What's New

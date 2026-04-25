@@ -197,6 +197,45 @@ body {
   box-shadow: 0 1px 0 rgba(196, 154, 90, 0.05);
 }
 
+/* Mobile sidebar — backdrop-filter on .navbar creates a containing block in
+ * Chromium that traps fixed-positioned descendants. Force the sidebar back to
+ * the viewport so the drawer expands to full height. */
+.navbar-sidebar {
+  height: 100dvh;
+  height: 100vh;
+  background: linear-gradient(180deg, var(--obscura-surface-1), var(--obscura-bg));
+  border-right: 1px solid var(--obscura-border-accent);
+}
+
+.navbar-sidebar__brand {
+  background: rgba(7, 8, 11, 0.85);
+  border-bottom: 1px solid var(--obscura-border-subtle);
+  box-shadow: inset 0 -1px 0 rgba(196, 154, 90, 0.08);
+}
+
+.navbar-sidebar__items {
+  background: transparent;
+}
+
+.navbar-sidebar__back {
+  background: rgba(196, 154, 90, 0.06);
+  color: var(--obscura-brass-300);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--obscura-border-subtle);
+}
+
+.navbar-sidebar .menu__link {
+  color: var(--obscura-text-secondary);
+}
+
+.navbar-sidebar .menu__link--active {
+  color: var(--obscura-brass-300);
+}
+
 .navbar__title {
   font-family: var(--ifm-heading-font-family);
   font-weight: 800;
