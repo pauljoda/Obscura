@@ -11,6 +11,20 @@
   let { class: className, size = 28, alt = "Obscura" }: Props = $props();
   const nsfw = useNsfw();
 
+  /*
+   * SVG <defs> ids must be unique per document, otherwise url(#id) refs
+   * resolve to the first matching element — which is often inside a
+   * display:none copy of the same logo (e.g. the desktop-only sidebar
+   * mark when viewing on mobile). Chromium fails to paint gradients
+   * sourced from a hidden subtree, which left the brass polygons
+   * empty and the whole mark looking flat black on mobile.
+   */
+  const uid = $props.id();
+  const idBrass = `brass-${uid}`;
+  const idBlade = `blade-fill-${uid}`;
+  const idGlow = `glow-${uid}`;
+  const idRing = `ring-fill-${uid}`;
+
   function ringStyle(mode: NsfwMode) {
     switch (mode) {
       case "show":
@@ -36,32 +50,32 @@
   aria-label={alt}
 >
   <defs>
-    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id={idBrass} x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#ddb477" />
       <stop offset="50%" stop-color="#c79b5c" />
       <stop offset="100%" stop-color="#8c6c32" />
     </linearGradient>
-    <radialGradient id="blade-fill" cx="256" cy="256" r="190" gradientUnits="userSpaceOnUse">
+    <radialGradient id={idBlade} cx="256" cy="256" r="190" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#6b5225" />
       <stop offset="45%" stop-color="#c79b5c" />
       <stop offset="100%" stop-color="#ddb477" />
     </radialGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+    <radialGradient id={idGlow} cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#c79b5c" stop-opacity="0.15" />
       <stop offset="100%" stop-color="#c79b5c" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="ring-fill" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id={idRing} x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#3d3540" />
       <stop offset="50%" stop-color="#1f2533" />
       <stop offset="100%" stop-color="#11151c" />
     </linearGradient>
   </defs>
 
-  <circle cx="256" cy="256" r="240" fill="url(#glow)" />
+  <circle cx="256" cy="256" r="240" fill="url(#{idGlow})" />
 
   <circle
     cx="256" cy="256" r="220"
-    fill="url(#ring-fill)"
+    fill="url(#{idRing})"
     stroke={ring.stroke}
     stroke-opacity={ring.strokeOpacity}
     stroke-width={nsfw.mode === "off" ? 2 : 5}
@@ -80,14 +94,14 @@
 
   <circle cx="256" cy="256" r="190" fill="#08090c" />
 
-  <polygon points="256,78 278.4,205.8 233.6,205.8" fill="url(#blade-fill)" opacity="0.88" />
-  <polygon points="410.2,167 310.7,250.3 288.3,211.5" fill="url(#blade-fill)" opacity="0.88" />
-  <polygon points="410.2,345 288.3,300.5 310.7,261.7" fill="url(#blade-fill)" opacity="0.88" />
-  <polygon points="256,434 233.6,306.2 278.4,306.2" fill="url(#blade-fill)" opacity="0.88" />
-  <polygon points="101.8,345 201.3,261.7 223.7,300.5" fill="url(#blade-fill)" opacity="0.88" />
-  <polygon points="101.8,167 223.7,211.5 201.3,250.3" fill="url(#blade-fill)" opacity="0.88" />
+  <polygon points="256,78 278.4,205.8 233.6,205.8" fill="url(#{idBlade})" opacity="0.88" />
+  <polygon points="410.2,167 310.7,250.3 288.3,211.5" fill="url(#{idBlade})" opacity="0.88" />
+  <polygon points="410.2,345 288.3,300.5 310.7,261.7" fill="url(#{idBlade})" opacity="0.88" />
+  <polygon points="256,434 233.6,306.2 278.4,306.2" fill="url(#{idBlade})" opacity="0.88" />
+  <polygon points="101.8,345 201.3,261.7 223.7,300.5" fill="url(#{idBlade})" opacity="0.88" />
+  <polygon points="101.8,167 223.7,211.5 201.3,250.3" fill="url(#{idBlade})" opacity="0.88" />
 
-  <circle cx="256" cy="256" r="100" fill="none" stroke="url(#brass)" stroke-width="2.5" stroke-opacity="0.5" />
+  <circle cx="256" cy="256" r="100" fill="none" stroke="url(#{idBrass})" stroke-width="2.5" stroke-opacity="0.5" />
   <circle cx="256" cy="256" r="80" fill="#08090c" />
   <circle cx="256" cy="256" r="80" fill="none" stroke="#c79b5c" stroke-width="1.5" stroke-opacity="0.3" />
   <circle cx="256" cy="256" r="65" fill="none" stroke="#c79b5c" stroke-width="0.75" stroke-opacity="0.15" />
