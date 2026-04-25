@@ -14,6 +14,7 @@
   import FilterSection from "$lib/components/FilterSection.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import {
     deleteAudioLibrary,
     fetchAudioLibraries as fetchMoreAudioLibraries,
@@ -251,11 +252,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedLibraries.map((library) => library.id));
-      const nextLibraries = response.items.filter((library) => !existing.has(library.id));
-      loadedLibraries = [...loadedLibraries, ...nextLibraries];
-      loadedTotal =
-        response.items.length === 0 ? loadedStart + loadedLibraries.length : response.total;
+      const merged = mergeUniquePage({
+        current: loadedLibraries,
+        incoming: response.items,
+        loadedStart,
+        total: response.total,
+      });
+      loadedLibraries = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more audio libraries.";
     } finally {

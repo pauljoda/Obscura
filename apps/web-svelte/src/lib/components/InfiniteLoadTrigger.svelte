@@ -7,6 +7,7 @@
     loading: boolean;
     error?: string | null;
     nextHref: string;
+    loadKey?: string | number;
     label?: string;
     onLoad: () => void | Promise<void>;
   }
@@ -16,16 +17,20 @@
     loading,
     error = null,
     nextHref,
+    loadKey,
     label = "Load more",
     onLoad,
   }: Props = $props();
 
-  const sentinel = elementInView({ rootMargin: "900px" });
+  const sentinel = elementInView({ rootMargin: "1800px 0px" });
+  const currentLoadKey = $derived(loadKey ?? nextHref);
+  let lastTriggeredKey: string | number | undefined;
 
   $effect(() => {
-    if (sentinel.inView && hasMore && !loading && !error) {
-      void onLoad();
-    }
+    if (!sentinel.inView || !hasMore || loading || error) return;
+    if (lastTriggeredKey === currentLoadKey) return;
+    lastTriggeredKey = currentLoadKey;
+    void onLoad();
   });
 </script>
 

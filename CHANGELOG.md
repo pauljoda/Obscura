@@ -9,11 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### What's New
 
 - Library browsing now keeps loading more cards as you scroll across Videos, Series, Actors, Galleries, Images, Collections, and Audio Libraries, without page-number footers interrupting the bottom of the list. Upgraded libraries that still point at legacy scene thumbnail or trickplay paths now show those assets again instead of flooding the console with 404s.
+- Infinite scrolling now starts fetching farther before the bottom of library pages and stops cleanly if a backend page repeats already-loaded cards, so the list no longer sits forever on a visible Loading footer.
+
+### Added
+
+- A local `pnpm dev:seed-scroll` helper now seeds synthetic video rows for repeatable infinite-scroll testing in small development libraries.
 
 ### Fixed
 
 - Videos infinite scroll now carries the current NSFW visibility mode into load-more requests and routes the visible fallback control through the same loader.
 - Series, Actors, Galleries, Images, Collections, and Audio Libraries now use the same offset-based infinite loader as Videos instead of manual Prev/Next page navigation.
+- Library infinite scroll now guards each load target so the same page cannot be auto-requested repeatedly, and all major entity grids treat duplicate load-more responses as end-of-list instead of spinning at the footer.
 - Legacy `/assets/scenes/...` card, sprite, trickplay, and custom thumbnail URLs now resolve from old scene cache directories after the SvelteKit cutover.
 
 ## [0.20.0] - 2026-04-24

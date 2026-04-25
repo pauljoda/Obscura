@@ -15,6 +15,7 @@
     fetchVideoCards as fetchMoreVideoCards,
     updateVideo,
   } from "$lib/api/videos";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     EXCLUSIVE_FILTER_TYPES,
@@ -369,10 +370,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedVideos.map((video) => video.id));
-      const nextVideos = response.videos.filter((video) => !existing.has(video.id));
-      loadedVideos = [...loadedVideos, ...nextVideos];
-      loadedTotal = response.videos.length === 0 ? loadedStart + loadedVideos.length : response.total;
+      const merged = mergeUniquePage({
+        current: loadedVideos,
+        incoming: response.videos,
+        loadedStart,
+        total: response.total,
+      });
+      loadedVideos = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more videos.";
     } finally {

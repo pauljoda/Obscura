@@ -10,6 +10,7 @@
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import { deleteImage, fetchImages as fetchMoreImages, updateImage } from "$lib/api/media";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
@@ -289,11 +290,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedImages.map((image) => image.id));
-      const nextImages = response.images.filter((image) => !existing.has(image.id));
-      loadedImages = [...loadedImages, ...nextImages];
-      loadedTotal =
-        response.images.length === 0 ? loadedStart + loadedImages.length : response.total;
+      const merged = mergeUniquePage({
+        current: loadedImages,
+        incoming: response.images,
+        loadedStart,
+        total: response.total,
+      });
+      loadedImages = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more images.";
     } finally {

@@ -10,6 +10,7 @@
   import CollectionThumbnail from "$lib/components/thumbnails/CollectionThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import { deleteCollection, fetchCollections as fetchMoreCollections } from "$lib/api/media";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -184,11 +185,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedCollections.map((collection) => collection.id));
-      const nextCollections = response.items.filter((collection) => !existing.has(collection.id));
-      loadedCollections = [...loadedCollections, ...nextCollections];
-      loadedTotal =
-        response.items.length === 0 ? loadedStart + loadedCollections.length : response.total;
+      const merged = mergeUniquePage({
+        current: loadedCollections,
+        incoming: response.items,
+        loadedStart,
+        total: response.total,
+      });
+      loadedCollections = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more collections.";
     } finally {

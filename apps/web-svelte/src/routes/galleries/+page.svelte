@@ -10,6 +10,7 @@
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import { deleteGallery, fetchGalleries as fetchMoreGalleries, updateGallery } from "$lib/api/media";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -286,11 +287,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedGalleries.map((gallery) => gallery.id));
-      const nextGalleries = response.galleries.filter((gallery) => !existing.has(gallery.id));
-      loadedGalleries = [...loadedGalleries, ...nextGalleries];
-      loadedTotal =
-        response.galleries.length === 0 ? loadedStart + loadedGalleries.length : response.total;
+      const merged = mergeUniquePage({
+        current: loadedGalleries,
+        incoming: response.galleries,
+        loadedStart,
+        total: response.total,
+      });
+      loadedGalleries = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more galleries.";
     } finally {

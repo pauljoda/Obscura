@@ -19,6 +19,7 @@
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
   import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
@@ -270,15 +271,14 @@
         limit: data.pageSize,
         offset,
       });
-      const existing = new Set(loadedPerformers.map((performer) => performer.id));
-      const nextPerformers = response.performers.filter(
-        (performer) => !existing.has(performer.id),
-      );
-      loadedPerformers = [...loadedPerformers, ...nextPerformers];
-      loadedTotal =
-        response.performers.length === 0
-          ? loadedStart + loadedPerformers.length
-          : response.total;
+      const merged = mergeUniquePage({
+        current: loadedPerformers,
+        incoming: response.performers,
+        loadedStart,
+        total: response.total,
+      });
+      loadedPerformers = merged.items;
+      loadedTotal = merged.total;
     } catch {
       loadMoreError = "Could not load more actors.";
     } finally {

@@ -18,6 +18,7 @@
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
+  import { mergeUniquePage } from "$lib/pagination/load-more";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import {
@@ -451,11 +452,14 @@
           limit: data.pageSize,
           offset,
         });
-        const existing = new Set(loadedSeries.map((series) => series.id));
-        const nextSeries = response.items.filter((series) => !existing.has(series.id));
-        loadedSeries = [...loadedSeries, ...nextSeries];
-        loadedTotal =
-          response.items.length === 0 ? loadedStart + loadedSeries.length : response.total;
+        const merged = mergeUniquePage({
+          current: loadedSeries,
+          incoming: response.items,
+          loadedStart,
+          total: response.total,
+        });
+        loadedSeries = merged.items;
+        loadedTotal = merged.total;
       } else if (showsVideos) {
         const response = await fetchMoreVideoCards({
           search: data.search || undefined,
@@ -468,11 +472,14 @@
           offset,
           nsfw: data.initialNsfwMode,
         });
-        const existing = new Set(loadedVideos.map((video) => video.id));
-        const nextVideos = response.videos.filter((video) => !existing.has(video.id));
-        loadedVideos = [...loadedVideos, ...nextVideos];
-        loadedTotal =
-          response.videos.length === 0 ? loadedStart + loadedVideos.length : response.total;
+        const merged = mergeUniquePage({
+          current: loadedVideos,
+          incoming: response.videos,
+          loadedStart,
+          total: response.total,
+        });
+        loadedVideos = merged.items;
+        loadedTotal = merged.total;
       }
     } catch {
       loadMoreError = "Could not load more items.";
