@@ -4,6 +4,7 @@
   import { onMount } from "svelte";
   import { Image as ImageIcon } from "@lucide/svelte";
   import { Checkbox } from "@obscura/ui-svelte";
+  import type { ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -168,9 +169,20 @@
   let deleteDialogOpen = $state(false);
   let selectedImageIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
+  let viewportWidth = $state(0);
   const visibleImageIds = $derived(loadedImages.map((image) => image.id));
   const allVisibleSelected = $derived(
     visibleImageIds.length > 0 && visibleImageIds.every((id) => selectedImageIds.has(id)),
+  );
+  const imageMasonryColumnCount = $derived.by(() => {
+    const cols = viewPrefs.current.cols;
+    if (viewportWidth >= 1024) return cols;
+    if (viewportWidth >= 768) return Math.max(4, Math.min(cols, 10));
+    if (viewportWidth >= 640) return Math.max(3, Math.min(cols, 6));
+    return Math.max(2, Math.min(cols, 4));
+  });
+  const imageMasonryColumns = $derived.by(() =>
+    buildImageMasonryColumns(loadedImages, imageMasonryColumnCount),
   );
 
   onMount(() => {
@@ -242,6 +254,31 @@
 
   function deletePreset(id: string) {
     presetsApi.save(presetsApi.presets.filter((p) => p.id !== id));
+  }
+
+  function imageAspect(image: ImageListItemDto) {
+    if (!image.width || !image.height || image.height <= 0) return 1;
+    return Math.max(0.25, Math.min(4, image.width / image.height));
+  }
+
+  function buildImageMasonryColumns(images: ImageListItemDto[], columnCount: number) {
+    const safeCount = Math.max(1, Math.round(columnCount));
+    const columns = Array.from({ length: safeCount }, () => ({
+      height: 0,
+      items: [] as { image: ImageListItemDto; aspect: number }[],
+    }));
+
+    for (const image of images) {
+      const aspect = imageAspect(image);
+      let target = columns[0]!;
+      for (const column of columns) {
+        if (column.height < target.height) target = column;
+      }
+      target.items.push({ image, aspect });
+      target.height += 1 / aspect;
+    }
+
+    return columns.map((column) => column.items);
   }
 
   function toggleSelectedImage(id: string) {
@@ -377,6 +414,8 @@
     }
   }
 </script>
+
+<svelte:window bind:innerWidth={viewportWidth} />
 
 <svelte:head>
   <title>Obscura</title>
@@ -546,24 +585,31 @@
       {/each}
     </div>
   {:else}
-    <div class="thumb-grid" style:--col-count={viewPrefs.current.cols}>
-      {#each loadedImages as img (img.id)}
-        <a
-          href={`/images/${img.id}`}
-          class="block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
-          title={img.title}
-        >
-          <ImageThumbnail
-            title={img.title}
-            thumbnailPath={img.thumbnailPath}
-            previewPath={img.previewPath}
-            isNsfw={img.isNsfw}
-            isVideo={img.isVideo}
-            width={img.width}
-            height={img.height}
-            size="grid"
-          />
-        </a>
+    <div class="image-masonry" style:--col-count={imageMasonryColumnCount}>
+      {#each imageMasonryColumns as column, columnIndex (columnIndex)}
+        <div class="image-masonry-column">
+          {#each column as item (item.image.id)}
+            {@const img = item.image}
+            <a
+              href={`/images/${img.id}`}
+              class="image-masonry-item block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+              title={img.title}
+              style:aspect-ratio="{item.aspect}"
+            >
+              <ImageThumbnail
+                title={img.title}
+                thumbnailPath={img.thumbnailPath}
+                previewPath={img.previewPath}
+                isNsfw={img.isNsfw}
+                isVideo={img.isVideo}
+                width={img.width}
+                height={img.height}
+                size="grid"
+                aspectClass="h-full w-full"
+              />
+            </a>
+          {/each}
+        </div>
       {/each}
     </div>
   {/if}
@@ -591,24 +637,20 @@
 />
 
 <style>
-  .thumb-grid {
+  .image-masonry {
     display: grid;
-    grid-template-columns: repeat(max(2, min(var(--col-count, 8), 4)), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--col-count, 2), minmax(0, 1fr));
     gap: 0.375rem;
   }
-  @media (min-width: 640px) {
-    .thumb-grid {
-      grid-template-columns: repeat(max(3, min(var(--col-count, 8), 6)), minmax(0, 1fr));
-    }
+  .image-masonry-column {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.375rem;
   }
-  @media (min-width: 768px) {
-    .thumb-grid {
-      grid-template-columns: repeat(max(4, min(var(--col-count, 8), 10)), minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1024px) {
-    .thumb-grid {
-      grid-template-columns: repeat(var(--col-count, 8), minmax(0, 1fr));
-    }
+  .image-masonry-item {
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--color-surface-1, #16161a);
   }
 </style>
