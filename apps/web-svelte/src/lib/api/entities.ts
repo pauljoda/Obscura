@@ -9,9 +9,13 @@ import type {
   TagItem,
 } from "./types";
 
-export async function fetchStudios(params?: { nsfw?: string }): Promise<{ studios: StudioItem[] }> {
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
+
+export async function fetchStudios(params?: { nsfw?: string }, options?: RequestOptions): Promise<{ studios: StudioItem[] }> {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return fetchApi(`/studios${qs}`);
+  return fetchApi(`/studios${qs}`, { signal: options?.signal });
 }
 
 export async function findOrCreateStudio(data: {
@@ -43,7 +47,7 @@ export async function fetchPerformers(params?: {
   limit?: number;
   offset?: number;
   nsfw?: string;
-}): Promise<{ performers: PerformerItem[]; total: number; limit: number; offset: number }> {
+}, options?: RequestOptions): Promise<{ performers: PerformerItem[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString({
     search: params?.search,
     sort: params?.sort,
@@ -61,7 +65,7 @@ export async function fetchPerformers(params?: {
     nsfw: params?.nsfw,
   });
 
-  return fetchApi(`/performers${qs}`);
+  return fetchApi(`/performers${qs}`, { signal: options?.signal });
 }
 
 const FETCH_ALL_PERFORMERS_PAGE_SIZE = 2000;
@@ -87,9 +91,9 @@ export async function fetchAllPerformers(
   return { performers, total };
 }
 
-export async function fetchTags(params?: { nsfw?: string }): Promise<{ tags: TagItem[] }> {
+export async function fetchTags(params?: { nsfw?: string }, options?: RequestOptions): Promise<{ tags: TagItem[] }> {
   const qs = buildQueryString({ nsfw: params?.nsfw });
-  return fetchApi(`/tags${qs}`);
+  return fetchApi(`/tags${qs}`, { signal: options?.signal });
 }
 
 export async function fetchPerformerDetail(id: string, params?: { nsfw?: string }): Promise<PerformerDetail> {

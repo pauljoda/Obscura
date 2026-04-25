@@ -4,6 +4,7 @@ import type {
   AudioLibraryListItemDto,
   AudioLibraryPatchDto,
   AudioLibraryStatsDto,
+  AudioTrackListItemDto,
   AudioTrackPatchDto,
   GalleryDetailDto,
   GalleryListItemDto,
@@ -25,6 +26,10 @@ import type {
   PaginatedResponse,
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi, uploadFile } from "./core";
+
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
 
 export async function deleteImage(
   id: string,
@@ -61,7 +66,7 @@ export async function fetchGalleries(params?: {
   nsfw?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }> {
+}, options?: RequestOptions): Promise<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -87,7 +92,7 @@ export async function fetchGalleries(params?: {
     },
   );
 
-  return fetchApi(`/galleries${qs}`);
+  return fetchApi(`/galleries${qs}`, { signal: options?.signal });
 }
 
 export async function fetchAudioLibraries(params?: {
@@ -108,7 +113,7 @@ export async function fetchAudioLibraries(params?: {
   nsfw?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ items: AudioLibraryListItemDto[]; total: number }> {
+}, options?: RequestOptions): Promise<{ items: AudioLibraryListItemDto[]; total: number }> {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -133,7 +138,51 @@ export async function fetchAudioLibraries(params?: {
     },
   );
 
-  return fetchApi(`/audio-libraries${qs}`);
+  return fetchApi(`/audio-libraries${qs}`, { signal: options?.signal });
+}
+
+export async function fetchAudioTracks(params?: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  library?: string;
+  tag?: string | string[];
+  performer?: string | string[];
+  studio?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: string;
+  nsfw?: string;
+  limit?: number;
+  offset?: number;
+}, options?: RequestOptions): Promise<{ items: AudioTrackListItemDto[]; total: number }> {
+  const toList = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value : value ? [value] : undefined;
+  const qs = buildQueryString(
+    {
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      library: params?.library,
+      studio: params?.studio,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      organized: params?.organized,
+      nsfw: params?.nsfw,
+      limit: params?.limit,
+      offset: params?.offset,
+    },
+    {
+      tag: toList(params?.tag),
+      performer: toList(params?.performer),
+    },
+  );
+
+  return fetchApi(`/audio-tracks${qs}`, { signal: options?.signal });
 }
 
 export async function fetchAudioLibraryStats(
@@ -157,13 +206,14 @@ export async function fetchGalleryDetail(
 export async function fetchGalleryImages(
   id: string,
   params?: { limit?: number; offset?: number },
+  options?: RequestOptions,
 ): Promise<GalleryImagesPageDto> {
   const qs = buildQueryString({
     limit: params?.limit,
     offset: params?.offset,
   });
 
-  return fetchApi(`/galleries/${id}/images${qs}`);
+  return fetchApi(`/galleries/${id}/images${qs}`, { signal: options?.signal });
 }
 
 export async function fetchGalleryStats(): Promise<GalleryStatsDto> {
@@ -230,7 +280,7 @@ export async function fetchImages(params?: {
   organized?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
+}, options?: RequestOptions): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
   const qs = buildQueryString(
     {
       search: params?.search,
@@ -257,7 +307,7 @@ export async function fetchImages(params?: {
     },
   );
 
-  return fetchApi(`/images${qs}`);
+  return fetchApi(`/images${qs}`, { signal: options?.signal });
 }
 
 export async function fetchImageDetail(id: string): Promise<ImageDetailDto> {
@@ -410,10 +460,11 @@ export async function fetchCollections(params: {
   mode?: string;
   limit?: number;
   offset?: number;
-}) {
+}, options?: RequestOptions) {
   const qs = buildQueryString(params);
   return fetchApi<PaginatedResponse<CollectionListItemDto>>(
     `/collections${qs}`,
+    { signal: options?.signal },
   );
 }
 
@@ -428,10 +479,12 @@ export async function fetchCollectionItems(
     offset?: number;
     entityType?: string;
   } = {},
+  options?: RequestOptions,
 ) {
   const qs = buildQueryString(params);
   return fetchApi<PaginatedResponse<CollectionItemDto>>(
     `/collections/${id}/items${qs}`,
+    { signal: options?.signal },
   );
 }
 

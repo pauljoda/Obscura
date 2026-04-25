@@ -34,18 +34,24 @@ export interface FetchVideoCardsResponse {
   offset: number;
 }
 
+export interface RequestOptions {
+  signal?: AbortSignal;
+}
+
 export async function fetchVideos(
   params: FetchVideosParams,
+  options?: RequestOptions,
 ): Promise<FetchVideosResponse> {
   const qs = buildFetchVideosQuery(params);
-  return fetchApi(`/videos${qs}`);
+  return fetchApi(`/videos${qs}`, { signal: options?.signal });
 }
 
 export async function fetchVideoCards(
   params: Omit<FetchVideosParams, "view">,
+  options?: RequestOptions,
 ): Promise<FetchVideoCardsResponse> {
   const qs = buildFetchVideosQuery({ ...params, view: "card" });
-  return fetchApi(`/videos${qs}`);
+  return fetchApi(`/videos${qs}`, { signal: options?.signal });
 }
 
 const FETCH_ALL_PAGE_SIZE = 2000;
@@ -256,7 +262,7 @@ export async function fetchSeries(params?: {
   dateFrom?: string;
   dateTo?: string;
   organized?: string;
-}): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
+}, options?: RequestOptions): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
   const toList = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value : value ? [value] : undefined;
   const qs = buildQueryString(
@@ -281,7 +287,7 @@ export async function fetchSeries(params?: {
       performer: toList(params?.performer),
     },
   );
-  return fetchApi(`/video-series${qs}`);
+  return fetchApi(`/video-series${qs}`, { signal: options?.signal });
 }
 
 export async function fetchSeriesDetail(
