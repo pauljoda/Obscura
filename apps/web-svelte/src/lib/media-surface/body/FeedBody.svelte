@@ -37,6 +37,7 @@
         item={item}
         index={index}
         imageLoading={index < 3 ? "eager" : "lazy"}
+        layout="feed"
       />
     </div>
   {/each}

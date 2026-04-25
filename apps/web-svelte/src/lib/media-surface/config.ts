@@ -148,6 +148,10 @@ export type Fetcher<T, F extends string = string> = (
   args: FetchPageArgs<F>,
 ) => Promise<FetchPageResult<T>>;
 
+// ── Body layouts ──────────────────────────────────────────────────────
+
+export type BodyLayout = "grid" | "list" | "feed" | "masonry";
+
 // ── Card render contract ──────────────────────────────────────────────
 
 export interface CardProps<T> {
@@ -158,11 +162,10 @@ export interface CardProps<T> {
   selected?: boolean;
   /** Toggle selection; only present when bulkActions are configured. */
   onToggleSelect?: () => void;
+  /** The body layout currently rendering this card; cards that render
+   *  differently in list vs grid (e.g. a row vs a tile) read this. */
+  layout?: BodyLayout;
 }
-
-// ── Body layouts ──────────────────────────────────────────────────────
-
-export type BodyLayout = "grid" | "list" | "feed" | "masonry";
 
 // ── Top-level config ──────────────────────────────────────────────────
 

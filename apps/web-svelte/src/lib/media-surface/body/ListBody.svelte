@@ -43,6 +43,7 @@
         imageLoading={index < 8 ? "eager" : "lazy"}
         selected={selectedIds?.has(getKey(item))}
         onToggleSelect={onToggleSelect ? () => onToggleSelect(getKey(item)) : undefined}
+        layout="list"
       />
     </div>
   {/each}
