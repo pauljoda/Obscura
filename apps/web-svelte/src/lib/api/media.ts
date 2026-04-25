@@ -202,8 +202,12 @@ export async function createGallery(data: {
   });
 }
 
-export async function deleteGallery(id: string): Promise<{ ok: true }> {
-  return fetchApi(`/galleries/${id}`, { method: "DELETE" });
+export async function deleteGallery(
+  id: string,
+  deleteFile?: boolean,
+): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/galleries/${id}${qs}`, { method: "DELETE" });
 }
 
 export async function fetchImages(params?: {
@@ -295,8 +299,12 @@ export async function updateAudioLibrary(
   });
 }
 
-export async function deleteAudioLibrary(id: string): Promise<{ ok: true }> {
-  return fetchApi(`/audio-libraries/${id}`, { method: "DELETE" });
+export async function deleteAudioLibrary(
+  id: string,
+  deleteFile?: boolean,
+): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/audio-libraries/${id}${qs}`, { method: "DELETE" });
 }
 
 export async function uploadAudioLibraryCover(

@@ -6,9 +6,12 @@
   import { Badge, Checkbox } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteGallery, fetchGalleries as fetchMoreGalleries, updateGallery } from "$lib/api/media";
   import { mergeUniquePage } from "$lib/pagination/load-more";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
@@ -109,6 +112,7 @@
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
+  let deleteDialogOpen = $state(false);
   let selectedGalleryIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
   const visibleGalleryIds = $derived(loadedGalleries.map((gallery) => gallery.id));
@@ -212,15 +216,16 @@
       await invalidateAll();
     } finally {
       bulkBusy = false;
+      deleteDialogOpen = false;
     }
   }
 
-  async function deleteSelectedGalleries() {
+  async function deleteSelectedGalleries(deleteFromDisk = false) {
     const ids = [...selectedGalleryIds];
     if (ids.length === 0 || bulkBusy) return;
     bulkBusy = true;
     try {
-      await Promise.all(ids.map((id) => deleteGallery(id)));
+      await Promise.all(ids.map((id) => deleteGallery(id, deleteFromDisk)));
       clearSelectedGalleries();
       await invalidateAll();
     } finally {
@@ -307,6 +312,7 @@
   <title>Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "image" }}>
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4">
     <div>
@@ -316,7 +322,10 @@
       </h1>
       <p class="text-text-muted text-[0.78rem] mt-1">Browse galleries in your library</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
+    <div class="flex items-center gap-2">
+      <ImportButton target={{ kind: "image" }} />
+      <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
+    </div>
   </div>
 
   <FilterBar
@@ -363,7 +372,9 @@
       onSelectAll={selectAllVisibleGalleries}
       onClear={clearSelectedGalleries}
       onMarkNsfw={markSelectedGalleriesNsfw}
-      onDelete={deleteSelectedGalleries}
+      onDelete={() => {
+        deleteDialogOpen = true;
+      }}
     />
   {/if}
 
@@ -451,6 +462,18 @@
     onLoad={loadMoreGalleries}
   />
 </div>
+</UploadDropZone>
+
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="gallery"
+  count={selectedGalleryIds.size}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void deleteSelectedGalleries(false)}
+  onDeleteFromDisk={() => void deleteSelectedGalleries(true)}
+/>
 
 <style>
   .thumb-grid {

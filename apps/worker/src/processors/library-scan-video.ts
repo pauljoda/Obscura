@@ -13,6 +13,7 @@ import {
   type VideoClassificationEpisode,
   type VideoClassificationMovie,
 } from "@obscura/media-core";
+import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
 import { db, schema } from "../lib/db.js";
 import { libraryRoots, performers, tags } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
@@ -119,9 +120,11 @@ export async function processLibraryScan(job: Job): Promise<void> {
   const settings = await ensureLibrarySettingsRow();
 
   // Classify files. Classification is pure and fast.
-  const files = root.scanVideos
+  const discoveredFiles = root.scanVideos
     ? await discoverVideoFiles(root.path, root.recursive)
     : [];
+  const ignoredPaths = await listIgnoredMediaPathsUnderRoot(db, root.path);
+  const files = discoveredFiles.filter((filePath) => !ignoredPaths.has(path.resolve(filePath)));
 
   const gallerySfwOpts = Boolean(job.data.sfwOnly)
     ? { sfwOnly: true as const }

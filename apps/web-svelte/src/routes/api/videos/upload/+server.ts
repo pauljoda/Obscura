@@ -25,6 +25,14 @@ export const POST: RequestHandler = async ({ request }) => {
   };
   const seriesId =
     typeof form.get("seriesId") === "string" ? String(form.get("seriesId")) : null;
+  const seasonNumberRaw =
+    typeof form.get("seasonNumber") === "string"
+      ? String(form.get("seasonNumber"))
+      : null;
+  const seasonNumber =
+    seasonNumberRaw != null && /^\d+$/.test(seasonNumberRaw)
+      ? Number(seasonNumberRaw)
+      : undefined;
   const libraryRootId =
     typeof form.get("libraryRootId") === "string"
       ? String(form.get("libraryRootId"))
@@ -32,7 +40,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
   try {
     if (seriesId) {
-      return json(await uploadVideoEpisodeWrite(db, seriesId, input));
+      return json(
+        seasonNumber === undefined
+          ? await uploadVideoEpisodeWrite(db, seriesId, input)
+          : await uploadVideoEpisodeWrite(db, seriesId, input, { seasonNumber }),
+      );
     }
     if (!libraryRootId) {
       return json(

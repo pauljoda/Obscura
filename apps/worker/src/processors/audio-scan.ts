@@ -5,6 +5,7 @@ import {
   discoverAudioFilesAndDirs,
   fileNameToTitle,
 } from "@obscura/media-core";
+import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
 import { db, libraryRoots, schema } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingAudioTrackJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
@@ -43,6 +44,13 @@ export async function processAudioScan(job: Job) {
 
   const settings = await ensureLibrarySettingsRow();
   const discovery = await discoverAudioFilesAndDirs(root.path, root.recursive);
+  const ignoredPaths = await listIgnoredMediaPathsUnderRoot(db, root.path);
+  discovery.audioFiles = discovery.audioFiles.filter(
+    (filePath) => !ignoredPaths.has(path.resolve(filePath)),
+  );
+  discovery.dirs = [
+    ...new Set(discovery.audioFiles.map((filePath) => path.dirname(filePath))),
+  ];
   const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
     discovery.dirs,
     root.path,

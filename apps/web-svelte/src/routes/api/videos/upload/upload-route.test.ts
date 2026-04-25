@@ -119,6 +119,38 @@ describe("/api/videos/upload route", () => {
     });
   });
 
+  it("passes a season number for season-scoped series uploads", async () => {
+    uploadVideoEpisodeWrite.mockResolvedValue({
+      id: "video-episode-2",
+      title: "Season Upload",
+    });
+
+    const { POST } = await import("./+server");
+    const file = createFile("season-bytes", "episode-s02e01.mp4", "video/mp4");
+
+    const response = await POST({
+      request: {
+        formData: async () =>
+          ({
+            get: (key: string) =>
+              key === "seriesId" ? "series-1" : key === "seasonNumber" ? "2" : null,
+            getAll: (key: string) => (key === "file" ? [file] : []),
+          }) as FormData,
+      },
+    } as never);
+
+    expect(uploadVideoEpisodeWrite).toHaveBeenCalledWith(
+      db,
+      "series-1",
+      expect.objectContaining({
+        filename: "episode-s02e01.mp4",
+        mimetype: "video/mp4",
+      }),
+      { seasonNumber: 2 },
+    );
+    expect(response.status).toBe(200);
+  });
+
   it("routes root uploads to the movie writer", async () => {
     uploadVideoMovieWrite.mockResolvedValue({
       id: "video-movie-1",

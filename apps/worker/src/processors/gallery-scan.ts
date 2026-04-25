@@ -8,6 +8,7 @@ import {
   parseZipImageMembers,
   getGeneratedImageDir,
 } from "@obscura/media-core";
+import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
 import { db, images, galleries, libraryRoots } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
@@ -65,6 +66,19 @@ export async function processGalleryScan(job: Job) {
 
   const settings = await ensureLibrarySettingsRow();
   const discovery = await discoverImageFilesAndDirs(root.path, root.recursive);
+  const ignoredPaths = await listIgnoredMediaPathsUnderRoot(db, root.path);
+  discovery.imageFiles = discovery.imageFiles.filter(
+    (filePath) => !ignoredPaths.has(path.resolve(filePath)),
+  );
+  discovery.zipFiles = discovery.zipFiles.filter(
+    (filePath) => !ignoredPaths.has(path.resolve(filePath)),
+  );
+  discovery.dirs = [
+    ...new Set([
+      ...discovery.imageFiles.map((filePath) => path.dirname(filePath)),
+      ...discovery.zipFiles.map((filePath) => path.dirname(filePath)),
+    ]),
+  ];
   const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
     discovery.dirs,
     root.path,

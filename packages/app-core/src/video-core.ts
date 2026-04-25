@@ -55,6 +55,7 @@ import {
   videoEpisodeVisibleSql,
   videoMovieVisibleSql,
 } from "./library-root-visibility";
+import { ignoreMediaFilePath } from "./media-file-ignores";
 import {
   assertDirExists,
   resolveCollisionSafePath,
@@ -147,6 +148,10 @@ export interface VideoQueueJobInput {
 
 export interface VideoWriteDeps {
   enqueueJob?: (input: VideoQueueJobInput) => Promise<{ id: string } | null>;
+}
+
+export interface UploadVideoEpisodeOptions extends VideoWriteDeps {
+  seasonNumber?: number;
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -1764,6 +1769,8 @@ export async function deleteVideoWrite(
       try {
         if (existsSync(filePath)) await unlink(filePath);
       } catch {}
+    } else {
+      await ignoreMediaFilePath(db, { path: filePath, entityType: "video" });
     }
   }
 
@@ -1882,7 +1889,7 @@ export async function uploadVideoEpisodeWrite(
   db: AppDb,
   seriesId: string,
   file: VideoUploadInput,
-  deps: VideoWriteDeps = {},
+  options: UploadVideoEpisodeOptions = {},
 ) {
   const [series] = await db
     .select({
@@ -1897,16 +1904,21 @@ export async function uploadVideoEpisodeWrite(
     .limit(1);
   if (!series) throw new NotFoundError("Video folder not found");
 
-  await assertDirExists(series.folderPath);
+  const seasonNumber =
+    Number.isInteger(options.seasonNumber) && options.seasonNumber! >= 0
+      ? options.seasonNumber!
+      : 0;
+  const targetDir = await resolveEpisodeUploadDir(db, seriesId, series.folderPath, seasonNumber);
+  await assertDirExists(targetDir);
   const { safeName } = validateUploadMetadata(file, "video");
-  const dest = await resolveCollisionSafePath(series.folderPath, safeName);
+  const dest = await resolveCollisionSafePath(targetDir, safeName);
   const { bytesWritten } = await persistUploadedVideo(dest, file);
 
   let [season] = await db
     .select({ id: videoSeasons.id })
     .from(videoSeasons)
     .where(
-      and(eq(videoSeasons.seriesId, seriesId), eq(videoSeasons.seasonNumber, 0)),
+      and(eq(videoSeasons.seriesId, seriesId), eq(videoSeasons.seasonNumber, seasonNumber)),
     )
     .limit(1);
   if (!season) {
@@ -1914,8 +1926,9 @@ export async function uploadVideoEpisodeWrite(
       .insert(videoSeasons)
       .values({
         seriesId,
-        seasonNumber: 0,
-        title: series.title,
+        seasonNumber,
+        folderPath: seasonNumber === 0 ? null : targetDir,
+        title: seasonNumber === 0 ? series.title : `Season ${seasonNumber}`,
       })
       .returning({ id: videoSeasons.id });
     season = createdSeason;
@@ -1926,7 +1939,7 @@ export async function uploadVideoEpisodeWrite(
     .values({
       seriesId,
       seasonId: season!.id,
-      seasonNumber: 0,
+      seasonNumber,
       title: fileNameToTitle(dest),
       filePath: dest,
       fileSize: bytesWritten,
@@ -1942,7 +1955,7 @@ export async function uploadVideoEpisodeWrite(
     throw new InternalError("Failed to create video episode row after upload");
   }
 
-  const enqueue = deps.enqueueJob ?? defaultEnqueueJob(db);
+  const enqueue = options.enqueueJob ?? defaultEnqueueJob(db);
   const target = {
     type: "video_episode",
     id: created.id,
@@ -1982,4 +1995,32 @@ export async function uploadVideoEpisodeWrite(
     seriesId,
     libraryRootId: series.libraryRootId,
   };
+}
+
+async function resolveEpisodeUploadDir(
+  db: AppDb,
+  seriesId: string,
+  seriesFolderPath: string,
+  seasonNumber: number,
+) {
+  if (seasonNumber === 0) return seriesFolderPath;
+
+  const [season] = await db
+    .select({ folderPath: videoSeasons.folderPath })
+    .from(videoSeasons)
+    .where(and(eq(videoSeasons.seriesId, seriesId), eq(videoSeasons.seasonNumber, seasonNumber)))
+    .limit(1);
+  if (season?.folderPath) return season.folderPath;
+
+  const [episode] = await db
+    .select({ filePath: videoEpisodes.filePath })
+    .from(videoEpisodes)
+    .where(and(eq(videoEpisodes.seriesId, seriesId), eq(videoEpisodes.seasonNumber, seasonNumber)))
+    .orderBy(asc(videoEpisodes.filePath))
+    .limit(1);
+  if (episode?.filePath) return path.dirname(episode.filePath);
+
+  const dir = path.join(seriesFolderPath, `Season ${String(seasonNumber).padStart(2, "0")}`);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }

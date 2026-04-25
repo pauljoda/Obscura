@@ -31,6 +31,8 @@
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
@@ -38,6 +40,7 @@
   import TagsSection from "$lib/components/TagsSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import TrackListRow from "$lib/components/TrackListRow.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import {
     DateField,
     EditFormShell,
@@ -355,6 +358,7 @@
   <title>{library.title} — Audio — Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "audio", audioLibraryId: library.id }} enabled={Boolean(library.folderPath)}>
 <div class="space-y-6 pb-64 md:pb-60">
   <!-- ─── Hero ─────────────────────────────────────────────────── -->
   <section class="relative isolate overflow-hidden border border-border-subtle">
@@ -670,6 +674,11 @@
   <div class="grid grid-cols-1 gap-5">
     <div class="min-w-0 space-y-2">
       <HierarchySection title={`Tracks — ${visibleTrackCount}`}>
+        {#snippet action()}
+          {#if library.folderPath}
+            <ImportButton target={{ kind: "audio", audioLibraryId: library.id }} />
+          {/if}
+        {/snippet}
         {#if visibleTracks.length === 0}
           <div class="surface-panel p-8 text-center text-sm text-text-muted">
             No tracks in this library
@@ -715,64 +724,16 @@
     </div>
   </div>
 
-  {#if trackDeleteTarget}
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        class="absolute inset-0 bg-black/75 backdrop-blur-sm"
-        onclick={() => {
-          if (!trackDeleteLoading) trackDeleteTarget = null;
-        }}
-        aria-label="Close delete track dialog"
-      ></button>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Delete track"
-        class="relative z-10 w-full max-w-md surface-elevated p-6"
-      >
-        <div class="space-y-2">
-          <h2 class="text-base font-heading font-semibold text-text-primary">
-            Delete {trackDeleteTarget.title}
-          </h2>
-          <p class="text-[0.8rem] leading-relaxed text-text-muted">
-            Remove this track from the library, or delete the source file from disk as well. This
-            action cannot be undone.
-          </p>
-        </div>
-
-        <div class="mt-5 flex flex-col gap-2">
-          <button
-            type="button"
-            onclick={() => void confirmTrackDelete(false)}
-            disabled={trackDeleteLoading}
-            class="inline-flex w-full items-center justify-center gap-2 bg-error-muted/60 px-3 py-2 text-sm font-medium text-error-text transition-colors hover:bg-error-muted disabled:opacity-50"
-          >
-            {#if trackDeleteLoading}
-              <Loader2 class="h-4 w-4 animate-spin" />
-            {/if}
-            Remove from library
-          </button>
-          <button
-            type="button"
-            onclick={() => void confirmTrackDelete(true)}
-            disabled={trackDeleteLoading}
-            class="inline-flex w-full items-center justify-center gap-2 border border-error/40 px-3 py-2 text-sm font-medium text-error-text transition-colors hover:bg-error-muted/20 disabled:opacity-50"
-          >
-            Delete from disk
-          </button>
-          <button
-            type="button"
-            onclick={() => (trackDeleteTarget = null)}
-            disabled={trackDeleteLoading}
-            class="inline-flex w-full items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <ConfirmDeleteDialog
+    open={Boolean(trackDeleteTarget)}
+    entityType="audio-track"
+    count={1}
+    loading={trackDeleteLoading}
+    allowDeleteFromDisk
+    onClose={() => (trackDeleteTarget = null)}
+    onDeleteFromLibrary={() => void confirmTrackDelete(false)}
+    onDeleteFromDisk={() => void confirmTrackDelete(true)}
+  />
 
   {#if visibleTracks.length > 0}
     <AddToCollectionModal
@@ -785,6 +746,7 @@
     />
   {/if}
 </div>
+</UploadDropZone>
 
 <div
   bind:this={audioDockEl}

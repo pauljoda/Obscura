@@ -162,6 +162,20 @@ export const libraryRoots = pgTable(
   (table) => [uniqueIndex("library_roots_path_idx").on(table.path)]
 );
 
+export const mediaFileIgnores = pgTable(
+  "media_file_ignores",
+  {
+    path: text("path").primaryKey(),
+    entityType: text("entity_type").notNull(),
+    reason: text("reason").default("deleted-from-library").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("media_file_ignores_entity_type_idx").on(table.entityType),
+    index("media_file_ignores_created_at_idx").on(table.createdAt),
+  ],
+);
+
 // ─── Library Settings ─────────────────────────────────────────────
 export const librarySettings = pgTable("library_settings", {
   id: uuid("id").defaultRandom().primaryKey(),

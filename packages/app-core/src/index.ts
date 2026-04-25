@@ -18,6 +18,7 @@ export * from "./library-config";
 export * from "./library-root-nsfw-sync";
 export * from "./library-roots-crud";
 export * from "./library-settings-writes";
+export * from "./media-file-ignores";
 export * from "./gallery-media";
 export * from "./audio-libraries";
 export * from "./audio-tracks";

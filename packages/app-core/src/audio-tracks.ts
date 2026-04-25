@@ -21,6 +21,7 @@ import {
 import { NotFoundError, ValidationError } from "./errors";
 import { buildHierarchyScopeConditions } from "./hierarchy";
 import { audioTrackVisibleSql } from "./library-root-visibility";
+import { ignoreMediaFilePath } from "./media-file-ignores";
 import { enqueueQueueJob } from "./queue-writes";
 import {
   assertDirExists,
@@ -472,6 +473,8 @@ export async function deleteAudioTrackWrite(
     } catch {
       /* non-fatal */
     }
+  } else if (!deleteFile) {
+    await ignoreMediaFilePath(db, { path: existing.filePath, entityType: "audio" });
   }
 
   return { ok: true as const };

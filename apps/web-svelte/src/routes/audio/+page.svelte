@@ -6,6 +6,7 @@
   import { Badge, Checkbox, cn } from "@obscura/ui-svelte";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, {
     type SortDir,
     type ActiveFilter,
@@ -14,6 +15,8 @@
   import FilterSection from "$lib/components/FilterSection.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { mergeUniquePage } from "$lib/pagination/load-more";
   import {
     deleteAudioLibrary,
@@ -145,6 +148,7 @@
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
+  let deleteDialogOpen = $state(false);
   let selectedLibraryIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
   const visibleLibraryIds = $derived(loadedLibraries.map((library) => library.id));
@@ -198,15 +202,16 @@
       await invalidateAll();
     } finally {
       bulkBusy = false;
+      deleteDialogOpen = false;
     }
   }
 
-  async function deleteSelectedLibraries() {
+  async function deleteSelectedLibraries(deleteFromDisk = false) {
     const ids = [...selectedLibraryIds];
     if (ids.length === 0 || bulkBusy) return;
     bulkBusy = true;
     try {
-      await Promise.all(ids.map((id) => deleteAudioLibrary(id)));
+      await Promise.all(ids.map((id) => deleteAudioLibrary(id, deleteFromDisk)));
       clearSelectedLibraries();
       await invalidateAll();
     } finally {
@@ -272,6 +277,7 @@
   <title>Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "audio" }}>
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4">
     <div>
@@ -281,7 +287,10 @@
       </h1>
       <p class="text-text-muted text-[0.78rem] mt-1">Browse audio libraries in your collection</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
+    <div class="flex items-center gap-2">
+      <ImportButton target={{ kind: "audio" }} />
+      <span class="text-mono-sm text-text-disabled mt-1">{loadedTotal.toLocaleString()} total</span>
+    </div>
   </div>
 
   <FilterBar
@@ -354,7 +363,9 @@
       onSelectAll={selectAllVisibleLibraries}
       onClear={clearSelectedLibraries}
       onMarkNsfw={markSelectedLibrariesNsfw}
-      onDelete={deleteSelectedLibraries}
+      onDelete={() => {
+        deleteDialogOpen = true;
+      }}
     />
   {/if}
 
@@ -430,6 +441,18 @@
     onLoad={loadMoreAudioLibraries}
   />
 </div>
+</UploadDropZone>
+
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="audio-library"
+  count={selectedLibraryIds.size}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void deleteSelectedLibraries(false)}
+  onDeleteFromDisk={() => void deleteSelectedLibraries(true)}
+/>
 
 <style>
   .thumb-grid {

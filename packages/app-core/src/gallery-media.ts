@@ -28,6 +28,7 @@ import {
   galleryVisibleSql,
   imageVisibleSql,
 } from "./library-root-visibility";
+import { ignoreMediaFilePath } from "./media-file-ignores";
 import { enqueueQueueJob } from "./queue-writes";
 import {
   assertDirExists,
@@ -695,12 +696,45 @@ export async function updateGalleryWrite(
   return { ok: true as const, id, ...(affectedGalleryIds ? { affectedGalleryIds } : {}) };
 }
 
-export async function deleteGalleryWrite(db: AppDb, id: string) {
-  const result = await db
-    .delete(galleries)
+export async function deleteGalleryWrite(db: AppDb, id: string, deleteFile = false) {
+  const [existing] = await db
+    .select({
+      id: galleries.id,
+      folderPath: galleries.folderPath,
+      zipFilePath: galleries.zipFilePath,
+    })
+    .from(galleries)
     .where(eq(galleries.id, id))
-    .returning({ id: galleries.id });
-  if (result.length === 0) throw new NotFoundError("Gallery not found");
+    .limit(1);
+  if (!existing) throw new NotFoundError("Gallery not found");
+
+  const fileRows = await db
+    .select({ filePath: images.filePath })
+    .from(images)
+    .where(eq(images.galleryId, id));
+
+  if (!deleteFile) {
+    for (const row of fileRows) {
+      await ignoreMediaFilePath(db, { path: row.filePath, entityType: "image" });
+    }
+    if (existing.zipFilePath) {
+      await ignoreMediaFilePath(db, { path: existing.zipFilePath, entityType: "image" });
+    }
+  }
+
+  await db.delete(galleries).where(eq(galleries.id, id));
+
+  if (deleteFile) {
+    try {
+      if (existing.folderPath && existsSync(existing.folderPath)) {
+        await rm(existing.folderPath, { recursive: true, force: true });
+      } else if (existing.zipFilePath && existsSync(existing.zipFilePath)) {
+        await unlink(existing.zipFilePath);
+      }
+    } catch {
+      /* non-fatal */
+    }
+  }
   return { ok: true as const };
 }
 
@@ -1332,6 +1366,8 @@ export async function deleteImageWrite(
     } catch {
       /* non-fatal */
     }
+  } else if (!deleteFile) {
+    await ignoreMediaFilePath(db, { path: existing.filePath, entityType: "image" });
   }
   return { ok: true as const };
 }

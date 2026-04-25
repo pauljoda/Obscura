@@ -21,6 +21,7 @@ import {
   audioLibraryVisibleSql,
   audioTrackVisibleSql,
 } from "./library-root-visibility";
+import { ignoreMediaFilePath } from "./media-file-ignores";
 import {
   assertDirExists,
   resolveCollisionSafePath,
@@ -527,12 +528,35 @@ export async function updateAudioLibraryWrite(
   return { ok: true as const };
 }
 
-export async function deleteAudioLibraryWrite(db: AppDb, id: string) {
-  const result = await db
-    .delete(audioLibraries)
+export async function deleteAudioLibraryWrite(db: AppDb, id: string, deleteFile = false) {
+  const [existing] = await db
+    .select({ id: audioLibraries.id, folderPath: audioLibraries.folderPath })
+    .from(audioLibraries)
     .where(eq(audioLibraries.id, id))
-    .returning({ id: audioLibraries.id });
-  if (result.length === 0) throw new NotFoundError("Audio library not found");
+    .limit(1);
+  if (!existing) throw new NotFoundError("Audio library not found");
+
+  const fileRows = await db
+    .select({ filePath: audioTracks.filePath })
+    .from(audioTracks)
+    .where(eq(audioTracks.libraryId, id));
+  if (!deleteFile) {
+    for (const row of fileRows) {
+      await ignoreMediaFilePath(db, { path: row.filePath, entityType: "audio" });
+    }
+  }
+
+  await db.delete(audioLibraries).where(eq(audioLibraries.id, id));
+
+  if (deleteFile && existing.folderPath) {
+    try {
+      if (existsSync(existing.folderPath)) {
+        await rm(existing.folderPath, { recursive: true, force: true });
+      }
+    } catch {
+      /* non-fatal */
+    }
+  }
   return { ok: true as const };
 }
 

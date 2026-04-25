@@ -30,10 +30,16 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
   }
 };
 
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, url }) => {
   const db = await getWebDb();
   try {
-    return json(await deleteAudioLibraryWrite(db, params.id!));
+    return json(
+      await deleteAudioLibraryWrite(
+        db,
+        params.id!,
+        url.searchParams.get("deleteFile") === "true",
+      ),
+    );
   } catch (err) {
     return mapAppCoreErrorToJson(err);
   }

@@ -5,10 +5,13 @@
   import { Film } from "@lucide/svelte";
   import type { PageData } from "./$types";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, {
     type AvailableItem,
   } from "$lib/components/FilterBar.svelte";
   import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import {
     deleteVideo,
@@ -82,6 +85,7 @@
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
+  let deleteDialogOpen = $state(false);
   let selectedVideoIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
 
@@ -413,12 +417,12 @@
     }
   }
 
-  async function deleteSelectedVideos() {
+  async function deleteSelectedVideos(deleteFromDisk = false) {
     const ids = [...selectedVideoIds];
     if (ids.length === 0 || bulkBusy) return;
     bulkBusy = true;
     try {
-      await Promise.all(ids.map((id) => deleteVideo(id)));
+      await Promise.all(ids.map((id) => deleteVideo(id, deleteFromDisk)));
       const idSet = new Set(ids);
       loadedVideos = loadedVideos.filter((video) => !idSet.has(video.id));
       loadedTotal = Math.max(0, loadedTotal - ids.length);
@@ -426,6 +430,7 @@
       await invalidateAll();
     } finally {
       bulkBusy = false;
+      deleteDialogOpen = false;
     }
   }
 </script>
@@ -434,6 +439,7 @@
   <title>Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "video" }}>
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4">
     <div>
@@ -445,9 +451,12 @@
         Browse and manage your media library
       </p>
     </div>
-    <span class="mt-1 text-mono-sm text-text-disabled">
-      {loadedTotal.toLocaleString()} total
-    </span>
+    <div class="flex items-center gap-2">
+      <ImportButton target={{ kind: "video" }} />
+      <span class="mt-1 text-mono-sm text-text-disabled">
+        {loadedTotal.toLocaleString()} total
+      </span>
+    </div>
   </div>
 
   <FilterBar
@@ -497,7 +506,9 @@
       onSelectAll={selectAllVisibleVideos}
       onClear={clearSelectedVideos}
       onMarkNsfw={markSelectedVideosNsfw}
-      onDelete={deleteSelectedVideos}
+      onDelete={() => {
+        deleteDialogOpen = true;
+      }}
     />
   {/if}
 
@@ -540,6 +551,18 @@
     onLoad={loadMoreVideos}
   />
 </div>
+</UploadDropZone>
+
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="video"
+  count={selectedVideoIds.size}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void deleteSelectedVideos(false)}
+  onDeleteFromDisk={() => void deleteSelectedVideos(true)}
+/>
 
 <style>
   .thumb-grid {

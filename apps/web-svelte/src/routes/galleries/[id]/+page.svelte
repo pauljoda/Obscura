@@ -11,8 +11,10 @@
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
   import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
@@ -94,6 +96,7 @@
   <title>Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "image", galleryId: g.id }} enabled={Boolean(g.folderPath)}>
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4 flex-wrap">
     <div class="space-y-1.5">
@@ -184,6 +187,11 @@
 
       {#if images.length > 0}
         <HierarchySection title={visibleChildGalleries.length > 0 ? "Images" : ""}>
+          {#snippet action()}
+            {#if g.folderPath}
+              <ImportButton target={{ kind: "image", galleryId: g.id }} onUploaded={refreshGallery} />
+            {/if}
+          {/snippet}
           {#snippet children()}
             <div class="flex justify-end -mt-1 mb-1.5">
               <div class="surface-well flex items-center">
@@ -326,6 +334,7 @@
     </aside>
   </div>
 </div>
+</UploadDropZone>
 
 {#if lightboxOpen}
   <ImageLightbox

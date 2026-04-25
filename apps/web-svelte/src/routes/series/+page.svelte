@@ -5,6 +5,7 @@
   import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
   import { Checkbox } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, {
     type AvailableItem,
     type FilterSectionKey,
@@ -17,7 +18,9 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { mergeUniquePage } from "$lib/pagination/load-more";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
@@ -100,6 +103,7 @@
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
   let bulkBusy = $state(false);
+  let deleteDialogOpen = $state(false);
   let selectedItemIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
   const loadedStart = $derived((data.page - 1) * data.pageSize);
@@ -128,6 +132,15 @@
   );
   const allVisibleSelected = $derived(
     visibleSelectionIds.length > 0 && visibleSelectionIds.every((id) => selectedItemIds.has(id)),
+  );
+  const uploadTarget = $derived(
+    data.activeSeries
+      ? {
+          kind: "video" as const,
+          videoSeriesId: data.activeSeries.id,
+          seasonNumber: data.activeSeasonNumber,
+        }
+      : { kind: "video" as const },
   );
 
   // svelte-ignore state_referenced_locally
@@ -520,12 +533,12 @@
     }
   }
 
-  async function deleteSelectedVideos() {
+  async function deleteSelectedVideos(deleteFromDisk = false) {
     const ids = [...selectedItemIds];
     if (ids.length === 0 || selectionKind !== "videos" || bulkBusy) return;
     bulkBusy = true;
     try {
-      await Promise.all(ids.map((id) => deleteVideo(id)));
+      await Promise.all(ids.map((id) => deleteVideo(id, deleteFromDisk)));
       const idSet = new Set(ids);
       loadedVideos = loadedVideos.filter((video) => !idSet.has(video.id));
       loadedTotal = Math.max(0, loadedTotal - ids.length);
@@ -533,6 +546,7 @@
       await invalidateAll();
     } finally {
       bulkBusy = false;
+      deleteDialogOpen = false;
     }
   }
 </script>
@@ -541,6 +555,7 @@
   <title>Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={uploadTarget}>
 <div class="space-y-4">
   <div class="flex items-start justify-between gap-4">
     <div>
@@ -552,6 +567,7 @@
         Browse your series hierarchy and drill into seasons or episodes.
       </p>
     </div>
+    <ImportButton target={uploadTarget} />
   </div>
 
   <FilterBar
@@ -608,7 +624,11 @@
       onSelectAll={selectAllVisibleItems}
       onClear={clearSelectedItems}
       onMarkNsfw={markSelectedItemsNsfw}
-      onDelete={selectionKind === "videos" ? deleteSelectedVideos : undefined}
+      onDelete={selectionKind === "videos"
+        ? () => {
+            deleteDialogOpen = true;
+          }
+        : undefined}
     />
   {/if}
 
@@ -959,6 +979,18 @@
     onLoad={loadMoreItems}
   />
 </div>
+</UploadDropZone>
+
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="video"
+  count={selectedItemIds.size}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void deleteSelectedVideos(false)}
+  onDeleteFromDisk={() => void deleteSelectedVideos(true)}
+/>
 
 
 <style>
