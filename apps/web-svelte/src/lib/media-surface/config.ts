@@ -166,6 +166,19 @@ export type BodyLayout = "grid" | "list" | "feed" | "masonry";
 
 // ── Top-level config ──────────────────────────────────────────────────
 
+export interface AvailableFilterItem {
+  id: string;
+  name: string;
+  count?: number;
+  isNsfw?: boolean;
+}
+
+export interface AvailableFilterItems {
+  tags?: AvailableFilterItem[];
+  performers?: AvailableFilterItem[];
+  studios?: AvailableFilterItem[];
+}
+
 export interface MediaSurfaceConfig<T extends { id: string }, F extends string = string> {
   // Identity
   /**
@@ -196,6 +209,12 @@ export interface MediaSurfaceConfig<T extends { id: string }, F extends string =
   defaultSortDir?: Record<string, SortDir>;
   viewModes?: ViewModeSpec[];
   filterSections?: FilterSectionSpec<F>[];
+  /**
+   * Available items for alphabetical-id-list filter sections (tags,
+   * performers, studios). Pages typically resolve these from server
+   * load and reflect them here.
+   */
+  availableFilterItems?: AvailableFilterItems;
   /** Filter types whose value replaces the previous selection rather than toggling. */
   exclusiveFilterTypes?: ExclusiveFilterTypes<F>;
   searchPlaceholder?: string;
