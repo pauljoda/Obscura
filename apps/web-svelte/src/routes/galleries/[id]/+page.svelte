@@ -13,7 +13,7 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import ThumbSizeSlider from "$lib/components/ThumbSizeSlider.svelte";
+  import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 

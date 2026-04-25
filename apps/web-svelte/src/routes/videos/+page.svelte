@@ -13,7 +13,7 @@
     type AvailableItem,
     type ViewMode as FilterViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
@@ -22,7 +22,7 @@
     fetchVideoCards as fetchMoreVideoCards,
     updateVideo,
   } from "$lib/api/videos";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     EXCLUSIVE_FILTER_TYPES,

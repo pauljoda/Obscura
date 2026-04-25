@@ -11,7 +11,7 @@
     type FilterSectionKey,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
@@ -21,7 +21,7 @@
   import ImportButton from "$lib/components/ImportButton.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import {

@@ -63,7 +63,7 @@
   import type { Snippet } from "svelte";
   import FilterChip from "./FilterChip.svelte";
   import FilterSection from "./FilterSection.svelte";
-  import ThumbSizeSlider from "./ThumbSizeSlider.svelte";
+  import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
   import AlphabeticalFilterSection, {
     type AlphabeticalFilterSectionItem,
   } from "./AlphabeticalFilterSection.svelte";

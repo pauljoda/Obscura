@@ -19,9 +19,9 @@
     updatePerformer,
   } from "$lib/api/entities";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 

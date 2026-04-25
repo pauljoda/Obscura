@@ -14,10 +14,10 @@
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/components/FilterSection.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import {
     deleteAudioLibrary,
     fetchAudioLibraries as fetchMoreAudioLibraries,

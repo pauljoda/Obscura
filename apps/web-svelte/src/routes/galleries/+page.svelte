@@ -11,9 +11,9 @@
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import { deleteGallery, fetchGalleries as fetchMoreGalleries, updateGallery } from "$lib/api/media";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";

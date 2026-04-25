@@ -15,11 +15,11 @@
   import ImageFeedItem from "$lib/components/ImageFeedItem.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import InfiniteLoadTrigger from "$lib/components/InfiniteLoadTrigger.svelte";
+  import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { deleteImage, fetchImages as fetchMoreImages, updateImage } from "$lib/api/media";
-  import { mergeUniquePage } from "$lib/pagination/load-more";
+  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
