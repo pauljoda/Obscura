@@ -12,7 +12,7 @@
     type ActiveFilter,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/components/FilterSection.svelte";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
   import { deleteStudio, updateStudio } from "$lib/api/entities";

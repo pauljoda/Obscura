@@ -11,7 +11,7 @@
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import FilterBar, { type SortDir, type ViewMode } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/components/FilterSection.svelte";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import ImageFeedItem from "$lib/components/ImageFeedItem.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";

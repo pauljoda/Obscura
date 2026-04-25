@@ -1,0 +1,46 @@
+<script lang="ts">
+  import { cn } from "@obscura/ui-svelte";
+  import FilterSection from "../FilterSection.svelte";
+  import type { SectionAddFilter, SectionPanelFilter } from "./types.ts";
+
+  interface Props {
+    panelFilters: SectionPanelFilter[];
+    onAddFilter: SectionAddFilter;
+    /** When false, hide the Interactive toggles (used for non-video surfaces). */
+    showInteractive?: boolean;
+  }
+
+  let { panelFilters, onAddFilter, showInteractive = true }: Props = $props();
+
+  const choices = $derived([
+    { type: "organized", value: "true", label: "Organized", chipLabel: "Organized" },
+    { type: "organized", value: "false", label: "Not organized", chipLabel: "Organized" },
+    ...(showInteractive
+      ? [
+          { type: "interactive", value: "true", label: "Interactive", chipLabel: "Interactive" },
+          { type: "interactive", value: "false", label: "Not interactive", chipLabel: "Interactive" },
+        ]
+      : []),
+  ]);
+</script>
+
+<FilterSection title="Library flags">
+  {#snippet children()}
+    <div class="flex flex-wrap gap-1">
+      {#each choices as item (`${item.type}-${item.value}`)}
+        <button
+          type="button"
+          onclick={() => onAddFilter(item.type, item.chipLabel, item.value)}
+          class={cn(
+            "tag-chip cursor-pointer transition-colors duration-fast",
+            panelFilters.some((f) => f.type === item.type && f.value === item.value)
+              ? "tag-chip-accent"
+              : "tag-chip-default hover:tag-chip-accent",
+          )}
+        >
+          {item.label}
+        </button>
+      {/each}
+    </div>
+  {/snippet}
+</FilterSection>

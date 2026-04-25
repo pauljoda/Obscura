@@ -8,7 +8,7 @@
     type ActiveFilter,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/components/FilterSection.svelte";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";

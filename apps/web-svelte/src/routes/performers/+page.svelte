@@ -8,7 +8,7 @@
     type ActiveFilter,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/components/FilterSection.svelte";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import { Checkbox, cn, dur, ease } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
   import { flip } from "svelte/animate";

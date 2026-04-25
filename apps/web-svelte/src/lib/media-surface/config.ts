@@ -13,7 +13,9 @@
  */
 
 import type { Component, Snippet } from "svelte";
-import type { ComponentType } from "svelte";
+
+/** Svelte 5 component or legacy Svelte 4 ComponentType — accepts both. */
+type AnyComponent = Component<any, any, any>;
 
 // ── Sort / view ───────────────────────────────────────────────────────
 
@@ -26,7 +28,7 @@ export interface SortOption<T extends string = string> {
 
 export interface ViewModeSpec {
   mode: string;
-  icon: ComponentType;
+  icon: AnyComponent;
   label: string;
 }
 
@@ -120,7 +122,7 @@ export interface ThumbSizeConfig {
 export interface BulkActionSpec<T> {
   id: string;
   label: string;
-  icon?: ComponentType;
+  icon?: AnyComponent;
   variant?: "default" | "danger";
   /** Called with the selected items. Surface clears selection after resolve. */
   handler: (selected: T[]) => Promise<void> | void;

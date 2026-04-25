@@ -12,7 +12,7 @@
     type ActiveFilter,
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/components/FilterSection.svelte";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
   import InfiniteLoadTrigger from "$lib/media-surface/pagination/InfiniteLoadTrigger.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
