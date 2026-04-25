@@ -53,7 +53,7 @@
       <main
         class={cn(
           "flex flex-1 flex-col transition-[margin-left] duration-moderate",
-          "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",
+          "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto [scrollbar-gutter:stable] md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",
           chrome.sidebarCollapsed ? "md:ml-14" : "md:ml-60",
         )}
         style:transition-timing-function="var(--ease-mechanical)"
