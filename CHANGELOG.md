@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Videos page now keeps loading past the first 60 cards on libraries that contain only episodes or only movies. Earlier the list would briefly show the full count and then collapse to 60 when scrolling, because the backend was handing the same first page back for every load-more request.
 - Direct Identify on video entries now offers the full provider set: Obscura plugins, Stash-Box endpoints, and community database scrapers. Legacy scraper matches now open in the same flyout review experience as plugin matches, so accepting metadata feels consistent from entry pages and the review queue.
 - Animated images now play correctly in Safari (both iOS and macOS). Previously the asset endpoint did not advertise byte-range support, so Safari refused to start playback while Chromium browsers played fine.
+- Bulk series Identify review now advances cleanly after choosing from multiple candidate matches. After a candidate refetch, **Apply all & next** shows the next row's review details instead of keeping the previous candidate's panel content.
 
 ### Added
 
@@ -58,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Legacy `/assets/scenes/...` card, sprite, trickplay, and custom thumbnail URLs now resolve from old scene cache directories after the SvelteKit cutover.
 - Infinite scroll on every grid no longer cascades into a runaway loop after the first auto-load. The trigger is now edge-triggered: the sentinel must leave and re-enter the viewport before another fetch fires, which also closes a race where two concurrent load-more calls could clobber each other and prematurely mark the list as exhausted.
 - Animated image previews and full-resolution clips served by `/api/assets/...` now respond to HTTP `Range` requests with `206 Partial Content` and advertise `Accept-Ranges: bytes`, which Safari requires before it will start playback. Image, image preview, and video preview-sidecar endpoints all stream byte ranges; Chromium browsers continue to work unchanged.
+- Bulk series Identify no longer carries a manually selected candidate's refetched scrape result into the next review row after using **Apply all & next**.
 
 ## [0.20.0] - 2026-04-24
 

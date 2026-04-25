@@ -48,8 +48,12 @@
     onAcceptAndNext,
   }: Props = $props();
 
-  let overrideScrapeResultId = $state<string | null>(null);
-  const currentScrapeResultId = $derived(overrideScrapeResultId ?? scrapeResultId);
+  let overrideScrapeResult = $state<{ baseId: string; id: string } | null>(null);
+  const currentScrapeResultId = $derived(
+    overrideScrapeResult?.baseId === scrapeResultId
+      ? overrideScrapeResult.id
+      : scrapeResultId,
+  );
   let row = $state<ScrapeResult | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -155,7 +159,7 @@
       if (!saved?.id) {
         throw new Error("Plugin did not persist a scrape result.");
       }
-      overrideScrapeResultId = saved.id;
+      overrideScrapeResult = { baseId: scrapeResultId, id: saved.id };
     } catch (err) {
       error = err instanceof Error ? err.message : "Re-run failed";
     } finally {
