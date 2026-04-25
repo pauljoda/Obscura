@@ -5,7 +5,6 @@
     Edit3,
     ExternalLink,
     FileText,
-    Film,
     Link,
     Star,
     Tag as TagIcon,
@@ -14,18 +13,9 @@
   import { Badge } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { updateStudio } from "$lib/api/entities";
-  import type { VideoListItem } from "$lib/api/types";
-  import type {
-    VideoSeriesListItemDto,
-    GalleryListItemDto,
-    AudioLibraryListItemDto,
-  } from "@obscura/contracts";
-  import VideoCard from "$lib/components/VideoCard.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
-  import { videoListItemToCardData } from "$lib/video-card-data";
-  import SeriesCard from "$lib/components/SeriesCard.svelte";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import { page } from "$app/state";
+  import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
+  import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
   import {
     EditFormShell,
     FormField,
@@ -81,10 +71,21 @@
     })),
   );
 
-  const videos = $derived(data.videos as VideoListItem[]);
-  const series = $derived(data.series as VideoSeriesListItemDto[]);
-  const galleries = $derived(data.galleries as GalleryListItemDto[]);
-  const audioLibraries = $derived(data.audioLibraries as AudioLibraryListItemDto[]);
+  const tabs = $derived(
+    detailTabsFor({
+      entityKind: "studio",
+      entityId: s.id,
+      entityName: s.name,
+      nsfwMode: "show",
+      initialActive: page.url.searchParams.get("tab") === null
+        ? {
+            tabId: "videos",
+            items: data.videos as unknown[],
+            total: data.totalVideos,
+          }
+        : undefined,
+    }),
+  );
 
   function beginEdit() {
     editName = s.name ?? "";
@@ -295,94 +296,5 @@
     </div>
   {/if}
 
-  {#if series.length > 0}
-    <HierarchySection title="Series">
-      {#snippet children()}
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {#each series as sItem (sItem.id)}
-            <SeriesCard series={sItem} href={`/series?series=${sItem.id}`} compact />
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if videos.length > 0}
-    <HierarchySection title={`${data.totalVideos} ${data.totalVideos === 1 ? "video" : "videos"}`}>
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {#each videos as v, i (v.id)}
-            <VideoCard
-              video={videoListItemToCardData(v, `/studios/${encodeURIComponent(s.name)}`)}
-              variant="grid"
-              index={i}
-              imageLoading={i < 6 ? "eager" : "lazy"}
-            />
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {:else if !series.length && !galleries.length && !audioLibraries.length}
-    <HierarchySection title="Videos">
-      {#snippet children()}
-        <div class="surface-panel p-8 text-center">
-          <Film class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
-          <p class="text-body text-text-muted">
-            Nothing from this studio yet — run Identify to hydrate.
-          </p>
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if galleries.length > 0}
-    <HierarchySection title="Galleries">
-      {#snippet children()}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {#each galleries as g (g.id)}
-            <a
-              href={`/galleries/${g.id}`}
-              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-            >
-              <GalleryThumbnail
-                title={g.title}
-                coverImagePath={g.coverImagePath}
-                imageCount={g.imageCount}
-                isNsfw={g.isNsfw}
-              />
-              <div class="p-2.5">
-                <h3 class="truncate text-sm font-medium">{g.title}</h3>
-                <p class="text-xs text-text-muted mt-0.5">
-                  {g.imageCount} image{g.imageCount === 1 ? "" : "s"}
-                </p>
-              </div>
-            </a>
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
-
-  {#if audioLibraries.length > 0}
-    <HierarchySection title="Audio">
-      {#snippet children()}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {#each audioLibraries as a, i (a.id)}
-            <a
-              href={`/audio/${a.id}`}
-              class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block group/card"
-            >
-              <AudioLibraryThumbnail library={a} gradientIndex={i} />
-              <div class="p-2.5">
-                <h3 class="truncate text-sm font-medium">{a.title}</h3>
-                <p class="text-xs text-text-muted mt-0.5">
-                  {a.trackCount} track{a.trackCount === 1 ? "" : "s"}
-                </p>
-              </div>
-            </a>
-          {/each}
-        </div>
-      {/snippet}
-    </HierarchySection>
-  {/if}
+  <MediaTabs tabs={tabs} defaultTabId="videos" />
 </div>
