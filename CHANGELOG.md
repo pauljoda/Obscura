@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-04-26
 ### What's New
 
 - Library state changes now feel continuous: the lightbox opens with a shared-element transition that grows the source thumbnail into the full image, modals fade in over a backdrop and dialog bodies fly up gently, the bulk action bar slides in when items are selected, filter chips scale on add and remove, and grid items fade in with a brief stagger and slide into their new positions when filters or sorts change.
