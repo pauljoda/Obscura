@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PanelLeftClose, PanelLeftOpen } from "@lucide/svelte";
+  import { BookOpen, PanelLeftClose, PanelLeftOpen } from "@lucide/svelte";
   import { page } from "$app/state";
   import { appShellSections, cn } from "@obscura/ui-svelte";
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
@@ -16,6 +16,7 @@
   let hovered = $state(false);
   const isExpanded = $derived(!collapsed || hovered);
   const pathname = $derived(page.url.pathname);
+  const docsHref = "https://pauljoda.github.io/Obscura/docs/users/quick-start";
 
   function isActive(href: string): boolean {
     return pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
@@ -134,26 +135,49 @@
     {/each}
   </nav>
 
-  <!-- Version indicator -->
-  <div class="border-t border-border-subtle px-3 py-3 shrink-0">
+  <!-- Footer actions -->
+  <div class="shrink-0 space-y-1 border-t border-border-subtle px-3 py-3">
     <ChangelogDialog version={APP_VERSION}>
-      {#snippet children()}
-        <div class="flex items-center group overflow-hidden whitespace-nowrap h-5">
-          <div class="w-8 flex items-center justify-center shrink-0">
-            <span class="led led-sm led-idle"></span>
-          </div>
-          <div
-            class={cn(
-              "overflow-hidden transition-[max-width,opacity] duration-moderate",
-              isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
-            )}
-          >
-            <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
-              v{APP_VERSION}
-            </span>
-          </div>
+      <div
+        class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
+        title={!isExpanded ? "Changelog" : undefined}
+      >
+        <div class="flex w-8 shrink-0 items-center justify-center">
+          <span class="led led-sm led-idle"></span>
         </div>
-      {/snippet}
+        <div
+          class={cn(
+            "overflow-hidden transition-[max-width,opacity] duration-moderate",
+            isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
+          )}
+        >
+          <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
+            v{APP_VERSION}
+          </span>
+        </div>
+      </div>
     </ChangelogDialog>
+    <a
+      href={docsHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open Obscura documentation"
+      title={!isExpanded ? "Docs" : undefined}
+      class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
+    >
+      <div class="flex w-8 shrink-0 items-center justify-center">
+        <BookOpen class="h-4 w-4 transition-colors group-hover:text-text-accent" />
+      </div>
+      <div
+        class={cn(
+          "overflow-hidden transition-[max-width,opacity] duration-moderate",
+          isExpanded ? "max-w-[160px] opacity-100 ml-1" : "max-w-0 opacity-0 ml-0",
+        )}
+      >
+        <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
+          Docs
+        </span>
+      </div>
+    </a>
   </div>
 </aside>

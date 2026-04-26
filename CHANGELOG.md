@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Embedded subtitle extraction is also dramatically faster, especially on multi-language sources. On a 4.8 GB MKV with 37 SRT tracks the extract job dropped from **19.4 s to 0.7 s** — a 29× speedup — by walking the source container exactly once and demuxing every subtitle stream into its own VTT file in the same pass, instead of re-opening the file once per track. Output files, languages, and the player's subtitle picker are unchanged; if a source has a single broken stream that takes down the single-pass call, the worker automatically falls back to the previous per-stream approach so one bad track no longer skips the rest.
 - Trickplay generation no longer fails outright on short clips or on long videos that contain a single bad keyframe region. Previously a single missing frame would crash the whole preview job (visible as an "Input file is missing" error in Operations); now the film strip simply repeats the nearest neighbour frame for any slot ffmpeg couldn't fill, and the job completes successfully.
 - File fingerprinting (the MD5 + OpenSubtitles hash a video, audio, or image scan computes when it imports a file) is modestly faster on every source — about **15% on a 642 MB clip and 11% on a 4.8 GB clip** in benchmarks. Hashing is fundamentally limited by how fast the disk can hand bytes to the CPU, so this is a small win compared with trickplay or subtitles, but it shaves a few seconds off every multi-GB import. The hashes themselves are unchanged.
+- The sidebar now links directly to the hosted Quick Start docs beside the changelog, so setup and usage help is one click away from inside the app.
 
 ### Added
 
@@ -48,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - A local `pnpm dev:seed-scroll` helper now seeds synthetic video rows for repeatable infinite-scroll testing in small development libraries.
 - `VideoDetailDto` now exposes a `fingerprints` block (`hasPhash` / `hasOshash` / `hasChecksumMd5`) so identify UIs can warn about Stash-Box providers when the current video has no fingerprint to query against.
 - Glass surface utilities `glass-1`, `glass-2`, and `glass-3` are now defined in `app.css`, matching the layered weights described in `docs/design-language.md`.
+- A documentation shortcut now appears in the sidebar footer next to the changelog.
 
 ### Changed
 
