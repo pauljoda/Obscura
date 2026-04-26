@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { computeMd5, computeOsHash } from "@obscura/media-core";
+import { computeMd5AndOsHash } from "@obscura/media-core";
 import { db, schema } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 
@@ -24,9 +24,8 @@ export async function processAudioFingerprint(job: Job) {
     label: track.title,
   });
 
-  const md5 = await computeMd5(track.filePath);
-  await markJobProgress(job, "audio-fingerprint", 50);
-  const oshash = await computeOsHash(track.filePath);
+  const { md5, oshash } = await computeMd5AndOsHash(track.filePath);
+  await markJobProgress(job, "audio-fingerprint", 80);
 
   await db
     .update(audioTracks)

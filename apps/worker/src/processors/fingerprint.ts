@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { computeMd5, computeOsHash, computePhash } from "@obscura/media-core";
+import { computeMd5AndOsHash, computePhash } from "@obscura/media-core";
 import { db, librarySettings, videoEpisodes, videoMovies } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { resolveRequiredMediaPath } from "../lib/media-paths.js";
@@ -69,9 +69,9 @@ export async function processFingerprint(job: Job) {
   const filePath = resolveRequiredMediaPath(row.filePath);
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (!phashOnly) {
-    update.checksumMd5 = await computeMd5(filePath);
-    await markJobProgress(job, "fingerprint", phashEnabled ? 33 : 50);
-    update.oshash = await computeOsHash(filePath);
+    const { md5, oshash } = await computeMd5AndOsHash(filePath);
+    update.checksumMd5 = md5;
+    update.oshash = oshash;
     await markJobProgress(job, "fingerprint", phashEnabled ? 66 : 100);
   }
   if (phashEnabled || phashOnly) {

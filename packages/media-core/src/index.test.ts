@@ -12,6 +12,9 @@ import {
   allVideoGeneratedDiskPaths,
   videoGeneratedLayoutFromDedicated,
   isAnimatedFormat,
+  computeMd5,
+  computeMd5AndOsHash,
+  computeOsHash,
   computePhash,
   runProcess,
   isCorruptMediaError,
@@ -363,4 +366,43 @@ describe("resolveExistingMediaPath", () => {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
+});
+
+describe("computeMd5AndOsHash", () => {
+  // Each entry must produce identical hashes whether computed via
+  // computeMd5+computeOsHash or via the single-pass combined helper.
+  // Sizes span: smaller than the 64 KB head chunk (where head+tail overlap),
+  // exactly the chunk size, just above it, and a multi-MB size that crosses
+  // the 4 MB read buffer boundary so the head capture spans multiple chunks.
+  const sizes = [
+    16 * 1024,
+    64 * 1024,
+    96 * 1024,
+    5 * 1024 * 1024,
+  ];
+
+  for (const size of sizes) {
+    it(`matches computeMd5 + computeOsHash on a ${size}-byte file`, async () => {
+      const tempDir = mkdtempSync(path.join(tmpdir(), "obscura-hash-"));
+      const file = path.join(tempDir, `payload-${size}.bin`);
+      // Deterministic non-zero pattern so byte ordering matters.
+      const buf = Buffer.alloc(size);
+      for (let i = 0; i < size; i++) {
+        buf[i] = (i * 1103515245 + 12345) & 0xff;
+      }
+      writeFileSync(file, buf);
+
+      try {
+        const [md5, oshash, combined] = await Promise.all([
+          computeMd5(file),
+          computeOsHash(file),
+          computeMd5AndOsHash(file),
+        ]);
+        expect(combined.md5).toBe(md5);
+        expect(combined.oshash).toBe(oshash);
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+  }
 });

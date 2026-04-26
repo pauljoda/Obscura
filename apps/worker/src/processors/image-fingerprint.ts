@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
-import { computeMd5, computeOsHash, extractZipMember } from "@obscura/media-core";
+import { computeMd5AndOsHash, extractZipMember } from "@obscura/media-core";
 import { db, images } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 
@@ -41,9 +41,8 @@ export async function processImageFingerprint(job: Job) {
   }
 
   try {
-    const md5 = await computeMd5(inputPath);
-    await markJobProgress(job, "image-fingerprint", 50);
-    const oshash = await computeOsHash(inputPath);
+    const { md5, oshash } = await computeMd5AndOsHash(inputPath);
+    await markJobProgress(job, "image-fingerprint", 80);
 
     await db
       .update(images)
