@@ -164,14 +164,6 @@ describe("performer detail page", () => {
       "src",
       "/api/assets/videos/episode-1/thumb",
     );
-    expect(screen.getByText("Still Frame").closest("a")).toHaveAttribute(
-      "href",
-      "/images/image-1",
-    );
-    expect(screen.getByText("Theme Song").closest("a")).toHaveAttribute(
-      "href",
-      "/audio/tracks/track-1",
-    );
   });
 
   it("edits actor metadata from the detail page", async () => {

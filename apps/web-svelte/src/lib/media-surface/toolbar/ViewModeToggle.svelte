@@ -17,6 +17,7 @@
       type="button"
       title={m.label}
       aria-label={m.label}
+      aria-pressed={value === m.mode}
       onclick={() => onChange(m.mode)}
       class={cn(
         "flex h-7 w-7 items-center justify-center transition-colors duration-fast",

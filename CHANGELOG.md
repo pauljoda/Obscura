@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Web app CI validation now uses shared browser animation test shims and current tabbed-detail assertions, so Svelte unit tests no longer fail on stale JSDOM or pre-tabbed page assumptions.
 - Actor Known For cards for episode roles now use the parent series poster when one is available instead of stretching the episode thumbnail into a poster card.
 - Trickplay sprite generation no longer crashes the entire preview job when a single frame extraction silently fails. Two distinct cases were causing this: (1) on short videos the planner could ask ffmpeg to seek past end-of-source, where ffmpeg exits cleanly without writing the output and then `sharp` errors with "Input file is missing"; (2) on long videos, the same silent-no-output behaviour could occur on individual unindexable regions or single bad keyframes. Per-frame timestamps are now clamped to a half-second before EOF so the first case can't happen, and the composite step now substitutes any missing frame with the nearest successfully-extracted neighbour so the film strip stays visually contiguous. If literally no frames extract (catastrophic source), the worker logs a warning and skips trickplay for that video instead of failing the preview job.
 - Image thumbnail resizing no longer shifts the whole Images page when moving between sizes that toggle vertical overflow.

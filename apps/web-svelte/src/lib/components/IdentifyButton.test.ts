@@ -73,7 +73,7 @@ describe("IdentifyButton", () => {
     await fireEvent.click(screen.getByRole("button", { name: /identify series/i }));
 
     const plugin = await screen.findByText("The Movie Database");
-    const menu = plugin.closest(".surface-elevated");
+    const menu = plugin.closest(".player-dropdown");
     expect(menu).toBeInTheDocument();
     expect(menu?.className).toContain("fixed");
     expect(menu).toHaveStyle({
