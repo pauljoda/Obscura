@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -154,10 +154,25 @@ export function buildTrickplayFrameFfmpegArgs(input: {
   ];
 }
 
-export function trickplayFrameTimestamp(frameIndex: number, frameInterval: number) {
+export function trickplayFrameTimestamp(
+  frameIndex: number,
+  frameInterval: number,
+  duration?: number,
+) {
   // Center the sample inside its VTT interval so keyframe-snapping doesn't
   // push it outside the cue's time range.
-  return frameIndex * frameInterval + frameInterval / 2;
+  const center = frameIndex * frameInterval + frameInterval / 2;
+  if (typeof duration === "number" && Number.isFinite(duration) && duration >= 0) {
+    // Don't seek past the end of the source. ffmpeg with -skip_frame nokey
+    // and an out-of-range -ss exits 0 without writing the output, which
+    // breaks the downstream sharp composite. Cap a half-second before EOF
+    // so we always have a real frame to land on; multiple slots may collapse
+    // to the same timestamp on very short videos and re-extract the same
+    // keyframe, which is fine for trickplay.
+    const cap = Math.max(0, duration - 0.5);
+    return Math.min(center, cap);
+  }
+  return center;
 }
 
 export function trickplaySharpQuality(quality: number) {
@@ -471,17 +486,30 @@ export async function processPreview(job: Job) {
         frameIndexes,
         trickplayConcurrency(),
         async (index) => {
-          await runProcess(
-            "ffmpeg",
-            buildTrickplayFrameFfmpegArgs({
-              filePath,
-              outputFile: framePaths[index]!,
-              timestampSeconds: trickplayFrameTimestamp(index, frameInterval),
-              frameWidth: plannedSpriteThumbWidth,
-              frameHeight: plannedSpriteThumbHeight,
-              jpegQuality,
-            }),
-          );
+          try {
+            await runProcess(
+              "ffmpeg",
+              buildTrickplayFrameFfmpegArgs({
+                filePath,
+                outputFile: framePaths[index]!,
+                timestampSeconds: trickplayFrameTimestamp(
+                  index,
+                  frameInterval,
+                  duration,
+                ),
+                frameWidth: plannedSpriteThumbWidth,
+                frameHeight: plannedSpriteThumbHeight,
+                jpegQuality,
+              }),
+            );
+          } catch (err) {
+            // Don't fail the whole job for a single bad frame — the
+            // missing-file substitution below will fill the slot from a
+            // neighbouring extracted frame.
+            console.warn(
+              `[preview] trickplay frame ${index} (t=${trickplayFrameTimestamp(index, frameInterval, duration).toFixed(1)}s) failed for ${entityKind} ${video.id}: ${(err as Error).message}`,
+            );
+          }
         },
         async (completed) => {
           if (completed === frameCount || completed % 8 === 0) {
@@ -492,8 +520,46 @@ export async function processPreview(job: Job) {
         },
       );
 
-      const composites = framePaths.map((input, index) => ({
-        input,
+      // ffmpeg can silently exit 0 without writing the output (out-of-range
+      // seek, unindexable region, single bad keyframe, …). Fill any missing
+      // slot with the closest successfully-extracted neighbour so the strip
+      // stays visually contiguous; if literally none came back, log and
+      // skip trickplay for this video rather than crashing the preview job.
+      const presence = await Promise.all(
+        framePaths.map(async (p) => {
+          try {
+            const s = await stat(p);
+            return s.size > 0;
+          } catch {
+            return false;
+          }
+        }),
+      );
+      const validIndexes = presence
+        .map((ok, i) => (ok ? i : -1))
+        .filter((i) => i >= 0);
+
+      if (validIndexes.length === 0) {
+        console.warn(
+          `[preview] trickplay produced no usable frames for ${entityKind} ${video.id} — skipping sprite/VTT`,
+        );
+        await markJobProgress(job, "preview", 100);
+        return;
+      }
+
+      function nearestValid(i: number): number {
+        let lo = i, hi = i;
+        while (lo >= 0 || hi < frameCount) {
+          if (lo >= 0 && presence[lo]) return lo;
+          if (hi < frameCount && presence[hi]) return hi;
+          lo--;
+          hi++;
+        }
+        return validIndexes[0]!;
+      }
+
+      const composites = framePaths.map((_input, index) => ({
+        input: framePaths[presence[index] ? index : nearestValid(index)]!,
         left: (index % gridColumns) * plannedSpriteThumbWidth,
         top: Math.floor(index / gridColumns) * plannedSpriteThumbHeight,
       }));

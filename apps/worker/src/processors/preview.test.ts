@@ -67,6 +67,18 @@ describe("preview trickplay planning", () => {
     expect(trickplayFrameTimestamp(6, 10)).toBe(65);
   });
 
+  it("clamps trickplay timestamps to a half-second before duration on short videos", () => {
+    // A 12-second video at a 10-second interval would otherwise ask for
+    // frame 1 at t=15s — past EOF — and ffmpeg would silently exit 0
+    // without writing the output, breaking the downstream sharp composite.
+    expect(trickplayFrameTimestamp(0, 10, 12)).toBe(5);
+    expect(trickplayFrameTimestamp(1, 10, 12)).toBe(11.5);
+    expect(trickplayFrameTimestamp(0, 10, 5)).toBe(4.5);
+    expect(trickplayFrameTimestamp(0, 10, 0)).toBe(0);
+    // Without duration the legacy centering applies (no clamp).
+    expect(trickplayFrameTimestamp(99, 10)).toBe(995);
+  });
+
   it("maps the 1..31 quality slider onto sharp's 1..100 jpeg scale", () => {
     expect(trickplaySharpQuality(1)).toBe(90);
     expect(trickplaySharpQuality(31)).toBe(60);
