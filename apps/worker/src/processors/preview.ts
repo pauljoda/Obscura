@@ -116,9 +116,14 @@ export function buildTrickplayFrameFfmpegArgs(input: {
   frameHeight: number;
   jpegQuality: number;
 }) {
+  // format=yuvj420p is required: ffmpeg's mjpeg encoder refuses to write
+  // full-range YUV (color_range=pc) without it, which makes raw extraction
+  // fail on a large fraction of real-world sources (HDR, phone video,
+  // rendered animation). Standardising on JPEG-range here is correct.
   const vf = [
     `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease`,
     `pad=${input.frameWidth}:${input.frameHeight}:(ow-iw)/2:(oh-ih)/2`,
+    `format=yuvj420p`,
   ].join(",");
 
   return [
@@ -126,9 +131,15 @@ export function buildTrickplayFrameFfmpegArgs(input: {
     "-loglevel",
     "error",
     "-y",
-    // Input-seek (-ss BEFORE -i): jumps to nearest keyframe via demuxer index
-    // without decoding the prefix. Orders of magnitude faster than the
-    // fps=1/N filter, which has to demux+decode the entire source.
+    // -skip_frame nokey makes the decoder discard B/P frame packets entirely,
+    // so seeking lands on a keyframe and we decode only that one frame.
+    // Combined with input-seek (-ss before -i) this is dramatically faster
+    // than letting ffmpeg decode the GOP up to an exact timestamp — and
+    // for trickplay scrub previews the visual cost (frame snaps to the
+    // nearest preceding keyframe, typically within a few seconds of the
+    // requested time) is negligible.
+    "-skip_frame",
+    "nokey",
     "-ss",
     input.timestampSeconds.toFixed(3),
     "-i",

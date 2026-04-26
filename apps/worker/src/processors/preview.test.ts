@@ -41,11 +41,21 @@ describe("preview trickplay planning", () => {
     expect(ssIndex).toBeGreaterThanOrEqual(0);
     expect(inputIndex).toBeGreaterThan(ssIndex);
 
+    // -skip_frame nokey makes the decoder discard non-keyframe packets so
+    // each spawn decodes exactly one frame (the keyframe at/before -ss).
+    // Must be passed BEFORE -i to apply to the input decoder.
+    const skipIndex = args.indexOf("-skip_frame");
+    expect(skipIndex).toBeGreaterThanOrEqual(0);
+    expect(args[skipIndex + 1]).toBe("nokey");
+    expect(skipIndex).toBeLessThan(inputIndex);
+
     expect(args).toContain("/media/video.mp4");
     expect(args).toContain("/tmp/frame_00007.jpg");
     expect(args).toContain("75.000");
+    // format=yuvj420p tail is required so the mjpeg encoder accepts
+    // full-range YUV sources (HDR, phone video, rendered animation).
     expect(args).toContain(
-      "scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2",
+      "scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
     );
     expect(args).toContain("-q:v");
     expect(args).toContain("4");
