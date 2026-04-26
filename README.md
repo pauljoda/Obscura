@@ -17,7 +17,7 @@
   <a href="https://pauljoda.github.io/Obscura/docs/users/quick-start">
     <img alt="Quick start guide" src="https://img.shields.io/badge/Quick_Start-Docker-1f6feb?style=for-the-badge&logo=docker&logoColor=white" />
   </a>
-  <a href="https://pauljoda.github.io/Obscura/docs/developers/plugin-development">
+  <a href="https://pauljoda.github.io/Obscura/docs/plugins/overview">
     <img alt="Plugin author guide" src="https://img.shields.io/badge/Plugin_Guide-Developers-24292f?style=for-the-badge&logo=typescript&logoColor=white" />
   </a>
 </p>
