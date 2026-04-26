@@ -48,7 +48,7 @@
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
     "galleries:interiorView",
-    { cols: 6 },
+    { cols: 3 },
     data.viewPrefs,
   );
 

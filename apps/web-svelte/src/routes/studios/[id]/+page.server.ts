@@ -7,7 +7,9 @@ import { error } from "@sveltejs/kit";
 const VIDEO_LIMIT = 60;
 const SERIES_LIMIT = 24;
 const GALLERY_LIMIT = 24;
+const IMAGE_LIMIT = 36;
 const AUDIO_LIMIT = 24;
+const AUDIO_TRACK_LIMIT = 36;
 
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`studios:${params.id}`);
@@ -53,13 +55,25 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     nsfw,
     limit: GALLERY_LIMIT,
   });
+  const imageQs = buildQueryString({
+    studio: studio.id,
+    nsfw,
+    limit: IMAGE_LIMIT,
+  });
   const audioQs = buildQueryString({
     studio: studio.id,
     nsfw,
     limit: AUDIO_LIMIT,
   });
+  const audioTracksQs = buildQueryString({
+    studio: studio.id,
+    nsfw,
+    limit: AUDIO_TRACK_LIMIT,
+    sort: "recent",
+    order: "desc",
+  });
 
-  const [videosRes, seriesRes, galleriesRes, audioRes, studiosRes] = await Promise.all([
+  const [videosRes, seriesRes, galleriesRes, imagesRes, audioRes, audioTracksRes, studiosRes] = await Promise.all([
     serverFetch<{ videos: unknown[]; total: number }>(`/videos${videoQs}`, { fetch }).catch(
       () => ({ videos: [], total: 0 }),
     ),
@@ -69,7 +83,13 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     serverFetch<{ galleries: unknown[]; total: number }>(`/galleries${galleryQs}`, {
       fetch,
     }).catch(() => ({ galleries: [], total: 0 })),
+    serverFetch<{ images: unknown[]; total: number }>(`/images${imageQs}`, { fetch }).catch(
+      () => ({ images: [], total: 0 }),
+    ),
     serverFetch<{ items: unknown[]; total: number }>(`/audio-libraries${audioQs}`, {
+      fetch,
+    }).catch(() => ({ items: [], total: 0 })),
+    serverFetch<{ items: unknown[]; total: number }>(`/audio-tracks${audioTracksQs}`, {
       fetch,
     }).catch(() => ({ items: [], total: 0 })),
     serverFetch<{
@@ -85,8 +105,12 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     totalSeries: seriesRes.total,
     galleries: galleriesRes.galleries,
     totalGalleries: galleriesRes.total,
+    images: imagesRes.images,
+    totalImages: imagesRes.total,
     audioLibraries: audioRes.items,
     totalAudioLibraries: audioRes.total,
+    audioTracks: audioTracksRes.items,
+    totalAudioTracks: audioTracksRes.total,
     allStudios: studiosRes.studios.filter((candidate) => candidate.id !== studio.id),
   };
 };

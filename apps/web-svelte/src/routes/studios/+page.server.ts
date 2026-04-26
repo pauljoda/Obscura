@@ -11,6 +11,6 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
   }));
   return {
     studios: response.studios,
-    viewPrefs: await loadUiPrefObject("studios:view", { cols: 4 }),
+    viewPrefs: await loadUiPrefObject("studios:view", { cols: 2 }),
   };
 };

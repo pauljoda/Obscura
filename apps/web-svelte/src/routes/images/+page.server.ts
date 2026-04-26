@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     sort,
     order,
     nsfwMode,
-    viewPrefs: await loadUiPrefObject("images:view", { cols: 8 }),
+    viewPrefs: await loadUiPrefObject("images:view", { cols: 3 }),
   };
 };
 

@@ -149,7 +149,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     view,
     nsfwMode,
     prefs,
-    viewPrefs: await loadUiPrefObject("series:view", { cols: 5 }),
+    viewPrefs: await loadUiPrefObject("series:view", { cols: 2 }),
     streamed: {
       studios: studiosPromise,
       tags: tagsPromise,

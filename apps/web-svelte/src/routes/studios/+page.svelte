@@ -74,7 +74,7 @@
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
     "studios:view",
-    { cols: 4, viewMode: "grid" },
+    { cols: 2, viewMode: "grid" },
     data.viewPrefs,
   );
   const viewMode = $derived(viewPrefs.current.viewMode);

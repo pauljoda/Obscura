@@ -99,6 +99,7 @@
   });
 
   onMount(() => {
+    void prefsStore.load();
     void presetsApi.load();
     return () => coll.dispose();
   });
@@ -154,7 +155,7 @@
   }
 
   function isDefaultPrefs(p: SurfacePrefs<F>): boolean {
-    const d = config.defaultPrefs;
+    const d = defaultPrefs();
     return (
       p.viewMode === d.viewMode &&
       p.sortBy === d.sortBy &&
@@ -166,15 +167,22 @@
   const canClear = $derived(!isDefaultPrefs(prefsStore.current));
 
   function onClearFiltersAndSort() {
-    prefsStore.set({ ...config.defaultPrefs });
+    prefsStore.set(defaultPrefs());
+  }
+
+  function defaultPrefs(): SurfacePrefs<F> {
+    return {
+      ...config.defaultPrefs,
+      cols: config.thumbSize?.min ?? config.defaultPrefs.cols,
+    };
   }
 
   // ── Presets ──────────────────────────────────────────────────────────
   function onApplyPreset(preset: FilterPreset) {
     prefsStore.set({
-      ...config.defaultPrefs,
-      sortBy: preset.sortBy ?? config.defaultPrefs.sortBy,
-      sortDir: (preset.sortDir as SortDir | undefined) ?? config.defaultPrefs.sortDir,
+      ...defaultPrefs(),
+      sortBy: preset.sortBy ?? defaultPrefs().sortBy,
+      sortDir: (preset.sortDir as SortDir | undefined) ?? defaultPrefs().sortDir,
       activeFilters: (preset.filters ?? []) as SurfacePrefs<F>["activeFilters"],
       activePresetId: preset.id,
       viewMode: prefsStore.current.viewMode,

@@ -12,6 +12,6 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
 
   return {
     tags: response.tags,
-    viewPrefs: await loadUiPrefObject("tags:view", { cols: 5 }),
+    viewPrefs: await loadUiPrefObject("tags:view", { cols: 2 }),
   };
 };

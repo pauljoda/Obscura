@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { Grid2x2, List } from "@lucide/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Harness from "./_test/Harness.svelte";
 import StubCard from "./_test/StubCard.svelte";
@@ -38,8 +39,8 @@ function items(start: number, count: number): Item[] {
   }));
 }
 
-function mockUiPrefsApi() {
-  let store: Record<string, unknown> = {};
+function mockUiPrefsApi(initialStore: Record<string, unknown> = {}) {
+  let store: Record<string, unknown> = { ...initialStore };
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     const m = url.match(/\/api\/ui-prefs\/(.+?)(?:\?|$)/);
@@ -187,5 +188,51 @@ describe("MediaSurface", () => {
     // No fetch yet — initial provides the data; defaultPrefs are used
     // straight away on first render.
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("loads persisted surface preferences on mount", async () => {
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      viewMode: "list",
+      sortBy: "title",
+      sortDir: "asc",
+      cols: 2,
+    };
+    mockUiPrefsApi({
+      "surface:detail-videos:prefs": savedPrefs,
+    });
+    const fetcher = vi.fn(
+      async (_args: { prefs: SurfacePrefs<"resolution" | "tag"> }) => ({
+        items: items(100, 2),
+        total: 2,
+      }),
+    );
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "detail-videos",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs: { ...defaultPrefs, cols: 5 },
+      sortOptions: [
+        { value: "recent", label: "Recent" },
+        { value: "title", label: "Title A-Z" },
+      ],
+      viewModes: [
+        { mode: "grid", icon: Grid2x2, label: "Grid view" },
+        { mode: "list", icon: List, label: "List view" },
+      ],
+      thumbSize: { min: 2, max: 8, default: 5 },
+    };
+
+    render(Harness, { props: { config } });
+
+    await waitFor(() => {
+      const prefs = fetcher.mock.calls.map(([arg]) => arg.prefs);
+      expect(prefs).toContainEqual(expect.objectContaining(savedPrefs));
+    });
+    expect(screen.getByRole("button", { name: /list view/i }).className).toContain(
+      "text-text-accent",
+    );
   });
 });

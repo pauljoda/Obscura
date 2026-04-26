@@ -35,11 +35,14 @@
   let { tabs, defaultTabId }: Props = $props();
 
   const tabFromUrl = $derived(page.url.searchParams.get("tab"));
+  const fallbackTabId = $derived(
+    defaultTabId && tabs.some((t) => t.id === defaultTabId)
+      ? defaultTabId
+      : tabs[0]?.id ?? "",
+  );
   const activeTabId = $derived(
     (tabFromUrl && tabs.some((t) => t.id === tabFromUrl) ? tabFromUrl : null) ??
-      defaultTabId ??
-      tabs[0]?.id ??
-      "",
+      fallbackTabId,
   );
   const activeTab = $derived(tabs.find((t) => t.id === activeTabId) ?? tabs[0]);
 

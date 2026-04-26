@@ -13,7 +13,7 @@ import type { MediaSurfaceConfig, SurfacePrefs } from "../config";
 export interface CreateSurfacePrefsOptions<F extends string> {
   config: Pick<
     MediaSurfaceConfig<{ id: string }, F>,
-    "surfaceId" | "defaultPrefs" | "filterSections" | "sortOptions" | "viewModes"
+    "surfaceId" | "defaultPrefs" | "filterSections" | "sortOptions" | "viewModes" | "thumbSize"
   >;
   /** Server-loaded snapshot from the page's load function. */
   initial?: Partial<SurfacePrefs<F>> | null;
@@ -43,16 +43,22 @@ export function createSurfacePrefs<F extends string>(
   opts: CreateSurfacePrefsOptions<F>,
 ): ServerPrefs<SurfacePrefs<F>> {
   const key = surfacePrefsKey(opts.config.surfaceId);
+  const defaultPrefs: SurfacePrefs<F> = {
+    ...opts.config.defaultPrefs,
+    cols: opts.config.thumbSize?.min ?? opts.config.defaultPrefs.cols,
+  };
+  const validationConfig = { ...opts.config, defaultPrefs };
 
   const initial = opts.initial
-    ? (validateSurfacePrefs<F>(opts.config, opts.initial) ??
-        opts.config.defaultPrefs)
+    ? (validateSurfacePrefs<F>(validationConfig, opts.initial) ??
+        defaultPrefs)
     : null;
 
   const prefs = createServerPrefs<SurfacePrefs<F>>(
     key,
-    opts.config.defaultPrefs,
+    defaultPrefs,
     initial,
+    (raw) => validateSurfacePrefs<F>(validationConfig, raw),
   );
 
   // Best-effort one-time migration from a legacy DB key. We don't gate
@@ -69,7 +75,7 @@ export function createSurfacePrefs<F extends string>(
           `/ui-prefs/${encodeURIComponent(opts.legacyKey!)}`,
         );
         if (!legacyRow.value) return;
-        const validated = validateSurfacePrefs<F>(opts.config, legacyRow.value);
+        const validated = validateSurfacePrefs<F>(validationConfig, legacyRow.value);
         if (!validated) return;
         prefs.set(validated);
       } catch {

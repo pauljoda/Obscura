@@ -77,6 +77,14 @@
       entityId: s.id,
       entityName: s.name,
       nsfwMode: "show",
+      totals: {
+        videos: data.totalVideos,
+        series: data.totalSeries,
+        galleries: data.totalGalleries,
+        images: data.totalImages,
+        "audio-libraries": data.totalAudioLibraries,
+        "audio-tracks": data.totalAudioTracks,
+      },
       initialActive: page.url.searchParams.get("tab") === null
         ? {
             tabId: "videos",

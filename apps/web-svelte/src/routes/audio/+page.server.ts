@@ -47,6 +47,6 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     sort,
     order,
     nsfwMode,
-    viewPrefs: await loadUiPrefObject("audio:view", { cols: 5 }),
+    viewPrefs: await loadUiPrefObject("audio:view", { cols: 2 }),
   };
 };

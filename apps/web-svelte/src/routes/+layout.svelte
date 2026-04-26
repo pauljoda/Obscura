@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
 
+  import { afterNavigate } from "$app/navigation";
   import { cn } from "@obscura/ui-svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
@@ -25,9 +26,16 @@
   const chrome = provideAppChrome(() => data.initialCollapsed);
   provideSearch();
   const playlist = providePlaylist();
+  let mainScroller = $state<HTMLElement | null>(null);
 
   $effect(() => {
     void playlist.hydrate();
+  });
+
+  afterNavigate(({ from, to, type }) => {
+    if (!from || !to || type === "popstate") return;
+    if (from.url.pathname === to.url.pathname) return;
+    mainScroller?.scrollTo({ top: 0, left: 0 });
   });
 
   const bottomDockPadding = $derived(
@@ -51,6 +59,7 @@
       </div>
 
       <main
+        bind:this={mainScroller}
         class={cn(
           "flex flex-1 flex-col transition-[margin-left] duration-moderate",
           "h-[calc(100dvh-var(--obscura-mobile-bottom-clearance))] overflow-y-auto [scrollbar-gutter:stable] md:h-[calc(100dvh-var(--obscura-desktop-bottom-clearance))]",

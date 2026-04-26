@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ params, depends, fetch }) => {
     const gallery = await fetchGalleryDetail(params.id, { fetch });
     return {
       gallery,
-      viewPrefs: await loadUiPrefObject("galleries:interiorView", { cols: 6 }),
+      viewPrefs: await loadUiPrefObject("galleries:interiorView", { cols: 3 }),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

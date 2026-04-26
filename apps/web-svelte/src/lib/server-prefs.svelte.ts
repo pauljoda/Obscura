@@ -37,6 +37,7 @@ export function createServerPrefs<T extends object>(
   key: string,
   defaults: T,
   initial?: Partial<T> | null,
+  validate?: (raw: unknown) => T | null,
 ): ServerPrefs<T> {
   let value = $state<T>({ ...defaults, ...(initial ?? {}) });
   let loaded = $state(false);
@@ -74,7 +75,7 @@ export function createServerPrefs<T extends object>(
         `/ui-prefs/${encodeURIComponent(key)}`,
       );
       if (row.value && typeof row.value === "object") {
-        value = { ...defaults, ...(row.value as T) };
+        value = validate?.(row.value) ?? { ...defaults, ...(row.value as T) };
       }
     } catch {
       // fall back to defaults

@@ -5,8 +5,11 @@ import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
 
 const VIDEO_LIMIT = 60;
+const SERIES_LIMIT = 24;
 const GALLERY_LIMIT = 24;
 const IMAGE_LIMIT = 48;
+const AUDIO_LIMIT = 24;
+const AUDIO_TRACK_LIMIT = 36;
 
 type TagDetail = {
   id: string;
@@ -64,15 +67,35 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     nsfw,
     limit: GALLERY_LIMIT,
   });
+  const seriesQs = buildQueryString({
+    tag: tagName,
+    nsfw,
+    limit: SERIES_LIMIT,
+  });
   const imagesQs = buildQueryString({
     tag: tagName,
     nsfw,
     limit: IMAGE_LIMIT,
   });
+  const audioQs = buildQueryString({
+    tag: tagName,
+    nsfw,
+    limit: AUDIO_LIMIT,
+  });
+  const audioTracksQs = buildQueryString({
+    tag: tagName,
+    nsfw,
+    limit: AUDIO_TRACK_LIMIT,
+    sort: "recent",
+    order: "desc",
+  });
 
-  const [videosRes, galleriesRes, imagesRes] = await Promise.all([
+  const [videosRes, seriesRes, galleriesRes, imagesRes, audioRes, audioTracksRes] = await Promise.all([
     serverFetch<{ videos: unknown[]; total: number }>(`/videos${videoQs}`, { fetch }).catch(
       () => ({ videos: [], total: 0 }),
+    ),
+    serverFetch<{ items: unknown[]; total: number }>(`/video-series${seriesQs}`, { fetch }).catch(
+      () => ({ items: [], total: 0 }),
     ),
     serverFetch<{ galleries: unknown[]; total: number }>(`/galleries${galleriesQs}`, {
       fetch,
@@ -80,15 +103,27 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     serverFetch<{ images: unknown[]; total: number }>(`/images${imagesQs}`, { fetch }).catch(
       () => ({ images: [], total: 0 }),
     ),
+    serverFetch<{ items: unknown[]; total: number }>(`/audio-libraries${audioQs}`, {
+      fetch,
+    }).catch(() => ({ items: [], total: 0 })),
+    serverFetch<{ items: unknown[]; total: number }>(`/audio-tracks${audioTracksQs}`, {
+      fetch,
+    }).catch(() => ({ items: [], total: 0 })),
   ]);
 
   return {
     tag,
     videos: videosRes.videos,
     totalVideos: videosRes.total,
+    series: seriesRes.items,
+    totalSeries: seriesRes.total,
     galleries: galleriesRes.galleries,
     totalGalleries: galleriesRes.total,
     images: imagesRes.images,
     totalImages: imagesRes.total,
+    audioLibraries: audioRes.items,
+    totalAudioLibraries: audioRes.total,
+    audioTracks: audioTracksRes.items,
+    totalAudioTracks: audioTracksRes.total,
   };
 };

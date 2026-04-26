@@ -42,6 +42,15 @@ export type DetailEntityKind =
   | "performer"
   | "studio";
 
+type DetailTabId =
+  | "videos"
+  | "series"
+  | "galleries"
+  | "images"
+  | "audio-libraries"
+  | "audio-tracks"
+  | "performers";
+
 export interface DetailContext {
   entityKind: DetailEntityKind;
   entityId: string;
@@ -54,6 +63,7 @@ export interface DetailContext {
     items: unknown[];
     total: number;
   };
+  totals?: Partial<Record<DetailTabId, number>>;
 }
 
 const PAGE_SIZE = 60;
@@ -100,6 +110,7 @@ function videosTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "videos",
     label: "Videos",
+    count: ctx.totals?.videos,
     build: () => scopedConfig,
   };
 }
@@ -145,6 +156,7 @@ function galleriesTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "galleries",
     label: "Galleries",
+    count: ctx.totals?.galleries,
     build: () => scopedConfig,
   };
 }
@@ -190,6 +202,7 @@ function imagesTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "images",
     label: "Images",
+    count: ctx.totals?.images,
     build: () => scopedConfig,
   };
 }
@@ -235,6 +248,7 @@ function audioLibrariesTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "audio-libraries",
     label: "Audio Libraries",
+    count: ctx.totals?.["audio-libraries"],
     build: () => scopedConfig,
   };
 }
@@ -244,6 +258,7 @@ function audioTracksTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "audio-tracks",
     label: "Audio Tracks",
+    count: ctx.totals?.["audio-tracks"],
     build: () =>
       ({
         surfaceId: `${ctx.entityKind}:${ctx.entityId}:audio-tracks`,
@@ -302,6 +317,7 @@ function seriesTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "series",
     label: "Series",
+    count: ctx.totals?.series,
     build: () =>
       ({
         surfaceId: `${ctx.entityKind}:${ctx.entityId}:series`,
@@ -378,6 +394,7 @@ function performersTab(ctx: DetailContext): MediaTabSpec {
   return {
     id: "performers",
     label: "Performers",
+    count: ctx.totals?.performers,
     build: () =>
       ({
         ...baseConfig,
@@ -387,7 +404,8 @@ function performersTab(ctx: DetailContext): MediaTabSpec {
 }
 
 export function detailTabsFor(ctx: DetailContext): MediaTabSpec[] {
-  switch (ctx.entityKind) {
+  const tabs = (() => {
+    switch (ctx.entityKind) {
     case "tag":
       return [
         videosTab(ctx),
@@ -416,5 +434,8 @@ export function detailTabsFor(ctx: DetailContext): MediaTabSpec[] {
         audioLibrariesTab(ctx),
         audioTracksTab(ctx),
       ];
-  }
+    }
+  })();
+
+  return tabs.filter((tab) => ctx.totals?.[tab.id as DetailTabId] !== 0);
 }

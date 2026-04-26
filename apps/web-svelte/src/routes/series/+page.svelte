@@ -160,7 +160,7 @@
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
     "series:view",
-    { cols: 5 },
+    { cols: 2 },
     data.viewPrefs,
   );
   let studiosList = $state<AvailableItem[]>([]);

@@ -79,7 +79,7 @@ function allowedFilterTypes<F extends string>(
 export function validateSurfacePrefs<F extends string>(
   config: Pick<
     MediaSurfaceConfig<{ id: string }, F>,
-    "viewModes" | "sortOptions" | "filterSections" | "defaultPrefs"
+    "viewModes" | "sortOptions" | "filterSections" | "defaultPrefs" | "thumbSize"
   >,
   raw: unknown,
 ): SurfacePrefs<F> | null {
@@ -116,10 +116,12 @@ export function validateSurfacePrefs<F extends string>(
       ? raw.activePresetId
       : undefined;
 
-  const cols =
-    typeof raw.cols === "number" && Number.isFinite(raw.cols) && raw.cols > 0
-      ? raw.cols
-      : config.defaultPrefs.cols;
+  const defaultCols = config.thumbSize?.min ?? config.defaultPrefs.cols;
+  const cols = (() => {
+    if (typeof raw.cols !== "number" || !Number.isFinite(raw.cols)) return defaultCols;
+    if (!config.thumbSize) return raw.cols > 0 ? raw.cols : defaultCols;
+    return Math.min(config.thumbSize.max, Math.max(config.thumbSize.min, raw.cols));
+  })();
 
   const extras = isRecord(raw.extras)
     ? (raw.extras as SurfacePrefs<F>["extras"])

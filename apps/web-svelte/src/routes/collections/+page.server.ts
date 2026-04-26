@@ -26,6 +26,6 @@ export const load: PageServerLoad = async ({ url, depends, fetch }) => {
     search: search ?? "",
     sort,
     order,
-    viewPrefs: await loadUiPrefObject("collections:view", { cols: 5 }),
+    viewPrefs: await loadUiPrefObject("collections:view", { cols: 2 }),
   };
 };
