@@ -67,6 +67,7 @@
 
   let stageEl: HTMLDivElement | undefined = $state();
   let imgEl: HTMLImageElement | HTMLVideoElement | undefined = $state();
+  let stripThumbEls: Array<HTMLButtonElement | undefined> = $state([]);
   let naturalW = $state(0);
   let naturalH = $state(0);
   let ready = $state(false);
@@ -92,6 +93,12 @@
 
   $effect(() => {
     onIndexChange?.(index);
+  });
+
+  $effect(() => {
+    const el = stripThumbEls[index];
+    if (!el) return;
+    el.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   });
 
   $effect(() => {
@@ -753,6 +760,7 @@
             <button
               type="button"
               onclick={() => (index = i)}
+              bind:this={stripThumbEls[i]}
               class={`flex-shrink-0 aspect-square w-12 overflow-hidden border transition-all ${
                 i === index
                   ? "border-border-accent ring-1 ring-accent-500/40"
