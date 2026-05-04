@@ -9,10 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### What's New
 
 - Scheduled library scans no longer redo work that's already been done. Probe, fingerprint, preview, and trickplay jobs now skip videos whose outputs are already present, so a rescan of a fully-processed library finishes quickly instead of reburning ffmpeg time on every file. Force-rebuild from the UI still regenerates everything as before, and missing on-disk artifacts (e.g. after a `/data` wipe) are detected and regenerated even when the database row still references them.
+- The Images Feed view now shows each image at its natural shape instead of cropping everything to a square, so portrait and panoramic images are easier to recognize while scrolling.
 
 ### Fixed
 
 - Library rescans no longer re-run media-probe, fingerprinting, or preview/trickplay generation against videos that already have all their derived metadata and assets. Each video processor now short-circuits when the expected DB columns are populated (and, for preview assets, when the artifacts still exist on disk). The "Rebuild" UI flow is unaffected — it sets `jobKind: "force-rebuild"` which bypasses the skip check.
+- The Images Feed view no longer forces every image into a square thumbnail. Each card now uses the image's own width/height ratio so portrait and landscape images display unclipped (APP-109).
 
 ## [0.21.0] - 2026-04-26
 ### What's New

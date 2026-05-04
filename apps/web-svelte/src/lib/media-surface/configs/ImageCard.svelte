@@ -24,6 +24,10 @@
     if (!item.width || !item.height || item.height <= 0) return 1;
     return Math.max(0.25, Math.min(4, item.width / item.height));
   }
+
+  const feedHasNaturalSize = $derived(
+    !!item.width && !!item.height && item.height > 0,
+  );
 </script>
 
 {#if layout === "list"}
@@ -66,6 +70,7 @@
     type="button"
     onclick={() => onActivate?.()}
     class="block w-full border-0 p-0 hover:ring-1 hover:ring-border-accent transition-all duration-fast"
+    style:aspect-ratio={feedHasNaturalSize ? aspectRatio() : undefined}
   >
     <ImageThumbnail
       title={item.title}
@@ -76,6 +81,7 @@
       width={item.width}
       height={item.height}
       size="grid"
+      aspectClass={feedHasNaturalSize ? "h-full w-full" : undefined}
     />
   </button>
 {:else}
