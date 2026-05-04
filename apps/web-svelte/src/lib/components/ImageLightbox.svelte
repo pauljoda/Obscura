@@ -290,10 +290,15 @@
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
     const moved = Math.hypot(dx, dy) > 6;
+    const target = e.target as HTMLElement;
+    const tappedVideo = target.tagName === "VIDEO";
 
     if (!panning && !moved && e.pointerType === "mouse") {
+      if (tappedVideo) {
+        toggleVideoPlayback();
+        return;
+      }
       // single click on backdrop (not on image) — close
-      const target = e.target as HTMLElement;
       if (!target.closest("[data-lightbox-image]")) {
         onClose();
         return;
@@ -320,8 +325,15 @@
       }
     }
 
-    // Double-tap / double-click to toggle zoom.
+    // Touch tap behaviors.
     if (!moved && e.pointerType !== "mouse") {
+      // Tap on video → toggle playback. Skip double-tap zoom for videos
+      // because two taps would otherwise pause then immediately resume.
+      if (tappedVideo) {
+        toggleVideoPlayback();
+        return;
+      }
+      // Double-tap to zoom for images.
       const now = Date.now();
       if (now - lastTapAt < DOUBLE_TAP_MS) {
         lastTapAt = 0;
