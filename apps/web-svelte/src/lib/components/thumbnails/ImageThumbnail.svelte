@@ -100,9 +100,10 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class={cn("relative overflow-hidden bg-surface-1", aspect, className)}
-  onmouseenter={startHover}
-  onmouseleave={endHover}
+  class={cn("relative overflow-hidden bg-surface-1 select-none", aspect, className)}
+  onpointerenter={startHover}
+  onpointerleave={endHover}
+  onpointercancel={endHover}
   onfocusin={startHover}
   onfocusout={endHover}
 >

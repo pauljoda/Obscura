@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Sort menu in library toolbars no longer slides off the left edge of the screen on narrow phones. The dropdown now opens to the right of the Sort button on mobile and keeps its existing right-anchored position on wider viewports.
 - The image lightbox's bottom thumbnail strip now scrolls the active image into view as you navigate, so the current selection stays visible in long galleries instead of disappearing off the right edge.
 - Tapping or clicking an animated image inside the lightbox now toggles play/pause directly, matching the behavior of native video players. Previously you had to use the toolbar Play/Pause button or press Space.
+- Animated image previews on touch devices now play while you press-and-hold any thumbnail in a grid. Previously preview playback was triggered by mouse hover, which was unreliable on touch — only the leftmost column of thumbnails would animate when tapped.
 
 ### Fixed
 
@@ -21,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library toolbar Sort dropdown no longer opens off the left side of the viewport on mobile. The panel now anchors `left-0` below `sm` breakpoint (opens to the right of the Sort button) and keeps `right-0` on wider screens, where the button has space to its left (APP-110).
 - The image lightbox bottom navigation strip now auto-scrolls the active thumbnail into view as you navigate. Without this, the highlighted thumb scrolled out of sight in galleries with more than ~7 images on mobile (APP-108).
 - Tapping (touch) or clicking (mouse) an animated image inside the lightbox now toggles its playback. Previously the only way to pause from inside the viewer was the toolbar button or the Space key (APP-107).
+- Animated image thumbnails now play preview video on touch press-and-hold, not just mouse hover. The hover-play handlers used `mouseenter`/`mouseleave`, which fire inconsistently across columns on touch devices — switching to `pointerenter`/`pointerleave`/`pointercancel` makes every thumbnail respond uniformly (APP-106).
 
 ## [0.21.0] - 2026-04-26
 ### What's New
