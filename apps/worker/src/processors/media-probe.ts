@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
-import type { JobLike as Job } from "../lib/job-tracking.js";
+import {
+  markJobActive,
+  markJobProgress,
+  type JobLike as Job,
+  type JobPayload,
+} from "../lib/job-tracking.js";
 import { CorruptMediaError, probeVideoFile } from "@obscura/media-core";
 import { db, videoEpisodes, videoMovies } from "../lib/db.js";
-import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -48,7 +52,15 @@ export async function processMediaProbe(job: Job) {
   const entityId = String(job.data.entityId);
   const table = entityKind === "video_episode" ? videoEpisodes : videoMovies;
   const [row] = await db
-    .select({ id: table.id, title: table.title, filePath: table.filePath })
+    .select({
+      id: table.id,
+      title: table.title,
+      filePath: table.filePath,
+      duration: table.duration,
+      width: table.width,
+      height: table.height,
+      codec: table.codec,
+    })
     .from(table)
     .where(eq(table.id, entityId))
     .limit(1);
@@ -62,6 +74,19 @@ export async function processMediaProbe(job: Job) {
     id: row.id,
     label: row.title ?? undefined,
   });
+
+  const payload = job.data as JobPayload;
+  const isForceRebuild = payload.jobKind === "force-rebuild";
+  const alreadyProbed =
+    row.duration != null &&
+    row.width != null &&
+    row.height != null &&
+    row.codec != null;
+
+  if (!isForceRebuild && alreadyProbed) {
+    await markJobProgress(job, "media-probe", 100);
+    return;
+  }
 
   try {
     await applyVideoProbeToVideoEntity(entityKind, row.id, row.filePath);

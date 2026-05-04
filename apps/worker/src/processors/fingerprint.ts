@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
-import type { JobLike as Job } from "../lib/job-tracking.js";
+import {
+  markJobActive,
+  markJobProgress,
+  type JobLike as Job,
+  type JobPayload,
+} from "../lib/job-tracking.js";
 import { computeMd5AndOsHash, computePhash } from "@obscura/media-core";
 import { db, librarySettings, videoEpisodes, videoMovies } from "../lib/db.js";
-import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 /**
@@ -51,6 +55,9 @@ export async function processFingerprint(job: Job) {
       title: table.title,
       filePath: table.filePath,
       duration: table.duration,
+      checksumMd5: table.checksumMd5,
+      oshash: table.oshash,
+      phash: table.phash,
     })
     .from(table)
     .where(eq(table.id, entityId))
@@ -66,15 +73,28 @@ export async function processFingerprint(job: Job) {
     label: row.title ?? undefined,
   });
 
+  const payload = job.data as JobPayload;
+  const isForceRebuild = payload.jobKind === "force-rebuild";
+
+  const needsHashes =
+    !phashOnly && (isForceRebuild || row.checksumMd5 == null || row.oshash == null);
+  const wantsPhash = phashEnabled || phashOnly;
+  const needsPhash = wantsPhash && (isForceRebuild || row.phash == null);
+
+  if (!needsHashes && !needsPhash) {
+    await markJobProgress(job, "fingerprint", 100);
+    return;
+  }
+
   const filePath = resolveRequiredMediaPath(row.filePath);
   const update: Record<string, unknown> = { updatedAt: new Date() };
-  if (!phashOnly) {
+  if (needsHashes) {
     const { md5, oshash } = await computeMd5AndOsHash(filePath);
     update.checksumMd5 = md5;
     update.oshash = oshash;
-    await markJobProgress(job, "fingerprint", phashEnabled ? 66 : 100);
+    await markJobProgress(job, "fingerprint", needsPhash ? 66 : 100);
   }
-  if (phashEnabled || phashOnly) {
+  if (needsPhash) {
     try {
       const phash = await computePhash(filePath, row.duration);
       if (phash) update.phash = phash;

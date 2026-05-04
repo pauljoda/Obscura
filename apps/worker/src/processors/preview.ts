@@ -20,6 +20,15 @@ import { applyVideoProbeToVideoEntity } from "./media-probe.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
 
+async function fileExists(p: string): Promise<boolean> {
+  try {
+    const s = await stat(p);
+    return s.size > 0;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Linearly interpolate resolution based on quality setting.
  * quality 1 -> nativeSize (no downscale), quality 31 -> minSize.
@@ -295,6 +304,11 @@ export async function processPreview(job: Job) {
       duration: table.duration,
       width: table.width,
       height: table.height,
+      thumbnailPath: table.thumbnailPath,
+      cardThumbnailPath: table.cardThumbnailPath,
+      previewPath: table.previewPath,
+      spritePath: table.spritePath,
+      trickplayVttPath: table.trickplayVttPath,
     })
     .from(table)
     .where(eq(table.id, entityId))
@@ -319,19 +333,10 @@ export async function processPreview(job: Job) {
   });
 
   const payload = job.data as JobPayload;
+  const isForceRebuild = payload.jobKind === "force-rebuild";
   const settings = await ensureLibrarySettingsRow();
 
   const filePath = resolveRequiredMediaPath(video.filePath!);
-  const metadata =
-    payload.jobKind === "force-rebuild"
-      ? await applyVideoProbeToVideoEntity(entityKind, video.id, filePath)
-      : video.duration && video.width && video.height
-        ? video
-        : await probeVideoFile(filePath);
-
-  if (payload.jobKind === "force-rebuild") {
-    await markJobProgress(job, "preview", 12);
-  }
 
   const layout = videoGeneratedLayoutFromDedicated(
     settings.metadataStorageDedicated ?? true
@@ -342,6 +347,46 @@ export async function processPreview(job: Job) {
   const previewFile = genPaths.preview;
   const spriteFile = genPaths.sprite;
   const trickplayFile = genPaths.trickplay;
+  const cardFile = genPaths.card;
+
+  // Existence test: a preview/trickplay phase is "already done" only when both
+  // the DB columns are populated AND the artifacts still exist on disk. If a
+  // user wiped /data, we must regenerate even though the row says we have
+  // assets.
+  const previewAssetsPresent =
+    row.thumbnailPath != null &&
+    row.cardThumbnailPath != null &&
+    row.previewPath != null &&
+    (await fileExists(thumbnailFile)) &&
+    (await fileExists(cardFile)) &&
+    (await fileExists(previewFile));
+  const trickplayPresent =
+    row.spritePath != null &&
+    row.trickplayVttPath != null &&
+    (await fileExists(spriteFile)) &&
+    (await fileExists(trickplayFile));
+
+  const shouldGeneratePreviewAssets =
+    settings.autoGeneratePreview === true &&
+    (isForceRebuild || !previewAssetsPresent);
+  const shouldGenerateTrickplay =
+    settings.generateTrickplay === true &&
+    (isForceRebuild || !trickplayPresent);
+
+  if (!shouldGeneratePreviewAssets && !shouldGenerateTrickplay) {
+    await markJobProgress(job, "preview", 100);
+    return;
+  }
+
+  const metadata = isForceRebuild
+    ? await applyVideoProbeToVideoEntity(entityKind, video.id, filePath)
+    : video.duration && video.width && video.height
+      ? video
+      : await probeVideoFile(filePath);
+
+  if (isForceRebuild) {
+    await markJobProgress(job, "preview", 12);
+  }
 
   await mkdir(path.dirname(thumbnailFile), { recursive: true });
 
@@ -349,8 +394,6 @@ export async function processPreview(job: Job) {
   const previewDuration = Math.max(4, settings.previewClipDurationSeconds);
   const previewStart = duration > previewDuration ? Math.max(0, duration * 0.1) : 0;
   const thumbnailAt = duration > 0 ? Math.min(duration - 0.5, Math.max(1, duration * 0.18)) : 0;
-  const shouldGeneratePreviewAssets = settings.autoGeneratePreview === true;
-  const shouldGenerateTrickplay = settings.generateTrickplay === true;
   const requestedFrameInterval = Math.max(3, settings.trickplayIntervalSeconds);
   // Resolution scales with the quality slider:
   //   quality 1  -> native video resolution (no downscale)
@@ -366,7 +409,6 @@ export async function processPreview(job: Job) {
     Math.round(scaleResolution(nativeH, 180, thumbQualityClamped))
   );
 
-  const cardFile = genPaths.card;
   const cardWidth = scaleResolution(nativeW, 160, thumbQualityClamped);
   const cardHeight = Math.max(
     Math.round((nativeH / nativeW) * cardWidth),
