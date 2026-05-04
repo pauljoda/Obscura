@@ -47,7 +47,7 @@
         aria-label="Close sort menu"
         onclick={() => (open = false)}
       ></button>
-      <div class="absolute right-0 top-full mt-1 z-50 w-44 surface-elevated py-1">
+      <div class="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-50 w-44 surface-elevated py-1">
         {#each sortOptions as opt (opt.value)}
           <button
             type="button"

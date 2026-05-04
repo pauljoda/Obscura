@@ -10,11 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Scheduled library scans no longer redo work that's already been done. Probe, fingerprint, preview, and trickplay jobs now skip videos whose outputs are already present, so a rescan of a fully-processed library finishes quickly instead of reburning ffmpeg time on every file. Force-rebuild from the UI still regenerates everything as before, and missing on-disk artifacts (e.g. after a `/data` wipe) are detected and regenerated even when the database row still references them.
 - The Images Feed view now shows each image at its natural shape instead of cropping everything to a square, so portrait and panoramic images are easier to recognize while scrolling.
+- The Sort menu in library toolbars no longer slides off the left edge of the screen on narrow phones. The dropdown now opens to the right of the Sort button on mobile and keeps its existing right-anchored position on wider viewports.
 
 ### Fixed
 
 - Library rescans no longer re-run media-probe, fingerprinting, or preview/trickplay generation against videos that already have all their derived metadata and assets. Each video processor now short-circuits when the expected DB columns are populated (and, for preview assets, when the artifacts still exist on disk). The "Rebuild" UI flow is unaffected — it sets `jobKind: "force-rebuild"` which bypasses the skip check.
 - The Images Feed view no longer forces every image into a square thumbnail. Each card now uses the image's own width/height ratio so portrait and landscape images display unclipped (APP-109).
+- Library toolbar Sort dropdown no longer opens off the left side of the viewport on mobile. The panel now anchors `left-0` below `sm` breakpoint (opens to the right of the Sort button) and keeps `right-0` on wider screens, where the button has space to its left (APP-110).
 
 ## [0.21.0] - 2026-04-26
 ### What's New
