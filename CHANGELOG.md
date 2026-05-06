@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-05-06
 ### What's New
 
 - Scheduled library scans no longer flood the job queue with work that's already been done. The previous fix made each processor short-circuit when its outputs were already present, but the queue itself was still being filled with thousands of no-op jobs on every scan — overwhelming the worker dashboard and stalling real work behind the backlog. Scans now check completion *before* enqueueing, so a rescan of a fully-processed library adds zero downstream jobs. Subtitle extraction in particular is now tracked with a dedicated timestamp, so videos with no embedded subtitles (which previously looked identical to "never tried") aren't re-probed every scan. Force-rebuild from the UI is unchanged.
