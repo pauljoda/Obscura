@@ -1,6 +1,6 @@
 {
   "name": "@obscura/ui-svelte",
-  "version": "0.21.1",
+  "version": "0.21.2-dev",
   "private": true,
   "type": "module",
   "svelte": "./src/index.ts",
