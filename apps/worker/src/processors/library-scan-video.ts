@@ -37,6 +37,80 @@ const {
   videoMovieTags,
 } = schema;
 
+// Subset of videoEpisodes/videoMovies columns used to decide whether the
+// downstream pipeline jobs still have work to do. Both tables share the same
+// shape for these columns, so a single helper can serve both.
+type VideoCompletionRow = {
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  codec: string | null;
+  checksumMd5: string | null;
+  oshash: string | null;
+  phash: string | null;
+  thumbnailPath: string | null;
+  cardThumbnailPath: string | null;
+  previewPath: string | null;
+  spritePath: string | null;
+  trickplayVttPath: string | null;
+  subtitlesExtractedAt: Date | null;
+};
+
+type LibrarySettingsForNeeds = {
+  generatePhash: boolean;
+  autoGeneratePreview: boolean;
+  generateTrickplay: boolean;
+};
+
+/**
+ * Decide which downstream pipeline jobs a video still needs based on what's
+ * already persisted on its row. Returning `true` means "enqueue"; the caller
+ * still gates on the relevant library-settings toggles.
+ *
+ * For brand-new rows (no `existing`), every job is needed — the row was just
+ * inserted with all derived columns null.
+ */
+function computeVideoJobNeeds(
+  existing: VideoCompletionRow | null,
+  settings: LibrarySettingsForNeeds,
+): {
+  mediaProbe: boolean;
+  fingerprint: boolean;
+  preview: boolean;
+  subtitles: boolean;
+} {
+  if (!existing) {
+    return { mediaProbe: true, fingerprint: true, preview: true, subtitles: true };
+  }
+
+  const probeDone =
+    existing.duration != null &&
+    existing.width != null &&
+    existing.height != null &&
+    existing.codec != null;
+
+  const hashesDone = existing.checksumMd5 != null && existing.oshash != null;
+  const phashDone = existing.phash != null;
+  const fingerprintDone = hashesDone && (!settings.generatePhash || phashDone);
+
+  const previewAssetsDone =
+    existing.thumbnailPath != null &&
+    existing.cardThumbnailPath != null &&
+    existing.previewPath != null;
+  const trickplayDone =
+    existing.spritePath != null && existing.trickplayVttPath != null;
+  const previewDone =
+    (!settings.autoGeneratePreview || previewAssetsDone) &&
+    (!settings.generateTrickplay || trickplayDone);
+
+  return {
+    mediaProbe: !probeDone,
+    fingerprint: !fingerprintDone,
+    preview: !previewDone,
+    subtitles: existing.subtitlesExtractedAt == null,
+  };
+}
+
 // Inlined buildSeriesTree — pure ~30-line function used by the scanner.
 
 interface SeriesTreeNode {
@@ -244,7 +318,10 @@ export async function processLibraryScan(job: Job): Promise<void> {
     const airDate = sidecar?.date ?? null;
     const rating = sidecar?.rating ?? null;
 
-    // Find existing row by file_path.
+    // Find existing row by file_path. Pull completion-relevant columns so we
+    // can skip enqueueing downstream jobs whose work is already done — without
+    // those checks, every scan re-queues thousands of probe/fingerprint/
+    // preview/subtitle jobs, swamping the worker.
     const [existing] = await db
       .select({
         id: videoEpisodes.id,
@@ -252,6 +329,19 @@ export async function processLibraryScan(job: Job): Promise<void> {
         overview: videoEpisodes.overview,
         airDate: videoEpisodes.airDate,
         rating: videoEpisodes.rating,
+        duration: videoEpisodes.duration,
+        width: videoEpisodes.width,
+        height: videoEpisodes.height,
+        codec: videoEpisodes.codec,
+        checksumMd5: videoEpisodes.checksumMd5,
+        oshash: videoEpisodes.oshash,
+        phash: videoEpisodes.phash,
+        thumbnailPath: videoEpisodes.thumbnailPath,
+        cardThumbnailPath: videoEpisodes.cardThumbnailPath,
+        previewPath: videoEpisodes.previewPath,
+        spritePath: videoEpisodes.spritePath,
+        trickplayVttPath: videoEpisodes.trickplayVttPath,
+        subtitlesExtractedAt: videoEpisodes.subtitlesExtractedAt,
       })
       .from(videoEpisodes)
       .where(eq(videoEpisodes.filePath, episode.filePath))
@@ -315,27 +405,32 @@ export async function processLibraryScan(job: Job): Promise<void> {
 
     // Enqueue downstream processors for the episode. The expensive generation
     // queues honor library settings so scans can stay cheap when enrichment is
-    // disabled.
+    // disabled. For existing rows, skip enqueueing when the work is already
+    // complete — otherwise every rescan re-queues identical jobs and the
+    // worker chokes on thousands of no-op runs.
     const epTrigger = {
       by: "library-scan" as const,
       label: `Queued during ${root.label} scan`,
     };
+    const epNeeds = computeVideoJobNeeds(existing ?? null, settings);
     try {
-      if (settings.autoGenerateMetadata) {
+      if (settings.autoGenerateMetadata && epNeeds.mediaProbe) {
         await enqueuePendingVideoJob("media-probe", "video_episode", episodeId, epTrigger);
       }
-      if (settings.autoGenerateFingerprints || settings.generatePhash) {
+      if ((settings.autoGenerateFingerprints || settings.generatePhash) && epNeeds.fingerprint) {
         await enqueuePendingVideoJob("fingerprint", "video_episode", episodeId, epTrigger);
       }
-      if (settings.autoGeneratePreview || settings.generateTrickplay) {
+      if ((settings.autoGeneratePreview || settings.generateTrickplay) && epNeeds.preview) {
         await enqueuePendingVideoJob("preview", "video_episode", episodeId, epTrigger);
       }
-      await enqueuePendingVideoJob(
-        "extract-subtitles",
-        "video_episode",
-        episodeId,
-        epTrigger,
-      );
+      if (epNeeds.subtitles) {
+        await enqueuePendingVideoJob(
+          "extract-subtitles",
+          "video_episode",
+          episodeId,
+          epTrigger,
+        );
+      }
     } catch (err) {
       console.warn(
         `[library-scan-video] failed to enqueue downstream jobs for episode ${episodeId}: ${(err as Error).message}`,
@@ -396,6 +491,19 @@ export async function processLibraryScan(job: Job): Promise<void> {
         overview: videoMovies.overview,
         releaseDate: videoMovies.releaseDate,
         rating: videoMovies.rating,
+        duration: videoMovies.duration,
+        width: videoMovies.width,
+        height: videoMovies.height,
+        codec: videoMovies.codec,
+        checksumMd5: videoMovies.checksumMd5,
+        oshash: videoMovies.oshash,
+        phash: videoMovies.phash,
+        thumbnailPath: videoMovies.thumbnailPath,
+        cardThumbnailPath: videoMovies.cardThumbnailPath,
+        previewPath: videoMovies.previewPath,
+        spritePath: videoMovies.spritePath,
+        trickplayVttPath: videoMovies.trickplayVttPath,
+        subtitlesExtractedAt: videoMovies.subtitlesExtractedAt,
       })
       .from(videoMovies)
       .where(eq(videoMovies.filePath, movie.filePath))
@@ -447,27 +555,31 @@ export async function processLibraryScan(job: Job): Promise<void> {
       );
     }
 
-    // Enqueue downstream processors for the movie.
+    // Enqueue downstream processors for the movie. See episode block above
+    // for the rationale on completion-gated enqueue.
     const mvTrigger = {
       by: "library-scan" as const,
       label: `Queued during ${root.label} scan`,
     };
+    const mvNeeds = computeVideoJobNeeds(existing ?? null, settings);
     try {
-      if (settings.autoGenerateMetadata) {
+      if (settings.autoGenerateMetadata && mvNeeds.mediaProbe) {
         await enqueuePendingVideoJob("media-probe", "video_movie", movieId, mvTrigger);
       }
-      if (settings.autoGenerateFingerprints || settings.generatePhash) {
+      if ((settings.autoGenerateFingerprints || settings.generatePhash) && mvNeeds.fingerprint) {
         await enqueuePendingVideoJob("fingerprint", "video_movie", movieId, mvTrigger);
       }
-      if (settings.autoGeneratePreview || settings.generateTrickplay) {
+      if ((settings.autoGeneratePreview || settings.generateTrickplay) && mvNeeds.preview) {
         await enqueuePendingVideoJob("preview", "video_movie", movieId, mvTrigger);
       }
-      await enqueuePendingVideoJob(
-        "extract-subtitles",
-        "video_movie",
-        movieId,
-        mvTrigger,
-      );
+      if (mvNeeds.subtitles) {
+        await enqueuePendingVideoJob(
+          "extract-subtitles",
+          "video_movie",
+          movieId,
+          mvTrigger,
+        );
+      }
     } catch (err) {
       console.warn(
         `[library-scan-video] failed to enqueue downstream jobs for movie ${movieId}: ${(err as Error).message}`,

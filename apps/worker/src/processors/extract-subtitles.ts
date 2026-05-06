@@ -12,7 +12,11 @@ import {
   videoMovies,
   videoSubtitles,
 } from "../lib/db.js";
-import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
+import {
+  markJobActive,
+  markJobProgress,
+  type JobPayload,
+} from "../lib/job-tracking.js";
 import { resolveRequiredMediaPath } from "../lib/media-paths.js";
 
 type VideoEntityKind = "video_episode" | "video_movie";
@@ -57,7 +61,12 @@ export async function processExtractSubtitles(job: Job) {
   const entityId = String(job.data.entityId);
   const table = entityKind === "video_episode" ? videoEpisodes : videoMovies;
   const [row] = await db
-    .select({ id: table.id, title: table.title, filePath: table.filePath })
+    .select({
+      id: table.id,
+      title: table.title,
+      filePath: table.filePath,
+      subtitlesExtractedAt: table.subtitlesExtractedAt,
+    })
     .from(table)
     .where(eq(table.id, entityId))
     .limit(1);
@@ -71,6 +80,14 @@ export async function processExtractSubtitles(job: Job) {
     id: row.id,
     label: row.title ?? undefined,
   });
+
+  const payload = job.data as JobPayload;
+  const isForceRebuild = payload.jobKind === "force-rebuild";
+
+  if (!isForceRebuild && row.subtitlesExtractedAt != null) {
+    await markJobProgress(job, "extract-subtitles", 100);
+    return;
+  }
 
   const filePath = resolveRequiredMediaPath(row.filePath);
 
@@ -98,7 +115,15 @@ export async function processExtractSubtitles(job: Job) {
     (s) => s.codec_type === "subtitle",
   );
 
+  const markExtracted = async () => {
+    await db
+      .update(table)
+      .set({ subtitlesExtractedAt: new Date() })
+      .where(eq(table.id, row.id));
+  };
+
   if (streams.length === 0) {
+    await markExtracted();
     await markJobProgress(job, "extract-subtitles", 100);
     return;
   }
@@ -150,6 +175,7 @@ export async function processExtractSubtitles(job: Job) {
   }
 
   if (plan.length === 0) {
+    await markExtracted();
     await markJobProgress(job, "extract-subtitles", 100);
     return;
   }
@@ -299,5 +325,6 @@ export async function processExtractSubtitles(job: Job) {
     }
   }
 
+  await markExtracted();
   await markJobProgress(job, "extract-subtitles", 100);
 }
