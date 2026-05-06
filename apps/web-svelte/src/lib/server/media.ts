@@ -348,6 +348,7 @@ export async function fetchCollections(
     mode?: string;
     limit?: number;
     offset?: number;
+    nsfw?: string;
   },
   options?: { fetch?: typeof fetch },
 ) {
@@ -368,6 +369,7 @@ export async function fetchCollectionItems(
     limit?: number;
     offset?: number;
     entityType?: string;
+    nsfw?: string;
   } = {},
 ) {
   const qs = buildQueryString(params);

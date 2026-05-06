@@ -12,6 +12,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
   const limit = Number(url.searchParams.get("limit"));
   const offset = Number(url.searchParams.get("offset"));
   const entityType = url.searchParams.get("entityType");
+  const nsfw = url.searchParams.get("nsfw");
   try {
     return json(
       await getCollectionItemsRead(db, params.id!, {
@@ -24,6 +25,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
           entityType === "audio-track"
             ? entityType
             : undefined,
+        nsfw: nsfw === "on" || nsfw === "off" ? nsfw : undefined,
       }),
     );
   } catch (err) {

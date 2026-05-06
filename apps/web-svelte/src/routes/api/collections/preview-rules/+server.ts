@@ -4,11 +4,16 @@ import type { CollectionRuleGroup } from "@obscura/contracts";
 import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, url }) => {
   const db = await getWebDb();
   const body = (await request.json()) as { ruleTree: CollectionRuleGroup };
+  const nsfw = url.searchParams.get("nsfw");
   try {
-    return json(await previewCollectionRulesRead(db, body.ruleTree));
+    return json(
+      await previewCollectionRulesRead(db, body.ruleTree, {
+        nsfw: nsfw === "on" || nsfw === "off" ? nsfw : undefined,
+      }),
+    );
   } catch (err) {
     return mapAppCoreErrorToJson(err);
   }

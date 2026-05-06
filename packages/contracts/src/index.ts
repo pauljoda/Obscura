@@ -1194,6 +1194,7 @@ export interface CollectionListItemDto {
   coverImagePath: string | null;
   slideshowDurationSeconds: number;
   slideshowAutoAdvance: boolean;
+  isNsfw: boolean;
   /** Breakdown of items by entity type. */
   typeCounts: Record<CollectionEntityType, number>;
   lastRefreshedAt: string | null;
@@ -1230,6 +1231,7 @@ export interface CollectionCreateDto {
   ruleTree?: CollectionRuleGroup;
   slideshowDurationSeconds?: number;
   slideshowAutoAdvance?: boolean;
+  isNsfw?: boolean;
 }
 
 export interface CollectionPatchDto {
@@ -1242,6 +1244,7 @@ export interface CollectionPatchDto {
   coverItemType?: CollectionEntityType | null;
   slideshowDurationSeconds?: number;
   slideshowAutoAdvance?: boolean;
+  isNsfw?: boolean;
 }
 
 export interface CollectionAddItemsDto {

@@ -81,6 +81,7 @@
   let ruleTree = $state<CollectionRuleGroup | null>(null);
   let slideshowDuration = $state(5);
   let slideshowAutoAdvance = $state(true);
+  let isNsfw = $state(false);
   let coverImagePath = $state<string | null>(null);
   let coverInput: HTMLInputElement | undefined = $state();
   let isCoverSaving = $state(false);
@@ -94,6 +95,7 @@
     ruleTree = collection?.ruleTree ?? null;
     slideshowDuration = collection?.slideshowDurationSeconds ?? 5;
     slideshowAutoAdvance = collection?.slideshowAutoAdvance ?? true;
+    isNsfw = collection?.isNsfw ?? false;
     coverImagePath = collection?.coverImagePath ?? null;
     coverCacheBust = collection?.updatedAt ?? "";
   });
@@ -111,6 +113,7 @@
           ruleTree: mode !== "manual" ? (ruleTree ?? undefined) : undefined,
           slideshowDurationSeconds: slideshowDuration,
           slideshowAutoAdvance,
+          isNsfw,
         };
         const result = await createCollection(dto);
         targetId = result.id;
@@ -122,6 +125,7 @@
           ruleTree: mode !== "manual" ? ruleTree : null,
           slideshowDurationSeconds: slideshowDuration,
           slideshowAutoAdvance,
+          isNsfw,
         };
         await updateCollection(collection.id, dto);
         targetId = collection.id;
@@ -232,6 +236,21 @@
               class="w-full px-3 py-2 text-sm bg-surface-1 border border-border-default text-text-primary focus:outline-none focus:border-accent-brass/30 resize-none"
             ></textarea>
           </div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              bind:checked={isNsfw}
+              class="accent-[#c49a5a]"
+            />
+            <span class="text-[0.78rem] text-text-secondary">
+              Mark this collection as NSFW
+            </span>
+          </label>
+          <p class="text-[0.7rem] text-text-muted leading-relaxed">
+            NSFW collections (and their NSFW items) are hidden when SFW mode is
+            on, blurred when blur mode is on, and shown normally when show
+            mode is on.
+          </p>
         </div>
       </section>
 

@@ -7,12 +7,14 @@
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
+  import NsfwBlur from "../nsfw/NsfwBlur.svelte";
 
   interface CollectionThumbLike {
     name: string;
     coverImagePath?: string | null;
     updatedAt?: string | null;
     itemCount?: number | null;
+    isNsfw?: boolean;
   }
 
   interface Props {
@@ -71,17 +73,19 @@
 </script>
 
 <div class={cn("relative overflow-hidden bg-surface-1", aspect, className)}>
-  {#if coverSrc}
-    <img
-      src={coverSrc}
-      alt={collection.name}
-      {loading}
-      decoding="async"
-      class="absolute inset-0 h-full w-full object-cover"
-    />
-  {:else}
-    <div class={cn(gradient, "flex h-full w-full items-center justify-center")}>
-      <FolderOpen class={cn("text-white/20", iconSize)} />
-    </div>
-  {/if}
+  <NsfwBlur isNsfw={collection.isNsfw === true} class="block h-full w-full">
+    {#if coverSrc}
+      <img
+        src={coverSrc}
+        alt={collection.name}
+        {loading}
+        decoding="async"
+        class="absolute inset-0 h-full w-full object-cover"
+      />
+    {:else}
+      <div class={cn(gradient, "flex h-full w-full items-center justify-center")}>
+        <FolderOpen class={cn("text-white/20", iconSize)} />
+      </div>
+    {/if}
+  </NsfwBlur>
 </div>

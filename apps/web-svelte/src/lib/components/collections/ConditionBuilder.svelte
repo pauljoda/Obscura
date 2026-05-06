@@ -10,6 +10,7 @@
   import CollectionItemCard from "./CollectionItemCard.svelte";
   import { previewCollectionRules } from "$lib/api/media";
   import type { SuggestionItem } from "$lib/collection-suggestions";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
 
   interface Props {
     ruleTree: CollectionRuleGroup | null;
@@ -61,12 +62,15 @@
   let isPreviewing = $state(false);
   let debounce: ReturnType<typeof setTimeout> | null = null;
 
+  const nsfw = useNsfw();
   const tree = $derived(ruleTree ?? emptyRuleTree());
 
   async function runPreview(currentTree: CollectionRuleGroup) {
     isPreviewing = true;
     try {
-      preview = await previewCollectionRules(currentTree);
+      preview = await previewCollectionRules(currentTree, {
+        nsfw: nsfw.mode === "off" ? "off" : undefined,
+      });
     } catch {
       // silent
     } finally {
@@ -76,6 +80,8 @@
 
   $effect(() => {
     const t = ruleTree;
+    // Re-fire preview when nsfw mode toggles too.
+    void nsfw.mode;
     if (!t || t.children.length === 0) {
       preview = null;
       return;

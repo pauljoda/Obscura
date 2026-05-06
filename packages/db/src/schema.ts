@@ -1090,6 +1090,7 @@ export const collections = pgTable(
     slideshowAutoAdvance: boolean("slideshow_auto_advance")
       .default(true)
       .notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
     lastRefreshedAt: timestamp("last_refreshed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -1098,6 +1099,7 @@ export const collections = pgTable(
     index("collections_name_idx").on(table.name),
     index("collections_mode_idx").on(table.mode),
     index("collections_created_at_idx").on(table.createdAt),
+    index("collections_nsfw_idx").on(table.isNsfw),
   ]
 );
 

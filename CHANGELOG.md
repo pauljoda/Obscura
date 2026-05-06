@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The image lightbox's bottom thumbnail strip now scrolls the active image into view as you navigate, so the current selection stays visible in long galleries instead of disappearing off the right edge.
 - Tapping or clicking an animated image inside the lightbox now toggles play/pause directly, matching the behavior of native video players. Previously you had to use the toolbar Play/Pause button or press Space.
 - Animated image previews on touch devices now play while you press-and-hold any thumbnail in a grid. Previously preview playback was triggered by mouse hover, which was unreliable on touch — only the leftmost column of thumbnails would animate when tapped.
+- Collections can now be marked NSFW. NSFW collections (and any NSFW items within a collection) are hidden when SFW mode is on, blurred under blur mode, and shown normally under show mode — matching the existing behavior for videos, images, and tags. NSFW results are also filtered out of the dynamic-rule preview while building dynamic collections in SFW mode.
+- Slideshow auto-advance now respects animated images. When a collection slideshow reaches a video / animated image, the duration timer is skipped and playback advances at the end of the clip — same as a regular video — instead of cutting to the next item mid-play.
 
 ### Fixed
 
@@ -23,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The image lightbox bottom navigation strip now auto-scrolls the active thumbnail into view as you navigate. Without this, the highlighted thumb scrolled out of sight in galleries with more than ~7 images on mobile (APP-108).
 - Tapping (touch) or clicking (mouse) an animated image inside the lightbox now toggles its playback. Previously the only way to pause from inside the viewer was the toolbar button or the Space key (APP-107).
 - Animated image thumbnails now play preview video on touch press-and-hold, not just mouse hover. The hover-play handlers used `mouseenter`/`mouseleave`, which fire inconsistently across columns on touch devices — switching to `pointerenter`/`pointerleave`/`pointercancel` makes every thumbnail respond uniformly (APP-106).
+
+### Added
+
+- `collections.is_nsfw` column with default `false` (drizzle migration `0026`). `CollectionListItemDto`, `CollectionCreateDto`, and `CollectionPatchDto` carry the new field, and the collection editor UI exposes a toggle. Collection list / detail item / dynamic-rule preview endpoints now accept the standard `?nsfw=on|off` query and apply the same SFW-mode filtering used elsewhere in the app (APP-111).
+- Image lightbox `autoAdvanceSeconds` path now branches by media type. Static images keep the existing duration-based timer; animated images / videos disable `loop`, listen for `ended`, and call the advance callback so playlist/slideshow playback honors the clip's natural length (APP-111).
 
 ## [0.21.0] - 2026-04-26
 ### What's New

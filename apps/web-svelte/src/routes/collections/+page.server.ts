@@ -1,11 +1,13 @@
 import type { PageServerLoad } from "./$types";
 import { fetchCollections } from "$lib/server/media";
 import { loadUiPrefObject } from "$lib/server/ui-prefs";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 
 const PAGE_SIZE = 60;
 
-export const load: PageServerLoad = async ({ url, depends, fetch }) => {
+export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => {
   depends("collections");
+  const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
   const search = url.searchParams.get("search") ?? undefined;
   const sort = url.searchParams.get("sort") ?? "recent";
   const orderRaw = url.searchParams.get("order");
@@ -14,7 +16,14 @@ export const load: PageServerLoad = async ({ url, depends, fetch }) => {
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const response = await fetchCollections(
-    { search, sort, order, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
+    {
+      search,
+      sort,
+      order,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      nsfw: nsfwMode === "off" ? "off" : undefined,
+    },
     { fetch },
   ).catch(() => ({ items: [], total: 0, limit: PAGE_SIZE, offset: 0 }));
 

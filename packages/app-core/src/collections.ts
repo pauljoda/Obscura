@@ -8,6 +8,7 @@ import {
   eq,
   ilike,
   inArray,
+  ne,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -115,6 +116,7 @@ function toCollectionListItem(
     coverImagePath: row.coverImagePath ? `/assets/collections/${row.id}/cover` : null,
     slideshowDurationSeconds: row.slideshowDurationSeconds,
     slideshowAutoAdvance: row.slideshowAutoAdvance,
+    isNsfw: row.isNsfw,
     typeCounts,
     lastRefreshedAt: row.lastRefreshedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -133,6 +135,7 @@ export async function listCollectionsRead(db: AppDb, query: CollectionListQuery)
   const conditions: SQL[] = [];
   if (query.search) conditions.push(ilike(collections.name, `%${query.search}%`));
   if (query.mode) conditions.push(eq(collections.mode, query.mode));
+  if (query.nsfw === "off") conditions.push(ne(collections.isNsfw, true));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const [rows, totalRows] = await Promise.all([
@@ -243,8 +246,9 @@ export async function getCollectionItemsRead(
   ]);
 
   const entityMap = await loadEntitiesForItems(db, rows);
-  return {
-    items: rows.map((row) => ({
+  const hideNsfw = query.nsfw === "off";
+  const items = rows
+    .map((row) => ({
       id: row.id,
       collectionId: row.collectionId,
       entityType: row.entityType as CollectionEntityType,
@@ -253,7 +257,11 @@ export async function getCollectionItemsRead(
       sortOrder: row.sortOrder,
       addedAt: row.addedAt.toISOString(),
       entity: entityMap.get(`${row.entityType}:${row.entityId}`) ?? null,
-    })),
+    }))
+    .filter((item) => !hideNsfw || (item.entity as { isNsfw?: boolean } | null)?.isNsfw !== true);
+
+  return {
+    items,
     total: totalRows[0]?.count ?? 0,
     limit,
     offset,
@@ -270,6 +278,7 @@ export async function createCollectionWrite(db: AppDb, dto: CollectionCreateDto)
       ruleTree: dto.ruleTree ?? null,
       slideshowDurationSeconds: dto.slideshowDurationSeconds ?? 5,
       slideshowAutoAdvance: dto.slideshowAutoAdvance ?? true,
+      isNsfw: dto.isNsfw ?? false,
     })
     .returning();
 
@@ -301,6 +310,7 @@ export async function updateCollectionWrite(
   if (dto.slideshowAutoAdvance !== undefined) {
     updateFields.slideshowAutoAdvance = dto.slideshowAutoAdvance;
   }
+  if (dto.isNsfw !== undefined) updateFields.isNsfw = dto.isNsfw;
 
   await db.update(collections).set(updateFields).where(eq(collections.id, id));
 
@@ -516,6 +526,7 @@ export async function refreshCollectionRulesWrite(db: AppDb, collectionId: strin
 export async function previewCollectionRulesRead(
   db: AppDb,
   ruleTree: CollectionRuleGroup,
+  options: { nsfw?: "on" | "off" } = {},
 ) {
   const preview = await previewRuleTree(db, ruleTree, 20);
   const previewRows = preview.items.map((item, index) => ({
@@ -528,11 +539,10 @@ export async function previewCollectionRulesRead(
     addedAt: new Date(),
   }));
   const entityMap = await loadEntitiesForItems(db, previewRows);
+  const hideNsfw = options.nsfw === "off";
 
-  return {
-    total: preview.total,
-    byType: preview.byType,
-    sample: preview.items.map((item, index) => ({
+  const sample = preview.items
+    .map((item, index) => ({
       id: `preview-${index}`,
       collectionId: "preview",
       entityType: item.entityType,
@@ -541,6 +551,12 @@ export async function previewCollectionRulesRead(
       sortOrder: index,
       addedAt: new Date().toISOString(),
       entity: entityMap.get(`${item.entityType}:${item.entityId}`) ?? null,
-    })),
+    }))
+    .filter((s) => !hideNsfw || (s.entity as { isNsfw?: boolean } | null)?.isNsfw !== true);
+
+  return {
+    total: preview.total,
+    byType: preview.byType,
+    sample,
   };
 }

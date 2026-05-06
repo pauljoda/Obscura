@@ -14,6 +14,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const sort = url.searchParams.get("sort");
   const order = url.searchParams.get("order");
   const mode = url.searchParams.get("mode");
+  const nsfw = url.searchParams.get("nsfw");
   const limit = Number(url.searchParams.get("limit"));
   const offset = Number(url.searchParams.get("offset"));
 
@@ -21,6 +22,7 @@ export const GET: RequestHandler = async ({ url }) => {
   if (sort) query.sort = sort;
   if (order === "asc" || order === "desc") query.order = order;
   if (mode === "manual" || mode === "dynamic" || mode === "hybrid") query.mode = mode;
+  if (nsfw === "on" || nsfw === "off") query.nsfw = nsfw;
   if (Number.isFinite(limit)) query.limit = limit;
   if (Number.isFinite(offset)) query.offset = offset;
 

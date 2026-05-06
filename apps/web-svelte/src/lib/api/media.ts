@@ -559,8 +559,12 @@ export async function refreshCollection(id: string) {
   );
 }
 
-export async function previewCollectionRules(ruleTree: CollectionRuleGroup) {
-  return fetchApi<CollectionRulePreviewDto>("/collections/preview-rules", {
+export async function previewCollectionRules(
+  ruleTree: CollectionRuleGroup,
+  options: { nsfw?: "on" | "off" } = {},
+) {
+  const qs = options.nsfw ? `?nsfw=${options.nsfw}` : "";
+  return fetchApi<CollectionRulePreviewDto>(`/collections/preview-rules${qs}`, {
     method: "POST",
     body: JSON.stringify({ ruleTree }),
   });

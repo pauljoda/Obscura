@@ -183,6 +183,13 @@
       "when": 1777124083177,
       "tag": "0025_superb_tana_nile",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1778078849577,
+      "tag": "0026_curvy_morlocks",
+      "breakpoints": true
     }
   ]
 }

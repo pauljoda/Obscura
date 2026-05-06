@@ -137,15 +137,18 @@
     index = (index + 1) % images.length;
   }
 
+  function advance() {
+    if (onAutoAdvance) onAutoAdvance();
+    else goNext();
+  }
+
+  // For animated images we wait for the video's `ended` event (see the video
+  // template — `loop` is disabled when slideshow is active so a single full
+  // playback fires `ended`). Static images use the duration timer.
   $effect(() => {
     if (!current || autoAdvanceSeconds <= 0) return;
-    const timeout = window.setTimeout(() => {
-      if (onAutoAdvance) {
-        onAutoAdvance();
-      } else {
-        goNext();
-      }
-    }, autoAdvanceSeconds * 1000);
+    if (isCurrentVideo) return;
+    const timeout = window.setTimeout(advance, autoAdvanceSeconds * 1000);
     return () => window.clearTimeout(timeout);
   });
 
@@ -598,7 +601,7 @@
                   data-lightbox-image
                   bind:this={imgEl as HTMLVideoElement}
                   autoplay
-                  loop
+                  loop={autoAdvanceSeconds <= 0}
                   muted={videoMuted}
                   playsinline
                   preload="metadata"
@@ -612,6 +615,9 @@
                     videoNeedsGesture = false;
                   }}
                   onpause={() => (videoPlaying = false)}
+                  onended={() => {
+                    if (autoAdvanceSeconds > 0) advance();
+                  }}
                   onerror={handleVideoError}
                   draggable="false"
                 >
