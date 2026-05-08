@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - On mobile, the comic reader now lets pages use the full screen: controls float over the artwork, fade away after a short delay, return or hide with a center tap, and left/right taps move backward or forward.
 - Comic reader controls now recover on desktop after auto-hiding: center-clicking the page or moving the cursor near the top or bottom brings the controls back.
 - Comic galleries now remember reading progress per gallery. The gallery page shows current page progress, offers Resume when there is saved progress, and keeps Read available to start from page one.
+- Comic archives stored inside a folder now group under that folder as a single series-style gallery, with chapter archive covers used as the parent preview tiles. Flat cbz/zip files at the library root still appear as standalone galleries.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
 - Detail-page linked media now uses the same content-specific thumbnail cards as Search and the main library views, so Series and Audio Track tabs no longer borrow video or album thumbnail rendering.
@@ -30,12 +31,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery scans now seed ComicInfo metadata from folder and cbz/zip galleries, attach comic creators as gallery performers, attach comic genres/tags/characters as tags, and index pages in natural numeric filename order.
 - Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
 - Gallery detail image browsing now uses the shared Images surface, including masonry, grid, and list views; comic galleries default to natural filename ordering and label performer metadata as Authors.
+- Nested comic archives now attach to their containing folder gallery during scans, and numbered archive names are shown as ordered chapter labels such as `#01` and `#02`.
 - Added a comic reader overlay for archive galleries with paged spreads, one/two-page controls, first-page-cover handling, keyboard navigation, and a vertical webtoon roll.
 - Comic reader mobile controls now auto-hide as floating overlays, with center-tap chrome toggling and left/right tap zones for page navigation.
 
 ### Fixed
 
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
+- Comic gallery detail pages now default to Grid view so page ordering is easier to scan, while Masonry and List remain available.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.
 - Detail-page media tabs now fetch their first page when they mount without SSR-hydrated items, fixing empty linked-gallery and linked-series grids for tags, actors, and studios.
 - Series and Audio Track tabs on tag, actor, and studio pages now render with their own universal thumbnail components instead of the Video or Audio Library card renderers.

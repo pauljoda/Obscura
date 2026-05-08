@@ -30,6 +30,10 @@ import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqu
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
 import {
+  inferComicArchiveGrouping,
+  inferComicArchiveTitle,
+} from "./gallery-series.js";
+import {
   excludeLibraryRootDir,
   groupFilesByDirectory,
   libraryContainerTitle,
@@ -280,9 +284,12 @@ export async function processGalleryScan(job: Job) {
   // -- Process folder-based galleries --
   // Group image files by directory
   const imagesByDir = groupFilesByDirectory(discovery.imageFiles);
-  const galleryIdByPath = new Map(
+  const galleryIdByPath: Map<string, string> = new Map(
     knownFolderGalleries
-      .filter((g) => includeRootInParentMap || g.folderPath !== root.path)
+      .filter(
+        (g): g is { id: string; folderPath: string } =>
+          Boolean(g.folderPath) && (includeRootInParentMap || g.folderPath !== root.path),
+      )
       .map((gallery) => [gallery.folderPath, gallery.id]),
   );
 
@@ -439,6 +446,8 @@ export async function processGalleryScan(job: Job) {
 
   // -- Process zip-based galleries --
   for (const zipPath of discovery.zipFiles) {
+    const fallbackTitle = fileNameToTitle(zipPath);
+    const grouping = inferComicArchiveGrouping(zipPath, root.path, galleryIdByPath);
     const [existingGallery] = await db
       .select({
         id: galleries.id,
@@ -465,23 +474,42 @@ export async function processGalleryScan(job: Job) {
       comicInfo = null;
     }
     const comicUpdate = await buildComicGalleryUpdate(comicInfo, existingGallery ?? null);
+    const scannerTitle = inferComicArchiveTitle({
+      zipPath,
+      fallbackTitle,
+      parentTitle: grouping.parentTitle,
+      comicInfoTitle: comicInfo?.title,
+      comicInfoNumber: comicInfo?.number,
+    });
 
     if (existingGallery) {
       galleryId = existingGallery.id;
+      const shouldApplyScannerTitle =
+        shouldSeedText(existingGallery.title) ||
+        (grouping.parentId !== null &&
+          existingGallery.title !== scannerTitle &&
+          [fallbackTitle, comicInfo?.title].filter(Boolean).includes(existingGallery.title));
       await db
         .update(galleries)
-        .set({ isNsfw: root.isNsfw, ...comicUpdate, updatedAt: new Date() })
+        .set({
+          isNsfw: root.isNsfw,
+          parentId: grouping.parentId,
+          ...comicUpdate,
+          ...(shouldApplyScannerTitle ? { title: scannerTitle } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(galleries.id, galleryId));
     } else {
       const [created] = await db
         .insert(galleries)
         .values({
-          title: fileNameToTitle(zipPath),
           galleryType: "zip",
           zipFilePath: zipPath,
+          parentId: grouping.parentId,
           imageCount: 0,
           isNsfw: root.isNsfw,
           ...comicUpdate,
+          title: scannerTitle,
         })
         .returning({ id: galleries.id });
       galleryId = created.id;

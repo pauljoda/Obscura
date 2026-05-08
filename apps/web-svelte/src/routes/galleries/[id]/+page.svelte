@@ -172,7 +172,7 @@
       nsfwMode: data.nsfwMode,
       galleryId: g.id,
       surfaceId: `gallery:${g.id}:images`,
-      defaultViewMode: "masonry",
+      defaultViewMode: g.isComic ? "grid" : "masonry",
       defaultSortBy: g.isComic ? "natural" : "recent",
       defaultSortDir: g.isComic ? "asc" : "desc",
       layoutByViewMode: { masonry: "masonry", grid: "grid", list: "list" },
