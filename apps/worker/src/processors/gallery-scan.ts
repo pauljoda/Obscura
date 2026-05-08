@@ -30,8 +30,10 @@ import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqu
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
 import {
+  effectiveComicArchiveDir,
   inferComicArchiveGrouping,
   inferComicArchiveTitle,
+  redundantSingleArchiveFolders,
 } from "./gallery-series.js";
 import {
   excludeLibraryRootDir,
@@ -203,10 +205,17 @@ export async function processGalleryScan(job: Job) {
   discovery.zipFiles = discovery.zipFiles.filter(
     (filePath) => !ignoredPaths.has(path.resolve(filePath)),
   );
+  const redundantArchiveFolders = redundantSingleArchiveFolders({
+    rootPath: root.path,
+    imageFiles: discovery.imageFiles,
+    zipFiles: discovery.zipFiles,
+  });
   discovery.dirs = [
     ...new Set([
       ...discovery.imageFiles.map((filePath) => path.dirname(filePath)),
-      ...discovery.zipFiles.map((filePath) => path.dirname(filePath)),
+      ...discovery.zipFiles.map((filePath) =>
+        effectiveComicArchiveDir(filePath, redundantArchiveFolders),
+      ),
     ]),
   ];
   const sortedDirs = mergeLibraryRootIntoDiscoveredDirs(
@@ -288,7 +297,9 @@ export async function processGalleryScan(job: Job) {
     knownFolderGalleries
       .filter(
         (g): g is { id: string; folderPath: string } =>
-          Boolean(g.folderPath) && (includeRootInParentMap || g.folderPath !== root.path),
+          typeof g.folderPath === "string" &&
+          discoveredDirSet.has(g.folderPath) &&
+          (includeRootInParentMap || g.folderPath !== root.path),
       )
       .map((gallery) => [gallery.folderPath, gallery.id]),
   );
@@ -447,7 +458,12 @@ export async function processGalleryScan(job: Job) {
   // -- Process zip-based galleries --
   for (const zipPath of discovery.zipFiles) {
     const fallbackTitle = fileNameToTitle(zipPath);
-    const grouping = inferComicArchiveGrouping(zipPath, root.path, galleryIdByPath);
+    const grouping = inferComicArchiveGrouping(
+      zipPath,
+      root.path,
+      galleryIdByPath,
+      redundantArchiveFolders,
+    );
     const [existingGallery] = await db
       .select({
         id: galleries.id,

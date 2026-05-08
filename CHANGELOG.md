@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Merge into series flow now opens in a drawer-style panel with mobile-friendly chapter fields that match the identify review surfaces more closely.
 - Merge into series now understands existing series selections: selecting a series plus a standalone gallery shows the current chapters and adds the new gallery into that series folder instead of nesting or replacing the series.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
+- Single-comic wrapper folders are now flattened during gallery scans. A folder such as `Comic Name/Comic Name.cbz` appears as the comic itself instead of a one-child series, while true multi-archive folders still appear as comic series.
 - The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
 - Detail-page linked media now uses the same content-specific thumbnail cards as Search and the main library views, so Series and Audio Track tabs no longer borrow video or album thumbnail rendering.
@@ -56,6 +57,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
+- Same-named folders containing a single cbz/zip archive are no longer imported as redundant parent galleries, and comic filtering now treats image-empty folders as comics only when all direct child galleries are comic archives.
 - Comic gallery detail pages now default to Grid view so page ordering is easier to scan, while Masonry and List remain available.
 - Comic series and sub-gallery thumbnails now preserve chapter cover artwork instead of cropping it, and parent series covers prefer the largest available child cover candidate.
 - Comic gallery cards now size their thumbnail frame from the selected cover dimensions when available, avoiding black letterbox bars from the default square grid frame.

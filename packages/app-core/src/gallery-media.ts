@@ -55,6 +55,13 @@ import {
   findOrCreateTagId,
 } from "./media-shared";
 import { planGallerySeriesMerge } from "./gallery-series-merge";
+import {
+  comicArchivePathSql,
+  comicGallerySql,
+  isComicGalleryRow,
+  isComicSeriesGalleryRow,
+  type ComicGalleryRow,
+} from "./gallery-comics";
 
 const {
   galleries,
@@ -136,12 +143,6 @@ function toGalleryImageListItem(img: typeof images.$inferSelect) {
   };
 }
 
-function isComicGallery(gallery: { galleryType: string; zipFilePath?: string | null }) {
-  if (gallery.galleryType !== "zip") return false;
-  const ext = path.extname(gallery.zipFilePath ?? "").toLowerCase();
-  return ext === ".zip" || ext === ".cbz";
-}
-
 function imageAspectRatio(image: { width?: number | null; height?: number | null }): number | null {
   if (!image.width || !image.height || image.width <= 0 || image.height <= 0) return null;
   return image.width / image.height;
@@ -154,23 +155,6 @@ function largestImageAspectRatio(
     (a, b) => (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0),
   )[0];
   return largest ? imageAspectRatio(largest) : null;
-}
-
-function comicArchivePathSql(column: typeof galleries.zipFilePath): SQL {
-  return sql`(lower(coalesce(${column}, '')) like '%.zip' or lower(coalesce(${column}, '')) like '%.cbz')`;
-}
-
-function comicGallerySql(): SQL {
-  return sql`(
-    (${galleries.galleryType} = 'zip' and ${comicArchivePathSql(galleries.zipFilePath)})
-    or exists (
-      select 1
-      from galleries child
-      where child.parent_id = ${galleries.id}
-        and child.gallery_type = 'zip'
-        and (lower(coalesce(child.zip_file_path, '')) like '%.zip' or lower(coalesce(child.zip_file_path, '')) like '%.cbz')
-    )
-  )`;
 }
 
 function comicImageSql(): SQL {
@@ -209,12 +193,24 @@ function completedGalleryReadSql(): SQL {
       and ${completedComicProgressSql(sql`${galleries.id}`)}
     )
     or (
+      coalesce(${galleries.imageCount}, 0) = 0
+      and
       exists (
         select 1
         from galleries comic_child
         where comic_child.parent_id = ${galleries.id}
-          and comic_child.gallery_type = 'zip'
-          and (lower(coalesce(comic_child.zip_file_path, '')) like '%.zip' or lower(coalesce(comic_child.zip_file_path, '')) like '%.cbz')
+      )
+      and not exists (
+        select 1
+        from galleries non_comic_child
+        where non_comic_child.parent_id = ${galleries.id}
+          and not (
+            non_comic_child.gallery_type = 'zip'
+            and (
+              lower(coalesce(non_comic_child.zip_file_path, '')) like '%.zip'
+              or lower(coalesce(non_comic_child.zip_file_path, '')) like '%.cbz'
+            )
+          )
       )
       and not exists (
         select 1
@@ -433,14 +429,16 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   }
   const childPreviewMap = new Map<string, string[]>();
   const childCoverAspectCandidates = new Map<string, Array<{ width: number | null; height: number | null }>>();
-  const childComicParentIds = new Set<string>();
+  const childrenByParent = new Map<string, ComicGalleryRow[]>();
   const childCountMap = new Map<string, number>();
   const comicChildrenByParent = new Map<string, string[]>();
   for (const child of childRows) {
     if (!child.parentId) continue;
     childCountMap.set(child.parentId, (childCountMap.get(child.parentId) ?? 0) + 1);
-    if (isComicGallery(child)) {
-      childComicParentIds.add(child.parentId);
+    const siblings = childrenByParent.get(child.parentId) ?? [];
+    siblings.push(child);
+    childrenByParent.set(child.parentId, siblings);
+    if (isComicGalleryRow(child)) {
       const existing = comicChildrenByParent.get(child.parentId) ?? [];
       existing.push(child.id);
       comicChildrenByParent.set(child.parentId, existing);
@@ -476,10 +474,14 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
       id: gallery.id,
       title: gallery.title,
       galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
-      isComic: isComicGallery(gallery) || childComicParentIds.has(gallery.id),
-      readCompleted: isComicGallery(gallery)
+      isComic:
+        isComicGalleryRow(gallery) ||
+        isComicSeriesGalleryRow(gallery, childrenByParent.get(gallery.id) ?? []),
+      readCompleted: isComicGalleryRow(gallery)
         ? completedProgressIds.has(gallery.id)
-        : (comicChildrenByParent.get(gallery.id)?.every((id) => completedProgressIds.has(id)) ?? false),
+        : isComicSeriesGalleryRow(gallery, childrenByParent.get(gallery.id) ?? [])
+          ? (comicChildrenByParent.get(gallery.id)?.every((id) => completedProgressIds.has(id)) ?? false)
+          : false,
       coverImagePath: `/assets/galleries/${gallery.id}/cover`,
       previewImagePaths: (() => {
         const direct = previewImages
@@ -615,7 +617,7 @@ export async function getGalleryDetailRead(
     title: gallery.title,
     details: gallery.details,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
-    isComic: isComicGallery(gallery) || children.some((child) => isComicGallery(child)),
+    isComic: isComicGalleryRow(gallery) || isComicSeriesGalleryRow(gallery, children),
     date: gallery.date,
     rating: gallery.rating,
     organized: gallery.organized,
@@ -664,7 +666,7 @@ export async function getGalleryDetailRead(
       coverAspectRatio: childPreviewAspectMap.get(child.id) ?? null,
       childCount: grandchildCountMap.get(child.id) ?? 0,
       isNsfw: child.isNsfw,
-      isComic: isComicGallery(child),
+      isComic: isComicGalleryRow(child),
     })),
     createdAt: gallery.createdAt.toISOString(),
     updatedAt: gallery.updatedAt.toISOString(),
@@ -723,7 +725,7 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
     );
 
   const galleryIds = galleryRows.map((gallery) => gallery.id);
-  const [perfJoins, tagJoins, studioRows] = await Promise.all([
+  const [perfJoins, tagJoins, studioRows, childRows] = await Promise.all([
     galleryIds.length > 0
       ? db
           .select({
@@ -758,15 +760,34 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
             .where(inArray(studios.id, studioIds))
         : Promise.resolve([]);
     })(),
+    galleryIds.length > 0
+      ? db
+          .select({
+            parentId: galleries.parentId,
+            galleryType: galleries.galleryType,
+            zipFilePath: galleries.zipFilePath,
+          })
+          .from(galleries)
+          .where(and(inArray(galleries.parentId, galleryIds), galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)))
+      : Promise.resolve([]),
   ]);
 
   const studioMap = new Map(studioRows.map((studio) => [studio.id, studio.name]));
+  const childrenByParent = new Map<string, ComicGalleryRow[]>();
+  for (const child of childRows) {
+    if (!child.parentId) continue;
+    const existing = childrenByParent.get(child.parentId) ?? [];
+    existing.push(child);
+    childrenByParent.set(child.parentId, existing);
+  }
 
   return galleryRows.map((gallery) => ({
     id: gallery.id,
     title: gallery.title,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
-    isComic: isComicGallery(gallery),
+    isComic:
+      isComicGalleryRow(gallery) ||
+      isComicSeriesGalleryRow(gallery, childrenByParent.get(gallery.id) ?? []),
     readCompleted: false,
     coverImagePath: `/assets/galleries/${gallery.id}/cover`,
     previewImagePaths: [] as string[],
