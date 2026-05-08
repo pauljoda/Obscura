@@ -17,7 +17,7 @@
   const gradient = $derived(VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]);
   const previewBackedSeries = $derived(item.imageCount === 0 && item.previewImagePaths.length > 0);
   const coverAspectRatio = $derived(
-    previewBackedSeries || item.isComic ? item.coverAspectRatio : null,
+    previewBackedSeries && !item.isComic ? item.coverAspectRatio : null,
   );
 </script>
 
@@ -47,7 +47,7 @@
           isComic={item.isComic}
           size="list"
           aspectRatio={coverAspectRatio}
-          fit={coverAspectRatio || !item.isComic ? "cover" : "contain"}
+          fit={item.isComic || previewBackedSeries ? "contain" : "cover"}
           gradientFallback={gradient}
           showCount={false}
         />
@@ -100,8 +100,8 @@
           isComic={item.isComic}
           size="grid"
           aspectRatio={coverAspectRatio}
-          aspectClass={previewBackedSeries ? "aspect-[4/3]" : undefined}
-          fit={coverAspectRatio || (!previewBackedSeries && !item.isComic) ? "cover" : "contain"}
+          aspectClass={previewBackedSeries && !item.isComic ? "aspect-[4/3]" : undefined}
+          fit={item.isComic || previewBackedSeries ? "contain" : "cover"}
           gradientFallback={gradient}
           showCount={false}
         />

@@ -55,6 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic gallery detail pages now default to Grid view so page ordering is easier to scan, while Masonry and List remain available.
 - Comic series and sub-gallery thumbnails now preserve chapter cover artwork instead of cropping it, and parent series covers prefer the largest available child cover candidate.
 - Comic gallery cards now size their thumbnail frame from the selected cover dimensions when available, avoiding black letterbox bars from the default square grid frame.
+- Comic gallery cards now use a consistent page-sized thumbnail frame and contain cover art inside it, fixing clipped chapter covers caused by raw cover aspect ratios.
 - Gallery grid selection controls are now square and no longer collide with media counts.
 - Gallery image thumbnail and fingerprint jobs now use live pg-boss state when the dashboard calculates Running, Queued, and Delayed counts, fixing stale waiting rows during active processing.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.

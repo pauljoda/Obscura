@@ -325,9 +325,9 @@
                     isNsfw={child.isNsfw}
                     isComic={child.isComic}
                     size="hero"
-                    aspectRatio={child.coverAspectRatio}
-                    aspectClass="aspect-[4/3]"
-                    fit={child.coverAspectRatio ? "cover" : "contain"}
+                    aspectRatio={child.isComic ? null : child.coverAspectRatio}
+                    aspectClass={child.isComic ? undefined : "aspect-[4/3]"}
+                    fit={child.isComic ? "contain" : child.coverAspectRatio ? "cover" : "contain"}
                     showCount={false}
                     gradientIndex={i}
                   />
