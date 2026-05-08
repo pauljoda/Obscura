@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.
 
+### Docs
+
+- Documented the planned comic-aware gallery experience, including archive-native cbz/zip reading, ComicInfo metadata mapping, natural page ordering, scoped Images browsing, and the dedicated comic reader.
+
 ## [0.21.1] - 2026-05-06
 ### What's New
 
