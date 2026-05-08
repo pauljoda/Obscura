@@ -91,6 +91,7 @@ const imageSortConfig: SortConfig = {
   columns: {
     recent: images.createdAt,
     title: images.title,
+    natural: images.sortOrder,
     date: images.date,
     rating: images.rating,
     resolution: images.width,
@@ -99,6 +100,7 @@ const imageSortConfig: SortConfig = {
   defaultDirs: {
     recent: "desc",
     title: "asc",
+    natural: "asc",
     date: "desc",
     rating: "desc",
     resolution: "desc",
@@ -130,6 +132,12 @@ function toGalleryImageListItem(img: typeof images.$inferSelect) {
     tags: [] as Array<{ id: string; name: string; isNsfw: boolean }>,
     createdAt: img.createdAt.toISOString(),
   };
+}
+
+function isComicGallery(gallery: { galleryType: string; zipFilePath?: string | null }) {
+  if (gallery.galleryType !== "zip") return false;
+  const ext = path.extname(gallery.zipFilePath ?? "").toLowerCase();
+  return ext === ".zip" || ext === ".cbz";
 }
 
 
@@ -228,7 +236,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
     .offset(offset);
 
   const galleryIds = galleryRows.map((g) => g.id);
-  const [perfJoins, tagJoins, previewImages] = await Promise.all([
+  const [perfJoins, tagJoins, previewImages, childRows] = await Promise.all([
     galleryIds.length > 0
       ? db
           .select({
@@ -263,7 +271,45 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
           .where(inArray(images.galleryId, galleryIds))
           .orderBy(asc(images.sortOrder))
       : Promise.resolve([]),
+    galleryIds.length > 0
+      ? db
+          .select({
+            id: galleries.id,
+            parentId: galleries.parentId,
+            coverImageId: galleries.coverImageId,
+          })
+          .from(galleries)
+          .where(and(inArray(galleries.parentId, galleryIds), galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)))
+      : Promise.resolve([]),
   ]);
+
+  const childIds = childRows.map((child) => child.id);
+  const childPreviewImages =
+    childIds.length > 0
+      ? await db
+          .select({
+            galleryId: images.galleryId,
+            imageId: images.id,
+            sortOrder: images.sortOrder,
+          })
+          .from(images)
+          .where(and(inArray(images.galleryId, childIds), imageVisibleSql(images.filePath)))
+          .orderBy(asc(images.sortOrder))
+      : [];
+  const firstChildImageMap = new Map<string, string>();
+  for (const img of childPreviewImages) {
+    if (!img.galleryId || firstChildImageMap.has(img.galleryId)) continue;
+    firstChildImageMap.set(img.galleryId, img.imageId);
+  }
+  const childPreviewMap = new Map<string, string[]>();
+  for (const child of childRows) {
+    if (!child.parentId) continue;
+    const imageId = child.coverImageId ?? firstChildImageMap.get(child.id);
+    if (!imageId) continue;
+    const list = childPreviewMap.get(child.parentId) ?? [];
+    if (list.length < 4) list.push(`/assets/images/${imageId}/thumb`);
+    childPreviewMap.set(child.parentId, list);
+  }
 
   const studioIds = [
     ...new Set(galleryRows.flatMap((g) => (g.studioId ? [g.studioId] : []))),
@@ -282,11 +328,15 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
       id: gallery.id,
       title: gallery.title,
       galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
+      isComic: isComicGallery(gallery),
       coverImagePath: `/assets/galleries/${gallery.id}/cover`,
-      previewImagePaths: previewImages
-        .filter((img) => img.galleryId === gallery.id)
-        .slice(0, 4)
-        .map((img) => `/assets/images/${img.imageId}/thumb`),
+      previewImagePaths: (() => {
+        const direct = previewImages
+          .filter((img) => img.galleryId === gallery.id)
+          .slice(0, 4)
+          .map((img) => `/assets/images/${img.imageId}/thumb`);
+        return direct.length > 0 ? direct : (childPreviewMap.get(gallery.id) ?? []);
+      })(),
       imageCount: gallery.imageCount,
       rating: gallery.rating,
       organized: gallery.organized,
@@ -388,6 +438,7 @@ export async function getGalleryDetailRead(
     title: gallery.title,
     details: gallery.details,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
+    isComic: isComicGallery(gallery),
     date: gallery.date,
     rating: gallery.rating,
     organized: gallery.organized,

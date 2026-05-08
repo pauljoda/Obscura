@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Comic archive helpers now understand natural page ordering and ComicInfo metadata, giving the gallery scanner a shared foundation for cbz/zip page order and comic metadata import.
 - Gallery scans now seed ComicInfo metadata from folder and cbz/zip galleries, attach comic creators as gallery performers, attach comic genres/tags/characters as tags, and index pages in natural numeric filename order.
+- Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
 
 ### Fixed
 

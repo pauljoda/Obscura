@@ -468,6 +468,7 @@ export interface GalleryListItemDto {
   id: string;
   title: string;
   galleryType: GalleryType;
+  isComic: boolean;
   coverImagePath: string | null;
   previewImagePaths: string[];
   imageCount: number;
@@ -488,6 +489,7 @@ export interface GalleryDetailDto {
   title: string;
   details: string | null;
   galleryType: GalleryType;
+  isComic: boolean;
   date: string | null;
   rating: number | null;
   organized: boolean;

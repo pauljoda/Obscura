@@ -58,6 +58,32 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
         coverImageId = firstImage?.id ?? null;
       }
 
+      if (!coverImageId) {
+        const childGalleries = await db
+          .select({ id: galleries.id, coverImageId: galleries.coverImageId })
+          .from(galleries)
+          .where(eq(galleries.parentId, id))
+          .limit(8);
+
+        for (const child of childGalleries) {
+          if (child.coverImageId) {
+            coverImageId = child.coverImageId;
+            break;
+          }
+
+          const [firstChildImage] = await db
+            .select({ id: images.id })
+            .from(images)
+            .where(eq(images.galleryId, child.id))
+            .orderBy(asc(images.sortOrder))
+            .limit(1);
+          if (firstChildImage?.id) {
+            coverImageId = firstChildImage.id;
+            break;
+          }
+        }
+      }
+
       return { found: true, coverImageId };
     },
 

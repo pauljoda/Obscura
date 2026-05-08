@@ -35,4 +35,19 @@ describe("/api/images route", () => {
       dimension: ["landscape", "hd"],
     });
   });
+
+  it("passes gallery scoped natural sorting params through to app-core", async () => {
+    const { GET } = await import("./+server");
+    const url = new URL(
+      "http://localhost/api/images?gallery=gallery-1&sort=natural&order=asc",
+    );
+
+    await GET({ url } as never);
+
+    expect(listImagesRead).toHaveBeenCalledWith(db, {
+      gallery: "gallery-1",
+      sort: "natural",
+      order: "asc",
+    });
+  });
 });
