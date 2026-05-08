@@ -10,6 +10,8 @@
     showInteractive?: boolean;
     /** When true, include comic/non-comic library filters. */
     showComic?: boolean;
+    /** When true, include read/unread comic progress filters. */
+    showRead?: boolean;
   }
 
   let {
@@ -17,6 +19,7 @@
     onAddFilter,
     showInteractive = true,
     showComic = false,
+    showRead = false,
   }: Props = $props();
 
   const choices = $derived([
@@ -32,6 +35,12 @@
       ? [
           { type: "comic", value: "true", label: "Comic", chipLabel: "Comic" },
           { type: "comic", value: "false", label: "Not comic", chipLabel: "Comic" },
+        ]
+      : []),
+    ...(showRead
+      ? [
+          { type: "read", value: "unread", label: "Unread", chipLabel: "Reading" },
+          { type: "read", value: "read", label: "Read", chipLabel: "Reading" },
         ]
       : []),
   ]);

@@ -4,6 +4,7 @@ import {
   comicProgressLabel,
   comicProgressPercent,
   comicReadingProgressKey,
+  isComicComplete,
   normalizeComicProgress,
 } from "./comic-progress";
 
@@ -28,5 +29,16 @@ describe("comic progress helpers", () => {
     expect(canResumeComic({ pageIndex: 4, pageCount: 10 }, 10)).toBe(true);
     expect(comicProgressPercent(4, 10)).toBe(50);
     expect(comicProgressLabel(4, 10)).toBe("Page 5 of 10");
+  });
+
+  it("preserves completed-at state for read comics", () => {
+    const progress = normalizeComicProgress(
+      { pageIndex: 9, pageCount: 10, completedAt: "2026-05-08T18:00:00.000Z" },
+      10,
+    );
+
+    expect(progress.completedAt).toBe("2026-05-08T18:00:00.000Z");
+    expect(isComicComplete(progress, 10)).toBe(true);
+    expect(isComicComplete({ pageIndex: 9, pageCount: 10 }, 10)).toBe(false);
   });
 });

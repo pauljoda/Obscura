@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Selected galleries can now be merged into a comic series from the Galleries list. The merge creates or reuses a real series folder on disk, moves the selected galleries under it, and lets the user label the chapter order before saving.
 - Comic series tools are easier to reach and filter. Gallery cards can now be selected from grid-style views for series merging, and the Images and Galleries pages can show only comic items or hide comic items.
 - Gallery cards now show cleaner comic covers and metadata: image counts moved below the title, zero-image series stop showing `0 images`, and sub-gallery counts appear alongside image counts.
+- Comic galleries now track when reading reaches the final page. Completed comics show a Re-read action, and the Galleries page can filter comic galleries by Read or Unread.
+- The Merge into series flow now opens in a drawer-style panel with mobile-friendly chapter fields that match the identify review surfaces more closely.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
@@ -29,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Library surface view preferences now use form-factor scoped database keys (`mobile` / `desktop`) while saved filter presets remain shared. Existing unscoped preference rows are used as a one-time fallback so current layouts seed the new scoped keys instead of resetting abruptly.
 - Gallery bulk actions now remain visible outside list view, and gallery grid cards expose selection controls so actions like Merge into series are discoverable without changing layouts.
 - Gallery cards now render image and sub-gallery counts in the subtitle row instead of overlaying the thumbnail.
+- Gallery selection controls are more compact and inset into selected cards, reducing how much of the cover artwork they obscure.
+- Merge into series now uses a full-height drawer layout with stacked chapter inputs on small screens.
 - On mobile gallery detail pages, the info panel now appears above sub-galleries and images so metadata is visible before long gallery lists.
 
 ### Added
@@ -41,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Nested comic archives now attach to their containing folder gallery during scans, and numbered archive names are shown as ordered chapter labels such as `#01` and `#02`.
 - Galleries list bulk actions now include Merge into series, with a review dialog for the series folder name and per-gallery chapter labels.
 - Galleries and Images now include a Comic library filter, with Comic and Not comic choices for narrowing archive series and comic pages.
+- Galleries now include a Reading filter with Read and Unread options for comic reading completion.
 - Added a comic reader overlay for archive galleries with paged spreads, one/two-page controls, first-page-cover handling, keyboard navigation, and a vertical webtoon roll.
 - Comic reader mobile controls now auto-hide as floating overlays, with center-tap chrome toggling and left/right tap zones for page navigation.
 

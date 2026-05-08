@@ -2,6 +2,7 @@
   import { ArrowDownUp, FolderInput, Loader2, X } from "@lucide/svelte";
   import type { GalleryListItemDto } from "@obscura/contracts";
   import { mergeGalleriesIntoSeries } from "$lib/api/media";
+  import { portal } from "$lib/actions/portal";
 
   interface Props {
     open: boolean;
@@ -82,9 +83,17 @@
 </script>
 
 {#if open}
-  <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
-    <div class="w-full max-w-2xl border border-border-default bg-surface-2 shadow-2xl backdrop-blur sm:max-h-[88vh]">
-      <div class="flex items-start justify-between gap-4 border-b border-border-subtle p-4">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    use:portal
+    class="fixed inset-0 z-[190] flex justify-end bg-bg/70"
+    onclick={(e) => {
+      if (e.target === e.currentTarget) onClose();
+    }}
+  >
+    <div class="flex h-full w-full max-w-3xl flex-col border-l border-border-subtle bg-surface-2 shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
         <div class="min-w-0">
           <h2 class="flex items-center gap-2 text-base font-heading text-text-primary">
             <FolderInput class="h-4 w-4 text-text-accent" />
@@ -104,7 +113,7 @@
         </button>
       </div>
 
-      <div class="max-h-[70vh] space-y-4 overflow-y-auto p-4">
+      <div class="flex-1 space-y-5 overflow-y-auto px-5 py-5">
         {#if error}
           <div class="border border-status-error/40 bg-status-error/10 p-2.5 text-sm text-status-error-text">
             {error}
@@ -125,8 +134,8 @@
             <ArrowDownUp class="h-3.5 w-3.5" />
             Chapter order
           </div>
-          {#each rows as row, index (row.id)}
-            <div class="grid grid-cols-[4.5rem_1fr] gap-2 border border-border-subtle bg-black/15 p-2">
+          {#each rows as row (row.id)}
+            <div class="grid grid-cols-1 gap-3 border border-border-subtle bg-black/15 p-3 sm:grid-cols-[5rem_1fr]">
               <label class="space-y-1">
                 <span class="text-[0.58rem] uppercase tracking-wider text-text-disabled">No.</span>
                 <input
@@ -137,7 +146,7 @@
                 />
               </label>
               <label class="min-w-0 space-y-1">
-                <span class="block truncate text-[0.58rem] uppercase tracking-wider text-text-disabled">
+                <span class="block truncate text-[0.58rem] uppercase tracking-wider text-text-disabled sm:pt-0">
                   {row.originalTitle}
                 </span>
                 <input
@@ -150,7 +159,7 @@
         </div>
       </div>
 
-      <div class="flex items-center justify-end gap-2 border-t border-border-subtle p-4">
+      <div class="flex items-center justify-end gap-2 border-t border-border-subtle bg-bg px-5 py-4">
         <button
           type="button"
           class="px-3 py-1.5 text-sm text-text-muted transition-colors hover:text-text-primary"

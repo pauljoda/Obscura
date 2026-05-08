@@ -33,4 +33,15 @@ describe("/api/galleries route", () => {
       comic: "false",
     });
   });
+
+  it("passes reading-status filter params through to app-core", async () => {
+    const { GET } = await import("./+server");
+    const url = new URL("http://localhost/api/galleries?read=unread");
+
+    await GET({ url } as never);
+
+    expect(listGalleriesRead).toHaveBeenCalledWith(db, {
+      read: "unread",
+    });
+  });
 });

@@ -24,6 +24,7 @@
     comicProgressPercent,
     comicReadingProgressKey,
     defaultComicProgress,
+    isComicComplete,
     normalizeComicProgress,
     validateComicProgress,
     type ComicReadingProgress,
@@ -71,7 +72,8 @@
   const comicProgress = $derived(
     normalizeComicProgress(comicProgressPrefs.current, images.length),
   );
-  const canResume = $derived(canResumeComic(comicProgress, images.length));
+  const comicComplete = $derived(isComicComplete(comicProgress, images.length));
+  const canResume = $derived(canResumeComic(comicProgress, images.length) && !comicComplete);
   const progressLabel = $derived(comicProgressLabel(comicProgress.pageIndex, images.length));
   const progressPercent = $derived(comicProgressPercent(comicProgress.pageIndex, images.length));
 
@@ -81,11 +83,18 @@
 
   function saveComicProgress(nextIndex: number) {
     if (!g.isComic || images.length === 0) return;
-    const normalized = normalizeComicProgress({ pageIndex: nextIndex }, images.length);
+    const normalized = normalizeComicProgress(
+      { ...comicProgressPrefs.current, pageIndex: nextIndex },
+      images.length,
+    );
+    const reachedEnd = normalized.pageIndex >= images.length - 1;
     comicProgressPrefs.update({
       pageIndex: normalized.pageIndex,
       pageCount: images.length,
       updatedAt: new Date().toISOString(),
+      completedAt: reachedEnd
+        ? normalized.completedAt ?? new Date().toISOString()
+        : normalized.completedAt ?? null,
     });
   }
 
@@ -273,7 +282,7 @@
           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
         >
           <BookOpen class="h-3.5 w-3.5" />
-          Read
+          {comicComplete ? "Re-read" : "Read"}
         </button>
       {/if}
       {#if !editing}

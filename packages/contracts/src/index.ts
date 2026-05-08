@@ -469,6 +469,7 @@ export interface GalleryListItemDto {
   title: string;
   galleryType: GalleryType;
   isComic: boolean;
+  readCompleted: boolean;
   coverImagePath: string | null;
   previewImagePaths: string[];
   coverAspectRatio: number | null;

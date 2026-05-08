@@ -26,6 +26,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
       sort,
       order,
       comic: url.searchParams.get("comic") ?? undefined,
+      read: url.searchParams.get("read") ?? undefined,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
       nsfw: nsfwMode,

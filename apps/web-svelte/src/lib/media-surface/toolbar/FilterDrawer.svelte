@@ -34,6 +34,7 @@
     studioItems: AlphabeticalFilterSectionItem[];
     showInteractiveFilter?: boolean;
     showComicFilter?: boolean;
+    showReadFilter?: boolean;
     /** Render extra panel sections at the top of the drawer (per-route hooks). */
     customSections?: Snippet<[{ panelFilters: SectionPanelFilter[] }]>;
   }
@@ -47,6 +48,7 @@
     studioItems,
     showInteractiveFilter = true,
     showComicFilter = false,
+    showReadFilter = false,
     customSections,
   }: Props = $props();
 </script>
@@ -77,6 +79,7 @@
         {onAddFilter}
         showInteractive={showInteractiveFilter}
         showComic={showComicFilter}
+        showRead={showReadFilter}
       />
     {/if}
     {#if enabledSections.has("codec")}

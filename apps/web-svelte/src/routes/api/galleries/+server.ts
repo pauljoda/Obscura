@@ -24,6 +24,7 @@ const SCALAR_KEYS = [
   "imageCountMin",
   "organized",
   "comic",
+  "read",
   "nsfw",
 ] as const;
 

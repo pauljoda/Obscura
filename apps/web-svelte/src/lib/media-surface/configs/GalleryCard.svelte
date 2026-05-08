@@ -26,7 +26,7 @@
     {#if onToggleSelect}
       <button
         type="button"
-        class="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center glass-2 border border-border-subtle"
+        class="absolute left-1.5 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center glass-2 border border-border-subtle"
         onclick={() => onToggleSelect?.()}
         aria-label={`Select ${item.title}`}
       >
@@ -79,7 +79,7 @@
     {#if onToggleSelect}
       <button
         type="button"
-        class="absolute left-2 top-2 z-20 flex h-9 w-9 items-center justify-center glass-2 border border-border-subtle shadow-[var(--shadow-soft)]"
+        class="absolute left-1.5 top-1.5 z-20 flex h-7 w-7 items-center justify-center glass-2 border border-border-subtle shadow-[var(--shadow-soft)]"
         onclick={() => onToggleSelect?.()}
         aria-label={`Select ${item.title}`}
       >
@@ -90,20 +90,22 @@
       href={`/galleries/${item.id}`}
       class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
     >
-      <GalleryThumbnail
-        title={item.title}
-        coverImagePath={item.coverImagePath}
-        previewImagePaths={item.previewImagePaths}
-        imageCount={item.imageCount}
-        isNsfw={item.isNsfw}
-        isComic={item.isComic}
-        size="grid"
-        aspectRatio={coverAspectRatio}
-        aspectClass={previewBackedSeries ? "aspect-[4/3]" : undefined}
-        fit={coverAspectRatio || (!previewBackedSeries && !item.isComic) ? "cover" : "contain"}
-        gradientFallback={gradient}
-        showCount={false}
-      />
+      <div class={onToggleSelect ? "p-1" : ""}>
+        <GalleryThumbnail
+          title={item.title}
+          coverImagePath={item.coverImagePath}
+          previewImagePaths={item.previewImagePaths}
+          imageCount={item.imageCount}
+          isNsfw={item.isNsfw}
+          isComic={item.isComic}
+          size="grid"
+          aspectRatio={coverAspectRatio}
+          aspectClass={previewBackedSeries ? "aspect-[4/3]" : undefined}
+          fit={coverAspectRatio || (!previewBackedSeries && !item.isComic) ? "cover" : "contain"}
+          gradientFallback={gradient}
+          showCount={false}
+        />
+      </div>
       <div class="p-2.5 space-y-1">
         <h4 class="truncate text-body font-medium text-text-primary">{item.title}</h4>
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.65rem] text-text-muted">

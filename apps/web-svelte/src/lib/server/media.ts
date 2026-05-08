@@ -44,6 +44,7 @@ export async function fetchGalleries(
     imageCountMin?: number;
     organized?: string;
     comic?: string;
+    read?: string;
     nsfw?: string;
     limit?: number;
     offset?: number;
@@ -66,6 +67,7 @@ export async function fetchGalleries(
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
       comic: params?.comic,
+      read: params?.read,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,

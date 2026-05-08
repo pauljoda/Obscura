@@ -115,7 +115,8 @@
       if (
         s.filterType === "organized" ||
         s.filterType === "interactive" ||
-        s.filterType === "comic"
+        s.filterType === "comic" ||
+        s.filterType === "read"
       )
         out.add("libraryFlags");
     }
@@ -149,6 +150,9 @@
   );
   const showComicFilter = $derived(
     Boolean(filterSections?.some((s) => s.filterType === "comic")),
+  );
+  const showReadFilter = $derived(
+    Boolean(filterSections?.some((s) => s.filterType === "read")),
   );
 
   // The chip strip wants `{label, value, type}`; map activeFilters
@@ -317,6 +321,7 @@
       studioItems={studioItems}
       showInteractiveFilter={showInteractiveFilter}
       showComicFilter={showComicFilter}
+      showReadFilter={showReadFilter}
       customSections={extraDrawerSections ? drawerCustom : undefined}
     />
   {/if}

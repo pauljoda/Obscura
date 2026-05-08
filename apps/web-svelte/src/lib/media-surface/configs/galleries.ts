@@ -19,6 +19,7 @@ type GalleryFilterType =
   | "dateFrom"
   | "dateTo"
   | "comic"
+  | "read"
   | "tag"
   | "performer"
   | "studio";
@@ -59,6 +60,15 @@ export function galleriesSurfaceConfig(
         { value: "false", label: "Not comic" },
       ],
     },
+    {
+      kind: "enum",
+      filterType: "read",
+      label: "Library flags",
+      options: [
+        { value: "unread", label: "Unread" },
+        { value: "read", label: "Read" },
+      ],
+    },
   ];
 
   return {
@@ -75,6 +85,7 @@ export function galleriesSurfaceConfig(
       const dateFrom = prefs.activeFilters.find((f) => f.type === "dateFrom")?.value;
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
       const comic = prefs.activeFilters.find((f) => f.type === "comic")?.value;
+      const read = prefs.activeFilters.find((f) => f.type === "read")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const tags = prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
       const performers = prefs.activeFilters
@@ -95,6 +106,7 @@ export function galleriesSurfaceConfig(
           dateFrom,
           dateTo,
           comic,
+          read,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -139,6 +151,7 @@ export function galleriesSurfaceConfig(
       "dateFrom",
       "dateTo",
       "comic",
+      "read",
       "studio",
     ]),
     searchPlaceholder: "Search galleries...",

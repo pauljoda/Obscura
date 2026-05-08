@@ -66,6 +66,7 @@ const {
   imageTags,
   performers,
   libraryRoots,
+  uiPrefs,
   tags,
   studios,
 } = schema;
@@ -187,6 +188,55 @@ function applyComicFilter(conditions: SQL[], value: string | undefined, conditio
   else if (value === "false") conditions.push(sql`not (${condition})`);
 }
 
+function comicProgressKey(galleryId: string) {
+  return `comic-reader:${galleryId}:progress`;
+}
+
+function completedComicProgressSql(galleryIdSql: SQL): SQL {
+  return sql`exists (
+    select 1
+    from ui_prefs comic_progress
+    where comic_progress.key = ('comic-reader:' || ${galleryIdSql}::text || ':progress')
+      and nullif(comic_progress.value->>'completedAt', '') is not null
+  )`;
+}
+
+function completedGalleryReadSql(): SQL {
+  return sql`(
+    (
+      ${galleries.galleryType} = 'zip'
+      and ${comicArchivePathSql(galleries.zipFilePath)}
+      and ${completedComicProgressSql(sql`${galleries.id}`)}
+    )
+    or (
+      exists (
+        select 1
+        from galleries comic_child
+        where comic_child.parent_id = ${galleries.id}
+          and comic_child.gallery_type = 'zip'
+          and (lower(coalesce(comic_child.zip_file_path, '')) like '%.zip' or lower(coalesce(comic_child.zip_file_path, '')) like '%.cbz')
+      )
+      and not exists (
+        select 1
+        from galleries unread_child
+        where unread_child.parent_id = ${galleries.id}
+          and unread_child.gallery_type = 'zip'
+          and (lower(coalesce(unread_child.zip_file_path, '')) like '%.zip' or lower(coalesce(unread_child.zip_file_path, '')) like '%.cbz')
+          and not ${completedComicProgressSql(sql`unread_child.id`)}
+      )
+    )
+  )`;
+}
+
+function applyReadFilter(conditions: SQL[], value: string | undefined) {
+  const completed = completedGalleryReadSql();
+  if (value === "read") conditions.push(completed);
+  else if (value === "unread") {
+    conditions.push(comicGallerySql());
+    conditions.push(sql`not (${completed})`);
+  }
+}
+
 export interface ListGalleriesQuery {
   search?: string;
   sort?: string;
@@ -206,6 +256,7 @@ export interface ListGalleriesQuery {
   imageCountMin?: string;
   organized?: string;
   comic?: string;
+  read?: string;
   nsfw?: string;
 }
 
@@ -232,6 +283,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   if (query.type) conditions.push(eq(galleries.galleryType, query.type));
   if (query.studio) conditions.push(eq(galleries.studioId, query.studio));
   applyComicFilter(conditions, query.comic, comicGallerySql());
+  applyReadFilter(conditions, query.read);
 
   const tagEntityIds = await resolveTagIds(
     db,
@@ -336,9 +388,9 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   ]);
 
   const childIds = childRows.map((child) => child.id);
-  const childPreviewImages =
+  const [childPreviewImages, progressRows] = await Promise.all([
     childIds.length > 0
-      ? await db
+      ? db
           .select({
             galleryId: images.galleryId,
             imageId: images.id,
@@ -349,7 +401,27 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
           .from(images)
           .where(and(inArray(images.galleryId, childIds), imageVisibleSql(images.filePath)))
           .orderBy(asc(images.sortOrder))
-      : [];
+      : Promise.resolve([]),
+    galleryIds.length + childIds.length > 0
+      ? db
+          .select({ key: uiPrefs.key, value: uiPrefs.value })
+          .from(uiPrefs)
+          .where(inArray(uiPrefs.key, [...galleryIds, ...childIds].map(comicProgressKey)))
+      : Promise.resolve([]),
+  ]);
+  const completedProgressIds = new Set(
+    progressRows.flatMap((row) => {
+      if (
+        row.value &&
+        typeof row.value === "object" &&
+        !Array.isArray(row.value) &&
+        typeof (row.value as { completedAt?: unknown }).completedAt === "string"
+      ) {
+        return [row.key.replace(/^comic-reader:/, "").replace(/:progress$/, "")];
+      }
+      return [];
+    }),
+  );
   const firstChildImageMap = new Map<string, { id: string; width: number | null; height: number | null }>();
   for (const img of childPreviewImages) {
     if (!img.galleryId || firstChildImageMap.has(img.galleryId)) continue;
@@ -363,10 +435,16 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   const childCoverAspectCandidates = new Map<string, Array<{ width: number | null; height: number | null }>>();
   const childComicParentIds = new Set<string>();
   const childCountMap = new Map<string, number>();
+  const comicChildrenByParent = new Map<string, string[]>();
   for (const child of childRows) {
     if (!child.parentId) continue;
     childCountMap.set(child.parentId, (childCountMap.get(child.parentId) ?? 0) + 1);
-    if (isComicGallery(child)) childComicParentIds.add(child.parentId);
+    if (isComicGallery(child)) {
+      childComicParentIds.add(child.parentId);
+      const existing = comicChildrenByParent.get(child.parentId) ?? [];
+      existing.push(child.id);
+      comicChildrenByParent.set(child.parentId, existing);
+    }
     const firstChildImage = firstChildImageMap.get(child.id);
     const imageId = child.coverImageId ?? firstChildImage?.id;
     if (!imageId) continue;
@@ -399,6 +477,9 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
       title: gallery.title,
       galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
       isComic: isComicGallery(gallery) || childComicParentIds.has(gallery.id),
+      readCompleted: isComicGallery(gallery)
+        ? completedProgressIds.has(gallery.id)
+        : (comicChildrenByParent.get(gallery.id)?.every((id) => completedProgressIds.has(id)) ?? false),
       coverImagePath: `/assets/galleries/${gallery.id}/cover`,
       previewImagePaths: (() => {
         const direct = previewImages
@@ -686,6 +767,7 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
     title: gallery.title,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
     isComic: isComicGallery(gallery),
+    readCompleted: false,
     coverImagePath: `/assets/galleries/${gallery.id}/cover`,
     previewImagePaths: [] as string[],
     coverAspectRatio: null,
