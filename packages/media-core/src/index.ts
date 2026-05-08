@@ -718,6 +718,159 @@ function extractAllTags(xml: string, tag: string): string[] {
   return results;
 }
 
+const naturalPathCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
+export function naturalComparePaths(a: string, b: string): number {
+  return naturalPathCollator.compare(a, b);
+}
+
+export function sortPathsNaturally<T extends string>(paths: T[]): T[] {
+  return [...paths].sort(naturalComparePaths);
+}
+
+export interface ComicInfoMetadata {
+  title?: string;
+  series?: string;
+  number?: string;
+  count?: number;
+  volume?: number;
+  summary?: string;
+  date?: string;
+  publisher?: string;
+  urls: string[];
+  pageCount?: number;
+  language?: string;
+  format?: string;
+  manga?: string;
+  ageRating?: string;
+  creators: string[];
+  tags: string[];
+}
+
+function cleanComicInfoValue(value: string | null): string | undefined {
+  const trimmed = value?.replace(/^\uFEFF/, "").trim();
+  if (!trimmed || trimmed === "-1") return undefined;
+  return trimmed;
+}
+
+function comicInfoNumber(xml: string, tag: string): number | undefined {
+  const raw = cleanComicInfoValue(extractTag(xml, tag));
+  if (!raw) return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function splitComicInfoList(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(/[;,]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+  return out;
+}
+
+function comicInfoDate(xml: string): string | undefined {
+  const year = comicInfoNumber(xml, "Year");
+  if (!year || year < 1) return undefined;
+  const month = comicInfoNumber(xml, "Month");
+  const day = comicInfoNumber(xml, "Day");
+  if (!month || month < 1 || month > 12) return String(year);
+  if (!day || day < 1 || day > 31) {
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function parseComicInfoXml(xml: string): ComicInfoMetadata {
+  const publisher =
+    cleanComicInfoValue(extractTag(xml, "Publisher")) ??
+    cleanComicInfoValue(extractTag(xml, "Imprint"));
+
+  const creatorTags = [
+    "Writer",
+    "Penciller",
+    "Inker",
+    "Colorist",
+    "Letterer",
+    "CoverArtist",
+    "Editor",
+    "Translator",
+  ];
+  const creators = uniqueStrings(
+    creatorTags.flatMap((tag) =>
+      splitComicInfoList(cleanComicInfoValue(extractTag(xml, tag))),
+    ),
+  );
+
+  const tags = uniqueStrings([
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "Genre"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "Tags"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "Characters"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "SeriesGroup"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "StoryArc"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "Manga"))),
+    ...splitComicInfoList(cleanComicInfoValue(extractTag(xml, "AgeRating"))),
+  ]);
+
+  const urls = uniqueStrings(
+    splitComicInfoList(cleanComicInfoValue(extractTag(xml, "Web"))),
+  );
+
+  const metadata: ComicInfoMetadata = {
+    title: cleanComicInfoValue(extractTag(xml, "Title")),
+    series: cleanComicInfoValue(extractTag(xml, "Series")),
+    number: cleanComicInfoValue(extractTag(xml, "Number")),
+    count: comicInfoNumber(xml, "Count"),
+    volume: comicInfoNumber(xml, "Volume"),
+    summary: cleanComicInfoValue(extractTag(xml, "Summary")),
+    date: comicInfoDate(xml),
+    publisher,
+    urls,
+    pageCount: comicInfoNumber(xml, "PageCount"),
+    language: cleanComicInfoValue(extractTag(xml, "LanguageISO")),
+    format: cleanComicInfoValue(extractTag(xml, "Format")),
+    manga: cleanComicInfoValue(extractTag(xml, "Manga")),
+    ageRating: cleanComicInfoValue(extractTag(xml, "AgeRating")),
+    creators,
+    tags,
+  };
+
+  for (const key of Object.keys(metadata) as Array<keyof ComicInfoMetadata>) {
+    if (metadata[key] === undefined) {
+      delete metadata[key];
+    }
+  }
+
+  return metadata;
+}
+
+export function extractComicInfoFromZip(zipPath: string): ComicInfoMetadata | null {
+  const zip = new AdmZip(zipPath);
+  const entry = zip
+    .getEntries()
+    .find(
+      (candidate) =>
+        !candidate.isDirectory &&
+        path.basename(candidate.entryName).toLowerCase() === "comicinfo.xml",
+    );
+  if (!entry) return null;
+  return parseComicInfoXml(entry.getData().toString("utf8"));
+}
+
 /**
  * Normalize a raw NFO rating to the 0-100 scale used by the database.
  * Common NFO scales: 0-5 (stars), 0-10 (decimal), 0-100 (percentage).

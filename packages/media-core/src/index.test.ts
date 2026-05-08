@@ -6,6 +6,10 @@ import {
   isVideoFile,
   isImageFile,
   fileNameToTitle,
+  naturalComparePaths,
+  sortPathsNaturally,
+  parseComicInfoXml,
+  extractComicInfoFromZip,
   normalizeNfoRating,
   getSidecarPaths,
   getVideoGeneratedDiskPaths,
@@ -22,6 +26,7 @@ import {
   resolveExistingMediaPath,
   getGeneratedCollectionDir,
 } from "./index";
+import AdmZip from "adm-zip";
 
 async function hasBinary(name: string): Promise<boolean> {
   try {
@@ -94,6 +99,92 @@ describe("isImageFile", () => {
   it("rejects unsupported formats", () => {
     expect(isImageFile("doc.txt")).toBe(false);
     expect(isImageFile("audio.mp3")).toBe(false);
+  });
+});
+
+describe("natural path sorting", () => {
+  it("orders numbered comic pages by numeric filename segments", () => {
+    expect(
+      sortPathsNaturally([
+        "/comic/10.png",
+        "/comic/2.png",
+        "/comic/1.png",
+        "/comic/9.png",
+      ]),
+    ).toEqual([
+      "/comic/1.png",
+      "/comic/2.png",
+      "/comic/9.png",
+      "/comic/10.png",
+    ]);
+  });
+
+  it("keeps natural compare stable for prefixed page numbers", () => {
+    const paths = ["page 010.jpg", "page 002.jpg", "page 001.jpg"];
+    expect([...paths].sort(naturalComparePaths)).toEqual([
+      "page 001.jpg",
+      "page 002.jpg",
+      "page 010.jpg",
+    ]);
+  });
+});
+
+describe("ComicInfo.xml helpers", () => {
+  const xml = `<?xml version="1.0" encoding="utf-8"?>
+<ComicInfo>
+  <Title>Example Comic</Title>
+  <Series>Example Series</Series>
+  <Number>2</Number>
+  <Count>5</Count>
+  <Volume>1</Volume>
+  <Summary>Long summary</Summary>
+  <Year>2026</Year>
+  <Month>5</Month>
+  <Day>8</Day>
+  <Writer>Ada Writer</Writer>
+  <Penciller>Pat Pencils</Penciller>
+  <Publisher>Panel House</Publisher>
+  <Genre>Adventure, Drama</Genre>
+  <Tags>tag one, tag two</Tags>
+  <Characters>Hero, Rival</Characters>
+  <Web>https://example.test/comic</Web>
+  <PageCount>42</PageCount>
+  <Manga>Yes</Manga>
+  <AgeRating>Teen</AgeRating>
+</ComicInfo>`;
+
+  it("parses common ComicInfo fields into normalized metadata", () => {
+    expect(parseComicInfoXml(xml)).toEqual({
+      title: "Example Comic",
+      series: "Example Series",
+      number: "2",
+      count: 5,
+      volume: 1,
+      summary: "Long summary",
+      date: "2026-05-08",
+      publisher: "Panel House",
+      urls: ["https://example.test/comic"],
+      pageCount: 42,
+      manga: "Yes",
+      ageRating: "Teen",
+      creators: ["Ada Writer", "Pat Pencils"],
+      tags: ["Adventure", "Drama", "tag one", "tag two", "Hero", "Rival", "Yes", "Teen"],
+    });
+  });
+
+  it("extracts ComicInfo.xml from zip/cbz archives", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "obscura-comicinfo-test-"));
+    const zipPath = path.join(dir, "comic.cbz");
+    try {
+      const zip = new AdmZip();
+      zip.addFile("ComicInfo.xml", Buffer.from(xml));
+      zip.addFile("1.jpg", Buffer.from("fake image"));
+      zip.writeZip(zipPath);
+
+      expect(extractComicInfoFromZip(zipPath)?.title).toBe("Example Comic");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
