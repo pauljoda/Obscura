@@ -16,6 +16,7 @@
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
   import {
     comicSpreadForIndex,
+    comicTapZone,
     nextComicIndex,
     previousComicIndex,
     type ComicPageMode,
@@ -36,6 +37,8 @@
   let pageMode = $state<ComicPageMode>("single");
   let firstPageIsCover = $state(true);
   let index = $state(untrack(() => initialIndex));
+  let controlsVisible = $state(true);
+  let controlsTimer: number | null = null;
 
   const spread = $derived(
     comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover }),
@@ -48,14 +51,51 @@
 
   function goNext() {
     index = nextComicIndex(index, images.length, { pageMode, firstPageIsCover });
+    showControlsTemporarily();
   }
 
   function goPrev() {
     index = previousComicIndex(index, images.length, { pageMode, firstPageIsCover });
+    showControlsTemporarily();
   }
 
   function imageSrc(image: ImageListItemDto) {
     return toApiUrl(image.fullPath ?? image.thumbnailPath) ?? "";
+  }
+
+  function clearControlsTimer() {
+    if (!controlsTimer) return;
+    window.clearTimeout(controlsTimer);
+    controlsTimer = null;
+  }
+
+  function showControlsTemporarily() {
+    controlsVisible = true;
+    clearControlsTimer();
+    controlsTimer = window.setTimeout(() => {
+      controlsVisible = false;
+      controlsTimer = null;
+    }, 2800);
+  }
+
+  function toggleControls() {
+    if (controlsVisible) {
+      controlsVisible = false;
+      clearControlsTimer();
+    } else {
+      showControlsTemporarily();
+    }
+  }
+
+  function handleReaderTap(event: PointerEvent) {
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-reader-control]")) return;
+    if (event.pointerType === "mouse") return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const zone = comicTapZone(event.clientX - rect.left, rect.width);
+    if (zone === "previous") goPrev();
+    else if (zone === "next") goNext();
+    else toggleControls();
   }
 
   onMount(() => {
@@ -92,9 +132,11 @@
     }
 
     window.addEventListener("keydown", onKey);
+    showControlsTemporarily();
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      clearControlsTimer();
     };
   });
 </script>
@@ -106,7 +148,10 @@
   in:fade={{ duration: dur.normal, easing: ease.enter }}
   out:fade={{ duration: dur.fast, easing: ease.exit }}
 >
-  <div class="relative z-20 flex items-center gap-2 border-b border-border-subtle bg-black/72 px-3 py-2 backdrop-blur-md">
+  <div
+    data-reader-control
+    class={`reader-top-layer ${controlsVisible ? "reader-layer-visible" : "reader-layer-hidden"}`}
+  >
     <button
       type="button"
       onclick={onClose}
@@ -178,8 +223,9 @@
   </div>
 
   {#if readerMode === "webtoon"}
-    <div class="flex-1 overflow-y-auto bg-black">
-      <div class="mx-auto flex w-full max-w-4xl flex-col items-center">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="reader-stage overflow-y-auto bg-black" onpointerup={handleReaderTap}>
+      <div class="mx-auto flex min-h-full w-full max-w-4xl flex-col items-center">
         {#each images as image (image.id)}
           <NsfwBlur isNsfw={image.isNsfw} class="w-full">
             <img
@@ -194,11 +240,13 @@
       </div>
     </div>
   {:else}
-    <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black px-2 py-3 sm:px-14">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="reader-stage items-center justify-center overflow-hidden bg-black p-0 sm:px-14 sm:py-3" onpointerup={handleReaderTap}>
       {#if images.length > 1}
         <button
           type="button"
           onclick={goPrev}
+          data-reader-control
           class="reader-nav-button left-2 sm:left-3"
           aria-label="Previous page"
           title="Previous (←)"
@@ -208,6 +256,7 @@
         <button
           type="button"
           onclick={goNext}
+          data-reader-control
           class="reader-nav-button right-2 sm:right-3"
           aria-label="Next page"
           title="Next (→)"
@@ -239,7 +288,10 @@
     </div>
   {/if}
 
-  <div class="relative z-20 border-t border-border-subtle bg-black/72 px-3 py-2 backdrop-blur-md sm:hidden">
+  <div
+    data-reader-control
+    class={`reader-bottom-layer ${controlsVisible ? "reader-layer-visible" : "reader-layer-hidden"}`}
+  >
     <div class="flex items-center justify-between gap-2">
       <button type="button" onclick={goPrev} class="reader-mode-button">
         <ChevronLeft class="h-4 w-4" />
@@ -289,6 +341,73 @@
       border-color 150ms ease,
       color 150ms ease,
       box-shadow 150ms ease;
+  }
+
+  .reader-stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    touch-action: manipulation;
+  }
+
+  .reader-top-layer,
+  .reader-bottom-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    border-color: rgb(255 255 255 / 0.12);
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.78),
+      rgb(0 0 0 / 0.48) 68%,
+      rgb(0 0 0 / 0)
+    );
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 1.25rem;
+    backdrop-filter: blur(14px);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .reader-top-layer {
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .reader-bottom-layer {
+    bottom: 0;
+    border-top: 1px solid rgb(255 255 255 / 0.12);
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.78),
+      rgb(0 0 0 / 0.48) 68%,
+      rgb(0 0 0 / 0)
+    );
+    padding: 1.25rem 0.75rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .reader-layer-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .reader-layer-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .reader-top-layer.reader-layer-hidden {
+    transform: translateY(-0.75rem);
+  }
+
+  .reader-bottom-layer.reader-layer-hidden {
+    transform: translateY(0.75rem);
   }
 
   .reader-icon-button {
@@ -347,6 +466,20 @@
   }
 
   @media (min-width: 640px) {
+    .reader-stage {
+      inset: 3.65rem 0 0;
+    }
+
+    .reader-top-layer {
+      border-bottom: 1px solid rgb(255 255 255 / 0.12);
+      background: rgb(0 0 0 / 0.72);
+      padding: 0.5rem 0.75rem;
+    }
+
+    .reader-bottom-layer {
+      display: none;
+    }
+
     .reader-nav-button {
       display: flex;
     }

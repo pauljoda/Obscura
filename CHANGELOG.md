@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Comic and archive galleries now open into a gallery-scoped Images browser instead of a one-off masonry strip. Gallery detail pages get the shared toolbar, sort menu, view-mode toggle, thumbnail sizing, infinite loading, and bulk image actions; comic archives default to filename-number ordering so pages read in the expected order.
 - Comic galleries now have a dedicated reader with paged and webtoon modes. Paged mode supports one-page or two-page spreads, plus a First Page is Cover toggle that keeps cover pages alone before pairing the rest.
+- On mobile, the comic reader now lets pages use the full screen: controls float over the artwork, fade away after a short delay, return or hide with a center tap, and left/right taps move backward or forward.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
 
@@ -24,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
 - Gallery detail image browsing now uses the shared Images surface, including masonry, grid, and list views; comic galleries default to natural filename ordering and label performer metadata as Authors.
 - Added a comic reader overlay for archive galleries with paged spreads, one/two-page controls, first-page-cover handling, keyboard navigation, and a vertical webtoon roll.
+- Comic reader mobile controls now auto-hide as floating overlays, with center-tap chrome toggling and left/right tap zones for page navigation.
 
 ### Fixed
 

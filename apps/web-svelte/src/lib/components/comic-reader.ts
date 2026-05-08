@@ -1,4 +1,5 @@
 export type ComicPageMode = "single" | "double";
+export type ComicTapZone = "previous" | "controls" | "next";
 
 export interface ComicReaderOptions {
   pageMode: ComicPageMode;
@@ -56,4 +57,12 @@ export function previousComicIndex(
   if (options.firstPageIsCover && previous <= 0) return 0;
   if (!options.firstPageIsCover) return previous % 2 === 0 ? clampIndex(previous, total) : clampIndex(previous - 1, total);
   return previous % 2 === 1 ? clampIndex(previous, total) : clampIndex(previous - 1, total);
+}
+
+export function comicTapZone(x: number, width: number): ComicTapZone {
+  if (width <= 0) return "controls";
+  const ratio = x / width;
+  if (ratio < 1 / 3) return "previous";
+  if (ratio > 2 / 3) return "next";
+  return "controls";
 }

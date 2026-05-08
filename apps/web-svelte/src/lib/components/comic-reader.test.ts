@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { comicSpreadForIndex, nextComicIndex, previousComicIndex } from "./comic-reader";
+import {
+  comicSpreadForIndex,
+  comicTapZone,
+  nextComicIndex,
+  previousComicIndex,
+} from "./comic-reader";
 
 describe("comic reader page math", () => {
   it("shows one page at a time in single-page mode", () => {
@@ -25,5 +30,11 @@ describe("comic reader page math", () => {
     expect(nextComicIndex(1, 8, opts)).toBe(3);
     expect(previousComicIndex(3, 8, opts)).toBe(1);
     expect(previousComicIndex(1, 8, opts)).toBe(0);
+  });
+
+  it("classifies mobile tap zones into previous, controls, and next", () => {
+    expect(comicTapZone(10, 300)).toBe("previous");
+    expect(comicTapZone(149, 300)).toBe("controls");
+    expect(comicTapZone(290, 300)).toBe("next");
   });
 });
