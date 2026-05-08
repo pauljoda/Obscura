@@ -1355,7 +1355,7 @@ export function parseZipImageMembers(zipPath: string): string[] {
       return supportedImageExtensions.has(ext);
     })
     .map((entry) => entry.entryName)
-    .sort((a, b) => a.localeCompare(b));
+    .sort(naturalComparePaths);
 }
 
 /**

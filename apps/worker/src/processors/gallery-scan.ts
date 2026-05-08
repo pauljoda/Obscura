@@ -1,15 +1,30 @@
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { and, eq, inArray, like, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, like, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverImageFilesAndDirs,
+  extractComicInfoFromZip,
   fileNameToTitle,
+  parseComicInfoXml,
   parseZipImageMembers,
   getGeneratedImageDir,
+  sortPathsNaturally,
+  type ComicInfoMetadata,
 } from "@obscura/media-core";
 import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
-import { db, images, galleries, libraryRoots } from "../lib/db.js";
+import {
+  db,
+  images,
+  galleries,
+  libraryRoots,
+  galleryPerformers,
+  galleryTags,
+  performers,
+  studios,
+  tags,
+} from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
@@ -21,6 +36,116 @@ import {
   pickStaleContainerIds,
   resolveParentPathId,
 } from "../lib/hierarchy-sync/hierarchy-sync.js";
+
+type ExistingGalleryMetadata = {
+  title: string;
+  details: string | null;
+  date: string | null;
+  urls: string[];
+  studioId: string | null;
+};
+
+async function readFolderComicInfo(dirPath: string): Promise<ComicInfoMetadata | null> {
+  const infoPath = path.join(dirPath, "ComicInfo.xml");
+  if (!existsSync(infoPath)) return null;
+  try {
+    return parseComicInfoXml(await readFile(infoPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function findOrCreateStudioId(name: string | null | undefined) {
+  const trimmed = name?.trim() ?? "";
+  if (!trimmed) return null;
+  const [existing] = await db
+    .select({ id: studios.id })
+    .from(studios)
+    .where(ilike(studios.name, trimmed))
+    .limit(1);
+  if (existing) return existing.id;
+  const [created] = await db
+    .insert(studios)
+    .values({ name: trimmed })
+    .returning({ id: studios.id });
+  return created.id;
+}
+
+async function findOrCreatePerformerId(name: string) {
+  const trimmed = name.trim();
+  const [existing] = await db
+    .select({ id: performers.id })
+    .from(performers)
+    .where(ilike(performers.name, trimmed))
+    .limit(1);
+  if (existing) return existing.id;
+  const [created] = await db
+    .insert(performers)
+    .values({ name: trimmed })
+    .returning({ id: performers.id });
+  return created.id;
+}
+
+async function findOrCreateTagId(name: string) {
+  const trimmed = name.trim();
+  const [existing] = await db
+    .select({ id: tags.id })
+    .from(tags)
+    .where(ilike(tags.name, trimmed))
+    .limit(1);
+  if (existing) return existing.id;
+  const [created] = await db
+    .insert(tags)
+    .values({ name: trimmed })
+    .returning({ id: tags.id });
+  return created.id;
+}
+
+function shouldSeedText(current: string | null | undefined) {
+  return !current || current.trim().length === 0;
+}
+
+async function buildComicGalleryUpdate(
+  comicInfo: ComicInfoMetadata | null,
+  existing?: ExistingGalleryMetadata | null,
+) {
+  if (!comicInfo) return {};
+  const update: Record<string, unknown> = {};
+  if (comicInfo.title && (!existing || shouldSeedText(existing.title))) {
+    update.title = comicInfo.title;
+  }
+  if (comicInfo.summary && (!existing || shouldSeedText(existing.details))) {
+    update.details = comicInfo.summary;
+  }
+  if (comicInfo.date && (!existing || shouldSeedText(existing.date))) {
+    update.date = comicInfo.date;
+  }
+  if (comicInfo.urls.length > 0 && (!existing || existing.urls.length === 0)) {
+    update.urls = comicInfo.urls;
+  }
+  if (comicInfo.publisher && (!existing || !existing.studioId)) {
+    update.studioId = await findOrCreateStudioId(comicInfo.publisher);
+  }
+  return update;
+}
+
+async function attachComicGalleryRelations(galleryId: string, comicInfo: ComicInfoMetadata | null) {
+  if (!comicInfo) return;
+  for (const name of comicInfo.creators) {
+    const performerId = await findOrCreatePerformerId(name);
+    await db
+      .insert(galleryPerformers)
+      .values({ galleryId, performerId })
+      .onConflictDoNothing();
+  }
+  for (const name of comicInfo.tags) {
+    const tagId = await findOrCreateTagId(name);
+    await db
+      .insert(galleryTags)
+      .values({ galleryId, tagId })
+      .onConflictDoNothing();
+  }
+}
 
 async function shouldSkipGalleryDerivedJobs(
   sfwOnly: boolean,
@@ -164,7 +289,14 @@ export async function processGalleryScan(job: Job) {
 
     // Upsert gallery
     const [existingGallery] = await db
-      .select({ id: galleries.id })
+      .select({
+        id: galleries.id,
+        title: galleries.title,
+        details: galleries.details,
+        date: galleries.date,
+        urls: galleries.urls,
+        studioId: galleries.studioId,
+      })
       .from(galleries)
       .where(
         and(
@@ -175,6 +307,8 @@ export async function processGalleryScan(job: Job) {
       .limit(1);
 
     let galleryId: string;
+    const comicInfo = await readFolderComicInfo(dirPath);
+    const comicUpdate = await buildComicGalleryUpdate(comicInfo, existingGallery ?? null);
 
     if (existingGallery) {
       galleryId = existingGallery.id;
@@ -182,11 +316,12 @@ export async function processGalleryScan(job: Job) {
         .update(galleries)
         .set({
           isNsfw: root.isNsfw,
-          title: libraryContainerTitle(
+          title: comicInfo?.title ?? libraryContainerTitle(
             dirPath,
             root.path,
             root.label,
           ),
+          ...comicUpdate,
           updatedAt: new Date(),
         })
         .where(eq(galleries.id, galleryId));
@@ -211,14 +346,16 @@ export async function processGalleryScan(job: Job) {
           parentId,
           imageCount: 0,
           isNsfw: root.isNsfw,
+          ...comicUpdate,
         })
         .returning({ id: galleries.id });
       galleryId = created.id;
       galleryIdByPath.set(dirPath, galleryId);
     }
+    await attachComicGalleryRelations(galleryId, comicInfo);
 
     // Upsert images
-    const sortedImages = [...dirImages].sort((a, b) => a.localeCompare(b));
+    const sortedImages = sortPathsNaturally(dirImages);
     for (let i = 0; i < sortedImages.length; i++) {
       const filePath = sortedImages[i];
 
@@ -301,7 +438,14 @@ export async function processGalleryScan(job: Job) {
   // -- Process zip-based galleries --
   for (const zipPath of discovery.zipFiles) {
     const [existingGallery] = await db
-      .select({ id: galleries.id })
+      .select({
+        id: galleries.id,
+        title: galleries.title,
+        details: galleries.details,
+        date: galleries.date,
+        urls: galleries.urls,
+        studioId: galleries.studioId,
+      })
       .from(galleries)
       .where(
         and(
@@ -312,12 +456,19 @@ export async function processGalleryScan(job: Job) {
       .limit(1);
 
     let galleryId: string;
+    let comicInfo: ComicInfoMetadata | null = null;
+    try {
+      comicInfo = extractComicInfoFromZip(zipPath);
+    } catch {
+      comicInfo = null;
+    }
+    const comicUpdate = await buildComicGalleryUpdate(comicInfo, existingGallery ?? null);
 
     if (existingGallery) {
       galleryId = existingGallery.id;
       await db
         .update(galleries)
-        .set({ isNsfw: root.isNsfw, updatedAt: new Date() })
+        .set({ isNsfw: root.isNsfw, ...comicUpdate, updatedAt: new Date() })
         .where(eq(galleries.id, galleryId));
     } else {
       const [created] = await db
@@ -328,10 +479,12 @@ export async function processGalleryScan(job: Job) {
           zipFilePath: zipPath,
           imageCount: 0,
           isNsfw: root.isNsfw,
+          ...comicUpdate,
         })
         .returning({ id: galleries.id });
       galleryId = created.id;
     }
+    await attachComicGalleryRelations(galleryId, comicInfo);
 
     // Index zip members
     let members: string[];
