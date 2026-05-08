@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery cards now show cleaner comic covers and metadata: image counts moved below the title, zero-image series stop showing `0 images`, and sub-gallery counts appear alongside image counts.
 - Comic galleries now track when reading reaches the final page. Completed comics show a Re-read action, and the Galleries page can filter comic galleries by Read or Unread.
 - The Merge into series flow now opens in a drawer-style panel with mobile-friendly chapter fields that match the identify review surfaces more closely.
+- Merge into series now understands existing series selections: selecting a series plus a standalone gallery shows the current chapters and adds the new gallery into that series folder instead of nesting or replacing the series.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
@@ -33,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery cards now render image and sub-gallery counts in the subtitle row instead of overlaying the thumbnail.
 - Gallery selection controls are more compact and inset into selected cards, reducing how much of the cover artwork they obscure.
 - Merge into series now uses a full-height drawer layout with stacked chapter inputs on small screens.
+- Merge into series now expands selected series folders into their existing child galleries and keeps the selected series folder as the disk target when adding standalone galleries.
 - On mobile gallery detail pages, the info panel now appears above sub-galleries and images so metadata is visible before long gallery lists.
 
 ### Added

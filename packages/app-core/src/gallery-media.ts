@@ -1027,6 +1027,7 @@ export async function mergeGalleriesIntoSeriesWrite(
     }
 
     for (const gallery of galleryRows) {
+      if (gallery.id === parentGalleryId!) continue;
       const move = moveByGalleryId.get(gallery.id);
       const input = inputById.get(gallery.id);
       const sequence = input?.sequence ?? (input?.index ?? 0) + 1;

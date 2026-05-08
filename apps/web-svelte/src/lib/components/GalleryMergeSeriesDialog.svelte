@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowDownUp, FolderInput, Loader2, X } from "@lucide/svelte";
   import type { GalleryListItemDto } from "@obscura/contracts";
-  import { mergeGalleriesIntoSeries } from "$lib/api/media";
+  import { fetchGalleryDetail, mergeGalleriesIntoSeries } from "$lib/api/media";
   import { portal } from "$lib/actions/portal";
 
   interface Props {
@@ -23,6 +23,7 @@
   let title = $state("");
   let rows = $state<MergeRow[]>([]);
   let saving = $state(false);
+  let loadingExisting = $state(false);
   let error = $state<string | null>(null);
   let initializedKey = $state("");
 
@@ -39,24 +40,63 @@
     return first || items[0].title;
   }
 
-  function resetFromSelection() {
-    title = suggestedTitle(galleries);
-    rows = galleries.map((gallery, index) => ({
-      id: gallery.id,
-      originalTitle: gallery.title,
-      title: `${suggestedTitle(galleries)} #${String(index + 1).padStart(2, "0")}`,
-      sequence: index + 1,
-    }));
+  async function resetFromSelection(key: string) {
     error = null;
+    loadingExisting = true;
+    try {
+      const selectedSeries = galleries.filter(
+        (gallery) => gallery.galleryType === "folder" && gallery.childCount > 0,
+      );
+      const seriesDetails = await Promise.all(
+        selectedSeries.map((gallery) =>
+          fetchGalleryDetail(gallery.id, { imageLimit: 0 }).catch(() => null),
+        ),
+      );
+      if (key !== initializedKey) return;
+
+      const baseTitle = selectedSeries[0]?.title ?? suggestedTitle(galleries);
+      const selectedSeriesIds = new Set(selectedSeries.map((gallery) => gallery.id));
+      const existingChildren = seriesDetails.flatMap((detail) => detail?.children ?? []);
+      const existingChildIds = new Set(existingChildren.map((child) => child.id));
+      const directGalleries = galleries.filter(
+        (gallery) => !selectedSeriesIds.has(gallery.id) && !existingChildIds.has(gallery.id),
+      );
+      title = baseTitle;
+      rows = [
+        ...existingChildren.map((child) => ({
+          id: child.id,
+          originalTitle: child.title,
+          title: child.title,
+          sequence: 0,
+        })),
+        ...directGalleries.map((gallery) => ({
+          id: gallery.id,
+          originalTitle: gallery.title,
+          title: "",
+          sequence: 0,
+        })),
+      ].map((row, index) => ({
+        ...row,
+        title: row.title || `${baseTitle} #${String(index + 1).padStart(2, "0")}`,
+        sequence: index + 1,
+      }));
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Failed to load existing series chapters";
+    } finally {
+      if (key === initializedKey) loadingExisting = false;
+    }
   }
 
   $effect(() => {
     const key = open ? galleries.map((gallery) => gallery.id).join("|") : "";
     if (key && key !== initializedKey) {
       initializedKey = key;
-      resetFromSelection();
+      void resetFromSelection(key);
     }
-    if (!open) initializedKey = "";
+    if (!open) {
+      initializedKey = "";
+      loadingExisting = false;
+    }
   });
 
   async function submit() {
@@ -100,7 +140,8 @@
             Merge into series
           </h2>
           <p class="mt-1 text-[0.76rem] text-text-muted">
-            {galleries.length} selected galler{galleries.length === 1 ? "y" : "ies"}
+            {rows.length > 0 ? rows.length : galleries.length} chapter{(rows.length > 0 ? rows.length : galleries.length) === 1 ? "" : "s"}
+            from {galleries.length} selected galler{galleries.length === 1 ? "y" : "ies"}
           </p>
         </div>
         <button
@@ -134,6 +175,12 @@
             <ArrowDownUp class="h-3.5 w-3.5" />
             Chapter order
           </div>
+          {#if loadingExisting}
+            <div class="flex items-center gap-2 border border-border-subtle bg-black/15 p-3 text-sm text-text-muted">
+              <Loader2 class="h-3.5 w-3.5 animate-spin" />
+              Loading existing series chapters…
+            </div>
+          {/if}
           {#each rows as row (row.id)}
             <div class="grid grid-cols-1 gap-3 border border-border-subtle bg-black/15 p-3 sm:grid-cols-[5rem_1fr]">
               <label class="space-y-1">
@@ -172,7 +219,7 @@
           type="button"
           class="inline-flex items-center gap-2 border border-border-accent px-3 py-1.5 text-sm text-text-accent shadow-[0_0_18px_rgba(196,154,90,0.18)] transition-colors hover:text-text-accent-bright disabled:opacity-50"
           onclick={() => void submit()}
-          disabled={saving || !title.trim() || rows.length === 0}
+          disabled={saving || loadingExisting || !title.trim() || rows.length === 0}
         >
           {#if saving}
             <Loader2 class="h-3.5 w-3.5 animate-spin" />

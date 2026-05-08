@@ -58,4 +58,66 @@ describe("planGallerySeriesMerge", () => {
     expect(plan.moves).toEqual([]);
     expect(plan.targetDir).toBe(targetDir);
   });
+
+  it("adds a flat archive to an existing selected series folder", () => {
+    const targetDir = path.join(root, "She Was Cute Before");
+    const plan = planGallerySeriesMerge({
+      title: "She Was Cute Before",
+      galleries: [
+        {
+          id: "existing-one",
+          galleryType: "zip",
+          folderPath: null,
+          zipFilePath: path.join(targetDir, "She Was Cute Before 1.cbz"),
+        },
+        {
+          id: "new-one",
+          galleryType: "zip",
+          folderPath: null,
+          zipFilePath: path.join(root, "She Was Cute Before 3.cbz"),
+        },
+      ],
+    });
+
+    expect(plan.targetDir).toBe(targetDir);
+    expect(plan.moves).toEqual([
+      {
+        galleryId: "new-one",
+        sourcePath: path.join(root, "She Was Cute Before 3.cbz"),
+        destinationPath: path.join(targetDir, "She Was Cute Before 3.cbz"),
+        kind: "zip",
+      },
+    ]);
+  });
+
+  it("does not move the selected series folder into itself", () => {
+    const targetDir = path.join(root, "She Was Cute Before");
+    const plan = planGallerySeriesMerge({
+      title: "She Was Cute Before",
+      galleries: [
+        {
+          id: "series",
+          galleryType: "folder",
+          folderPath: targetDir,
+          zipFilePath: null,
+        },
+        {
+          id: "new-one",
+          galleryType: "zip",
+          folderPath: null,
+          zipFilePath: path.join(root, "She Was Cute Before 3.cbz"),
+        },
+      ],
+    });
+
+    expect(plan.targetDir).toBe(targetDir);
+    expect(plan.moves).toEqual([
+      {
+        galleryId: "new-one",
+        sourcePath: path.join(root, "She Was Cute Before 3.cbz"),
+        destinationPath: path.join(targetDir, "She Was Cute Before 3.cbz"),
+        kind: "zip",
+      },
+    ]);
+  });
 });

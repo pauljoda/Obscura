@@ -53,15 +53,34 @@ export function planGallerySeriesMerge(input: {
     gallery,
     ...galleryDiskPath(gallery),
   }));
-  const parentDir = path.dirname(diskItems[0].path);
-  if (!diskItems.every((item) => path.dirname(item.path) === parentDir)) {
-    throw new ValidationError("Selected galleries must live in the same folder");
-  }
-
+  const existingTarget = diskItems.find(
+    (item) => path.basename(path.dirname(item.path)).toLowerCase() === folderName.toLowerCase(),
+  );
+  const directTarget = diskItems.find(
+    (item) => path.basename(item.path).toLowerCase() === folderName.toLowerCase(),
+  );
+  const firstParentDir = path.dirname(diskItems[0].path);
   const targetDir =
-    path.basename(parentDir).toLowerCase() === folderName.toLowerCase()
-      ? parentDir
-      : path.join(parentDir, folderName);
+    existingTarget
+      ? path.dirname(existingTarget.path)
+      : directTarget
+        ? directTarget.path
+        : path.basename(firstParentDir).toLowerCase() === folderName.toLowerCase()
+          ? firstParentDir
+          : path.join(firstParentDir, folderName);
+  const targetParentDir = path.dirname(targetDir);
+  if (
+    !diskItems.every((item) => {
+      const itemParentDir = path.dirname(item.path);
+      return (
+        path.resolve(item.path) === path.resolve(targetDir) ||
+        path.resolve(itemParentDir) === path.resolve(targetDir) ||
+        path.resolve(itemParentDir) === path.resolve(targetParentDir)
+      );
+    })
+  ) {
+    throw new ValidationError("Selected galleries must live in the same folder or target series folder");
+  }
   const moves = diskItems.flatMap((item): GallerySeriesMergeMove[] => {
     if (path.resolve(path.dirname(item.path)) === path.resolve(targetDir)) {
       return [];
