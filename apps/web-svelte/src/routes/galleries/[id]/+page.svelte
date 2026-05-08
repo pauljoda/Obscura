@@ -5,6 +5,7 @@
   import { toApiUrl } from "$lib/api/core";
   import { deleteImage, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
+  import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
@@ -42,12 +43,23 @@
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
   let lightboxSourceId = $state<string | null>(null);
+  let readerOpen = $state(false);
+  let readerIndex = $state(0);
   let editing = $state(false);
   let deleteDialogOpen = $state(false);
   let pendingDelete = $state<ImageListItemDto[]>([]);
   let bulkBusy = $state(false);
 
   function openAt(i: number) {
+    if (g.isComic) {
+      readerIndex = i;
+      readerOpen = true;
+      return;
+    }
+    openLightboxAt(i);
+  }
+
+  function openLightboxAt(i: number) {
     lightboxIndex = i;
     lightboxSourceId = images[i]?.id ?? null;
     lightboxOpen = true;
@@ -60,6 +72,11 @@
       lightboxIndex = images.length - 1;
     } else {
       lightboxIndex = existingIndex;
+    }
+    if (g.isComic) {
+      readerIndex = existingIndex < 0 ? images.length - 1 : existingIndex;
+      readerOpen = true;
+      return;
     }
     lightboxSourceId = item.id;
     lightboxOpen = true;
@@ -370,5 +387,14 @@
     onClose={closeLightbox}
     onIndexChange={(index) => (lightboxIndex = index)}
     onRatingChange={patchImageRating}
+  />
+{/if}
+
+{#if readerOpen}
+  <ComicReader
+    {images}
+    initialIndex={readerIndex}
+    title={g.title}
+    onClose={() => (readerOpen = false)}
   />
 {/if}
