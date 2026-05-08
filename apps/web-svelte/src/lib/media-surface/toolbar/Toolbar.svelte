@@ -112,7 +112,11 @@
           break;
       }
       if (s.filterType === "played" || s.filterType === "hasFile") out.add("playback");
-      if (s.filterType === "organized" || s.filterType === "interactive")
+      if (
+        s.filterType === "organized" ||
+        s.filterType === "interactive" ||
+        s.filterType === "comic"
+      )
         out.add("libraryFlags");
     }
     return out;
@@ -142,6 +146,9 @@
 
   const showInteractiveFilter = $derived(
     Boolean(filterSections?.some((s) => s.filterType === "interactive")),
+  );
+  const showComicFilter = $derived(
+    Boolean(filterSections?.some((s) => s.filterType === "comic")),
   );
 
   // The chip strip wants `{label, value, type}`; map activeFilters
@@ -309,6 +316,7 @@
       performerItems={performerItems}
       studioItems={studioItems}
       showInteractiveFilter={showInteractiveFilter}
+      showComicFilter={showComicFilter}
       customSections={extraDrawerSections ? drawerCustom : undefined}
     />
   {/if}

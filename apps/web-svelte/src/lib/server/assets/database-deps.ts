@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { getCollectionDetailRead } from "@obscura/app-core";
 import { resolveExistingMediaPath } from "@obscura/media-core";
 import { schema, type AppDb } from "@obscura/db";
@@ -59,6 +59,7 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
       }
 
       if (!coverImageId) {
+        const childCoverCandidates: string[] = [];
         const childGalleries = await db
           .select({ id: galleries.id, coverImageId: galleries.coverImageId })
           .from(galleries)
@@ -67,8 +68,8 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
 
         for (const child of childGalleries) {
           if (child.coverImageId) {
-            coverImageId = child.coverImageId;
-            break;
+            childCoverCandidates.push(child.coverImageId);
+            continue;
           }
 
           const [firstChildImage] = await db
@@ -78,9 +79,19 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
             .orderBy(asc(images.sortOrder))
             .limit(1);
           if (firstChildImage?.id) {
-            coverImageId = firstChildImage.id;
-            break;
+            childCoverCandidates.push(firstChildImage.id);
           }
+        }
+
+        if (childCoverCandidates.length > 0) {
+          const childCoverRows = await db
+            .select({ id: images.id, width: images.width, height: images.height })
+            .from(images)
+            .where(inArray(images.id, childCoverCandidates));
+          coverImageId =
+            childCoverRows.sort(
+              (a, b) => (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0),
+            )[0]?.id ?? childCoverCandidates[0] ?? null;
         }
       }
 

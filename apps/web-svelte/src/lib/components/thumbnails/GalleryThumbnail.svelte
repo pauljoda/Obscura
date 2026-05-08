@@ -21,6 +21,7 @@
     size?: GalleryThumbnailSize;
     aspectClass?: string;
     loading?: "eager" | "lazy";
+    fit?: "cover" | "contain";
     class?: string;
     gradientFallback?: string;
     showCount?: boolean;
@@ -39,6 +40,7 @@
     size = "grid",
     aspectClass,
     loading = "lazy",
+    fit,
     class: className,
     gradientFallback,
     showCount = true,
@@ -68,6 +70,11 @@
         return "aspect-square";
     }
   });
+  const imageFitClass = $derived(
+    (fit ?? (isComic ? "contain" : "cover")) === "contain"
+      ? "object-contain bg-black/35"
+      : "object-cover",
+  );
 
   const iconSize = $derived.by(() => {
     switch (size) {
@@ -173,7 +180,7 @@
           alt={title}
           {loading}
           decoding="async"
-          class="absolute inset-0 h-full w-full object-cover"
+          class={cn("absolute inset-0 h-full w-full", imageFitClass)}
         />
       {:else if previews.length > 0}
         <img
@@ -181,7 +188,7 @@
           alt={title}
           {loading}
           decoding="async"
-          class="absolute inset-0 h-full w-full object-cover"
+          class={cn("absolute inset-0 h-full w-full", imageFitClass)}
         />
       {:else}
         <div class="flex h-full w-full items-center justify-center text-white/25">
@@ -193,7 +200,10 @@
         <img
           src={hoverSrc}
           alt=""
-          class="absolute inset-0 h-full w-full object-cover transition-opacity duration-fast"
+          class={cn(
+            "absolute inset-0 h-full w-full transition-opacity duration-fast",
+            imageFitClass,
+          )}
           style:opacity={hovering ? 1 : 0}
           loading="eager"
         />

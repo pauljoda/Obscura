@@ -18,6 +18,7 @@ type GalleryFilterType =
   | "date"
   | "dateFrom"
   | "dateTo"
+  | "comic"
   | "tag"
   | "performer"
   | "studio";
@@ -49,6 +50,15 @@ export function galleriesSurfaceConfig(
       label: "Date",
       rangeTypes: { min: "dateFrom", max: "dateTo" },
     },
+    {
+      kind: "enum",
+      filterType: "comic",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Comic" },
+        { value: "false", label: "Not comic" },
+      ],
+    },
   ];
 
   return {
@@ -64,6 +74,7 @@ export function galleriesSurfaceConfig(
       const ratingMax = prefs.activeFilters.find((f) => f.type === "ratingMax")?.value;
       const dateFrom = prefs.activeFilters.find((f) => f.type === "dateFrom")?.value;
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
+      const comic = prefs.activeFilters.find((f) => f.type === "comic")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const tags = prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
       const performers = prefs.activeFilters
@@ -83,6 +94,7 @@ export function galleriesSurfaceConfig(
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           dateFrom,
           dateTo,
+          comic,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -126,6 +138,7 @@ export function galleriesSurfaceConfig(
       "ratingMax",
       "dateFrom",
       "dateTo",
+      "comic",
       "studio",
     ]),
     searchPlaceholder: "Search galleries...",

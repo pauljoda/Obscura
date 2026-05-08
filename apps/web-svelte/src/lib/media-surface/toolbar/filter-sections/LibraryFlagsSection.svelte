@@ -8,9 +8,16 @@
     onAddFilter: SectionAddFilter;
     /** When false, hide the Interactive toggles (used for non-video surfaces). */
     showInteractive?: boolean;
+    /** When true, include comic/non-comic library filters. */
+    showComic?: boolean;
   }
 
-  let { panelFilters, onAddFilter, showInteractive = true }: Props = $props();
+  let {
+    panelFilters,
+    onAddFilter,
+    showInteractive = true,
+    showComic = false,
+  }: Props = $props();
 
   const choices = $derived([
     { type: "organized", value: "true", label: "Organized", chipLabel: "Organized" },
@@ -19,6 +26,12 @@
       ? [
           { type: "interactive", value: "true", label: "Interactive", chipLabel: "Interactive" },
           { type: "interactive", value: "false", label: "Not interactive", chipLabel: "Interactive" },
+        ]
+      : []),
+    ...(showComic
+      ? [
+          { type: "comic", value: "true", label: "Comic", chipLabel: "Comic" },
+          { type: "comic", value: "false", label: "Not comic", chipLabel: "Comic" },
         ]
       : []),
   ]);

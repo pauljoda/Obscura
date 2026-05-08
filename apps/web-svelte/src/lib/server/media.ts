@@ -43,6 +43,7 @@ export async function fetchGalleries(
     dateTo?: string;
     imageCountMin?: number;
     organized?: string;
+    comic?: string;
     nsfw?: string;
     limit?: number;
     offset?: number;
@@ -64,6 +65,7 @@ export async function fetchGalleries(
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
+      comic: params?.comic,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -120,6 +122,7 @@ export async function fetchImages(
     dateTo?: string;
     resolution?: string;
     organized?: string;
+    comic?: string;
     limit?: number;
     offset?: number;
   },
@@ -140,6 +143,7 @@ export async function fetchImages(
       dateTo: params?.dateTo,
       resolution: params?.resolution,
       organized: params?.organized,
+      comic: params?.comic,
       limit: params?.limit,
       offset: params?.offset,
     },

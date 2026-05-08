@@ -21,7 +21,15 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const response = await fetchGalleries(
-    { search, sort, order, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, nsfw: nsfwMode },
+    {
+      search,
+      sort,
+      order,
+      comic: url.searchParams.get("comic") ?? undefined,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      nsfw: nsfwMode,
+    },
     { fetch },
   ).catch(() => ({ galleries: [], total: 0, limit: PAGE_SIZE, offset: 0 }));
 

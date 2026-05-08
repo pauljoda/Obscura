@@ -14,6 +14,7 @@
   }: CardProps<GalleryListItemDto> = $props();
 
   const gradient = $derived(VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]);
+  const previewBackedSeries = $derived(item.imageCount === 0 && item.previewImagePaths.length > 0);
 </script>
 
 {#if layout === "list"}
@@ -41,6 +42,7 @@
           isNsfw={item.isNsfw}
           isComic={item.isComic}
           size="list"
+          fit={item.isComic ? "contain" : "cover"}
           gradientFallback={gradient}
           showCount={false}
         />
@@ -57,26 +59,40 @@
     </a>
   </div>
 {:else}
-  <a
-    href={`/galleries/${item.id}`}
-    class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-  >
-    <GalleryThumbnail
-      title={item.title}
-      coverImagePath={item.coverImagePath}
-      previewImagePaths={item.previewImagePaths}
-      imageCount={item.imageCount}
-      isNsfw={item.isNsfw}
-      isComic={item.isComic}
-      size="grid"
-      gradientFallback={gradient}
-    />
-    <div class="p-2.5 space-y-1">
-      <h4 class="truncate text-body font-medium text-text-primary">{item.title}</h4>
-      <div class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">
-        <span>{item.imageCount} image{item.imageCount === 1 ? "" : "s"}</span>
-        {#if item.studioName}<span class="text-text-accent truncate">· {item.studioName}</span>{/if}
+  <div class="relative">
+    {#if onToggleSelect}
+      <button
+        type="button"
+        class="absolute left-2 top-2 z-20 glass-2 border border-border-subtle p-1 shadow-[var(--shadow-soft)]"
+        onclick={() => onToggleSelect?.()}
+        aria-label={`Select ${item.title}`}
+      >
+        <Checkbox checked={selected} />
+      </button>
+    {/if}
+    <a
+      href={`/galleries/${item.id}`}
+      class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
+    >
+      <GalleryThumbnail
+        title={item.title}
+        coverImagePath={item.coverImagePath}
+        previewImagePaths={item.previewImagePaths}
+        imageCount={item.imageCount}
+        isNsfw={item.isNsfw}
+        isComic={item.isComic}
+        size="grid"
+        aspectClass={previewBackedSeries ? "aspect-[4/3]" : undefined}
+        fit={previewBackedSeries || item.isComic ? "contain" : "cover"}
+        gradientFallback={gradient}
+      />
+      <div class="p-2.5 space-y-1">
+        <h4 class="truncate text-body font-medium text-text-primary">{item.title}</h4>
+        <div class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">
+          <span>{item.imageCount} image{item.imageCount === 1 ? "" : "s"}</span>
+          {#if item.studioName}<span class="text-text-accent truncate">· {item.studioName}</span>{/if}
+        </div>
       </div>
-    </div>
-  </a>
+    </a>
+  </div>
 {/if}

@@ -63,6 +63,7 @@ export async function fetchGalleries(params?: {
   dateTo?: string;
   imageCountMin?: number;
   organized?: string;
+  comic?: string;
   nsfw?: string;
   limit?: number;
   offset?: number;
@@ -82,6 +83,7 @@ export async function fetchGalleries(params?: {
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
+      comic: params?.comic,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -288,6 +290,7 @@ export async function fetchImages(params?: {
   dateTo?: string;
   resolution?: string;
   organized?: string;
+  comic?: string;
   limit?: number;
   offset?: number;
 }, options?: RequestOptions): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
@@ -306,6 +309,7 @@ export async function fetchImages(params?: {
       dateTo: params?.dateTo,
       resolution: params?.resolution,
       organized: params?.organized,
+      comic: params?.comic,
       limit: params?.limit,
       offset: params?.offset,
     },

@@ -298,7 +298,7 @@
   {/if}
 
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
-    <div class="space-y-6 min-w-0">
+    <div class="space-y-6 min-w-0 order-2 lg:order-1">
       {#if visibleChildGalleries.length > 0}
         <HierarchySection title="Sub-galleries">
           {#snippet children()}
@@ -314,8 +314,10 @@
                     previewImagePaths={child.previewImagePaths}
                     imageCount={child.imageCount}
                     isNsfw={child.isNsfw}
-                    isComic={g.isComic}
+                    isComic={child.isComic}
                     size="hero"
+                    aspectClass="aspect-[4/3]"
+                    fit="contain"
                     gradientIndex={i}
                   />
                   <div class="p-2.5">
@@ -362,7 +364,7 @@
     </div>
 
     <!-- Metadata sidebar -->
-    <aside class="space-y-4 lg:sticky lg:top-5 lg:self-start">
+    <aside class="space-y-4 order-1 lg:order-2 lg:sticky lg:top-5 lg:self-start">
       <div class="surface-well p-4 space-y-4">
         {#if g.performers && g.performers.length > 0}
           <div class="space-y-2">

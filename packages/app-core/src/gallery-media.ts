@@ -141,6 +141,37 @@ function isComicGallery(gallery: { galleryType: string; zipFilePath?: string | n
   return ext === ".zip" || ext === ".cbz";
 }
 
+function comicArchivePathSql(column: typeof galleries.zipFilePath): SQL {
+  return sql`(lower(coalesce(${column}, '')) like '%.zip' or lower(coalesce(${column}, '')) like '%.cbz')`;
+}
+
+function comicGallerySql(): SQL {
+  return sql`(
+    (${galleries.galleryType} = 'zip' and ${comicArchivePathSql(galleries.zipFilePath)})
+    or exists (
+      select 1
+      from galleries child
+      where child.parent_id = ${galleries.id}
+        and child.gallery_type = 'zip'
+        and (lower(coalesce(child.zip_file_path, '')) like '%.zip' or lower(coalesce(child.zip_file_path, '')) like '%.cbz')
+    )
+  )`;
+}
+
+function comicImageSql(): SQL {
+  return sql`exists (
+    select 1
+    from galleries image_gallery
+    where image_gallery.id = ${images.galleryId}
+      and image_gallery.gallery_type = 'zip'
+      and (lower(coalesce(image_gallery.zip_file_path, '')) like '%.zip' or lower(coalesce(image_gallery.zip_file_path, '')) like '%.cbz')
+  )`;
+}
+
+function applyComicFilter(conditions: SQL[], value: string | undefined, condition: SQL) {
+  if (value === "true") conditions.push(condition);
+  else if (value === "false") conditions.push(sql`not (${condition})`);
+}
 
 export interface ListGalleriesQuery {
   search?: string;
@@ -160,6 +191,7 @@ export interface ListGalleriesQuery {
   dateTo?: string;
   imageCountMin?: string;
   organized?: string;
+  comic?: string;
   nsfw?: string;
 }
 
@@ -185,6 +217,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
   }
   if (query.type) conditions.push(eq(galleries.galleryType, query.type));
   if (query.studio) conditions.push(eq(galleries.studioId, query.studio));
+  applyComicFilter(conditions, query.comic, comicGallerySql());
 
   const tagEntityIds = await resolveTagIds(
     db,
@@ -278,6 +311,8 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
             id: galleries.id,
             parentId: galleries.parentId,
             coverImageId: galleries.coverImageId,
+            galleryType: galleries.galleryType,
+            zipFilePath: galleries.zipFilePath,
           })
           .from(galleries)
           .where(and(inArray(galleries.parentId, galleryIds), galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)))
@@ -303,8 +338,10 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
     firstChildImageMap.set(img.galleryId, img.imageId);
   }
   const childPreviewMap = new Map<string, string[]>();
+  const childComicParentIds = new Set<string>();
   for (const child of childRows) {
     if (!child.parentId) continue;
+    if (isComicGallery(child)) childComicParentIds.add(child.parentId);
     const imageId = child.coverImageId ?? firstChildImageMap.get(child.id);
     if (!imageId) continue;
     const list = childPreviewMap.get(child.parentId) ?? [];
@@ -329,7 +366,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
       id: gallery.id,
       title: gallery.title,
       galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
-      isComic: isComicGallery(gallery),
+      isComic: isComicGallery(gallery) || childComicParentIds.has(gallery.id),
       coverImagePath: `/assets/galleries/${gallery.id}/cover`,
       previewImagePaths: (() => {
         const direct = previewImages
@@ -400,6 +437,8 @@ export async function getGalleryDetailRead(
       .select({
         id: galleries.id,
         title: galleries.title,
+        galleryType: galleries.galleryType,
+        zipFilePath: galleries.zipFilePath,
         imageCount: galleries.imageCount,
         isNsfw: galleries.isNsfw,
       })
@@ -439,7 +478,7 @@ export async function getGalleryDetailRead(
     title: gallery.title,
     details: gallery.details,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
-    isComic: isComicGallery(gallery),
+    isComic: isComicGallery(gallery) || children.some((child) => isComicGallery(child)),
     date: gallery.date,
     rating: gallery.rating,
     organized: gallery.organized,
@@ -486,6 +525,7 @@ export async function getGalleryDetailRead(
       coverImagePath: `/assets/galleries/${child.id}/cover`,
       previewImagePaths: childPreviewMap.get(child.id) ?? [],
       isNsfw: child.isNsfw,
+      isComic: isComicGallery(child),
     })),
     createdAt: gallery.createdAt.toISOString(),
     updatedAt: gallery.updatedAt.toISOString(),
@@ -1308,6 +1348,7 @@ export interface ListImagesQuery {
   dateTo?: string;
   resolution?: string;
   organized?: string;
+  comic?: string;
 }
 
 const imageFileTypeExtensions: Record<string, string[]> = {
@@ -1432,6 +1473,7 @@ export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
   }
   const orgCond = buildBooleanCondition(images.organized, query.organized);
   if (orgCond) conditions.push(orgCond);
+  applyComicFilter(conditions, query.comic, comicImageSql());
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [countResult, imageRows] = await Promise.all([

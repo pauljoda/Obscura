@@ -23,6 +23,7 @@ const SCALAR_KEYS = [
   "dateTo",
   "imageCountMin",
   "organized",
+  "comic",
   "nsfw",
 ] as const;
 

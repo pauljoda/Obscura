@@ -293,6 +293,9 @@
   const deleteAction = $derived(
     config.bulkActions?.find((a) => a.id === "delete"),
   );
+  const extraBulkActions = $derived(
+    config.bulkActions?.filter((a) => a.id !== "mark-nsfw" && a.id !== "delete") ?? [],
+  );
 
   // ── Layout ───────────────────────────────────────────────────────────
   const currentLayout = $derived<BodyLayout>(
@@ -350,11 +353,7 @@
     extraDrawerSections={config.extraFilterSections}
   />
 
-  <!-- Bulk select is list-mode only. Grid/masonry/feed views drop the
-       per-card checkbox affordance so the visual hierarchy isn't
-       disrupted by selection state on every tile; bulk operations are
-       reachable by switching to List view. -->
-  {#if config.bulkActions && config.bulkActions.length > 0 && currentLayout === "list"}
+  {#if config.bulkActions && config.bulkActions.length > 0}
     <BulkActionBar
       selectedCount={selectedIds.size}
       visibleCount={visibleIdSet.size}
@@ -363,6 +362,12 @@
       busy={bulkBusy}
       canMarkNsfw={Boolean(markNsfwAction)}
       canDelete={Boolean(deleteAction)}
+      actions={extraBulkActions.map((action) => ({
+        id: action.id,
+        label: action.label,
+        variant: action.variant,
+        onRun: () => runBulkAction(action.id),
+      }))}
       onSelectAll={toggleSelectAllVisible}
       onClear={clearSelection}
       onMarkNsfw={markNsfwAction ? () => runBulkAction(markNsfwAction.id) : undefined}
@@ -400,6 +405,8 @@
       cols={cols}
       card={config.card}
       getKey={config.getKey}
+      selectedIds={config.bulkActions ? selectedIds : undefined}
+      onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
       onActivate={config.onItemActivate}
     />
@@ -409,6 +416,8 @@
       cols={cols}
       card={config.card}
       getKey={config.getKey}
+      selectedIds={config.bulkActions ? selectedIds : undefined}
+      onToggleSelect={config.bulkActions ? toggleSelect : undefined}
       reducedMotion={reducedMotion.value}
       onActivate={config.onItemActivate}
     />

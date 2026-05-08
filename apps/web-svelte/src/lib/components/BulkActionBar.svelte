@@ -3,6 +3,13 @@
   import { Checkbox, cn, dur, ease } from "@obscura/ui-svelte";
   import { fly } from "svelte/transition";
 
+  interface ExtraAction {
+    id: string;
+    label: string;
+    variant?: "default" | "danger";
+    onRun: () => void | Promise<void>;
+  }
+
   interface Props {
     selectedCount: number;
     visibleCount: number;
@@ -11,6 +18,7 @@
     busy?: boolean;
     canMarkNsfw?: boolean;
     canDelete?: boolean;
+    actions?: ExtraAction[];
     onSelectAll: () => void;
     onClear: () => void;
     onMarkNsfw?: () => void | Promise<void>;
@@ -25,6 +33,7 @@
     busy = false,
     canMarkNsfw = true,
     canDelete = true,
+    actions = [],
     onSelectAll,
     onClear,
     onMarkNsfw,
@@ -70,6 +79,21 @@
           Mark NSFW
         </button>
       {/if}
+      {#each actions as action (action.id)}
+        <button
+          type="button"
+          class={cn(
+            "inline-flex items-center gap-1.5 border px-2.5 py-1 text-[0.68rem] transition-colors disabled:opacity-50",
+            action.variant === "danger"
+              ? "border-status-error/30 text-status-error-text hover:bg-status-error/10"
+              : "border-border-subtle text-text-muted hover:border-border-accent hover:text-text-primary",
+          )}
+          disabled={busy}
+          onclick={() => void action.onRun()}
+        >
+          {action.label}
+        </button>
+      {/each}
       {#if canDelete && onDelete}
         <button
           type="button"
