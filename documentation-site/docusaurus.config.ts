@@ -81,6 +81,11 @@ const config: Config = {
           label: 'GitHub',
           position: 'right',
         },
+        {
+          href: 'https://www.reddit.com/r/ObscuraMediaApp/',
+          label: 'Reddit',
+          position: 'right',
+        },
       ],
     },
     footer: {
@@ -122,6 +127,10 @@ const config: Config = {
             {
               label: 'Releases',
               href: 'https://github.com/pauljoda/Obscura/releases',
+            },
+            {
+              label: 'Subreddit',
+              href: 'https://www.reddit.com/r/ObscuraMediaApp/',
             },
           ],
         },

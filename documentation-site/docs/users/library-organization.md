@@ -117,6 +117,8 @@ A **gallery** is either:
 
 Images directly inside a root become loose images, not a gallery. Group them in a folder if you want gallery semantics.
 
+Comic libraries use the same gallery model. Put chapter archives inside a series folder to have Obscura group them under that folder; leave cbz/zip files at the library root if you want each archive to appear as a standalone gallery. Page images are sorted with natural filename ordering (`page2.jpg` before `page10.jpg`), and `ComicInfo.xml` metadata is imported when it is present in a folder or archive.
+
 ### Images
 
 Files matching the supported image formats (JPEG, PNG, WebP, AVIF, HEIF, GIF) are imported individually if they're not part of a gallery folder. They're scanned by roots with `scan_images` enabled.

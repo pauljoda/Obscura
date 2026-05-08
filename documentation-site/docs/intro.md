@@ -6,7 +6,7 @@ description: What Obscura is and where to go next.
 
 # Welcome to Obscura
 
-Obscura is a **private, self-hosted media browser** for a single trusted user on a private LAN. It is video-first, but images, galleries, audio, collections, performers, studios, and tags are all first-class library entities.
+Obscura is a **private, self-hosted media browser** for a single trusted user on a private LAN. It is video-first, but comics, images, galleries, audio, collections, performers, studios, and tags are all first-class library entities.
 
 The app ships as a **single Docker image** with PostgreSQL, ffmpeg, the SvelteKit web server, and the background worker bundled together. You mount `/data` for application state and `/media` for your library, then drive everything from the web UI on port `8008`.
 
@@ -17,6 +17,7 @@ The app ships as a **single Docker image** with PostgreSQL, ffmpeg, the SvelteKi
 | Capability | What it gets you |
 | --- | --- |
 | **HLS streaming** | Videos transcode on demand via ffmpeg, with cached renditions and trickplay sprites. |
+| **Comic reader and organizer** | cbz/zip archives and image-folder galleries keep natural page order, series grouping, reading progress, and paged or webtoon reading modes. |
 | **Universal Identify** | One identify engine across videos, series, galleries, images, audio libraries, audio tracks. |
 | **Plugin-powered metadata** | Native TypeScript and Python plugins, plus Stash-compatible YAML scrapers and StashBox endpoints. |
 | **Cinematic UI** | Dark Room visual system: sharp edges, brass accent, glass surfaces, mobile-first. |
@@ -30,6 +31,8 @@ There are three ways into these docs depending on what you're doing today.
 ### I want to run Obscura
 
 Start at [Quick Start](./users/quick-start.md). Then read [First Boot](./users/first-boot.md) before pointing it at a real library. Scanning, identify, settings, and operations follow from there.
+
+The project also has a [subreddit](https://www.reddit.com/r/ObscuraMediaApp/) for app updates and discussion.
 
 ### I want to understand the code
 

@@ -7,7 +7,7 @@
 <p align="center">
   <strong>A modern, self-hosted private media browser.</strong>
   <br />
-  Video-first. First-class images, galleries, and audio. Designed for a single trusted user on a private LAN.
+  Video-first, with first-class comics, images, galleries, and audio. Designed for a single trusted user on a private LAN.
 </p>
 
 <p align="center">
@@ -27,6 +27,7 @@
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#highlights">Highlights</a> &middot;
   <a href="#features">Features</a> &middot;
+  <a href="https://www.reddit.com/r/ObscuraMediaApp/">Subreddit</a> &middot;
   <a href="#configuration">Configuration</a> &middot;
   <a href="#development">Development</a>
 </p>
@@ -39,24 +40,25 @@
 
 ## What is Obscura?
 
-Obscura is a **modern alternative for anyone who wants a Stash-style private media library** with a focus on usability, polish, and quality-of-life. Stash is a great project with a deep ecosystem — Obscura keeps the core idea (a self-hosted, metadata-rich library with community scrapers) and rebuilds the experience around a refined mobile-first UI, a streamlined scanning pipeline, and a single Docker image with zero configuration.
+Obscura is a **modern alternative for anyone who wants a Stash-style private media library** with a focus on usability, polish, and quality-of-life. It is also a comic reader and organizer: cbz/zip archives and image-folder galleries sit beside videos, images, and audio as core library types. Stash is a great project with a deep ecosystem — Obscura keeps the core idea (a self-hosted, metadata-rich library with community scrapers) and rebuilds the experience around a refined mobile-first UI, a streamlined scanning pipeline, and a single Docker image with zero configuration.
 
 If you like the Stash model but want a faster, cleaner interface that feels native on phones and desktops alike, Obscura is built for you.
 
-Discussions can be conducted here, or via the subreddit https://www.reddit.com/r/ObscuraMediaApp/, where I will post updates on the app.
+Discussions can be conducted here, or via the [Obscura subreddit](https://www.reddit.com/r/ObscuraMediaApp/), where I will post updates on the app.
 
 ---
 
 ## Highlights
 
-- **Video, images, galleries, and audio** — all first-class library entities, not afterthoughts.
+- **Video, comics, images, galleries, and audio** — all first-class library entities, not afterthoughts.
 - **SFW / NSFW split personality** — swap the entire library between safe-for-work and full modes with a global keyboard shortcut on desktop or a hidden gesture on mobile.
 - **Mobile first** — built for phones from day one. The desktop view is an expansion of the mobile design, not the other way around.
 - **Stash-compatible metadata** — native StashDB support and full compatibility with community Stash scraper plugins.
 - **Bulk scrape everything** — pick what to identify and Obscura iterates every installed scraper for you. No more one-by-one.
 - **Rich playback** — HLS adaptive streaming with on-demand ffmpeg transcoding, a scrollable/grabable frame strip, and one-click marker + thumbnail creation from any frame.
 - **Subtitles & live transcripts** — multi-language sidecar / embedded / uploaded tracks, three player caption styles, a clickable transcript panel that can dock next to the video on desktop.
-- **Link everything together** — scenes, galleries, audio, performers, and studios all cross-reference with the same rich metadata surface.
+- **Comic reader and organizer** — cbz/zip archives and image folders scan into gallery series, keep natural page order, track reading progress, and open in paged or webtoon reading modes.
+- **Link everything together** — scenes, comic galleries, audio, performers, and studios all cross-reference with the same rich metadata surface.
 - **Automated scanning** — point it at a folder, walk away. Obscura scans on a schedule and notices new files.
 - **Command palette + global search** — `⌘K` from anywhere, or a dedicated search page with scene, performer, studio, tag, and gallery results.
 - **Drag-and-drop uploads** — add files from the browser, remove from the library, or remove from disk entirely.
@@ -228,9 +230,11 @@ Browse, install, enable, and disable community Stash scrapers directly from the 
   <img src="docs/screenshots/scrapers.png" alt="Community scrapers" width="100%" />
 </p>
 
-### Image Galleries
+### Galleries & Comics
 
-Folder-based and archive-based galleries are first-class. Browse, tag, rate, link performers and studios, and view them in grid or lightbox modes.
+Folder-based and archive-based galleries are first-class. Browse, tag, rate, link authors/performers and studios, and view them in grid or lightbox modes.
+
+Comics are part of the same gallery system instead of a separate silo. Drop in cbz/zip archives or image folders, and Obscura keeps page filenames in natural reading order, imports ComicInfo metadata where available, groups chapter archives into series-style galleries, tracks read/unread progress, and opens comics in a dedicated reader with paged spreads or vertical webtoon mode.
 
 <p align="center">
   <img src="docs/screenshots/galleries.png" alt="Galleries" width="100%" />

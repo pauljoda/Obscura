@@ -82,6 +82,19 @@
   import type { Snippet } from "svelte";
   import { X } from "@lucide/svelte";
 
+  const communityLinks = [
+    {
+      label: "GitHub",
+      href: "https://github.com/pauljoda/Obscura",
+      icon: "/icons/github.svg",
+    },
+    {
+      label: "Reddit",
+      href: "https://www.reddit.com/r/ObscuraMediaApp/",
+      icon: "/icons/reddit.svg",
+    },
+  ];
+
   interface Props {
     version: string;
     children: Snippet;
@@ -155,14 +168,30 @@
   onclose={() => (open = false)}
   class="fixed inset-0 m-auto h-[85vh] w-[90vw] max-w-3xl flex-col border border-border-subtle bg-surface-1 p-0 text-text-primary backdrop:bg-black/70 open:flex sm:h-[80vh]"
 >
-  <div class="flex items-center justify-between border-b border-border-subtle px-5 py-3.5">
-    <h2 class="font-heading text-sm font-bold uppercase tracking-wider text-text-accent">
-      Changelog &middot; v{version}
-    </h2>
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
+    <div class="min-w-0">
+      <h2 class="font-heading text-sm font-bold uppercase tracking-wider text-text-accent">
+        Changelog &middot; v{version}
+      </h2>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {#each communityLinks as link (link.href)}
+          <a
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex h-8 items-center gap-2 border border-border-subtle bg-surface-2/80 px-2.5 font-heading text-[10px] font-bold uppercase tracking-wider text-text-muted transition hover:border-border-accent hover:text-text-accent hover:shadow-[0_0_18px_rgba(196,154,90,0.18)] focus-visible:border-border-accent focus-visible:text-text-accent focus-visible:outline-none focus-visible:shadow-[0_0_18px_rgba(196,154,90,0.22)]"
+            aria-label={`Open Obscura on ${link.label}`}
+          >
+            <img src={link.icon} alt="" class="h-3.5 w-3.5" />
+            {link.label}
+          </a>
+        {/each}
+      </div>
+    </div>
     <button
       type="button"
       onclick={() => (open = false)}
-      class="flex h-7 w-7 items-center justify-center text-text-muted transition-colors hover:bg-surface-3 hover:text-text-primary"
+      class="flex h-7 w-7 shrink-0 items-center justify-center text-text-muted transition-colors hover:bg-surface-3 hover:text-text-primary"
       aria-label="Close"
     >
       <X class="h-4 w-4" />

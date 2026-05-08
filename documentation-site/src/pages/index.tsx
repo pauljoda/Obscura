@@ -10,6 +10,7 @@ import styles from './index.module.css';
 const CAPABILITIES = [
   'Videos',
   'Series',
+  'Comics',
   'Galleries',
   'Images',
   'Audio',
@@ -20,6 +21,12 @@ const CAPABILITIES = [
 ];
 
 const FEATURES = [
+  {
+    kicker: 'Comics',
+    title: 'Comic archives read like books',
+    body:
+      'cbz/zip archives and image folders scan as gallery series, keep natural page order, import ComicInfo metadata, track read/unread progress, and open in paged or webtoon reader modes.',
+  },
   {
     kicker: 'Streaming',
     title: 'On-demand HLS',
@@ -74,6 +81,13 @@ const SHOWCASE = [
     alt: 'Scene detail page',
   },
   {
+    title: 'Comic galleries organized for reading.',
+    body:
+      'Archive chapters and image folders live in the gallery system, with natural page order, reader progress, and a dedicated paged or webtoon reader.',
+    image: '/img/screenshots/gallery-detail.png',
+    alt: 'Gallery detail page',
+  },
+  {
     title: 'Mobile is first-class, not a fallback.',
     body:
       'Browse, search, and play from any phone on your LAN. Touch targets, sheets, and bottom navigation are designed before the desktop expansion.',
@@ -103,8 +117,8 @@ function Hero() {
           </Heading>
           <p className={styles.heroSubtitle}>
             Obscura is a video-first, self-hosted media browser. Galleries, audio,
-            performers, and plugin-powered metadata are first-class — and the whole
-            thing fits in one Docker image.
+            comics, performers, and plugin-powered metadata are first-class — and
+            the whole thing fits in one Docker image.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primaryAction} to="/docs/users/quick-start">
@@ -310,6 +324,12 @@ function CtaBlock() {
             href="https://github.com/pauljoda/Obscura"
           >
             View on GitHub
+          </Link>
+          <Link
+            className={styles.secondaryAction}
+            href="https://www.reddit.com/r/ObscuraMediaApp/"
+          >
+            Join the subreddit
           </Link>
         </div>
       </div>

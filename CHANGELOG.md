@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- The changelog dialog now links directly to the Obscura GitHub repo and subreddit with icon chips, making project updates and community discussion easier to reach from inside the app.
 - Library surface view preferences now use form-factor scoped database keys (`mobile` / `desktop`) while saved filter presets remain shared. Existing unscoped preference rows are used as a one-time fallback so current layouts seed the new scoped keys instead of resetting abruptly.
 - Gallery bulk actions now remain visible outside list view, and gallery grid cards expose selection controls so actions like Merge into series are discoverable without changing layouts.
 - Gallery cards now render image and sub-gallery counts in the subtitle row instead of overlaying the thumbnail.
@@ -72,6 +73,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Updated the README and docs site to describe comics as a core Obscura reader and organizer workflow, including cbz/zip archive galleries, series grouping, reading progress, and paged/webtoon reader modes.
+- Added the Obscura subreddit link to the README and docs site navigation/footer.
 - Documented the planned comic-aware gallery experience, including archive-native cbz/zip reading, ComicInfo metadata mapping, natural page ordering, scoped Images browsing, and the dedicated comic reader.
 - Added the implementation plan for comic-aware galleries so the archive metadata, scoped gallery browser, cover behavior, and reader work can land in small reviewable commits.
 

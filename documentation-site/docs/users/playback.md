@@ -6,7 +6,7 @@ description: Video player, image lightbox, audio player, subtitles, transcripts,
 
 # Playback
 
-This page covers the three viewers — video, image, audio — including the controls, the subtitle stack, and the keyboard shortcuts that make them fast.
+This page covers the four viewers — video, comic reader, image, audio — including the controls, the subtitle stack, and the keyboard shortcuts that make them fast.
 
 ## The video player
 
@@ -126,6 +126,17 @@ GIF, WebP-animated, and video-as-image entries autoplay in the lightbox. Play / 
 ### Info panel
 
 Press `I` (or click the info button) to slide in a panel showing dimensions, format, date, performers, and tags.
+
+## Comic reader
+
+Open **Read** from a comic-aware gallery to launch the dedicated reader. The reader keeps gallery page order, saves progress per gallery, and reopens with **Resume** when you come back.
+
+| Mode | What it does |
+| --- | --- |
+| **Paged** | Shows one page at a time or two-page spreads. Enable **First Page is Cover** when the cover should stand alone before pairing the rest. |
+| **Webtoon** | Shows a vertical scroll of pages and restores the saved scroll position when you resume. |
+
+Desktop controls support the arrow keys for previous/next page. On mobile, left and right tap zones move through pages, while a center tap shows or hides the floating controls so artwork can use the full screen.
 
 ## Audio playback
 

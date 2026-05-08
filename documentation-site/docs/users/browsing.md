@@ -58,13 +58,17 @@ The page navigates in three views:
 
 Breadcrumbs at the top let you jump back up the tree. Episodes show **S01E03** badges where season + episode numbers were parsed.
 
-## Galleries (`/galleries`) and Images (`/images`)
+## Galleries (`/galleries`), Comics, and Images (`/images`)
 
 ![Galleries](/img/screenshots/galleries.png)
 
-Galleries are rendered as cards with a multi-image preview cover. Click into a gallery to see its images in a **masonry layout** that respects each image's natural aspect ratio.
+Galleries are rendered as cards with a multi-image preview cover. Click into a gallery to browse its images with the same shared library controls used elsewhere: search, sort, view modes, thumbnail sizing, infinite loading, and bulk actions.
 
 ![Gallery detail](/img/screenshots/gallery-detail.png)
+
+Comics are a core gallery workflow. cbz/zip archives and image folders can scan as comic galleries, use natural filename ordering for pages, import ComicInfo metadata when present, and group chapter archives under a series-style parent gallery. Comic galleries expose read/unread filters, progress-aware Resume/Re-read actions, and author-style metadata labels.
+
+Open **Read** from a comic gallery to launch the dedicated reader. Paged mode supports one-page or two-page spreads with a first-page-is-cover toggle; webtoon mode gives you a vertical scroll reader and resumes back to the saved page.
 
 The standalone Images page covers loose images that aren't part of a folder gallery. Clicking either opens the **lightbox**, covered fully in [Playback](./playback.md#image-lightbox).
 
