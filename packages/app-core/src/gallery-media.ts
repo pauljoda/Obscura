@@ -141,6 +141,20 @@ function isComicGallery(gallery: { galleryType: string; zipFilePath?: string | n
   return ext === ".zip" || ext === ".cbz";
 }
 
+function imageAspectRatio(image: { width?: number | null; height?: number | null }): number | null {
+  if (!image.width || !image.height || image.width <= 0 || image.height <= 0) return null;
+  return image.width / image.height;
+}
+
+function largestImageAspectRatio(
+  imagesForGallery: Array<{ width?: number | null; height?: number | null }>,
+): number | null {
+  const largest = [...imagesForGallery].sort(
+    (a, b) => (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0),
+  )[0];
+  return largest ? imageAspectRatio(largest) : null;
+}
+
 function comicArchivePathSql(column: typeof galleries.zipFilePath): SQL {
   return sql`(lower(coalesce(${column}, '')) like '%.zip' or lower(coalesce(${column}, '')) like '%.cbz')`;
 }
@@ -300,6 +314,8 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
             galleryId: images.galleryId,
             imageId: images.id,
             sortOrder: images.sortOrder,
+            width: images.width,
+            height: images.height,
           })
           .from(images)
           .where(inArray(images.galleryId, galleryIds))
@@ -327,26 +343,42 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
             galleryId: images.galleryId,
             imageId: images.id,
             sortOrder: images.sortOrder,
+            width: images.width,
+            height: images.height,
           })
           .from(images)
           .where(and(inArray(images.galleryId, childIds), imageVisibleSql(images.filePath)))
           .orderBy(asc(images.sortOrder))
       : [];
-  const firstChildImageMap = new Map<string, string>();
+  const firstChildImageMap = new Map<string, { id: string; width: number | null; height: number | null }>();
   for (const img of childPreviewImages) {
     if (!img.galleryId || firstChildImageMap.has(img.galleryId)) continue;
-    firstChildImageMap.set(img.galleryId, img.imageId);
+    firstChildImageMap.set(img.galleryId, {
+      id: img.imageId,
+      width: img.width,
+      height: img.height,
+    });
   }
   const childPreviewMap = new Map<string, string[]>();
+  const childCoverAspectCandidates = new Map<string, Array<{ width: number | null; height: number | null }>>();
   const childComicParentIds = new Set<string>();
+  const childCountMap = new Map<string, number>();
   for (const child of childRows) {
     if (!child.parentId) continue;
+    childCountMap.set(child.parentId, (childCountMap.get(child.parentId) ?? 0) + 1);
     if (isComicGallery(child)) childComicParentIds.add(child.parentId);
-    const imageId = child.coverImageId ?? firstChildImageMap.get(child.id);
+    const firstChildImage = firstChildImageMap.get(child.id);
+    const imageId = child.coverImageId ?? firstChildImage?.id;
     if (!imageId) continue;
     const list = childPreviewMap.get(child.parentId) ?? [];
     if (list.length < 4) list.push(`/assets/images/${imageId}/thumb`);
     childPreviewMap.set(child.parentId, list);
+    const candidates = childCoverAspectCandidates.get(child.parentId) ?? [];
+    candidates.push({
+      width: firstChildImage?.width ?? null,
+      height: firstChildImage?.height ?? null,
+    });
+    childCoverAspectCandidates.set(child.parentId, candidates);
   }
 
   const studioIds = [
@@ -375,6 +407,11 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
           .map((img) => `/assets/images/${img.imageId}/thumb`);
         return direct.length > 0 ? direct : (childPreviewMap.get(gallery.id) ?? []);
       })(),
+      coverAspectRatio:
+        largestImageAspectRatio(previewImages.filter((img) => img.galleryId === gallery.id)) ??
+        largestImageAspectRatio(childCoverAspectCandidates.get(gallery.id) ?? []) ??
+        null,
+      childCount: childCountMap.get(gallery.id) ?? 0,
       imageCount: gallery.imageCount,
       rating: gallery.rating,
       organized: gallery.organized,
@@ -460,17 +497,36 @@ export async function getGalleryDetailRead(
             galleryId: images.galleryId,
             imageId: images.id,
             sortOrder: images.sortOrder,
+            width: images.width,
+            height: images.height,
           })
           .from(images)
           .where(and(inArray(images.galleryId, childIds), imageVisibleSql(images.filePath)))
           .orderBy(asc(images.sortOrder))
       : [];
   const childPreviewMap = new Map<string, string[]>();
+  const childPreviewAspectMap = new Map<string, number | null>();
   for (const img of childPreviewImages) {
     if (!img.galleryId) continue;
     const list = childPreviewMap.get(img.galleryId) ?? [];
     if (list.length < 4) list.push(`/assets/images/${img.imageId}/thumb`);
     childPreviewMap.set(img.galleryId, list);
+    if (!childPreviewAspectMap.has(img.galleryId)) {
+      childPreviewAspectMap.set(img.galleryId, imageAspectRatio(img));
+    }
+  }
+
+  const grandchildRows =
+    childIds.length > 0
+      ? await db
+          .select({ parentId: galleries.parentId })
+          .from(galleries)
+          .where(and(inArray(galleries.parentId, childIds), galleryVisibleSql(galleries.folderPath, galleries.zipFilePath)))
+      : [];
+  const grandchildCountMap = new Map<string, number>();
+  for (const row of grandchildRows) {
+    if (!row.parentId) continue;
+    grandchildCountMap.set(row.parentId, (grandchildCountMap.get(row.parentId) ?? 0) + 1);
   }
 
   return {
@@ -524,6 +580,8 @@ export async function getGalleryDetailRead(
       imageCount: child.imageCount,
       coverImagePath: `/assets/galleries/${child.id}/cover`,
       previewImagePaths: childPreviewMap.get(child.id) ?? [],
+      coverAspectRatio: childPreviewAspectMap.get(child.id) ?? null,
+      childCount: grandchildCountMap.get(child.id) ?? 0,
       isNsfw: child.isNsfw,
       isComic: isComicGallery(child),
     })),
@@ -627,8 +685,11 @@ export async function getGalleriesByIdsRead(db: AppDb, ids: string[]) {
     id: gallery.id,
     title: gallery.title,
     galleryType: gallery.galleryType as "folder" | "zip" | "virtual",
+    isComic: isComicGallery(gallery),
     coverImagePath: `/assets/galleries/${gallery.id}/cover`,
     previewImagePaths: [] as string[],
+    coverAspectRatio: null,
+    childCount: 0,
     imageCount: gallery.imageCount,
     rating: gallery.rating,
     organized: gallery.organized,

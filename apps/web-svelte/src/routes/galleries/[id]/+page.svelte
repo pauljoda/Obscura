@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidate, invalidateAll } from "$app/navigation";
   import { onMount } from "svelte";
-  import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
+  import { BookOpen, Images, Layers, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { deleteImage, updateGallery } from "$lib/api/media";
@@ -316,15 +316,28 @@
                     isNsfw={child.isNsfw}
                     isComic={child.isComic}
                     size="hero"
+                    aspectRatio={child.coverAspectRatio}
                     aspectClass="aspect-[4/3]"
-                    fit="contain"
+                    fit={child.coverAspectRatio ? "cover" : "contain"}
+                    showCount={false}
                     gradientIndex={i}
                   />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{child.title}</h3>
-                    <p class="text-xs text-text-muted mt-0.5">
-                      {child.imageCount} image{child.imageCount === 1 ? "" : "s"}
-                    </p>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
+                      {#if child.imageCount > 0}
+                        <span class="inline-flex items-center gap-1">
+                          <Images class="h-3 w-3" />
+                          {child.imageCount} image{child.imageCount === 1 ? "" : "s"}
+                        </span>
+                      {/if}
+                      {#if child.childCount > 0}
+                        <span class="inline-flex items-center gap-1">
+                          <Layers class="h-3 w-3" />
+                          {child.childCount} {child.childCount === 1 ? "sub-gallery" : "sub-galleries"}
+                        </span>
+                      {/if}
+                    </div>
                   </div>
                 </a>
               {/each}

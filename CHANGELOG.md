@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic archives stored inside a folder now group under that folder as a single series-style gallery, with chapter archive covers used as the parent preview tiles. Flat cbz/zip files at the library root still appear as standalone galleries.
 - Selected galleries can now be merged into a comic series from the Galleries list. The merge creates or reuses a real series folder on disk, moves the selected galleries under it, and lets the user label the chapter order before saving.
 - Comic series tools are easier to reach and filter. Gallery cards can now be selected from grid-style views for series merging, and the Images and Galleries pages can show only comic items or hide comic items.
+- Gallery cards now show cleaner comic covers and metadata: image counts moved below the title, zero-image series stop showing `0 images`, and sub-gallery counts appear alongside image counts.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Library surface view preferences now use form-factor scoped database keys (`mobile` / `desktop`) while saved filter presets remain shared. Existing unscoped preference rows are used as a one-time fallback so current layouts seed the new scoped keys instead of resetting abruptly.
 - Gallery bulk actions now remain visible outside list view, and gallery grid cards expose selection controls so actions like Merge into series are discoverable without changing layouts.
+- Gallery cards now render image and sub-gallery counts in the subtitle row instead of overlaying the thumbnail.
 - On mobile gallery detail pages, the info panel now appears above sub-galleries and images so metadata is visible before long gallery lists.
 
 ### Added
@@ -47,6 +49,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
 - Comic gallery detail pages now default to Grid view so page ordering is easier to scan, while Masonry and List remain available.
 - Comic series and sub-gallery thumbnails now preserve chapter cover artwork instead of cropping it, and parent series covers prefer the largest available child cover candidate.
+- Comic gallery cards now size their thumbnail frame from the selected cover dimensions when available, avoiding black letterbox bars from the default square grid frame.
+- Gallery grid selection controls are now square and no longer collide with media counts.
 - Gallery image thumbnail and fingerprint jobs now use live pg-boss state when the dashboard calculates Running, Queued, and Delayed counts, fixing stale waiting rows during active processing.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.
 - Detail-page media tabs now fetch their first page when they mount without SSR-hydrated items, fixing empty linked-gallery and linked-series grids for tags, actors, and studios.

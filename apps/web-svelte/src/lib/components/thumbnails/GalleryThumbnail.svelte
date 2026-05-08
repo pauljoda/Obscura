@@ -20,6 +20,7 @@
     updatedAt?: string | null;
     size?: GalleryThumbnailSize;
     aspectClass?: string;
+    aspectRatio?: number | null;
     loading?: "eager" | "lazy";
     fit?: "cover" | "contain";
     class?: string;
@@ -39,6 +40,7 @@
     updatedAt = null,
     size = "grid",
     aspectClass,
+    aspectRatio = null,
     loading = "lazy",
     fit,
     class: className,
@@ -56,6 +58,7 @@
   );
 
   const aspect = $derived.by(() => {
+    if (aspectRatio && Number.isFinite(aspectRatio) && aspectRatio > 0) return "";
     if (aspectClass) return aspectClass;
     if (isComic) return "aspect-[2/3]";
     switch (size) {
@@ -70,6 +73,11 @@
         return "aspect-square";
     }
   });
+  const aspectRatioStyle = $derived(
+    aspectRatio && Number.isFinite(aspectRatio) && aspectRatio > 0
+      ? `${aspectRatio}`
+      : undefined,
+  );
   const imageFitClass = $derived(
     (fit ?? (isComic ? "contain" : "cover")) === "contain"
       ? "object-contain bg-black/35"
@@ -169,6 +177,7 @@
       aspect,
       !coverSrc && previews.length === 0 && fallbackGradient(title),
     )}
+    style:aspect-ratio={aspectRatioStyle}
     onmouseenter={startHover}
     onmouseleave={endHover}
     onmousemove={onMove}
