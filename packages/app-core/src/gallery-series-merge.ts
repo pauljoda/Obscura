@@ -18,6 +18,7 @@ export type GallerySeriesMergeMove = {
 export type GallerySeriesMergePlan = {
   targetDir: string;
   moves: GallerySeriesMergeMove[];
+  emptySourceDirs: string[];
 };
 
 function sanitizeFolderName(value: string): string {
@@ -39,6 +40,13 @@ function galleryDiskPath(gallery: GallerySeriesMergeGallery) {
   throw new ValidationError("Only file-backed galleries can be merged into a series");
 }
 
+function isSameNamedArchiveWrapper(item: { path: string; kind: "folder" | "zip" }) {
+  if (item.kind !== "zip") return false;
+  const archiveTitle = path.basename(item.path, path.extname(item.path)).trim().toLowerCase();
+  const wrapperTitle = path.basename(path.dirname(item.path)).trim().toLowerCase();
+  return archiveTitle.length > 0 && archiveTitle === wrapperTitle;
+}
+
 export function planGallerySeriesMerge(input: {
   title: string;
   galleries: GallerySeriesMergeGallery[];
@@ -49,17 +57,25 @@ export function planGallerySeriesMerge(input: {
     throw new ValidationError("Choose at least one gallery to merge");
   }
 
-  const diskItems = input.galleries.map((gallery) => ({
-    gallery,
-    ...galleryDiskPath(gallery),
-  }));
+  const diskItems = input.galleries.map((gallery) => {
+    const disk = galleryDiskPath(gallery);
+    const sourceDir = path.dirname(disk.path);
+    const isWrapperArchive = isSameNamedArchiveWrapper(disk);
+    return {
+      gallery,
+      ...disk,
+      sourceDir,
+      effectiveParentDir: isWrapperArchive ? path.dirname(sourceDir) : sourceDir,
+      emptySourceDir: isWrapperArchive ? sourceDir : null,
+    };
+  });
   const existingTarget = diskItems.find(
     (item) => path.basename(path.dirname(item.path)).toLowerCase() === folderName.toLowerCase(),
   );
   const directTarget = diskItems.find(
     (item) => path.basename(item.path).toLowerCase() === folderName.toLowerCase(),
   );
-  const firstParentDir = path.dirname(diskItems[0].path);
+  const firstParentDir = diskItems[0].effectiveParentDir;
   const targetDir =
     existingTarget
       ? path.dirname(existingTarget.path)
@@ -71,11 +87,10 @@ export function planGallerySeriesMerge(input: {
   const targetParentDir = path.dirname(targetDir);
   if (
     !diskItems.every((item) => {
-      const itemParentDir = path.dirname(item.path);
       return (
         path.resolve(item.path) === path.resolve(targetDir) ||
-        path.resolve(itemParentDir) === path.resolve(targetDir) ||
-        path.resolve(itemParentDir) === path.resolve(targetParentDir)
+        path.resolve(item.sourceDir) === path.resolve(targetDir) ||
+        path.resolve(item.effectiveParentDir) === path.resolve(targetParentDir)
       );
     })
   ) {
@@ -98,5 +113,13 @@ export function planGallerySeriesMerge(input: {
     ];
   });
 
-  return { targetDir, moves };
+  const emptySourceDirs = [
+    ...new Set(
+      diskItems
+        .filter((item) => item.emptySourceDir && path.resolve(item.emptySourceDir) !== path.resolve(targetDir))
+        .map((item) => item.emptySourceDir!),
+    ),
+  ];
+
+  return { targetDir, moves, emptySourceDirs };
 }

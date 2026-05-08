@@ -165,10 +165,14 @@
    * iOS Safari zooms the viewport when focused inputs use a computed font-size < 16px.
    * max(16px, 1em) stays at least 16px while still scaling up with component styles.
    */
-  input,
+  input:not([type="button"]):not([type="checkbox"]):not([type="color"]):not([type="file"]):not(
+      [type="hidden"]
+    ):not([type="image"]):not([type="radio"]):not([type="range"]):not([type="reset"]):not(
+      [type="submit"]
+    ),
   textarea,
   select {
-    font-size: max(16px, 1em);
+    font-size: max(16px, 1em) !important;
   }
 
   /* ── Typography voices ── */

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, rename, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdir, rename, rmdir, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   and,
@@ -1006,6 +1006,16 @@ export async function mergeGalleriesIntoSeriesWrite(
 
   for (const move of plan.moves) {
     await rename(move.sourcePath, move.destinationPath);
+  }
+  for (const dir of plan.emptySourceDirs) {
+    try {
+      await rmdir(dir);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTEMPTY" && code !== "EEXIST") {
+        throw err;
+      }
+    }
   }
 
   const moveByGalleryId = new Map(plan.moves.map((move) => [move.galleryId, move]));

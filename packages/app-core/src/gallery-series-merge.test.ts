@@ -120,4 +120,44 @@ describe("planGallerySeriesMerge", () => {
       },
     ]);
   });
+
+  it("moves same-named single-archive wrapper folders into the new series folder", () => {
+    const plan = planGallerySeriesMerge({
+      title: "New Series",
+      galleries: [
+        {
+          id: "one",
+          galleryType: "zip",
+          folderPath: null,
+          zipFilePath: path.join(root, "Old One", "Old One.cbz"),
+        },
+        {
+          id: "two",
+          galleryType: "zip",
+          folderPath: null,
+          zipFilePath: path.join(root, "Old Two", "Old Two.cbz"),
+        },
+      ],
+    });
+
+    expect(plan.targetDir).toBe(path.join(root, "New Series"));
+    expect(plan.moves).toEqual([
+      {
+        galleryId: "one",
+        sourcePath: path.join(root, "Old One", "Old One.cbz"),
+        destinationPath: path.join(root, "New Series", "Old One.cbz"),
+        kind: "zip",
+      },
+      {
+        galleryId: "two",
+        sourcePath: path.join(root, "Old Two", "Old Two.cbz"),
+        destinationPath: path.join(root, "New Series", "Old Two.cbz"),
+        kind: "zip",
+      },
+    ]);
+    expect(plan.emptySourceDirs).toEqual([
+      path.join(root, "Old One"),
+      path.join(root, "Old Two"),
+    ]);
+  });
 });
