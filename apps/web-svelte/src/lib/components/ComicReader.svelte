@@ -51,12 +51,10 @@
 
   function goNext() {
     index = nextComicIndex(index, images.length, { pageMode, firstPageIsCover });
-    showControlsTemporarily();
   }
 
   function goPrev() {
     index = previousComicIndex(index, images.length, { pageMode, firstPageIsCover });
-    showControlsTemporarily();
   }
 
   function imageSrc(image: ImageListItemDto) {
