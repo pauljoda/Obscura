@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic and archive galleries now open into a gallery-scoped Images browser instead of a one-off masonry strip. Gallery detail pages get the shared toolbar, sort menu, view-mode toggle, thumbnail sizing, infinite loading, and bulk image actions; comic archives default to filename-number ordering so pages read in the expected order.
 - Comic galleries now have a dedicated reader with paged and webtoon modes. Paged mode supports one-page or two-page spreads, plus a First Page is Cover toggle that keeps cover pages alone before pairing the rest.
 - On mobile, the comic reader now lets pages use the full screen: controls float over the artwork, fade away after a short delay, return or hide with a center tap, and left/right taps move backward or forward.
+- Comic reader controls now recover on desktop after auto-hiding: center-clicking the page or moving the cursor near the top or bottom brings the controls back.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
@@ -32,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.
+- Comic reader controls can be restored on desktop after auto-hide by center-clicking the page or hovering near the control areas.
 - Comic reader side-tap and keyboard navigation no longer reopens the floating controls after they have auto-hidden. Only a center tap brings the reader chrome back.
 - Library view preferences now initialize from server-loaded mobile/desktop preference snapshots, so saved view mode and thumbnail size are applied before the first client-side preference fetch instead of animating from defaults after mount.
 - The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.

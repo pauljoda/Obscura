@@ -88,9 +88,12 @@
   function handleReaderTap(event: PointerEvent) {
     const target = event.target as HTMLElement;
     if (target.closest("[data-reader-control]")) return;
-    if (event.pointerType === "mouse") return;
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const zone = comicTapZone(event.clientX - rect.left, rect.width);
+    if (event.pointerType === "mouse") {
+      if (zone === "controls") toggleControls();
+      return;
+    }
     if (zone === "previous") goPrev();
     else if (zone === "next") goNext();
     else toggleControls();
@@ -146,6 +149,19 @@
   in:fade={{ duration: dur.normal, easing: ease.enter }}
   out:fade={{ duration: dur.fast, easing: ease.exit }}
 >
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    data-reader-hover-zone="top"
+    class="reader-hover-zone reader-hover-zone-top"
+    onpointerenter={showControlsTemporarily}
+  ></div>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    data-reader-hover-zone="bottom"
+    class="reader-hover-zone reader-hover-zone-bottom"
+    onpointerenter={showControlsTemporarily}
+  ></div>
+
   <div
     data-reader-control
     class={`reader-top-layer ${controlsVisible ? "reader-layer-visible" : "reader-layer-hidden"}`}
@@ -348,6 +364,22 @@
     min-height: 0;
     flex: 1 1 auto;
     touch-action: manipulation;
+  }
+
+  .reader-hover-zone {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 15;
+    height: 5rem;
+  }
+
+  .reader-hover-zone-top {
+    top: 0;
+  }
+
+  .reader-hover-zone-bottom {
+    bottom: 0;
   }
 
   .reader-top-layer,

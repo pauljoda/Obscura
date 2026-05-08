@@ -75,4 +75,72 @@ describe("ComicReader", () => {
 
     expect(topLayer?.classList.contains("reader-layer-hidden")).toBe(true);
   });
+
+  it("shows hidden controls when clicking the center with a mouse", async () => {
+    const { container } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: 0,
+        title: "Comic",
+        onClose: vi.fn(),
+      },
+    });
+
+    const topLayer = container.querySelector(".reader-top-layer");
+    const stage = container.querySelector(".reader-stage");
+    expect(topLayer).not.toBeNull();
+    expect(stage).not.toBeNull();
+
+    await tick();
+    vi.advanceTimersByTime(2_800);
+    await tick();
+    expect(topLayer?.classList.contains("reader-layer-hidden")).toBe(true);
+
+    vi.spyOn(stage!, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      width: 300,
+    } as DOMRect);
+
+    const event = new MouseEvent("pointerup", {
+      bubbles: true,
+      clientX: 150,
+    });
+    Object.defineProperty(event, "pointerType", { value: "mouse" });
+    await fireEvent(stage!, event);
+
+    expect(topLayer?.classList.contains("reader-layer-visible")).toBe(true);
+  });
+
+  it("shows hidden controls when hovering over the top or bottom control edges", async () => {
+    const { container } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: 0,
+        title: "Comic",
+        onClose: vi.fn(),
+      },
+    });
+
+    const topLayer = container.querySelector(".reader-top-layer");
+    const topHoverZone = container.querySelector('[data-reader-hover-zone="top"]');
+    const bottomHoverZone = container.querySelector('[data-reader-hover-zone="bottom"]');
+    expect(topLayer).not.toBeNull();
+    expect(topHoverZone).not.toBeNull();
+    expect(bottomHoverZone).not.toBeNull();
+
+    await tick();
+    vi.advanceTimersByTime(2_800);
+    await tick();
+    expect(topLayer?.classList.contains("reader-layer-hidden")).toBe(true);
+
+    await fireEvent.pointerEnter(topHoverZone!);
+    expect(topLayer?.classList.contains("reader-layer-visible")).toBe(true);
+
+    vi.advanceTimersByTime(2_800);
+    await tick();
+    expect(topLayer?.classList.contains("reader-layer-hidden")).toBe(true);
+
+    await fireEvent.pointerEnter(bottomHoverZone!);
+    expect(topLayer?.classList.contains("reader-layer-visible")).toBe(true);
+  });
 });
