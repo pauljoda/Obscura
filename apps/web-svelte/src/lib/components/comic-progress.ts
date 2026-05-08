@@ -1,6 +1,7 @@
 export interface ComicReadingProgress {
   pageIndex: number;
   pageCount: number;
+  readerMode?: "paged" | "webtoon";
   updatedAt?: string | null;
   completedAt?: string | null;
 }
@@ -8,6 +9,7 @@ export interface ComicReadingProgress {
 export const defaultComicProgress: ComicReadingProgress = {
   pageIndex: 0,
   pageCount: 0,
+  readerMode: "paged",
   updatedAt: null,
   completedAt: null,
 };
@@ -28,6 +30,7 @@ export function validateComicProgress(raw: unknown): ComicReadingProgress | null
   return {
     pageIndex: Math.trunc(candidate.pageIndex),
     pageCount: typeof candidate.pageCount === "number" ? Math.trunc(candidate.pageCount) : 0,
+    readerMode: candidate.readerMode === "webtoon" ? "webtoon" : "paged",
     updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : null,
     completedAt: typeof candidate.completedAt === "string" ? candidate.completedAt : null,
   };
@@ -41,6 +44,7 @@ export function normalizeComicProgress(
   return {
     pageIndex: clampPageIndex(Number(progress?.pageIndex ?? 0), pageCount),
     pageCount,
+    readerMode: progress?.readerMode === "webtoon" ? "webtoon" : "paged",
     updatedAt: progress?.updatedAt ?? null,
     completedAt: progress?.completedAt ?? null,
   };

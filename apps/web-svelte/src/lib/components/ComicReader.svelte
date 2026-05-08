@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import {
     BookOpen,
     Columns2,
@@ -27,19 +27,31 @@
   interface Props {
     images: ImageListItemDto[];
     initialIndex: number;
+    initialMode?: ReaderMode;
     title?: string;
     onClose: () => void;
     onIndexChange?: (index: number) => void;
+    onModeChange?: (mode: ReaderMode) => void;
   }
 
-  let { images, initialIndex, title = "Comic", onClose, onIndexChange }: Props = $props();
+  let {
+    images,
+    initialIndex,
+    initialMode = "paged",
+    title = "Comic",
+    onClose,
+    onIndexChange,
+    onModeChange,
+  }: Props = $props();
 
-  let readerMode = $state<ReaderMode>("paged");
+  let readerMode = $state<ReaderMode>(untrack(() => initialMode));
   let pageMode = $state<ComicPageMode>("single");
   let firstPageIsCover = $state(true);
   let index = $state(untrack(() => initialIndex));
   let controlsVisible = $state(true);
   let controlsTimer: number | null = null;
+  let webtoonStage: HTMLElement | undefined = $state();
+  let programmaticWebtoonScroll = false;
 
   const spread = $derived(
     comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover }),
@@ -54,6 +66,12 @@
     if (nextIndex === index) return;
     index = nextIndex;
     onIndexChange?.(index);
+  }
+
+  function setReaderMode(mode: ReaderMode) {
+    if (mode === readerMode) return;
+    readerMode = mode;
+    onModeChange?.(mode);
   }
 
   function goNext() {
@@ -107,6 +125,7 @@
   }
 
   function handleWebtoonScroll(event: Event) {
+    if (programmaticWebtoonScroll) return;
     const stage = event.currentTarget as HTMLElement;
     const anchor = stage.scrollTop + stage.clientHeight * 0.45;
     let nextIndex = index;
@@ -117,6 +136,31 @@
     }
     setReaderIndex(nextIndex);
   }
+
+  async function scrollWebtoonToIndex(targetIndex: number) {
+    await tick();
+    if (!webtoonStage) return;
+    const target = webtoonStage.querySelector<HTMLElement>(
+      `[data-comic-page-index="${targetIndex}"]`,
+    );
+    if (!target) return;
+    programmaticWebtoonScroll = true;
+    if (typeof webtoonStage.scrollTo === "function") {
+      webtoonStage.scrollTo({ top: target.offsetTop, behavior: "auto" });
+    } else {
+      webtoonStage.scrollTop = target.offsetTop;
+    }
+    queueMicrotask(() => {
+      programmaticWebtoonScroll = false;
+    });
+  }
+
+  $effect(() => {
+    if (readerMode !== "webtoon") return;
+    webtoonStage;
+    const targetIndex = untrack(() => index);
+    void scrollWebtoonToIndex(targetIndex);
+  });
 
   onMount(() => {
     const prevOverflow = document.body.style.overflow;
@@ -205,7 +249,7 @@
     <div class="flex items-center gap-1">
       <button
         type="button"
-        onclick={() => (readerMode = "paged")}
+        onclick={() => setReaderMode("paged")}
         class:active-reader-control={readerMode === "paged"}
         class="reader-mode-button"
         aria-label="Paged reader"
@@ -216,7 +260,7 @@
       </button>
       <button
         type="button"
-        onclick={() => (readerMode = "webtoon")}
+        onclick={() => setReaderMode("webtoon")}
         class:active-reader-control={readerMode === "webtoon"}
         class="reader-mode-button"
         aria-label="Webtoon reader"
@@ -258,6 +302,7 @@
   {#if readerMode === "webtoon"}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
+      bind:this={webtoonStage}
       class="reader-stage overflow-y-auto bg-black"
       onpointerup={handleReaderTap}
       onscroll={handleWebtoonScroll}

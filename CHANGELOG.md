@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic series tools are easier to reach and filter. Gallery cards can now be selected from grid-style views for series merging, and the Images and Galleries pages can show only comic items or hide comic items.
 - Gallery cards now show cleaner comic covers and metadata: image counts moved below the title, zero-image series stop showing `0 images`, and sub-gallery counts appear alongside image counts.
 - Comic galleries now track when reading reaches the final page. Completed comics show a Re-read action, and the Galleries page can filter comic galleries by Read or Unread.
+- Comic reader mode is now remembered per gallery, and reopening a comic in webtoon mode resumes by scrolling back to the saved page.
 - The Merge into series flow now opens in a drawer-style panel with mobile-friendly chapter fields that match the identify review surfaces more closely.
 - Merge into series now understands existing series selections: selecting a series plus a standalone gallery shows the current chapters and adds the new gallery into that series folder instead of nesting or replacing the series.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
@@ -65,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Series and Audio Track tabs on tag, actor, and studio pages now render with their own universal thumbnail components instead of the Video or Audio Library card renderers.
 - Comic reader controls can be restored on desktop after auto-hide by center-clicking the page or hovering near the control areas.
 - Comic reader side-tap and keyboard navigation no longer reopens the floating controls after they have auto-hidden. Only a center tap brings the reader chrome back.
+- Webtoon reader mode now restores the saved scroll position when resuming instead of reopening at the top of the comic.
 - Library view preferences now initialize from server-loaded mobile/desktop preference snapshots, so saved view mode and thumbnail size are applied before the first client-side preference fetch instead of animating from defaults after mount.
 - The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.
 

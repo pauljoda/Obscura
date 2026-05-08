@@ -91,10 +91,22 @@
     comicProgressPrefs.update({
       pageIndex: normalized.pageIndex,
       pageCount: images.length,
+      readerMode: normalized.readerMode,
       updatedAt: new Date().toISOString(),
       completedAt: reachedEnd
         ? normalized.completedAt ?? new Date().toISOString()
         : normalized.completedAt ?? null,
+    });
+  }
+
+  function saveComicReaderMode(readerMode: "paged" | "webtoon") {
+    if (!g.isComic || images.length === 0) return;
+    comicProgressPrefs.update({
+      ...comicProgressPrefs.current,
+      pageIndex: readerIndex,
+      pageCount: images.length,
+      readerMode,
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -487,11 +499,13 @@
   <ComicReader
     {images}
     initialIndex={readerIndex}
+    initialMode={comicProgress.readerMode}
     title={g.title}
     onIndexChange={(index) => {
       readerIndex = index;
       saveComicProgress(index);
     }}
+    onModeChange={saveComicReaderMode}
     onClose={() => void closeReader()}
   />
 {/if}

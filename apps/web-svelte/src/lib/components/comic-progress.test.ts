@@ -41,4 +41,14 @@ describe("comic progress helpers", () => {
     expect(isComicComplete(progress, 10)).toBe(true);
     expect(isComicComplete({ pageIndex: 9, pageCount: 10 }, 10)).toBe(false);
   });
+
+  it("preserves the last reader mode", () => {
+    expect(
+      normalizeComicProgress({ pageIndex: 3, pageCount: 10, readerMode: "webtoon" }, 10)
+        .readerMode,
+    ).toBe("webtoon");
+    expect(normalizeComicProgress({ pageIndex: 3, pageCount: 10 }, 10).readerMode).toBe(
+      "paged",
+    );
+  });
 });
