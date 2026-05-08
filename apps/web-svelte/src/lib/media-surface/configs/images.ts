@@ -2,7 +2,10 @@ import { LayoutGrid, LayoutList, Rows3 } from "@lucide/svelte";
 import type { ImageListItemDto } from "@obscura/contracts";
 import type {
   FilterSectionSpec,
+  BodyLayout,
   MediaSurfaceConfig,
+  SortDir,
+  ViewModeSpec,
 } from "$lib/media-surface/config";
 import {
   deleteImage,
@@ -34,6 +37,12 @@ interface BuildArgs {
   nsfwMode: string;
   /** Optional gallery scope; when set, fetcher only returns images from this gallery. */
   galleryId?: string;
+  surfaceId?: string;
+  defaultViewMode?: string;
+  defaultSortBy?: string;
+  defaultSortDir?: SortDir;
+  layoutByViewMode?: Record<string, BodyLayout>;
+  viewModes?: ViewModeSpec[];
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: ImageListItemDto[]) => void;
   onItemActivate?: (item: ImageListItemDto, index: number) => void;
@@ -78,7 +87,7 @@ export function imagesSurfaceConfig(
   ];
 
   return {
-    surfaceId: "images",
+    surfaceId: args.surfaceId ?? "images",
     pageSize: args.pageSize,
     initial: {
       items: args.initial.items,
@@ -131,17 +140,18 @@ export function imagesSurfaceConfig(
     },
     card: ImageCard,
     bodyLayout: "masonry",
-    layoutByViewMode: { grid: "masonry", list: "list", feed: "feed" },
+    layoutByViewMode: args.layoutByViewMode ?? { grid: "masonry", list: "list", feed: "feed" },
     defaultPrefs: {
-      viewMode: "grid",
-      sortBy: "recent",
-      sortDir: "desc",
+      viewMode: args.defaultViewMode ?? "grid",
+      sortBy: args.defaultSortBy ?? "recent",
+      sortDir: args.defaultSortDir ?? "desc",
       search: "",
       activeFilters: [],
       cols: 8,
     },
     sortOptions: [
       { value: "recent", label: "Recently Added" },
+      { value: "natural", label: "Filename Number" },
       { value: "date", label: "Image Date" },
       { value: "title", label: "Title A–Z" },
       { value: "resolution", label: "Resolution" },
@@ -150,13 +160,14 @@ export function imagesSurfaceConfig(
     ],
     defaultSortDir: {
       recent: "desc",
+      natural: "asc",
       date: "desc",
       title: "asc",
       resolution: "desc",
       size: "desc",
       rating: "desc",
     },
-    viewModes: [
+    viewModes: args.viewModes ?? [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },
       { mode: "list", icon: LayoutList, label: "List view" },
       { mode: "feed", icon: Rows3, label: "Feed view" },

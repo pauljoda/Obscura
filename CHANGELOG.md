@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### What's New
 
+- Comic and archive galleries now open into a gallery-scoped Images browser instead of a one-off masonry strip. Gallery detail pages get the shared toolbar, sort menu, view-mode toggle, thumbnail sizing, infinite loading, and bulk image actions; comic archives default to filename-number ordering so pages read in the expected order.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
 
@@ -20,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic archive helpers now understand natural page ordering and ComicInfo metadata, giving the gallery scanner a shared foundation for cbz/zip page order and comic metadata import.
 - Gallery scans now seed ComicInfo metadata from folder and cbz/zip galleries, attach comic creators as gallery performers, attach comic genres/tags/characters as tags, and index pages in natural numeric filename order.
 - Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
+- Gallery detail image browsing now uses the shared Images surface, including masonry, grid, and list views; comic galleries default to natural filename ordering and label performer metadata as Authors.
 
 ### Fixed
 

@@ -80,8 +80,15 @@ export async function fetchGalleries(
   );
 }
 
-export async function fetchGalleryDetail(id: string, options?: { fetch?: typeof fetch }) {
-  return serverFetch<GalleryDetailDto>(`/galleries/${id}`, { fetch: options?.fetch });
+export async function fetchGalleryDetail(
+  id: string,
+  options?: { fetch?: typeof fetch; imageLimit?: number; imageOffset?: number },
+) {
+  const qs = buildQueryString({
+    imageLimit: options?.imageLimit,
+    imageOffset: options?.imageOffset,
+  });
+  return serverFetch<GalleryDetailDto>(`/galleries/${id}${qs}`, { fetch: options?.fetch });
 }
 
 export async function fetchImageDetail(id: string, options?: { fetch?: typeof fetch }) {

@@ -16,6 +16,7 @@
     previewImagePaths?: string[] | null;
     imageCount?: number | null;
     isNsfw?: boolean;
+    isComic?: boolean;
     updatedAt?: string | null;
     size?: GalleryThumbnailSize;
     aspectClass?: string;
@@ -33,6 +34,7 @@
     previewImagePaths = [],
     imageCount = null,
     isNsfw = false,
+    isComic = false,
     updatedAt = null,
     size = "grid",
     aspectClass,
@@ -53,6 +55,7 @@
 
   const aspect = $derived.by(() => {
     if (aspectClass) return aspectClass;
+    if (isComic) return "aspect-[2/3]";
     switch (size) {
       case "compact":
         return "aspect-square";
@@ -132,7 +135,7 @@
   )}
 >
   {#if showStackedPreview}
-    {#each previews.slice(1, 3) as preview, i}
+    {#each previews.slice(1, 3) as preview, i (preview)}
       <div
         class={cn(
           "pointer-events-none absolute bg-surface-2 overflow-hidden border border-border-subtle",

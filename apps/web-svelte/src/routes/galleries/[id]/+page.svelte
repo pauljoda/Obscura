@@ -1,25 +1,20 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { invalidate } from "$app/navigation";
-  import { Images, Pencil } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
+  import { invalidate, invalidateAll } from "$app/navigation";
+  import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
+  import { Badge, dur } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
-  import { fetchGalleryImages, updateGallery } from "$lib/api/media";
+  import { deleteImage, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
+  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
+  import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
-  import {
-    detectUiPrefsFormFactor,
-    formFactorUiPrefKey,
-  } from "$lib/prefs/form-factor-prefs";
-  import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
   let overrideRating = $state<number | null | undefined>(undefined);
@@ -42,27 +37,45 @@
 
   let images = $state.raw<ImageListItemDto[]>([]);
   let imageTotal = $state(0);
-  let loadingMore = $state(false);
   let syncedGalleryId = $state<string | null>(null);
 
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
+  let lightboxSourceId = $state<string | null>(null);
   let editing = $state(false);
-
-  // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number }>(
-    formFactorUiPrefKey("galleries:interiorView", detectUiPrefsFormFactor()),
-    { cols: 3 },
-    data.viewPrefs,
-  );
-
-  onMount(() => {
-    void viewPrefs.load();
-  });
+  let deleteDialogOpen = $state(false);
+  let pendingDelete = $state<ImageListItemDto[]>([]);
+  let bulkBusy = $state(false);
 
   function openAt(i: number) {
     lightboxIndex = i;
+    lightboxSourceId = images[i]?.id ?? null;
     lightboxOpen = true;
+  }
+
+  function openImage(item: ImageListItemDto) {
+    const existingIndex = images.findIndex((image) => image.id === item.id);
+    if (existingIndex < 0) {
+      images = [...images, item];
+      lightboxIndex = images.length - 1;
+    } else {
+      lightboxIndex = existingIndex;
+    }
+    lightboxSourceId = item.id;
+    lightboxOpen = true;
+  }
+
+  function closeLightbox() {
+    lightboxOpen = false;
+    window.setTimeout(() => {
+      if (!lightboxOpen) lightboxSourceId = null;
+    }, dur.moderate + 40);
+  }
+
+  function patchImageRating(imageId: string, rating: number | null) {
+    images = images.map((image) =>
+      image.id === imageId ? { ...image, rating } : image,
+    );
   }
 
   async function refreshGallery() {
@@ -70,22 +83,53 @@
     editing = false;
   }
 
-  async function loadMore() {
-    if (loadingMore || images.length >= imageTotal) return;
-    loadingMore = true;
+  async function confirmDelete(deleteFromDisk: boolean) {
+    if (bulkBusy) return;
+    bulkBusy = true;
     try {
-      const result = await fetchGalleryImages(g.id, {
-        limit: 60,
-        offset: images.length,
-      });
-      const existing = new Set(images.map((i) => i.id));
-      images = [...images, ...result.images.filter((i) => !existing.has(i.id))];
+      await Promise.all(pendingDelete.map((i) => deleteImage(i.id, deleteFromDisk)));
+      deleteDialogOpen = false;
+      pendingDelete = [];
+      await invalidateAll();
     } finally {
-      loadingMore = false;
+      bulkBusy = false;
     }
   }
 
   const visibleChildGalleries = $derived(g.children ?? []);
+  const performerLabel = $derived(g.isComic ? "Authors" : "Performers");
+  const galleryImageSurface = $derived(
+    imagesSurfaceConfig({
+      initial: { items: images, total: imageTotal },
+      pageSize: data.pageSize,
+      page: 1,
+      nsfwMode: data.nsfwMode,
+      galleryId: g.id,
+      surfaceId: `gallery:${g.id}:images`,
+      defaultViewMode: "masonry",
+      defaultSortBy: g.isComic ? "natural" : "recent",
+      defaultSortDir: g.isComic ? "asc" : "desc",
+      layoutByViewMode: { masonry: "masonry", grid: "grid", list: "list" },
+      viewModes: [
+        { mode: "masonry", icon: Rows3, label: "Masonry view" },
+        { mode: "grid", icon: LayoutGrid, label: "Grid view" },
+        { mode: "list", icon: LayoutList, label: "List view" },
+      ],
+      onMutated: () => invalidateAll(),
+      onConfirmDelete: (selected) => {
+        pendingDelete = selected;
+        deleteDialogOpen = true;
+      },
+      onItemActivate: (item) => openImage(item),
+    }),
+  );
+  const annotatedImages = $derived(
+    images.map((image) =>
+      image.id === lightboxSourceId && lightboxOpen
+        ? { ...image, __lightboxSource: true }
+        : image,
+    ),
+  );
 
   $effect(() => {
     if (syncedGalleryId !== data.gallery.id) {
@@ -136,16 +180,28 @@
         </p>
       {/if}
     </div>
-    {#if !editing}
-      <button
-        type="button"
-        onclick={() => (editing = true)}
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
-      >
-        <Pencil class="h-3.5 w-3.5" />
-        Edit
-      </button>
-    {/if}
+    <div class="flex items-center gap-2">
+      {#if g.isComic && images.length > 0}
+        <button
+          type="button"
+          onclick={() => openAt(0)}
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-accent text-text-accent shadow-[0_0_18px_rgba(196,154,90,0.18)] hover:text-text-accent-bright transition-colors"
+        >
+          <BookOpen class="h-3.5 w-3.5" />
+          Read
+        </button>
+      {/if}
+      {#if !editing}
+        <button
+          type="button"
+          onclick={() => (editing = true)}
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
+        >
+          <Pencil class="h-3.5 w-3.5" />
+          Edit
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#if editing}
@@ -173,6 +229,7 @@
                     previewImagePaths={child.previewImagePaths}
                     imageCount={child.imageCount}
                     isNsfw={child.isNsfw}
+                    isComic={g.isComic}
                     size="hero"
                     gradientIndex={i}
                   />
@@ -197,63 +254,17 @@
             {/if}
           {/snippet}
           {#snippet children()}
-            <div class="flex justify-end -mt-1 mb-1.5">
-              <div class="surface-well flex items-center">
-                <ThumbSizeSlider
-                  value={viewPrefs.current.cols}
-                  min={3}
-                  max={12}
-                  onChange={(n) => viewPrefs.update({ cols: n })}
-                  label="Thumbnail size"
-                />
-              </div>
-            </div>
-            <div
-              class="gallery-masonry"
-              style:--col-count={viewPrefs.current.cols}
-            >
-              {#each images as img, i (img.id)}
-                {@const aspect =
-                  img.width && img.height && img.height > 0
-                    ? img.width / img.height
-                    : 1}
-                <button
-                  type="button"
-                  onclick={() => openAt(i)}
-                  class="gallery-masonry-item block hover:ring-1 hover:ring-border-accent transition-all duration-fast"
-                  aria-label={img.title}
-                  title={img.title}
-                  style:aspect-ratio="{aspect}"
-                >
-                  <ImageThumbnail
-                    title={img.title}
-                    thumbnailPath={img.thumbnailPath}
-                    previewPath={img.previewPath}
-                    isNsfw={img.isNsfw}
-                    isVideo={img.isVideo}
-                    width={img.width}
-                    height={img.height}
-                    size="grid"
-                    aspectClass="h-full w-full"
-                    showChips={false}
-                  />
-                </button>
-              {/each}
-            </div>
-            {#if images.length < imageTotal}
-              <div class="flex justify-center mt-3">
-                <button
-                  type="button"
-                  onclick={() => void loadMore()}
-                  disabled={loadingMore}
-                  class="surface-well px-4 py-1.5 text-[0.78rem] text-text-muted hover:text-text-primary hover:border-border-accent transition-colors disabled:opacity-50"
-                >
-                  {loadingMore
-                    ? "Loading…"
-                    : `Load more (${imageTotal - images.length} remaining)`}
-                </button>
-              </div>
-            {/if}
+            <MediaSurface
+              config={{
+                ...galleryImageSurface,
+                initial: {
+                  items: annotatedImages,
+                  total: imageTotal,
+                  loadedStart: 0,
+                },
+              }}
+              legacyPrefsKey={`gallery:${g.id}:imageFilterPresets`}
+            />
           {/snippet}
         </HierarchySection>
       {:else if visibleChildGalleries.length === 0}
@@ -269,7 +280,7 @@
       <div class="surface-well p-4 space-y-4">
         {#if g.performers && g.performers.length > 0}
           <div class="space-y-2">
-            <h2 class="text-kicker">Performers</h2>
+            <h2 class="text-kicker">{performerLabel}</h2>
             <div class="flex flex-wrap gap-1.5">
               {#each g.performers as p (p.id)}
                 <a
@@ -340,40 +351,24 @@
 </div>
 </UploadDropZone>
 
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="image"
+  count={pendingDelete.length}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void confirmDelete(false)}
+  onDeleteFromDisk={() => void confirmDelete(true)}
+/>
+
 {#if lightboxOpen}
   <ImageLightbox
     {images}
     initialIndex={lightboxIndex}
-    onClose={() => (lightboxOpen = false)}
+    sharedKey={lightboxSourceId ?? undefined}
+    onClose={closeLightbox}
+    onIndexChange={(index) => (lightboxIndex = index)}
+    onRatingChange={patchImageRating}
   />
 {/if}
-
-<style>
-  .gallery-masonry {
-    column-count: max(2, min(var(--col-count, 6), 3));
-    column-gap: 0.375rem;
-  }
-  @media (min-width: 640px) {
-    .gallery-masonry {
-      column-count: max(3, min(var(--col-count, 6), 5));
-    }
-  }
-  @media (min-width: 768px) {
-    .gallery-masonry {
-      column-count: max(3, min(var(--col-count, 6), 8));
-    }
-  }
-  @media (min-width: 1024px) {
-    .gallery-masonry {
-      column-count: var(--col-count, 6);
-    }
-  }
-  .gallery-masonry-item {
-    display: block;
-    width: 100%;
-    break-inside: avoid;
-    margin-bottom: 0.375rem;
-    background-color: var(--color-surface-1, #16161a);
-    overflow: hidden;
-  }
-</style>

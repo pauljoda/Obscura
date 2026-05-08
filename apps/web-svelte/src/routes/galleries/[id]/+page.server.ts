@@ -1,15 +1,22 @@
 import type { PageServerLoad } from "./$types";
 import { fetchGalleryDetail } from "$lib/server/media";
 import { error } from "@sveltejs/kit";
-import { loadUiPrefObject } from "$lib/server/ui-prefs";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 
-export const load: PageServerLoad = async ({ params, depends, fetch }) => {
+const PAGE_SIZE = 120;
+
+export const load: PageServerLoad = async ({ params, depends, fetch, cookies }) => {
   depends(`galleries:${params.id}`);
   try {
-    const gallery = await fetchGalleryDetail(params.id, { fetch });
+    const gallery = await fetchGalleryDetail(params.id, {
+      fetch,
+      imageLimit: PAGE_SIZE,
+      imageOffset: 0,
+    });
     return {
       gallery,
-      viewPrefs: await loadUiPrefObject("galleries:interiorView", { cols: 3 }),
+      pageSize: PAGE_SIZE,
+      nsfwMode: parseNsfwModeCookie(cookies.get("obscura-nsfw-mode")),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

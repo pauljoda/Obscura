@@ -39,6 +39,7 @@
           previewImagePaths={item.previewImagePaths}
           imageCount={item.imageCount}
           isNsfw={item.isNsfw}
+          isComic={item.isComic}
           size="list"
           gradientFallback={gradient}
           showCount={false}
@@ -66,6 +67,7 @@
       previewImagePaths={item.previewImagePaths}
       imageCount={item.imageCount}
       isNsfw={item.isNsfw}
+      isComic={item.isComic}
       size="grid"
       gradientFallback={gradient}
     />
