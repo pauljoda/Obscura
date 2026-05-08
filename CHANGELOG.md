@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic reader controls now recover on desktop after auto-hiding: center-clicking the page or moving the cursor near the top or bottom brings the controls back.
 - Comic galleries now remember reading progress per gallery. The gallery page shows current page progress, offers Resume when there is saved progress, and keeps Read available to start from page one.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
+- Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
 
@@ -35,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.
+- Detail-page media tabs now fetch their first page when they mount without SSR-hydrated items, fixing empty linked-gallery and linked-series grids for tags, actors, and studios.
 - Comic reader controls can be restored on desktop after auto-hide by center-clicking the page or hovering near the control areas.
 - Comic reader side-tap and keyboard navigation no longer reopens the floating controls after they have auto-hidden. Only a center tap brings the reader chrome back.
 - Library view preferences now initialize from server-loaded mobile/desktop preference snapshots, so saved view mode and thumbnail size are applied before the first client-side preference fetch instead of animating from defaults after mount.

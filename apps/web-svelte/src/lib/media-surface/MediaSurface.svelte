@@ -106,9 +106,17 @@
   });
 
   onMount(() => {
-    void prefsStore.load();
+    let disposed = false;
+    void (async () => {
+      await prefsStore.load();
+      if (disposed || (config.initial && config.initial.items.length > 0)) return;
+      void coll.loadMore();
+    })();
     void presetsApi.load();
-    return () => coll.dispose();
+    return () => {
+      disposed = true;
+      coll.dispose();
+    };
   });
 
   // ── Toolbar callbacks ────────────────────────────────────────────────

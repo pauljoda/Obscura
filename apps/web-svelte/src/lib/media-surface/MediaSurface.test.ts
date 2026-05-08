@@ -118,6 +118,29 @@ describe("MediaSurface", () => {
     // visible in the rendered output.
   });
 
+  it("loads the first page on mount when a detail tab has no hydrated items", async () => {
+    const fetcher = vi.fn(async ({ offset, limit }: { offset: number; limit: number }) => ({
+      items: items(offset + 20, limit),
+      total: 1,
+    }));
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "tag:military:galleries",
+      pageSize: 1,
+      fetcher,
+      initial: { items: [], total: 0, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs,
+      sortOptions: [{ value: "recent", label: "Recent" }],
+    };
+
+    render(Harness, { props: { config } });
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ offset: 0, limit: 1 }));
+    });
+    expect(await screen.findByText("Item 20")).toBeInTheDocument();
+  });
+
   it("re-fetches when sortBy changes", async () => {
     const fetcher = vi.fn(async ({ offset, limit }: { offset: number; limit: number }) => ({
       items: items(offset + 100, limit),
