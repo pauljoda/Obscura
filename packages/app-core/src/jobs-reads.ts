@@ -8,6 +8,7 @@ import {
   queueDefinitions,
   resolveQueueWorkerConcurrency,
   type JobKind,
+  type JobStatus,
   type JobTriggerKind,
   type QueueName,
 } from "@obscura/contracts";
@@ -25,6 +26,7 @@ const {
 } = schema;
 
 type JobRow = typeof jobRuns.$inferSelect;
+type PendingJobStatus = Extract<JobStatus, "waiting" | "active" | "delayed">;
 
 type JobPayload = Record<string, unknown> & {
   jobKind?: JobKind;
@@ -36,6 +38,96 @@ interface QueueTrigger {
   by?: JobTriggerKind;
   kind?: JobKind;
   label?: string | null;
+}
+
+type PgBossLiveJobState = {
+  state: string;
+  startAfter: Date | string | null;
+  startedOn?: Date | string | null;
+};
+
+type PendingJobLike = {
+  bullmqJobId: string;
+  status: string;
+  startedAt?: Date | null;
+};
+
+const pendingJobStatuses: PendingJobStatus[] = ["waiting", "active", "delayed"];
+
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function mapPgBossStateToJobRunStatus(
+  live: PgBossLiveJobState,
+  now = new Date(),
+): PendingJobStatus | null {
+  if (live.state === "active") return "active";
+  if (live.state === "created" || live.state === "retry") {
+    const startAfter = toDate(live.startAfter);
+    return startAfter && startAfter.getTime() > now.getTime() ? "delayed" : "waiting";
+  }
+  return null;
+}
+
+function applyLiveJobState<T extends PendingJobLike>(
+  job: T,
+  liveStates: Map<string, PgBossLiveJobState> | null,
+  now = new Date(),
+): T {
+  const live = liveStates?.get(job.bullmqJobId);
+  if (!live) return job;
+  const status = mapPgBossStateToJobRunStatus(live, now);
+  if (!status) return job;
+  return {
+    ...job,
+    status,
+    startedAt:
+      status === "active" && !job.startedAt
+        ? toDate(live.startedOn)
+        : job.startedAt,
+  };
+}
+
+async function readLivePgBossStates(
+  db: AppDb,
+  jobIds: string[],
+): Promise<Map<string, PgBossLiveJobState> | null> {
+  const uniqueIds = [...new Set(jobIds)].filter(Boolean);
+  if (uniqueIds.length === 0) return new Map();
+
+  try {
+    const rows = await db.execute<{
+      jobId: string;
+      state: string;
+      startAfter: Date | string | null;
+      startedOn: Date | string | null;
+    }>(sql`
+      SELECT
+        id::text as "jobId",
+        state::text as "state",
+        start_after as "startAfter",
+        started_on as "startedOn"
+      FROM pgboss.job
+      WHERE id::text = ANY(${uniqueIds})
+    `);
+
+    return new Map(
+      rows.map((row) => [
+        row.jobId,
+        {
+          state: row.state,
+          startAfter: row.startAfter,
+          startedOn: row.startedOn,
+        },
+      ]),
+    );
+  } catch {
+    return null;
+  }
 }
 
 function readTriggerMetadata(payload: unknown): QueueTrigger {
@@ -199,6 +291,20 @@ export async function getJobsDashboardRead(
     .from(jobRuns)
     .groupBy(jobRuns.queueName, jobRuns.status);
 
+  const pendingRowsForLiveState = await db
+    .select({
+      queueName: jobRuns.queueName,
+      status: jobRuns.status,
+      bullmqJobId: jobRuns.bullmqJobId,
+      startedAt: jobRuns.startedAt,
+    })
+    .from(jobRuns)
+    .where(inArray(jobRuns.status, pendingJobStatuses));
+  const liveStateMap = await readLivePgBossStates(
+    db,
+    pendingRowsForLiveState.map((job) => job.bullmqJobId),
+  );
+
   const countsByQueue = new Map<string, Record<string, number>>();
   for (const row of countsRows) {
     let bucket = countsByQueue.get(row.queueName);
@@ -207,6 +313,16 @@ export async function getJobsDashboardRead(
       countsByQueue.set(row.queueName, bucket);
     }
     bucket[row.status] = row.total;
+  }
+  if (liveStateMap) {
+    for (const row of pendingRowsForLiveState) {
+      const liveRow = applyLiveJobState(row, liveStateMap);
+      if (liveRow.status === row.status) continue;
+      const bucket = countsByQueue.get(row.queueName) ?? {};
+      bucket[row.status] = Math.max(0, (bucket[row.status] ?? 0) - 1);
+      bucket[liveRow.status] = (bucket[liveRow.status] ?? 0) + 1;
+      countsByQueue.set(row.queueName, bucket);
+    }
   }
 
   const queues = queueDefinitions.map((definition) => {
@@ -249,7 +365,7 @@ export async function getJobsDashboardRead(
   const activeJobsRaw = await db
     .select()
     .from(jobRuns)
-    .where(inArray(jobRuns.status, ["waiting", "active", "delayed"]))
+    .where(inArray(jobRuns.status, pendingJobStatuses))
     .orderBy(
       sql`case
         when ${jobRuns.status} = 'active' then 0
@@ -258,7 +374,7 @@ export async function getJobsDashboardRead(
       end`,
       asc(jobRuns.createdAt),
     )
-    .limit(activeLimit);
+    .limit(activeLimit * 4);
 
   const failedJobsRaw = await db
     .select()
@@ -289,9 +405,19 @@ export async function getJobsDashboardRead(
     .orderBy(desc(jobRuns.updatedAt), desc(jobRuns.createdAt))
     .limit(recentLimit);
 
+  const activeJobsWithLiveState = activeJobsRaw
+    .map((job) => applyLiveJobState(job, liveStateMap))
+    .sort((a, b) => {
+      const priority = (status: string) =>
+        status === "active" ? 0 : status === "delayed" ? 1 : 2;
+      const priorityDiff = priority(a.status) - priority(b.status);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
   const [activeJobs, failedJobs, completedJobs, recentJobs] = await Promise.all(
     [
-      filterSfwJobs(db, activeJobsRaw, sfwOnly).then((rows) =>
+      filterSfwJobs(db, activeJobsWithLiveState, sfwOnly).then((rows) =>
         rows.slice(0, 24),
       ),
       filterSfwJobs(db, failedJobsRaw, sfwOnly).then((rows) =>

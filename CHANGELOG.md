@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic galleries now remember reading progress per gallery. The gallery page shows current page progress, offers Resume when there is saved progress, and keeps Read available to start from page one.
 - Comic archives stored inside a folder now group under that folder as a single series-style gallery, with chapter archive covers used as the parent preview tiles. Flat cbz/zip files at the library root still appear as standalone galleries.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
+- The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
 - Detail-page linked media now uses the same content-specific thumbnail cards as Search and the main library views, so Series and Audio Track tabs no longer borrow video or album thumbnail rendering.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
@@ -39,6 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
 - Comic gallery detail pages now default to Grid view so page ordering is easier to scan, while Masonry and List remain available.
+- Gallery image thumbnail and fingerprint jobs now use live pg-boss state when the dashboard calculates Running, Queued, and Delayed counts, fixing stale waiting rows during active processing.
 - Actor, tag, and studio detail tabs now flatten gallery and audio-library hierarchy filters and use each endpoint's native relation filter, so their related-media counts match the items shown in the tab.
 - Detail-page media tabs now fetch their first page when they mount without SSR-hydrated items, fixing empty linked-gallery and linked-series grids for tags, actors, and studios.
 - Series and Audio Track tabs on tag, actor, and studio pages now render with their own universal thumbnail components instead of the Video or Audio Library card renderers.
