@@ -14,6 +14,10 @@
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import { deleteTag, updateTag } from "$lib/api/entities";
+  import {
+    detectUiPrefsFormFactor,
+    formFactorUiPrefKey,
+  } from "$lib/prefs/form-factor-prefs";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -75,7 +79,7 @@
   const presetsApi = createServerPresets("tags:filterPresets");
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
-    "tags:view",
+    formFactorUiPrefKey("tags:view", detectUiPrefsFormFactor()),
     { cols: 2, viewMode: "grid" },
     data.viewPrefs,
   );

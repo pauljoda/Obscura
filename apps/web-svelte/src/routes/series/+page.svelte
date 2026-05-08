@@ -32,6 +32,10 @@
     updateVideo,
   } from "$lib/api/videos";
   import { videoListItemToCardData } from "$lib/video-card-data";
+  import {
+    detectUiPrefsFormFactor,
+    formFactorUiPrefKey,
+  } from "$lib/prefs/form-factor-prefs";
   import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
@@ -159,7 +163,7 @@
   const presetsApi = createServerPresets(SERIES_PRESETS_KEY);
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
-    "series:view",
+    formFactorUiPrefKey("series:view", detectUiPrefsFormFactor()),
     { cols: 2 },
     data.viewPrefs,
   );

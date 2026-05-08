@@ -3,6 +3,7 @@ import { Grid2x2, List } from "@lucide/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Harness from "./_test/Harness.svelte";
 import StubCard from "./_test/StubCard.svelte";
+import { surfacePrefsKey } from "./prefs/surface-prefs.svelte";
 import type {
   FilterSectionSpec,
   MediaSurfaceConfig,
@@ -200,6 +201,71 @@ describe("MediaSurface", () => {
     };
     mockUiPrefsApi({
       "surface:detail-videos:prefs": savedPrefs,
+    });
+    const fetcher = vi.fn(
+      async (_args: { prefs: SurfacePrefs<"resolution" | "tag"> }) => ({
+        items: items(100, 2),
+        total: 2,
+      }),
+    );
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "detail-videos",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs: { ...defaultPrefs, cols: 5 },
+      sortOptions: [
+        { value: "recent", label: "Recent" },
+        { value: "title", label: "Title A-Z" },
+      ],
+      viewModes: [
+        { mode: "grid", icon: Grid2x2, label: "Grid view" },
+        { mode: "list", icon: List, label: "List view" },
+      ],
+      thumbSize: { min: 2, max: 8, default: 5 },
+    };
+
+    render(Harness, { props: { config } });
+
+    await waitFor(() => {
+      const prefs = fetcher.mock.calls.map(([arg]) => arg.prefs);
+      expect(prefs).toContainEqual(expect.objectContaining(savedPrefs));
+    });
+    expect(screen.getByRole("button", { name: /list view/i }).className).toContain(
+      "text-text-accent",
+    );
+  });
+
+  it("derives form-factor specific surface preference keys", () => {
+    expect(surfacePrefsKey("images", "mobile")).toBe("surface:images:mobile:prefs");
+    expect(surfacePrefsKey("images", "desktop")).toBe("surface:images:desktop:prefs");
+  });
+
+  it("loads the mobile surface preference key on mobile viewports", async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      viewMode: "list",
+      sortBy: "title",
+      sortDir: "asc",
+      cols: 2,
+    };
+    mockUiPrefsApi({
+      "surface:detail-videos:mobile:prefs": savedPrefs,
+      "surface:detail-videos:desktop:prefs": {
+        ...defaultPrefs,
+        viewMode: "grid",
+        sortBy: "recent",
+        sortDir: "desc",
+        cols: 8,
+      },
     });
     const fetcher = vi.fn(
       async (_args: { prefs: SurfacePrefs<"resolution" | "tag"> }) => ({

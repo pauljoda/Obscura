@@ -6,9 +6,16 @@
  */
 
 import { fetchApi } from "$lib/api/core";
+import {
+  detectUiPrefsFormFactor,
+  formFactorUiPrefKey,
+  type UiPrefsFormFactor,
+} from "$lib/prefs/form-factor-prefs";
 import { createServerPrefs, type ServerPrefs } from "$lib/server-prefs.svelte";
 import { validateSurfacePrefs } from "./prefs-validator";
 import type { MediaSurfaceConfig, SurfacePrefs } from "../config";
+
+export type SurfacePrefsFormFactor = UiPrefsFormFactor;
 
 export interface CreateSurfacePrefsOptions<F extends string> {
   config: Pick<
@@ -26,8 +33,15 @@ export interface CreateSurfacePrefsOptions<F extends string> {
   legacyKey?: string;
 }
 
-export function surfacePrefsKey(surfaceId: string): string {
+export function legacySurfacePrefsKey(surfaceId: string): string {
   return `surface:${surfaceId}:prefs`;
+}
+
+export function surfacePrefsKey(
+  surfaceId: string,
+  formFactor: SurfacePrefsFormFactor = "desktop",
+): string {
+  return formFactorUiPrefKey(`surface:${surfaceId}`, formFactor) + ":prefs";
 }
 
 export function surfacePresetsKey(surfaceId: string): string {
@@ -42,7 +56,11 @@ interface LegacyResponse<T> {
 export function createSurfacePrefs<F extends string>(
   opts: CreateSurfacePrefsOptions<F>,
 ): ServerPrefs<SurfacePrefs<F>> {
-  const key = surfacePrefsKey(opts.config.surfaceId);
+  const key = surfacePrefsKey(
+    opts.config.surfaceId,
+    detectUiPrefsFormFactor(),
+  );
+  const legacySurfaceKey = legacySurfacePrefsKey(opts.config.surfaceId);
   const defaultPrefs: SurfacePrefs<F> = {
     ...opts.config.defaultPrefs,
     cols: opts.config.thumbSize?.min ?? opts.config.defaultPrefs.cols,
@@ -64,20 +82,23 @@ export function createSurfacePrefs<F extends string>(
   // Best-effort one-time migration from a legacy DB key. We don't gate
   // the surface load on this; if it fails or the legacy value is
   // invalid, we silently fall back to defaults.
-  if (opts.legacyKey && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     void (async () => {
       try {
         const surfaceRow = await fetchApi<LegacyResponse<unknown>>(
           `/ui-prefs/${encodeURIComponent(key)}`,
         );
         if (surfaceRow.value) return; // surface key already populated
-        const legacyRow = await fetchApi<LegacyResponse<unknown>>(
-          `/ui-prefs/${encodeURIComponent(opts.legacyKey!)}`,
-        );
-        if (!legacyRow.value) return;
-        const validated = validateSurfacePrefs<F>(validationConfig, legacyRow.value);
-        if (!validated) return;
-        prefs.set(validated);
+        for (const fallbackKey of [legacySurfaceKey, opts.legacyKey].filter(Boolean)) {
+          const legacyRow = await fetchApi<LegacyResponse<unknown>>(
+            `/ui-prefs/${encodeURIComponent(fallbackKey!)}`,
+          );
+          if (!legacyRow.value) continue;
+          const validated = validateSurfacePrefs<F>(validationConfig, legacyRow.value);
+          if (!validated) continue;
+          prefs.set(validated);
+          return;
+        }
       } catch {
         // ignore — defaults stand
       }

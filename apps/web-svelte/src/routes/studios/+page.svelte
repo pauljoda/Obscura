@@ -16,6 +16,10 @@
   import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
   import { deleteStudio, updateStudio } from "$lib/api/entities";
+  import {
+    detectUiPrefsFormFactor,
+    formFactorUiPrefKey,
+  } from "$lib/prefs/form-factor-prefs";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
@@ -73,7 +77,7 @@
   const presetsApi = createServerPresets("studios:filterPresets");
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
-    "studios:view",
+    formFactorUiPrefKey("studios:view", detectUiPrefsFormFactor()),
     { cols: 2, viewMode: "grid" },
     data.viewPrefs,
   );

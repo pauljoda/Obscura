@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### What's New
+
+- Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
+- The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
+
+### Changed
+
+- Library surface view preferences now use form-factor scoped database keys (`mobile` / `desktop`) while saved filter presets remain shared. Existing unscoped preference rows are used as a one-time fallback so current layouts seed the new scoped keys instead of resetting abruptly.
+
+### Fixed
+
+- The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.
+
 ## [0.21.1] - 2026-05-06
 ### What's New
 

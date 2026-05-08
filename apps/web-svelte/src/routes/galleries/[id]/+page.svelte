@@ -15,6 +15,10 @@
   import InlineRating from "$lib/components/InlineRating.svelte";
   import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
+  import {
+    detectUiPrefsFormFactor,
+    formFactorUiPrefKey,
+  } from "$lib/prefs/form-factor-prefs";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
 
   let { data } = $props();
@@ -47,7 +51,7 @@
 
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
-    "galleries:interiorView",
+    formFactorUiPrefKey("galleries:interiorView", detectUiPrefsFormFactor()),
     { cols: 3 },
     data.viewPrefs,
   );
