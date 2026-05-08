@@ -280,6 +280,7 @@
                   loadedStart: 0,
                 },
               }}
+              initialPrefsByFormFactor={data.surfacePrefs}
               legacyPrefsKey={`gallery:${g.id}:imageFilterPresets`}
             />
           {/snippet}

@@ -5,8 +5,8 @@
   // Type-erased prop on the test boundary — callers pass a typed config
   // and we forward it to MediaSurface, which is itself fully generic.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let { config }: { config: any } = $props();
+  let { config, initialPrefsByFormFactor }: { config: any; initialPrefsByFormFactor?: any } = $props();
   provideNsfw(() => ({ initialMode: "show", lanAutoEnable: false }));
 </script>
 
-<MediaSurface {config} />
+<MediaSurface {config} {initialPrefsByFormFactor} />

@@ -70,7 +70,11 @@
       </div>
     </div>
 
-    <MediaSurface {config} legacyPrefsKey="audio:filterPresets" />
+    <MediaSurface
+      {config}
+      initialPrefsByFormFactor={data.surfacePrefs}
+      legacyPrefsKey="audio:filterPresets"
+    />
   </div>
 </UploadDropZone>
 

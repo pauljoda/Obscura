@@ -9,6 +9,7 @@ import { fetchApi } from "$lib/api/core";
 import {
   detectUiPrefsFormFactor,
   formFactorUiPrefKey,
+  type FormFactorUiPrefs,
   type UiPrefsFormFactor,
 } from "$lib/prefs/form-factor-prefs";
 import { createServerPrefs, type ServerPrefs } from "$lib/server-prefs.svelte";
@@ -24,6 +25,8 @@ export interface CreateSurfacePrefsOptions<F extends string> {
   >;
   /** Server-loaded snapshot from the page's load function. */
   initial?: Partial<SurfacePrefs<F>> | null;
+  /** Server-loaded mobile/desktop snapshots so the client can pick before mount. */
+  initialByFormFactor?: FormFactorUiPrefs<Partial<SurfacePrefs<F>> | null>;
   /**
    * Optional legacy key to read once and migrate from. If the surface
    * key is empty/missing on first load and this key has a value, the
@@ -41,7 +44,7 @@ export function surfacePrefsKey(
   surfaceId: string,
   formFactor: SurfacePrefsFormFactor = "desktop",
 ): string {
-  return formFactorUiPrefKey(`surface:${surfaceId}`, formFactor) + ":prefs";
+  return formFactorUiPrefKey(`surface:${surfaceId}`, formFactor, ":prefs");
 }
 
 export function surfacePresetsKey(surfaceId: string): string {
@@ -56,10 +59,8 @@ interface LegacyResponse<T> {
 export function createSurfacePrefs<F extends string>(
   opts: CreateSurfacePrefsOptions<F>,
 ): ServerPrefs<SurfacePrefs<F>> {
-  const key = surfacePrefsKey(
-    opts.config.surfaceId,
-    detectUiPrefsFormFactor(),
-  );
+  const formFactor = detectUiPrefsFormFactor();
+  const key = surfacePrefsKey(opts.config.surfaceId, formFactor);
   const legacySurfaceKey = legacySurfacePrefsKey(opts.config.surfaceId);
   const defaultPrefs: SurfacePrefs<F> = {
     ...opts.config.defaultPrefs,
@@ -67,8 +68,9 @@ export function createSurfacePrefs<F extends string>(
   };
   const validationConfig = { ...opts.config, defaultPrefs };
 
-  const initial = opts.initial
-    ? (validateSurfacePrefs<F>(validationConfig, opts.initial) ??
+  const initialCandidate = opts.initialByFormFactor?.[formFactor] ?? opts.initial;
+  const initial = initialCandidate
+    ? (validateSurfacePrefs<F>(validationConfig, initialCandidate) ??
         defaultPrefs)
     : null;
 

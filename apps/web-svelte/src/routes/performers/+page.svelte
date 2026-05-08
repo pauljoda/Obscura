@@ -157,6 +157,7 @@
 
   <MediaSurface
     config={{ ...config, extraFilterSections: drawerSections }}
+    initialPrefsByFormFactor={data.surfacePrefs}
     legacyPrefsKey="performers:filterPresets"
   />
 </div>

@@ -239,6 +239,7 @@
         },
         extraFilterSections: drawerSections,
       }}
+      initialPrefsByFormFactor={data.surfacePrefs}
       legacyPrefsKey="images:filterPresets"
     />
   </div>

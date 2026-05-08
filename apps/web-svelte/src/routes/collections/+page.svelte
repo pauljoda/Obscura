@@ -43,5 +43,9 @@
     </a>
   </div>
 
-  <MediaSurface {config} legacyPrefsKey="collections:filterPresets" />
+  <MediaSurface
+    {config}
+    initialPrefsByFormFactor={data.surfacePrefs}
+    legacyPrefsKey="collections:filterPresets"
+  />
 </div>

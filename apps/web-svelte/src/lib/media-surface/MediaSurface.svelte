@@ -11,6 +11,7 @@
   import Toolbar from "./toolbar/Toolbar.svelte";
   import {
     createSurfacePrefs,
+    type SurfacePrefsFormFactor,
     surfacePresetsKey,
   } from "./prefs/surface-prefs.svelte";
   import { encodeSurfacePrefs } from "./prefs/prefs-codec";
@@ -33,6 +34,10 @@
     baseFetchParams?: Record<string, unknown>;
     /** Legacy prefs key to read once and migrate from. */
     legacyPrefsKey?: string;
+    /** Mobile/desktop prefs loaded by SvelteKit before this component mounts. */
+    initialPrefsByFormFactor?: Partial<
+      Record<SurfacePrefsFormFactor, Partial<SurfacePrefs<F>> | null>
+    >;
     /** Display formatter for filter chips (e.g. resolve studio id → name). */
     formatFilterValue?: (filter: { type: F; value: string; label: string }) => string;
     /** Called whenever the selection set changes. */
@@ -43,6 +48,7 @@
     config,
     baseFetchParams,
     legacyPrefsKey,
+    initialPrefsByFormFactor,
     formatFilterValue,
     onSelectionChange,
   }: Props = $props();
@@ -51,6 +57,7 @@
   const prefsStore = createSurfacePrefs<F>({
     config,
     initial: null,
+    initialByFormFactor: initialPrefsByFormFactor,
     legacyKey: legacyPrefsKey,
   });
   // svelte-ignore state_referenced_locally

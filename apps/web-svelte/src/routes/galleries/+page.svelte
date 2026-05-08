@@ -60,7 +60,11 @@
     </span>
   </div>
 
-  <MediaSurface {config} legacyPrefsKey="galleries:filterPresets" />
+  <MediaSurface
+    {config}
+    initialPrefsByFormFactor={data.surfacePrefs}
+    legacyPrefsKey="galleries:filterPresets"
+  />
 </div>
 
 <ConfirmDeleteDialog

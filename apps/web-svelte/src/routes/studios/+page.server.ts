@@ -1,7 +1,10 @@
 import type { PageServerLoad } from "./$types";
 import { fetchStudios } from "$lib/server/media";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import { loadUiPrefObject } from "$lib/server/ui-prefs";
+import {
+  loadFormFactorUiPrefObjects,
+  loadUiPrefObject,
+} from "$lib/server/ui-prefs";
 
 export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
   depends("studios");
@@ -11,6 +14,10 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
   }));
   return {
     studios: response.studios,
+    viewPrefsByFormFactor: await loadFormFactorUiPrefObjects(
+      "studios:view",
+      { cols: 2, viewMode: "grid" },
+    ),
     viewPrefs: await loadUiPrefObject("studios:view", { cols: 2 }),
   };
 };

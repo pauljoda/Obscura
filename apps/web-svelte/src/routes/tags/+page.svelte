@@ -22,6 +22,7 @@
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
   let { data } = $props();
+  const viewPrefsFormFactor = detectUiPrefsFormFactor();
 
   const sortOptions = [
     { value: "videos", label: "Usage Count" },
@@ -79,9 +80,9 @@
   const presetsApi = createServerPresets("tags:filterPresets");
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
-    formFactorUiPrefKey("tags:view", detectUiPrefsFormFactor()),
+    formFactorUiPrefKey("tags:view", viewPrefsFormFactor),
     { cols: 2, viewMode: "grid" },
-    data.viewPrefs,
+    data.viewPrefsByFormFactor?.[viewPrefsFormFactor] ?? data.viewPrefs,
   );
   const viewMode = $derived(viewPrefs.current.viewMode);
 

@@ -54,6 +54,7 @@
   } from "$lib/prefs/series-list-prefs";
 
   let { data } = $props();
+  const viewPrefsFormFactor = detectUiPrefsFormFactor();
 
   const videoSortOptions = [
     { value: "episode", label: "Episode order" },
@@ -163,9 +164,9 @@
   const presetsApi = createServerPresets(SERIES_PRESETS_KEY);
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number }>(
-    formFactorUiPrefKey("series:view", detectUiPrefsFormFactor()),
+    formFactorUiPrefKey("series:view", viewPrefsFormFactor),
     { cols: 2 },
-    data.viewPrefs,
+    data.viewPrefsByFormFactor?.[viewPrefsFormFactor] ?? data.viewPrefs,
   );
   let studiosList = $state<AvailableItem[]>([]);
   let tagsList = $state<AvailableItem[]>([]);

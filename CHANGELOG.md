@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - Comic reader side-tap and keyboard navigation no longer reopens the floating controls after they have auto-hidden. Only a center tap brings the reader chrome back.
+- Library view preferences now initialize from server-loaded mobile/desktop preference snapshots, so saved view mode and thumbnail size are applied before the first client-side preference fetch instead of animating from defaults after mount.
 - The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.
 
 ### Docs

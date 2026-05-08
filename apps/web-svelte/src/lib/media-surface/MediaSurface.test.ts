@@ -301,4 +301,54 @@ describe("MediaSurface", () => {
       "text-text-accent",
     );
   });
+
+  it("uses server-loaded mobile preferences before the mount fetch resolves", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      viewMode: "list",
+      sortBy: "title",
+      sortDir: "asc",
+      cols: 2,
+    };
+    const fetcher = vi.fn(async () => ({ items: items(100, 2), total: 2 }));
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "detail-videos",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs: { ...defaultPrefs, cols: 5 },
+      sortOptions: [
+        { value: "recent", label: "Recent" },
+        { value: "title", label: "Title A-Z" },
+      ],
+      viewModes: [
+        { mode: "grid", icon: Grid2x2, label: "Grid view" },
+        { mode: "list", icon: List, label: "List view" },
+      ],
+      thumbSize: { min: 2, max: 8, default: 5 },
+    };
+
+    render(Harness, {
+      props: {
+        config,
+        initialPrefsByFormFactor: {
+          mobile: savedPrefs,
+          desktop: { ...defaultPrefs, viewMode: "grid", cols: 8 },
+        },
+      },
+    });
+
+    expect(screen.getByRole("button", { name: /list view/i }).className).toContain(
+      "text-text-accent",
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+  });
 });

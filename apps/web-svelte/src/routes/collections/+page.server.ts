@@ -1,6 +1,9 @@
 import type { PageServerLoad } from "./$types";
 import { fetchCollections } from "$lib/server/media";
-import { loadUiPrefObject } from "$lib/server/ui-prefs";
+import {
+  loadFormFactorUiPrefObjects,
+  loadUiPrefObject,
+} from "$lib/server/ui-prefs";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 
 const PAGE_SIZE = 60;
@@ -35,6 +38,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    surfacePrefs: await loadFormFactorUiPrefObjects("surface:collections", {}, ":prefs"),
     viewPrefs: await loadUiPrefObject("collections:view", { cols: 2 }),
   };
 };

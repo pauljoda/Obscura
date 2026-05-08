@@ -24,6 +24,7 @@
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
 
   let { data } = $props();
+  const viewPrefsFormFactor = detectUiPrefsFormFactor();
 
   const sortOptions = [
     { value: "name", label: "Name" },
@@ -77,9 +78,9 @@
   const presetsApi = createServerPresets("studios:filterPresets");
   // svelte-ignore state_referenced_locally
   const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
-    formFactorUiPrefKey("studios:view", detectUiPrefsFormFactor()),
+    formFactorUiPrefKey("studios:view", viewPrefsFormFactor),
     { cols: 2, viewMode: "grid" },
-    data.viewPrefs,
+    data.viewPrefsByFormFactor?.[viewPrefsFormFactor] ?? data.viewPrefs,
   );
   const viewMode = $derived(viewPrefs.current.viewMode);
 

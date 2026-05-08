@@ -14,7 +14,10 @@ import {
 } from "$lib/prefs/series-list-prefs";
 import { getWebDb } from "$lib/server/db";
 import { serverFetch } from "$lib/server/core";
-import { loadUiPrefObject } from "$lib/server/ui-prefs";
+import {
+  loadFormFactorUiPrefObjects,
+  loadUiPrefObject,
+} from "$lib/server/ui-prefs";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
 const PAGE_SIZE = 60;
@@ -149,6 +152,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     view,
     nsfwMode,
     prefs,
+    viewPrefsByFormFactor: await loadFormFactorUiPrefObjects("series:view", { cols: 2 }),
     viewPrefs: await loadUiPrefObject("series:view", { cols: 2 }),
     streamed: {
       studios: studiosPromise,

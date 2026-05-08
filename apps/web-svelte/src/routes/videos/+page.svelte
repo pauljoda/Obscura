@@ -118,7 +118,11 @@
       </div>
     </div>
 
-    <MediaSurface {config} legacyPrefsKey="videos:listPrefs" />
+    <MediaSurface
+      {config}
+      initialPrefsByFormFactor={data.surfacePrefs}
+      legacyPrefsKey="videos:listPrefs"
+    />
   </div>
 </UploadDropZone>
 
