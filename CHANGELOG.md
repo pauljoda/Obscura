@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Docs
 
 - Documented the planned comic-aware gallery experience, including archive-native cbz/zip reading, ComicInfo metadata mapping, natural page ordering, scoped Images browsing, and the dedicated comic reader.
+- Added the implementation plan for comic-aware galleries so the archive metadata, scoped gallery browser, cover behavior, and reader work can land in small reviewable commits.
 
 ## [0.21.1] - 2026-05-06
 ### What's New
