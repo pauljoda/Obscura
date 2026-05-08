@@ -1,6 +1,7 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  excludeLibraryRootDir,
   hierarchyFolderDepth,
   libraryContainerTitle,
   mergeLibraryRootIntoDiscoveredDirs,
@@ -24,6 +25,13 @@ describe("mergeLibraryRootIntoDiscoveredDirs", () => {
   it("keeps the real root when media files live directly under it", () => {
     const out = mergeLibraryRootIntoDiscoveredDirs([root], root);
     expect(out).toEqual([root]);
+  });
+});
+
+describe("excludeLibraryRootDir", () => {
+  it("removes the library root while keeping nested discovered folders", () => {
+    const out = excludeLibraryRootDir([root, series, season], root);
+    expect(out).toEqual([series, season]);
   });
 });
 

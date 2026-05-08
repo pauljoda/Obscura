@@ -70,6 +70,13 @@ export function mergeLibraryRootIntoDiscoveredDirs(
   return sortPathsParentFirst(set);
 }
 
+export function excludeLibraryRootDir(
+  dirPaths: Iterable<string>,
+  rootPath: string,
+): string[] {
+  return [...dirPaths].filter((dirPath) => path.resolve(dirPath) !== path.resolve(rootPath));
+}
+
 export function libraryContainerTitle(
   dirPath: string,
   _rootPath: string,

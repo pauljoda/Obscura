@@ -30,6 +30,7 @@ import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqu
 import { ensureLibrarySettingsRow } from "../lib/scheduler.js";
 import { removeGeneratedImageDirs } from "../lib/helpers.js";
 import {
+  excludeLibraryRootDir,
   groupFilesByDirectory,
   libraryContainerTitle,
   mergeLibraryRootIntoDiscoveredDirs,
@@ -208,7 +209,8 @@ export async function processGalleryScan(job: Job) {
     discovery.dirs,
     root.path,
   );
-  const discoveredDirSet = new Set(sortedDirs);
+  const galleryDirs = excludeLibraryRootDir(sortedDirs, root.path);
+  const discoveredDirSet = new Set(galleryDirs);
   const includeRootInParentMap = discoveredDirSet.has(root.path);
 
   // -- Cleanup stale folder-based galleries --
@@ -272,7 +274,7 @@ export async function processGalleryScan(job: Job) {
     await db.delete(images).where(inArray(images.id, staleImageIds));
   }
 
-  const totalWork = sortedDirs.length + discovery.zipFiles.length;
+  const totalWork = galleryDirs.length + discovery.zipFiles.length;
   let processed = 0;
 
   // -- Process folder-based galleries --
@@ -284,7 +286,7 @@ export async function processGalleryScan(job: Job) {
       .map((gallery) => [gallery.folderPath, gallery.id]),
   );
 
-  for (const dirPath of sortedDirs) {
+  for (const dirPath of galleryDirs) {
     const dirImages = imagesByDir.get(dirPath) ?? [];
 
     // Upsert gallery

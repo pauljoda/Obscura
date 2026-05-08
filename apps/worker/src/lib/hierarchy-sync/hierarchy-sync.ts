@@ -1,5 +1,6 @@
 export {
   sortPathsParentFirst,
+  excludeLibraryRootDir,
   resolveParentPathId,
   toRelativeHierarchyPath,
   pickStaleContainerIds,

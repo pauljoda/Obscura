@@ -48,6 +48,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     performer: performerName,
     nsfw,
     limit: GALLERY_LIMIT,
+    root: "all",
   });
   const imagesQs = buildQueryString({
     performer: performerName,
@@ -60,6 +61,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     performer: performerName,
     nsfw,
     limit: AUDIO_LIMIT,
+    root: "all",
   });
   const audioTracksQs = buildQueryString({
     performer: performerName,

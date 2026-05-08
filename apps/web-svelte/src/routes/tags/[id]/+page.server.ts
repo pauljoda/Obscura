@@ -66,6 +66,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     tag: tagName,
     nsfw,
     limit: GALLERY_LIMIT,
+    root: "all",
   });
   const seriesQs = buildQueryString({
     tag: tagName,
@@ -81,6 +82,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     tag: tagName,
     nsfw,
     limit: AUDIO_LIMIT,
+    root: "all",
   });
   const audioTracksQs = buildQueryString({
     tag: tagName,

@@ -16,15 +16,16 @@ vi.mock("$lib/nsfw/cookie", () => ({
   parseNsfwModeCookie,
 }));
 
-describe("/performers/[id] page server load", () => {
+describe("/studios/[id] page server load", () => {
   beforeEach(() => {
     serverFetch.mockReset();
     parseNsfwModeCookie.mockClear();
 
     serverFetch.mockImplementation((path: string) => {
-      if (path.startsWith("/performers/performer-1")) {
-        return Promise.resolve({ id: "performer-1", name: "Alice Actor" });
+      if (path.startsWith("/studios/studio-1")) {
+        return Promise.resolve({ id: "studio-1", name: "Studio One" });
       }
+      if (path.startsWith("/studios?")) return Promise.resolve({ studios: [] });
       if (path.startsWith("/videos")) return Promise.resolve({ videos: [], total: 0 });
       if (path.startsWith("/video-series")) return Promise.resolve({ items: [], total: 0 });
       if (path.startsWith("/galleries")) return Promise.resolve({ galleries: [], total: 0 });
@@ -35,11 +36,11 @@ describe("/performers/[id] page server load", () => {
     });
   });
 
-  it("uses the actor name for appearance queries and fetches every linked media type", async () => {
+  it("uses endpoint-native studio filters for related media", async () => {
     const { load } = await import("./+page.server");
 
     await load({
-      params: { id: "performer-1" },
+      params: { id: "studio-1" },
       cookies: { get: vi.fn(() => "show") },
       depends: vi.fn(),
       fetch: vi.fn(),
@@ -47,17 +48,13 @@ describe("/performers/[id] page server load", () => {
 
     const paths = serverFetch.mock.calls.map(([path]) => String(path));
 
-    expect(paths.some((path) => path.startsWith("/videos?") && path.includes("performer=Alice+Actor"))).toBe(
+    expect(paths.some((path) => path.startsWith("/galleries?") && path.includes("studio=studio-1"))).toBe(true);
+    expect(paths.some((path) => path.startsWith("/images?") && path.includes("studio=studio-1"))).toBe(true);
+    expect(
+      paths.some((path) => path.startsWith("/audio-libraries?") && path.includes("studio=Studio+One")),
+    ).toBe(true);
+    expect(paths.some((path) => path.startsWith("/audio-tracks?") && path.includes("studio=Studio+One"))).toBe(
       true,
     );
-    expect(paths.some((path) => path.startsWith("/images?") && path.includes("performer=Alice+Actor"))).toBe(
-      true,
-    );
-    expect(paths.some((path) => path.startsWith("/audio-tracks?") && path.includes("performer=Alice+Actor"))).toBe(
-      true,
-    );
-    expect(paths.some((path) => path.startsWith("/galleries?") && path.includes("root=all"))).toBe(true);
-    expect(paths.some((path) => path.startsWith("/audio-libraries?") && path.includes("root=all"))).toBe(true);
-    expect(paths.some((path) => path.includes("performer=performer-1"))).toBe(false);
   });
 });

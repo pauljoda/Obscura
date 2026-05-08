@@ -27,6 +27,7 @@ interface BuildArgs {
   pageSize: number;
   page: number;
   nsfwMode: string;
+  root?: string;
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: GalleryListItemDto[]) => void;
 }
@@ -76,6 +77,7 @@ export function galleriesSurfaceConfig(
           studio,
           tag: tags,
           performer: performers,
+          root: args.root,
           ratingMin: ratingMin ? Number(ratingMin) : undefined,
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           dateFrom,

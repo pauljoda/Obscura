@@ -54,6 +54,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     studio: studio.id,
     nsfw,
     limit: GALLERY_LIMIT,
+    root: "all",
   });
   const imageQs = buildQueryString({
     studio: studio.id,
@@ -61,12 +62,13 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     limit: IMAGE_LIMIT,
   });
   const audioQs = buildQueryString({
-    studio: studio.id,
+    studio: studio.name,
     nsfw,
     limit: AUDIO_LIMIT,
+    root: "all",
   });
   const audioTracksQs = buildQueryString({
-    studio: studio.id,
+    studio: studio.name,
     nsfw,
     limit: AUDIO_TRACK_LIMIT,
     sort: "recent",

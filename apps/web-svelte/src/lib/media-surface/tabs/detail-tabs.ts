@@ -68,8 +68,16 @@ export interface DetailContext {
 
 const PAGE_SIZE = 60;
 
+function nameFilterValue(ctx: DetailContext): string {
+  return ctx.entityName ?? ctx.entityId;
+}
+
+function galleryFilterValue(ctx: DetailContext): string {
+  return ctx.entityKind === "studio" ? ctx.entityId : nameFilterValue(ctx);
+}
+
 function videosTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = nameFilterValue(ctx);
   const initial =
     ctx.initialActive?.tabId === "videos"
       ? {
@@ -116,7 +124,7 @@ function videosTab(ctx: DetailContext): MediaTabSpec {
 }
 
 function galleriesTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = galleryFilterValue(ctx);
   const initial =
     ctx.initialActive?.tabId === "galleries"
       ? {
@@ -129,6 +137,7 @@ function galleriesTab(ctx: DetailContext): MediaTabSpec {
     pageSize: PAGE_SIZE,
     page: 1,
     nsfwMode: ctx.nsfwMode,
+    root: "all",
   });
   const scopedConfig: any = {
     ...baseConfig,
@@ -162,7 +171,7 @@ function galleriesTab(ctx: DetailContext): MediaTabSpec {
 }
 
 function imagesTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = galleryFilterValue(ctx);
   const initial =
     ctx.initialActive?.tabId === "images"
       ? {
@@ -208,7 +217,7 @@ function imagesTab(ctx: DetailContext): MediaTabSpec {
 }
 
 function audioLibrariesTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = nameFilterValue(ctx);
   const initial =
     ctx.initialActive?.tabId === "audio-libraries"
       ? {
@@ -221,6 +230,7 @@ function audioLibrariesTab(ctx: DetailContext): MediaTabSpec {
     pageSize: PAGE_SIZE,
     page: 1,
     nsfwMode: ctx.nsfwMode,
+    root: "all",
   });
   const scopedConfig: any = {
     ...baseConfig,
@@ -254,7 +264,7 @@ function audioLibrariesTab(ctx: DetailContext): MediaTabSpec {
 }
 
 function audioTracksTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = nameFilterValue(ctx);
   return {
     id: "audio-tracks",
     label: "Audio Tracks",
@@ -313,7 +323,7 @@ function audioTracksTab(ctx: DetailContext): MediaTabSpec {
 }
 
 function seriesTab(ctx: DetailContext): MediaTabSpec {
-  const filterValue = ctx.entityName ?? ctx.entityId;
+  const filterValue = nameFilterValue(ctx);
   return {
     id: "series",
     label: "Series",

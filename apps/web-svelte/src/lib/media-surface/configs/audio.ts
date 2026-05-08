@@ -25,6 +25,7 @@ interface BuildArgs {
   pageSize: number;
   page: number;
   nsfwMode: string;
+  root?: string;
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: AudioLibraryListItemDto[]) => void;
 }
@@ -74,6 +75,7 @@ export function audioSurfaceConfig(
           studio,
           tag: prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value),
           performer: prefs.activeFilters.filter((f) => f.type === "performer").map((f) => f.value),
+          root: args.root,
           nsfw: args.nsfwMode,
           limit,
           offset,
