@@ -35,6 +35,8 @@ import type {
 } from "@obscura/contracts";
 import type { VideoCardListItem, PerformerItem } from "$lib/api/types";
 import AudioLibraryCard from "../configs/AudioLibraryCard.svelte";
+import AudioTrackCard from "../configs/AudioTrackCard.svelte";
+import SeriesCardWrapper from "../configs/SeriesCardWrapper.svelte";
 import VideoCardWrapper from "../configs/VideoCardWrapper.svelte";
 
 export type DetailEntityKind =
@@ -303,7 +305,7 @@ function audioTracksTab(ctx: DetailContext): MediaTabSpec {
           return { items: response.items, total: response.total };
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        card: AudioLibraryCard as unknown as any,
+        card: AudioTrackCard as unknown as any,
         bodyLayout: "list",
         defaultPrefs: {
           viewMode: "list",
@@ -361,10 +363,8 @@ function seriesTab(ctx: DetailContext): MediaTabSpec {
           );
           return { items: response.items, total: response.total };
         },
-        // Fall back to VideoCardWrapper for now; series get a dedicated
-        // SeriesCard in a future commit.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        card: VideoCardWrapper as unknown as any,
+        card: SeriesCardWrapper as unknown as any,
         bodyLayout: "grid",
         defaultPrefs: {
           viewMode: "grid",

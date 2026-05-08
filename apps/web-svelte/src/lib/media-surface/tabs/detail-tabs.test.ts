@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { detailTabsFor } from "./detail-tabs";
 import { fetchAudioLibraries, fetchGalleries, fetchImages } from "$lib/api/media";
+import AudioLibraryCard from "../configs/AudioLibraryCard.svelte";
+import AudioTrackCard from "../configs/AudioTrackCard.svelte";
+import SeriesCardWrapper from "../configs/SeriesCardWrapper.svelte";
+import VideoCardWrapper from "../configs/VideoCardWrapper.svelte";
 
 vi.mock("$lib/api/videos", () => ({
   fetchVideoCards: vi.fn(),
@@ -80,6 +84,36 @@ describe("detailTabsFor", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it("does not render series tabs with the video card renderer", () => {
+    const tabs = detailTabsFor({
+      entityKind: "tag",
+      entityId: "tag-1",
+      entityName: "Comedy",
+      nsfwMode: "show",
+      totals: { series: 1 },
+    });
+    const config = tabs.find((tab) => tab.id === "series")?.build();
+    if (!config) throw new Error("Expected series tab");
+
+    expect(config.card).not.toBe(VideoCardWrapper);
+    expect(config.card).toBe(SeriesCardWrapper);
+  });
+
+  it("does not render audio track tabs with the audio library renderer", () => {
+    const tabs = detailTabsFor({
+      entityKind: "tag",
+      entityId: "tag-1",
+      entityName: "Comedy",
+      nsfwMode: "show",
+      totals: { "audio-tracks": 1 },
+    });
+    const config = tabs.find((tab) => tab.id === "audio-tracks")?.build();
+    if (!config) throw new Error("Expected audio tracks tab");
+
+    expect(config.card).not.toBe(AudioLibraryCard);
+    expect(config.card).toBe(AudioTrackCard);
   });
 
   it("flattens scoped audio library tabs so nested performer libraries are returned", async () => {
