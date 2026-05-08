@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic galleries now have a dedicated reader with paged and webtoon modes. Paged mode supports one-page or two-page spreads, plus a First Page is Cover toggle that keeps cover pages alone before pairing the rest.
 - On mobile, the comic reader now lets pages use the full screen: controls float over the artwork, fade away after a short delay, return or hide with a center tap, and left/right taps move backward or forward.
 - Comic reader controls now recover on desktop after auto-hiding: center-clicking the page or moving the cursor near the top or bottom brings the controls back.
+- Comic galleries now remember reading progress per gallery. The gallery page shows current page progress, offers Resume when there is saved progress, and keeps Read available to start from page one.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
@@ -23,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - Comic archive helpers now understand natural page ordering and ComicInfo metadata, giving the gallery scanner a shared foundation for cbz/zip page order and comic metadata import.
+- Comic gallery pages now persist the last-read page in the existing UI preference store and show Resume plus a compact progress meter when reading has started.
 - Gallery scans now seed ComicInfo metadata from folder and cbz/zip galleries, attach comic creators as gallery performers, attach comic genres/tags/characters as tags, and index pages in natural numeric filename order.
 - Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
 - Gallery detail image browsing now uses the shared Images surface, including masonry, grid, and list views; comic galleries default to natural filename ordering and label performer metadata as Authors.

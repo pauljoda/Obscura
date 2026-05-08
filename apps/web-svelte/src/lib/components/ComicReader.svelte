@@ -29,9 +29,10 @@
     initialIndex: number;
     title?: string;
     onClose: () => void;
+    onIndexChange?: (index: number) => void;
   }
 
-  let { images, initialIndex, title = "Comic", onClose }: Props = $props();
+  let { images, initialIndex, title = "Comic", onClose, onIndexChange }: Props = $props();
 
   let readerMode = $state<ReaderMode>("paged");
   let pageMode = $state<ComicPageMode>("single");
@@ -49,12 +50,18 @@
       : `${Math.min(index + 1, images.length)} / ${images.length}`,
   );
 
+  function setReaderIndex(nextIndex: number) {
+    if (nextIndex === index) return;
+    index = nextIndex;
+    onIndexChange?.(index);
+  }
+
   function goNext() {
-    index = nextComicIndex(index, images.length, { pageMode, firstPageIsCover });
+    setReaderIndex(nextComicIndex(index, images.length, { pageMode, firstPageIsCover }));
   }
 
   function goPrev() {
-    index = previousComicIndex(index, images.length, { pageMode, firstPageIsCover });
+    setReaderIndex(previousComicIndex(index, images.length, { pageMode, firstPageIsCover }));
   }
 
   function imageSrc(image: ImageListItemDto) {
@@ -97,6 +104,18 @@
     if (zone === "previous") goPrev();
     else if (zone === "next") goNext();
     else toggleControls();
+  }
+
+  function handleWebtoonScroll(event: Event) {
+    const stage = event.currentTarget as HTMLElement;
+    const anchor = stage.scrollTop + stage.clientHeight * 0.45;
+    let nextIndex = index;
+    for (const page of stage.querySelectorAll<HTMLElement>("[data-comic-page-index]")) {
+      if (page.offsetTop <= anchor) {
+        nextIndex = Number(page.dataset.comicPageIndex ?? nextIndex);
+      }
+    }
+    setReaderIndex(nextIndex);
   }
 
   onMount(() => {
@@ -238,18 +257,24 @@
 
   {#if readerMode === "webtoon"}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="reader-stage overflow-y-auto bg-black" onpointerup={handleReaderTap}>
+    <div
+      class="reader-stage overflow-y-auto bg-black"
+      onpointerup={handleReaderTap}
+      onscroll={handleWebtoonScroll}
+    >
       <div class="mx-auto flex min-h-full w-full max-w-4xl flex-col items-center">
-        {#each images as image (image.id)}
-          <NsfwBlur isNsfw={image.isNsfw} class="w-full">
-            <img
-              src={imageSrc(image)}
-              alt={image.title}
-              class="block h-auto w-full bg-surface-1"
-              loading="lazy"
-              decoding="async"
-            />
-          </NsfwBlur>
+        {#each images as image, pageIndex (image.id)}
+          <div class="w-full" data-comic-page-index={pageIndex}>
+            <NsfwBlur isNsfw={image.isNsfw} class="w-full">
+              <img
+                src={imageSrc(image)}
+                alt={image.title}
+                class="block h-auto w-full bg-surface-1"
+                loading="lazy"
+                decoding="async"
+              />
+            </NsfwBlur>
+          </div>
         {/each}
       </div>
     </div>

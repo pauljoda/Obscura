@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invalidate, invalidateAll } from "$app/navigation";
+  import { onMount } from "svelte";
   import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
@@ -16,6 +17,17 @@
   import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
+  import { createServerPrefs } from "$lib/server-prefs.svelte";
+  import {
+    canResumeComic,
+    comicProgressLabel,
+    comicProgressPercent,
+    comicReadingProgressKey,
+    defaultComicProgress,
+    normalizeComicProgress,
+    validateComicProgress,
+    type ComicReadingProgress,
+  } from "$lib/components/comic-progress";
 
   let { data } = $props();
   let overrideRating = $state<number | null | undefined>(undefined);
@@ -49,11 +61,49 @@
   let deleteDialogOpen = $state(false);
   let pendingDelete = $state<ImageListItemDto[]>([]);
   let bulkBusy = $state(false);
+  // svelte-ignore state_referenced_locally
+  const comicProgressPrefs = createServerPrefs<ComicReadingProgress>(
+    comicReadingProgressKey(data.gallery.id),
+    defaultComicProgress,
+    data.comicProgress,
+    validateComicProgress,
+  );
+  const comicProgress = $derived(
+    normalizeComicProgress(comicProgressPrefs.current, images.length),
+  );
+  const canResume = $derived(canResumeComic(comicProgress, images.length));
+  const progressLabel = $derived(comicProgressLabel(comicProgress.pageIndex, images.length));
+  const progressPercent = $derived(comicProgressPercent(comicProgress.pageIndex, images.length));
+
+  onMount(() => {
+    void comicProgressPrefs.load();
+  });
+
+  function saveComicProgress(nextIndex: number) {
+    if (!g.isComic || images.length === 0) return;
+    const normalized = normalizeComicProgress({ pageIndex: nextIndex }, images.length);
+    comicProgressPrefs.update({
+      pageIndex: normalized.pageIndex,
+      pageCount: images.length,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  async function closeReader() {
+    saveComicProgress(readerIndex);
+    readerOpen = false;
+    await comicProgressPrefs.flush();
+  }
+
+  function openComicReaderAt(i: number) {
+    readerIndex = normalizeComicProgress({ pageIndex: i }, images.length).pageIndex;
+    saveComicProgress(readerIndex);
+    readerOpen = true;
+  }
 
   function openAt(i: number) {
     if (g.isComic) {
-      readerIndex = i;
-      readerOpen = true;
+      openComicReaderAt(i);
       return;
     }
     openLightboxAt(i);
@@ -74,8 +124,7 @@
       lightboxIndex = existingIndex;
     }
     if (g.isComic) {
-      readerIndex = existingIndex < 0 ? images.length - 1 : existingIndex;
-      readerOpen = true;
+      openComicReaderAt(existingIndex < 0 ? images.length - 1 : existingIndex);
       return;
     }
     lightboxSourceId = item.id;
@@ -199,10 +248,29 @@
     </div>
     <div class="flex items-center gap-2">
       {#if g.isComic && images.length > 0}
+        {#if canResume}
+          <div class="comic-progress-summary">
+            <div class="flex items-center justify-between gap-3">
+              <span>{progressLabel}</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div class="comic-progress-track" aria-hidden="true">
+              <div class="comic-progress-fill" style:width={`${progressPercent}%`}></div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick={() => openComicReaderAt(comicProgress.pageIndex)}
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-accent text-text-accent shadow-[0_0_18px_rgba(196,154,90,0.18)] hover:text-text-accent-bright transition-colors"
+          >
+            <BookOpen class="h-3.5 w-3.5" />
+            Resume
+          </button>
+        {/if}
         <button
           type="button"
           onclick={() => openAt(0)}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-accent text-text-accent shadow-[0_0_18px_rgba(196,154,90,0.18)] hover:text-text-accent-bright transition-colors"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
         >
           <BookOpen class="h-3.5 w-3.5" />
           Read
@@ -396,6 +464,35 @@
     {images}
     initialIndex={readerIndex}
     title={g.title}
-    onClose={() => (readerOpen = false)}
+    onIndexChange={(index) => {
+      readerIndex = index;
+      saveComicProgress(index);
+    }}
+    onClose={() => void closeReader()}
   />
 {/if}
+
+<style>
+  .comic-progress-summary {
+    min-width: 9rem;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    background: rgb(0 0 0 / 0.42);
+    padding: 0.42rem 0.55rem;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+    font-size: 0.66rem;
+    line-height: 1;
+    color: rgb(210 215 226 / 0.82);
+  }
+
+  .comic-progress-track {
+    margin-top: 0.38rem;
+    height: 0.16rem;
+    background: rgb(255 255 255 / 0.12);
+  }
+
+  .comic-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #9f6f2f, #c49a5a);
+    box-shadow: 0 0 14px rgb(196 154 90 / 0.28);
+  }
+</style>

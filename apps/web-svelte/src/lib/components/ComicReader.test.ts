@@ -143,4 +143,48 @@ describe("ComicReader", () => {
     await fireEvent.pointerEnter(bottomHoverZone!);
     expect(topLayer?.classList.contains("reader-layer-visible")).toBe(true);
   });
+
+  it("reports page changes so callers can persist reading progress", async () => {
+    const onIndexChange = vi.fn();
+    const { getByLabelText } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: 0,
+        title: "Comic",
+        onClose: vi.fn(),
+        onIndexChange: onIndexChange as never,
+      },
+    });
+
+    await fireEvent.click(getByLabelText("Next page"));
+
+    expect(onIndexChange).toHaveBeenCalledWith(1);
+  });
+
+  it("reports the nearest page while scrolling in webtoon mode", async () => {
+    const onIndexChange = vi.fn();
+    const { container, getByLabelText } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: 0,
+        title: "Comic",
+        onClose: vi.fn(),
+        onIndexChange: onIndexChange as never,
+      },
+    });
+
+    await fireEvent.click(getByLabelText("Webtoon reader"));
+    const stage = container.querySelector(".reader-stage") as HTMLElement;
+    const pages = Array.from(container.querySelectorAll("[data-comic-page-index]")) as HTMLElement[];
+    expect(pages).toHaveLength(3);
+    Object.defineProperty(stage, "scrollTop", { value: 1_300, configurable: true });
+    Object.defineProperty(stage, "clientHeight", { value: 800, configurable: true });
+    pages.forEach((page, index) => {
+      Object.defineProperty(page, "offsetTop", { value: index * 1_200, configurable: true });
+    });
+
+    await fireEvent.scroll(stage);
+
+    expect(onIndexChange).toHaveBeenCalledWith(1);
+  });
 });
