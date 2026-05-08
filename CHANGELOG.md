@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic reader controls now recover on desktop after auto-hiding: center-clicking the page or moving the cursor near the top or bottom brings the controls back.
 - Comic galleries now remember reading progress per gallery. The gallery page shows current page progress, offers Resume when there is saved progress, and keeps Read available to start from page one.
 - Comic archives stored inside a folder now group under that folder as a single series-style gallery, with chapter archive covers used as the parent preview tiles. Flat cbz/zip files at the library root still appear as standalone galleries.
+- Selected galleries can now be merged into a comic series from the Galleries list. The merge creates or reuses a real series folder on disk, moves the selected galleries under it, and lets the user label the chapter order before saving.
 - Gallery scans no longer turn the library root itself into an empty gallery card, and actor/tag/studio detail pages now show linked galleries and audio libraries even when those items live inside nested folders.
 - The Operations dashboard now reflects live worker state for gallery image thumbnail and fingerprint jobs, so jobs that pg-boss has started appear under Running instead of lingering only in the backlog counts.
 - Tag, actor, and studio detail pages now load their linked media when switching beyond the initial Videos tab, so non-video sections like Series and Galleries no longer show an empty grid while their tab badge says items exist.
@@ -33,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery and image reads now expose comic-aware gallery metadata, support a natural page-order sort for gallery images, and fall back to child gallery imagery when a parent gallery needs a cover or preview tile.
 - Gallery detail image browsing now uses the shared Images surface, including masonry, grid, and list views; comic galleries default to natural filename ordering and label performer metadata as Authors.
 - Nested comic archives now attach to their containing folder gallery during scans, and numbered archive names are shown as ordered chapter labels such as `#01` and `#02`.
+- Galleries list bulk actions now include Merge into series, with a review dialog for the series folder name and per-gallery chapter labels.
 - Added a comic reader overlay for archive galleries with paged spreads, one/two-page controls, first-page-cover handling, keyboard navigation, and a vertical webtoon roll.
 - Comic reader mobile controls now auto-hide as floating overlays, with center-tap chrome toggling and left/right tap zones for page navigation.
 

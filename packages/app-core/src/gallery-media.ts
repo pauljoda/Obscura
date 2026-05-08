@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   and,
@@ -54,6 +54,7 @@ import {
   findOrCreateStudioId,
   findOrCreateTagId,
 } from "./media-shared";
+import { planGallerySeriesMerge } from "./gallery-series-merge";
 
 const {
   galleries,
@@ -746,6 +747,153 @@ export async function updateGalleryWrite(
   });
 
   return { ok: true as const, id, ...(affectedGalleryIds ? { affectedGalleryIds } : {}) };
+}
+
+function isPathWithin(parentPath: string, candidatePath: string): boolean {
+  const relative = path.relative(parentPath, candidatePath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function numberedSeriesTitle(seriesTitle: string, sequence: number, fallback: string) {
+  return Number.isInteger(sequence) && sequence > 0
+    ? `${seriesTitle} #${String(sequence).padStart(2, "0")}`
+    : fallback;
+}
+
+export async function mergeGalleriesIntoSeriesWrite(
+  db: AppDb,
+  body: {
+    title: string;
+    galleries: Array<{ id: string; title?: string; sequence?: number }>;
+  },
+) {
+  const title = body.title?.trim();
+  if (!title) throw new ValidationError("Series title is required");
+  const requested = body.galleries ?? [];
+  if (requested.length < 1) {
+    throw new ValidationError("Choose at least one gallery to merge");
+  }
+
+  const requestedIds = [...new Set(requested.map((item) => item.id).filter(Boolean))];
+  const galleryRows = await db
+    .select({
+      id: galleries.id,
+      title: galleries.title,
+      galleryType: galleries.galleryType,
+      folderPath: galleries.folderPath,
+      zipFilePath: galleries.zipFilePath,
+      isNsfw: galleries.isNsfw,
+    })
+    .from(galleries)
+    .where(inArray(galleries.id, requestedIds));
+
+  if (galleryRows.length !== requestedIds.length) {
+    throw new NotFoundError("One or more galleries were not found");
+  }
+
+  const plan = planGallerySeriesMerge({ title, galleries: galleryRows });
+  await mkdir(plan.targetDir, { recursive: true });
+
+  for (const move of plan.moves) {
+    if (existsSync(move.destinationPath)) {
+      throw new ValidationError(`A file already exists at ${move.destinationPath}`);
+    }
+  }
+
+  for (const move of plan.moves) {
+    await rename(move.sourcePath, move.destinationPath);
+  }
+
+  const moveByGalleryId = new Map(plan.moves.map((move) => [move.galleryId, move]));
+  const inputById = new Map(requested.map((item, index) => [item.id, { ...item, index }]));
+
+  let parentGalleryId: string;
+  await db.transaction(async (tx) => {
+    const parentDir = path.dirname(plan.targetDir);
+    const [parentContainer] = await tx
+      .select({ id: galleries.id })
+      .from(galleries)
+      .where(eq(galleries.folderPath, parentDir))
+      .limit(1);
+
+    const [existingSeries] = await tx
+      .select({ id: galleries.id })
+      .from(galleries)
+      .where(eq(galleries.folderPath, plan.targetDir))
+      .limit(1);
+
+    if (existingSeries) {
+      parentGalleryId = existingSeries.id;
+      await tx
+        .update(galleries)
+        .set({ title, galleryType: "folder", updatedAt: new Date() })
+        .where(eq(galleries.id, parentGalleryId));
+    } else {
+      const [created] = await tx
+        .insert(galleries)
+        .values({
+          title,
+          galleryType: "folder",
+          folderPath: plan.targetDir,
+          parentId: parentContainer?.id ?? null,
+          imageCount: 0,
+          isNsfw: galleryRows.every((gallery) => gallery.isNsfw),
+        })
+        .returning({ id: galleries.id });
+      parentGalleryId = created.id;
+    }
+
+    for (const gallery of galleryRows) {
+      const move = moveByGalleryId.get(gallery.id);
+      const input = inputById.get(gallery.id);
+      const sequence = input?.sequence ?? (input?.index ?? 0) + 1;
+      const nextTitle =
+        input?.title?.trim() || numberedSeriesTitle(title, sequence, gallery.title);
+      const update: Record<string, unknown> = {
+        parentId: parentGalleryId,
+        title: nextTitle,
+        updatedAt: new Date(),
+      };
+
+      if (move?.kind === "zip") {
+        update.zipFilePath = move.destinationPath;
+      } else if (move?.kind === "folder") {
+        update.folderPath = move.destinationPath;
+      }
+
+      await tx.update(galleries).set(update).where(eq(galleries.id, gallery.id));
+
+      if (!move) continue;
+      const imageRows = await tx
+        .select({ id: images.id, filePath: images.filePath })
+        .from(images)
+        .where(eq(images.galleryId, gallery.id));
+
+      for (const image of imageRows) {
+        let nextPath = image.filePath;
+        if (move.kind === "zip") {
+          const oldPrefix = `${move.sourcePath}::`;
+          if (image.filePath.startsWith(oldPrefix)) {
+            nextPath = `${move.destinationPath}::${image.filePath.slice(oldPrefix.length)}`;
+          }
+        } else if (isPathWithin(move.sourcePath, image.filePath)) {
+          nextPath = path.join(
+            move.destinationPath,
+            path.relative(move.sourcePath, image.filePath),
+          );
+        }
+
+        if (nextPath !== image.filePath) {
+          await tx
+            .update(images)
+            .set({ filePath: nextPath, updatedAt: new Date() })
+            .where(eq(images.id, image.id));
+        }
+      }
+    }
+  });
+
+  return { ok: true as const, id: parentGalleryId!, targetDir: plan.targetDir };
 }
 
 export async function deleteGalleryWrite(db: AppDb, id: string, deleteFile = false) {

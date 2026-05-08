@@ -4,6 +4,7 @@
   import type { GalleryListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
+  import GalleryMergeSeriesDialog from "$lib/components/GalleryMergeSeriesDialog.svelte";
   import { deleteGallery } from "$lib/api/media";
   import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import { galleriesSurfaceConfig } from "$lib/media-surface/configs/galleries";
@@ -12,6 +13,8 @@
 
   let deleteDialogOpen = $state(false);
   let pendingDelete = $state<GalleryListItemDto[]>([]);
+  let mergeDialogOpen = $state(false);
+  let pendingMerge = $state<GalleryListItemDto[]>([]);
   let bulkBusy = $state(false);
 
   const config = $derived(
@@ -24,6 +27,10 @@
       onConfirmDelete: (selected) => {
         pendingDelete = selected;
         deleteDialogOpen = true;
+      },
+      onMergeSeries: (selected) => {
+        pendingMerge = selected;
+        mergeDialogOpen = true;
       },
     }),
   );
@@ -39,6 +46,12 @@
     } finally {
       bulkBusy = false;
     }
+  }
+
+  async function handleMerged() {
+    mergeDialogOpen = false;
+    pendingMerge = [];
+    await invalidateAll();
   }
 </script>
 
@@ -76,4 +89,11 @@
   onClose={() => (deleteDialogOpen = false)}
   onDeleteFromLibrary={() => void confirmDelete(false)}
   onDeleteFromDisk={() => void confirmDelete(true)}
+/>
+
+<GalleryMergeSeriesDialog
+  open={mergeDialogOpen}
+  galleries={pendingMerge}
+  onClose={() => (mergeDialogOpen = false)}
+  onMerged={() => void handleMerged()}
 />

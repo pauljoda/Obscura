@@ -30,6 +30,7 @@ interface BuildArgs {
   root?: string;
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: GalleryListItemDto[]) => void;
+  onMergeSeries?: (selected: GalleryListItemDto[]) => void;
 }
 
 export function galleriesSurfaceConfig(
@@ -131,6 +132,13 @@ export function galleriesSurfaceConfig(
     thumbSize: { min: 2, max: 8, default: 4, label: "Gallery card size" },
     bulkItemLabel: "galleries",
     bulkActions: [
+      {
+        id: "merge-series",
+        label: "Merge into series",
+        handler: async (selected) => {
+          args.onMergeSeries?.(selected);
+        },
+      },
       {
         id: "mark-nsfw",
         label: "Mark NSFW",

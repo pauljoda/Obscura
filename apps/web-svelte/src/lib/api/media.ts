@@ -252,6 +252,16 @@ export async function createGallery(data: {
   });
 }
 
+export async function mergeGalleriesIntoSeries(data: {
+  title: string;
+  galleries: Array<{ id: string; title?: string; sequence?: number }>;
+}): Promise<{ ok: true; id: string; targetDir: string }> {
+  return fetchApi("/galleries/merge-series", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteGallery(
   id: string,
   deleteFile?: boolean,
