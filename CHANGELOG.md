@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-09
 ### What's New
 
 - Comic and archive galleries now open into a gallery-scoped Images browser instead of a one-off masonry strip. Gallery detail pages get the shared toolbar, sort menu, view-mode toggle, thumbnail sizing, infinite loading, and bulk image actions; comic archives default to filename-number ordering so pages read in the expected order.
