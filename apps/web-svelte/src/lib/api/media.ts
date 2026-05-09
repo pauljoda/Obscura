@@ -51,6 +51,7 @@ export async function fetchGalleries(params?: {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   tag?: string[];
   performer?: string[];
   studio?: string;
@@ -74,6 +75,7 @@ export async function fetchGalleries(params?: {
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       studio: params?.studio,
       type: params?.type,
       parent: params?.parent,
@@ -103,6 +105,7 @@ export async function fetchAudioLibraries(params?: {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   tag?: string[];
   performer?: string[];
   studio?: string;
@@ -123,6 +126,7 @@ export async function fetchAudioLibraries(params?: {
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       studio: params?.studio,
       parent: params?.parent,
       root: params?.root,
@@ -149,6 +153,7 @@ export async function fetchAudioTracks(params?: {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   library?: string;
   tag?: string | string[];
   performer?: string | string[];
@@ -169,6 +174,7 @@ export async function fetchAudioTracks(params?: {
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       library: params?.library,
       studio: params?.studio,
       ratingMin: params?.ratingMin,
@@ -278,6 +284,7 @@ export async function fetchImages(params?: {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   gallery?: string;
   tag?: string[];
   performer?: string[];
@@ -301,6 +308,7 @@ export async function fetchImages(params?: {
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       gallery: params?.gallery,
       studio: params?.studio,
       animated: params?.animated,
@@ -473,6 +481,7 @@ export async function fetchCollections(params: {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   mode?: string;
   limit?: number;
   offset?: number;

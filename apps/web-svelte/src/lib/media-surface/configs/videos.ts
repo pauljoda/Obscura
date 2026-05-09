@@ -177,6 +177,7 @@ export function videosSurfaceConfig(
       const response = await fetchVideoCards(
         {
           ...fetchParams,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           seasonNumber: args.seasonNumber,
           limit,
           offset,
@@ -204,6 +205,7 @@ export function videosSurfaceConfig(
       { value: "size", label: "File Size" },
       { value: "rating", label: "Rating" },
       { value: "plays", label: "Most Played" },
+      { value: "randomized", label: "Randomized" },
     ],
     defaultSortDir: {
       recent: "desc",
@@ -213,6 +215,7 @@ export function videosSurfaceConfig(
       size: "desc",
       rating: "desc",
       plays: "desc",
+      randomized: "asc",
     },
     viewModes: [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },

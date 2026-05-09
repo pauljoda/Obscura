@@ -128,6 +128,7 @@ export function imagesSurfaceConfig(
           search: prefs.search.trim() || undefined,
           sort: prefs.sortBy,
           order: prefs.sortDir,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           gallery: args.galleryId,
           studio,
           tag: tags,
@@ -169,6 +170,7 @@ export function imagesSurfaceConfig(
       { value: "resolution", label: "Resolution" },
       { value: "size", label: "File Size" },
       { value: "rating", label: "Rating" },
+      { value: "randomized", label: "Randomized" },
     ],
     defaultSortDir: {
       recent: "desc",
@@ -178,6 +180,7 @@ export function imagesSurfaceConfig(
       resolution: "desc",
       size: "desc",
       rating: "desc",
+      randomized: "asc",
     },
     viewModes: args.viewModes ?? [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },

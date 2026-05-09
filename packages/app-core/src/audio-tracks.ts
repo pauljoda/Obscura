@@ -74,6 +74,7 @@ const audioTrackSortConfig: SortConfig = {
     duration: "desc",
   },
   fallbackColumn: audioTracks.createdAt,
+  randomColumn: audioTracks.id,
 };
 
 
@@ -173,6 +174,7 @@ export interface ListAudioTracksQuery {
   dateTo?: string;
   organized?: string;
   nsfw?: string;
+  randomSeed?: string;
 }
 
 export async function listAudioTracksRead(
@@ -240,7 +242,7 @@ export async function listAudioTracksRead(
       .select()
       .from(audioTracks)
       .where(where)
-      .orderBy(buildOrderBy(audioTrackSortConfig, query.sort, query.order))
+      .orderBy(buildOrderBy(audioTrackSortConfig, query.sort, query.order, query.randomSeed))
       .limit(limit)
       .offset(offset),
   ]);

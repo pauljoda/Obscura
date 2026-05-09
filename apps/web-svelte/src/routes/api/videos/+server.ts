@@ -25,6 +25,7 @@ const SCALAR_KEYS = [
   "seriesScope",
   "uncategorized",
   "seasonNumber",
+  "randomSeed",
 ] as const;
 
 const REPEATED_KEYS = [

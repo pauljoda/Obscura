@@ -13,6 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const search = url.searchParams.get("search");
   const sort = url.searchParams.get("sort");
   const order = url.searchParams.get("order");
+  const randomSeed = url.searchParams.get("randomSeed");
   const mode = url.searchParams.get("mode");
   const nsfw = url.searchParams.get("nsfw");
   const limit = Number(url.searchParams.get("limit"));
@@ -21,6 +22,7 @@ export const GET: RequestHandler = async ({ url }) => {
   if (search) query.search = search;
   if (sort) query.sort = sort;
   if (order === "asc" || order === "desc") query.order = order;
+  if (randomSeed) query.randomSeed = randomSeed;
   if (mode === "manual" || mode === "dynamic" || mode === "hybrid") query.mode = mode;
   if (nsfw === "on" || nsfw === "off") query.nsfw = nsfw;
   if (Number.isFinite(limit)) query.limit = limit;

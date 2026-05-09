@@ -25,6 +25,7 @@ export interface ListQuery {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   limit?: number;
   offset?: number;
   nsfw?: "on" | "off";

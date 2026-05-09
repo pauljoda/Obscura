@@ -26,7 +26,8 @@ export type SortOption =
   | "rating"
   | "date"
   | "plays"
-  | "episode";
+  | "episode"
+  | "randomized";
 export type SortDir = "asc" | "desc";
 
 export interface VideosListPrefsActiveFilter {
@@ -54,6 +55,7 @@ const SORT_OPTIONS: readonly SortOption[] = [
   "date",
   "plays",
   "episode",
+  "randomized",
 ];
 
 function parseActiveFilters(raw: unknown): VideosListPrefsActiveFilter[] | null {

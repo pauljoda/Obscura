@@ -11,7 +11,13 @@ import { isRecord } from "$lib/list-prefs";
 export const SERIES_LIST_PREFS_KEY = "series:listPrefs";
 export const SERIES_PRESETS_KEY = "series:filterPresets";
 
-export type SeriesSortOption = "recent" | "title" | "date" | "rating" | "videos";
+export type SeriesSortOption =
+  | "recent"
+  | "title"
+  | "date"
+  | "rating"
+  | "videos"
+  | "randomized";
 export type SortDir = "asc" | "desc";
 
 export interface SeriesListPrefsActiveFilter {
@@ -54,6 +60,7 @@ const SORT_OPTIONS: readonly SeriesSortOption[] = [
   "date",
   "rating",
   "videos",
+  "randomized",
 ];
 
 function parseActiveFilters(raw: unknown): SeriesListPrefsActiveFilter[] | null {

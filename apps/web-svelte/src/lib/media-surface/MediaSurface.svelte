@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends { id: string }, F extends string">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import type {
     MediaSurfaceConfig,
     SurfacePrefs,
@@ -64,6 +64,23 @@
   const presetsApi = createServerPresets(surfacePresetsKey(config.surfaceId));
 
   const reducedMotion = prefersReducedMotion();
+  let randomSortSeed = $state(createRandomSortSeed());
+
+  function createRandomSortSeed(): string {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function prefsForFetch(): SurfacePrefs<F> {
+    const prefs = prefsStore.current;
+    if (prefs.sortBy !== "randomized") return prefs;
+    return {
+      ...prefs,
+      extras: {
+        ...(prefs.extras ?? {}),
+        randomSeed: randomSortSeed,
+      },
+    };
+  }
 
   // svelte-ignore state_referenced_locally
   const coll = createPaginatedCollection<T>({
@@ -71,14 +88,21 @@
     initial: config.initial,
     getKey: config.getKey,
     fetcher: ({ offset, limit, signal }) =>
-      config.fetcher({ offset, limit, signal, prefs: prefsStore.current }),
+      config.fetcher({ offset, limit, signal, prefs: prefsForFetch() }),
   });
 
   // Re-hydrate when config.initial changes (e.g. SvelteKit load re-runs
   // after filter prefs change and the server returns a fresh first page).
   $effect(() => {
-    if (config.initial) {
-      coll.hydrate(config.initial);
+    const initial = config.initial;
+    if (initial) {
+      untrack(() => {
+        coll.hydrate(initial);
+        if (lastPrefsSignature !== "" && shouldRefetchAfterHydrate()) {
+          coll.reset();
+          void coll.loadMore();
+        }
+      });
     }
   });
 
@@ -91,6 +115,7 @@
     const sig = JSON.stringify({
       sort: prefs.sortBy,
       dir: prefs.sortDir,
+      randomSeed: prefs.sortBy === "randomized" ? randomSortSeed : undefined,
       search: prefs.search,
       filters: prefs.activeFilters,
       view: prefs.viewMode,
@@ -98,6 +123,12 @@
     if (sig === lastPrefsSignature) return;
     if (lastPrefsSignature === "") {
       lastPrefsSignature = sig;
+      if (prefs.sortBy === "randomized" && config.initial) {
+        untrack(() => {
+          coll.reset();
+          void coll.loadMore();
+        });
+      }
       return;
     }
     lastPrefsSignature = sig;
@@ -121,6 +152,9 @@
 
   // ── Toolbar callbacks ────────────────────────────────────────────────
   function onSortChange(sort: string, dir?: SortDir) {
+    if (sort === "randomized") {
+      randomSortSeed = createRandomSortSeed();
+    }
     prefsStore.update({
       sortBy: sort,
       sortDir: dir ?? prefsStore.current.sortDir,
@@ -190,6 +224,17 @@
       ...config.defaultPrefs,
       cols: config.thumbSize?.min ?? config.defaultPrefs.cols,
     };
+  }
+
+  function shouldRefetchAfterHydrate(): boolean {
+    const prefs = prefsStore.current;
+    const d = defaultPrefs();
+    return (
+      prefs.sortBy !== d.sortBy ||
+      prefs.sortDir !== d.sortDir ||
+      prefs.search !== d.search ||
+      prefs.activeFilters.length > 0
+    );
   }
 
   // ── Presets ──────────────────────────────────────────────────────────

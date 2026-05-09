@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail-page linked media now uses the same content-specific thumbnail cards as Search and the main library views, so Series and Audio Track tabs no longer borrow video or album thumbnail rendering.
 - Library view preferences are now saved separately for mobile and desktop layouts. A phone can keep a compact feed/list setup while a desktop keeps a wider grid, without the two devices overwriting each other's view choices.
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
+- Library grids now include a Randomized sort option that reshuffles results on each reload while keeping infinite scrolling stable during that visit.
+- Gallery series merges now keep the visible grid in sync with the active sort and filters after the merge completes, so the controls no longer show one state while the cards use another.
 
 ### Changed
 
@@ -43,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Library grid sort menus now include a Randomized option across Videos, Series, Images, Galleries, Collections, Actors, Tags, Studios, Audio Libraries, Audio Tracks, and detail-page related-media tabs.
 - Comic archive helpers now understand natural page ordering and ComicInfo metadata, giving the gallery scanner a shared foundation for cbz/zip page order and comic metadata import.
 - Comic gallery pages now persist the last-read page in the existing UI preference store and show Resume plus a compact progress meter when reading has started.
 - Gallery scans now seed ComicInfo metadata from folder and cbz/zip galleries, attach comic creators as gallery performers, attach comic genres/tags/characters as tags, and index pages in natural numeric filename order.
@@ -57,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Shared library surfaces now refetch active persisted filters and sorts after server-side data is rehydrated, fixing stale default-ordered cards after actions such as merging selected galleries into a series.
 - Gallery scans no longer create a folder gallery for the library root when comics or loose images are stored directly under that root.
 - Same-named folders containing a single cbz/zip archive are no longer imported as redundant parent galleries, and comic filtering now treats image-empty folders as comics only when all direct child galleries are comic archives.
 - Merge into series no longer rejects selected cbz/zip galleries that came from separate same-named wrapper folders, and it now cleans up those old wrapper folders after moving the archives when they are empty.

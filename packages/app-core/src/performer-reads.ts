@@ -51,6 +51,7 @@ export interface ListPerformersQuery {
   hasImage?: string;
   videoCountMin?: string;
   counts?: string;
+  randomSeed?: string;
 }
 
 export interface PerformerListEntry {
@@ -221,6 +222,13 @@ export async function listPerformersRead(
       break;
     case "rating":
       orderBy = sortDir(performers.rating);
+      break;
+    case "randomized":
+      orderBy = asc(
+        query.randomSeed
+          ? sql`md5(${performers.id}::text || ${query.randomSeed})`
+          : sql`random()`,
+      );
       break;
     case "recent":
     default:

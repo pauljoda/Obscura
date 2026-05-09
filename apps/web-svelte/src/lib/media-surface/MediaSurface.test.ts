@@ -180,6 +180,56 @@ describe("MediaSurface", () => {
     });
   });
 
+  it("re-fetches persisted filters after server data is rehydrated", async () => {
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      sortBy: "title",
+      sortDir: "asc",
+      activeFilters: [{ type: "resolution", label: "Resolution", value: "1080p" }],
+    };
+    mockUiPrefsApi({
+      "surface:test-rehydrate:desktop:prefs": savedPrefs,
+    });
+    const fetcher = vi.fn(async () => ({ items: items(100, 2), total: 2 }));
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "test-rehydrate",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs,
+      sortOptions: [
+        { value: "recent", label: "Recent" },
+        { value: "title", label: "Title A-Z" },
+      ],
+      filterSections: [
+        {
+          kind: "enum",
+          filterType: "resolution",
+          label: "Resolution",
+        },
+      ],
+    };
+
+    const { rerender } = render(Harness, { props: { config } });
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ prefs: savedPrefs }));
+    });
+    fetcher.mockClear();
+
+    await rerender({
+      config: {
+        ...config,
+        initial: { items: items(50, 2), total: 2, loadedStart: 0 },
+      },
+    });
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ prefs: savedPrefs }));
+    });
+  });
+
   it("encodes activeFilters via the fetcher's prefs argument", async () => {
     const fetcher = vi.fn(async () => ({ items: [], total: 0 }));
     const sections: FilterSectionSpec<"resolution" | "tag">[] = [

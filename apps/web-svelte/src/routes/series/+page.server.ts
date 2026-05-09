@@ -44,7 +44,8 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
           rootSort === "title" ||
           rootSort === "date" ||
           rootSort === "rating" ||
-          rootSort === "videos"
+          rootSort === "videos" ||
+          rootSort === "randomized"
             ? rootSort
             : parsedPrefs.sortBy,
         sortDir:
@@ -66,12 +67,14 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const view: "grid" | "list" = viewRaw === "list" ? "list" : "grid";
   const pageParam = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const randomSeed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const seriesFetchParams = seriesListPrefsToFetchParams(prefs, nsfwMode);
 
   const seriesResponse = !seriesParam
     ? await fetchSeries(
         {
           ...seriesFetchParams,
+          randomSeed: seriesFetchParams.sort === "randomized" ? randomSeed : undefined,
           root: "all",
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
@@ -103,6 +106,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
           search,
           sort,
           order,
+          randomSeed: sort === "randomized" ? randomSeed : undefined,
           videoSeriesId: seriesParam ?? undefined,
           seasonNumber,
           limit: PAGE_SIZE,
@@ -152,6 +156,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     view,
     nsfwMode,
     prefs,
+    randomSeed,
     viewPrefsByFormFactor: await loadFormFactorUiPrefObjects("series:view", { cols: 2 }),
     viewPrefs: await loadUiPrefObject("series:view", { cols: 2 }),
     streamed: {

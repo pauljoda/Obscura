@@ -97,6 +97,7 @@ export function galleriesSurfaceConfig(
           search: prefs.search.trim() || undefined,
           sort: prefs.sortBy,
           order: prefs.sortDir,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           studio,
           tag: tags,
           performer: performers,
@@ -132,6 +133,7 @@ export function galleriesSurfaceConfig(
       { value: "title", label: "Title A–Z" },
       { value: "imageCount", label: "Image Count" },
       { value: "rating", label: "Rating" },
+      { value: "randomized", label: "Randomized" },
     ],
     defaultSortDir: {
       recent: "desc",
@@ -139,6 +141,7 @@ export function galleriesSurfaceConfig(
       title: "asc",
       imageCount: "desc",
       rating: "desc",
+      randomized: "asc",
     },
     viewModes: [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },

@@ -69,6 +69,7 @@ export function audioSurfaceConfig(
           search: prefs.search.trim() || undefined,
           sort: prefs.sortBy,
           order: prefs.sortDir,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           ratingMin: ratingMin ? Number(ratingMin) : undefined,
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           organized,
@@ -101,6 +102,7 @@ export function audioSurfaceConfig(
       { value: "title", label: "Title A–Z" },
       { value: "trackCount", label: "Track Count" },
       { value: "rating", label: "Rating" },
+      { value: "randomized", label: "Randomized" },
     ],
     defaultSortDir: {
       recent: "desc",
@@ -108,6 +110,7 @@ export function audioSurfaceConfig(
       title: "asc",
       trackCount: "desc",
       rating: "desc",
+      randomized: "asc",
     },
     viewModes: [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },

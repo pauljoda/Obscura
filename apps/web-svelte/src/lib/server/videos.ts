@@ -55,6 +55,7 @@ export async function fetchSeries(
     search?: string;
     sort?: string;
     order?: "asc" | "desc";
+    randomSeed?: string;
     limit?: number;
     offset?: number;
     nsfw?: string;
@@ -78,6 +79,7 @@ export async function fetchSeries(
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       limit: params?.limit,
       offset: params?.offset,
       nsfw: params?.nsfw,

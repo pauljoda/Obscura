@@ -65,6 +65,7 @@
     { value: "size", label: "File Size" },
     { value: "rating", label: "Rating" },
     { value: "plays", label: "Most Played" },
+    { value: "randomized", label: "Randomized" },
   ];
   const seriesSortOptions: { value: SeriesSortOption; label: string }[] = [
     { value: "title", label: "Title A-Z" },
@@ -72,6 +73,7 @@
     { value: "date", label: "Series date" },
     { value: "rating", label: "Rating" },
     { value: "videos", label: "Video count" },
+    { value: "randomized", label: "Randomized" },
   ];
   const defaultSeriesSortDir: Record<string, SortDir> = {
     title: "asc",
@@ -79,6 +81,7 @@
     date: "desc",
     rating: "desc",
     videos: "desc",
+    randomized: "asc",
   };
   const seriesFilterSections: FilterSectionKey[] = [
     "rating",
@@ -107,6 +110,8 @@
   let loadedTotal = $state(listTotal);
   let loadingMore = $state(false);
   let loadMoreError = $state<string | null>(null);
+  // svelte-ignore state_referenced_locally
+  let randomSortSeed = $state(data.randomSeed);
   let bulkBusy = $state(false);
   let deleteDialogOpen = $state(false);
   let selectedItemIds = $state.raw(new Set<string>());
@@ -263,6 +268,7 @@
     loadedVideos = data.videos;
     loadedSeries = data.series;
     loadedTotal = listTotal;
+    randomSortSeed = data.randomSeed;
     loadingMore = false;
     loadMoreError = null;
     selectedItemIds = new Set();
@@ -320,6 +326,7 @@
 
   function onSortChange(sort: string, dir?: SortDir) {
     if (usesRootPrefs) {
+      if (sort === "randomized") randomSortSeed = createRandomSortSeed();
       seriesSortBy = sort as SeriesSortOption;
       seriesSortDir = dir ?? defaultSeriesSortDir[sort] ?? seriesSortDir;
       seriesActivePresetId = null;
@@ -327,6 +334,10 @@
     } else {
       updateUrl({ sort, order: dir ?? data.order });
     }
+  }
+
+  function createRandomSortSeed(): string {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 
   function onViewModeChange(v: ViewMode) {
@@ -467,6 +478,7 @@
             data.initialNsfwMode,
           ),
           root: "all",
+          randomSeed: seriesSortBy === "randomized" ? randomSortSeed : undefined,
           limit: data.pageSize,
           offset,
         });
@@ -483,6 +495,7 @@
           search: data.search || undefined,
           sort: data.sort,
           order: data.order,
+          randomSeed: data.sort === "randomized" ? randomSortSeed : undefined,
           videoSeriesId: data.seriesId ?? undefined,
           seasonNumber:
             data.activeSeasonNumber != null ? String(data.activeSeasonNumber) : undefined,

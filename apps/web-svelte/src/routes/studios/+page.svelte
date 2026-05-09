@@ -30,7 +30,9 @@
     { value: "name", label: "Name" },
     { value: "videoCount", label: "Video Count" },
     { value: "rating", label: "Rating" },
+    { value: "randomized", label: "Randomized" },
   ];
+  let randomSortSeed = $state(createRandomSortSeed());
 
   const sortBy = $derived(page.url.searchParams.get("sort") ?? "name");
   const sortDir: SortDir = $derived(
@@ -50,6 +52,20 @@
     }
     const qs = params.toString();
     void goto(qs ? `/studios?${qs}` : "/studios", { keepFocus: true, noScroll: true });
+  }
+
+  function createRandomSortSeed(): string {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function stableRandomSortValue(value: string): number {
+    let hash = 2166136261;
+    const input = `${randomSortSeed}:${value}`;
+    for (let i = 0; i < input.length; i += 1) {
+      hash ^= input.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
   }
 
   const activeFilters = $derived<ActiveFilter[]>([
@@ -154,6 +170,8 @@
           return sign * ((a.videoCount ?? 0) - (b.videoCount ?? 0));
         case "rating":
           return sign * ((a.rating ?? 0) - (b.rating ?? 0));
+        case "randomized":
+          return stableRandomSortValue(a.id) - stableRandomSortValue(b.id);
         case "name":
         default:
           return sign * a.name.localeCompare(b.name);
@@ -233,7 +251,10 @@
       viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
     {sortBy}
     {sortDir}
-    onSortChange={(sort: string, dir?: SortDir) => updateUrl({ sort, order: dir ?? sortDir })}
+    onSortChange={(sort: string, dir?: SortDir) => {
+      if (sort === "randomized") randomSortSeed = createRandomSortSeed();
+      updateUrl({ sort, order: dir ?? sortDir });
+    }}
     {searchQuery}
     onSearchChange={(q) => updateUrl({ search: q || null })}
     searchPlaceholder="Search studios..."

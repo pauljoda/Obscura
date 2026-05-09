@@ -94,6 +94,7 @@ const gallerySortConfig: SortConfig = {
     imageCount: "desc",
   },
   fallbackColumn: galleries.createdAt,
+  randomColumn: galleries.id,
 };
 
 const imageSortConfig: SortConfig = {
@@ -116,6 +117,7 @@ const imageSortConfig: SortConfig = {
     size: "desc",
   },
   fallbackColumn: images.createdAt,
+  randomColumn: images.id,
 };
 
 function toGalleryImageListItem(img: typeof images.$inferSelect) {
@@ -254,6 +256,7 @@ export interface ListGalleriesQuery {
   comic?: string;
   read?: string;
   nsfw?: string;
+  randomSeed?: string;
 }
 
 export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
@@ -327,7 +330,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
     .select()
     .from(galleries)
     .where(where)
-    .orderBy(buildOrderBy(gallerySortConfig, query.sort, query.order))
+    .orderBy(buildOrderBy(gallerySortConfig, query.sort, query.order, query.randomSeed))
     .limit(limit)
     .offset(offset);
 
@@ -1524,6 +1527,7 @@ export interface ListImagesQuery {
   resolution?: string;
   organized?: string;
   comic?: string;
+  randomSeed?: string;
 }
 
 const imageFileTypeExtensions: Record<string, string[]> = {
@@ -1657,7 +1661,7 @@ export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
       .select()
       .from(images)
       .where(where)
-      .orderBy(buildOrderBy(imageSortConfig, query.sort, query.order))
+      .orderBy(buildOrderBy(imageSortConfig, query.sort, query.order, query.randomSeed))
       .limit(limit)
       .offset(offset),
   ]);

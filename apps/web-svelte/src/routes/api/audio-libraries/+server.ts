@@ -21,6 +21,7 @@ const SCALAR_KEYS = [
   "trackCountMin",
   "organized",
   "nsfw",
+  "randomSeed",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

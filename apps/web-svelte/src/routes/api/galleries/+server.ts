@@ -26,6 +26,7 @@ const SCALAR_KEYS = [
   "comic",
   "read",
   "nsfw",
+  "randomSeed",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

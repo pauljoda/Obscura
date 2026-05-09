@@ -31,6 +31,7 @@ export async function fetchGalleries(
     search?: string;
     sort?: string;
     order?: string;
+    randomSeed?: string;
     tag?: string[];
     performer?: string[];
     studio?: string;
@@ -56,6 +57,7 @@ export async function fetchGalleries(
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       studio: params?.studio,
       type: params?.type,
       parent: params?.parent,
@@ -110,6 +112,7 @@ export async function fetchImages(
     search?: string;
     sort?: string;
     order?: string;
+    randomSeed?: string;
     gallery?: string;
     tag?: string[];
     performer?: string[];
@@ -135,6 +138,7 @@ export async function fetchImages(
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       gallery: params?.gallery,
       studio: params?.studio,
       animated: params?.animated,
@@ -188,6 +192,7 @@ export async function fetchPerformers(
     search?: string;
     sort?: string;
     order?: string;
+    randomSeed?: string;
     gender?: string;
     favorite?: string;
     country?: string;
@@ -206,6 +211,7 @@ export async function fetchPerformers(
     search: params?.search,
     sort: params?.sort,
     order: params?.order,
+    randomSeed: params?.randomSeed,
     gender: params?.gender,
     favorite: params?.favorite,
     country: params?.country,
@@ -289,6 +295,7 @@ export async function fetchAudioLibraries(
     search?: string;
     sort?: string;
     order?: string;
+    randomSeed?: string;
     tag?: string[];
     performer?: string[];
     studio?: string;
@@ -311,6 +318,7 @@ export async function fetchAudioLibraries(
       search: params?.search,
       sort: params?.sort,
       order: params?.order,
+      randomSeed: params?.randomSeed,
       studio: params?.studio,
       parent: params?.parent,
       root: params?.root,
@@ -358,6 +366,7 @@ export async function fetchCollections(
     search?: string;
     sort?: string;
     order?: "asc" | "desc";
+    randomSeed?: string;
     mode?: string;
     limit?: number;
     offset?: number;

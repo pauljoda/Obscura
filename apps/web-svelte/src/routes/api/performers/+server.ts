@@ -23,6 +23,7 @@ const QUERY_KEYS = [
   "hasImage",
   "videoCountMin",
   "counts",
+  "randomSeed",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

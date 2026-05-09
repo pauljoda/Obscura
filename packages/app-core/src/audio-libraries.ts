@@ -74,6 +74,7 @@ const audioLibrarySortConfig: SortConfig = {
     trackCount: "desc",
   },
   fallbackColumn: audioLibraries.createdAt,
+  randomColumn: audioLibraries.id,
 };
 
 
@@ -95,6 +96,7 @@ export interface ListAudioLibrariesQuery {
   trackCountMin?: string;
   organized?: string;
   nsfw?: string;
+  randomSeed?: string;
 }
 
 export async function listAudioLibrariesRead(
@@ -167,7 +169,7 @@ export async function listAudioLibrariesRead(
       .select()
       .from(audioLibraries)
       .where(where)
-      .orderBy(buildOrderBy(audioLibrarySortConfig, query.sort, query.order))
+      .orderBy(buildOrderBy(audioLibrarySortConfig, query.sort, query.order, query.randomSeed))
       .limit(limit)
       .offset(offset),
   ]);

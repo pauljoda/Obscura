@@ -43,6 +43,7 @@ import {
   MAX_ENTITY_LIST_LIMIT,
   buildResolutionConditions,
   parsePagination,
+  buildRandomizedSortSql,
   toArray,
   type SortConfig,
 } from "./media-query-helpers";
@@ -109,6 +110,7 @@ export interface ListVideosQuery {
   seriesScope?: "direct" | "subtree";
   uncategorized?: string;
   seasonNumber?: string;
+  randomSeed?: string;
 }
 
 export interface UpdateVideoBody {
@@ -329,6 +331,10 @@ function parseSort(query: ListVideosQuery, kind: "episode" | "movie") {
   };
   const sortKey = query.sort ?? "recent";
 
+  if (sortKey === "randomized") {
+    return [asc(buildRandomizedSortSql(table.id, query.randomSeed))];
+  }
+
   if (sortKey === "episode") {
     const dir =
       query.order === "asc" || query.order === "desc" ? query.order : "asc";
@@ -384,6 +390,16 @@ function compareCreatedAt(
   return dir === "asc" ? leftValue - rightValue : rightValue - leftValue;
 }
 
+function stableRandomSortValue(value: string, seed = ""): number {
+  let hash = 2166136261;
+  const input = `${seed}:${value}`;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 /**
  * Pick the right page out of merged episode + movie rows.
  *
@@ -409,7 +425,7 @@ export function paginateMergedVideos<T>(
 
 export function sortMergedVideos<T extends MixedVideoSortRow>(
   rows: T[],
-  query: Pick<ListVideosQuery, "sort" | "order">,
+  query: Pick<ListVideosQuery, "sort" | "order" | "randomSeed">,
 ): T[] {
   const sortKey = query.sort ?? "recent";
   const dir: "asc" | "desc" =
@@ -440,6 +456,11 @@ export function sortMergedVideos<T extends MixedVideoSortRow>(
         break;
       case "plays":
         cmp = compareNullableNumbers(left.playCount, right.playCount, dir);
+        break;
+      case "randomized":
+        cmp =
+          stableRandomSortValue(`${left.kind}:${left.id}`, query.randomSeed) -
+          stableRandomSortValue(`${right.kind}:${right.id}`, query.randomSeed);
         break;
       case "episode":
         cmp = compareNullableNumbers(left.seasonNumber, right.seasonNumber, dir);

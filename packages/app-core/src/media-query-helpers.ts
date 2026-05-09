@@ -8,6 +8,7 @@ import {
   lte,
   isNotNull,
   inArray,
+  sql,
   type SQL,
   type Column,
 } from "drizzle-orm";
@@ -20,14 +21,25 @@ export interface SortConfig {
   columns: Record<string, Column>;
   defaultDirs: Record<string, "asc" | "desc">;
   fallbackColumn: Column;
+  randomColumn?: Column;
+}
+
+export function buildRandomizedSortSql(column: Column, seed?: string): SQL {
+  return seed
+    ? sql`md5(${column}::text || ${seed})`
+    : sql`random()`;
 }
 
 export function buildOrderBy(
   config: SortConfig,
   sortKey: string | undefined,
   orderParam: string | undefined,
+  randomSeed?: string,
 ) {
   const key = sortKey ?? "recent";
+  if (key === "randomized") {
+    return asc(buildRandomizedSortSql(config.randomColumn ?? config.fallbackColumn, randomSeed));
+  }
   const col = config.columns[key] ?? config.fallbackColumn;
   const dir =
     orderParam === "asc" || orderParam === "desc"

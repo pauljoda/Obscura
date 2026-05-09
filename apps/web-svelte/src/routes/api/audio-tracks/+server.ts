@@ -16,6 +16,7 @@ const SCALAR_KEYS = [
   "dateTo",
   "organized",
   "nsfw",
+  "randomSeed",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

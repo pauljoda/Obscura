@@ -267,6 +267,7 @@ export interface ListVideoSeriesQuery {
   dateFrom?: string;
   dateTo?: string;
   organized?: string;
+  randomSeed?: string;
 }
 
 type VideoSeriesRow = typeof videoSeries.$inferSelect;
@@ -283,9 +284,19 @@ function compareDate(left: Date | null | undefined, right: Date | null | undefin
   return (left?.getTime?.() ?? 0) - (right?.getTime?.() ?? 0);
 }
 
+function stableRandomSortValue(value: string, seed = ""): number {
+  let hash = 2166136261;
+  const input = `${seed}:${value}`;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function sortSeriesRows(
   rows: VideoSeriesRow[],
-  query: Pick<ListVideoSeriesQuery, "sort" | "order">,
+  query: Pick<ListVideoSeriesQuery, "sort" | "order" | "randomSeed">,
   episodeCounts: Map<string, number>,
 ) {
   const sortKey = query.sort ?? "title";
@@ -311,6 +322,11 @@ function sortSeriesRows(
         break;
       case "videos":
         cmp = compareNumber(episodeCounts.get(left.id), episodeCounts.get(right.id));
+        break;
+      case "randomized":
+        cmp =
+          stableRandomSortValue(left.id, query.randomSeed) -
+          stableRandomSortValue(right.id, query.randomSeed);
         break;
       case "title":
       default:

@@ -33,6 +33,7 @@ export function collectionsSurfaceConfig(
           search: prefs.search.trim() || undefined,
           sort: prefs.sortBy,
           order: prefs.sortDir,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           mode: args.mode,
           limit,
           offset,
@@ -56,8 +57,9 @@ export function collectionsSurfaceConfig(
       { value: "recent", label: "Recently Added" },
       { value: "name", label: "Name A–Z" },
       { value: "itemCount", label: "Item Count" },
+      { value: "randomized", label: "Randomized" },
     ],
-    defaultSortDir: { recent: "desc", name: "asc", itemCount: "desc" },
+    defaultSortDir: { recent: "desc", name: "asc", itemCount: "desc", randomized: "asc" },
     viewModes: [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },
       { mode: "list", icon: LayoutList, label: "List view" },

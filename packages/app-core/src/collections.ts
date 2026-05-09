@@ -55,6 +55,7 @@ const collectionSortConfig: SortConfig = {
     items: "desc",
   },
   fallbackColumn: collections.createdAt,
+  randomColumn: collections.id,
 };
 
 async function computeTypeCounts(
@@ -143,7 +144,7 @@ export async function listCollectionsRead(db: AppDb, query: CollectionListQuery)
       .select()
       .from(collections)
       .where(whereClause)
-      .orderBy(buildOrderBy(collectionSortConfig, query.sort, query.order))
+      .orderBy(buildOrderBy(collectionSortConfig, query.sort, query.order, query.randomSeed))
       .limit(limit)
       .offset(offset),
     db

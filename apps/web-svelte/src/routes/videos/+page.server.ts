@@ -47,10 +47,12 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const fetchParams = videosListPrefsToFetchParams(prefs, nsfwMode);
+  const randomSeed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
   const videosPromise = fetchVideoCards(
     {
       ...fetchParams,
+      randomSeed: fetchParams.sort === "randomized" ? randomSeed : undefined,
       seasonNumber,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,

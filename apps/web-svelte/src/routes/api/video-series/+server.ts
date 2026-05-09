@@ -22,6 +22,7 @@ const KEYS = [
   "dateFrom",
   "dateTo",
   "organized",
+  "randomSeed",
 ] as const;
 
 export const GET: RequestHandler = async ({ url }) => {

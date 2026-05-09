@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildRandomizedSortSql,
   buildBooleanCondition,
   buildDateConditions,
   buildResolutionConditions,
@@ -40,6 +41,12 @@ describe("media-query-helpers", () => {
       buildResolutionConditions(schema.images.height, ["1080p", "720p"]),
     ).toBeTruthy();
     expect(buildResolutionConditions(schema.images.height, ["bogus"])).toBeUndefined();
+  });
+
+  it("builds a stable randomized sort expression from an id and seed", () => {
+    const expression = buildRandomizedSortSql(schema.images.id, "reload-seed");
+
+    expect(expression).toBeTruthy();
   });
 });
 

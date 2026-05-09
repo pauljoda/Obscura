@@ -5,6 +5,7 @@ export interface FetchVideosParams {
   search?: string;
   sort?: string;
   order?: "asc" | "desc";
+  randomSeed?: string;
   tag?: string[];
   performer?: string[];
   studio?: string[];
@@ -36,6 +37,7 @@ export function buildFetchVideosQuery(params: FetchVideosParams): string {
       view: params.view,
       sort: params.sort,
       order: params.order,
+      randomSeed: params.randomSeed,
       ratingMin: params.ratingMin,
       ratingMax: params.ratingMax,
       dateFrom: params.dateFrom,

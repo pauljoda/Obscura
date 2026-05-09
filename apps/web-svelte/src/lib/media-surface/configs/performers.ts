@@ -56,6 +56,7 @@ export function performersSurfaceConfig(
           search: prefs.search.trim() || undefined,
           sort: prefs.sortBy,
           order: prefs.sortDir,
+          randomSeed: prefs.extras?.randomSeed?.toString(),
           gender,
           country,
           favorite,
@@ -86,8 +87,9 @@ export function performersSurfaceConfig(
       { value: "name", label: "Name A–Z" },
       { value: "recent", label: "Recently Added" },
       { value: "rating", label: "Rating" },
+      { value: "randomized", label: "Randomized" },
     ],
-    defaultSortDir: { name: "asc", recent: "desc", rating: "desc" },
+    defaultSortDir: { name: "asc", recent: "desc", rating: "desc", randomized: "asc" },
     viewModes: [
       { mode: "grid", icon: LayoutGrid, label: "Grid view" },
       { mode: "list", icon: LayoutList, label: "List view" },

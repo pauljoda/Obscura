@@ -36,6 +36,7 @@ export async function fetchPerformers(params?: {
   search?: string;
   sort?: string;
   order?: string;
+  randomSeed?: string;
   gender?: string;
   favorite?: string;
   country?: string;
@@ -52,6 +53,7 @@ export async function fetchPerformers(params?: {
     search: params?.search,
     sort: params?.sort,
     order: params?.order,
+    randomSeed: params?.randomSeed,
     gender: params?.gender,
     favorite: params?.favorite,
     country: params?.country,
