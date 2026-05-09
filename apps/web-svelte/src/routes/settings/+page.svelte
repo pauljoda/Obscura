@@ -6,7 +6,6 @@
     Eye,
     Film,
     Flame,
-    HardDrive,
     Loader2,
     Package,
     ScanSearch,
@@ -22,7 +21,7 @@
     type SubtitleAppearance,
     type SubtitleDisplayStyle,
   } from "@obscura/contracts";
-  import type { LibraryRoot, LibrarySettings, StorageStats } from "$lib/api/types";
+  import type { LibraryRoot, LibrarySettings } from "$lib/api/types";
   import {
     fetchLibraryConfig,
     migrateVideoAssetStorage,
@@ -33,7 +32,6 @@
   import ToggleCard from "$lib/components/settings/ToggleCard.svelte";
   import NumberStepper from "$lib/components/settings/NumberStepper.svelte";
   import QualitySlider from "$lib/components/settings/QualitySlider.svelte";
-  import StorageStat from "$lib/components/settings/StorageStat.svelte";
   import SubtitlesSection from "$lib/components/settings/SubtitlesSection.svelte";
   import DiagnosticsSection from "$lib/components/settings/DiagnosticsSection.svelte";
   import WatchedLibrariesSection from "$lib/components/settings/WatchedLibrariesSection.svelte";
@@ -89,7 +87,6 @@
 
   let settings = $state<LibrarySettings>(defaultSettings);
   let roots = $state<LibraryRoot[]>([]);
-  let storage = $state<StorageStats | null>(null);
   let scraperCount = $state(0);
 
   let savedMetadataStorageDedicated = $state(defaultSettings.metadataStorageDedicated);
@@ -104,7 +101,6 @@
     if (!data.config) {
       settings = defaultSettings;
       roots = [];
-      storage = null;
       scraperCount = data.scraperCount ?? 0;
       savedMetadataStorageDedicated = defaultSettings.metadataStorageDedicated;
       return;
@@ -113,7 +109,6 @@
     const normalized = normalizeSettings(data.config.settings);
     settings = normalized;
     roots = data.config.roots;
-    storage = data.config.storage;
     scraperCount = data.scraperCount ?? 0;
     savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
   });
@@ -139,7 +134,6 @@
       settings = normalized;
       savedMetadataStorageDedicated = normalized.metadataStorageDedicated;
       roots = response.roots;
-      storage = response.storage;
       scraperCount = scrapersResponse.packages.length;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load settings");
@@ -238,20 +232,6 @@
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   });
-
-  function formatBytes(bytes: number) {
-    if (!bytes) return "0 B";
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    let value = bytes;
-    let unitIndex = 0;
-    while (value >= 1024 && unitIndex < units.length - 1) {
-      value /= 1024;
-      unitIndex += 1;
-    }
-    return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
-  }
-
-  const totalBytes = $derived(storage?.totalBytes ?? 0);
 
   function commitSubtitleAppearance(next: SubtitleAppearance) {
     settings = {
@@ -679,41 +659,6 @@
       />
     </div>
   </section>
-
-  <div class="border-t border-border-subtle"></div>
-
-  <!-- ─── Generated Storage ──────────────────────────────────── -->
-  <section class="space-y-3">
-    <div class="flex items-center gap-2.5 px-1">
-      <HardDrive class="h-4 w-4 text-text-accent" />
-      <div>
-        <h2 class="text-sm font-semibold tracking-wide font-heading text-text-primary uppercase">
-          Generated Storage
-        </h2>
-        <p class="text-[0.68rem] text-text-muted">Disk usage for rendered assets</p>
-      </div>
-    </div>
-    <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
-      <StorageStat
-        label="Thumbnails"
-        value={formatBytes(storage?.thumbnailsBytes ?? 0)}
-        gradientClass="gradient-thumb-1"
-      />
-      <StorageStat
-        label="Preview clips"
-        value={formatBytes(storage?.previewsBytes ?? 0)}
-        gradientClass="gradient-thumb-2"
-      />
-      <StorageStat
-        label="Trickplay sprites"
-        value={formatBytes(storage?.trickplayBytes ?? 0)}
-        gradientClass="gradient-thumb-3"
-      />
-      <StorageStat label="Total" value={formatBytes(totalBytes)} accent />
-    </div>
-  </section>
-
-  <div class="border-t border-border-subtle"></div>
 
   <DiagnosticsSection />
 </div>

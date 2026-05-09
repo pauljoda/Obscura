@@ -4,13 +4,11 @@ import type {
   LibraryBrowse,
   LibraryRoot,
   LibrarySettings,
-  StorageStats,
 } from "./types";
 
 export async function fetchLibraryConfig(): Promise<{
   settings: LibrarySettings;
   roots: LibraryRoot[];
-  storage: StorageStats;
 }> {
   return fetchApi("/settings/library");
 }

@@ -4,7 +4,6 @@ import type {
   LibrarySettingsDto,
   ScraperPackageDto,
   StashBoxEndpointDto,
-  StorageStatsDto,
 } from "@obscura/contracts";
 export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
   const f = options?.fetch ?? fetch;
@@ -13,7 +12,6 @@ export async function fetchLibraryConfig(options?: { fetch?: typeof fetch }) {
   return res.json() as Promise<{
     settings: LibrarySettingsDto;
     roots: LibraryRootDto[];
-    storage: StorageStatsDto;
   }>;
 }
 

@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The changelog dialog now shows the same app version as the package release cycle, so the sidebar header no longer drifts behind the actual installed version.
 - Library grids now include a Randomized sort option that reshuffles results on each reload while keeping infinite scrolling stable during that visit.
 - Gallery series merges now keep the visible grid in sync with the active sort and filters after the merge completes, so the controls no longer show one state while the cards use another.
+- Settings now opens without waiting for generated-storage totals, removing a slow cache-directory scan from the page load.
 
 ### Changed
 
@@ -79,6 +80,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Webtoon reader mode now restores the saved scroll position when resuming instead of reopening at the top of the comic.
 - Library view preferences now initialize from server-loaded mobile/desktop preference snapshots, so saved view mode and thumbnail size are applied before the first client-side preference fetch instead of animating from defaults after mount.
 - The changelog dialog no longer displays a stale hardcoded version. It now reads the web package version at build time, keeping the sidebar header aligned with `package.json` and release changelog headings.
+- Settings no longer blocks initial rendering on generated-storage statistics, fixing slow settings navigation on large cache directories.
 
 ### Docs
 

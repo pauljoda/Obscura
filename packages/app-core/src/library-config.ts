@@ -1,22 +1,19 @@
-export interface LoadLibraryConfigDeps<TSettings, TRoot, TStorage> {
+export interface LoadLibraryConfigDeps<TSettings, TRoot> {
   ensureSettings: () => Promise<TSettings>;
   loadRoots: () => Promise<TRoot[]>;
-  loadStorage: () => Promise<TStorage>;
 }
 
-export interface LibraryConfigPayload<TSettings, TRoot, TStorage> {
+export interface LibraryConfigPayload<TSettings, TRoot> {
   settings: TSettings;
   roots: TRoot[];
-  storage: TStorage;
 }
 
-export async function loadLibraryConfig<TSettings, TRoot, TStorage>(
-  deps: LoadLibraryConfigDeps<TSettings, TRoot, TStorage>,
-): Promise<LibraryConfigPayload<TSettings, TRoot, TStorage>> {
-  const [settings, roots, storage] = await Promise.all([
+export async function loadLibraryConfig<TSettings, TRoot>(
+  deps: LoadLibraryConfigDeps<TSettings, TRoot>,
+): Promise<LibraryConfigPayload<TSettings, TRoot>> {
+  const [settings, roots] = await Promise.all([
     deps.ensureSettings(),
     deps.loadRoots(),
-    deps.loadStorage(),
   ]);
-  return { settings, roots, storage };
+  return { settings, roots };
 }
