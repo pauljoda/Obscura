@@ -47,6 +47,8 @@ interface BuildArgs {
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: ImageListItemDto[]) => void;
   onItemActivate?: (item: ImageListItemDto, index: number) => void;
+  onItemsChange?: (items: ImageListItemDto[]) => void;
+  decorateItem?: (item: ImageListItemDto) => ImageListItemDto;
 }
 
 export function imagesSurfaceConfig(
@@ -202,6 +204,8 @@ export function imagesSurfaceConfig(
     searchPlaceholder: "Search images...",
     thumbSize: { min: 3, max: 14, default: 8, label: "Thumbnail size" },
     bulkItemLabel: "images",
+    onItemsChange: args.onItemsChange,
+    decorateItem: args.decorateItem,
     bulkActions: [
       {
         id: "mark-nsfw",

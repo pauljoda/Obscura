@@ -26,6 +26,7 @@
   import { fetchLibraryConfig, rebuildVideoPreview } from "$lib/api/library";
   import type { LibrarySettings } from "$lib/api/types";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import { entityTerms } from "$lib/terminology";
   import BackLink from "$lib/components/BackLink.svelte";
@@ -57,6 +58,7 @@
   });
 
   const nsfw = useNsfw();
+  const appChrome = useAppChrome();
   const playlist = usePlaylist();
   const terms = entityTerms;
 
@@ -365,6 +367,30 @@
   });
 
   const explicitCounterLabels = $derived(nsfw.mode === "show");
+
+  function seriesHref(seriesId: string, seasonNumber?: number | null) {
+    const params = new URLSearchParams({ series: seriesId });
+    if (seasonNumber != null) params.set("season", String(seasonNumber));
+    return `/series?${params.toString()}`;
+  }
+
+  $effect(() => {
+    const crumbs: AppBreadcrumb[] = [{ label: terms.videos, href: "/videos" }];
+    if (video.videoSeriesId && video.videoSeriesTitle) {
+      crumbs.push({
+        label: video.videoSeriesTitle,
+        href: seriesHref(video.videoSeriesId),
+      });
+      if (video.seasonNumber != null) {
+        crumbs.push({
+          label: video.seasonNumber === 0 ? "Specials" : `Season ${video.seasonNumber}`,
+          href: seriesHref(video.videoSeriesId, video.seasonNumber),
+        });
+      }
+    }
+    crumbs.push({ label: video.title });
+    return appChrome.setBreadcrumbs(crumbs);
+  });
 </script>
 
 <svelte:head>

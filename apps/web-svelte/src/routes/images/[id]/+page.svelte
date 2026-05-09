@@ -8,9 +8,11 @@
   import InlineRating from "$lib/components/InlineRating.svelte";
   import ImageEdit from "$lib/components/ImageEdit.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
+  import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   let { data } = $props();
+  const appChrome = useAppChrome();
   const playlist = usePlaylist();
   let overrideRating = $state<number | null | undefined>(undefined);
   const img = $derived((overrideRating === undefined
@@ -51,6 +53,15 @@
     }
     return `${size.toFixed(size < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`;
   }
+
+  $effect(() => {
+    const crumbs: AppBreadcrumb[] = [{ label: "Images", href: "/images" }];
+    if (img.galleryId) {
+      crumbs.push({ label: "Gallery", href: `/galleries/${img.galleryId}` });
+    }
+    crumbs.push({ label: img.title });
+    return appChrome.setBreadcrumbs(crumbs);
+  });
 </script>
 
 <svelte:head>

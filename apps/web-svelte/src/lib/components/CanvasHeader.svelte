@@ -2,6 +2,7 @@
   import { Search, Settings } from "@lucide/svelte";
   import { page } from "$app/state";
   import { cn } from "@obscura/ui-svelte";
+  import { useAppChrome } from "$lib/stores/app-chrome.svelte";
   import { useSearch } from "$lib/stores/search.svelte";
   import LogoMark from "./LogoMark.svelte";
 
@@ -19,7 +20,9 @@
     return decoded.charAt(0).toUpperCase() + decoded.slice(1);
   }
 
-  const crumbs = $derived.by(() => {
+  const chrome = useAppChrome();
+
+  const pathCrumbs = $derived.by(() => {
     const segments = page.url.pathname.split("/").filter(Boolean);
     return segments
       .filter((seg) => !UUID_RE.test(seg))
@@ -29,6 +32,15 @@
         isLast: i === arr.length - 1,
       }));
   });
+  const crumbs = $derived(
+    chrome.breadcrumbs.length > 0
+      ? chrome.breadcrumbs.map((crumb, i) => ({
+          label: crumb.label,
+          href: crumb.href ?? "#",
+          isLast: i === chrome.breadcrumbs.length - 1 || !crumb.href,
+        }))
+      : pathCrumbs,
+  );
 
   const search = useSearch();
 

@@ -5,6 +5,11 @@ const KEY = Symbol("app-chrome");
 const COOKIE_NAME = "obscura-sidebar";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
+export interface AppBreadcrumb {
+  label: string;
+  href?: string;
+}
+
 function writeSidebarCookie(collapsed: boolean) {
   if (!browser) return;
   document.cookie = `${COOKIE_NAME}=${collapsed ? "collapsed" : "expanded"};path=/;max-age=${COOKIE_MAX_AGE}`;
@@ -13,6 +18,7 @@ function writeSidebarCookie(collapsed: boolean) {
 export class AppChromeStore {
   sidebarCollapsed = $state(false);
   bottomDockInsetPx = $state(0);
+  breadcrumbs = $state.raw<AppBreadcrumb[]>([]);
   private bottomDocks = new Map<string, number>();
 
   constructor(initialCollapsed: boolean) {
@@ -34,6 +40,13 @@ export class AppChromeStore {
   clearBottomDockInset(id: string) {
     this.bottomDocks.delete(id);
     this.bottomDockInsetPx = Math.max(0, ...this.bottomDocks.values());
+  }
+
+  setBreadcrumbs(breadcrumbs: AppBreadcrumb[]) {
+    this.breadcrumbs = breadcrumbs;
+    return () => {
+      if (this.breadcrumbs === breadcrumbs) this.breadcrumbs = [];
+    };
   }
 }
 

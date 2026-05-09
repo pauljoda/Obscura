@@ -18,6 +18,7 @@
   import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
+  import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import {
     canResumeComic,
     comicProgressLabel,
@@ -31,6 +32,7 @@
   } from "$lib/components/comic-progress";
 
   let { data } = $props();
+  const appChrome = useAppChrome();
   let overrideRating = $state<number | null | undefined>(undefined);
   const g = $derived(
     overrideRating === undefined
@@ -187,7 +189,7 @@
   const performerLabel = $derived(g.isComic ? "Authors" : "Performers");
   const galleryImageSurface = $derived(
     imagesSurfaceConfig({
-      initial: { items: images, total: imageTotal },
+      initial: { items: data.gallery.images, total: data.gallery.imageTotal },
       pageSize: data.pageSize,
       page: 1,
       nsfwMode: data.nsfwMode,
@@ -208,14 +210,14 @@
         deleteDialogOpen = true;
       },
       onItemActivate: (item) => openImage(item),
+      onItemsChange: (items) => {
+        images = items;
+      },
+      decorateItem: (image) =>
+        image.id === lightboxSourceId && lightboxOpen
+          ? { ...image, __lightboxSource: true }
+          : image,
     }),
-  );
-  const annotatedImages = $derived(
-    images.map((image) =>
-      image.id === lightboxSourceId && lightboxOpen
-        ? { ...image, __lightboxSource: true }
-        : image,
-    ),
   );
 
   $effect(() => {
@@ -224,6 +226,15 @@
       imageTotal = data.gallery.imageTotal;
       syncedGalleryId = data.gallery.id;
     }
+  });
+
+  $effect(() => {
+    const crumbs: AppBreadcrumb[] = [{ label: "Galleries", href: "/galleries" }];
+    if (g.parentId) {
+      crumbs.push({ label: "Parent", href: `/galleries/${g.parentId}` });
+    }
+    crumbs.push({ label: g.title });
+    return appChrome.setBreadcrumbs(crumbs);
   });
 </script>
 
@@ -367,7 +378,7 @@
         </HierarchySection>
       {/if}
 
-      {#if images.length > 0}
+      {#if imageTotal > 0}
         <HierarchySection title={visibleChildGalleries.length > 0 ? "Images" : ""}>
           {#snippet action()}
             {#if g.folderPath}
@@ -376,14 +387,7 @@
           {/snippet}
           {#snippet children()}
             <MediaSurface
-              config={{
-                ...galleryImageSurface,
-                initial: {
-                  items: annotatedImages,
-                  total: imageTotal,
-                  loadedStart: 0,
-                },
-              }}
+              config={galleryImageSurface}
               initialPrefsByFormFactor={data.surfacePrefs}
               legacyPrefsKey={`gallery:${g.id}:imageFilterPresets`}
             />

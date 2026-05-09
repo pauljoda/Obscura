@@ -347,6 +347,13 @@
     config.layoutByViewMode?.[prefsStore.current.viewMode] ?? config.bodyLayout ?? "grid",
   );
   const cols = $derived(prefsStore.current.cols ?? config.thumbSize?.default ?? 5);
+  const renderedItems = $derived.by(() =>
+    config.decorateItem ? coll.items.map((item) => config.decorateItem?.(item) ?? item) : coll.items,
+  );
+
+  $effect(() => {
+    config.onItemsChange?.(coll.items);
+  });
 
   // Surface a "load more page href" for the no-JS fallback link inside
   // InfiniteLoadTrigger. We don't have a real page-based URL here, so
@@ -428,7 +435,7 @@
     {/if}
   {:else if currentLayout === "list"}
     <ListBody
-      items={coll.items}
+      items={renderedItems}
       card={config.card}
       getKey={config.getKey}
       selectedIds={config.bulkActions ? selectedIds : undefined}
@@ -438,7 +445,8 @@
     />
   {:else if currentLayout === "feed"}
     <FeedBody
-      items={coll.items}
+      items={renderedItems}
+      {cols}
       card={config.card}
       getKey={config.getKey}
       reducedMotion={reducedMotion.value}
@@ -446,7 +454,7 @@
     />
   {:else if currentLayout === "masonry"}
     <MasonryBody
-      items={coll.items}
+      items={renderedItems}
       cols={cols}
       card={config.card}
       getKey={config.getKey}
@@ -457,7 +465,7 @@
     />
   {:else}
     <ThumbnailGrid
-      items={coll.items}
+      items={renderedItems}
       cols={cols}
       card={config.card}
       getKey={config.getKey}

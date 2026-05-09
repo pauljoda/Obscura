@@ -39,6 +39,7 @@
   import { writeListPrefsAndInvalidate } from "$lib/prefs/ui-list-prefs-writer";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
+  import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import {
     SERIES_EXCLUSIVE_FILTER_TYPES,
     SERIES_LIST_PREFS_KEY,
@@ -54,6 +55,7 @@
   } from "$lib/prefs/series-list-prefs";
 
   let { data } = $props();
+  const appChrome = useAppChrome();
   const viewPrefsFormFactor = detectUiPrefsFormFactor();
 
   const videoSortOptions = [
@@ -180,6 +182,19 @@
   onMount(() => {
     void presetsApi.load();
     void viewPrefs.load();
+  });
+
+  $effect(() => {
+    if (!data.activeSeries) return appChrome.setBreadcrumbs([]);
+    const crumbs: AppBreadcrumb[] = [
+      { label: entityTerms.series, href: "/series" },
+      ...data.activeSeries.breadcrumbs.map((crumb) => ({
+        label: crumb.displayTitle,
+        href: `/series?series=${crumb.id}`,
+      })),
+      { label: data.activeSeries.displayTitle },
+    ];
+    return appChrome.setBreadcrumbs(crumbs);
   });
 
   const seriesDisplayFilters = $derived(

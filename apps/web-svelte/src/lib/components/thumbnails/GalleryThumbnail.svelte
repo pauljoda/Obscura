@@ -9,6 +9,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub";
 
   interface Props {
     title?: string;
@@ -110,14 +111,23 @@
     hoverIndex = 0;
   }
 
-  function onMove(e: MouseEvent) {
-    if (!hovering || previews.length === 0) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    hoverIndex = Math.min(
-      previews.length - 1,
-      Math.max(0, Math.floor(ratio * previews.length)),
+  function updateScrub(clientX: number, target: EventTarget | null) {
+    if (previews.length === 0 || !(target instanceof HTMLElement)) return;
+    hoverIndex = scrubIndexFromClientX(
+      clientX,
+      target.getBoundingClientRect(),
+      previews.length,
     );
+  }
+
+  function startScrub(e: PointerEvent) {
+    startHover();
+    updateScrub(e.clientX, e.currentTarget);
+  }
+
+  function onMove(e: PointerEvent) {
+    if (!hovering) return;
+    updateScrub(e.clientX, e.currentTarget);
   }
 
   const hoverSrc = $derived(
@@ -178,9 +188,13 @@
       !coverSrc && previews.length === 0 && fallbackGradient(title),
     )}
     style:aspect-ratio={aspectRatioStyle}
-    onmouseenter={startHover}
-    onmouseleave={endHover}
-    onmousemove={onMove}
+    onpointerenter={startScrub}
+    onpointerdown={startScrub}
+    onpointermove={onMove}
+    onpointerleave={endHover}
+    onpointerup={endHover}
+    onpointercancel={endHover}
+    style:touch-action="pan-y"
   >
     <NsfwBlur {isNsfw} class="block h-full w-full">
       {#if coverSrc}

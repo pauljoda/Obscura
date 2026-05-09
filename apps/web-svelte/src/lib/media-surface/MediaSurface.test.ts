@@ -230,6 +230,39 @@ describe("MediaSurface", () => {
     });
   });
 
+  it("reports the currently rendered items after client-side refetches", async () => {
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      activeFilters: [{ type: "resolution", label: "Resolution", value: "1080p" }],
+    };
+    mockUiPrefsApi({
+      "surface:test-current-items:desktop:prefs": savedPrefs,
+    });
+    const fetchedItems = items(100, 2);
+    const fetcher = vi.fn(async () => ({ items: fetchedItems, total: 2 }));
+    const onItemsChange = vi.fn();
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "test-current-items",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs,
+      sortOptions: [{ value: "recent", label: "Recent" }],
+      filterSections: [
+        { kind: "enum", filterType: "resolution", label: "Resolution" },
+      ],
+      onItemsChange,
+    };
+
+    render(Harness, { props: { config } });
+
+    await waitFor(() => {
+      expect(onItemsChange).toHaveBeenCalledWith(fetchedItems);
+    });
+    expect(screen.getByText("Item 100")).toBeInTheDocument();
+  });
+
   it("encodes activeFilters via the fetcher's prefs argument", async () => {
     const fetcher = vi.fn(async () => ({ items: [], total: 0 }));
     const sections: FilterSectionSpec<"resolution" | "tag">[] = [
@@ -423,5 +456,31 @@ describe("MediaSurface", () => {
       "text-text-accent",
     );
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("passes thumbnail size preferences through to feed layout", async () => {
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "test-feed-scale",
+      pageSize: 10,
+      fetcher: vi.fn(async () => ({ items: [], total: 0 })),
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs: { ...defaultPrefs, viewMode: "feed", cols: 11 },
+      sortOptions: [{ value: "recent", label: "Recent" }],
+      viewModes: [{ mode: "feed", icon: List, label: "Feed view" }],
+      layoutByViewMode: { feed: "feed" },
+      thumbSize: { min: 3, max: 14, default: 8 },
+    };
+
+    const { container } = render(Harness, { props: { config } });
+    await fireEvent.input(screen.getAllByLabelText("Thumbnail size")[0], {
+      target: { value: "11" },
+    });
+
+    await waitFor(() => {
+      const feed = container.querySelector<HTMLElement>("[data-media-feed]");
+      expect(feed).not.toBeNull();
+      expect(feed?.style.getPropertyValue("--feed-cols")).toBe("11");
+    });
   });
 });

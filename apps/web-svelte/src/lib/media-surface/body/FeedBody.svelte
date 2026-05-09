@@ -4,6 +4,7 @@
 
   interface Props {
     items: T[];
+    cols: number;
     card: Component<CardProps<T>>;
     getKey?: (item: T) => string;
     onActivate?: (item: T, index: number) => void;
@@ -13,13 +14,18 @@
 
   let {
     items,
+    cols,
     card: Card,
     getKey = (item) => item.id,
     onActivate,
   }: Props = $props();
 </script>
 
-<div class="mx-auto flex w-full max-w-2xl flex-col gap-4">
+<div
+  class="feed-list mx-auto flex w-full flex-col gap-4"
+  data-media-feed
+  style:--feed-cols={cols}
+>
   {#each items as item, index (getKey(item))}
     <Card
       item={item}
@@ -30,3 +36,27 @@
     />
   {/each}
 </div>
+
+<style>
+  .feed-list {
+    /*
+     * The shared thumbnail slider stores a column count: low values mean
+     * larger cards, high values mean denser/smaller cards. Feed is a
+     * single column, so map that same value onto the readable column width.
+     */
+    max-width: clamp(26rem, calc(86rem - (var(--feed-cols, 8) * 4rem)), 74rem);
+    transition: max-width 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @media (max-width: 640px) {
+    .feed-list {
+      max-width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feed-list {
+      transition: none;
+    }
+  }
+</style>

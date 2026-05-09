@@ -208,6 +208,10 @@ export interface MediaSurfaceConfig<T extends { id: string }, F extends string =
   /** Map view-mode value to body layout; takes precedence over bodyLayout. */
   layoutByViewMode?: Record<string, BodyLayout>;
   getKey?: (item: T) => string;
+  /** Called whenever the internally rendered collection changes. */
+  onItemsChange?: (items: T[]) => void;
+  /** Last-mile display decoration for cards without mutating collection state. */
+  decorateItem?: (item: T) => T;
 
   // Toolbar
   defaultPrefs: SurfacePrefs<F>;

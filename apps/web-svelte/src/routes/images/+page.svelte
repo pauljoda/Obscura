@@ -107,17 +107,14 @@
         lightboxSourceId = item.id;
         lightboxOpen = true;
       },
+      onItemsChange: (items) => {
+        surfaceItems = items;
+      },
+      decorateItem: (image) =>
+        image.id === lightboxSourceId && lightboxOpen
+          ? { ...image, __lightboxSource: true }
+          : image,
     }),
-  );
-
-  // Annotate items with the lightbox-source flag so the masonry card
-  // hides itself during the shared-element flight.
-  const annotatedItems = $derived(
-    surfaceItems.map((image) =>
-      image.id === lightboxSourceId && lightboxOpen
-        ? { ...image, __lightboxSource: true }
-        : image,
-    ),
   );
 
   // Keep our snapshot in sync with the SSR payload.
@@ -232,11 +229,6 @@
     <MediaSurface
       config={{
         ...config,
-        initial: {
-          items: annotatedItems,
-          total: config.initial?.total ?? 0,
-          loadedStart: config.initial?.loadedStart ?? 0,
-        },
         extraFilterSections: drawerSections,
       }}
       initialPrefsByFormFactor={data.surfacePrefs}
