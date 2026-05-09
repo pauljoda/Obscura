@@ -15,6 +15,12 @@ import {
   streamFile,
   streamFileWithRange,
 } from "./asset-response";
+import {
+  MUTABLE_ASSET_CACHE_CONTROL,
+  PRIVATE_DAILY_IMMUTABLE_ASSET_CACHE_CONTROL,
+  PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
+  PRIVATE_IMMUTABLE_ASSET_CACHE_CONTROL,
+} from "$lib/server/cache-policy";
 
 const SIDECAR_MIME: Record<SidecarKind, string> = {
   thumb: "image/jpeg",
@@ -100,7 +106,7 @@ function serveEntityImage(dir: string, entityLabel: string): Response {
   }
 
   return streamFile(filePath, {
-    "Cache-Control": "public, max-age=86400, immutable",
+    "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
     "Content-Type": mimeForFile(filePath),
   });
 }
@@ -122,7 +128,7 @@ async function handleVideoAsset(
         ...cacheCandidates("scenes", id, "thumbnail-custom.jpg"),
       ],
       "Custom thumbnail not found",
-      "no-cache",
+      MUTABLE_ASSET_CACHE_CONTROL,
     );
   }
 
@@ -182,7 +188,7 @@ async function handleVideoAsset(
   }
 
   const sidecarHeaders = {
-    "Cache-Control": "public, max-age=31536000, immutable",
+    "Cache-Control": PRIVATE_IMMUTABLE_ASSET_CACHE_CONTROL,
     "Content-Type": SIDECAR_MIME[resolvedKind],
   };
   if (resolvedKind === "preview") {
@@ -201,7 +207,7 @@ async function handleGalleryCover(
   );
   if (customPath) {
     return streamFile(customPath, {
-      "Cache-Control": "no-cache",
+      "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
       "Content-Type": "image/jpeg",
     });
   }
@@ -222,7 +228,7 @@ async function handleGalleryCover(
     return notFound("Cover thumbnail not yet generated");
   }
   return streamFile(coverThumb, {
-    "Cache-Control": "no-cache",
+    "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
     "Content-Type": "image/jpeg",
   });
 }
@@ -242,7 +248,7 @@ async function handleImageAsset(
       return notFound("Image thumbnail not found");
     }
     return streamFile(thumbPath, {
-      "Cache-Control": "no-cache",
+      "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
       "Content-Type": "image/jpeg",
     });
   }
@@ -255,7 +261,7 @@ async function handleImageAsset(
     return streamFileWithRange(
       previewPath,
       {
-        "Cache-Control": "public, max-age=86400, immutable",
+        "Cache-Control": PRIVATE_DAILY_IMMUTABLE_ASSET_CACHE_CONTROL,
         "Content-Type": "video/mp4",
       },
       range,
@@ -279,7 +285,7 @@ async function handleImageAsset(
     }
 
     return sendBuffer(data, {
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
       "Content-Type": mimeForFile(memberPath),
     });
   }
@@ -290,7 +296,7 @@ async function handleImageAsset(
 
   const contentType = mimeForFile(image.filePath);
   const headers = {
-    "Cache-Control": "public, max-age=3600",
+    "Cache-Control": PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
     "Content-Type": contentType,
   };
   if (contentType.startsWith("video/")) {
@@ -314,6 +320,7 @@ async function handleCollectionCover(
       ...cacheCandidates("collections", id, "cover.webp"),
     ],
     "Cover file not found",
+    MUTABLE_ASSET_CACHE_CONTROL,
   );
 }
 
@@ -376,7 +383,7 @@ export async function resolveAssetRequest(
       firstExistingPath(cacheCandidates("audio-libraries", id, "cover-custom.jpg")) ??
         path.join("__missing__", "cover-custom.jpg"),
       {
-        "Cache-Control": "no-cache",
+        "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
         "Content-Type": "image/jpeg",
       },
       "Cover not found",
@@ -398,6 +405,7 @@ export async function resolveAssetRequest(
         ...cacheCandidates("video-series", id, `${baseName}.webp`),
       ],
       `${prefix} not found`,
+      MUTABLE_ASSET_CACHE_CONTROL,
     );
   }
 
@@ -416,6 +424,7 @@ export async function resolveAssetRequest(
         ...cacheCandidates("video-series", id, `${baseName}.webp`),
       ],
       `${prefix} not found`,
+      MUTABLE_ASSET_CACHE_CONTROL,
     );
   }
 
@@ -428,6 +437,7 @@ export async function resolveAssetRequest(
         ...cacheCandidates("seasons", id, "poster.webp"),
       ],
       "Season poster not found",
+      MUTABLE_ASSET_CACHE_CONTROL,
     );
   }
 
@@ -440,7 +450,7 @@ export async function resolveAssetRequest(
       firstExistingPath(cacheCandidates("audio-tracks", id, "waveform.json")) ??
         path.join("__missing__", "waveform.json"),
       {
-        "Cache-Control": "public, max-age=86400, immutable",
+        "Cache-Control": PRIVATE_DAILY_IMMUTABLE_ASSET_CACHE_CONTROL,
         "Content-Type": "application/json",
       },
       "Waveform not found",

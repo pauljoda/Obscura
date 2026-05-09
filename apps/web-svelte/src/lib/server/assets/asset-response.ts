@@ -22,8 +22,15 @@ export function streamFile(
   filePath: string,
   headers: Record<string, string> = {},
 ): Response {
+  const stats = statSync(filePath);
   const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream;
-  return new Response(body, { headers });
+  return new Response(body, {
+    headers: {
+      ...headers,
+      "Content-Length": String(stats.size),
+      "Last-Modified": stats.mtime.toUTCString(),
+    },
+  });
 }
 
 export function streamFileWithRange(

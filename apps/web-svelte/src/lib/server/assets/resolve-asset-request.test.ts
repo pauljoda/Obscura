@@ -57,7 +57,7 @@ describe("resolveAssetRequest", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("image/jpeg");
     expect(response.headers.get("cache-control")).toBe(
-      "public, max-age=31536000, immutable",
+      "private, max-age=31536000, immutable",
     );
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "card-bytes",
@@ -157,6 +157,9 @@ describe("resolveAssetRequest", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("image/webp");
+    expect(response.headers.get("cache-control")).toBe(
+      "private, max-age=300, stale-while-revalidate=86400",
+    );
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "cover-bytes",
     );
@@ -183,6 +186,9 @@ describe("resolveAssetRequest", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("image/jpeg");
+    expect(response.headers.get("cache-control")).toBe(
+      "private, max-age=300, stale-while-revalidate=86400",
+    );
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "custom-cover",
     );
@@ -259,7 +265,7 @@ describe("resolveAssetRequest", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(response.headers.get("cache-control")).toBe(
-      "public, max-age=86400, immutable",
+      "private, max-age=86400, immutable",
     );
     expect(await response.json()).toEqual({ peaks: [0, 1, 0] });
   });

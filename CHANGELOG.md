@@ -9,10 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
+- Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
 
 ### Changed
 
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
+- Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
 
 ### Fixed
 
