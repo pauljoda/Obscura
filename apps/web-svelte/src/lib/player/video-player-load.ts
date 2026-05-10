@@ -34,6 +34,19 @@ export interface AdaptiveHlsBufferConfig {
   startPosition: number;
 }
 
+export interface AdaptiveSeekPlanInput {
+  streamMode: VideoPlaybackMode;
+  target: number;
+  seekableEnd: number | null;
+  hasManagedHls: boolean;
+}
+
+export interface AdaptiveSeekPlan {
+  currentTime: number;
+  deferredSeekTarget: number | null;
+  hlsStartLoadAt: number | null;
+}
+
 export function requestedModeFromQualityMode(
   qualityMode: QualityMode,
 ): VideoPlaybackMode {
@@ -148,4 +161,38 @@ export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
 export function hlsStatusUrlForSrc(src: string): string | null {
   const statusUrl = src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
   return statusUrl === src ? null : statusUrl;
+}
+
+export function adaptiveSeekPlan({
+  streamMode,
+  target,
+  seekableEnd,
+  hasManagedHls,
+}: AdaptiveSeekPlanInput): AdaptiveSeekPlan {
+  if (streamMode === "hls" && hasManagedHls) {
+    return {
+      currentTime: target,
+      deferredSeekTarget: null,
+      hlsStartLoadAt: target,
+    };
+  }
+
+  if (
+    streamMode === "hls" &&
+    seekableEnd !== null &&
+    Number.isFinite(seekableEnd) &&
+    target > seekableEnd + 0.5
+  ) {
+    return {
+      currentTime: Math.max(0, seekableEnd - 0.5),
+      deferredSeekTarget: target,
+      hlsStartLoadAt: null,
+    };
+  }
+
+  return {
+    currentTime: target,
+    deferredSeekTarget: null,
+    hlsStartLoadAt: null,
+  };
 }

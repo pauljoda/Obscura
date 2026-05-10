@@ -15,10 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
 - Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
-- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
+- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, and adaptive streams avoid forced top-quality startup churn.
 - Adaptive video streams now use continuous HLS packaging with a short startup buffer, reducing audible audio clips at segment boundaries during transcoded playback.
 - Adaptive video playback now asks hls.js to buffer the full available stream instead of stopping at the previous short forward-buffer cap.
-- Direct playback for non-native video containers now prepares a seekable MP4 before playing, so audio and timeline scrubbing behave like a normal file-backed video.
+- Direct playback is now only offered for original files the browser can play directly, so non-native containers stay on adaptive streaming instead of entering a hidden preparation state.
+- Adaptive video scrubbing now jumps to the requested time through hls.js instead of snapping to the current buffer edge.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
@@ -42,8 +43,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Adaptive HLS now lets hls.js choose its startup quality, recovers once from transient media or segment loading errors, and warms the next on-demand segment to reduce playback stalls.
 - Adaptive HLS now packages segments through one continuous ffmpeg job and waits for three ready segments before playback, preventing per-segment AAC timestamp overlap from causing periodic audio clips.
 - Adaptive HLS no longer caps hls.js at a short forward buffer, allowing already-generated segments to continue loading ahead as far as the browser permits.
-- Direct video playback now serves prepared MP4 caches with byte-range support instead of piping a one-shot fragmented MP4 stream, fixing missing audio and scrubber snap-back in Direct mode.
-- HEVC MKV direct-source probing now normalizes ffprobe codec output before choosing a remux mode, preventing accidental full 4K software transcodes that left playback stuck on loading.
+- Direct video playback no longer tries to remux or transcode non-native containers behind the Direct button; those videos now use adaptive HLS unless the original file itself is browser-playable.
+- Adaptive HLS seeks outside the current buffer now restart loading at the requested timestamp while keeping already buffered media available for backward jumps.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

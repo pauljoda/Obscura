@@ -57,6 +57,7 @@
   import {
     adaptiveAutoLevelSelection,
     adaptiveHlsBufferConfig,
+    adaptiveSeekPlan,
     canUseDirectPlayback,
     chooseInitialPlaybackMode,
     computeVideoLoadState,
@@ -138,10 +139,6 @@
   }
 
   // ─── Helpers ────────────────────────────────────────────────────
-  function usesProgressiveHlsSeekWindow(s: string | undefined): boolean {
-    return Boolean(s && hlsStatusUrlForSrc(s));
-  }
-
   async function fetchHlsStatus(
     statusUrl: string,
     signal?: AbortSignal,
@@ -1134,20 +1131,20 @@
   function handleSeekTo(time: number) {
     if (!videoEl) return;
     const target = Math.max(0, Math.min(duration || time, time));
-    if (
-      streamMode === "hls" &&
-      usesProgressiveHlsSeekWindow(src) &&
-      videoEl.seekable.length > 0
-    ) {
-      const seekableEnd = videoEl.seekable.end(videoEl.seekable.length - 1);
-      if (Number.isFinite(seekableEnd) && target > seekableEnd + 0.5) {
-        deferredSeekTarget = target;
-        videoEl.currentTime = Math.max(0, seekableEnd - 0.5);
-        return;
-      }
+    const seekableEnd =
+      videoEl.seekable.length > 0 ? videoEl.seekable.end(videoEl.seekable.length - 1) : null;
+    const plan = adaptiveSeekPlan({
+      streamMode,
+      target,
+      seekableEnd,
+      hasManagedHls: Boolean(hlsRef),
+    });
+    if (plan.hlsStartLoadAt !== null) {
+      hlsRef?.stopLoad();
+      hlsRef?.startLoad(plan.hlsStartLoadAt);
     }
-    deferredSeekTarget = null;
-    videoEl.currentTime = target;
+    deferredSeekTarget = plan.deferredSeekTarget;
+    videoEl.currentTime = plan.currentTime;
   }
 
   $effect(() => {

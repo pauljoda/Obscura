@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { schema, type AppDb } from "@obscura/db";
 
@@ -76,13 +76,6 @@ describe("serveVideoSource", () => {
     getCacheRootDir.mockImplementation(() => runtime.cacheRoot);
     resolveExistingMediaPath.mockImplementation((filePath: string | undefined) => filePath ?? null);
     runProcess.mockImplementation(async (command: string, args: string[]) => {
-      if (command === "ffmpeg") {
-        const outPath = args.at(-1);
-        if (!outPath) throw new Error("missing ffmpeg output path");
-        await mkdir(path.dirname(outPath), { recursive: true });
-        await writeFile(outPath, "prepared-mp4-with-audio");
-        return { stdout: "", stderr: "" };
-      }
       if (command !== "ffprobe") {
         throw new Error(`Unexpected command: ${command}`);
       }
@@ -104,52 +97,33 @@ describe("serveVideoSource", () => {
     vi.clearAllMocks();
   });
 
-  it("prepares a seekable mp4 cache before serving uncached mkv sources", async () => {
+  it("rejects non-native containers from Direct instead of preparing a hidden remux", async () => {
     const { serveVideoSource } = await import("./video-stream");
 
     const response = await serveVideoSource(createDb(sourcePath), "video-1", null);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("video/mp4");
-    expect(response.headers.get("accept-ranges")).toBe("bytes");
-    expect(response.headers.get("content-length")).toBe(String("prepared-mp4-with-audio".length));
-    expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
-      "prepared-mp4-with-audio",
-    );
-    const videoProbeArgs = runProcess.mock.calls.find(
-      ([command, args]) => command === "ffprobe" && (args as string[]).includes("v:0"),
-    )?.[1] as string[] | undefined;
-    expect(videoProbeArgs?.filter((arg) => arg === "v:0")).toHaveLength(1);
-    expect(videoProbeArgs?.at(-1)).toBe(sourcePath);
-    expect(runProcess).toHaveBeenCalledWith(
-      "ffmpeg",
-      expect.arrayContaining([
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-tag:v",
-        "hvc1",
-        "-movflags",
-        "+faststart",
-      ]),
-    );
+    expect(response.status).toBe(415);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Direct playback is not available for this container",
+    });
+    expect(runProcess).not.toHaveBeenCalled();
   });
 
-  it("serves direct scrubs from the prepared mp4 cache with byte ranges", async () => {
+  it("serves native direct files with byte ranges", async () => {
     const { serveVideoSource } = await import("./video-stream");
+    const mp4Path = path.join(tempDir, "episode.mp4");
+    await writeFile(mp4Path, "native-mp4-with-audio");
 
-    await serveVideoSource(createDb(sourcePath), "video-1", null);
-    const response = await serveVideoSource(createDb(sourcePath), "video-1", "bytes=9-11");
+    const response = await serveVideoSource(createDb(mp4Path), "video-1", "bytes=7-9");
 
     expect(response.status).toBe(206);
     expect(response.headers.get("content-type")).toBe("video/mp4");
     expect(response.headers.get("accept-ranges")).toBe("bytes");
-    expect(response.headers.get("content-range")).toBe("bytes 9-11/23");
+    expect(response.headers.get("content-range")).toBe("bytes 7-9/21");
     expect(response.headers.get("content-length")).toBe("3");
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "mp4",
     );
-    expect(runProcess.mock.calls.filter(([command]) => command === "ffmpeg")).toHaveLength(1);
+    expect(runProcess).not.toHaveBeenCalled();
   });
 });

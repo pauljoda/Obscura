@@ -11,6 +11,7 @@ import {
   videoEpisodeVisibleSql,
   videoMovieVisibleSql,
 } from "./library-root-visibility";
+import { directStreamUrlForVideoFile } from "./video-core";
 
 const {
   videoEpisodes,
@@ -79,7 +80,7 @@ function toVideoListItem(row: VideoRow) {
     filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
-    directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,
+    directStreamUrl: directStreamUrlForVideoFile(row.id, resolvedFilePath),
     thumbnailPath: row.thumbnailPath,
     cardThumbnailPath: row.cardThumbnailPath,
     spritePath: row.spritePath,
