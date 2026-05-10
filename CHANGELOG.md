@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
 - Adaptive video streams now use continuous HLS packaging with a short startup buffer, reducing audible audio clips at segment boundaries during transcoded playback.
 - Adaptive video playback now asks hls.js to buffer the full available stream instead of stopping at the previous short forward-buffer cap.
+- Direct playback for non-native video containers now prepares a seekable MP4 before playing, so audio and timeline scrubbing behave like a normal file-backed video.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
@@ -41,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Adaptive HLS now lets hls.js choose its startup quality, recovers once from transient media or segment loading errors, and warms the next on-demand segment to reduce playback stalls.
 - Adaptive HLS now packages segments through one continuous ffmpeg job and waits for three ready segments before playback, preventing per-segment AAC timestamp overlap from causing periodic audio clips.
 - Adaptive HLS no longer caps hls.js at a short forward buffer, allowing already-generated segments to continue loading ahead as far as the browser permits.
+- Direct video playback now serves prepared MP4 caches with byte-range support instead of piping a one-shot fragmented MP4 stream, fixing missing audio and scrubber snap-back in Direct mode.
 - HEVC MKV direct-source probing now normalizes ffprobe codec output before choosing a remux mode, preventing accidental full 4K software transcodes that left playback stuck on loading.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 

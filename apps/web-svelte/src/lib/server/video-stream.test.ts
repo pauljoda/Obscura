@@ -1,17 +1,14 @@
 import os from "node:os";
 import path from "node:path";
-import { EventEmitter } from "node:events";
-import { PassThrough } from "node:stream";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { schema, type AppDb } from "@obscura/db";
 
-const { getCacheRootDir, resolveExistingMediaPath, runProcess, spawn, runtime } =
+const { getCacheRootDir, resolveExistingMediaPath, runProcess, runtime } =
   vi.hoisted(() => ({
     getCacheRootDir: vi.fn(),
     resolveExistingMediaPath: vi.fn(),
     runProcess: vi.fn(),
-    spawn: vi.fn(),
     runtime: {
       cacheRoot: "",
     },
@@ -32,11 +29,6 @@ vi.mock("@obscura/app-core", () => ({
   peekHlsTracker: vi.fn(),
   segmentCount: vi.fn(),
   startHlsGeneration: vi.fn(),
-}));
-
-vi.mock("node:child_process", () => ({
-  default: { spawn },
-  spawn,
 }));
 
 function createDb(filePath: string): AppDb {
@@ -84,6 +76,13 @@ describe("serveVideoSource", () => {
     getCacheRootDir.mockImplementation(() => runtime.cacheRoot);
     resolveExistingMediaPath.mockImplementation((filePath: string | undefined) => filePath ?? null);
     runProcess.mockImplementation(async (command: string, args: string[]) => {
+      if (command === "ffmpeg") {
+        const outPath = args.at(-1);
+        if (!outPath) throw new Error("missing ffmpeg output path");
+        await mkdir(path.dirname(outPath), { recursive: true });
+        await writeFile(outPath, "prepared-mp4-with-audio");
+        return { stdout: "", stderr: "" };
+      }
       if (command !== "ffprobe") {
         throw new Error(`Unexpected command: ${command}`);
       }
@@ -98,23 +97,6 @@ describe("serveVideoSource", () => {
       }
       return { stdout: "", stderr: "" };
     });
-    spawn.mockImplementation(() => {
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      const process = Object.assign(new EventEmitter(), {
-        stdout,
-        stderr,
-        kill: vi.fn(),
-      });
-
-      queueMicrotask(() => {
-        stdout.write(Buffer.from("fragmented-mp4"));
-        stdout.end();
-        process.emit("close", 0);
-      });
-
-      return process;
-    });
   });
 
   afterEach(async () => {
@@ -122,23 +104,24 @@ describe("serveVideoSource", () => {
     vi.clearAllMocks();
   });
 
-  it("streams a fragmented mp4 immediately for uncached mkv sources", async () => {
+  it("prepares a seekable mp4 cache before serving uncached mkv sources", async () => {
     const { serveVideoSource } = await import("./video-stream");
 
     const response = await serveVideoSource(createDb(sourcePath), "video-1", null);
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("content-type")).toBe("video/mp4");
+    expect(response.headers.get("accept-ranges")).toBe("bytes");
+    expect(response.headers.get("content-length")).toBe(String("prepared-mp4-with-audio".length));
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
-      "fragmented-mp4",
+      "prepared-mp4-with-audio",
     );
     const videoProbeArgs = runProcess.mock.calls.find(
       ([command, args]) => command === "ffprobe" && (args as string[]).includes("v:0"),
     )?.[1] as string[] | undefined;
     expect(videoProbeArgs?.filter((arg) => arg === "v:0")).toHaveLength(1);
     expect(videoProbeArgs?.at(-1)).toBe(sourcePath);
-    expect(spawn).toHaveBeenCalledWith(
+    expect(runProcess).toHaveBeenCalledWith(
       "ffmpeg",
       expect.arrayContaining([
         "-c:v",
@@ -148,28 +131,25 @@ describe("serveVideoSource", () => {
         "-tag:v",
         "hvc1",
         "-movflags",
-        "frag_keyframe+empty_moov+default_base_moof",
+        "+faststart",
       ]),
-      expect.objectContaining({
-        stdio: ["ignore", "pipe", "pipe"],
-      }),
     );
   });
 
-  it("treats bytes=0- as an initial direct request instead of returning 503", async () => {
+  it("serves direct scrubs from the prepared mp4 cache with byte ranges", async () => {
     const { serveVideoSource } = await import("./video-stream");
 
-    const response = await serveVideoSource(
-      createDb(sourcePath),
-      "video-1",
-      "bytes=0-",
-    );
+    await serveVideoSource(createDb(sourcePath), "video-1", null);
+    const response = await serveVideoSource(createDb(sourcePath), "video-1", "bytes=9-11");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(206);
     expect(response.headers.get("content-type")).toBe("video/mp4");
+    expect(response.headers.get("accept-ranges")).toBe("bytes");
+    expect(response.headers.get("content-range")).toBe("bytes 9-11/23");
+    expect(response.headers.get("content-length")).toBe("3");
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
-      "fragmented-mp4",
+      "mp4",
     );
-    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(runProcess.mock.calls.filter(([command]) => command === "ffmpeg")).toHaveLength(1);
   });
 });
