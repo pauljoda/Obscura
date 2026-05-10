@@ -1231,8 +1231,8 @@
           </span>
         </div>
 
-        <div class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:w-auto sm:items-center">
-          <div class="flex min-w-0 items-center gap-2 sm:contents">
+        <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-2 sm:contents">
+          <div class="flex min-w-0 shrink items-center gap-2 sm:contents">
           {#if subtitleTracks.length > 0}
             <div class="relative">
               <button
@@ -1317,7 +1317,7 @@
           {/if}
 
           {#if displayedAudioTracks.length > 0}
-            <div class="relative min-w-0 flex-1 sm:flex-none">
+            <div class="relative min-w-0 shrink sm:flex-none">
               <button
                 type="button"
                 bind:this={audioMenuButton}
@@ -1327,7 +1327,7 @@
                   subtitleMenuOpen = false;
                   speedMenuOpen = false;
                 }}
-                class="player-control-button w-full min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:w-auto sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
+                class="player-control-button max-w-[9.5rem] min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
                 aria-label="Audio track"
               >
                 <span class="min-w-0 truncate">{displayedAudioTrackLabel}</span>
