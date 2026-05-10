@@ -128,6 +128,7 @@ describe("VideoPlayer", () => {
 
     expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
     expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Audio track" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Quality menu/ })).toBeInTheDocument();
   });
 });

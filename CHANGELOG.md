@@ -59,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Mobile captions controls now have a little extra side padding so the icon and chevron do not clip against the button border.
 - Desktop video playback controls now place the scrub bar below the button row, matching the cleaner mobile control order.
 - Video playback scrub bars now have a larger click target, and the desktop captions button now matches the padding rhythm of the other dropdown controls.
+- Video playback now always exposes the audio-track selector, including single-track videos where it shows the default audio track.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

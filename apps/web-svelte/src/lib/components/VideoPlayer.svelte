@@ -230,6 +230,14 @@
   const activePlaybackLabel = $derived(
     effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
   );
+  const displayedAudioTracks = $derived<AudioTrackOption[]>(
+    audioTracks.length > 0
+      ? audioTracks
+      : [{ id: "default-audio", index: -1, label: "Default audio", selected: true }],
+  );
+  const displayedAudioTrackLabel = $derived(
+    selectedAudioTrackLabel ?? displayedAudioTracks.find((track) => track.selected)?.label ?? "Audio",
+  );
 
   const assTrackForRender = $derived.by(() => {
     if (!activeSubtitleId) return null;
@@ -388,6 +396,11 @@
   }
 
   function selectAudioTrack(index: number) {
+    if (index < 0) {
+      selectedAudioTrackLabel = displayedAudioTrackLabel;
+      audioMenuOpen = false;
+      return;
+    }
     const track = player?.audioTracks?.toArray?.()[index];
     if (!track) return;
     track.selected = true;
@@ -1221,7 +1234,7 @@
         <div
           class={cn(
             "grid w-full gap-2 sm:flex sm:w-auto sm:items-center",
-            audioTracks.length > 1
+            displayedAudioTracks.length > 0
               ? "grid-cols-[2.125rem_minmax(0,1fr)_minmax(0,1fr)_1.75rem]"
               : "grid-cols-[2.125rem_minmax(0,1fr)_1.75rem]",
           )}
@@ -1309,7 +1322,7 @@
             </div>
           {/if}
 
-          {#if audioTracks.length > 1}
+          {#if displayedAudioTracks.length > 0}
             <div class="relative">
               <button
                 type="button"
@@ -1323,7 +1336,7 @@
                 class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
                 aria-label="Audio track"
               >
-                <span class="min-w-0 truncate">{selectedAudioTrackLabel ?? "Audio"}</span>
+                <span class="min-w-0 truncate">{displayedAudioTrackLabel}</span>
                 <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
               </button>
               {#if audioMenuOpen}
@@ -1335,7 +1348,7 @@
                   )}
                   style={playerMenuFlyoutStyle ?? undefined}
                 >
-                  {#each audioTracks as track (track.id)}
+                  {#each displayedAudioTracks as track (track.id)}
                     <button
                       type="button"
                       onclick={() => selectAudioTrack(track.index)}
