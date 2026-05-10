@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidate, invalidateAll } from "$app/navigation";
   import { onMount } from "svelte";
-  import { BookOpen, Images, Layers, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
+  import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
   import { deleteImage, updateGallery } from "$lib/api/media";
@@ -9,8 +9,8 @@
   import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
+  import ChildGalleryGrid from "$lib/components/galleries/ChildGalleryGrid.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
@@ -18,6 +18,10 @@
   import { imagesSurfaceConfig } from "$lib/media-surface/configs/images";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { createServerPrefs } from "$lib/server-prefs.svelte";
+  import {
+    detectUiPrefsFormFactor,
+    formFactorUiPrefKey,
+  } from "$lib/prefs/form-factor-prefs";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
   import {
     canResumeComic,
@@ -31,8 +35,19 @@
     type ComicReadingProgress,
   } from "$lib/components/comic-progress";
 
+  type ChildGalleryViewPrefs = { cols: number };
+  const childGalleryPrefsDefault: ChildGalleryViewPrefs = { cols: 3 };
+
+  function validateChildGalleryPrefs(raw: unknown): ChildGalleryViewPrefs | null {
+    if (!raw || typeof raw !== "object") return null;
+    const cols = (raw as { cols?: unknown }).cols;
+    if (typeof cols !== "number" || !Number.isFinite(cols)) return null;
+    return { cols: Math.min(8, Math.max(2, Math.round(cols))) };
+  }
+
   let { data } = $props();
   const appChrome = useAppChrome();
+  const childGalleryFormFactor = detectUiPrefsFormFactor();
   let overrideRating = $state<number | null | undefined>(undefined);
   const g = $derived(
     overrideRating === undefined
@@ -71,6 +86,14 @@
     data.comicProgress,
     validateComicProgress,
   );
+  // svelte-ignore state_referenced_locally
+  const childGalleryPrefs = createServerPrefs<ChildGalleryViewPrefs>(
+    formFactorUiPrefKey("galleries:interiorView", childGalleryFormFactor),
+    childGalleryPrefsDefault,
+    data.viewPrefsByFormFactor?.[childGalleryFormFactor],
+    validateChildGalleryPrefs,
+  );
+  const childGalleryCols = $derived(childGalleryPrefs.current.cols);
   const comicProgress = $derived(
     normalizeComicProgress(comicProgressPrefs.current, images.length),
   );
@@ -81,6 +104,7 @@
 
   onMount(() => {
     void comicProgressPrefs.load();
+    void childGalleryPrefs.load();
   });
 
   function saveComicProgress(nextIndex: number) {
@@ -334,46 +358,11 @@
       {#if visibleChildGalleries.length > 0}
         <HierarchySection title="Sub-galleries">
           {#snippet children()}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {#each visibleChildGalleries as child, i (child.id)}
-                <a
-                  href={`/galleries/${child.id}`}
-                  class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
-                >
-                  <GalleryThumbnail
-                    title={child.title}
-                    coverImagePath={child.coverImagePath}
-                    previewImagePaths={child.previewImagePaths}
-                    imageCount={child.imageCount}
-                    isNsfw={child.isNsfw}
-                    isComic={child.isComic}
-                    size="hero"
-                    aspectRatio={child.isComic ? null : child.coverAspectRatio}
-                    aspectClass={child.isComic ? undefined : "aspect-[4/3]"}
-                    fit={child.isComic ? "contain" : child.coverAspectRatio ? "cover" : "contain"}
-                    showCount={false}
-                    gradientIndex={i}
-                  />
-                  <div class="p-2.5">
-                    <h3 class="truncate text-sm font-medium">{child.title}</h3>
-                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
-                      {#if child.imageCount > 0}
-                        <span class="inline-flex items-center gap-1">
-                          <Images class="h-3 w-3" />
-                          {child.imageCount} image{child.imageCount === 1 ? "" : "s"}
-                        </span>
-                      {/if}
-                      {#if child.childCount > 0}
-                        <span class="inline-flex items-center gap-1">
-                          <Layers class="h-3 w-3" />
-                          {child.childCount} {child.childCount === 1 ? "sub-gallery" : "sub-galleries"}
-                        </span>
-                      {/if}
-                    </div>
-                  </div>
-                </a>
-              {/each}
-            </div>
+            <ChildGalleryGrid
+              galleries={visibleChildGalleries}
+              cols={childGalleryCols}
+              onColsChange={(cols) => childGalleryPrefs.update({ cols })}
+            />
           {/snippet}
         </HierarchySection>
       {/if}
