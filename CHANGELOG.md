@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Images Feed view now responds to the thumbnail-size slider instead of staying at a fixed width.
 - Gallery thumbnail preview scrubbing now uses pointer input, making the preview strip work on mobile touch as well as desktop hover.
 
+### Docs
+
+- Documented the CPU-first streaming stability plan, including HEVC direct-play detection, smoother adaptive HLS behavior, and the later Linux Docker GPU support path.
+
 ## [0.22.0] - 2026-05-09
 ### What's New
 
