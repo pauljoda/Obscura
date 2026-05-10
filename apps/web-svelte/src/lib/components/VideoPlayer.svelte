@@ -1039,7 +1039,7 @@
           {:else if playing}
             <Pause class="h-4 w-4" fill="currentColor" />
           {:else}
-            <Play class="h-4 w-4 translate-x-px" fill="currentColor" />
+            <span class="play-glyph play-glyph-lg" aria-hidden="true"></span>
           {/if}
         </button>
         <button
@@ -1171,7 +1171,7 @@
             {:else if playing}
               <Pause class="h-3.5 w-3.5" fill="currentColor" />
             {:else}
-              <Play class="h-3.5 w-3.5 translate-x-px" fill="currentColor" />
+              <span class="play-glyph" aria-hidden="true"></span>
             {/if}
           </button>
           <button
@@ -1229,12 +1229,14 @@
                 }}
                 aria-label="Subtitles"
                 class={cn(
-                  "player-control-button justify-center gap-1 sm:gap-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
+                  "player-control-button subtitle-control-button text-[0.65rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
                   activeSubtitleId ? "text-accent-100" : "text-white/82",
                 )}
               >
-                <Captions class="h-3.5 w-3.5" />
-                <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                <span class="subtitle-control-glyph" aria-hidden="true">
+                  <Captions class="h-3.5 w-3.5" />
+                  <ChevronDown class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </span>
               </button>
               {#if subtitleMenuOpen}
                 <div
@@ -1514,11 +1516,65 @@
     min-width: 2.25rem;
   }
 
+  .play-glyph {
+    display: block;
+    height: 0.875rem;
+    position: relative;
+    width: 0.875rem;
+  }
+
+  .play-glyph::before {
+    border-bottom: 0.36rem solid transparent;
+    border-left: 0.56rem solid currentColor;
+    border-top: 0.36rem solid transparent;
+    content: "";
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-42%, -50%);
+  }
+
+  .play-glyph-lg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  .play-glyph-lg::before {
+    border-bottom-width: 0.42rem;
+    border-left-width: 0.64rem;
+    border-top-width: 0.42rem;
+  }
+
+  .subtitle-control-button {
+    justify-content: center;
+    padding: 0;
+    width: 2.5rem;
+  }
+
+  .subtitle-control-glyph {
+    align-items: center;
+    display: grid;
+    gap: 0.18rem;
+    grid-template-columns: 1fr 1fr;
+    justify-items: center;
+    margin-left: 0.02rem;
+    width: 1.62rem;
+  }
+
   @media (min-width: 640px) {
     .player-control-button {
       height: 2.25rem;
       min-height: 2.25rem;
       min-width: 2.25rem;
+    }
+
+    .subtitle-control-button {
+      width: 2.5rem;
+    }
+
+    .subtitle-control-glyph {
+      gap: 0.22rem;
+      width: 1.72rem;
     }
   }
 </style>

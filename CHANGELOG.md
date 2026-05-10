@@ -53,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Vidstack video playback now presents Obscura's previous squared-off controls and custom subtitle styling instead of the bare default player chrome.
 - Video playback no longer renders Vidstack's custom element during server hydration, preventing the player shell from producing hydration mismatch warnings on load.
 - Adaptive HLS buffering now uses browser-safe limits, reducing noisy `bufferFullError` console logs while still keeping a large forward buffer.
+- Video playback controls now center the play glyph and captions control more precisely inside their square buttons.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs
