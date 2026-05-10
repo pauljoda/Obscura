@@ -17,13 +17,26 @@
 </script>
 
 <script lang="ts">
-  import "vidstack/player/styles/default/theme.css";
-  import "vidstack/player/styles/default/layouts/video.css";
   import "vidstack/player";
-  import "vidstack/player/layouts";
-  import "vidstack/player/ui";
 
   import { onMount } from "svelte";
+  import {
+    Captions,
+    ChevronDown,
+    Gauge,
+    Loader,
+    Maximize,
+    Pause,
+    Play,
+    RotateCcw,
+    RotateCw,
+    Settings2,
+    Sliders,
+    Volume2,
+    VolumeX,
+    Wifi,
+  } from "@lucide/svelte";
+  import { cn } from "@obscura/ui-svelte";
   import {
     isHLSProvider,
     type AudioTrack,
@@ -31,12 +44,36 @@
     type MediaErrorEvent,
     type MediaProviderChangeEvent,
     type MediaTimeUpdateEvent,
+    type VideoQuality,
   } from "vidstack";
   import type { MediaPlayerElement } from "vidstack/elements";
   import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
+  import type { SubtitleCueDto } from "$lib/api/types";
+  import { fetchVideoSubtitleCues } from "$lib/api/videos";
+  import { portal } from "$lib/actions/portal";
+  import {
+    enterMediaFullscreen,
+    exitDocumentFullscreen,
+    isDocumentFullscreen,
+  } from "$lib/fullscreen";
+  import {
+    adaptiveHlsBufferConfig,
+    canUseDirectPlayback,
+  } from "$lib/player/video-player-load";
+  import {
+    layoutPlayerMobileFlyout,
+    playerFlyoutStyleToString,
+  } from "$lib/player/flyout-layout";
+  import {
+    captionClassName,
+    pickPreferredSubtitleTrack,
+    readLocalSubtitleAppearance,
+    resolveSubtitleAppearance,
+    writeLocalSubtitleAppearance,
+  } from "$lib/player/subtitle-appearance";
+  import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import FilmStrip from "./FilmStrip.svelte";
-  import { adaptiveHlsBufferConfig } from "$lib/player/video-player-load";
-  import { pickPreferredSubtitleTrack } from "$lib/player/subtitle-appearance";
+  import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
 
   interface Props {
     src?: string;
@@ -67,11 +104,17 @@
   }
 
   type PlaybackMode = "direct" | "hls";
+  type QualityMode = "direct" | "auto" | number;
+
+  interface QualityOption {
+    value: QualityMode;
+    label: string;
+  }
 
   interface AudioTrackOption {
     id: string;
+    index: number;
     label: string;
-    language: string;
     selected: boolean;
   }
 
@@ -82,12 +125,13 @@
     poster,
     markers = [],
     duration: propDuration,
+    onMarkerClick,
     onPlayStarted,
     onTimeUpdate,
     trickplaySprite,
     trickplayVtt,
     subtitleTracks = [],
-    activeSubtitleTrackId,
+    activeSubtitleTrackId: controlledSubtitleId,
     onActiveSubtitleTrackIdChange,
     onActiveCueChange,
     subtitleChoiceLocked = false,
@@ -98,46 +142,226 @@
     handle = $bindable(),
   }: Props = $props();
 
+  const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
+  const PLAYER_MENU_GUTTER_PX = 12;
+
+  let containerEl: HTMLDivElement | undefined = $state();
   let player: MediaPlayerElement | undefined = $state();
   let videoEl: HTMLVideoElement | null = $state(null);
-  let currentTime = $state(0);
-  let discoveredDuration = $state(0);
+  let controlsTimeout: number | null = null;
+  let playTracked = false;
+  let isDraggingRef = false;
+  let lastSourceKey = "";
+  let pendingSeekTime: number | null = null;
+  let pendingAutoPlay = false;
+
   let playbackMode = $state<PlaybackMode>("hls");
-  let sourceKey = $state("");
+  let qualityMode = $state<QualityMode>("auto");
+  let currentTime = $state(0);
+  let duration = $state(0);
+  let playing = $state(false);
+  let buffering = $state(false);
+  let muted = $state(false);
+  let volume = $state(1);
+  let playbackRate = $state(1);
+  let showControls = $state(true);
+  let isDragging = $state(false);
+  let bufferedProgress = $state(0);
+  let bufferAhead = $state(0);
+  let bandwidthEstimate = $state<number | null>(null);
+  let droppedFrames = $state<number | null>(null);
+  let qualityOptions = $state<QualityOption[]>([{ value: "auto", label: "Auto" }]);
+  let activeQualityLabel = $state<string | null>(null);
   let audioTracks = $state<AudioTrackOption[]>([]);
-  let selectedAudioTrackId = $state("");
+  let selectedAudioTrackLabel = $state<string | null>(null);
   let providerLabel = $state("Vidstack");
   let playerNotice = $state<string | null>(null);
+  let timelineHover = $state<{
+    markerTitles: string[];
+    percent: number;
+    time: number;
+  } | null>(null);
 
+  let qualityMenuOpen = $state(false);
+  let audioMenuOpen = $state(false);
+  let speedMenuOpen = $state(false);
+  let subtitleMenuOpen = $state(false);
+  let subtitleSettingsOpen = $state(false);
+  let qualityMenuButton: HTMLButtonElement | undefined = $state();
+  let audioMenuButton: HTMLButtonElement | undefined = $state();
+  let subtitleMenuButton: HTMLButtonElement | undefined = $state();
+  let playerMenuFlyoutStyle = $state<string | null>(null);
+  let playerMenuIsSm = $state(false);
+
+  let internalSubtitleId = $state<string | null>(null);
+  let activeTrackCues = $state<SubtitleCueDto[]>([]);
+  let activeCueText = $state<string | null>(null);
+  let localAppearance = $state<Partial<SubtitleAppearance> | null>(null);
+  let autoSelected = false;
+
+  const directPlayable = $derived.by(() => {
+    const video = videoEl as HTMLVideoElement | null;
+    return canUseDirectPlayback({
+      directSrc,
+      codec,
+      canPlayType: video ? video.canPlayType.bind(video) : undefined,
+    });
+  });
   const effectiveMode = $derived<PlaybackMode>(
-    playbackMode === "direct" && directSrc ? "direct" : "hls",
+    playbackMode === "direct" && directSrc && directPlayable ? "direct" : "hls",
   );
   const playerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
-  const displayDuration = $derived(propDuration ?? discoveredDuration);
-  const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && displayDuration > 0));
-  const supportedSubtitleTracks = $derived(
-    subtitleTracks.filter((track) => track.sourceFormat !== "ass" && track.sourceFormat !== "ssa"),
+  const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
+  const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && duration > 0));
+  const activeSubtitleId = $derived(
+    controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId,
   );
+  const appearance = $derived(
+    resolveSubtitleAppearance(subtitleDefaults?.appearance ?? null, localAppearance),
+  );
+  const selectedQualityLabel = $derived(
+    effectiveMode === "direct"
+      ? "Direct"
+      : qualityMode === "auto"
+        ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
+        : activeQualityLabel ?? "Quality",
+  );
+
+  const assTrackForRender = $derived.by(() => {
+    if (!activeSubtitleId) return null;
+    const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
+    if (!track) return null;
+    if (track.sourceFormat !== "ass" && track.sourceFormat !== "ssa") return null;
+    if (!track.sourceUrl) return null;
+    return track;
+  });
 
   function initialPlaybackMode(): PlaybackMode {
     if (defaultPlaybackMode === "hls") return "hls";
-    return directSrc ? "direct" : "hls";
+    return directSrc && directPlayable ? "direct" : "hls";
+  }
+
+  function formatTime(seconds: number) {
+    const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    const h = Math.floor(safe / 3600);
+    const m = Math.floor((safe % 3600) / 60);
+    const s = Math.floor(safe % 60);
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function formatBandwidth(bps: number | null) {
+    if (!bps || !Number.isFinite(bps)) return "—";
+    if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
+    return `${Math.round(bps / 1_000)} Kbps`;
+  }
+
+  function languageLabel(language: string): string {
+    if (!language || language === "und") return "Unknown";
+    try {
+      const displayNames = new Intl.DisplayNames(undefined, { type: "language" });
+      return displayNames.of(language) ?? language.toUpperCase();
+    } catch {
+      return language.toUpperCase();
+    }
+  }
+
+  function isAssTrackActive(
+    id: string | null | undefined,
+    tracks: readonly VideoSubtitleTrackDto[],
+  ): boolean {
+    if (!id) return false;
+    const track = tracks.find((x) => x.id === id);
+    if (!track) return false;
+    return (track.sourceFormat === "ass" || track.sourceFormat === "ssa") && !!track.sourceUrl;
   }
 
   function syncVideoElement() {
     videoEl = player?.querySelector("video") ?? null;
   }
 
-  function refreshAudioTracks() {
-    const tracks = player?.audioTracks?.toArray?.() ?? [];
-    audioTracks = tracks.map((track, index) => ({
-      id: track.id,
-      label: audioTrackLabel(track, index),
-      language: track.language,
-      selected: track.selected,
-    }));
-    selectedAudioTrackId =
-      tracks.find((track) => track.selected)?.id ?? tracks[0]?.id ?? "";
+  function closeMenus() {
+    qualityMenuOpen = false;
+    audioMenuOpen = false;
+    speedMenuOpen = false;
+    subtitleMenuOpen = false;
+  }
+
+  function clearControlsTimer() {
+    if (controlsTimeout) {
+      window.clearTimeout(controlsTimeout);
+      controlsTimeout = null;
+    }
+  }
+
+  function scheduleControlsHide() {
+    clearControlsTimer();
+    if (!playing) return;
+    controlsTimeout = window.setTimeout(() => {
+      showControls = false;
+      closeMenus();
+    }, 2400);
+  }
+
+  function surfaceControls() {
+    showControls = true;
+    scheduleControlsHide();
+  }
+
+  function updateBuffered() {
+    const video = videoEl;
+    if (!video || duration <= 0) {
+      bufferedProgress = 0;
+      bufferAhead = 0;
+      return;
+    }
+    let bufferedEnd = 0;
+    for (let i = 0; i < video.buffered.length; i += 1) {
+      const start = video.buffered.start(i);
+      const end = video.buffered.end(i);
+      if (video.currentTime >= start && video.currentTime <= end) {
+        bufferedEnd = end;
+        break;
+      }
+      bufferedEnd = Math.max(bufferedEnd, end);
+    }
+    bufferedProgress = Math.min(100, (bufferedEnd / duration) * 100);
+    bufferAhead = Math.max(0, bufferedEnd - video.currentTime);
+  }
+
+  function qualityLabel(quality: VideoQuality, index: number) {
+    if (quality.height > 0) return `${quality.height}p`;
+    if (quality.bitrate) return formatBandwidth(quality.bitrate);
+    return `Level ${index + 1}`;
+  }
+
+  function refreshQualities() {
+    if (!player || effectiveMode === "direct") {
+      qualityOptions = [
+        ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+        { value: "auto" as const, label: "Auto" },
+      ];
+      activeQualityLabel = null;
+      return;
+    }
+    const qualities = player.qualities?.toArray?.() ?? [];
+    const options = qualities
+      .map((quality, index) => ({
+        value: index,
+        label: qualityLabel(quality, index),
+        height: quality.height,
+      }))
+      .sort((a, b) => b.height - a.height);
+    qualityOptions = [
+      ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+      { value: "auto" as const, label: "Auto" },
+      ...options.map(({ value, label }) => ({ value, label })),
+    ];
+    const selected = qualities.find((quality) => quality.selected);
+    activeQualityLabel = selected
+      ? qualityLabel(selected, qualities.indexOf(selected))
+      : activeQualityLabel;
+    if (player.qualities?.auto) qualityMode = "auto";
   }
 
   function audioTrackLabel(track: AudioTrack, index: number): string {
@@ -147,20 +371,157 @@
       : label;
   }
 
-  function selectAudioTrack(id: string) {
-    const track = player?.audioTracks?.getById(id);
+  function refreshAudioTracks() {
+    const tracks = player?.audioTracks?.toArray?.() ?? [];
+    audioTracks = tracks.map((track, index) => ({
+      id: track.id,
+      index,
+      label: audioTrackLabel(track, index),
+      selected: track.selected,
+    }));
+    selectedAudioTrackLabel =
+      audioTracks.find((track) => track.selected)?.label ?? audioTracks[0]?.label ?? null;
+  }
+
+  function selectAudioTrack(index: number) {
+    const track = player?.audioTracks?.toArray?.()[index];
     if (!track) return;
     track.selected = true;
-    selectedAudioTrackId = id;
+    selectedAudioTrackLabel = audioTrackLabel(track, index);
     refreshAudioTracks();
+    audioMenuOpen = false;
+  }
+
+  function requestPlaybackMode(nextQualityMode: QualityMode) {
+    pendingSeekTime = currentTime > 0.25 ? currentTime : null;
+    pendingAutoPlay = playing;
+    if (nextQualityMode === "direct") {
+      playbackMode = "direct";
+      qualityMode = "direct";
+      closeMenus();
+      return;
+    }
+    playbackMode = "hls";
+    qualityMode = nextQualityMode;
+    closeMenus();
+    if (!player || typeof nextQualityMode === "string") {
+      if (nextQualityMode === "auto") player?.qualities?.autoSelect?.();
+      return;
+    }
+    const quality = player.qualities?.toArray?.()[nextQualityMode];
+    const remote = (player as unknown as {
+      remoteControl?: { changeQuality?: (index: number, trigger?: Event) => void };
+    }).remoteControl;
+    remote?.changeQuality?.(nextQualityMode);
+    if (quality) quality.selected = true;
+    activeQualityLabel = quality ? qualityLabel(quality, nextQualityMode) : activeQualityLabel;
+  }
+
+  function selectSubtitle(id: string | null) {
+    if (controlledSubtitleId === undefined) internalSubtitleId = id;
+    onActiveSubtitleTrackIdChange?.(id);
+    subtitleMenuOpen = false;
+  }
+
+  function handleAppearanceChange(next: SubtitleAppearance) {
+    localAppearance = next;
+    writeLocalSubtitleAppearance(next);
+  }
+
+  function handleAppearanceReset() {
+    localAppearance = null;
+    writeLocalSubtitleAppearance(null);
+  }
+
+  function togglePlay() {
+    if (!player) return;
+    if (player.paused) void player.play();
+    else void player.pause();
+  }
+
+  function seek(delta: number) {
+    seekTo(currentTime + delta);
   }
 
   function seekTo(time: number) {
     if (!player) return;
-    const target = Math.max(0, Math.min(displayDuration || Number.MAX_SAFE_INTEGER, time));
+    const target = Math.max(0, Math.min(duration || time, time));
     player.currentTime = target;
     currentTime = target;
     onTimeUpdate?.(target);
+  }
+
+  function toggleMute() {
+    if (!player) return;
+    player.muted = !player.muted;
+    if (!player.muted && player.volume === 0) player.volume = 1;
+    muted = player.muted;
+    volume = player.volume;
+  }
+
+  function handleVolumeChange(next: number) {
+    if (!player) return;
+    player.volume = next;
+    player.muted = next === 0;
+    volume = next;
+    muted = next === 0;
+  }
+
+  function applyPlaybackRate(nextRate: number) {
+    if (!player) return;
+    player.playbackRate = nextRate;
+    playbackRate = nextRate;
+    speedMenuOpen = false;
+  }
+
+  function toggleFullscreen() {
+    if (isDocumentFullscreen()) {
+      exitDocumentFullscreen();
+      return;
+    }
+    if (!containerEl) return;
+    enterMediaFullscreen(containerEl, videoEl);
+  }
+
+  function updateTimelineHover(clientX: number, rect: DOMRect) {
+    if (duration <= 0) {
+      timelineHover = null;
+      return;
+    }
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const time = percent * duration;
+    const windowSec = Math.max(duration * 0.01, 1.5);
+    const markerTitles = markers
+      .filter((marker) => Math.abs(marker.time - time) <= windowSec)
+      .map((marker) => marker.title);
+    timelineHover = { markerTitles, percent: percent * 100, time };
+  }
+
+  function handleFilmStripInteraction(active: boolean) {
+    if (active) {
+      clearControlsTimer();
+      showControls = false;
+      closeMenus();
+    } else {
+      surfaceControls();
+    }
+  }
+
+  function updateActiveCue() {
+    if (!activeSubtitleId || activeTrackCues.length === 0) {
+      if (activeCueText !== null) {
+        activeCueText = null;
+        onActiveCueChange?.(null);
+      }
+      return;
+    }
+    const cue = activeTrackCues.find((candidate) => (
+      currentTime >= candidate.start && currentTime < candidate.end
+    ));
+    const text = cue?.text.replace(/<[^>]+>/g, "") || null;
+    if (text === activeCueText) return;
+    activeCueText = text;
+    onActiveCueChange?.(cue && text ? { start: cue.start, end: cue.end, text } : null);
   }
 
   $effect(() => {
@@ -171,32 +532,138 @@
 
   $effect(() => {
     const nextKey = `${src ?? ""}|${directSrc ?? ""}|${defaultPlaybackMode ?? ""}`;
-    if (nextKey === sourceKey) return;
-    sourceKey = nextKey;
+    if (nextKey === lastSourceKey) return;
+    lastSourceKey = nextKey;
     playbackMode = initialPlaybackMode();
-    playerNotice = null;
+    qualityMode = playbackMode === "direct" ? "direct" : "auto";
     currentTime = 0;
-    audioTracks = [];
-    selectedAudioTrackId = "";
+    duration = propDuration ?? 0;
+    bufferedProgress = 0;
+    bufferAhead = 0;
+    playerNotice = null;
+    activeQualityLabel = null;
+    playTracked = false;
+    autoSelected = false;
   });
 
   $effect(() => {
-    if (!subtitleDefaults?.autoEnable || subtitleChoiceLocked || activeSubtitleTrackId) return;
-    const next = pickPreferredSubtitleTrack(
-      supportedSubtitleTracks.map((track) => ({
-        id: track.id,
-        language: track.language,
-      })),
-      subtitleDefaults.preferredLanguages,
-    );
-    if (next) onActiveSubtitleTrackIdChange?.(next);
+    if (propDuration && propDuration > duration) duration = propDuration;
   });
 
-  onMount(() => {
-    syncVideoElement();
-    return () => {
-      onActiveCueChange?.(null);
+  $effect(() => {
+    if (!subtitleMenuOpen && !qualityMenuOpen && !audioMenuOpen) {
+      playerMenuFlyoutStyle = null;
+      return;
+    }
+
+    subtitleMenuButton;
+    qualityMenuButton;
+    audioMenuButton;
+
+    const mql = window.matchMedia("(min-width: 640px)");
+    const runLayout = () => {
+      const isSm = mql.matches;
+      playerMenuIsSm = isSm;
+      const trigger = subtitleMenuOpen
+        ? subtitleMenuButton
+        : audioMenuOpen
+          ? audioMenuButton
+          : qualityMenuButton;
+      if (!trigger) {
+        playerMenuFlyoutStyle = null;
+        return;
+      }
+      const flyoutLayout = layoutPlayerMobileFlyout(trigger.getBoundingClientRect(), {
+        vh: window.innerHeight,
+        vw: window.innerWidth,
+        maxHeightVh: 0.6,
+        preferredWidth: subtitleMenuOpen ? 360 : audioMenuOpen ? 260 : 220,
+        minWidth: subtitleMenuOpen ? 220 : audioMenuOpen ? 200 : 140,
+        gutter: PLAYER_MENU_GUTTER_PX,
+      });
+      playerMenuFlyoutStyle = playerFlyoutStyleToString(
+        isSm
+          ? flyoutLayout
+          : {
+              ...flyoutLayout,
+              left: `${PLAYER_MENU_GUTTER_PX}px`,
+              right: `${PLAYER_MENU_GUTTER_PX}px`,
+              width: undefined,
+              minWidth: undefined,
+              maxWidth: undefined,
+            },
+      );
     };
+
+    runLayout();
+    const onMql = () => runLayout();
+    mql.addEventListener("change", onMql);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", runLayout);
+    vv?.addEventListener("scroll", runLayout);
+    window.addEventListener("resize", runLayout);
+    return () => {
+      mql.removeEventListener("change", onMql);
+      vv?.removeEventListener("resize", runLayout);
+      vv?.removeEventListener("scroll", runLayout);
+      window.removeEventListener("resize", runLayout);
+    };
+  });
+
+  $effect(() => {
+    if (autoSelected) return;
+    if (subtitleChoiceLocked) {
+      autoSelected = true;
+      return;
+    }
+    if (controlledSubtitleId !== undefined && controlledSubtitleId !== null) {
+      autoSelected = true;
+      return;
+    }
+    if (!subtitleDefaults?.autoEnable || subtitleTracks.length === 0) return;
+    const picked = pickPreferredSubtitleTrack(
+      subtitleTracks.map((track) => ({ id: track.id, language: track.language })),
+      subtitleDefaults.preferredLanguages,
+    );
+    if (picked) {
+      autoSelected = true;
+      selectSubtitle(picked);
+    }
+  });
+
+  $effect(() => {
+    if (!activeSubtitleId) {
+      activeTrackCues = [];
+      activeCueText = null;
+      onActiveCueChange?.(null);
+      return;
+    }
+    const track = subtitleTracks.find((candidate) => candidate.id === activeSubtitleId);
+    if (!track || track.sourceFormat === "ass" || track.sourceFormat === "ssa") {
+      activeTrackCues = [];
+      activeCueText = null;
+      onActiveCueChange?.(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetchVideoSubtitleCues(track.videoId, track.id)
+      .then(({ cues }) => {
+        if (!cancelled) activeTrackCues = cues;
+      })
+      .catch(() => {
+        if (!cancelled) activeTrackCues = [];
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  $effect(() => {
+    currentTime;
+    activeTrackCues;
+    activeSubtitleId;
+    updateActiveCue();
   });
 
   $effect(() => {
@@ -204,24 +671,87 @@
     if (!el) return;
 
     const listeners: Array<[string, EventListener]> = [
-      ["provider-change", handleProviderChange as EventListener],
-      ["can-play", handleCanPlay as EventListener],
-      ["time-update", handleTimeUpdate as EventListener],
+      ["provider-change", handleProviderChange],
+      ["can-play", handleCanPlay],
+      ["time-update", handleTimeUpdate],
       ["play", handlePlay],
+      ["playing", handlePlaying],
+      ["pause", handlePause],
       ["ended", handleEnded],
-      ["audio-tracks-change", handleAudioTracksChange as EventListener],
-      ["audio-track-change", handleAudioTrackChange as EventListener],
+      ["waiting", handleWaiting],
+      ["seeking", handleWaiting],
+      ["seeked", handlePlaying],
+      ["volume-change", handleVolumeChangeEvent],
+      ["rate-change", handleRateChange],
+      ["progress", handleProgress],
+      ["audio-tracks-change", handleAudioTracksChange],
+      ["audio-track-change", handleAudioTrackChange],
+      ["qualities-change", handleQualitiesChange],
+      ["quality-change", handleQualityChange],
       ["error", handleError],
     ];
 
-    for (const [type, listener] of listeners) {
-      el.addEventListener(type, listener);
-    }
-
+    for (const [type, listener] of listeners) el.addEventListener(type, listener);
     return () => {
-      for (const [type, listener] of listeners) {
-        el.removeEventListener(type, listener);
+      for (const [type, listener] of listeners) el.removeEventListener(type, listener);
+    };
+  });
+
+  $effect(() => {
+    const video = videoEl;
+    if (!video) return;
+    const onProgress = () => updateBuffered();
+    const onLoadedMetadata = () => {
+      duration = Math.max(video.duration || 0, propDuration ?? 0);
+      updateBuffered();
+    };
+    video.addEventListener("progress", onProgress);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    return () => {
+      video.removeEventListener("progress", onProgress);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+    };
+  });
+
+  onMount(() => {
+    localAppearance = readLocalSubtitleAppearance();
+    syncVideoElement();
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      switch (event.key.toLowerCase()) {
+        case " ":
+        case "k":
+          if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) break;
+          event.preventDefault();
+          togglePlay();
+          break;
+        case "arrowleft":
+          seek(-5);
+          break;
+        case "arrowright":
+          seek(5);
+          break;
+        case "j":
+          seek(-10);
+          break;
+        case "l":
+          seek(10);
+          break;
+        case "m":
+          toggleMute();
+          break;
+        case "f":
+          toggleFullscreen();
+          break;
       }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      clearControlsTimer();
+      window.removeEventListener("keydown", handleKey);
+      onActiveCueChange?.(null);
     };
   });
 
@@ -239,23 +769,73 @@
 
   function handleCanPlay(event: Event) {
     const detail = (event as MediaCanPlayEvent).detail;
-    discoveredDuration = detail.duration || player?.duration || 0;
+    duration = Math.max(detail.duration || 0, propDuration ?? 0);
+    buffering = false;
     syncVideoElement();
+    refreshQualities();
     refreshAudioTracks();
+    updateBuffered();
+    if (pendingSeekTime !== null) {
+      player!.currentTime = Math.min(duration || pendingSeekTime, pendingSeekTime);
+      pendingSeekTime = null;
+    }
+    if ((pendingAutoPlay || autoPlay) && player?.paused) {
+      pendingAutoPlay = false;
+      void player.play();
+    }
   }
 
   function handleTimeUpdate(event: Event) {
     const detail = (event as MediaTimeUpdateEvent).detail;
     currentTime = detail.currentTime;
     onTimeUpdate?.(detail.currentTime);
+    updateBuffered();
   }
 
   function handlePlay(_event: Event) {
-    onPlayStarted?.();
+    playing = true;
+    if (!playTracked) {
+      playTracked = true;
+      onPlayStarted?.();
+    }
+    scheduleControlsHide();
+  }
+
+  function handlePlaying(_event: Event) {
+    buffering = false;
+    playing = true;
+    scheduleControlsHide();
+  }
+
+  function handlePause(_event: Event) {
+    playing = false;
+    showControls = true;
+    clearControlsTimer();
   }
 
   function handleEnded(_event: Event) {
+    playing = false;
+    showControls = true;
+    clearControlsTimer();
     onEnded?.();
+  }
+
+  function handleWaiting(_event: Event) {
+    buffering = true;
+  }
+
+  function handleVolumeChangeEvent(_event: Event) {
+    if (!player) return;
+    muted = player.muted || player.volume === 0;
+    volume = player.volume;
+  }
+
+  function handleRateChange(_event: Event) {
+    if (player) playbackRate = player.playbackRate;
+  }
+
+  function handleProgress(_event: Event) {
+    updateBuffered();
   }
 
   function handleAudioTracksChange(_event: Event) {
@@ -266,206 +846,622 @@
     refreshAudioTracks();
   }
 
+  function handleQualitiesChange(_event: Event) {
+    refreshQualities();
+  }
+
+  function handleQualityChange(_event: Event) {
+    refreshQualities();
+  }
+
   function handleError(event: Event) {
     const detail = (event as MediaErrorEvent).detail;
-    const message =
-      detail instanceof Error ? detail.message : "Playback failed.";
+    const message = detail instanceof Error ? detail.message : "Playback failed.";
     playerNotice = `${effectiveMode === "direct" ? "Direct" : "Adaptive"} playback error: ${message}`;
+    buffering = false;
   }
 </script>
 
-<div class="relative surface-media-well bg-black" data-testid="vidstack-video-player">
-  <div class="absolute left-4 right-4 top-4 z-20 flex flex-wrap items-center gap-2">
-    <button
-      type="button"
-      class:active-mode={effectiveMode === "hls"}
-      class="player-chip"
-      aria-pressed={effectiveMode === "hls"}
-      onclick={() => (playbackMode = "hls")}
-    >
-      Adaptive HLS
-    </button>
-    {#if directSrc}
-      <button
-        type="button"
-        class:active-mode={effectiveMode === "direct"}
-        class="player-chip"
-        aria-pressed={effectiveMode === "direct"}
-        onclick={() => (playbackMode = "direct")}
+<div class="space-y-1" data-testid="vidstack-video-player">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    bind:this={containerEl}
+    class="relative surface-media-well bg-black"
+    onmousemove={surfaceControls}
+    onmouseleave={() => {
+      if (playing) showControls = false;
+    }}
+    ontouchstart={surfaceControls}
+  >
+    {#if playerSrc}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <media-player
+        class="obscura-media-engine"
+        title="Obscura video"
+        src={playerSrc}
+        poster={poster}
+        streamType="on-demand"
+        crossOrigin
+        playsInline
+        autoPlay={autoPlay}
+        bind:this={player}
+        onclick={(event) => {
+          if (event.target === event.currentTarget || event.target instanceof HTMLVideoElement) {
+            togglePlay();
+          }
+        }}
       >
-        Direct
-      </button>
+        <media-provider>
+          {#if poster}
+            <media-poster class="vds-poster" src={poster} alt="Video poster"></media-poster>
+          {/if}
+        </media-provider>
+      </media-player>
+    {:else}
+      <div class="flex aspect-video items-center justify-center bg-surface-1">
+        <div class="text-center">
+          <Play class="mx-auto mb-3 h-16 w-16 text-text-disabled" />
+          <p class="text-sm text-text-muted">No video source</p>
+          <p class="mt-1 text-xs text-text-disabled">Video playback will appear here</p>
+        </div>
+      </div>
     {/if}
-    <span class="player-chip player-chip-muted">{providerLabel}</span>
-    {#if codec}
-      <span class="player-chip player-chip-muted">{codec}</span>
+
+    {#if assTrackForRender}
+      {#key assTrackForRender.id}
+        <AssSubtitleOverlay
+          videoEl={videoEl ?? null}
+          videoId={assTrackForRender.videoId}
+          trackId={assTrackForRender.id}
+          opacity={appearance.opacity}
+        />
+      {/key}
     {/if}
-    {#if audioTracks.length > 1}
-      <label class="player-chip player-audio-select">
-        <span>Audio</span>
-        <select
-          aria-label="Audio track"
-          value={selectedAudioTrackId}
-          onchange={(event) => selectAudioTrack(event.currentTarget.value)}
+
+    {#if activeCueText && !isAssTrackActive(activeSubtitleId, subtitleTracks)}
+      <div
+        class="pointer-events-none absolute inset-x-0 flex justify-center px-4"
+        style:top="{appearance.positionPercent}%"
+        style:transform="translateY(-100%)"
+        style:opacity={appearance.opacity}
+      >
+        <div
+          class={cn(
+            captionClassName(appearance.style),
+            "max-w-[86%] whitespace-pre-line text-center font-medium leading-snug",
+          )}
+          style:font-size="{appearance.fontScale * 1.05}rem"
         >
-          {#each audioTracks as track (track.id)}
-            <option value={track.id}>{track.label}</option>
-          {/each}
-        </select>
-      </label>
+          {activeCueText}
+        </div>
+      </div>
     {/if}
+
+    {#if subtitleSettingsOpen}
+      <SubtitleSettingsPanel
+        {appearance}
+        onChange={handleAppearanceChange}
+        onClose={() => (subtitleSettingsOpen = false)}
+        onReset={handleAppearanceReset}
+        hasLocalOverride={localAppearance != null}
+      />
+    {/if}
+
+    <div
+      class={cn(
+        "pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
+        showControls ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <div class="flex flex-wrap gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          class={cn(
+            "pointer-events-auto player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em]",
+            effectiveMode === "hls" ? "text-accent-100 border-accent-500/40" : "text-white/75",
+          )}
+          aria-pressed={effectiveMode === "hls"}
+          onclick={() => requestPlaybackMode("auto")}
+        >
+          Adaptive HLS
+        </button>
+        {#if directSrc && directPlayable}
+          <button
+            type="button"
+            class={cn(
+              "pointer-events-auto player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em]",
+              effectiveMode === "direct" ? "text-accent-100 border-accent-500/40" : "text-white/75",
+            )}
+            aria-pressed={effectiveMode === "direct"}
+            onclick={() => requestPlaybackMode("direct")}
+          >
+            Direct
+          </button>
+        {/if}
+        <span class="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/55">
+          {providerLabel}
+        </span>
+        {#if codec}
+          <span class="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/55">
+            {codec}
+          </span>
+        {/if}
+        {#if playerNotice}
+          <span class="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
+            {playerNotice}
+          </span>
+        {/if}
+      </div>
+
+      <div
+        class={cn(
+          "hidden sm:grid gap-2 text-right text-[0.68rem] text-white/70",
+          effectiveMode === "direct" ? "min-w-[120px] grid-cols-2" : "min-w-[184px] grid-cols-3",
+        )}
+      >
+        {#if effectiveMode !== "direct"}
+          <div class="player-chip px-2 py-1.5">
+            <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
+              <Wifi class="h-3.5 w-3.5" />
+              <span class="text-[0.58rem] uppercase tracking-[0.16em]">ABR</span>
+            </div>
+            <div class="truncate text-mono-tabular text-glow-phosphor text-[0.72rem] font-medium">
+              {formatBandwidth(bandwidthEstimate)}
+            </div>
+          </div>
+        {/if}
+        <div class="player-chip px-2 py-1.5">
+          <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
+            <Gauge class="h-3.5 w-3.5" />
+            <span class="text-[0.58rem] uppercase tracking-[0.16em]">Buffer</span>
+          </div>
+          <div class="truncate text-mono-tabular text-glow-phosphor text-[0.72rem] font-medium">
+            {bufferAhead.toFixed(1)}s
+          </div>
+        </div>
+        <div class="player-chip px-2 py-1.5">
+          <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
+            <Settings2 class="h-3.5 w-3.5" />
+            <span class="text-[0.58rem] uppercase tracking-[0.16em]">Drop</span>
+          </div>
+          <div class="truncate text-mono-tabular text-glow-phosphor text-[0.72rem] font-medium">
+            {droppedFrames == null ? "—" : String(droppedFrames)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class={cn(
+        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 sm:px-4 pb-3 sm:pb-4 pt-12 sm:pt-20 transition-opacity duration-normal",
+        showControls ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+    >
+      <div class="mb-3 sm:mb-4 space-y-2">
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="video-progress-track group/track"
+          data-dragging={isDragging}
+          onpointerdown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            isDraggingRef = true;
+            isDragging = true;
+            const rect = event.currentTarget.getBoundingClientRect();
+            updateTimelineHover(event.clientX, rect);
+            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            seekTo(nextPercent * duration);
+          }}
+          onpointermove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            updateTimelineHover(event.clientX, rect);
+            if (!isDraggingRef) return;
+            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            seekTo(nextPercent * duration);
+          }}
+          onpointerup={(event) => {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+            isDraggingRef = false;
+            isDragging = false;
+          }}
+          onpointercancel={() => {
+            isDraggingRef = false;
+            isDragging = false;
+          }}
+          onpointerleave={() => {
+            if (!isDraggingRef) timelineHover = null;
+          }}
+        >
+          {#if timelineHover}
+            <div
+              class="pointer-events-none absolute bottom-[calc(100%+0.6rem)] z-20 -translate-x-1/2 border border-white/10 bg-black/88 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(0,0,0,0.35)]"
+              style:left="{timelineHover.percent}%"
+            >
+              <div class="text-mono-tabular text-[0.65rem] text-white/82">
+                {formatTime(timelineHover.time)}
+              </div>
+              {#if timelineHover.markerTitles.length > 0}
+                <div class="mt-1 max-w-48 text-[0.65rem] font-medium leading-snug text-accent-100">
+                  {timelineHover.markerTitles.join(" • ")}
+                </div>
+              {/if}
+            </div>
+          {/if}
+          <div class="video-progress-buffered" style:width="{bufferedProgress}%"></div>
+          <div class="video-progress-fill" style:width="{progress}%"></div>
+          {#each markers as marker (marker.id)}
+            {@const markerPercent = duration > 0 ? (marker.time / duration) * 100 : 0}
+            <button
+              type="button"
+              class="absolute top-1/2 h-full w-1 -translate-y-1/2 bg-white/60 transition-all hover:bg-white hover:w-1.5 hover:scale-y-150 z-10"
+              style:left="{markerPercent}%"
+              onclick={(event) => {
+                event.stopPropagation();
+                seekTo(marker.time);
+                onMarkerClick?.(marker);
+              }}
+              title={marker.title}
+              aria-label={marker.title}
+            ></button>
+          {/each}
+        </div>
+
+        {#if markers.length > 0}
+          <div class="hidden sm:flex flex-wrap gap-1.5">
+            {#each markers as marker (marker.id)}
+              <button
+                type="button"
+                onclick={() => {
+                  seekTo(marker.time);
+                  onMarkerClick?.(marker);
+                }}
+                class="player-chip px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
+              >
+                {marker.title}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 sm:gap-2.5">
+          <button
+            type="button"
+            onclick={() => seek(-10)}
+            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            title="Skip back 10s"
+            aria-label="Skip back 10s"
+          >
+            <RotateCcw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
+            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+          </button>
+          <button
+            type="button"
+            onclick={togglePlay}
+            class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+            aria-label={playing ? "Pause" : "Play"}
+          >
+            {#if buffering}
+              <Loader class="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin" />
+            {:else if playing}
+              <Pause class="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+            {:else}
+              <Play class="ml-0.5 h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+            {/if}
+          </button>
+          <button
+            type="button"
+            onclick={() => seek(10)}
+            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            title="Skip forward 10s"
+            aria-label="Skip forward 10s"
+          >
+            <RotateCw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
+            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+          </button>
+
+          <div class="hidden sm:flex items-center gap-2 text-white/80">
+            <button type="button" onclick={toggleMute} class="transition-colors hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
+              {#if muted}<VolumeX class="h-4 w-4" />{:else}<Volume2 class="h-4 w-4" />{/if}
+            </button>
+            <input
+              aria-label="Volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={muted ? 0 : volume}
+              oninput={(event) => handleVolumeChange(Number(event.currentTarget.value))}
+              class="obscura-range h-1.5 w-20"
+            />
+          </div>
+
+          <span class="text-mono-tabular text-glow-phosphor text-[0.68rem] sm:text-xs">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          {#if subtitleTracks.length > 0}
+            <div class="relative">
+              <button
+                type="button"
+                bind:this={subtitleMenuButton}
+                onclick={() => {
+                  subtitleMenuOpen = !subtitleMenuOpen;
+                  qualityMenuOpen = false;
+                  audioMenuOpen = false;
+                  speedMenuOpen = false;
+                }}
+                aria-label="Subtitles"
+                class={cn(
+                  "player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
+                  activeSubtitleId ? "text-accent-100" : "text-white/82",
+                )}
+              >
+                <Captions class="h-3.5 w-3.5" />
+                <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+              </button>
+              {#if subtitleMenuOpen}
+                <div
+                  use:portal
+                  class={cn(
+                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                    playerMenuIsSm && "min-w-[220px] max-w-[360px]",
+                  )}
+                  style={playerMenuFlyoutStyle ?? undefined}
+                >
+                  <button
+                    type="button"
+                    onclick={() => selectSubtitle(null)}
+                    class={cn(
+                      "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                      !activeSubtitleId
+                        ? "bg-accent-500/18 text-accent-100"
+                        : "text-white/78 hover:bg-white/8 hover:text-white",
+                    )}
+                  >
+                    <span>Off</span>
+                    {#if !activeSubtitleId}
+                      <span class="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>
+                    {/if}
+                  </button>
+                  {#each subtitleTracks as track (track.id)}
+                    {@const isActive = activeSubtitleId === track.id}
+                    {@const lang = languageLabel(track.language)}
+                    {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
+                    <button
+                      type="button"
+                      onclick={() => selectSubtitle(track.id)}
+                      class={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                        isActive
+                          ? "bg-accent-500/18 text-accent-100"
+                          : "text-white/78 hover:bg-white/8 hover:text-white",
+                      )}
+                    >
+                      <span class="min-w-0 flex-1 truncate">{displayName}</span>
+                      <span class="shrink-0 text-[0.55rem] sm:text-[0.6rem] uppercase tracking-[0.16em] text-white/50">
+                        {track.source}
+                      </span>
+                    </button>
+                  {/each}
+                  <div class="my-1 border-t border-white/10"></div>
+                  <button
+                    type="button"
+                    onclick={() => {
+                      subtitleSettingsOpen = true;
+                      subtitleMenuOpen = false;
+                    }}
+                    class="flex w-full items-center gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-white/78 hover:bg-white/8 hover:text-white transition-colors"
+                  >
+                    <Sliders class="h-3.5 w-3.5" />
+                    <span>Subtitle style...</span>
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          {#if audioTracks.length > 1}
+            <div class="relative hidden sm:block">
+              <button
+                type="button"
+                bind:this={audioMenuButton}
+                onclick={() => {
+                  audioMenuOpen = !audioMenuOpen;
+                  qualityMenuOpen = false;
+                  subtitleMenuOpen = false;
+                  speedMenuOpen = false;
+                }}
+                class="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                aria-label="Audio track"
+              >
+                {selectedAudioTrackLabel ?? "Audio"}
+                <ChevronDown class="h-3.5 w-3.5" />
+              </button>
+              {#if audioMenuOpen}
+                <div
+                  use:portal
+                  class={cn(
+                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                    playerMenuIsSm && "min-w-[200px] max-w-[260px]",
+                  )}
+                  style={playerMenuFlyoutStyle ?? undefined}
+                >
+                  {#each audioTracks as track (track.id)}
+                    <button
+                      type="button"
+                      onclick={() => selectAudioTrack(track.index)}
+                      class={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
+                        track.selected
+                          ? "bg-accent-500/18 text-accent-100"
+                          : "text-white/78 hover:bg-white/8 hover:text-white",
+                      )}
+                    >
+                      <span class="min-w-0 flex-1 truncate">{track.label}</span>
+                      {#if track.selected}
+                        <span class="text-[0.6rem] uppercase tracking-[0.16em]">On</span>
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          <div class="relative">
+            <button
+              type="button"
+              aria-label={`Quality menu, ${selectedQualityLabel ?? "Quality"}`}
+              bind:this={qualityMenuButton}
+              onclick={() => {
+                qualityMenuOpen = !qualityMenuOpen;
+                audioMenuOpen = false;
+                speedMenuOpen = false;
+                subtitleMenuOpen = false;
+              }}
+              class="player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+            >
+              {selectedQualityLabel ?? "Quality"}
+              <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+            </button>
+            {#if qualityMenuOpen}
+              <div
+                use:portal
+                class={cn(
+                  "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                  playerMenuIsSm && "min-w-[140px] max-w-[220px]",
+                )}
+                style={playerMenuFlyoutStyle ?? undefined}
+              >
+                {#each qualityOptions as option (String(option.value))}
+                  <button
+                    type="button"
+                    onclick={() => requestPlaybackMode(option.value)}
+                    class={cn(
+                      "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
+                      qualityMode === option.value
+                        ? "bg-accent-500/18 text-accent-100"
+                        : "text-white/78 hover:bg-white/8 hover:text-white",
+                    )}
+                  >
+                    <span>{option.label}</span>
+                    {#if qualityMode === option.value}
+                      <span class="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+
+          <div class="relative hidden sm:block">
+            <button
+              type="button"
+              onclick={() => {
+                speedMenuOpen = !speedMenuOpen;
+                qualityMenuOpen = false;
+                audioMenuOpen = false;
+                subtitleMenuOpen = false;
+              }}
+              class="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+            >
+              {playbackRate}x
+              <ChevronDown class="h-3.5 w-3.5" />
+            </button>
+            {#if speedMenuOpen}
+              <div class="absolute bottom-12 right-0 min-w-[112px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
+                {#each PLAYBACK_RATES as rate (rate)}
+                  <button
+                    type="button"
+                    onclick={() => applyPlaybackRate(rate)}
+                    class={cn(
+                      "block w-full px-3 py-2 text-left text-sm transition-colors",
+                      playbackRate === rate
+                        ? "bg-accent-500/18 text-accent-100"
+                        : "text-white/78 hover:bg-white/8 hover:text-white",
+                    )}
+                  >
+                    {rate}x
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+
+          <button
+            type="button"
+            onclick={toggleFullscreen}
+            class="player-chip p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+            aria-label="Fullscreen"
+          >
+            <Maximize class="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  {#if playerNotice}
-    <div class="absolute left-4 right-4 top-16 z-20 border border-border-subtle bg-surface-2/95 px-3 py-2 text-sm text-text-muted backdrop-blur">
-      {playerNotice}
-    </div>
-  {/if}
-
-  {#if playerSrc}
-    <media-player
-      class="obscura-vidstack-player"
-      title="Obscura video"
-      src={playerSrc}
-      poster={poster}
-      streamType="on-demand"
-      crossOrigin
-      playsInline
-      controls
-      hideControlsOnMouseLeave={false}
-      autoPlay={autoPlay}
-      bind:this={player}
-    >
-      <media-provider>
-        {#if poster}
-          <media-poster class="vds-poster" src={poster} alt="Video poster"></media-poster>
-        {/if}
-        {#each supportedSubtitleTracks as track (track.id)}
-          <track
-            src={track.url}
-            kind="subtitles"
-            label={track.label ?? track.language ?? "Subtitles"}
-            srclang={track.language ?? "und"}
-            default={track.id === activeSubtitleTrackId}
-          />
-        {/each}
-      </media-provider>
-
-      <media-video-layout thumbnails={trickplayVtt}></media-video-layout>
-    </media-player>
-  {:else}
-    <div class="flex aspect-video items-center justify-center border border-border-subtle bg-black text-sm uppercase tracking-[0.24em] text-text-muted">
-      No playable source
-    </div>
-  {/if}
-
   {#if hasFilmStrip}
-    <div class="border-t border-border-subtle bg-black">
+    <div class="border border-border-subtle bg-black overflow-hidden">
       <FilmStrip
         spriteUrl={trickplaySprite!}
         vttUrl={trickplayVtt!}
-        {videoEl}
+        videoEl={videoEl ?? null}
         currentTime={currentTime}
-        duration={displayDuration}
+        {duration}
         onSeek={seekTo}
         {markers}
+        onStripInteractionChange={handleFilmStripInteraction}
       />
     </div>
   {/if}
 </div>
 
 <style>
-  .obscura-vidstack-player {
-    --media-brand: #c49a5a;
-    --media-focus-ring-color: rgba(196, 154, 90, 0.9);
-    --media-focus-ring: 0 0 0 2px var(--media-focus-ring-color);
-    --media-border-radius: 0;
-    --video-brand: #c49a5a;
-    --video-focus-ring-color: rgba(196, 154, 90, 0.9);
-    --video-border-radius: 0;
-    --video-controls-bg: linear-gradient(
-      to top,
-      rgba(4, 6, 10, 0.96),
-      rgba(4, 6, 10, 0.64) 62%,
-      transparent
-    );
-    --video-menu-bg: rgba(12, 16, 24, 0.96);
-    --video-menu-border: 1px solid rgba(196, 154, 90, 0.24);
-    --video-slider-track-bg: rgba(255, 255, 255, 0.18);
-    --video-slider-track-fill-bg: linear-gradient(90deg, #c49a5a, #e2bd79);
-    --video-slider-thumb-bg: #d7ad67;
-    --video-tooltip-bg: rgba(12, 16, 24, 0.96);
-    --video-tooltip-color: #f2eee7;
+  .obscura-media-engine {
     aspect-ratio: 16 / 9;
     background: #000;
     color: #f2eee7;
-    contain: layout;
     display: block;
     margin-inline: auto;
     max-width: calc((100dvh - 14rem) * 16 / 9);
     width: 100%;
   }
 
-  .obscura-vidstack-player :global(video),
-  .obscura-vidstack-player :global(media-poster) {
+  .obscura-media-engine :global(video),
+  .obscura-media-engine :global(media-poster) {
+    background: #000;
     border-radius: 0;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
   }
 
-  .obscura-vidstack-player :global(.vds-controls) {
-    font-family: var(--font-body, Inter, sans-serif);
+  .obscura-range {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 0;
+    cursor: pointer;
   }
 
-  .player-chip {
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    background: rgba(13, 18, 28, 0.82);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.36);
-    color: rgba(241, 245, 249, 0.78);
-    font-family: var(--font-mono, "JetBrains Mono", monospace);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    line-height: 1;
-    min-height: 2.55rem;
-    padding: 0 0.9rem;
-    text-transform: uppercase;
-    transition:
-      border-color 160ms ease,
-      box-shadow 160ms ease,
-      color 160ms ease;
+  .obscura-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 0;
+    background: var(--color-accent-300);
+    box-shadow: 0 0 10px rgba(199, 155, 92, 0.65);
   }
 
-  .player-chip:hover,
-  .player-chip:focus-visible,
-  .player-chip.active-mode {
-    border-color: rgba(196, 154, 90, 0.72);
-    box-shadow:
-      0 0 0 1px rgba(196, 154, 90, 0.18),
-      0 0 24px rgba(196, 154, 90, 0.24),
-      0 16px 36px rgba(0, 0, 0, 0.38);
-    color: #fff5df;
-    outline: none;
-  }
-
-  .player-chip-muted {
-    align-items: center;
-    display: inline-flex;
-    opacity: 0.76;
-  }
-
-  .player-audio-select {
-    align-items: center;
-    display: inline-flex;
-    gap: 0.65rem;
-    padding-right: 0.45rem;
-  }
-
-  .player-audio-select select {
-    border: 1px solid rgba(196, 154, 90, 0.32);
-    background: rgba(0, 0, 0, 0.46);
-    color: #fff5df;
-    font: inherit;
-    letter-spacing: 0;
-    min-height: 1.75rem;
-    padding: 0 1.7rem 0 0.55rem;
+  .obscura-range::-moz-range-thumb {
+    width: 0.72rem;
+    height: 0.72rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-accent-300);
+    box-shadow: 0 0 10px rgba(199, 155, 92, 0.65);
   }
 </style>

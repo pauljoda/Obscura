@@ -21,13 +21,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Direct playback is now only offered for original files the browser can play directly, so non-native containers stay on adaptive streaming instead of entering a hidden preparation state.
 - Adaptive video scrubbing now jumps to the requested time through hls.js instead of snapping to the current buffer edge.
 - Video playback now has a Vidstack-powered proof-of-concept player that keeps Obscura's filmstrip scrubber while adding a built-in audio-track selector for multi-audio streams.
+- Video playback now keeps Vidstack's stable media engine while restoring Obscura's full Dark Room controls, including brass square transport buttons, custom captions, filmstrip scrubbing, audio tracks, quality, speed, and fullscreen menus.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
 
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
-- The video player now uses Vidstack's tested media controls and HLS provider while retaining Obscura's adaptive/direct mode chips and external filmstrip strip.
+- The video player now uses Vidstack's tested media engine and HLS provider behind Obscura's custom controls, captions, menus, and filmstrip strip.
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
 
 ### Fixed
@@ -48,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Direct video playback no longer tries to remux or transcode non-native containers behind the Direct button; those videos now use adaptive HLS unless the original file itself is browser-playable.
 - Adaptive HLS seeks outside the current buffer now restart loading at the requested timestamp while keeping already buffered media available for backward jumps.
 - Multi-audio adaptive streams now expose audio-track selection in the video player instead of forcing whichever track the browser or HLS stack selected first.
+- Vidstack video playback now presents Obscura's previous squared-off controls and custom subtitle styling instead of the bare default player chrome.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs
