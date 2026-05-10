@@ -165,9 +165,15 @@ export async function listCollectionsRead(db: AppDb, query: CollectionListQuery)
   };
 }
 
-export async function getCollectionDetailRead(db: AppDb, id: string) {
+export async function getCollectionDetailRead(
+  db: AppDb,
+  id: string,
+  options: { nsfw?: string } = {},
+) {
   const [row] = await db.select().from(collections).where(eq(collections.id, id));
   if (!row) throw new NotFoundError("Collection not found");
+  if (options.nsfw === "off" && row.isNsfw)
+    throw new NotFoundError("Collection not found");
 
   const typeCounts = await computeTypeCounts(db, id);
   const base = toCollectionListItem(row, typeCounts);

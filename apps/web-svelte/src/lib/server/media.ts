@@ -381,8 +381,14 @@ export async function fetchCollections(
   );
 }
 
-export async function fetchCollectionDetail(id: string, options?: { fetch?: typeof fetch }) {
-  return serverFetch<CollectionDetailDto>(`/collections/${id}`, { fetch: options?.fetch });
+export async function fetchCollectionDetail(
+  id: string,
+  options?: { fetch?: typeof fetch; nsfw?: string },
+) {
+  const qs = buildQueryString({ nsfw: options?.nsfw });
+  return serverFetch<CollectionDetailDto>(`/collections/${id}${qs}`, {
+    fetch: options?.fetch,
+  });
 }
 
 export async function fetchCollectionItems(

@@ -7,10 +7,15 @@ import {
 import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, url }) => {
   const db = await getWebDb();
+  const nsfw = url.searchParams.get("nsfw");
   try {
-    return json(await getCollectionDetailRead(db, params.id!));
+    return json(
+      await getCollectionDetailRead(db, params.id!, {
+        nsfw: nsfw === "on" || nsfw === "off" ? nsfw : undefined,
+      }),
+    );
   } catch (err) {
     return mapAppCoreErrorToJson(err);
   }

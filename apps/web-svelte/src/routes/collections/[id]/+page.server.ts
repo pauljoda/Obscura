@@ -13,7 +13,10 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
 
   let collection;
   try {
-    collection = await fetchCollectionDetail(params.id, { fetch });
+    collection = await fetchCollectionDetail(params.id, {
+      fetch,
+      nsfw: nsfw === "off" ? "off" : undefined,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (/404/.test(message)) error(404, "Collection not found");

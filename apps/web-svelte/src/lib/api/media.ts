@@ -483,6 +483,7 @@ export async function fetchCollections(params: {
   order?: "asc" | "desc";
   randomSeed?: string;
   mode?: string;
+  nsfw?: string;
   limit?: number;
   offset?: number;
 }, options?: RequestOptions) {
@@ -493,8 +494,9 @@ export async function fetchCollections(params: {
   );
 }
 
-export async function fetchCollectionDetail(id: string) {
-  return fetchApi<CollectionDetailDto>(`/collections/${id}`);
+export async function fetchCollectionDetail(id: string, params: { nsfw?: string } = {}) {
+  const qs = buildQueryString({ nsfw: params.nsfw });
+  return fetchApi<CollectionDetailDto>(`/collections/${id}${qs}`);
 }
 
 export async function fetchCollectionItems(
