@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Adaptive video scrubbing now jumps to the requested time through hls.js instead of snapping to the current buffer edge.
 - Video playback now has a Vidstack-powered proof-of-concept player that keeps Obscura's filmstrip scrubber while adding a built-in audio-track selector for multi-audio streams.
 - Video playback now keeps Vidstack's stable media engine while restoring Obscura's full Dark Room controls, including brass square transport buttons, custom captions, filmstrip scrubbing, audio tracks, quality, speed, and fullscreen menus.
+- Video playback controls now fit more consistently across desktop and mobile, with one active playback-mode status chip and subtitle styling at the top of the captions menu.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
@@ -50,6 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Adaptive HLS seeks outside the current buffer now restart loading at the requested timestamp while keeping already buffered media available for backward jumps.
 - Multi-audio adaptive streams now expose audio-track selection in the video player instead of forcing whichever track the browser or HLS stack selected first.
 - Vidstack video playback now presents Obscura's previous squared-off controls and custom subtitle styling instead of the bare default player chrome.
+- Video playback no longer renders Vidstack's custom element during server hydration, preventing the player shell from producing hydration mismatch warnings on load.
+- Adaptive HLS buffering now uses browser-safe limits, reducing noisy `bufferFullError` console logs while still keeping a large forward buffer.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

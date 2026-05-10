@@ -148,6 +148,8 @@
   let containerEl: HTMLDivElement | undefined = $state();
   let player: MediaPlayerElement | undefined = $state();
   let videoEl: HTMLVideoElement | null = $state(null);
+  let directCapabilityProbe: HTMLVideoElement | null = $state(null);
+  let mediaMounted = $state(false);
   let controlsTimeout: number | null = null;
   let playTracked = false;
   let isDraggingRef = false;
@@ -174,7 +176,6 @@
   let activeQualityLabel = $state<string | null>(null);
   let audioTracks = $state<AudioTrackOption[]>([]);
   let selectedAudioTrackLabel = $state<string | null>(null);
-  let providerLabel = $state("Vidstack");
   let playerNotice = $state<string | null>(null);
   let timelineHover = $state<{
     markerTitles: string[];
@@ -200,7 +201,7 @@
   let autoSelected = false;
 
   const directPlayable = $derived.by(() => {
-    const video = videoEl as HTMLVideoElement | null;
+    const video = (videoEl ?? directCapabilityProbe) as HTMLVideoElement | null;
     return canUseDirectPlayback({
       directSrc,
       codec,
@@ -225,6 +226,9 @@
       : qualityMode === "auto"
         ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
         : activeQualityLabel ?? "Quality",
+  );
+  const activePlaybackLabel = $derived(
+    effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
   );
 
   const assTrackForRender = $derived.by(() => {
@@ -531,7 +535,7 @@
   });
 
   $effect(() => {
-    const nextKey = `${src ?? ""}|${directSrc ?? ""}|${defaultPlaybackMode ?? ""}`;
+    const nextKey = `${src ?? ""}|${directSrc ?? ""}|${defaultPlaybackMode ?? ""}|${directPlayable ? "direct" : "adaptive"}`;
     if (nextKey === lastSourceKey) return;
     lastSourceKey = nextKey;
     playbackMode = initialPlaybackMode();
@@ -714,6 +718,8 @@
   });
 
   onMount(() => {
+    mediaMounted = true;
+    directCapabilityProbe = document.createElement("video");
     localAppearance = readLocalSubtitleAppearance();
     syncVideoElement();
 
@@ -757,7 +763,6 @@
 
   function handleProviderChange(event: Event) {
     const provider = (event as MediaProviderChangeEvent).detail;
-    providerLabel = provider?.type ? provider.type.toUpperCase() : "Vidstack";
     if (isHLSProvider(provider)) {
       provider.config = {
         ...adaptiveHlsBufferConfig(),
@@ -873,7 +878,7 @@
     }}
     ontouchstart={surfaceControls}
   >
-    {#if playerSrc}
+    {#if playerSrc && mediaMounted}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <media-player
         class="obscura-media-engine"
@@ -897,6 +902,10 @@
           {/if}
         </media-provider>
       </media-player>
+    {:else if playerSrc}
+      <div class="obscura-media-engine flex items-center justify-center">
+        <Loader class="h-5 w-5 animate-spin text-white/40" />
+      </div>
     {:else}
       <div class="flex aspect-video items-center justify-center bg-surface-1">
         <div class="text-center">
@@ -954,38 +963,9 @@
       )}
     >
       <div class="flex flex-wrap gap-1.5 sm:gap-2">
-        <button
-          type="button"
-          class={cn(
-            "pointer-events-auto player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em]",
-            effectiveMode === "hls" ? "text-accent-100 border-accent-500/40" : "text-white/75",
-          )}
-          aria-pressed={effectiveMode === "hls"}
-          onclick={() => requestPlaybackMode("auto")}
-        >
-          Adaptive HLS
-        </button>
-        {#if directSrc && directPlayable}
-          <button
-            type="button"
-            class={cn(
-              "pointer-events-auto player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em]",
-              effectiveMode === "direct" ? "text-accent-100 border-accent-500/40" : "text-white/75",
-            )}
-            aria-pressed={effectiveMode === "direct"}
-            onclick={() => requestPlaybackMode("direct")}
-          >
-            Direct
-          </button>
-        {/if}
-        <span class="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/55">
-          {providerLabel}
+        <span class="pointer-events-auto player-chip border-accent-500/40 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-accent-100 sm:px-2.5 sm:py-1 sm:text-[0.62rem]">
+          {activePlaybackLabel}
         </span>
-        {#if codec}
-          <span class="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/55">
-            {codec}
-          </span>
-        {/if}
         {#if playerNotice}
           <span class="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
             {playerNotice}
@@ -1033,11 +1013,55 @@
 
     <div
       class={cn(
-        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 sm:px-4 pb-3 sm:pb-4 pt-12 sm:pt-20 transition-opacity duration-normal",
+        "pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-normal sm:hidden",
+        showControls ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <div class="pointer-events-auto flex items-center gap-4">
+        <button
+          type="button"
+          onclick={() => seek(-10)}
+          class="relative flex h-9 w-9 items-center justify-center text-white/72 transition-colors hover:text-white"
+          title="Skip back 10s"
+          aria-label="Skip back 10s"
+        >
+          <RotateCcw class="h-5 w-5" />
+          <span class="absolute mt-[1px] text-[0.5rem] font-bold">10</span>
+        </button>
+        <button
+          type="button"
+          onclick={togglePlay}
+          class="flex h-11 w-11 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+          aria-label={playing ? "Pause" : "Play"}
+        >
+          {#if buffering}
+            <Loader class="h-4 w-4 animate-spin" />
+          {:else if playing}
+            <Pause class="h-4 w-4" fill="currentColor" />
+          {:else}
+            <Play class="h-4 w-4 translate-x-px" fill="currentColor" />
+          {/if}
+        </button>
+        <button
+          type="button"
+          onclick={() => seek(10)}
+          class="relative flex h-9 w-9 items-center justify-center text-white/72 transition-colors hover:text-white"
+          title="Skip forward 10s"
+          aria-label="Skip forward 10s"
+        >
+          <RotateCw class="h-5 w-5" />
+          <span class="absolute mt-[1px] text-[0.5rem] font-bold">10</span>
+        </button>
+      </div>
+    </div>
+
+    <div
+      class={cn(
+        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 pb-2 pt-12 transition-opacity duration-normal sm:px-4 sm:pb-4 sm:pt-20",
         showControls ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     >
-      <div class="mb-3 sm:mb-4 space-y-2">
+      <div class="mb-2 space-y-2 sm:mb-4">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="video-progress-track group/track"
@@ -1123,42 +1147,45 @@
         {/if}
       </div>
 
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-start sm:gap-2.5">
+          <div class="hidden items-center gap-2.5 sm:flex">
           <button
             type="button"
             onclick={() => seek(-10)}
-            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
             title="Skip back 10s"
             aria-label="Skip back 10s"
           >
-            <RotateCcw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
-            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+            <RotateCcw class="h-4 w-4" />
+            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
           </button>
           <button
             type="button"
             onclick={togglePlay}
-            class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+            class="flex h-9 w-9 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
             aria-label={playing ? "Pause" : "Play"}
           >
             {#if buffering}
-              <Loader class="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin" />
+              <Loader class="h-3.5 w-3.5 animate-spin" />
             {:else if playing}
-              <Pause class="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+              <Pause class="h-3.5 w-3.5" fill="currentColor" />
             {:else}
-              <Play class="ml-0.5 h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+              <Play class="h-3.5 w-3.5 translate-x-px" fill="currentColor" />
             {/if}
           </button>
           <button
             type="button"
             onclick={() => seek(10)}
-            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
             title="Skip forward 10s"
             aria-label="Skip forward 10s"
           >
-            <RotateCw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
-            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+            <RotateCw class="h-4 w-4" />
+            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
           </button>
+
+          </div>
 
           <div class="hidden sm:flex items-center gap-2 text-white/80">
             <button type="button" onclick={toggleMute} class="transition-colors hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
@@ -1176,12 +1203,19 @@
             />
           </div>
 
-          <span class="text-mono-tabular text-glow-phosphor text-[0.68rem] sm:text-xs">
+          <span class="shrink-0 whitespace-nowrap text-mono-tabular text-glow-phosphor text-[0.7rem] sm:text-xs">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
 
-        <div class="flex items-center gap-1.5 sm:gap-2">
+        <div
+          class={cn(
+            "grid w-full gap-2 sm:flex sm:w-auto sm:items-center",
+            audioTracks.length > 1
+              ? "grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem]"
+              : "grid-cols-[2.25rem_minmax(0,1fr)_2.25rem]",
+          )}
+        >
           {#if subtitleTracks.length > 0}
             <div class="relative">
               <button
@@ -1195,7 +1229,7 @@
                 }}
                 aria-label="Subtitles"
                 class={cn(
-                  "player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
+                  "player-control-button justify-center gap-1 sm:gap-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
                   activeSubtitleId ? "text-accent-100" : "text-white/82",
                 )}
               >
@@ -1211,6 +1245,18 @@
                   )}
                   style={playerMenuFlyoutStyle ?? undefined}
                 >
+                  <button
+                    type="button"
+                    onclick={() => {
+                      subtitleSettingsOpen = true;
+                      subtitleMenuOpen = false;
+                    }}
+                    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-white/78 transition-colors hover:bg-white/8 hover:text-white sm:py-2 sm:text-sm"
+                  >
+                    <Sliders class="h-3.5 w-3.5" />
+                    <span>Subtitle style...</span>
+                  </button>
+                  <div class="my-1 border-t border-white/10"></div>
                   <button
                     type="button"
                     onclick={() => selectSubtitle(null)}
@@ -1246,25 +1292,13 @@
                       </span>
                     </button>
                   {/each}
-                  <div class="my-1 border-t border-white/10"></div>
-                  <button
-                    type="button"
-                    onclick={() => {
-                      subtitleSettingsOpen = true;
-                      subtitleMenuOpen = false;
-                    }}
-                    class="flex w-full items-center gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-white/78 hover:bg-white/8 hover:text-white transition-colors"
-                  >
-                    <Sliders class="h-3.5 w-3.5" />
-                    <span>Subtitle style...</span>
-                  </button>
                 </div>
               {/if}
             </div>
           {/if}
 
           {#if audioTracks.length > 1}
-            <div class="relative hidden sm:block">
+            <div class="relative">
               <button
                 type="button"
                 bind:this={audioMenuButton}
@@ -1274,11 +1308,11 @@
                   subtitleMenuOpen = false;
                   speedMenuOpen = false;
                 }}
-                class="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+                class="player-control-button min-w-0 justify-between gap-1.5 px-2 text-[0.65rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:px-3 sm:text-[0.72rem]"
                 aria-label="Audio track"
               >
-                {selectedAudioTrackLabel ?? "Audio"}
-                <ChevronDown class="h-3.5 w-3.5" />
+                <span class="min-w-0 truncate">{selectedAudioTrackLabel ?? "Audio"}</span>
+                <ChevronDown class="h-3.5 w-3.5 shrink-0" />
               </button>
               {#if audioMenuOpen}
                 <div
@@ -1322,10 +1356,10 @@
                 speedMenuOpen = false;
                 subtitleMenuOpen = false;
               }}
-              class="player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+              class="player-control-button min-w-0 justify-between gap-1 px-2 text-[0.65rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
             >
-              {selectedQualityLabel ?? "Quality"}
-              <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+              <span class="min-w-0 truncate">{selectedQualityLabel ?? "Quality"}</span>
+              <ChevronDown class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
             </button>
             {#if qualityMenuOpen}
               <div
@@ -1366,7 +1400,7 @@
                 audioMenuOpen = false;
                 subtitleMenuOpen = false;
               }}
-              class="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+              class="player-control-button justify-between gap-1.5 px-3 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
             >
               {playbackRate}x
               <ChevronDown class="h-3.5 w-3.5" />
@@ -1394,7 +1428,7 @@
           <button
             type="button"
             onclick={toggleFullscreen}
-            class="player-chip p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+            class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             aria-label="Fullscreen"
           >
             <Maximize class="h-3.5 sm:h-4 w-3.5 sm:w-4" />
@@ -1463,5 +1497,28 @@
     border-radius: 0;
     background: var(--color-accent-300);
     box-shadow: 0 0 10px rgba(199, 155, 92, 0.65);
+  }
+
+  .player-control-button {
+    align-items: center;
+    background: rgba(17, 21, 28, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    min-width: 2.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .player-control-button {
+      height: 2.25rem;
+      min-height: 2.25rem;
+      min-width: 2.25rem;
+    }
   }
 </style>

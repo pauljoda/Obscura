@@ -117,16 +117,17 @@ describe("VideoPlayer", () => {
     });
   });
 
-  it("renders the Vidstack playback shell with adaptive and direct mode controls", () => {
+  it("renders the Vidstack playback shell with active playback status and quality controls", () => {
     render(VideoPlayer, {
       props: {
         src: "/api/video-stream/video-1/hls2/master.m3u8",
         directSrc: "/api/video-stream/video-1/source",
+        defaultPlaybackMode: "hls",
       },
     });
 
     expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Adaptive HLS" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Direct" })).toBeInTheDocument();
+    expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Quality menu/ })).toBeInTheDocument();
   });
 });

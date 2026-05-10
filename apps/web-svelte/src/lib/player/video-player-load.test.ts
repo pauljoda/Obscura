@@ -127,13 +127,13 @@ describe("video-player-load", () => {
     });
   });
 
-  it("allows adaptive HLS to buffer the full available playlist", () => {
+  it("allows adaptive HLS to buffer aggressively without overfilling MediaSource", () => {
     expect(adaptiveHlsBufferConfig()).toEqual({
-      backBufferLength: Infinity,
+      backBufferLength: 2 * 60,
       frontBufferFlushThreshold: Infinity,
-      maxBufferLength: 24 * 60 * 60,
-      maxMaxBufferLength: 24 * 60 * 60,
-      maxBufferSize: Number.MAX_SAFE_INTEGER,
+      maxBufferLength: 2 * 60,
+      maxMaxBufferLength: 2 * 60,
+      maxBufferSize: 60 * 1000 * 1000,
       startPosition: 0,
     });
   });

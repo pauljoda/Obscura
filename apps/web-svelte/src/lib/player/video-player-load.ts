@@ -147,13 +147,13 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
 }
 
 export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
-  const fullDaySeconds = 24 * 60 * 60;
+  const twoMinutes = 2 * 60;
   return {
-    backBufferLength: Infinity,
+    backBufferLength: twoMinutes,
     frontBufferFlushThreshold: Infinity,
-    maxBufferLength: fullDaySeconds,
-    maxMaxBufferLength: fullDaySeconds,
-    maxBufferSize: Number.MAX_SAFE_INTEGER,
+    maxBufferLength: twoMinutes,
+    maxMaxBufferLength: twoMinutes,
+    maxBufferSize: 60 * 1000 * 1000,
     startPosition: 0,
   };
 }
