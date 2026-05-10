@@ -4,6 +4,7 @@ import {
   canUseDirectPlayback,
   chooseInitialPlaybackMode,
   computeVideoLoadState,
+  hlsStatusUrlForSrc,
   requestedModeFromQualityMode,
 } from "./video-player-load";
 
@@ -122,5 +123,15 @@ describe("video-player-load", () => {
       startLevel: -1,
       nextAutoLevel: -1,
     });
+  });
+
+  it("uses the hls2 readiness endpoint before loading adaptive streams", () => {
+    expect(hlsStatusUrlForSrc("/api/video-stream/video-1/hls2/master.m3u8")).toBe(
+      "/api/video-stream/video-1/hls2/status",
+    );
+    expect(
+      hlsStatusUrlForSrc("/api/video-stream/video-1/hls2/master.m3u8?token=abc"),
+    ).toBe("/api/video-stream/video-1/hls2/status?token=abc");
+    expect(hlsStatusUrlForSrc("/api/video-stream/video-1/source")).toBeNull();
   });
 });

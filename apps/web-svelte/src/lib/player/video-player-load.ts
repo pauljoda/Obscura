@@ -123,3 +123,8 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
     nextAutoLevel: -1,
   };
 }
+
+export function hlsStatusUrlForSrc(src: string): string | null {
+  const statusUrl = src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
+  return statusUrl === src ? null : statusUrl;
+}

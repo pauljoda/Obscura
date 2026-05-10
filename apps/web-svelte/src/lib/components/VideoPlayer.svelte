@@ -59,6 +59,7 @@
     canUseDirectPlayback,
     chooseInitialPlaybackMode,
     computeVideoLoadState,
+    hlsStatusUrlForSrc,
     requestedModeFromQualityMode,
     type QualityMode,
   } from "$lib/player/video-player-load";
@@ -136,18 +137,8 @@
   }
 
   // ─── Helpers ────────────────────────────────────────────────────
-  function isVirtualHlsSrc(s: string): boolean {
-    return /\/hls2\/master\.m3u8$/.test(s);
-  }
-
   function usesProgressiveHlsSeekWindow(s: string | undefined): boolean {
-    return Boolean(s?.endsWith("/master.m3u8")) && !Boolean(s && isVirtualHlsSrc(s));
-  }
-
-  function hlsStatusUrlForSrc(s: string): string | null {
-    if (!s.endsWith("/master.m3u8")) return null;
-    if (isVirtualHlsSrc(s)) return null;
-    return s.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
+    return Boolean(s && hlsStatusUrlForSrc(s));
   }
 
   async function fetchHlsStatus(
