@@ -1231,14 +1231,8 @@
           </span>
         </div>
 
-        <div
-          class={cn(
-            "grid w-full gap-2 sm:flex sm:w-auto sm:items-center",
-            displayedAudioTracks.length > 0
-              ? "grid-cols-[2.125rem_minmax(0,1fr)_minmax(0,1fr)_1.75rem]"
-              : "grid-cols-[2.125rem_minmax(0,1fr)_1.75rem]",
-          )}
-        >
+        <div class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:w-auto sm:items-center">
+          <div class="flex min-w-0 items-center gap-2 sm:contents">
           {#if subtitleTracks.length > 0}
             <div class="relative">
               <button
@@ -1323,7 +1317,7 @@
           {/if}
 
           {#if displayedAudioTracks.length > 0}
-            <div class="relative">
+            <div class="relative min-w-0 flex-1 sm:flex-none">
               <button
                 type="button"
                 bind:this={audioMenuButton}
@@ -1333,7 +1327,7 @@
                   subtitleMenuOpen = false;
                   speedMenuOpen = false;
                 }}
-                class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
+                class="player-control-button w-full min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:w-auto sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
                 aria-label="Audio track"
               >
                 <span class="min-w-0 truncate">{displayedAudioTrackLabel}</span>
@@ -1369,7 +1363,9 @@
               {/if}
             </div>
           {/if}
+          </div>
 
+          <div class="flex min-w-0 items-center justify-end gap-2 sm:contents">
           <div class="relative">
             <button
               type="button"
@@ -1456,8 +1452,9 @@
             class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             aria-label="Fullscreen"
           >
-            <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
-          </button>
+              <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
+          </div>
         </div>
       </div>
       </div>
