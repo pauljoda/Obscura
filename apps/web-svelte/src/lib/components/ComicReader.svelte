@@ -15,6 +15,7 @@
   import { toApiUrl } from "$lib/api/core";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
   import {
+    comicPreloadIndexes,
     comicSpreadForIndex,
     comicTapZone,
     nextComicIndex,
@@ -60,6 +61,12 @@
     spread.length > 1
       ? `${spread[0] + 1}-${spread[spread.length - 1] + 1} / ${images.length}`
       : `${Math.min(index + 1, images.length)} / ${images.length}`,
+  );
+  const preloadSources = $derived(
+    comicPreloadIndexes(index, images.length, { pageMode, firstPageIsCover })
+      .map((pageIndex) => images[pageIndex])
+      .map((image) => (image ? imageSrc(image) : ""))
+      .filter(Boolean),
   );
 
   function setReaderIndex(nextIndex: number) {
@@ -204,6 +211,12 @@
     };
   });
 </script>
+
+<svelte:head>
+  {#each preloadSources as src (src)}
+    <link rel="preload" as="image" href={src} />
+  {/each}
+</svelte:head>
 
 <div
   class="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-sm"

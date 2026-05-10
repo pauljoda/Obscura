@@ -66,3 +66,24 @@ export function comicTapZone(x: number, width: number): ComicTapZone {
   if (ratio > 2 / 3) return "next";
   return "controls";
 }
+
+export function comicPreloadIndexes(
+  index: number,
+  total: number,
+  options: ComicReaderOptions,
+  radius = 2,
+): number[] {
+  const visible = comicSpreadForIndex(index, total, options);
+  if (visible.length === 0) return [];
+
+  const visibleSet = new Set(visible);
+  const start = clampIndex(Math.min(...visible) - radius, total);
+  const end = clampIndex(Math.max(...visible) + radius, total);
+  const indexes: number[] = [];
+
+  for (let i = start; i <= end; i += 1) {
+    if (!visibleSet.has(i)) indexes.push(i);
+  }
+
+  return indexes;
+}

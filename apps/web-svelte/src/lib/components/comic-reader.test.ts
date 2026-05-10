@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   comicSpreadForIndex,
+  comicPreloadIndexes,
   comicTapZone,
   nextComicIndex,
   previousComicIndex,
@@ -36,5 +37,14 @@ describe("comic reader page math", () => {
     expect(comicTapZone(10, 300)).toBe("previous");
     expect(comicTapZone(149, 300)).toBe("controls");
     expect(comicTapZone(290, 300)).toBe("next");
+  });
+
+  it("preloads two pages in both directions around the visible spread", () => {
+    expect(
+      comicPreloadIndexes(3, 9, { pageMode: "single", firstPageIsCover: true }),
+    ).toEqual([1, 2, 4, 5]);
+    expect(
+      comicPreloadIndexes(3, 9, { pageMode: "double", firstPageIsCover: true }),
+    ).toEqual([1, 2, 5, 6]);
   });
 });

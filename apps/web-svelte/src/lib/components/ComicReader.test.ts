@@ -8,28 +8,32 @@ vi.mock("$lib/nsfw/store.svelte", () => ({
   useNsfw: () => ({ mode: "show" }),
 }));
 
-const images = Array.from({ length: 3 }, (_, index) => ({
-  id: `image-${index + 1}`,
-  title: `Page ${index + 1}`,
-  date: null,
-  rating: null,
-  organized: false,
-  isNsfw: false,
-  width: 800,
-  height: 1200,
-  format: "jpg",
-  isVideo: false,
-  fileSize: 100,
-  thumbnailPath: `/assets/images/image-${index + 1}/thumb`,
-  previewPath: null,
-  fullPath: `/assets/images/image-${index + 1}/full`,
-  galleryId: "gallery-1",
-  sortOrder: index,
-  studioId: null,
-  performers: [],
-  tags: [],
-  createdAt: "2026-05-08T00:00:00.000Z",
-})) satisfies ImageListItemDto[];
+function makeImages(count: number): ImageListItemDto[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `image-${index + 1}`,
+    title: `Page ${index + 1}`,
+    date: null,
+    rating: null,
+    organized: false,
+    isNsfw: false,
+    width: 800,
+    height: 1200,
+    format: "jpg",
+    isVideo: false,
+    fileSize: 100,
+    thumbnailPath: `/assets/images/image-${index + 1}/thumb`,
+    previewPath: null,
+    fullPath: `/assets/images/image-${index + 1}/full`,
+    galleryId: "gallery-1",
+    sortOrder: index,
+    studioId: null,
+    performers: [],
+    tags: [],
+    createdAt: "2026-05-08T00:00:00.000Z",
+  }));
+}
+
+const images = makeImages(3);
 
 describe("ComicReader", () => {
   beforeEach(() => {
@@ -38,6 +42,9 @@ describe("ComicReader", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    document.head
+      .querySelectorAll('link[rel="preload"][as="image"]')
+      .forEach((link) => link.remove());
   });
 
   it("keeps controls hidden while navigating with side taps", async () => {
@@ -159,6 +166,30 @@ describe("ComicReader", () => {
     await fireEvent.click(getByLabelText("Next page"));
 
     expect(onIndexChange).toHaveBeenCalledWith(1);
+  });
+
+  it("preloads nearby paged images in the document head", async () => {
+    render(ComicReader, {
+      props: {
+        images: makeImages(6),
+        initialIndex: 2,
+        title: "Comic",
+        onClose: vi.fn(),
+      },
+    });
+
+    await tick();
+
+    const hrefs = Array.from(
+      document.head.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="image"]'),
+    ).map((link) => link.getAttribute("href"));
+
+    expect(hrefs).toEqual([
+      "/api/assets/images/image-1/full",
+      "/api/assets/images/image-2/full",
+      "/api/assets/images/image-4/full",
+      "/api/assets/images/image-5/full",
+    ]);
   });
 
   it("reports the nearest page while scrolling in webtoon mode", async () => {
