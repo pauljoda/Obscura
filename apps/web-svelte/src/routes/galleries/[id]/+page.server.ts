@@ -2,6 +2,7 @@ import type { PageServerLoad } from "./$types";
 import { fetchGalleryDetail } from "$lib/server/media";
 import { error } from "@sveltejs/kit";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 import { loadFormFactorUiPrefObjects, loadUiPrefObject } from "$lib/server/ui-prefs";
 import {
   comicReadingProgressKey,
@@ -12,16 +13,18 @@ const PAGE_SIZE = 120;
 
 export const load: PageServerLoad = async ({ params, depends, fetch, cookies }) => {
   depends(`galleries:${params.id}`);
+  const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
   try {
     const gallery = await fetchGalleryDetail(params.id, {
       fetch,
       imageLimit: PAGE_SIZE,
       imageOffset: 0,
     });
+    redirectHiddenNsfwDetail(nsfwMode, gallery);
     return {
       gallery,
       pageSize: PAGE_SIZE,
-      nsfwMode: parseNsfwModeCookie(cookies.get("obscura-nsfw-mode")),
+      nsfwMode,
       surfacePrefs: await loadFormFactorUiPrefObjects(
         `surface:gallery:${params.id}:images`,
         {},

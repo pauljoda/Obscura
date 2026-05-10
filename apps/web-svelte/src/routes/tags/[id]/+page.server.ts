@@ -3,6 +3,7 @@ import { serverFetch } from "$lib/server/core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 
 const VIDEO_LIMIT = 60;
 const SERIES_LIMIT = 24;
@@ -53,6 +54,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
       throw err;
     }
   }
+  redirectHiddenNsfwDetail(nsfw, tag);
   const tagName = tag.name;
   // The /videos + /galleries + /images API accepts a `tag=` filter by name.
   const videoQs = buildQueryString({

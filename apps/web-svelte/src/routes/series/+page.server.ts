@@ -18,6 +18,7 @@ import {
   loadFormFactorUiPrefObjects,
   loadUiPrefObject,
 } from "$lib/server/ui-prefs";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 import type { PerformerItem, StudioItem, TagItem } from "$lib/api/types";
 
 const PAGE_SIZE = 60;
@@ -84,10 +85,13 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     : { items: [], total: 0, limit: 200, offset: 0 };
 
   const activeSeries = seriesParam
-    ? await fetchSeriesDetail(seriesParam, { nsfw: nsfwMode }, { fetch }).catch(
-        () => null,
-      )
+    ? await fetchSeriesDetail(
+        seriesParam,
+        { nsfw: nsfwMode === "off" ? undefined : nsfwMode },
+        { fetch },
+      ).catch(() => null)
     : null;
+  if (activeSeries) redirectHiddenNsfwDetail(nsfwMode, activeSeries);
 
   const childSeriesResponse = seriesParam
     ? await fetchSeries(

@@ -8,6 +8,7 @@
   import { toApiUrl } from "$lib/api/core";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
+  import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
 
   interface CollectionThumbLike {
     name: string;
@@ -88,4 +89,5 @@
       </div>
     {/if}
   </NsfwBlur>
+  <NsfwShowModeChip isNsfw={collection.isNsfw === true} class="absolute right-2 top-2" />
 </div>

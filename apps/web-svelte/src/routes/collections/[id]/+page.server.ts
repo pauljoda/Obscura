@@ -4,6 +4,7 @@ import { serverFetch } from "$lib/server/core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 
 const ITEM_LIMIT = 120;
 
@@ -15,13 +16,13 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
   try {
     collection = await fetchCollectionDetail(params.id, {
       fetch,
-      nsfw: nsfw === "off" ? "off" : undefined,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (/404/.test(message)) error(404, "Collection not found");
     throw err;
   }
+  redirectHiddenNsfwDetail(nsfw, collection);
 
   const itemsQs = buildQueryString({ limit: ITEM_LIMIT, nsfw });
   const itemsRes = await serverFetch<{

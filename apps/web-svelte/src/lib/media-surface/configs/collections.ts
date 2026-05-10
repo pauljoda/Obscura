@@ -12,6 +12,8 @@ interface BuildArgs {
   page: number;
   /** Optional collection-mode filter forwarded as `?mode=` to the API. */
   mode?: string;
+  /** Optional NSFW mode filter forwarded to client-side pagination fetches. */
+  nsfw?: string;
   /** Called after a bulk delete; routes typically invalidate the page load. */
   onMutated?: () => void | Promise<void>;
 }
@@ -35,6 +37,7 @@ export function collectionsSurfaceConfig(
           order: prefs.sortDir,
           randomSeed: prefs.extras?.randomSeed?.toString(),
           mode: args.mode,
+          nsfw: args.nsfw,
           limit,
           offset,
         },

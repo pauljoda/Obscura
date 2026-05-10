@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
-- NSFW collections now stay hidden in SFW mode even when opened directly from a saved or typed URL.
+- NSFW collections now stay hidden in SFW mode from the first browser render, and direct links to hidden detail pages now return to the dashboard instead of showing an error page.
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
 - Comic reader page turns now preload nearby pages, so paged reading feels instant instead of flashing while the next image loads.
@@ -24,7 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- NSFW collection detail pages now return not found while SFW mode is active, matching the existing collection list filtering.
+- NSFW collections no longer reappear from the browser's client-side pagination fetch while SFW mode is active.
+- NSFW detail pages now redirect back to the dashboard while SFW mode is active, avoiding hidden-content stubs and server errors from saved or typed URLs.
 - Gallery and video scans now mark linked tags, artists, and studios as NSFW when those links come from an NSFW library root.
 - Sub-gallery cards on gallery detail pages now use a persisted size slider, matching the rest of the library browsing surfaces.
 - Comic reader paged mode now preloads the previous and next two pages around the current spread to prevent page-turn flashes.

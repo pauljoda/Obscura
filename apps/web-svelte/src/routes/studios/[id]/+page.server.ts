@@ -3,6 +3,7 @@ import { serverFetch } from "$lib/server/core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 
 const VIDEO_LIMIT = 60;
 const SERIES_LIMIT = 24;
@@ -31,12 +32,13 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
       videoCount?: number;
       imageAppearanceCount?: number;
       audioLibraryCount?: number;
-    }>(`/studios/${encodeURIComponent(params.id)}${buildQueryString({ nsfw })}`, { fetch });
+    }>(`/studios/${encodeURIComponent(params.id)}`, { fetch });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (/404/.test(message)) error(404, "Studio not found");
     throw err;
   }
+  redirectHiddenNsfwDetail(nsfw, studio);
 
   const videoQs = buildQueryString({
     studio: studio.id,

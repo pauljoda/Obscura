@@ -33,20 +33,25 @@ describe("/collections/[id] page server load", () => {
     parseNsfwModeCookie.mockReturnValue("off");
   });
 
-  it("loads collection detail through the current NSFW mode", async () => {
+  it("redirects NSFW collection detail back home in SFW mode", async () => {
     const eventFetch = vi.fn();
     const { load } = await import("./+page.server");
 
-    await load({
-      params: { id: "collection-1" },
-      cookies: { get: vi.fn(() => "off") },
-      depends: vi.fn(),
-      fetch: eventFetch,
-    } as never);
+    await expect(
+      load({
+        params: { id: "collection-1" },
+        cookies: { get: vi.fn(() => "off") },
+        depends: vi.fn(),
+        fetch: eventFetch,
+      } as never),
+    ).rejects.toMatchObject({
+      status: 303,
+      location: "/",
+    });
 
     expect(fetchCollectionDetail).toHaveBeenCalledWith("collection-1", {
       fetch: eventFetch,
-      nsfw: "off",
     });
+    expect(serverFetch).not.toHaveBeenCalled();
   });
 });

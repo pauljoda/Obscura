@@ -38,6 +38,7 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
     search: search ?? "",
     sort,
     order,
+    nsfwMode,
     surfacePrefs: await loadFormFactorUiPrefObjects("surface:collections", {}, ":prefs"),
     viewPrefs: await loadUiPrefObject("collections:view", { cols: 2 }),
   };

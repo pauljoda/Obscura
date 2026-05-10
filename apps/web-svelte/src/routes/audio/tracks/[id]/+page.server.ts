@@ -1,11 +1,17 @@
 import type { PageServerLoad } from "./$types";
 import { fetchAudioLibraryDetail, fetchAudioTrackDetail } from "$lib/server/media";
 import { error } from "@sveltejs/kit";
+import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 
-export const load: PageServerLoad = async ({ params, depends, fetch }) => {
+export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`audio-tracks:${params.id}`);
   try {
     const track = await fetchAudioTrackDetail(params.id, { fetch });
+    redirectHiddenNsfwDetail(
+      parseNsfwModeCookie(cookies.get("obscura-nsfw-mode")),
+      track,
+    );
     let libraryCoverImagePath: string | null = null;
     if (track.libraryId) {
       try {

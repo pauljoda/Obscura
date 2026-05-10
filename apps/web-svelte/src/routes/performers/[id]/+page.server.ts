@@ -3,6 +3,7 @@ import { serverFetch } from "$lib/server/core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { buildQueryString } from "$lib/query-string";
 import { error } from "@sveltejs/kit";
+import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 
 const VIDEO_LIMIT = 60;
 const GALLERY_LIMIT = 24;
@@ -14,12 +15,13 @@ const SERIES_LIMIT = 24;
 export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) => {
   depends(`performers:${params.id}`);
   const nsfw = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
-  const qs = buildQueryString({ nsfw });
 
   let performer;
   try {
-    performer = await serverFetch<Record<string, unknown> & { id: string; name: string }>(
-      `/performers/${encodeURIComponent(params.id)}${qs}`,
+    performer = await serverFetch<
+      Record<string, unknown> & { id: string; name: string; isNsfw?: boolean }
+    >(
+      `/performers/${encodeURIComponent(params.id)}`,
       { fetch },
     );
   } catch (err) {
@@ -27,6 +29,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     if (/404/.test(message)) error(404, "Actor not found");
     throw err;
   }
+  redirectHiddenNsfwDetail(nsfw, performer);
 
   // Fetch performer appearances in parallel. Errors fall back to empty
   // collections so a stale link to a broken endpoint still renders the

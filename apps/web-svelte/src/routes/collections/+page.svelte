@@ -15,6 +15,7 @@
       pageSize: data.pageSize,
       page: data.page,
       mode: page.url.searchParams.get("mode") ?? undefined,
+      nsfw: data.nsfwMode === "off" ? "off" : undefined,
       onMutated: () => invalidateAll(),
     }),
   );
