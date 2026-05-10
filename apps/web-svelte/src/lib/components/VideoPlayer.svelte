@@ -958,7 +958,7 @@
 
     <div
       class={cn(
-        "pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
+        "pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
         showControls ? "opacity-100" : "opacity-0",
       )}
     >
@@ -1013,58 +1013,68 @@
 
     <div
       class={cn(
-        "pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-normal sm:hidden",
+        "pointer-events-none absolute inset-0 z-30 flex items-center justify-center transition-opacity duration-normal sm:hidden",
         showControls ? "opacity-100" : "opacity-0",
       )}
     >
-      <div class="pointer-events-auto flex items-center gap-4">
+      <div class="pointer-events-auto flex items-center gap-3">
         <button
           type="button"
-          onclick={() => seek(-10)}
-          class="relative flex h-9 w-9 items-center justify-center text-white/72 transition-colors hover:text-white"
+          onclick={(event) => {
+            event.stopPropagation();
+            seek(-10);
+          }}
+          class="relative flex h-7 w-7 items-center justify-center text-white/72 transition-colors hover:text-white"
           title="Skip back 10s"
           aria-label="Skip back 10s"
         >
-          <RotateCcw class="h-5 w-5" />
-          <span class="absolute mt-[1px] text-[0.5rem] font-bold">10</span>
+          <RotateCcw class="h-4 w-4" />
+          <span class="absolute mt-[1px] text-[0.42rem] font-bold">10</span>
         </button>
         <button
           type="button"
-          onclick={togglePlay}
-          class="flex h-11 w-11 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+          onclick={(event) => {
+            event.stopPropagation();
+            togglePlay();
+          }}
+          class="flex h-8 w-8 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_12px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_16px_rgba(199,155,92,0.28)]"
           aria-label={playing ? "Pause" : "Play"}
         >
           {#if buffering}
-            <Loader class="h-4 w-4 animate-spin" />
+            <Loader class="h-3.5 w-3.5 animate-spin" />
           {:else if playing}
-            <Pause class="h-4 w-4" fill="currentColor" />
+            <Pause class="h-3.5 w-3.5" fill="currentColor" />
           {:else}
-            <span class="play-glyph play-glyph-lg" aria-hidden="true"></span>
+            <span class="play-glyph" aria-hidden="true"></span>
           {/if}
         </button>
         <button
           type="button"
-          onclick={() => seek(10)}
-          class="relative flex h-9 w-9 items-center justify-center text-white/72 transition-colors hover:text-white"
+          onclick={(event) => {
+            event.stopPropagation();
+            seek(10);
+          }}
+          class="relative flex h-7 w-7 items-center justify-center text-white/72 transition-colors hover:text-white"
           title="Skip forward 10s"
           aria-label="Skip forward 10s"
         >
-          <RotateCw class="h-5 w-5" />
-          <span class="absolute mt-[1px] text-[0.5rem] font-bold">10</span>
+          <RotateCw class="h-4 w-4" />
+          <span class="absolute mt-[1px] text-[0.42rem] font-bold">10</span>
         </button>
       </div>
     </div>
 
     <div
       class={cn(
-        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 pb-2 pt-12 transition-opacity duration-normal sm:px-4 sm:pb-4 sm:pt-20",
-        showControls ? "opacity-100" : "pointer-events-none opacity-0",
+        "pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/92 via-black/58 to-transparent px-3 pb-1.5 pt-8 transition-opacity duration-normal sm:px-4 sm:pb-4 sm:pt-20",
+        showControls ? "opacity-100" : "opacity-0",
       )}
     >
-      <div class="mb-2 space-y-2 sm:mb-4">
+      <div class="flex flex-col gap-2">
+        <div class="pointer-events-auto order-2 py-1 sm:py-1.5">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="video-progress-track group/track"
+          class="video-progress-track mobile-video-progress group/track"
           data-dragging={isDragging}
           onpointerdown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -1128,9 +1138,10 @@
             ></button>
           {/each}
         </div>
+        </div>
 
         {#if markers.length > 0}
-          <div class="hidden sm:flex flex-wrap gap-1.5">
+          <div class="order-3 hidden flex-wrap gap-1.5 sm:flex">
             {#each markers as marker (marker.id)}
               <button
                 type="button"
@@ -1145,9 +1156,8 @@
             {/each}
           </div>
         {/if}
-      </div>
 
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div class="pointer-events-auto order-1 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-start sm:gap-2.5">
           <div class="hidden items-center gap-2.5 sm:flex">
           <button
@@ -1212,8 +1222,8 @@
           class={cn(
             "grid w-full gap-2 sm:flex sm:w-auto sm:items-center",
             audioTracks.length > 1
-              ? "grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_2.25rem]"
-              : "grid-cols-[2.25rem_minmax(0,1fr)_2.25rem]",
+              ? "grid-cols-[2.125rem_minmax(0,1fr)_minmax(0,1fr)_1.75rem]"
+              : "grid-cols-[2.125rem_minmax(0,1fr)_1.75rem]",
           )}
         >
           {#if subtitleTracks.length > 0}
@@ -1229,13 +1239,13 @@
                 }}
                 aria-label="Subtitles"
                 class={cn(
-                  "player-control-button subtitle-control-button text-[0.65rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
+                  "player-control-button subtitle-control-button text-[0.56rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
                   activeSubtitleId ? "text-accent-100" : "text-white/82",
                 )}
               >
                 <span class="subtitle-control-glyph" aria-hidden="true">
-                  <Captions class="h-3.5 w-3.5" />
-                  <ChevronDown class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <ChevronDown class="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
                 </span>
               </button>
               {#if subtitleMenuOpen}
@@ -1310,11 +1320,11 @@
                   subtitleMenuOpen = false;
                   speedMenuOpen = false;
                 }}
-                class="player-control-button min-w-0 justify-between gap-1.5 px-2 text-[0.65rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:px-3 sm:text-[0.72rem]"
+                class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
                 aria-label="Audio track"
               >
                 <span class="min-w-0 truncate">{selectedAudioTrackLabel ?? "Audio"}</span>
-                <ChevronDown class="h-3.5 w-3.5 shrink-0" />
+                <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
               </button>
               {#if audioMenuOpen}
                 <div
@@ -1358,10 +1368,10 @@
                 speedMenuOpen = false;
                 subtitleMenuOpen = false;
               }}
-              class="player-control-button min-w-0 justify-between gap-1 px-2 text-[0.65rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
+              class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
             >
               <span class="min-w-0 truncate">{selectedQualityLabel ?? "Quality"}</span>
-              <ChevronDown class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+              <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
             </button>
             {#if qualityMenuOpen}
               <div
@@ -1433,9 +1443,10 @@
             class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             aria-label="Fullscreen"
           >
-            <Maximize class="h-3.5 sm:h-4 w-3.5 sm:w-4" />
+            <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
           </button>
         </div>
+      </div>
       </div>
     </div>
   </div>
@@ -1511,9 +1522,9 @@
       inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
       0 2px 8px rgba(0, 0, 0, 0.3);
     display: flex;
-    height: 2.25rem;
-    min-height: 2.25rem;
-    min-width: 2.25rem;
+    height: 1.75rem;
+    min-height: 1.75rem;
+    min-width: 1.75rem;
   }
 
   .play-glyph {
@@ -1547,21 +1558,40 @@
 
   .subtitle-control-button {
     justify-content: center;
-    padding: 0;
-    width: 2.5rem;
+    padding-left: 0.125rem;
+    padding-right: 0.25rem;
+    width: 2.125rem;
   }
 
   .subtitle-control-glyph {
     align-items: center;
     display: grid;
-    gap: 0.18rem;
+    gap: 0.12rem;
     grid-template-columns: 1fr 1fr;
     justify-items: center;
     margin-left: 0.02rem;
-    width: 1.62rem;
+    width: 1.24rem;
+  }
+
+  .mobile-video-progress {
+    height: 5px;
+  }
+
+  .mobile-video-progress:hover,
+  .mobile-video-progress[data-dragging="true"] {
+    height: 6px;
   }
 
   @media (min-width: 640px) {
+    .mobile-video-progress {
+      height: 8px;
+    }
+
+    .mobile-video-progress:hover,
+    .mobile-video-progress[data-dragging="true"] {
+      height: 10px;
+    }
+
     .player-control-button {
       height: 2.25rem;
       min-height: 2.25rem;
@@ -1569,12 +1599,14 @@
     }
 
     .subtitle-control-button {
-      width: 2.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.55rem;
+      width: 3rem;
     }
 
     .subtitle-control-glyph {
-      gap: 0.22rem;
-      width: 1.72rem;
+      gap: 0.28rem;
+      width: 2rem;
     }
   }
 </style>

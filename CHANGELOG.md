@@ -54,6 +54,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback no longer renders Vidstack's custom element during server hydration, preventing the player shell from producing hydration mismatch warnings on load.
 - Adaptive HLS buffering now uses browser-safe limits, reducing noisy `bufferFullError` console logs while still keeping a large forward buffer.
 - Video playback controls now center the play glyph and captions control more precisely inside their square buttons.
+- Mobile video playback controls now keep the compact transport buttons clickable and move the scrub bar to the bottom of the overlay.
+- Mobile video playback menus now use smaller option text and icons so quality, captions, and fullscreen controls fit in the player overlay.
+- Mobile captions controls now have a little extra side padding so the icon and chevron do not clip against the button border.
+- Desktop video playback controls now place the scrub bar below the button row, matching the cleaner mobile control order.
+- Video playback scrub bars now have a larger click target, and the desktop captions button now matches the padding rhythm of the other dropdown controls.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs
