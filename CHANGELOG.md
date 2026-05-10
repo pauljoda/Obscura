@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
 - Comic reader page turns now preload nearby pages, so paged reading feels instant instead of flashing while the next image loads.
+- Filtered library views now re-check their saved filters when reopened, so comics that become Read disappear from Unread lists without manually toggling the filter.
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
 - Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
@@ -26,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery and video scans now mark linked tags, artists, and studios as NSFW when those links come from an NSFW library root.
 - Sub-gallery cards on gallery detail pages now use a persisted size slider, matching the rest of the library browsing surfaces.
 - Comic reader paged mode now preloads the previous and next two pages around the current spread to prevent page-turn flashes.
+- Filtered media surfaces now verify hydrated or cached first-page data against active saved filters before trusting it, fixing stale Gallery lists after read-progress changes.
 - Filtered Images results now keep the lightbox item list in sync with the cards on screen, so clicking filtered or newly loaded images opens the expected item.
 - Images Feed view now responds to the thumbnail-size slider instead of staying at a fixed width.
 - Gallery thumbnail preview scrubbing now uses pointer input, making the preview strip work on mobile touch as well as desktop hover.

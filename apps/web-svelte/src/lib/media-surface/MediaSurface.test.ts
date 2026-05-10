@@ -264,7 +264,12 @@ describe("MediaSurface", () => {
   });
 
   it("encodes activeFilters via the fetcher's prefs argument", async () => {
-    const fetcher = vi.fn(async () => ({ items: [], total: 0 }));
+    const fetcher = vi.fn(
+      async (_args: { prefs: SurfacePrefs<"resolution" | "tag"> }) => ({
+        items: [],
+        total: 0,
+      }),
+    );
     const sections: FilterSectionSpec<"resolution" | "tag">[] = [
       { kind: "enum", filterType: "resolution", label: "Resolution" },
     ];
@@ -292,9 +297,15 @@ describe("MediaSurface", () => {
     };
 
     render(Harness, { props: { config: config2 } });
-    // No fetch yet — initial provides the data; defaultPrefs are used
-    // straight away on first render.
-    expect(fetcher).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const activeFilters = fetcher.mock.calls.map(
+        (c) => (c[0] as unknown as { prefs: SurfacePrefs<"resolution" | "tag"> }).prefs.activeFilters,
+      );
+      expect(activeFilters).toContainEqual([
+        { type: "resolution", label: "Resolution", value: "1080p" },
+      ]);
+    });
   });
 
   it("loads persisted surface preferences on mount", async () => {
@@ -456,6 +467,45 @@ describe("MediaSurface", () => {
       "text-text-accent",
     );
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("verifies hydrated items against server-loaded active filters", async () => {
+    const savedPrefs: SurfacePrefs<"resolution" | "tag"> = {
+      ...defaultPrefs,
+      activeFilters: [{ type: "resolution", label: "Resolution", value: "1080p" }],
+    };
+    const fetcher = vi.fn(async (_args: { prefs: SurfacePrefs<"resolution" | "tag"> }) => ({
+      items: items(100, 2),
+      total: 2,
+    }));
+    const config: MediaSurfaceConfig<Item, "resolution" | "tag"> = {
+      surfaceId: "test-filtered-revisit",
+      pageSize: 10,
+      fetcher,
+      initial: { items: items(0, 2), total: 2, loadedStart: 0 },
+      card: StubCard,
+      defaultPrefs,
+      sortOptions: [{ value: "recent", label: "Recent" }],
+      filterSections: [
+        { kind: "enum", filterType: "resolution", label: "Resolution" },
+      ],
+    };
+
+    render(Harness, {
+      props: {
+        config,
+        initialPrefsByFormFactor: {
+          mobile: savedPrefs,
+          desktop: savedPrefs,
+        },
+      },
+    });
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(expect.objectContaining({ prefs: savedPrefs }));
+    });
+    expect(screen.queryByText("Item 0")).not.toBeInTheDocument();
+    expect(screen.getByText("Item 100")).toBeInTheDocument();
   });
 
   it("passes thumbnail size preferences through to feed layout", async () => {

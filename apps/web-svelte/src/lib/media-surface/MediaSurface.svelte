@@ -123,7 +123,10 @@
     if (sig === lastPrefsSignature) return;
     if (lastPrefsSignature === "") {
       lastPrefsSignature = sig;
-      if (prefs.sortBy === "randomized" && config.initial) {
+      if (
+        config.initial &&
+        (prefs.sortBy === "randomized" || shouldVerifyHydratedFilteredPage())
+      ) {
         untrack(() => {
           coll.reset();
           void coll.loadMore();
@@ -235,6 +238,12 @@
       prefs.search !== d.search ||
       prefs.activeFilters.length > 0
     );
+  }
+
+  function shouldVerifyHydratedFilteredPage(): boolean {
+    const prefs = prefsStore.current;
+    const d = defaultPrefs();
+    return prefs.search !== d.search || prefs.activeFilters.length > 0;
   }
 
   // ── Presets ──────────────────────────────────────────────────────────

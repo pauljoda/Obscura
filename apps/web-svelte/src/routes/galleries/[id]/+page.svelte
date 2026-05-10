@@ -102,6 +102,11 @@
   const progressLabel = $derived(comicProgressLabel(comicProgress.pageIndex, images.length));
   const progressPercent = $derived(comicProgressPercent(comicProgress.pageIndex, images.length));
 
+  async function flushComicProgressAndRefreshLists() {
+    await comicProgressPrefs.flush();
+    await invalidate("galleries");
+  }
+
   onMount(() => {
     void comicProgressPrefs.load();
     void childGalleryPrefs.load();
@@ -123,6 +128,9 @@
         ? normalized.completedAt ?? new Date().toISOString()
         : normalized.completedAt ?? null,
     });
+    if (reachedEnd) {
+      void flushComicProgressAndRefreshLists();
+    }
   }
 
   function saveComicReaderMode(readerMode: "paged" | "webtoon") {
@@ -139,7 +147,7 @@
   async function closeReader() {
     saveComicProgress(readerIndex);
     readerOpen = false;
-    await comicProgressPrefs.flush();
+    await flushComicProgressAndRefreshLists();
   }
 
   function openComicReaderAt(i: number) {
