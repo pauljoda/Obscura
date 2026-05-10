@@ -13,7 +13,10 @@ import {
   type VideoClassificationEpisode,
   type VideoClassificationMovie,
 } from "@obscura/media-core";
-import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
+import {
+  listIgnoredMediaPathsUnderRoot,
+  markLinkedMetadataNsfwForLibraryRoot,
+} from "@obscura/app-core";
 import { db, schema } from "../lib/db.js";
 import { libraryRoots, performers, tags } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
@@ -657,6 +660,10 @@ export async function processLibraryScan(job: Job): Promise<void> {
       SELECT 1 FROM ${videoSeasons} WHERE ${videoSeasons.seriesId} = ${videoSeries.id}
     )
   `);
+
+  if (root.isNsfw) {
+    await markLinkedMetadataNsfwForLibraryRoot(db, root.path);
+  }
 
   // -------------------------------------------------------------------------
   // Mark scan complete and fan out downstream scans (unchanged from old).

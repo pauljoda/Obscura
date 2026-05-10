@@ -5,6 +5,7 @@ import {
   propagateEpisodeNsfw,
   propagateMovieNsfw,
 } from "../packages/db/src/lib/nsfw-video-propagation.ts";
+import { syncMediaNsfwWithLibraryRoot } from "../packages/app-core/src/library-root-nsfw-sync.ts";
 import { createPostgresTestContext } from "./support/postgres.ts";
 
 const {
@@ -17,6 +18,9 @@ const {
   videoEpisodePerformers,
   videoMovieTags,
   videoMoviePerformers,
+  galleries,
+  galleryTags,
+  galleryPerformers,
   tags,
   performers,
   studios,
@@ -241,6 +245,66 @@ describe("nsfw-video-propagation", () => {
         .from(videoMovies)
         .where(eq(videoMovies.id, movie.id));
       expect(row.isNsfw).toBe(false);
+    });
+  });
+
+  describe("syncMediaNsfwWithLibraryRoot", () => {
+    it("marks gallery-linked metadata NSFW when a library root becomes NSFW", async () => {
+      const rootPath = `/tmp/gallery-root-${Math.random()}`;
+      await database.db
+        .insert(libraryRoots)
+        .values({ path: rootPath, label: "Gallery Root" });
+      const [studio] = await database.db
+        .insert(studios)
+        .values({ name: `Gallery Studio ${Math.random()}`, isNsfw: false })
+        .returning();
+      const [performer] = await database.db
+        .insert(performers)
+        .values({ name: `Gallery Artist ${Math.random()}`, isNsfw: false })
+        .returning();
+      const [tag] = await database.db
+        .insert(tags)
+        .values({ name: `gallery-tag-${Math.random()}`, isNsfw: false })
+        .returning();
+      const [gallery] = await database.db
+        .insert(galleries)
+        .values({
+          title: "Gallery",
+          galleryType: "folder",
+          folderPath: `${rootPath}/Gallery`,
+          studioId: studio.id,
+        })
+        .returning();
+      await database.db
+        .insert(galleryPerformers)
+        .values({ galleryId: gallery.id, performerId: performer.id });
+      await database.db
+        .insert(galleryTags)
+        .values({ galleryId: gallery.id, tagId: tag.id });
+
+      await syncMediaNsfwWithLibraryRoot(database.db, rootPath, true);
+
+      const [updatedGallery] = await database.db
+        .select({ isNsfw: galleries.isNsfw })
+        .from(galleries)
+        .where(eq(galleries.id, gallery.id));
+      const [updatedStudio] = await database.db
+        .select({ isNsfw: studios.isNsfw })
+        .from(studios)
+        .where(eq(studios.id, studio.id));
+      const [updatedPerformer] = await database.db
+        .select({ isNsfw: performers.isNsfw })
+        .from(performers)
+        .where(eq(performers.id, performer.id));
+      const [updatedTag] = await database.db
+        .select({ isNsfw: tags.isNsfw })
+        .from(tags)
+        .where(eq(tags.id, tag.id));
+
+      expect(updatedGallery.isNsfw).toBe(true);
+      expect(updatedStudio.isNsfw).toBe(true);
+      expect(updatedPerformer.isNsfw).toBe(true);
+      expect(updatedTag.isNsfw).toBe(true);
     });
   });
 });

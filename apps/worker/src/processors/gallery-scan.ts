@@ -13,7 +13,10 @@ import {
   sortPathsNaturally,
   type ComicInfoMetadata,
 } from "@obscura/media-core";
-import { listIgnoredMediaPathsUnderRoot } from "@obscura/app-core";
+import {
+  listIgnoredMediaPathsUnderRoot,
+  markLinkedMetadataNsfwForLibraryRoot,
+} from "@obscura/app-core";
 import {
   db,
   images,
@@ -614,6 +617,10 @@ export async function processGalleryScan(job: Job) {
     if (totalWork > 0) {
       await markJobProgress(job, "gallery-scan", Math.round((processed / totalWork) * 100));
     }
+  }
+
+  if (root.isNsfw) {
+    await markLinkedMetadataNsfwForLibraryRoot(db, root.path);
   }
 
   // Refresh dynamic collections after gallery scan
