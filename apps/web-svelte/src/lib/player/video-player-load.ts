@@ -25,6 +25,15 @@ export interface AdaptiveAutoLevelSelection {
   nextAutoLevel: -1;
 }
 
+export interface AdaptiveHlsBufferConfig {
+  backBufferLength: number;
+  frontBufferFlushThreshold: number;
+  maxBufferLength: number;
+  maxMaxBufferLength: number;
+  maxBufferSize: number;
+  startPosition: number;
+}
+
 export function requestedModeFromQualityMode(
   qualityMode: QualityMode,
 ): VideoPlaybackMode {
@@ -121,6 +130,18 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
     currentLevel: -1,
     startLevel: -1,
     nextAutoLevel: -1,
+  };
+}
+
+export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
+  const fullDaySeconds = 24 * 60 * 60;
+  return {
+    backBufferLength: Infinity,
+    frontBufferFlushThreshold: Infinity,
+    maxBufferLength: fullDaySeconds,
+    maxMaxBufferLength: fullDaySeconds,
+    maxBufferSize: Number.MAX_SAFE_INTEGER,
+    startPosition: 0,
   };
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   adaptiveAutoLevelSelection,
+  adaptiveHlsBufferConfig,
   canUseDirectPlayback,
   chooseInitialPlaybackMode,
   computeVideoLoadState,
@@ -122,6 +123,17 @@ describe("video-player-load", () => {
       currentLevel: -1,
       startLevel: -1,
       nextAutoLevel: -1,
+    });
+  });
+
+  it("allows adaptive HLS to buffer the full available playlist", () => {
+    expect(adaptiveHlsBufferConfig()).toEqual({
+      backBufferLength: Infinity,
+      frontBufferFlushThreshold: Infinity,
+      maxBufferLength: 24 * 60 * 60,
+      maxMaxBufferLength: 24 * 60 * 60,
+      maxBufferSize: Number.MAX_SAFE_INTEGER,
+      startPosition: 0,
     });
   });
 

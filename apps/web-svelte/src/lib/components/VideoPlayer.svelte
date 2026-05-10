@@ -56,6 +56,7 @@
   import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
   import {
     adaptiveAutoLevelSelection,
+    adaptiveHlsBufferConfig,
     canUseDirectPlayback,
     chooseInitialPlaybackMode,
     computeVideoLoadState,
@@ -708,8 +709,7 @@
             startLevel: -1,
             capLevelToPlayerSize: true,
             capLevelOnFPSDrop: true,
-            maxBufferLength: 30,
-            backBufferLength: 90,
+            ...adaptiveHlsBufferConfig(),
             manifestLoadPolicy: {
               default: {
                 maxTimeToFirstByteMs: 20_000,
