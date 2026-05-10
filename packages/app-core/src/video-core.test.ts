@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { paginateMergedVideos, sortMergedVideos } from "./video-core";
+import { directStreamUrlForVideoFile, paginateMergedVideos, sortMergedVideos } from "./video-core";
+
+describe("directStreamUrlForVideoFile", () => {
+  it("only exposes direct playback for browser-native source containers", () => {
+    expect(directStreamUrlForVideoFile("video-1", "/media/episode.mp4")).toBe(
+      "/video-stream/video-1/source",
+    );
+    expect(directStreamUrlForVideoFile("video-1", "/media/episode.m4v")).toBe(
+      "/video-stream/video-1/source",
+    );
+    expect(directStreamUrlForVideoFile("video-1", "/media/episode.webm")).toBe(
+      "/video-stream/video-1/source",
+    );
+    expect(directStreamUrlForVideoFile("video-1", "/media/episode.mkv")).toBeNull();
+    expect(directStreamUrlForVideoFile("video-1", null)).toBeNull();
+  });
+});
 
 describe("sortMergedVideos", () => {
   const rows = [

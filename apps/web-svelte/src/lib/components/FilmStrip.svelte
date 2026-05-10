@@ -19,6 +19,7 @@
     spriteUrl: string;
     vttUrl: string;
     videoEl: HTMLVideoElement | null | undefined;
+    currentTime?: number;
     duration: number;
     onSeek: (time: number) => void;
     markers?: FilmStripMarker[];
@@ -29,6 +30,7 @@
     spriteUrl,
     vttUrl,
     videoEl,
+    currentTime,
     duration,
     onSeek,
     markers = [],
@@ -97,11 +99,11 @@
   $effect(() => {
     if (!frames || frames.length === 0) return;
     const tick = () => {
-      if (!videoEl || !containerEl || !trackEl || dragging) {
+      if (!containerEl || !trackEl || dragging) {
         rafId = requestAnimationFrame(tick);
         return;
       }
-      applyPosition(videoEl.currentTime);
+      applyPosition(currentTime ?? videoEl?.currentTime ?? 0);
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -123,7 +125,7 @@
       e.stopPropagation();
       const pixelsPerSecond = trackWidth / duration;
       const timeDelta = raw / pixelsPerSecond;
-      const current = videoEl?.currentTime ?? 0;
+      const current = currentTime ?? videoEl?.currentTime ?? 0;
       const newTime = Math.max(0, Math.min(duration, current + timeDelta));
       applyPosition(newTime);
       onSeek(newTime);
@@ -156,7 +158,7 @@
     onStripInteractionChange?.(true);
     dragging = true;
     dragStartX = e.clientX;
-    dragStartTime = videoEl?.currentTime ?? 0;
+    dragStartTime = currentTime ?? videoEl?.currentTime ?? 0;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
 
@@ -178,7 +180,7 @@
 
   function jumpFrame(direction: -1 | 1) {
     if (!frames || frames.length === 0) return;
-    const time = videoEl?.currentTime ?? 0;
+    const time = currentTime ?? videoEl?.currentTime ?? 0;
     const currentIndex = findFrameAtTime(frames, time);
     const nextIndex = Math.max(0, Math.min(frames.length - 1, currentIndex + direction));
     onSeek(frames[nextIndex].start);

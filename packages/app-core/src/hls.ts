@@ -17,11 +17,16 @@ export interface HlsPackage {
 }
 
 interface HlsCacheMetadata {
+  engine: typeof HLS_CACHE_ENGINE;
   sourcePath: string;
   sourceSize: number;
   sourceMtimeMs: number;
   renditions: HlsRendition[];
 }
+
+export const HLS_CACHE_ENGINE = "continuous-hls-v1";
+export const HLS_SEGMENT_DURATION_SECONDS = 3;
+export const HLS_MIN_READY_SEGMENTS = 3;
 
 function getHlsCacheDir() {
   return path.join(getCacheRootDir(), "hls");
@@ -74,6 +79,7 @@ async function isPackageFresh(
     metadata.sourcePath === sourcePath &&
     metadata.sourceSize === sourceStats.size &&
     metadata.sourceMtimeMs === sourceStats.mtimeMs &&
+    metadata.engine === HLS_CACHE_ENGINE &&
     JSON.stringify(metadata.renditions) === JSON.stringify(renditions) &&
     existsSync(masterManifestPath)
   );
@@ -169,7 +175,7 @@ async function ffmpegHlsBuilder(
     "-hls_list_size",
     "0",
     "-hls_time",
-    "6",
+    String(HLS_SEGMENT_DURATION_SECONDS),
     "-hls_flags",
     "independent_segments+append_list",
     "-master_pl_name",
@@ -199,9 +205,10 @@ export function resetHlsTracker() {
 }
 
 /**
- * Polls the cache dir until the master playlist and at least one segment
- * per variant exist — the moment the package becomes playable. Returns
- * false on timeout or when the abort flag flips.
+ * Polls the cache dir until the master playlist and a startup buffer of
+ * segments per variant exist. Waiting for a few continuous muxer-produced
+ * segments avoids attaching hls.js before the package has enough audio/video
+ * continuity to play smoothly.
  */
 async function waitForPartialHlsPackage(
   cacheDir: string,
@@ -210,12 +217,16 @@ async function waitForPartialHlsPackage(
   timeoutMs = 5 * 60 * 1000
 ): Promise<boolean> {
   const masterPath = path.join(cacheDir, "master.m3u8");
-  const firstSegments = renditions.map((r) => path.join(cacheDir, r.name, "segment_000.ts"));
+  const readySegments = renditions.flatMap((r) =>
+    Array.from({ length: HLS_MIN_READY_SEGMENTS }, (_, index) =>
+      path.join(cacheDir, r.name, `segment_${String(index).padStart(3, "0")}.ts`),
+    ),
+  );
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (isAborted()) return false;
-    if (existsSync(masterPath) && firstSegments.every((p) => existsSync(p))) {
+    if (existsSync(masterPath) && readySegments.every((p) => existsSync(p))) {
       return true;
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -243,6 +254,7 @@ async function buildHlsPackage(
 
   const sourceStats = await stat(sourcePath);
   const metadata: HlsCacheMetadata = {
+    engine: HLS_CACHE_ENGINE,
     sourcePath,
     sourceSize: sourceStats.size,
     sourceMtimeMs: sourceStats.mtimeMs,
@@ -328,7 +340,10 @@ export function startHlsGeneration(
       renditions,
       isEncodeActive: true,
     });
-    log(videoId, "partial package ready (master + first segments) — playback can start");
+    log(
+      videoId,
+      `partial package ready (master + ${HLS_MIN_READY_SEGMENTS} segments/rendition) — playback can start`,
+    );
   };
 
   void (async () => {

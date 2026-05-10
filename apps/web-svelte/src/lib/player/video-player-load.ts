@@ -25,6 +25,28 @@ export interface AdaptiveAutoLevelSelection {
   nextAutoLevel: -1;
 }
 
+export interface AdaptiveHlsBufferConfig {
+  backBufferLength: number;
+  frontBufferFlushThreshold: number;
+  maxBufferLength: number;
+  maxMaxBufferLength: number;
+  maxBufferSize: number;
+  startPosition: number;
+}
+
+export interface AdaptiveSeekPlanInput {
+  streamMode: VideoPlaybackMode;
+  target: number;
+  seekableEnd: number | null;
+  hasManagedHls: boolean;
+}
+
+export interface AdaptiveSeekPlan {
+  currentTime: number;
+  deferredSeekTarget: number | null;
+  hlsStartLoadAt: number | null;
+}
+
 export function requestedModeFromQualityMode(
   qualityMode: QualityMode,
 ): VideoPlaybackMode {
@@ -121,5 +143,56 @@ export function adaptiveAutoLevelSelection(): AdaptiveAutoLevelSelection {
     currentLevel: -1,
     startLevel: -1,
     nextAutoLevel: -1,
+  };
+}
+
+export function adaptiveHlsBufferConfig(): AdaptiveHlsBufferConfig {
+  const twoMinutes = 2 * 60;
+  return {
+    backBufferLength: twoMinutes,
+    frontBufferFlushThreshold: Infinity,
+    maxBufferLength: twoMinutes,
+    maxMaxBufferLength: twoMinutes,
+    maxBufferSize: 60 * 1000 * 1000,
+    startPosition: 0,
+  };
+}
+
+export function hlsStatusUrlForSrc(src: string): string | null {
+  const statusUrl = src.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
+  return statusUrl === src ? null : statusUrl;
+}
+
+export function adaptiveSeekPlan({
+  streamMode,
+  target,
+  seekableEnd,
+  hasManagedHls,
+}: AdaptiveSeekPlanInput): AdaptiveSeekPlan {
+  if (streamMode === "hls" && hasManagedHls) {
+    return {
+      currentTime: target,
+      deferredSeekTarget: null,
+      hlsStartLoadAt: target,
+    };
+  }
+
+  if (
+    streamMode === "hls" &&
+    seekableEnd !== null &&
+    Number.isFinite(seekableEnd) &&
+    target > seekableEnd + 0.5
+  ) {
+    return {
+      currentTime: Math.max(0, seekableEnd - 0.5),
+      deferredSeekTarget: target,
+      hlsStartLoadAt: null,
+    };
+  }
+
+  return {
+    currentTime: target,
+    deferredSeekTarget: null,
+    hlsStartLoadAt: null,
   };
 }

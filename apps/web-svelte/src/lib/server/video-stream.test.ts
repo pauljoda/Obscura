@@ -1,17 +1,14 @@
 import os from "node:os";
 import path from "node:path";
-import { EventEmitter } from "node:events";
-import { PassThrough } from "node:stream";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { schema, type AppDb } from "@obscura/db";
 
-const { getCacheRootDir, resolveExistingMediaPath, runProcess, spawn, runtime } =
+const { getCacheRootDir, resolveExistingMediaPath, runProcess, runtime } =
   vi.hoisted(() => ({
     getCacheRootDir: vi.fn(),
     resolveExistingMediaPath: vi.fn(),
     runProcess: vi.fn(),
-    spawn: vi.fn(),
     runtime: {
       cacheRoot: "",
     },
@@ -32,11 +29,6 @@ vi.mock("@obscura/app-core", () => ({
   peekHlsTracker: vi.fn(),
   segmentCount: vi.fn(),
   startHlsGeneration: vi.fn(),
-}));
-
-vi.mock("node:child_process", () => ({
-  default: { spawn },
-  spawn,
 }));
 
 function createDb(filePath: string): AppDb {
@@ -98,23 +90,6 @@ describe("serveVideoSource", () => {
       }
       return { stdout: "", stderr: "" };
     });
-    spawn.mockImplementation(() => {
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      const process = Object.assign(new EventEmitter(), {
-        stdout,
-        stderr,
-        kill: vi.fn(),
-      });
-
-      queueMicrotask(() => {
-        stdout.write(Buffer.from("fragmented-mp4"));
-        stdout.end();
-        process.emit("close", 0);
-      });
-
-      return process;
-    });
   });
 
   afterEach(async () => {
@@ -122,54 +97,33 @@ describe("serveVideoSource", () => {
     vi.clearAllMocks();
   });
 
-  it("streams a fragmented mp4 immediately for uncached mkv sources", async () => {
+  it("rejects non-native containers from Direct instead of preparing a hidden remux", async () => {
     const { serveVideoSource } = await import("./video-stream");
 
     const response = await serveVideoSource(createDb(sourcePath), "video-1", null);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-type")).toBe("video/mp4");
-    expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
-      "fragmented-mp4",
-    );
-    const videoProbeArgs = runProcess.mock.calls.find(
-      ([command, args]) => command === "ffprobe" && (args as string[]).includes("v:0"),
-    )?.[1] as string[] | undefined;
-    expect(videoProbeArgs?.filter((arg) => arg === "v:0")).toHaveLength(1);
-    expect(videoProbeArgs?.at(-1)).toBe(sourcePath);
-    expect(spawn).toHaveBeenCalledWith(
-      "ffmpeg",
-      expect.arrayContaining([
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-tag:v",
-        "hvc1",
-        "-movflags",
-        "frag_keyframe+empty_moov+default_base_moof",
-      ]),
-      expect.objectContaining({
-        stdio: ["ignore", "pipe", "pipe"],
-      }),
-    );
+    expect(response.status).toBe(415);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Direct playback is not available for this container",
+    });
+    expect(runProcess).not.toHaveBeenCalled();
   });
 
-  it("treats bytes=0- as an initial direct request instead of returning 503", async () => {
+  it("serves native direct files with byte ranges", async () => {
     const { serveVideoSource } = await import("./video-stream");
+    const mp4Path = path.join(tempDir, "episode.mp4");
+    await writeFile(mp4Path, "native-mp4-with-audio");
 
-    const response = await serveVideoSource(
-      createDb(sourcePath),
-      "video-1",
-      "bytes=0-",
-    );
+    const response = await serveVideoSource(createDb(mp4Path), "video-1", "bytes=7-9");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(206);
     expect(response.headers.get("content-type")).toBe("video/mp4");
+    expect(response.headers.get("accept-ranges")).toBe("bytes");
+    expect(response.headers.get("content-range")).toBe("bytes 7-9/21");
+    expect(response.headers.get("content-length")).toBe("3");
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
-      "fragmented-mp4",
+      "mp4",
     );
-    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(runProcess).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { db, getWebDb, serveVirtualHlsAsset } = vi.hoisted(() => ({
+const { db, getWebDb, serveLegacyHlsAsset } = vi.hoisted(() => ({
   db: { name: "web-db" },
   getWebDb: vi.fn(),
-  serveVirtualHlsAsset: vi.fn(),
+  serveLegacyHlsAsset: vi.fn(),
 }));
 
 vi.mock("$lib/server/db", () => ({
@@ -11,31 +11,31 @@ vi.mock("$lib/server/db", () => ({
 }));
 
 vi.mock("$lib/server/video-stream", () => ({
-  serveVirtualHlsAsset,
+  serveLegacyHlsAsset,
 }));
 
 describe("/api/video-stream/[id]/hls2/[...asset] route", () => {
   beforeEach(() => {
     getWebDb.mockResolvedValue(db);
-    serveVirtualHlsAsset.mockReset();
-    serveVirtualHlsAsset.mockResolvedValue(new Response("#EXTM3U"));
+    serveLegacyHlsAsset.mockReset();
+    serveLegacyHlsAsset.mockResolvedValue(new Response("#EXTM3U"));
   });
 
-  it("forwards virtual HLS asset requests to the video-stream helper", async () => {
+  it("forwards hls2 asset requests to the continuous HLS helper", async () => {
     const { GET } = await import("./[...asset]/+server");
 
     const response = await GET({
       params: {
         id: "video-1",
-        asset: "v/1080p/seg_00000.ts",
+        asset: "720p/segment_000.ts",
       },
     } as never);
 
     expect(getWebDb).toHaveBeenCalled();
-    expect(serveVirtualHlsAsset).toHaveBeenCalledWith(
+    expect(serveLegacyHlsAsset).toHaveBeenCalledWith(
       db,
       "video-1",
-      "v/1080p/seg_00000.ts",
+      "720p/segment_000.ts",
     );
     expect(await response.text()).toBe("#EXTM3U");
   });

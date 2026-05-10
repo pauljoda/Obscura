@@ -65,6 +65,18 @@ import {
   type UploadFileInput,
 } from "./upload-utils";
 
+const DIRECT_PLAYBACK_EXTENSIONS = new Set([".mp4", ".m4v", ".webm", ".ogg", ".ogv"]);
+
+export function directStreamUrlForVideoFile(
+  id: string,
+  filePath: string | null | undefined,
+): string | null {
+  if (!filePath) return null;
+  return DIRECT_PLAYBACK_EXTENSIONS.has(path.extname(filePath).toLowerCase())
+    ? `/video-stream/${id}/source`
+    : null;
+}
+
 const {
   libraryRoots,
   performers,
@@ -248,7 +260,7 @@ function toVideoListItem(row: VideoRow) {
     filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
-    directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,
+    directStreamUrl: directStreamUrlForVideoFile(row.id, resolvedFilePath),
     thumbnailPath: row.thumbnailPath,
     cardThumbnailPath: row.cardThumbnailPath,
     spritePath: row.spritePath,
@@ -1564,7 +1576,7 @@ export async function getVideoDetailRead(db: AppDb, id: string) {
     filePath: resolvedFilePath ?? row.filePath,
     hasVideo,
     streamUrl: hasVideo ? `/video-stream/${row.id}/hls2/master.m3u8` : null,
-    directStreamUrl: hasVideo ? `/video-stream/${row.id}/source` : null,
+    directStreamUrl: directStreamUrlForVideoFile(row.id, resolvedFilePath),
     thumbnailPath: row.thumbnailPath,
     cardThumbnailPath: row.cardThumbnailPath,
     previewPath: row.previewPath,

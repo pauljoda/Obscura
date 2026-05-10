@@ -15,13 +15,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
 - Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
-- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
+- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, and adaptive streams avoid forced top-quality startup churn.
+- Adaptive video streams now use continuous HLS packaging with a short startup buffer, reducing audible audio clips at segment boundaries during transcoded playback.
+- Adaptive video playback now asks hls.js to buffer the full available stream instead of stopping at the previous short forward-buffer cap.
+- Direct playback is now only offered for original files the browser can play directly, so non-native containers stay on adaptive streaming instead of entering a hidden preparation state.
+- Adaptive video scrubbing now jumps to the requested time through hls.js instead of snapping to the current buffer edge.
+- Video playback now has a Vidstack-powered proof-of-concept player that keeps Obscura's filmstrip scrubber while adding a built-in audio-track selector for multi-audio streams.
+- Video playback now keeps Vidstack's stable media engine while restoring Obscura's full Dark Room controls, including brass square transport buttons, custom captions, filmstrip scrubbing, audio tracks, quality, speed, and fullscreen menus.
+- Video playback controls now fit more consistently across desktop and mobile, with one active playback-mode status chip and subtitle styling at the top of the captions menu.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
 
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
+- The video player now uses Vidstack's tested media engine and HLS provider behind Obscura's custom controls, captions, menus, and filmstrip strip.
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
 
 ### Fixed
@@ -37,7 +45,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery thumbnail preview scrubbing now uses pointer input, making the preview strip work on mobile touch as well as desktop hover.
 - HEVC videos now only start in Direct mode when the browser reports HEVC MP4 support, and HEVC MP4 remuxes are tagged as `hvc1` for Safari and Chrome compatibility.
 - Adaptive HLS now lets hls.js choose its startup quality, recovers once from transient media or segment loading errors, and warms the next on-demand segment to reduce playback stalls.
-- HEVC MKV direct-source probing now normalizes ffprobe codec output before choosing a remux mode, preventing accidental full 4K software transcodes that left playback stuck on loading.
+- Adaptive HLS now packages segments through one continuous ffmpeg job and waits for three ready segments before playback, preventing per-segment AAC timestamp overlap from causing periodic audio clips.
+- Adaptive HLS no longer caps hls.js at a short forward buffer, allowing already-generated segments to continue loading ahead as far as the browser permits.
+- Direct video playback no longer tries to remux or transcode non-native containers behind the Direct button; those videos now use adaptive HLS unless the original file itself is browser-playable.
+- Adaptive HLS seeks outside the current buffer now restart loading at the requested timestamp while keeping already buffered media available for backward jumps.
+- Multi-audio adaptive streams now expose audio-track selection in the video player instead of forcing whichever track the browser or HLS stack selected first.
+- Vidstack video playback now presents Obscura's previous squared-off controls and custom subtitle styling instead of the bare default player chrome.
+- Video playback no longer renders Vidstack's custom element during server hydration, preventing the player shell from producing hydration mismatch warnings on load.
+- Adaptive HLS buffering now uses browser-safe limits, reducing noisy `bufferFullError` console logs while still keeping a large forward buffer.
+- Video playback controls now center the play glyph and captions control more precisely inside their square buttons.
+- Mobile video playback controls now keep the compact transport buttons clickable and move the scrub bar to the bottom of the overlay.
+- Mobile video playback menus now use smaller option text and icons so quality, captions, and fullscreen controls fit in the player overlay.
+- Mobile captions controls now have a little extra side padding so the icon and chevron do not clip against the button border.
+- Desktop video playback controls now place the scrub bar below the button row, matching the cleaner mobile control order.
+- Video playback scrub bars now have a larger click target, and the desktop captions button now matches the padding rhythm of the other dropdown controls.
+- Video playback now always exposes the audio-track selector, including single-track videos where it shows the default audio track.
+- Mobile video playback now groups the quality selector with fullscreen so the audio selector has room on the left side of the control row.
+- Mobile video playback now keeps the audio selector sized to its label instead of stretching across the control row.
+- Desktop video playback controls now stay grouped together after the mobile audio-selector layout changes.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

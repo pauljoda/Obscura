@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   adaptiveAutoLevelSelection,
+  adaptiveHlsBufferConfig,
+  adaptiveSeekPlan,
   canUseDirectPlayback,
   chooseInitialPlaybackMode,
   computeVideoLoadState,
+  hlsStatusUrlForSrc,
   requestedModeFromQualityMode,
 } from "./video-player-load";
 
@@ -121,6 +124,57 @@ describe("video-player-load", () => {
       currentLevel: -1,
       startLevel: -1,
       nextAutoLevel: -1,
+    });
+  });
+
+  it("allows adaptive HLS to buffer aggressively without overfilling MediaSource", () => {
+    expect(adaptiveHlsBufferConfig()).toEqual({
+      backBufferLength: 2 * 60,
+      frontBufferFlushThreshold: Infinity,
+      maxBufferLength: 2 * 60,
+      maxMaxBufferLength: 2 * 60,
+      maxBufferSize: 60 * 1000 * 1000,
+      startPosition: 0,
+    });
+  });
+
+  it("uses the hls2 readiness endpoint before loading adaptive streams", () => {
+    expect(hlsStatusUrlForSrc("/api/video-stream/video-1/hls2/master.m3u8")).toBe(
+      "/api/video-stream/video-1/hls2/status",
+    );
+    expect(
+      hlsStatusUrlForSrc("/api/video-stream/video-1/hls2/master.m3u8?token=abc"),
+    ).toBe("/api/video-stream/video-1/hls2/status?token=abc");
+    expect(hlsStatusUrlForSrc("/api/video-stream/video-1/source")).toBeNull();
+  });
+
+  it("asks hls.js to load from an out-of-buffer adaptive seek instead of clamping", () => {
+    expect(
+      adaptiveSeekPlan({
+        streamMode: "hls",
+        target: 960,
+        seekableEnd: 165,
+        hasManagedHls: true,
+      }),
+    ).toEqual({
+      currentTime: 960,
+      deferredSeekTarget: null,
+      hlsStartLoadAt: 960,
+    });
+  });
+
+  it("keeps the old wait-at-edge behavior only when hls.js is unavailable", () => {
+    expect(
+      adaptiveSeekPlan({
+        streamMode: "hls",
+        target: 960,
+        seekableEnd: 165,
+        hasManagedHls: false,
+      }),
+    ).toEqual({
+      currentTime: 164.5,
+      deferredSeekTarget: 960,
+      hlsStartLoadAt: null,
     });
   });
 });

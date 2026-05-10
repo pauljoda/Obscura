@@ -17,13 +17,9 @@
 </script>
 
 <script lang="ts">
-  // TODO(refactor): split into a `VideoPlayer/` folder — Timeline,
-  // SubtitleManager, QualityMenu, SpeedMenu, hls-manager. Deferred
-  // because the reactive HLS/subtitle/quality state needs browser
-  // verification (subtitle switching, HLS↔direct fallback, fullscreen,
-  // mobile flyout) before the seams are safe to cut.
-  import { onMount, untrack } from "svelte";
-  import type Hls from "hls.js";
+  import "vidstack/player";
+
+  import { onMount } from "svelte";
   import {
     Captions,
     ChevronDown,
@@ -32,43 +28,42 @@
     Maximize,
     Pause,
     Play,
-    Settings2,
     RotateCcw,
     RotateCw,
+    Settings2,
     Sliders,
     Volume2,
     VolumeX,
     Wifi,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
-  import type {
-    HlsRendition,
-    HlsStatus,
-    SubtitleAppearance,
-  } from "@obscura/contracts";
+  import {
+    isHLSProvider,
+    type AudioTrack,
+    type MediaCanPlayEvent,
+    type MediaErrorEvent,
+    type MediaProviderChangeEvent,
+    type MediaTimeUpdateEvent,
+    type VideoQuality,
+  } from "vidstack";
+  import type { MediaPlayerElement } from "vidstack/elements";
+  import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
+  import type { SubtitleCueDto } from "$lib/api/types";
+  import { fetchVideoSubtitleCues } from "$lib/api/videos";
+  import { portal } from "$lib/actions/portal";
   import {
     enterMediaFullscreen,
     exitDocumentFullscreen,
     isDocumentFullscreen,
   } from "$lib/fullscreen";
-  import FilmStrip from "./FilmStrip.svelte";
-  import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
-  import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
   import {
-    adaptiveAutoLevelSelection,
+    adaptiveHlsBufferConfig,
     canUseDirectPlayback,
-    chooseInitialPlaybackMode,
-    computeVideoLoadState,
-    requestedModeFromQualityMode,
-    type QualityMode,
   } from "$lib/player/video-player-load";
-  import { fetchVideoSubtitleCues } from "$lib/api/videos";
-  import { portal } from "$lib/actions/portal";
   import {
     layoutPlayerMobileFlyout,
     playerFlyoutStyleToString,
   } from "$lib/player/flyout-layout";
-  import type { VideoSubtitleTrackDto, SubtitleCueDto } from "$lib/api/types";
   import {
     captionClassName,
     pickPreferredSubtitleTrack,
@@ -76,6 +71,9 @@
     resolveSubtitleAppearance,
     writeLocalSubtitleAppearance,
   } from "$lib/player/subtitle-appearance";
+  import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
+  import FilmStrip from "./FilmStrip.svelte";
+  import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
 
   interface Props {
     src?: string;
@@ -102,8 +100,22 @@
     defaultPlaybackMode?: "direct" | "hls";
     onEnded?: () => void;
     autoPlay?: boolean;
-    /** Bound handle for parent access (`bind:handle`). */
     handle?: VideoPlayerHandle;
+  }
+
+  type PlaybackMode = "direct" | "hls";
+  type QualityMode = "direct" | "auto" | number;
+
+  interface QualityOption {
+    value: QualityMode;
+    label: string;
+  }
+
+  interface AudioTrackOption {
+    id: string;
+    index: number;
+    label: string;
+    selected: boolean;
   }
 
   let {
@@ -130,82 +142,122 @@
     handle = $bindable(),
   }: Props = $props();
 
-  interface QualityOption {
-    value: QualityMode;
-    label: string;
-  }
-
-  // ─── Helpers ────────────────────────────────────────────────────
-  function isVirtualHlsSrc(s: string): boolean {
-    return /\/hls2\/master\.m3u8$/.test(s);
-  }
-
-  function usesProgressiveHlsSeekWindow(s: string | undefined): boolean {
-    return Boolean(s?.endsWith("/master.m3u8")) && !Boolean(s && isVirtualHlsSrc(s));
-  }
-
-  function hlsStatusUrlForSrc(s: string): string | null {
-    if (!s.endsWith("/master.m3u8")) return null;
-    if (isVirtualHlsSrc(s)) return null;
-    return s.replace(/\/master\.m3u8(\?.*)?$/, "/status$1");
-  }
-
-  async function fetchHlsStatus(
-    statusUrl: string,
-    signal?: AbortSignal,
-  ): Promise<HlsStatus | null> {
-    try {
-      const res = await fetch(statusUrl, { signal, cache: "no-store" });
-      if (!res.ok) return null;
-      return (await res.json()) as HlsStatus;
-    } catch {
-      return null;
-    }
-  }
-
-  async function waitForHlsReady(
-    statusUrl: string,
-    signal: AbortSignal,
-    opts: { intervalMs?: number; maxAttempts?: number } = {},
-  ): Promise<HlsStatus> {
-    const interval = opts.intervalMs ?? 2000;
-    const max = opts.maxAttempts ?? 450;
-    for (let i = 0; i < max; i += 1) {
-      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-      const status = await fetchHlsStatus(statusUrl, signal);
-      if (!status) {
-        await new Promise((r) => setTimeout(r, interval));
-        continue;
-      }
-      if (status.state === "ready") return status;
-      if (status.state === "error") {
-        throw new Error(status.error ?? "HLS generation failed");
-      }
-      await new Promise((r) => setTimeout(r, interval));
-    }
-    throw new Error("Timed out waiting for HLS package");
-  }
-
-  function renditionsToQualityOptions(
-    renditions: HlsRendition[],
-    directAvailable: boolean,
-  ): QualityOption[] {
-    return [
-      ...(directAvailable ? [{ value: "direct" as const, label: "Direct" }] : []),
-      { value: "auto" as const, label: "Auto" },
-      ...renditions
-        .slice()
-        .sort((a, b) => b.height - a.height)
-        .map<QualityOption>((r) => ({ value: `seed:${r.name}` as const, label: r.label })),
-    ];
-  }
-
   const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
+  const PLAYER_MENU_GUTTER_PX = 12;
+
+  let containerEl: HTMLDivElement | undefined = $state();
+  let player: MediaPlayerElement | undefined = $state();
+  let videoEl: HTMLVideoElement | null = $state(null);
+  let directCapabilityProbe: HTMLVideoElement | null = $state(null);
+  let mediaMounted = $state(false);
+  let controlsTimeout: number | null = null;
+  let playTracked = false;
+  let isDraggingRef = false;
+  let lastSourceKey = "";
+  let pendingSeekTime: number | null = null;
+  let pendingAutoPlay = false;
+
+  let playbackMode = $state<PlaybackMode>("hls");
+  let qualityMode = $state<QualityMode>("auto");
+  let currentTime = $state(0);
+  let duration = $state(0);
+  let playing = $state(false);
+  let buffering = $state(false);
+  let muted = $state(false);
+  let volume = $state(1);
+  let playbackRate = $state(1);
+  let showControls = $state(true);
+  let isDragging = $state(false);
+  let bufferedProgress = $state(0);
+  let bufferAhead = $state(0);
+  let bandwidthEstimate = $state<number | null>(null);
+  let droppedFrames = $state<number | null>(null);
+  let qualityOptions = $state<QualityOption[]>([{ value: "auto", label: "Auto" }]);
+  let activeQualityLabel = $state<string | null>(null);
+  let audioTracks = $state<AudioTrackOption[]>([]);
+  let selectedAudioTrackLabel = $state<string | null>(null);
+  let playerNotice = $state<string | null>(null);
+  let timelineHover = $state<{
+    markerTitles: string[];
+    percent: number;
+    time: number;
+  } | null>(null);
+
+  let qualityMenuOpen = $state(false);
+  let audioMenuOpen = $state(false);
+  let speedMenuOpen = $state(false);
+  let subtitleMenuOpen = $state(false);
+  let subtitleSettingsOpen = $state(false);
+  let qualityMenuButton: HTMLButtonElement | undefined = $state();
+  let audioMenuButton: HTMLButtonElement | undefined = $state();
+  let subtitleMenuButton: HTMLButtonElement | undefined = $state();
+  let playerMenuFlyoutStyle = $state<string | null>(null);
+  let playerMenuIsSm = $state(false);
+
+  let internalSubtitleId = $state<string | null>(null);
+  let activeTrackCues = $state<SubtitleCueDto[]>([]);
+  let activeCueText = $state<string | null>(null);
+  let localAppearance = $state<Partial<SubtitleAppearance> | null>(null);
+  let autoSelected = false;
+
+  const directPlayable = $derived.by(() => {
+    const video = (videoEl ?? directCapabilityProbe) as HTMLVideoElement | null;
+    return canUseDirectPlayback({
+      directSrc,
+      codec,
+      canPlayType: video ? video.canPlayType.bind(video) : undefined,
+    });
+  });
+  const effectiveMode = $derived<PlaybackMode>(
+    playbackMode === "direct" && directSrc && directPlayable ? "direct" : "hls",
+  );
+  const playerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
+  const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
+  const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && duration > 0));
+  const activeSubtitleId = $derived(
+    controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId,
+  );
+  const appearance = $derived(
+    resolveSubtitleAppearance(subtitleDefaults?.appearance ?? null, localAppearance),
+  );
+  const selectedQualityLabel = $derived(
+    effectiveMode === "direct"
+      ? "Direct"
+      : qualityMode === "auto"
+        ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
+        : activeQualityLabel ?? "Quality",
+  );
+  const activePlaybackLabel = $derived(
+    effectiveMode === "direct" ? "Direct Playback" : "Adaptive HLS",
+  );
+  const displayedAudioTracks = $derived<AudioTrackOption[]>(
+    audioTracks.length > 0
+      ? audioTracks
+      : [{ id: "default-audio", index: -1, label: "Default audio", selected: true }],
+  );
+  const displayedAudioTrackLabel = $derived(
+    selectedAudioTrackLabel ?? displayedAudioTracks.find((track) => track.selected)?.label ?? "Audio",
+  );
+
+  const assTrackForRender = $derived.by(() => {
+    if (!activeSubtitleId) return null;
+    const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
+    if (!track) return null;
+    if (track.sourceFormat !== "ass" && track.sourceFormat !== "ssa") return null;
+    if (!track.sourceUrl) return null;
+    return track;
+  });
+
+  function initialPlaybackMode(): PlaybackMode {
+    if (defaultPlaybackMode === "hls") return "hls";
+    return directSrc && directPlayable ? "direct" : "hls";
+  }
 
   function formatTime(seconds: number) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
+    const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    const h = Math.floor(safe / 3600);
+    const m = Math.floor((safe % 3600) / 60);
+    const s = Math.floor(safe % 60);
     if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     return `${m}:${String(s).padStart(2, "0")}`;
   }
@@ -216,35 +268,11 @@
     return `${Math.round(bps / 1_000)} Kbps`;
   }
 
-  function getLevelLabel(level: { height?: number; name?: string }, index: number) {
-    if (level.name) return level.name.toUpperCase();
-    if (level.height) return `${level.height}p`;
-    return `Level ${index + 1}`;
-  }
-
-  function applyAdaptiveAutoLevelSelection(hls: Hls) {
-    const selection = adaptiveAutoLevelSelection();
-    hls.currentLevel = selection.currentLevel;
-    hls.startLevel = selection.startLevel;
-    hls.nextAutoLevel = selection.nextAutoLevel;
-  }
-
-  function describeMediaError(error: MediaError | null): string {
-    if (!error) return "media error";
-    switch (error.code) {
-      case error.MEDIA_ERR_ABORTED: return "request aborted";
-      case error.MEDIA_ERR_NETWORK: return "network error";
-      case error.MEDIA_ERR_DECODE: return "decode error";
-      case error.MEDIA_ERR_SRC_NOT_SUPPORTED: return "format not supported";
-      default: return "media error";
-    }
-  }
-
   function languageLabel(language: string): string {
     if (!language || language === "und") return "Unknown";
     try {
-      const dn = new Intl.DisplayNames(undefined, { type: "language" });
-      return dn.of(language) ?? language.toUpperCase();
+      const displayNames = new Intl.DisplayNames(undefined, { type: "language" });
+      return displayNames.of(language) ?? language.toUpperCase();
     } catch {
       return language.toUpperCase();
     }
@@ -255,143 +283,156 @@
     tracks: readonly VideoSubtitleTrackDto[],
   ): boolean {
     if (!id) return false;
-    const t = tracks.find((x) => x.id === id);
-    if (!t) return false;
-    return (t.sourceFormat === "ass" || t.sourceFormat === "ssa") && !!t.sourceUrl;
+    const track = tracks.find((x) => x.id === id);
+    if (!track) return false;
+    return (track.sourceFormat === "ass" || track.sourceFormat === "ssa") && !!track.sourceUrl;
   }
 
-  // ─── State ──────────────────────────────────────────────────────
-  let containerEl: HTMLDivElement | undefined = $state();
-  let videoEl: HTMLVideoElement | undefined = $state();
-  let hlsRef: Hls | null = null;
-  let controlsTimeout: number | null = null;
-  let playTracked = false;
-  let isDraggingRef = false;
+  function syncVideoElement() {
+    videoEl = player?.querySelector("video") ?? null;
+  }
 
-  let prevSrcKey = "";
-  let prevLoadKey = "";
-  let pendingAutoPlay = false;
-  let pendingSeekTime: number | null = null;
-  let pendingSeedName: string | null = null;
-  let seededRenditions: HlsRendition[] = [];
-  let qualityModeRef: QualityMode = "direct";
-  let directFallbackTried = false;
-  let adaptiveSrcRef = "";
+  function closeMenus() {
+    qualityMenuOpen = false;
+    audioMenuOpen = false;
+    speedMenuOpen = false;
+    subtitleMenuOpen = false;
+  }
 
-  let playing = $state(false);
-  let isDragging = $state(false);
-  let currentTime = $state(0);
-  let duration = $state(0);
-  let muted = $state(false);
-  let volume = $state(1);
-  let showControls = $state(true);
-  let playbackRate = $state(1);
-  let qualityMode = $state<QualityMode>("direct");
-  let streamMode = $state<"direct" | "hls">("direct");
-  let playbackLoadRevision = $state(0);
-  let qualityOptions = $state<QualityOption[]>([{ value: "direct", label: "Direct" }]);
-  let activeQualityLabel = $state<string | null>(null);
-  let bufferedProgress = $state(0);
-  let bufferAhead = $state(0);
-  let bandwidthEstimate = $state<number | null>(null);
-  let droppedFrames = $state<number | null>(null);
-  let qualityMenuOpen = $state(false);
-  let speedMenuOpen = $state(false);
-  let timelineHover = $state<{
-    markerTitles: string[];
-    percent: number;
-    time: number;
-  } | null>(null);
-  let usingAdaptiveStream = $state(false);
-  let playerNotice = $state<string | null>(null);
-  let hlsInitializing = $state(false);
-  let deferredSeekTarget = $state<number | null>(null);
-  let subtitleMenuOpen = $state(false);
-  let subtitleMenuButton: HTMLButtonElement | undefined = $state();
-  let qualityMenuButton: HTMLButtonElement | undefined = $state();
-  const PLAYER_MENU_GUTTER_PX = 12;
-  let playerMenuFlyoutStyle = $state<string | null>(null);
-  let playerMenuIsSm = $state(false);
-  let internalSubtitleId = $state<string | null>(null);
-  let activeCueText = $state<string | null>(null);
-  let subtitleSettingsOpen = $state(false);
-  let localAppearance = $state<Partial<SubtitleAppearance> | null>(null);
-  let autoSelected = false;
+  function clearControlsTimer() {
+    if (controlsTimeout) {
+      window.clearTimeout(controlsTimeout);
+      controlsTimeout = null;
+    }
+  }
 
-  const activeSubtitleId = $derived(
-    controlledSubtitleId !== undefined ? controlledSubtitleId : internalSubtitleId,
-  );
+  function scheduleControlsHide() {
+    clearControlsTimer();
+    if (!playing) return;
+    controlsTimeout = window.setTimeout(() => {
+      showControls = false;
+      closeMenus();
+    }, 2400);
+  }
 
-  const appearance = $derived(
-    resolveSubtitleAppearance(subtitleDefaults?.appearance ?? null, localAppearance),
-  );
+  function surfaceControls() {
+    showControls = true;
+    scheduleControlsHide();
+  }
 
-  const subtitleSelectionContext = $derived.by(() =>
-    [
-      src ?? "",
-      directSrc ?? "",
-      subtitleChoiceLocked ? "locked" : "unlocked",
-      controlledSubtitleId ?? "__null__",
-      subtitleTracks.map((track) => track.id).join(","),
-    ].join("|"),
-  );
-
-  const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
-
-  const selectedQualityLabel = $derived(
-    qualityMode === "direct"
-      ? "Direct"
-      : qualityMode === "auto"
-        ? `Auto${activeQualityLabel ? ` · ${activeQualityLabel}` : ""}`
-        : typeof qualityMode === "string" && qualityMode.startsWith("seed:")
-          ? (qualityMode as string).slice(5)
-          : activeQualityLabel,
-  );
-
-  const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && duration > 0));
-
-  // ─── Imperative handle ───────────────────────────────────────────
-  $effect(() => {
-    handle = {
-      seekTo: (time: number) => handleSeekTo(time),
-    };
-  });
-
-  // ─── Subtitle: read local override ───────────────────────────────
-  onMount(() => {
-    localAppearance = readLocalSubtitleAppearance();
-  });
-
-  $effect(() => {
-    subtitleSelectionContext;
-    autoSelected = false;
-  });
-
-  $effect(() => {
-    adaptiveSrcRef = src ?? "";
-  });
-
-  // ─── Subtitle auto-select ────────────────────────────────────────
-  $effect(() => {
-    if (autoSelected) return;
-    if (subtitleChoiceLocked) {
-      autoSelected = true;
+  function updateBuffered() {
+    const video = videoEl;
+    if (!video || duration <= 0) {
+      bufferedProgress = 0;
+      bufferAhead = 0;
       return;
     }
-    if (controlledSubtitleId !== undefined && controlledSubtitleId !== null) {
-      autoSelected = true;
+    let bufferedEnd = 0;
+    for (let i = 0; i < video.buffered.length; i += 1) {
+      const start = video.buffered.start(i);
+      const end = video.buffered.end(i);
+      if (video.currentTime >= start && video.currentTime <= end) {
+        bufferedEnd = end;
+        break;
+      }
+      bufferedEnd = Math.max(bufferedEnd, end);
+    }
+    bufferedProgress = Math.min(100, (bufferedEnd / duration) * 100);
+    bufferAhead = Math.max(0, bufferedEnd - video.currentTime);
+  }
+
+  function qualityLabel(quality: VideoQuality, index: number) {
+    if (quality.height > 0) return `${quality.height}p`;
+    if (quality.bitrate) return formatBandwidth(quality.bitrate);
+    return `Level ${index + 1}`;
+  }
+
+  function refreshQualities() {
+    if (!player || effectiveMode === "direct") {
+      qualityOptions = [
+        ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+        { value: "auto" as const, label: "Auto" },
+      ];
+      activeQualityLabel = null;
       return;
     }
-    if (!subtitleDefaults?.autoEnable || subtitleTracks.length === 0) return;
-    const picked = pickPreferredSubtitleTrack(
-      subtitleTracks.map((t) => ({ id: t.id, language: t.language })),
-      subtitleDefaults.preferredLanguages,
-    );
-    if (picked) {
-      autoSelected = true;
-      selectSubtitle(picked);
+    const qualities = player.qualities?.toArray?.() ?? [];
+    const options = qualities
+      .map((quality, index) => ({
+        value: index,
+        label: qualityLabel(quality, index),
+        height: quality.height,
+      }))
+      .sort((a, b) => b.height - a.height);
+    qualityOptions = [
+      ...(directSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
+      { value: "auto" as const, label: "Auto" },
+      ...options.map(({ value, label }) => ({ value, label })),
+    ];
+    const selected = qualities.find((quality) => quality.selected);
+    activeQualityLabel = selected
+      ? qualityLabel(selected, qualities.indexOf(selected))
+      : activeQualityLabel;
+    if (player.qualities?.auto) qualityMode = "auto";
+  }
+
+  function audioTrackLabel(track: AudioTrack, index: number): string {
+    const label = track.label || track.language || track.kind || `Track ${index + 1}`;
+    return track.language && !label.toLowerCase().includes(track.language.toLowerCase())
+      ? `${label} · ${track.language}`
+      : label;
+  }
+
+  function refreshAudioTracks() {
+    const tracks = player?.audioTracks?.toArray?.() ?? [];
+    audioTracks = tracks.map((track, index) => ({
+      id: track.id,
+      index,
+      label: audioTrackLabel(track, index),
+      selected: track.selected,
+    }));
+    selectedAudioTrackLabel =
+      audioTracks.find((track) => track.selected)?.label ?? audioTracks[0]?.label ?? null;
+  }
+
+  function selectAudioTrack(index: number) {
+    if (index < 0) {
+      selectedAudioTrackLabel = displayedAudioTrackLabel;
+      audioMenuOpen = false;
+      return;
     }
-  });
+    const track = player?.audioTracks?.toArray?.()[index];
+    if (!track) return;
+    track.selected = true;
+    selectedAudioTrackLabel = audioTrackLabel(track, index);
+    refreshAudioTracks();
+    audioMenuOpen = false;
+  }
+
+  function requestPlaybackMode(nextQualityMode: QualityMode) {
+    pendingSeekTime = currentTime > 0.25 ? currentTime : null;
+    pendingAutoPlay = playing;
+    if (nextQualityMode === "direct") {
+      playbackMode = "direct";
+      qualityMode = "direct";
+      closeMenus();
+      return;
+    }
+    playbackMode = "hls";
+    qualityMode = nextQualityMode;
+    closeMenus();
+    if (!player || typeof nextQualityMode === "string") {
+      if (nextQualityMode === "auto") player?.qualities?.autoSelect?.();
+      return;
+    }
+    const quality = player.qualities?.toArray?.()[nextQualityMode];
+    const remote = (player as unknown as {
+      remoteControl?: { changeQuality?: (index: number, trigger?: Event) => void };
+    }).remoteControl;
+    remote?.changeQuality?.(nextQualityMode);
+    if (quality) quality.selected = true;
+    activeQualityLabel = quality ? qualityLabel(quality, nextQualityMode) : activeQualityLabel;
+  }
 
   function selectSubtitle(id: string | null) {
     if (controlledSubtitleId === undefined) internalSubtitleId = id;
@@ -399,47 +440,176 @@
     subtitleMenuOpen = false;
   }
 
+  function handleAppearanceChange(next: SubtitleAppearance) {
+    localAppearance = next;
+    writeLocalSubtitleAppearance(next);
+  }
+
+  function handleAppearanceReset() {
+    localAppearance = null;
+    writeLocalSubtitleAppearance(null);
+  }
+
+  function togglePlay() {
+    if (!player) return;
+    if (player.paused) void player.play();
+    else void player.pause();
+  }
+
+  function seek(delta: number) {
+    seekTo(currentTime + delta);
+  }
+
+  function seekTo(time: number) {
+    if (!player) return;
+    const target = Math.max(0, Math.min(duration || time, time));
+    player.currentTime = target;
+    currentTime = target;
+    onTimeUpdate?.(target);
+  }
+
+  function toggleMute() {
+    if (!player) return;
+    player.muted = !player.muted;
+    if (!player.muted && player.volume === 0) player.volume = 1;
+    muted = player.muted;
+    volume = player.volume;
+  }
+
+  function handleVolumeChange(next: number) {
+    if (!player) return;
+    player.volume = next;
+    player.muted = next === 0;
+    volume = next;
+    muted = next === 0;
+  }
+
+  function applyPlaybackRate(nextRate: number) {
+    if (!player) return;
+    player.playbackRate = nextRate;
+    playbackRate = nextRate;
+    speedMenuOpen = false;
+  }
+
+  function toggleFullscreen() {
+    if (isDocumentFullscreen()) {
+      exitDocumentFullscreen();
+      return;
+    }
+    if (!containerEl) return;
+    enterMediaFullscreen(containerEl, videoEl);
+  }
+
+  function updateTimelineHover(clientX: number, rect: DOMRect) {
+    if (duration <= 0) {
+      timelineHover = null;
+      return;
+    }
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const time = percent * duration;
+    const windowSec = Math.max(duration * 0.01, 1.5);
+    const markerTitles = markers
+      .filter((marker) => Math.abs(marker.time - time) <= windowSec)
+      .map((marker) => marker.title);
+    timelineHover = { markerTitles, percent: percent * 100, time };
+  }
+
+  function handleFilmStripInteraction(active: boolean) {
+    if (active) {
+      clearControlsTimer();
+      showControls = false;
+      closeMenus();
+    } else {
+      surfaceControls();
+    }
+  }
+
+  function updateActiveCue() {
+    if (!activeSubtitleId || activeTrackCues.length === 0) {
+      if (activeCueText !== null) {
+        activeCueText = null;
+        onActiveCueChange?.(null);
+      }
+      return;
+    }
+    const cue = activeTrackCues.find((candidate) => (
+      currentTime >= candidate.start && currentTime < candidate.end
+    ));
+    const text = cue?.text.replace(/<[^>]+>/g, "") || null;
+    if (text === activeCueText) return;
+    activeCueText = text;
+    onActiveCueChange?.(cue && text ? { start: cue.start, end: cue.end, text } : null);
+  }
+
   $effect(() => {
-    if (!subtitleMenuOpen && !qualityMenuOpen) {
+    handle = {
+      seekTo,
+    };
+  });
+
+  $effect(() => {
+    const nextKey = `${src ?? ""}|${directSrc ?? ""}|${defaultPlaybackMode ?? ""}|${directPlayable ? "direct" : "adaptive"}`;
+    if (nextKey === lastSourceKey) return;
+    lastSourceKey = nextKey;
+    playbackMode = initialPlaybackMode();
+    qualityMode = playbackMode === "direct" ? "direct" : "auto";
+    currentTime = 0;
+    duration = propDuration ?? 0;
+    bufferedProgress = 0;
+    bufferAhead = 0;
+    playerNotice = null;
+    activeQualityLabel = null;
+    playTracked = false;
+    autoSelected = false;
+  });
+
+  $effect(() => {
+    if (propDuration && propDuration > duration) duration = propDuration;
+  });
+
+  $effect(() => {
+    if (!subtitleMenuOpen && !qualityMenuOpen && !audioMenuOpen) {
       playerMenuFlyoutStyle = null;
       return;
     }
 
     subtitleMenuButton;
     qualityMenuButton;
+    audioMenuButton;
 
     const mql = window.matchMedia("(min-width: 640px)");
     const runLayout = () => {
       const isSm = mql.matches;
       playerMenuIsSm = isSm;
-      const trigger = subtitleMenuOpen ? subtitleMenuButton : qualityMenuButton;
+      const trigger = subtitleMenuOpen
+        ? subtitleMenuButton
+        : audioMenuOpen
+          ? audioMenuButton
+          : qualityMenuButton;
       if (!trigger) {
         playerMenuFlyoutStyle = null;
         return;
       }
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const rect = trigger.getBoundingClientRect();
-      const flyoutLayout = layoutPlayerMobileFlyout(rect, {
-        vh,
-        vw,
+      const flyoutLayout = layoutPlayerMobileFlyout(trigger.getBoundingClientRect(), {
+        vh: window.innerHeight,
+        vw: window.innerWidth,
         maxHeightVh: 0.6,
-        preferredWidth: subtitleMenuOpen ? 360 : 220,
-        minWidth: subtitleMenuOpen ? 220 : 140,
+        preferredWidth: subtitleMenuOpen ? 360 : audioMenuOpen ? 260 : 220,
+        minWidth: subtitleMenuOpen ? 220 : audioMenuOpen ? 200 : 140,
         gutter: PLAYER_MENU_GUTTER_PX,
       });
-      if (isSm) {
-        playerMenuFlyoutStyle = playerFlyoutStyleToString(flyoutLayout);
-      } else {
-        playerMenuFlyoutStyle = playerFlyoutStyleToString({
-          ...flyoutLayout,
-          left: `${PLAYER_MENU_GUTTER_PX}px`,
-          right: `${PLAYER_MENU_GUTTER_PX}px`,
-          width: undefined,
-          minWidth: undefined,
-          maxWidth: undefined,
-        });
-      }
+      playerMenuFlyoutStyle = playerFlyoutStyleToString(
+        isSm
+          ? flyoutLayout
+          : {
+              ...flyoutLayout,
+              left: `${PLAYER_MENU_GUTTER_PX}px`,
+              right: `${PLAYER_MENU_GUTTER_PX}px`,
+              width: undefined,
+              minWidth: undefined,
+              maxWidth: undefined,
+            },
+      );
     };
 
     runLayout();
@@ -457,569 +627,121 @@
     };
   });
 
-  function handleAppearanceChange(next: SubtitleAppearance) {
-    localAppearance = next;
-    writeLocalSubtitleAppearance(next);
-  }
-
-  function handleAppearanceReset() {
-    localAppearance = null;
-    writeLocalSubtitleAppearance(null);
-  }
-
-  // ─── Controls visibility ─────────────────────────────────────────
-  function clearControlsTimer() {
-    if (controlsTimeout) {
-      window.clearTimeout(controlsTimeout);
-      controlsTimeout = null;
-    }
-  }
-
-  function scheduleControlsHide() {
-    clearControlsTimer();
-    if (!playing) return;
-    controlsTimeout = window.setTimeout(() => {
-      showControls = false;
-      qualityMenuOpen = false;
-      speedMenuOpen = false;
-    }, 2400);
-  }
-
-  function surfaceControls() {
-    showControls = true;
-    scheduleControlsHide();
-  }
-
-  onMount(() => () => clearControlsTimer());
-
-  // ─── Status-seed quality options ─────────────────────────────────
   $effect(() => {
-    if (!src) {
-      seededRenditions = [];
+    if (autoSelected) return;
+    if (subtitleChoiceLocked) {
+      autoSelected = true;
       return;
     }
-    if (!videoEl) return;
-    const statusUrl = hlsStatusUrlForSrc(src);
-    if (!statusUrl) return;
-    const directPlayable = canUseDirectPlayback({
-      directSrc,
-      codec,
-      canPlayType: videoEl.canPlayType.bind(videoEl),
-    });
-    const controller = new AbortController();
-    void (async () => {
-      const status = await fetchHlsStatus(statusUrl, controller.signal);
-      if (!status || controller.signal.aborted) return;
-      seededRenditions = status.renditions;
-      const hasRealLevels = qualityOptions.some((opt) => typeof opt.value === "number");
-      if (!hasRealLevels) {
-        qualityOptions = renditionsToQualityOptions(status.renditions, Boolean(directSrc && directPlayable));
-      }
-    })();
-    return () => controller.abort();
+    if (controlledSubtitleId !== undefined && controlledSubtitleId !== null) {
+      autoSelected = true;
+      return;
+    }
+    if (!subtitleDefaults?.autoEnable || subtitleTracks.length === 0) return;
+    const picked = pickPreferredSubtitleTrack(
+      subtitleTracks.map((track) => ({ id: track.id, language: track.language })),
+      subtitleDefaults.preferredLanguages,
+    );
+    if (picked) {
+      autoSelected = true;
+      selectSubtitle(picked);
+    }
   });
 
-  // ─── Request play with direct-fallback ───────────────────────────
-  function requestPlaybackMode(nextQualityMode: QualityMode) {
-    const nextMode = requestedModeFromQualityMode(nextQualityMode);
-    const shouldReload = nextMode !== streamMode;
-    qualityMode = nextQualityMode;
-    if (shouldReload) playbackLoadRevision += 1;
-  }
-
-  function handleDirectPlaybackFailure(reason: string, shouldResumePlayback = false) {
-    if (streamMode !== "direct") {
-      playerNotice = `Playback failed: ${reason}.`;
-      return;
-    }
-    if (!adaptiveSrcRef) {
-      playerNotice = `Direct playback failed: ${reason}.`;
-      return;
-    }
-    if (directFallbackTried) {
-      playerNotice = `Direct playback failed: ${reason}.`;
-      return;
-    }
-    directFallbackTried = true;
-    pendingAutoPlay = shouldResumePlayback;
-    pendingSeekTime = videoEl?.currentTime ?? 0;
-    playerNotice = `Direct playback failed on this device — switched to adaptive HLS (${reason}).`;
-    requestPlaybackMode("auto");
-  }
-
-  function requestPlay(video: HTMLVideoElement) {
-    const p = video.play();
-    if (!p || typeof p.catch !== "function") return;
-    void p.catch((error: unknown) => {
-      const message =
-        error instanceof Error && error.message.trim().length > 0
-          ? error.message
-          : "playback could not start";
-      handleDirectPlaybackFailure(message, true);
-    });
-  }
-
-  // ─── Source lifecycle (direct <-> HLS) ───────────────────────────
   $effect(() => {
-    if (!videoEl) return;
-    const currentSrc = src;
-    const currentDirectSrc = directSrc;
-    const currentCodec = codec;
-    const localVideoEl = videoEl;
-    const currentPropDuration = propDuration;
-    const currentDefaultPlaybackMode = defaultPlaybackMode;
-    playbackLoadRevision;
-    const requestedMode = untrack(() => requestedModeFromQualityMode(qualityMode));
+    if (!activeSubtitleId) {
+      activeTrackCues = [];
+      activeCueText = null;
+      onActiveCueChange?.(null);
+      return;
+    }
+    const track = subtitleTracks.find((candidate) => candidate.id === activeSubtitleId);
+    if (!track || track.sourceFormat === "ass" || track.sourceFormat === "ssa") {
+      activeTrackCues = [];
+      activeCueText = null;
+      onActiveCueChange?.(null);
+      return;
+    }
 
-    return untrack(() => {
-    const videoEl = localVideoEl!;
     let cancelled = false;
-    const hlsLoadAbort = new AbortController();
-    const directPlayable = canUseDirectPlayback({
-      directSrc: currentDirectSrc,
-      codec: currentCodec,
-      canPlayType: videoEl.canPlayType.bind(videoEl),
-    });
-
-    const { srcKey, isNewSource, effectiveMode, loadKey } = computeVideoLoadState({
-      src: currentSrc,
-      directSrc: currentDirectSrc,
-      defaultPlaybackMode: currentDefaultPlaybackMode,
-      directPlayable,
-      requestedMode,
-      prevSrcKey,
-    });
-
-    if (loadKey === prevLoadKey) {
-      return;
-    }
-
-    prevSrcKey = srcKey;
-    prevLoadKey = loadKey;
-
-    if (isNewSource) {
-      duration = currentPropDuration ?? 0;
-      currentTime = 0;
-      bufferedProgress = 0;
-      bufferAhead = 0;
-      bandwidthEstimate = null;
-      droppedFrames = null;
-      qualityMode = effectiveMode === "direct" ? "direct" : "auto";
-      streamMode = effectiveMode;
-      pendingSeedName = null;
-      deferredSeekTarget = null;
-      const seeded = seededRenditions;
-      if (seeded.length > 0) {
-        qualityOptions = renditionsToQualityOptions(seeded, Boolean(currentDirectSrc && directPlayable));
-      } else {
-        qualityOptions = chooseInitialPlaybackMode({
-          src: currentSrc,
-          directSrc: currentDirectSrc,
-          directPlayable,
-          defaultPlaybackMode: currentDefaultPlaybackMode,
-        }) === "direct"
-          ? [
-              { value: "direct" as const, label: "Direct" },
-              { value: "auto" as const, label: "Auto" },
-            ]
-          : [{ value: "auto" as const, label: "Auto" }];
-      }
-      activeQualityLabel = null;
-      playerNotice = null;
-      usingAdaptiveStream = false;
-      hlsInitializing = false;
-      pendingAutoPlay = false;
-      pendingSeekTime = null;
-      directFallbackTried = false;
-    } else {
-      pendingSeekTime = videoEl.currentTime > 0.5 ? videoEl.currentTime : null;
-      pendingAutoPlay = pendingAutoPlay || !videoEl.paused;
-    }
-
-    const destroyHls = () => {
-      hlsRef?.destroy();
-      hlsRef = null;
-    };
-
-    destroyHls();
-    videoEl.pause();
-    playing = false;
-    videoEl.removeAttribute("src");
-    videoEl.load();
-
-    if (!src && !directSrc) {
-      hlsInitializing = false;
-      return;
-    }
-
-    if (effectiveMode === "direct") {
-      hlsInitializing = false;
-      usingAdaptiveStream = false;
-      const directSource = currentDirectSrc ?? currentSrc;
-      if (directSource) {
-        videoEl.src = directSource;
-        videoEl.load();
-        const seekTime = pendingSeekTime;
-        const shouldPlay = pendingAutoPlay;
-        if (seekTime !== null || shouldPlay) {
-          pendingSeekTime = null;
-          pendingAutoPlay = false;
-          const onReady = () => {
-            if (seekTime !== null && videoEl) videoEl.currentTime = seekTime;
-            if (shouldPlay && videoEl) requestPlay(videoEl);
-          };
-          videoEl.addEventListener("loadedmetadata", onReady, { once: true });
-        }
-      }
-      return () => {
-        cancelled = true;
-        destroyHls();
-      };
-    }
-
-    if (currentSrc?.endsWith(".m3u8")) {
-      hlsInitializing = true;
-
-      void (async () => {
-        const { default: Hls } = await import("hls.js");
-        if (cancelled) return;
-
-        const statusUrl = hlsStatusUrlForSrc(currentSrc);
-        if (statusUrl) {
-          try {
-            const ready = await waitForHlsReady(statusUrl, hlsLoadAbort.signal);
-            if (!cancelled && ready.renditions.length > 0) {
-              seededRenditions = ready.renditions;
-            }
-          } catch (err) {
-            if (cancelled || hlsLoadAbort.signal.aborted) return;
-            hlsInitializing = false;
-            usingAdaptiveStream = false;
-            if (currentDirectSrc && directPlayable) {
-              qualityMode = "direct";
-              playerNotice = `Adaptive stream unavailable — switched to direct. (${
-                err instanceof Error ? err.message : "unknown error"
-              })`;
-              videoEl!.src = currentDirectSrc;
-              videoEl!.load();
-              return;
-            }
-            playerNotice = `Adaptive playback unavailable: ${
-              err instanceof Error ? err.message : "unknown error"
-            }`;
-            return;
-          }
-        }
-        if (cancelled) return;
-
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            startLevel: -1,
-            capLevelToPlayerSize: true,
-            capLevelOnFPSDrop: true,
-            maxBufferLength: 30,
-            backBufferLength: 90,
-            manifestLoadPolicy: {
-              default: {
-                maxTimeToFirstByteMs: 20_000,
-                maxLoadTimeMs: 60_000,
-                timeoutRetry: { maxNumRetry: 4, retryDelayMs: 1000, maxRetryDelayMs: 8000 },
-                errorRetry: { maxNumRetry: 8, retryDelayMs: 1000, maxRetryDelayMs: 4000 },
-              },
-            },
-            playlistLoadPolicy: {
-              default: {
-                maxTimeToFirstByteMs: 20_000,
-                maxLoadTimeMs: 60_000,
-                timeoutRetry: { maxNumRetry: 4, retryDelayMs: 1000, maxRetryDelayMs: 8000 },
-                errorRetry: { maxNumRetry: 8, retryDelayMs: 1000, maxRetryDelayMs: 4000 },
-              },
-            },
-          });
-
-          hlsRef = hls;
-          hls.attachMedia(videoEl!);
-          usingAdaptiveStream = true;
-          let mediaErrorRecoveries = 0;
-          let networkErrorRecoveries = 0;
-
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(currentSrc));
-
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            hlsInitializing = false;
-            const hlsLevels = hls.levels
-              .map((level, index) => ({ value: index, label: getLevelLabel(level, index) }))
-              .reverse();
-            const options: QualityOption[] = [
-              ...(currentDirectSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
-              { value: "auto" as const, label: "Auto" },
-              ...hlsLevels,
-            ];
-            qualityOptions = options;
-
-            const seedName = pendingSeedName;
-            pendingSeedName = null;
-            if (seedName) {
-              const matchIdx = hls.levels.findIndex((lvl, idx) => {
-                const label = getLevelLabel(lvl, idx).toLowerCase();
-                return label === seedName.toLowerCase();
-              });
-              if (matchIdx >= 0) {
-                hls.currentLevel = matchIdx;
-                hls.nextLevel = matchIdx;
-                qualityMode = matchIdx;
-                activeQualityLabel = getLevelLabel(hls.levels[matchIdx] ?? {}, matchIdx);
-              } else {
-                applyAdaptiveAutoLevelSelection(hls);
-                qualityMode = "auto";
-                activeQualityLabel = null;
-              }
-            } else if (typeof qualityModeRef === "number") {
-              const target = qualityModeRef as number;
-              hls.currentLevel = target;
-              hls.nextLevel = target;
-              activeQualityLabel = getLevelLabel(hls.levels[target] ?? {}, target);
-            } else {
-              applyAdaptiveAutoLevelSelection(hls);
-              activeQualityLabel = null;
-            }
-
-            bandwidthEstimate = Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null;
-
-            const seekTime = pendingSeekTime;
-            const shouldPlay = pendingAutoPlay;
-            pendingSeekTime = null;
-            pendingAutoPlay = false;
-            if (seekTime !== null && videoEl) videoEl.currentTime = seekTime;
-            if (shouldPlay && videoEl) requestPlay(videoEl);
-          });
-
-          hls.on(Hls.Events.LEVEL_SWITCHED, (_: unknown, data: { level: number }) => {
-            const level = hls.levels[data.level];
-            activeQualityLabel = getLevelLabel(level ?? {}, data.level);
-            bandwidthEstimate = Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null;
-          });
-
-          hls.on(Hls.Events.FRAG_BUFFERED, () => {
-            bandwidthEstimate = Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null;
-          });
-
-          hls.on(Hls.Events.ERROR, (_: unknown, data: { fatal?: boolean; type?: string }) => {
-            if (!data.fatal) return;
-            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaErrorRecoveries < 1) {
-              mediaErrorRecoveries += 1;
-              hls.recoverMediaError();
-              playerNotice = "Adaptive playback recovered after a media decode error.";
-              return;
-            }
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR && networkErrorRecoveries < 1) {
-              networkErrorRecoveries += 1;
-              hls.startLoad();
-              playerNotice = "Adaptive playback recovered after a segment loading error.";
-              return;
-            }
-            hls.destroy();
-            hlsRef = null;
-            usingAdaptiveStream = false;
-            hlsInitializing = false;
-            pendingAutoPlay = false;
-            pendingSeekTime = null;
-            if (currentDirectSrc && directPlayable) {
-              qualityMode = "direct";
-              playerNotice = "Adaptive stream failed — switched to direct.";
-              videoEl!.src = currentDirectSrc;
-              videoEl!.load();
-              return;
-            }
-            playerNotice = "Adaptive playback failed.";
-          });
-          return;
-        }
-
-        // Native HLS (Safari)
-        if (videoEl!.canPlayType("application/vnd.apple.mpegurl")) {
-          hlsInitializing = false;
-          usingAdaptiveStream = true;
-          videoEl!.src = currentSrc;
-          videoEl!.load();
-          const seekTime = pendingSeekTime;
-          const shouldPlay = pendingAutoPlay;
-          if (seekTime !== null || shouldPlay) {
-            pendingSeekTime = null;
-            pendingAutoPlay = false;
-            const onReady = () => {
-              if (seekTime !== null && videoEl) videoEl.currentTime = seekTime;
-              if (shouldPlay && videoEl) requestPlay(videoEl);
-            };
-            videoEl!.addEventListener("loadedmetadata", onReady, { once: true });
-          }
-          return;
-        }
-
-        hlsInitializing = false;
-        const fallbackSource = currentDirectSrc ?? currentSrc;
-        if (fallbackSource) {
-          videoEl!.src = fallbackSource;
-          videoEl!.load();
-        }
-      })();
-
-      return () => {
-        cancelled = true;
-        hlsLoadAbort.abort();
-        destroyHls();
-      };
-    }
-
-    hlsInitializing = false;
-    const fallbackSource = currentDirectSrc ?? currentSrc;
-    if (fallbackSource) {
-      videoEl.src = fallbackSource;
-      videoEl.load();
-    }
-
+    fetchVideoSubtitleCues(track.videoId, track.id)
+      .then(({ cues }) => {
+        if (!cancelled) activeTrackCues = cues;
+      })
+      .catch(() => {
+        if (!cancelled) activeTrackCues = [];
+      });
     return () => {
       cancelled = true;
-      destroyHls();
     };
-    });
-  });
-
-  // Sync streamMode from qualityMode
-  $effect(() => {
-    qualityModeRef = qualityMode;
-    streamMode = qualityMode === "direct" ? "direct" : "hls";
   });
 
   $effect(() => {
-    if (qualityMode === "direct") return;
-    if (typeof qualityMode === "string" && qualityMode.startsWith("seed:")) {
-      pendingSeedName = qualityMode.slice(5);
-      return;
-    }
-    const hls = hlsRef;
-    if (!hls) return;
-    if (qualityMode === "auto") {
-      applyAdaptiveAutoLevelSelection(hls);
-      activeQualityLabel = null;
-      return;
-    }
-    if (typeof qualityMode === "number") {
-      hls.currentLevel = qualityMode;
-      activeQualityLabel = getLevelLabel(hls.levels[qualityMode] ?? {}, qualityMode);
-    }
+    currentTime;
+    activeTrackCues;
+    activeSubtitleId;
+    updateActiveCue();
   });
 
-  // ─── Video event wiring ──────────────────────────────────────────
   $effect(() => {
-    if (!videoEl) return;
+    const el = player;
+    if (!el) return;
 
-    const updateBuffered = () => {
-      const bufferedEnd = videoEl!.buffered.length > 0
-        ? videoEl!.buffered.end(videoEl!.buffered.length - 1)
-        : 0;
-      bufferedProgress = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
-      bufferAhead = Math.max(0, bufferedEnd - videoEl!.currentTime);
-    };
+    const listeners: Array<[string, EventListener]> = [
+      ["provider-change", handleProviderChange],
+      ["can-play", handleCanPlay],
+      ["time-update", handleTimeUpdate],
+      ["play", handlePlay],
+      ["playing", handlePlaying],
+      ["pause", handlePause],
+      ["ended", handleEnded],
+      ["waiting", handleWaiting],
+      ["seeking", handleWaiting],
+      ["seeked", handlePlaying],
+      ["volume-change", handleVolumeChangeEvent],
+      ["rate-change", handleRateChange],
+      ["progress", handleProgress],
+      ["audio-tracks-change", handleAudioTracksChange],
+      ["audio-track-change", handleAudioTrackChange],
+      ["qualities-change", handleQualitiesChange],
+      ["quality-change", handleQualityChange],
+      ["error", handleError],
+    ];
 
-    const handleTimeUpdate = () => {
-      currentTime = videoEl!.currentTime;
-      onTimeUpdate?.(videoEl!.currentTime);
-      updateBuffered();
-    };
-
-    const applyDuration = () => {
-      const vd = Number.isFinite(videoEl!.duration) ? videoEl!.duration : 0;
-      const next = Math.max(vd, propDuration ?? 0);
-      if (next > 0) duration = next;
-    };
-
-    const onLoadedMetadata = () => {
-      applyDuration();
-      updateBuffered();
-      onTimeUpdate?.(videoEl!.currentTime);
-      if (autoPlay && videoEl!.paused) requestPlay(videoEl!);
-    };
-    const onDurationChange = () => applyDuration();
-    const onSeeked = () => {
-      currentTime = videoEl!.currentTime;
-      onTimeUpdate?.(videoEl!.currentTime);
-    };
-    const onProgress = () => updateBuffered();
-    const onPlay = () => {
-      playing = true;
-      scheduleControlsHide();
-      if (!playTracked) {
-        playTracked = true;
-        onPlayStarted?.();
-      }
-    };
-    const onPause = () => {
-      playing = false;
-      showControls = true;
-      clearControlsTimer();
-    };
-    const onEndedEvt = () => {
-      playing = false;
-      showControls = true;
-      clearControlsTimer();
-      onEnded?.();
-    };
-    const onVolumeChange = () => {
-      muted = videoEl!.muted || videoEl!.volume === 0;
-      volume = videoEl!.volume;
-    };
-    const onErrorEvt = () => handleDirectPlaybackFailure(describeMediaError(videoEl!.error));
-
-    videoEl.addEventListener("timeupdate", handleTimeUpdate);
-    videoEl.addEventListener("loadedmetadata", onLoadedMetadata);
-    videoEl.addEventListener("durationchange", onDurationChange);
-    videoEl.addEventListener("seeked", onSeeked);
-    videoEl.addEventListener("progress", onProgress);
-    videoEl.addEventListener("play", onPlay);
-    videoEl.addEventListener("pause", onPause);
-    videoEl.addEventListener("ended", onEndedEvt);
-    videoEl.addEventListener("volumechange", onVolumeChange);
-    videoEl.addEventListener("error", onErrorEvt);
-
-    onTimeUpdate?.(videoEl.currentTime);
-
-    const metricsInterval = window.setInterval(() => {
-      const quality = videoEl!.getVideoPlaybackQuality?.();
-      if (quality) droppedFrames = quality.droppedVideoFrames;
-      const hls = hlsRef;
-      if (hls && Number.isFinite(hls.bandwidthEstimate)) {
-        bandwidthEstimate = hls.bandwidthEstimate;
-      }
-    }, 1000);
-
+    for (const [type, listener] of listeners) el.addEventListener(type, listener);
     return () => {
-      if (!videoEl) return;
-      videoEl.removeEventListener("timeupdate", handleTimeUpdate);
-      videoEl.removeEventListener("loadedmetadata", onLoadedMetadata);
-      videoEl.removeEventListener("durationchange", onDurationChange);
-      videoEl.removeEventListener("seeked", onSeeked);
-      videoEl.removeEventListener("progress", onProgress);
-      videoEl.removeEventListener("play", onPlay);
-      videoEl.removeEventListener("pause", onPause);
-      videoEl.removeEventListener("ended", onEndedEvt);
-      videoEl.removeEventListener("volumechange", onVolumeChange);
-      videoEl.removeEventListener("error", onErrorEvt);
-      window.clearInterval(metricsInterval);
+      for (const [type, listener] of listeners) el.removeEventListener(type, listener);
     };
   });
 
-  // ─── Keyboard shortcuts ──────────────────────────────────────────
+  $effect(() => {
+    const video = videoEl;
+    if (!video) return;
+    const onProgress = () => updateBuffered();
+    const onLoadedMetadata = () => {
+      duration = Math.max(video.duration || 0, propDuration ?? 0);
+      updateBuffered();
+    };
+    video.addEventListener("progress", onProgress);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    return () => {
+      video.removeEventListener("progress", onProgress);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+    };
+  });
+
   onMount(() => {
+    mediaMounted = true;
+    directCapabilityProbe = document.createElement("video");
+    localAppearance = readLocalSubtitleAppearance();
+    syncVideoElement();
+
     const handleKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       switch (event.key.toLowerCase()) {
         case " ":
-          event.preventDefault();
-          togglePlay();
-          break;
         case "k":
-          if (event.metaKey || event.ctrlKey) break;
+          if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) break;
           event.preventDefault();
           togglePlay();
           break;
@@ -1043,232 +765,160 @@
           break;
       }
     };
+
     window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  });
-
-  // ─── Subtitle cue pipeline ───────────────────────────────────────
-  let activeTrackCues = $state<SubtitleCueDto[]>([]);
-
-  $effect(() => {
-    if (!activeSubtitleId) {
-      activeTrackCues = [];
-      activeCueText = null;
-      onActiveCueChange?.(null);
-      return;
-    }
-    const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
-    if (!track) {
-      activeTrackCues = [];
-      activeCueText = null;
-      onActiveCueChange?.(null);
-      return;
-    }
-
-    let cancelled = false;
-    fetchVideoSubtitleCues(track.videoId, track.id)
-      .then(({ cues }) => {
-        if (cancelled) return;
-        activeTrackCues = cues;
-      })
-      .catch(() => {
-        if (cancelled) return;
-        activeTrackCues = [];
-      });
     return () => {
-      cancelled = true;
-    };
-  });
-
-  $effect(() => {
-    if (!videoEl) return;
-    let lastIndex = -1;
-    const evaluate = () => {
-      const cues = activeTrackCues;
-      if (!activeSubtitleId || cues.length === 0) {
-        if (lastIndex !== -1) {
-          lastIndex = -1;
-          activeCueText = null;
-          onActiveCueChange?.(null);
-        }
-        return;
-      }
-      const t = videoEl!.currentTime;
-      let idx = -1;
-      for (let i = 0; i < cues.length; i++) {
-        const cue = cues[i];
-        if (!cue) continue;
-        if (t >= cue.start && t < cue.end) {
-          idx = i;
-          break;
-        }
-      }
-      if (idx === lastIndex) return;
-      lastIndex = idx;
-      if (idx === -1) {
-        activeCueText = null;
-        onActiveCueChange?.(null);
-        return;
-      }
-      const cue = cues[idx]!;
-      const text = cue.text.replace(/<[^>]+>/g, "");
-      activeCueText = text || null;
-      onActiveCueChange?.({ start: cue.start, end: cue.end, text });
-    };
-
-    evaluate();
-    videoEl.addEventListener("timeupdate", evaluate);
-    videoEl.addEventListener("seeking", evaluate);
-    videoEl.addEventListener("seeked", evaluate);
-    return () => {
-      if (!videoEl) return;
-      videoEl.removeEventListener("timeupdate", evaluate);
-      videoEl.removeEventListener("seeking", evaluate);
-      videoEl.removeEventListener("seeked", evaluate);
-    };
-  });
-
-  // ─── Seek / playback helpers ────────────────────────────────────
-  function togglePlay() {
-    if (!videoEl) return;
-    if (videoEl.paused) requestPlay(videoEl);
-    else videoEl.pause();
-  }
-
-  function seek(delta: number) {
-    if (!videoEl) return;
-    videoEl.currentTime = Math.max(0, Math.min(duration, videoEl.currentTime + delta));
-  }
-
-  function handleSeekTo(time: number) {
-    if (!videoEl) return;
-    const target = Math.max(0, Math.min(duration || time, time));
-    if (
-      streamMode === "hls" &&
-      usesProgressiveHlsSeekWindow(src) &&
-      videoEl.seekable.length > 0
-    ) {
-      const seekableEnd = videoEl.seekable.end(videoEl.seekable.length - 1);
-      if (Number.isFinite(seekableEnd) && target > seekableEnd + 0.5) {
-        deferredSeekTarget = target;
-        videoEl.currentTime = Math.max(0, seekableEnd - 0.5);
-        return;
-      }
-    }
-    deferredSeekTarget = null;
-    videoEl.currentTime = target;
-  }
-
-  $effect(() => {
-    if (deferredSeekTarget == null || !videoEl) return;
-
-    const attemptReseek = () => {
-      if (!videoEl || videoEl.seekable.length === 0) return false;
-      const end = videoEl.seekable.end(videoEl.seekable.length - 1);
-      if (!Number.isFinite(end)) return false;
-      if (end + 0.25 >= deferredSeekTarget!) {
-        videoEl.currentTime = Math.min(duration || deferredSeekTarget!, deferredSeekTarget!);
-        deferredSeekTarget = null;
-        return true;
-      }
-      return false;
-    };
-
-    if (attemptReseek()) return;
-    const interval = window.setInterval(() => attemptReseek(), 500);
-    return () => window.clearInterval(interval);
-  });
-
-  function toggleMute() {
-    if (!videoEl) return;
-    videoEl.muted = !videoEl.muted;
-    if (!videoEl.muted && videoEl.volume === 0) videoEl.volume = 1;
-  }
-
-  function handleVolumeChange(next: number) {
-    if (!videoEl) return;
-    videoEl.volume = next;
-    videoEl.muted = next === 0;
-    volume = next;
-    muted = next === 0;
-  }
-
-  function toggleFullscreen() {
-    if (isDocumentFullscreen()) {
-      exitDocumentFullscreen();
-      return;
-    }
-    if (!containerEl) return;
-    enterMediaFullscreen(containerEl, videoEl ?? null);
-  }
-
-  function applyPlaybackRate(nextRate: number) {
-    if (!videoEl) return;
-    videoEl.playbackRate = nextRate;
-    playbackRate = nextRate;
-    speedMenuOpen = false;
-  }
-
-  function updateTimelineHover(clientX: number, rect: DOMRect) {
-    if (duration <= 0) {
-      timelineHover = null;
-      return;
-    }
-    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const time = percent * duration;
-    const windowSec = Math.max(duration * 0.01, 1.5);
-    const markerTitles = markers
-      .filter((m) => Math.abs(m.time - time) <= windowSec)
-      .map((m) => m.title);
-    timelineHover = { markerTitles, percent: percent * 100, time };
-  }
-
-  function handleFilmStripInteraction(active: boolean) {
-    if (active) {
       clearControlsTimer();
-      showControls = false;
-      qualityMenuOpen = false;
-      speedMenuOpen = false;
-    } else {
-      surfaceControls();
+      window.removeEventListener("keydown", handleKey);
+      onActiveCueChange?.(null);
+    };
+  });
+
+  function handleProviderChange(event: Event) {
+    const provider = (event as MediaProviderChangeEvent).detail;
+    if (isHLSProvider(provider)) {
+      provider.config = {
+        ...adaptiveHlsBufferConfig(),
+        capLevelToPlayerSize: true,
+      };
+    }
+    syncVideoElement();
+  }
+
+  function handleCanPlay(event: Event) {
+    const detail = (event as MediaCanPlayEvent).detail;
+    duration = Math.max(detail.duration || 0, propDuration ?? 0);
+    buffering = false;
+    syncVideoElement();
+    refreshQualities();
+    refreshAudioTracks();
+    updateBuffered();
+    if (pendingSeekTime !== null) {
+      player!.currentTime = Math.min(duration || pendingSeekTime, pendingSeekTime);
+      pendingSeekTime = null;
+    }
+    if ((pendingAutoPlay || autoPlay) && player?.paused) {
+      pendingAutoPlay = false;
+      void player.play();
     }
   }
 
-  const assTrackForRender = $derived.by(() => {
-    if (!activeSubtitleId) return null;
-    const track = subtitleTracks.find((t) => t.id === activeSubtitleId);
-    if (!track) return null;
-    if (track.sourceFormat !== "ass" && track.sourceFormat !== "ssa") return null;
-    if (!track.sourceUrl) return null;
-    return track;
-  });
+  function handleTimeUpdate(event: Event) {
+    const detail = (event as MediaTimeUpdateEvent).detail;
+    currentTime = detail.currentTime;
+    onTimeUpdate?.(detail.currentTime);
+    updateBuffered();
+  }
+
+  function handlePlay(_event: Event) {
+    playing = true;
+    if (!playTracked) {
+      playTracked = true;
+      onPlayStarted?.();
+    }
+    scheduleControlsHide();
+  }
+
+  function handlePlaying(_event: Event) {
+    buffering = false;
+    playing = true;
+    scheduleControlsHide();
+  }
+
+  function handlePause(_event: Event) {
+    playing = false;
+    showControls = true;
+    clearControlsTimer();
+  }
+
+  function handleEnded(_event: Event) {
+    playing = false;
+    showControls = true;
+    clearControlsTimer();
+    onEnded?.();
+  }
+
+  function handleWaiting(_event: Event) {
+    buffering = true;
+  }
+
+  function handleVolumeChangeEvent(_event: Event) {
+    if (!player) return;
+    muted = player.muted || player.volume === 0;
+    volume = player.volume;
+  }
+
+  function handleRateChange(_event: Event) {
+    if (player) playbackRate = player.playbackRate;
+  }
+
+  function handleProgress(_event: Event) {
+    updateBuffered();
+  }
+
+  function handleAudioTracksChange(_event: Event) {
+    refreshAudioTracks();
+  }
+
+  function handleAudioTrackChange(_event: Event) {
+    refreshAudioTracks();
+  }
+
+  function handleQualitiesChange(_event: Event) {
+    refreshQualities();
+  }
+
+  function handleQualityChange(_event: Event) {
+    refreshQualities();
+  }
+
+  function handleError(event: Event) {
+    const detail = (event as MediaErrorEvent).detail;
+    const message = detail instanceof Error ? detail.message : "Playback failed.";
+    playerNotice = `${effectiveMode === "direct" ? "Direct" : "Adaptive"} playback error: ${message}`;
+    buffering = false;
+  }
 </script>
 
-<div class="space-y-1">
+<div class="space-y-1" data-testid="vidstack-video-player">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     bind:this={containerEl}
-    class="relative surface-media-well"
+    class="relative surface-media-well bg-black"
     onmousemove={surfaceControls}
     onmouseleave={() => {
       if (playing) showControls = false;
     }}
     ontouchstart={surfaceControls}
   >
-    {#if src || directSrc}
-      <!-- svelte-ignore a11y_media_has_caption -->
-      <!-- Cap the player's width off the viewport height so the scrub /
-           play / volume row always stays inside the fold. Without this,
-           a 16:9 aspect with w-full on a wide desktop window pushes the
-           controls below the viewport and the player appears broken. -->
-      <video
-        bind:this={videoEl}
-        {poster}
-        class="aspect-video w-full max-w-[calc((100dvh-14rem)*16/9)] mx-auto bg-black"
-        onclick={togglePlay}
-        playsinline
-        crossorigin="anonymous"
-      ></video>
+    {#if playerSrc && mediaMounted}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <media-player
+        class="obscura-media-engine"
+        title="Obscura video"
+        src={playerSrc}
+        poster={poster}
+        streamType="on-demand"
+        crossOrigin
+        playsInline
+        autoPlay={autoPlay}
+        bind:this={player}
+        onclick={(event) => {
+          if (event.target === event.currentTarget || event.target instanceof HTMLVideoElement) {
+            togglePlay();
+          }
+        }}
+      >
+        <media-provider>
+          {#if poster}
+            <media-poster class="vds-poster" src={poster} alt="Video poster"></media-poster>
+          {/if}
+        </media-provider>
+      </media-player>
+    {:else if playerSrc}
+      <div class="obscura-media-engine flex items-center justify-center">
+        <Loader class="h-5 w-5 animate-spin text-white/40" />
+      </div>
     {:else}
       <div class="flex aspect-video items-center justify-center bg-surface-1">
         <div class="text-center">
@@ -1319,43 +969,18 @@
       />
     {/if}
 
-    <!-- Top overlay: chips + metrics -->
     <div
       class={cn(
-        "pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
+        "pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
         showControls ? "opacity-100" : "opacity-0",
       )}
     >
       <div class="flex flex-wrap gap-1.5 sm:gap-2">
-        {#if hlsInitializing || usingAdaptiveStream || qualityMode !== "direct"}
-          <span
-            class="player-chip px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/75"
-          >
-            {#if hlsInitializing}Loading…{:else if usingAdaptiveStream}{qualityMode === "auto"
-                ? "Adaptive HLS"
-                : typeof qualityMode === "number"
-                  ? "HLS"
-                  : "Adaptive HLS"}{:else}Direct{/if}
-          </span>
-        {/if}
-        {#if selectedQualityLabel}
-          <span
-            class="player-chip-accent px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] font-medium text-accent-100"
-          >
-            {selectedQualityLabel}
-          </span>
-        {/if}
-        {#if deferredSeekTarget != null}
-          <span
-            class="player-chip border-warning/30 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/85"
-          >
-            Seeking to {formatTime(deferredSeekTarget)} · still encoding
-          </span>
-        {/if}
+        <span class="pointer-events-auto player-chip border-accent-500/40 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-accent-100 sm:px-2.5 sm:py-1 sm:text-[0.62rem]">
+          {activePlaybackLabel}
+        </span>
         {#if playerNotice}
-          <span
-            class="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80"
-          >
+          <span class="player-chip border-warning/20 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.7rem] text-white/80">
             {playerNotice}
           </span>
         {/if}
@@ -1364,11 +989,11 @@
       <div
         class={cn(
           "hidden sm:grid gap-2 text-right text-[0.68rem] text-white/70",
-          streamMode === "direct" ? "min-w-[120px] grid-cols-2" : "min-w-[184px] grid-cols-3",
+          effectiveMode === "direct" ? "min-w-[120px] grid-cols-2" : "min-w-[184px] grid-cols-3",
         )}
       >
-        {#if streamMode !== "direct"}
-          <div class="pointer-events-none player-chip px-2 py-1.5">
+        {#if effectiveMode !== "direct"}
+          <div class="player-chip px-2 py-1.5">
             <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
               <Wifi class="h-3.5 w-3.5" />
               <span class="text-[0.58rem] uppercase tracking-[0.16em]">ABR</span>
@@ -1378,7 +1003,7 @@
             </div>
           </div>
         {/if}
-        <div class="pointer-events-none player-chip px-2 py-1.5">
+        <div class="player-chip px-2 py-1.5">
           <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
             <Gauge class="h-3.5 w-3.5" />
             <span class="text-[0.58rem] uppercase tracking-[0.16em]">Buffer</span>
@@ -1387,7 +1012,7 @@
             {bufferAhead.toFixed(1)}s
           </div>
         </div>
-        <div class="pointer-events-none player-chip px-2 py-1.5">
+        <div class="player-chip px-2 py-1.5">
           <div class="mb-0.5 flex items-center justify-end gap-1 text-white/50">
             <Settings2 class="h-3.5 w-3.5" />
             <span class="text-[0.58rem] uppercase tracking-[0.16em]">Drop</span>
@@ -1399,17 +1024,70 @@
       </div>
     </div>
 
-    <!-- Bottom control bar -->
     <div
       class={cn(
-        "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/92 via-black/65 to-transparent px-3 sm:px-4 pb-3 sm:pb-4 pt-12 sm:pt-20 transition-opacity duration-normal",
-        showControls ? "opacity-100" : "pointer-events-none opacity-0",
+        "pointer-events-none absolute inset-0 z-30 flex items-center justify-center transition-opacity duration-normal sm:hidden",
+        showControls ? "opacity-100" : "opacity-0",
       )}
     >
-      <div class="mb-3 sm:mb-4 space-y-2">
+      <div class="pointer-events-auto flex items-center gap-3">
+        <button
+          type="button"
+          onclick={(event) => {
+            event.stopPropagation();
+            seek(-10);
+          }}
+          class="relative flex h-7 w-7 items-center justify-center text-white/72 transition-colors hover:text-white"
+          title="Skip back 10s"
+          aria-label="Skip back 10s"
+        >
+          <RotateCcw class="h-4 w-4" />
+          <span class="absolute mt-[1px] text-[0.42rem] font-bold">10</span>
+        </button>
+        <button
+          type="button"
+          onclick={(event) => {
+            event.stopPropagation();
+            togglePlay();
+          }}
+          class="flex h-8 w-8 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_12px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_16px_rgba(199,155,92,0.28)]"
+          aria-label={playing ? "Pause" : "Play"}
+        >
+          {#if buffering}
+            <Loader class="h-3.5 w-3.5 animate-spin" />
+          {:else if playing}
+            <Pause class="h-3.5 w-3.5" fill="currentColor" />
+          {:else}
+            <span class="play-glyph" aria-hidden="true"></span>
+          {/if}
+        </button>
+        <button
+          type="button"
+          onclick={(event) => {
+            event.stopPropagation();
+            seek(10);
+          }}
+          class="relative flex h-7 w-7 items-center justify-center text-white/72 transition-colors hover:text-white"
+          title="Skip forward 10s"
+          aria-label="Skip forward 10s"
+        >
+          <RotateCw class="h-4 w-4" />
+          <span class="absolute mt-[1px] text-[0.42rem] font-bold">10</span>
+        </button>
+      </div>
+    </div>
+
+    <div
+      class={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/92 via-black/58 to-transparent px-3 pb-1.5 pt-8 transition-opacity duration-normal sm:px-4 sm:pb-4 sm:pt-20",
+        showControls ? "opacity-100" : "opacity-0",
+      )}
+    >
+      <div class="flex flex-col gap-2">
+        <div class="pointer-events-auto order-2 py-1 sm:py-1.5">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="video-progress-track group/track"
+          class="video-progress-track mobile-video-progress group/track"
           data-dragging={isDragging}
           onpointerdown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -1417,21 +1095,15 @@
             isDragging = true;
             const rect = event.currentTarget.getBoundingClientRect();
             updateTimelineHover(event.clientX, rect);
-            const nextPercent = Math.max(
-              0,
-              Math.min(1, (event.clientX - rect.left) / rect.width),
-            );
-            handleSeekTo(nextPercent * duration);
+            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            seekTo(nextPercent * duration);
           }}
           onpointermove={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             updateTimelineHover(event.clientX, rect);
             if (!isDraggingRef) return;
-            const nextPercent = Math.max(
-              0,
-              Math.min(1, (event.clientX - rect.left) / rect.width),
-            );
-            handleSeekTo(nextPercent * duration);
+            const nextPercent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+            seekTo(nextPercent * duration);
           }}
           onpointerup={(event) => {
             event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1471,7 +1143,7 @@
               style:left="{markerPercent}%"
               onclick={(event) => {
                 event.stopPropagation();
-                handleSeekTo(marker.time);
+                seekTo(marker.time);
                 onMarkerClick?.(marker);
               }}
               title={marker.title}
@@ -1479,14 +1151,15 @@
             ></button>
           {/each}
         </div>
+        </div>
 
         {#if markers.length > 0}
-          <div class="hidden sm:flex flex-wrap gap-1.5">
+          <div class="order-3 hidden flex-wrap gap-1.5 sm:flex">
             {#each markers as marker (marker.id)}
               <button
                 type="button"
                 onclick={() => {
-                  handleSeekTo(marker.time);
+                  seekTo(marker.time);
                   onMarkerClick?.(marker);
                 }}
                 class="player-chip px-2.5 py-1 text-[0.68rem] text-white/72 transition-colors hover:border-accent-400/35 hover:text-white"
@@ -1496,45 +1169,46 @@
             {/each}
           </div>
         {/if}
-      </div>
 
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <div class="pointer-events-auto order-1 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-start sm:gap-2.5">
+          <div class="hidden items-center gap-2.5 sm:flex">
           <button
             type="button"
             onclick={() => seek(-10)}
-            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
             title="Skip back 10s"
             aria-label="Skip back 10s"
           >
-            <RotateCcw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
-            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+            <RotateCcw class="h-4 w-4" />
+            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
           </button>
           <button
             type="button"
-            onclick={hlsInitializing ? undefined : togglePlay}
-            disabled={hlsInitializing}
-            class="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)] disabled:opacity-70 disabled:cursor-wait"
+            onclick={togglePlay}
+            class="flex h-9 w-9 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
             aria-label={playing ? "Pause" : "Play"}
           >
-            {#if hlsInitializing}
-              <Loader class="h-3.5 sm:h-4 w-3.5 sm:w-4 animate-spin" />
+            {#if buffering}
+              <Loader class="h-3.5 w-3.5 animate-spin" />
             {:else if playing}
-              <Pause class="h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+              <Pause class="h-3.5 w-3.5" fill="currentColor" />
             {:else}
-              <Play class="ml-0.5 h-3.5 sm:h-4 w-3.5 sm:w-4" fill="currentColor" />
+              <span class="play-glyph" aria-hidden="true"></span>
             {/if}
           </button>
           <button
             type="button"
             onclick={() => seek(10)}
-            class="relative flex items-center justify-center text-white/70 transition-colors hover:text-white"
+            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
             title="Skip forward 10s"
             aria-label="Skip forward 10s"
           >
-            <RotateCw class="h-4 sm:h-[1.125rem] w-4 sm:w-[1.125rem]" />
-            <span class="absolute text-[0.45rem] sm:text-[0.5rem] font-bold mt-[1px]">10</span>
+            <RotateCw class="h-4 w-4" />
+            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
           </button>
+
+          </div>
 
           <div class="hidden sm:flex items-center gap-2 text-white/80">
             <button type="button" onclick={toggleMute} class="transition-colors hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
@@ -1547,18 +1221,18 @@
               max="1"
               step="0.05"
               value={muted ? 0 : volume}
-              oninput={(event) =>
-                handleVolumeChange(Number((event.currentTarget as HTMLInputElement).value))}
-              class="h-1.5 w-20 accent-accent-500"
+              oninput={(event) => handleVolumeChange(Number(event.currentTarget.value))}
+              class="obscura-range h-1.5 w-20"
             />
           </div>
 
-          <span class="text-mono-tabular text-glow-phosphor text-[0.68rem] sm:text-xs">
+          <span class="shrink-0 whitespace-nowrap text-mono-tabular text-glow-phosphor text-[0.7rem] sm:text-xs">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
 
-        <div class="flex items-center gap-1.5 sm:gap-2">
+        <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+          <div class="flex min-w-0 shrink items-center gap-2 sm:contents">
           {#if subtitleTracks.length > 0}
             <div class="relative">
               <button
@@ -1567,16 +1241,19 @@
                 onclick={() => {
                   subtitleMenuOpen = !subtitleMenuOpen;
                   qualityMenuOpen = false;
+                  audioMenuOpen = false;
                   speedMenuOpen = false;
                 }}
                 aria-label="Subtitles"
                 class={cn(
-                  "player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] transition-colors hover:border-white/20 hover:text-white",
+                  "player-control-button subtitle-control-button text-[0.56rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
                   activeSubtitleId ? "text-accent-100" : "text-white/82",
                 )}
               >
-                <Captions class="h-3.5 w-3.5" />
-                <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                <span class="subtitle-control-glyph" aria-hidden="true">
+                  <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <ChevronDown class="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+                </span>
               </button>
               {#if subtitleMenuOpen}
                 <div
@@ -1587,6 +1264,18 @@
                   )}
                   style={playerMenuFlyoutStyle ?? undefined}
                 >
+                  <button
+                    type="button"
+                    onclick={() => {
+                      subtitleSettingsOpen = true;
+                      subtitleMenuOpen = false;
+                    }}
+                    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-white/78 transition-colors hover:bg-white/8 hover:text-white sm:py-2 sm:text-sm"
+                  >
+                    <Sliders class="h-3.5 w-3.5" />
+                    <span>Subtitle style...</span>
+                  </button>
+                  <div class="my-1 border-t border-white/10"></div>
                   <button
                     type="button"
                     onclick={() => selectSubtitle(null)}
@@ -1605,7 +1294,7 @@
                   {#each subtitleTracks as track (track.id)}
                     {@const isActive = activeSubtitleId === track.id}
                     {@const lang = languageLabel(track.language)}
-                    {@const displayName = track.label ? `${lang} — ${track.label}` : lang}
+                    {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
                     <button
                       type="button"
                       onclick={() => selectSubtitle(track.id)}
@@ -1622,36 +1311,76 @@
                       </span>
                     </button>
                   {/each}
-                  <div class="my-1 border-t border-white/10"></div>
-                  <button
-                    type="button"
-                    onclick={() => {
-                      subtitleSettingsOpen = true;
-                      subtitleMenuOpen = false;
-                    }}
-                    class="flex w-full items-center gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-white/78 hover:bg-white/8 hover:text-white transition-colors"
-                  >
-                    <Sliders class="h-3.5 w-3.5" />
-                    <span>Subtitle style…</span>
-                  </button>
                 </div>
               {/if}
             </div>
           {/if}
 
+          {#if displayedAudioTracks.length > 0}
+            <div class="relative min-w-0 shrink sm:flex-none">
+              <button
+                type="button"
+                bind:this={audioMenuButton}
+                onclick={() => {
+                  audioMenuOpen = !audioMenuOpen;
+                  qualityMenuOpen = false;
+                  subtitleMenuOpen = false;
+                  speedMenuOpen = false;
+                }}
+                class="player-control-button max-w-[9.5rem] min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
+                aria-label="Audio track"
+              >
+                <span class="min-w-0 truncate">{displayedAudioTrackLabel}</span>
+                <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
+              </button>
+              {#if audioMenuOpen}
+                <div
+                  use:portal
+                  class={cn(
+                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
+                    playerMenuIsSm && "min-w-[200px] max-w-[260px]",
+                  )}
+                  style={playerMenuFlyoutStyle ?? undefined}
+                >
+                  {#each displayedAudioTracks as track (track.id)}
+                    <button
+                      type="button"
+                      onclick={() => selectAudioTrack(track.index)}
+                      class={cn(
+                        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
+                        track.selected
+                          ? "bg-accent-500/18 text-accent-100"
+                          : "text-white/78 hover:bg-white/8 hover:text-white",
+                      )}
+                    >
+                      <span class="min-w-0 flex-1 truncate">{track.label}</span>
+                      {#if track.selected}
+                        <span class="text-[0.6rem] uppercase tracking-[0.16em]">On</span>
+                      {/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+          </div>
+
+          <div class="flex min-w-0 items-center justify-end gap-2 sm:contents">
           <div class="relative">
             <button
               type="button"
+              aria-label={`Quality menu, ${selectedQualityLabel ?? "Quality"}`}
               bind:this={qualityMenuButton}
               onclick={() => {
                 qualityMenuOpen = !qualityMenuOpen;
+                audioMenuOpen = false;
                 speedMenuOpen = false;
                 subtitleMenuOpen = false;
               }}
-              class="player-chip flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[0.65rem] sm:text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+              class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
             >
-              {selectedQualityLabel ?? "Quality"}
-              <ChevronDown class="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+              <span class="min-w-0 truncate">{selectedQualityLabel ?? "Quality"}</span>
+              <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
             </button>
             {#if qualityMenuOpen}
               <div
@@ -1665,10 +1394,7 @@
                 {#each qualityOptions as option (String(option.value))}
                   <button
                     type="button"
-                    onclick={() => {
-                      requestPlaybackMode(option.value);
-                      qualityMenuOpen = false;
-                    }}
+                    onclick={() => requestPlaybackMode(option.value)}
                     class={cn(
                       "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
                       qualityMode === option.value
@@ -1692,16 +1418,16 @@
               onclick={() => {
                 speedMenuOpen = !speedMenuOpen;
                 qualityMenuOpen = false;
+                audioMenuOpen = false;
+                subtitleMenuOpen = false;
               }}
-              class="player-chip flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
+              class="player-control-button justify-between gap-1.5 px-3 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
             >
               {playbackRate}x
               <ChevronDown class="h-3.5 w-3.5" />
             </button>
             {#if speedMenuOpen}
-              <div
-                class="absolute bottom-12 right-0 min-w-[112px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1"
-              >
+              <div class="absolute bottom-12 right-0 min-w-[112px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
                 {#each PLAYBACK_RATES as rate (rate)}
                   <button
                     type="button"
@@ -1723,12 +1449,14 @@
           <button
             type="button"
             onclick={toggleFullscreen}
-            class="player-chip p-1.5 sm:p-2 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+            class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
             aria-label="Fullscreen"
           >
-            <Maximize class="h-3.5 sm:h-4 w-3.5 sm:w-4" />
-          </button>
+              <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
+          </div>
         </div>
+      </div>
       </div>
     </div>
   </div>
@@ -1739,11 +1467,156 @@
         spriteUrl={trickplaySprite!}
         vttUrl={trickplayVtt!}
         videoEl={videoEl ?? null}
+        currentTime={currentTime}
         {duration}
-        onSeek={handleSeekTo}
+        onSeek={seekTo}
         {markers}
         onStripInteractionChange={handleFilmStripInteraction}
       />
     </div>
   {/if}
 </div>
+
+<style>
+  .obscura-media-engine {
+    aspect-ratio: 16 / 9;
+    background: #000;
+    color: #f2eee7;
+    display: block;
+    margin-inline: auto;
+    max-width: calc((100dvh - 14rem) * 16 / 9);
+    width: 100%;
+  }
+
+  .obscura-media-engine :global(video),
+  .obscura-media-engine :global(media-poster) {
+    background: #000;
+    border-radius: 0;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .obscura-range {
+    appearance: none;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  .obscura-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 0;
+    background: var(--color-accent-300);
+    box-shadow: 0 0 10px rgba(199, 155, 92, 0.65);
+  }
+
+  .obscura-range::-moz-range-thumb {
+    width: 0.72rem;
+    height: 0.72rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-accent-300);
+    box-shadow: 0 0 10px rgba(199, 155, 92, 0.65);
+  }
+
+  .player-control-button {
+    align-items: center;
+    background: rgba(17, 21, 28, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.04),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    height: 1.75rem;
+    min-height: 1.75rem;
+    min-width: 1.75rem;
+  }
+
+  .play-glyph {
+    display: block;
+    height: 0.875rem;
+    position: relative;
+    width: 0.875rem;
+  }
+
+  .play-glyph::before {
+    border-bottom: 0.36rem solid transparent;
+    border-left: 0.56rem solid currentColor;
+    border-top: 0.36rem solid transparent;
+    content: "";
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-42%, -50%);
+  }
+
+  .play-glyph-lg {
+    height: 1rem;
+    width: 1rem;
+  }
+
+  .play-glyph-lg::before {
+    border-bottom-width: 0.42rem;
+    border-left-width: 0.64rem;
+    border-top-width: 0.42rem;
+  }
+
+  .subtitle-control-button {
+    justify-content: center;
+    padding-left: 0.125rem;
+    padding-right: 0.25rem;
+    width: 2.125rem;
+  }
+
+  .subtitle-control-glyph {
+    align-items: center;
+    display: grid;
+    gap: 0.12rem;
+    grid-template-columns: 1fr 1fr;
+    justify-items: center;
+    margin-left: 0.02rem;
+    width: 1.24rem;
+  }
+
+  .mobile-video-progress {
+    height: 5px;
+  }
+
+  .mobile-video-progress:hover,
+  .mobile-video-progress[data-dragging="true"] {
+    height: 6px;
+  }
+
+  @media (min-width: 640px) {
+    .mobile-video-progress {
+      height: 8px;
+    }
+
+    .mobile-video-progress:hover,
+    .mobile-video-progress[data-dragging="true"] {
+      height: 10px;
+    }
+
+    .player-control-button {
+      height: 2.25rem;
+      min-height: 2.25rem;
+      min-width: 2.25rem;
+    }
+
+    .subtitle-control-button {
+      padding-left: 0.5rem;
+      padding-right: 0.55rem;
+      width: 3rem;
+    }
+
+    .subtitle-control-glyph {
+      gap: 0.28rem;
+      width: 2rem;
+    }
+  }
+</style>

@@ -1,14 +1,13 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import VideoPlayer from "./VideoPlayer.svelte";
 import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
 
-const { fetchVideoSubtitleCues } = vi.hoisted(() => ({
-  fetchVideoSubtitleCues: vi.fn(),
-}));
-
-vi.mock("$lib/api/videos", () => ({
-  fetchVideoSubtitleCues,
+vi.mock("vidstack/player", () => ({}));
+vi.mock("vidstack/player/layouts", () => ({}));
+vi.mock("vidstack/player/ui", () => ({}));
+vi.mock("vidstack", () => ({
+  isHLSProvider: () => false,
 }));
 
 const subtitleDefaults: {
@@ -46,10 +45,8 @@ function makeTrack(
   };
 }
 
-describe("VideoPlayer subtitle defaults", () => {
+describe("VideoPlayer", () => {
   beforeEach(() => {
-    fetchVideoSubtitleCues.mockReset();
-    fetchVideoSubtitleCues.mockResolvedValue({ cues: [] });
     window.localStorage?.removeItem?.("obscura:subtitle-appearance");
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -120,25 +117,18 @@ describe("VideoPlayer subtitle defaults", () => {
     });
   });
 
-  it("opens the subtitle flyout with viewport-constrained positioning", async () => {
+  it("renders the Vidstack playback shell with active playback status and quality controls", () => {
     render(VideoPlayer, {
       props: {
-        subtitleTracks: [makeTrack("track-en", "en")],
-        activeSubtitleTrackId: null,
-        subtitleChoiceLocked: true,
+        src: "/api/video-stream/video-1/hls2/master.m3u8",
+        directSrc: "/api/video-stream/video-1/source",
+        defaultPlaybackMode: "hls",
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Subtitles" }));
-
-    const flyout = await screen.findByText("Off");
-    const menu = flyout.closest(".player-dropdown");
-    expect(menu).toBeInTheDocument();
-    expect(menu?.className).toContain("fixed");
-    expect(menu).toHaveStyle({
-      left: "12px",
-      right: "12px",
-    });
-    expect(menu?.getAttribute("style")).toContain("max-height:");
+    expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
+    expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Audio track" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Quality menu/ })).toBeInTheDocument();
   });
 });
