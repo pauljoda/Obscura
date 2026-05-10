@@ -88,7 +88,7 @@ describe("serveVideoSource", () => {
         throw new Error(`Unexpected command: ${command}`);
       }
       if (args.includes("v:0")) {
-        return { stdout: "hevc\n", stderr: "" };
+        return { stdout: "hevc,\n", stderr: "" };
       }
       if (args.includes("a:0")) {
         return { stdout: "eac3\n", stderr: "" };
@@ -133,6 +133,11 @@ describe("serveVideoSource", () => {
     expect(Buffer.from(await response.arrayBuffer()).toString("utf8")).toBe(
       "fragmented-mp4",
     );
+    const videoProbeArgs = runProcess.mock.calls.find(
+      ([command, args]) => command === "ffprobe" && (args as string[]).includes("v:0"),
+    )?.[1] as string[] | undefined;
+    expect(videoProbeArgs?.filter((arg) => arg === "v:0")).toHaveLength(1);
+    expect(videoProbeArgs?.at(-1)).toBe(sourcePath);
     expect(spawn).toHaveBeenCalledWith(
       "ffmpeg",
       expect.arrayContaining([

@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
 - Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
-- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
+- Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
 
 ### Changed
 
@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery thumbnail preview scrubbing now uses pointer input, making the preview strip work on mobile touch as well as desktop hover.
 - HEVC videos now only start in Direct mode when the browser reports HEVC MP4 support, and HEVC MP4 remuxes are tagged as `hvc1` for Safari and Chrome compatibility.
 - Adaptive HLS now lets hls.js choose its startup quality, recovers once from transient media or segment loading errors, and warms the next on-demand segment to reduce playback stalls.
+- HEVC MKV direct-source probing now normalizes ffprobe codec output before choosing a remux mode, preventing accidental full 4K software transcodes that left playback stuck on loading.
 
 ### Docs
 

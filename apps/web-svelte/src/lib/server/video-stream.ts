@@ -212,6 +212,11 @@ async function getVideoSource(db: AppDb, id: string): Promise<VideoSource | null
 }
 
 async function probeCodecs(filePath: string): Promise<{ video: string | null; audio: string | null }> {
+  const parseCodecName = (stdout: string) => {
+    const raw = stdout.trim().split("\n")[0]?.trim();
+    return raw?.split(",")[0]?.trim().toLowerCase() || null;
+  };
+
   try {
     const { stdout } = await runProcess("ffprobe", [
       "-v",
@@ -224,7 +229,7 @@ async function probeCodecs(filePath: string): Promise<{ video: string | null; au
       "csv=p=0",
       filePath,
     ]);
-    const videoCodec = stdout.trim().split("\n")[0]?.trim() || null;
+    const videoCodec = parseCodecName(stdout);
     let audioCodec: string | null = null;
     try {
       const { stdout: audioOut } = await runProcess("ffprobe", [
@@ -238,7 +243,7 @@ async function probeCodecs(filePath: string): Promise<{ video: string | null; au
         "csv=p=0",
         filePath,
       ]);
-      audioCodec = audioOut.trim().split("\n")[0]?.trim() || null;
+      audioCodec = parseCodecName(audioOut);
     } catch {
       // no audio stream is fine
     }

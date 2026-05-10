@@ -288,6 +288,7 @@
   let playbackRate = $state(1);
   let qualityMode = $state<QualityMode>("direct");
   let streamMode = $state<"direct" | "hls">("direct");
+  let playbackLoadRevision = $state(0);
   let qualityOptions = $state<QualityOption[]>([{ value: "direct", label: "Direct" }]);
   let activeQualityLabel = $state<string | null>(null);
   let bufferedProgress = $state(0);
@@ -519,6 +520,13 @@
   });
 
   // ─── Request play with direct-fallback ───────────────────────────
+  function requestPlaybackMode(nextQualityMode: QualityMode) {
+    const nextMode = requestedModeFromQualityMode(nextQualityMode);
+    const shouldReload = nextMode !== streamMode;
+    qualityMode = nextQualityMode;
+    if (shouldReload) playbackLoadRevision += 1;
+  }
+
   function handleDirectPlaybackFailure(reason: string, shouldResumePlayback = false) {
     if (streamMode !== "direct") {
       playerNotice = `Playback failed: ${reason}.`;
@@ -536,7 +544,7 @@
     pendingAutoPlay = shouldResumePlayback;
     pendingSeekTime = videoEl?.currentTime ?? 0;
     playerNotice = `Direct playback failed on this device — switched to adaptive HLS (${reason}).`;
-    qualityMode = "auto";
+    requestPlaybackMode("auto");
   }
 
   function requestPlay(video: HTMLVideoElement) {
@@ -560,7 +568,8 @@
     const localVideoEl = videoEl;
     const currentPropDuration = propDuration;
     const currentDefaultPlaybackMode = defaultPlaybackMode;
-    const requestedMode = requestedModeFromQualityMode(qualityMode);
+    playbackLoadRevision;
+    const requestedMode = untrack(() => requestedModeFromQualityMode(qualityMode));
 
     return untrack(() => {
     const videoEl = localVideoEl!;
@@ -1657,7 +1666,7 @@
                   <button
                     type="button"
                     onclick={() => {
-                      qualityMode = option.value;
+                      requestPlaybackMode(option.value);
                       qualityMenuOpen = false;
                     }}
                     class={cn(
