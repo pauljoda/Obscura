@@ -6,9 +6,9 @@
     Loader2,
     ScanSearch,
     X,
-    FolderOpen,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { VideoSeriesRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 
@@ -54,7 +54,18 @@
     )}
   >
     <StatusDot status={row.status} />
-    <FolderOpen class="h-5 w-5 text-text-muted flex-shrink-0" />
+    <div class="h-10 w-7 flex-shrink-0 overflow-hidden">
+      <EntityThumbnail
+        kind="video-series"
+        title={row.series.displayTitle}
+        coverImagePath={row.series.coverImagePath}
+        previewThumbnailPaths={row.series.previewThumbnailPaths}
+        isNsfw={row.series.isNsfw}
+        videoCount={row.series.visibleSfwVideoCount}
+        class="h-full w-full"
+        showCount={false}
+      />
+    </div>
     <div class="flex-1 min-w-0">
       <p class="text-[0.8rem] font-medium truncate">{row.series.displayTitle}</p>
       <div class="flex items-center gap-2 mt-0.5">

@@ -2,7 +2,7 @@
   import { Badge, Checkbox } from "@obscura/ui-svelte";
   import type { AudioLibraryListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
   let {
     item,
@@ -19,7 +19,8 @@
       <Checkbox checked={selected} onchange={() => onToggleSelect?.()} />
     {/if}
     <a href={`/audio/${item.id}`} class="w-14 shrink-0">
-      <AudioLibraryThumbnail
+      <EntityThumbnail
+        kind="audio-library"
         library={item}
         gradientIndex={index}
         size="list"
@@ -47,7 +48,7 @@
     href={`/audio/${item.id}`}
     class="group/card surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
   >
-    <AudioLibraryThumbnail library={item} gradientIndex={index} />
+    <EntityThumbnail kind="audio-library" library={item} gradientIndex={index} />
     <div class="p-2 space-y-0.5">
       <h4 class="truncate text-body-sm font-medium text-text-primary transition-colors group-hover/card:text-text-accent">
         {item.title}

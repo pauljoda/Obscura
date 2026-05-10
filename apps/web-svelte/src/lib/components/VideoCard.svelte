@@ -9,7 +9,7 @@
   import NsfwShowModeChip from "./nsfw/NsfwShowModeChip.svelte";
   import NsfwText from "./nsfw/NsfwText.svelte";
   import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
-  import VideoThumbnail from "./thumbnails/VideoThumbnail.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import { VIDEO_TAG_COLORS } from "$lib/video-tag-colors";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import { tagsVisibleInNsfwMode } from "$lib/nsfw/tags";
@@ -66,11 +66,12 @@
         </div>
       {/if}
       <NsfwBlur isNsfw={video.isNsfw ?? false}>
-        <VideoThumbnail
+        <EntityThumbnail
+          kind="video"
           {video}
           imageLoading={index < 6 ? "eager" : "lazy"}
           size="list"
-          gradient={thumbnailGradient}
+          gradientFallback={thumbnailGradient}
         />
       </NsfwBlur>
 
@@ -168,10 +169,11 @@
       onclick={() => onSelect?.(video.href)}
       class="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
     >
-      <VideoThumbnail
+      <EntityThumbnail
+        kind="video"
         {video}
         size="compact"
-        gradient={thumbnailGradient}
+        gradientFallback={thumbnailGradient}
       />
       <div class="flex-1 min-w-0">
         <div class="text-sm text-text-primary truncate">{video.title}</div>
@@ -186,10 +188,11 @@
       href={video.href}
       class="flex items-center gap-3 w-full px-4 py-2 hover:bg-surface-2 transition-colors duration-fast text-left"
     >
-      <VideoThumbnail
+      <EntityThumbnail
+        kind="video"
         {video}
         size="compact"
-        gradient={thumbnailGradient}
+        gradientFallback={thumbnailGradient}
       />
       <div class="flex-1 min-w-0">
         <div class="text-sm text-text-primary truncate">{video.title}</div>
@@ -223,11 +226,12 @@
             />
           </div>
         {/if}
-        <VideoThumbnail
+        <EntityThumbnail
+          kind="video"
           {video}
           {imageLoading}
           size="grid"
-          gradient={thumbnailGradient}
+          gradientFallback={thumbnailGradient}
         />
 
         <div class="p-2.5 space-y-1.5">

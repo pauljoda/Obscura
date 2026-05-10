@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Checkbox } from "@obscura/ui-svelte";
   import type { CardProps } from "$lib/media-surface/config";
-  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import type { PerformerItem } from "$lib/api/types";
 
@@ -22,7 +22,8 @@
       <Checkbox checked={selected} onchange={() => onToggleSelect?.()} />
     {/if}
     <a href={`/performers/${item.id}`} class="w-12 shrink-0">
-      <PerformerThumbnail
+      <EntityThumbnail
+        kind="performer"
         performer={item}
         gradientFallback={gradient}
         showChips={false}
@@ -44,7 +45,7 @@
     href={`/performers/${item.id}`}
     class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast flex flex-col block"
   >
-    <PerformerThumbnail performer={item} gradientFallback={gradient} showChips={false} />
+    <EntityThumbnail kind="performer" performer={item} gradientFallback={gradient} showChips={false} />
     <div class="p-2 space-y-1">
       <h4 class="truncate text-[0.8rem] font-medium text-text-primary leading-tight">
         {item.name}

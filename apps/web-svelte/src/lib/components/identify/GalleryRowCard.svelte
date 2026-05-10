@@ -9,6 +9,7 @@
     Layers,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { GalleryRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 
@@ -53,7 +54,20 @@
     )}
   >
     <StatusDot status={row.status} />
-    <Images class="h-5 w-5 text-text-muted flex-shrink-0" />
+    <div class="h-10 w-10 flex-shrink-0 overflow-hidden">
+      <EntityThumbnail
+        kind="gallery"
+        title={row.gallery.title}
+        coverImagePath={row.gallery.coverImagePath}
+        previewImagePaths={row.gallery.previewImagePaths}
+        imageCount={row.gallery.imageCount}
+        isNsfw={row.gallery.isNsfw}
+        isComic={row.gallery.isComic}
+        size="compact"
+        aspectClass="h-full w-full"
+        showCount={false}
+      />
+    </div>
     <div class="flex-1 min-w-0">
       <p class="text-[0.8rem] font-medium truncate">{row.gallery.title}</p>
       <div class="flex items-center gap-2 mt-0.5">

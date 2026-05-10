@@ -4,7 +4,6 @@
     Star,
     Film,
     Music,
-    FolderOpen,
     Image as ImageIcon,
     Edit3,
     X,
@@ -29,8 +28,8 @@
   } from "@obscura/contracts";
   import { page } from "$app/state";
   import InlineRating from "$lib/components/InlineRating.svelte";
-  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
   import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
   import {
@@ -212,16 +211,12 @@
 
 <div class="space-y-6">
   <div class="flex flex-col sm:flex-row gap-4 items-start">
-    <div class="w-32 sm:w-40 aspect-[3/4] shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
-      {#if patchedP.imagePath}
-        <NsfwBlur isNsfw={patchedP.isNsfw ?? false} class="block h-full w-full">
-          <img src={toApiUrl(patchedP.imagePath)} alt={patchedP.name} class="h-full w-full object-cover" />
-        </NsfwBlur>
-      {:else}
-        <div class="flex h-full items-center justify-center">
-          <Users class="h-10 w-10 text-text-disabled" />
-        </div>
-      {/if}
+    <div class="w-32 sm:w-40 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden">
+      <EntityThumbnail
+        kind="performer"
+        performer={patchedP}
+        showChips={false}
+      />
     </div>
     <div class="flex-1 min-w-0 space-y-2">
       <div class="flex items-start justify-between gap-3">
@@ -419,20 +414,30 @@
               {href}
               class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
             >
-              <div class="aspect-[2/3] bg-surface-2">
-                {#if entry.thumbnailPath || entry.cardThumbnailPath}
-                  <img
-                    src={toApiUrl(entry.cardThumbnailPath ?? entry.thumbnailPath)}
-                    alt=""
-                    loading="lazy"
-                    class="h-full w-full object-cover"
-                  />
-                {:else}
-                  <div class="flex h-full w-full items-center justify-center text-text-disabled">
-                    <FolderOpen class="h-8 w-8" />
-                  </div>
-                {/if}
-              </div>
+              {#if entry.sourceType === "series"}
+                <EntityThumbnail
+                  kind="video-series"
+                  title={entry.sourceTitle}
+                  coverImagePath={entry.thumbnailPath}
+                  class="aspect-[2/3]"
+                  showCount={false}
+                />
+              {:else}
+                <EntityThumbnail
+                  kind="video"
+                  video={{
+                    id: entry.sourceId,
+                    href,
+                    title: entry.sourceTitle,
+                    thumbnail: toApiUrl(entry.thumbnailPath) ?? undefined,
+                    cardThumbnail: toApiUrl(entry.cardThumbnailPath) ?? undefined,
+                    seasonNumber: entry.seasonNumber ?? undefined,
+                    episodeNumber: entry.episodeNumber ?? undefined,
+                  }}
+                  size="hero"
+                  class="aspect-[2/3]"
+                />
+              {/if}
               <div class="p-2 space-y-0.5">
                 <h4 class="truncate text-[0.78rem] font-medium text-text-primary">
                   {entry.sourceTitle}

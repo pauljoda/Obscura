@@ -13,14 +13,13 @@
   } from "@lucide/svelte";
   import { invalidate } from "$app/navigation";
   import { Badge } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
   import {
     deleteTagImage,
     updateTag,
     uploadTagImage,
   } from "$lib/api/entities";
   import { page } from "$app/state";
-  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import MediaTabs from "$lib/media-surface/tabs/MediaTabs.svelte";
   import { detailTabsFor } from "$lib/media-surface/tabs/detail-tabs";
   import {
@@ -157,7 +156,7 @@
 <div class="space-y-6">
   <div class="flex flex-col sm:flex-row gap-4 items-start">
     <div class="w-32 shrink-0">
-      <TagThumbnail tag={t} cacheBust={imageCacheBust || null} showLabel={false} />
+      <EntityThumbnail kind="tag" tag={t} cacheBust={imageCacheBust || null} showLabel={false} />
     </div>
     <div class="flex-1 min-w-0 space-y-2">
       <div class="flex items-start justify-between gap-3">
@@ -241,15 +240,13 @@
         <FormField label="Image" icon={ImageIcon}>
           <div class="flex items-start gap-3">
             <div class="w-24 h-24 shrink-0 bg-surface-1 border border-border-subtle overflow-hidden flex items-center justify-center">
-              {#if t.imagePath}
-                <img
-                  src={toApiUrl(t.imagePath, imageCacheBust)}
-                  alt=""
-                  class="h-full w-full object-cover"
-                />
-              {:else}
-                <ImageIcon class="h-7 w-7 text-text-disabled" />
-              {/if}
+              <EntityThumbnail
+                kind="tag"
+                tag={t}
+                cacheBust={imageCacheBust || null}
+                showLabel={false}
+                aspectClass="h-full w-full"
+              />
             </div>
             <div class="flex-1 min-w-0 space-y-2">
               <div class="flex flex-wrap gap-2">

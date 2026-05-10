@@ -3,7 +3,7 @@
   import type { VideoSeriesListItemDto } from "@obscura/contracts";
   import { cn } from "@obscura/ui-svelte";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
-  import SeriesThumbnail from "./thumbnails/SeriesThumbnail.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
 
   interface Props {
     series: VideoSeriesListItemDto;
@@ -18,7 +18,8 @@
   {href}
   class="group surface-card overflow-hidden transition-colors duration-fast hover:border-border-accent block"
 >
-  <SeriesThumbnail
+  <EntityThumbnail
+    kind="video-series"
     title={series.displayTitle}
     coverImagePath={series.coverImagePath}
     previewThumbnailPaths={series.previewThumbnailPaths}

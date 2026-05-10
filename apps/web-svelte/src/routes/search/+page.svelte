@@ -8,8 +8,6 @@
     Loader2,
     SlidersHorizontal,
     Star,
-    Layers,
-    Image as ImageIcon,
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import type {
@@ -17,22 +15,10 @@
     SearchResponseDto,
     SearchResultItem,
   } from "@obscura/contracts";
-  import VideoCard from "$lib/components/VideoCard.svelte";
-  import SeriesThumbnail from "$lib/components/thumbnails/SeriesThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
-  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
-  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
-  import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
+  import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { fetchSearch } from "$lib/api/media";
-  import { toApiUrl } from "$lib/api/core";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
-  import { buildHrefWithFrom } from "$lib/back-navigation";
-  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import type { VideoCardData } from "$lib/video-card-data";
   import {
     ALL_SEARCH_KINDS,
     SEARCH_KIND_CONFIG,
@@ -214,43 +200,6 @@
         [kind]: { ...expanded[kind]!, loading: false },
       };
     }
-  }
-
-  function videoSearchItemToCardData(item: SearchResultItem): VideoCardData {
-    const meta = item.meta ?? {};
-    const durationSeconds =
-      typeof meta.durationSeconds === "number" ? meta.durationSeconds : undefined;
-    return {
-      id: item.id,
-      href: buildHrefWithFrom(item.href, currentPath),
-      title: item.title,
-      thumbnail: toApiUrl(item.imagePath ?? undefined),
-      cardThumbnail: toApiUrl(
-        (meta.cardThumbnailPath as string | null | undefined) ?? undefined,
-      ),
-      trickplaySprite: toApiUrl(
-        (meta.spritePath as string | null | undefined) ?? undefined,
-      ),
-      trickplayVtt: toApiUrl(
-        (meta.trickplayVttPath as string | null | undefined) ?? undefined,
-      ),
-      scrubDurationSeconds: durationSeconds,
-      duration:
-        typeof meta.durationFormatted === "string" ? meta.durationFormatted : undefined,
-      resolution: typeof meta.resolution === "string" ? meta.resolution : undefined,
-      codec: typeof meta.codec === "string" ? meta.codec : undefined,
-      fileSize:
-        typeof meta.fileSizeFormatted === "string" ? meta.fileSizeFormatted : undefined,
-      studio: typeof meta.studio === "string" ? meta.studio : undefined,
-      views: typeof meta.views === "number" ? meta.views : undefined,
-      rating: item.rating ?? undefined,
-      hasSubtitles: false,
-    };
-  }
-
-  function isNsfwItem(item: SearchResultItem): boolean {
-    const v = item.meta?.isNsfw;
-    return v === true;
   }
 
   function gridClassFor(kind: EntityKind): string {
@@ -455,234 +404,7 @@
 
           <div class={gridClassFor(group.kind)}>
             {#each items as item, index (item.id)}
-              {#if item.kind === "video"}
-                <VideoCard
-                  video={videoSearchItemToCardData(item)}
-                  variant="grid"
-                  index={index}
-                />
-              {:else if item.kind === "video-series"}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp overflow-hidden transition-colors duration-fast hover:border-border-accent"
-                >
-                  <SeriesThumbnail
-                    title={item.title}
-                    coverImagePath={item.imagePath}
-                    isNsfw={isNsfwItem(item)}
-                    videoCount={typeof item.meta?.videoCount === "number"
-                      ? item.meta.videoCount
-                      : null}
-                  />
-                  <div class="space-y-1 p-2.5">
-                    <h4 class="truncate text-body font-medium text-text-primary">
-                      {item.title}
-                    </h4>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.65rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
-                </a>
-              {:else if item.kind === "gallery"}
-                {@const gradient = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
-                {@const previewPaths = (() => {
-                  try {
-                    const raw = item.meta?.previewImagePaths;
-                    return typeof raw === "string" ? (JSON.parse(raw) as string[]) : [];
-                  } catch {
-                    return [] as string[];
-                  }
-                })()}
-                {@const imageCount = typeof item.meta?.imageCount === "number"
-                  ? item.meta.imageCount
-                  : null}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp overflow-hidden transition-colors duration-fast hover:border-border-accent"
-                >
-                  <GalleryThumbnail
-                    title={item.title}
-                    coverImagePath={item.imagePath}
-                    previewImagePaths={previewPaths}
-                    imageCount={imageCount}
-                    isNsfw={isNsfwItem(item)}
-                    size="grid"
-                    gradientFallback={gradient}
-                  />
-                  <div class="space-y-1 p-2.5">
-                    <h4 class="truncate text-body font-medium text-text-primary">
-                      {item.title}
-                    </h4>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.65rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
-                </a>
-              {:else if item.kind === "image"}
-                {@const previewPath = typeof item.meta?.previewPath === "string"
-                  ? item.meta.previewPath
-                  : null}
-                {@const width = typeof item.meta?.width === "number" ? item.meta.width : null}
-                {@const height = typeof item.meta?.height === "number" ? item.meta.height : null}
-                {@const format = typeof item.meta?.format === "string" ? item.meta.format : null}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp group overflow-hidden transition-colors duration-fast hover:border-border-accent"
-                >
-                  <ImageThumbnail
-                    title={item.title}
-                    thumbnailPath={item.imagePath}
-                    previewPath={previewPath}
-                    isVideo={!!previewPath}
-                    isNsfw={isNsfwItem(item)}
-                    width={width}
-                    height={height}
-                    size="grid"
-                  />
-                  {#if item.title}
-                    <div class="px-1.5 py-1 text-[0.62rem] text-text-muted truncate">
-                      {item.title}
-                    </div>
-                  {/if}
-                </a>
-              {:else if item.kind === "performer"}
-                {@const gradient = VIDEO_CARD_GRADIENTS[index % VIDEO_CARD_GRADIENTS.length]}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex flex-col overflow-hidden transition-colors duration-fast hover:border-border-accent"
-                >
-                  <PerformerThumbnail
-                    performer={{
-                      name: item.title,
-                      imagePath: item.imagePath,
-                      isNsfw: isNsfwItem(item),
-                      videoCount: typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
-                      seriesCount: typeof item.meta?.seriesCount === "number" ? item.meta.seriesCount : 0,
-                      galleryCount: typeof item.meta?.galleryCount === "number" ? item.meta.galleryCount : 0,
-                      imageCount: typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
-                      audioLibraryCount: typeof item.meta?.audioLibraryCount === "number" ? item.meta.audioLibraryCount : 0,
-                      audioTrackCount: typeof item.meta?.audioTrackCount === "number" ? item.meta.audioTrackCount : 0,
-                    }}
-                    gradientFallback={gradient}
-                  />
-                  <div class="space-y-0.5 p-2">
-                    <h4 class="truncate text-[0.8rem] font-medium leading-tight text-text-primary">
-                      {item.title}
-                    </h4>
-                    {#if item.subtitle}
-                      <p class="truncate text-[0.62rem] text-text-muted">
-                        {item.subtitle}
-                      </p>
-                    {/if}
-                  </div>
-                </a>
-              {:else if item.kind === "studio"}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex items-center gap-3 overflow-hidden p-2 transition-colors duration-fast hover:border-border-accent"
-                >
-                  <div class="h-16 w-20 shrink-0">
-                    <StudioThumbnail
-                      studio={{
-                        name: item.title,
-                        imagePath: item.imagePath,
-                        isNsfw: isNsfwItem(item),
-                      }}
-                      aspectClass="aspect-[4/3] h-full w-full"
-                      showChips={false}
-                    />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm text-text-primary">{item.title}</div>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.65rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
-                </a>
-              {:else if item.kind === "tag"}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="block transition-transform duration-fast"
-                >
-                  <TagThumbnail
-                    tag={{
-                      name: item.title,
-                      imagePath: item.imagePath,
-                      isNsfw: isNsfwItem(item),
-                      videoCount:
-                        typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
-                      imageCount:
-                        typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
-                    }}
-                  />
-                </a>
-              {:else if item.kind === "audio-library"}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex items-center gap-3 p-2 transition-colors duration-fast hover:border-border-accent group/card"
-                >
-                  <div class="h-16 w-16 shrink-0">
-                    <AudioLibraryThumbnail
-                      library={{
-                        title: item.title,
-                        coverImagePath: item.imagePath,
-                        isNsfw: isNsfwItem(item),
-                        trackCount:
-                          typeof item.meta?.trackCount === "number"
-                            ? item.meta.trackCount
-                            : null,
-                      }}
-                      aspectClass="h-full w-full"
-                      showPlayOverlay={false}
-                      gradientIndex={index}
-                    />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm text-text-primary">{item.title}</div>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.65rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
-                </a>
-              {:else if item.kind === "audio-track"}
-                <a
-                  href={buildHrefWithFrom(item.href, currentPath)}
-                  class="surface-card-sharp flex items-center gap-3 p-2 transition-colors duration-fast hover:border-border-accent group/card"
-                >
-                  <div class="h-16 w-16 shrink-0">
-                    <AudioTrackThumbnail
-                      track={{
-                        title: item.title,
-                        coverImagePath: item.imagePath,
-                        isNsfw: isNsfwItem(item),
-                        trackNumber:
-                          typeof item.meta?.trackNumber === "number"
-                            ? item.meta.trackNumber
-                            : null,
-                      }}
-                      aspectClass="h-full w-full"
-                      showPlayOverlay={false}
-                      gradientIndex={index}
-                    />
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="truncate text-sm text-text-primary">{item.title}</div>
-                    {#if item.subtitle}
-                      <div class="truncate text-[0.65rem] text-text-muted">
-                        {item.subtitle}
-                      </div>
-                    {/if}
-                  </div>
-                </a>
-              {/if}
+              <SearchResultCard {item} {index} {currentPath} />
             {/each}
           </div>
 

@@ -22,7 +22,7 @@
   } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
-  import ImageThumbnail from "./thumbnails/ImageThumbnail.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import {
     DateField,
     EditFormShell,
@@ -253,7 +253,8 @@
       Thumbnail
     </h4>
     <div class="surface-well overflow-hidden">
-      <ImageThumbnail
+      <EntityThumbnail
+        kind="image"
         title={image.title}
         thumbnailPath={image.thumbnailPath}
         previewPath={image.previewPath}

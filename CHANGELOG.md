@@ -16,11 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
 - Library navigation now reuses recent page data and media thumbnails from the browser cache, making back-and-forth browsing feel snappier while keeping private media out of shared caches.
 - Video playback now handles HEVC and adaptive streaming more smoothly: unsupported direct HEVC starts in adaptive mode without getting stuck on loading, compatible HEVC remuxes are tagged for browser playback, and adaptive streams avoid forced top-quality startup churn.
+- Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
 
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
+- Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
 
 ### Fixed
 
@@ -36,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - HEVC videos now only start in Direct mode when the browser reports HEVC MP4 support, and HEVC MP4 remuxes are tagged as `hvc1` for Safari and Chrome compatibility.
 - Adaptive HLS now lets hls.js choose its startup quality, recovers once from transient media or segment loading errors, and warms the next on-demand segment to reduce playback stalls.
 - HEVC MKV direct-source probing now normalizes ffprobe codec output before choosing a remux mode, preventing accidental full 4K software transcodes that left playback stuck on loading.
+- Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs
 

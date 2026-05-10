@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Images, Layers } from "@lucide/svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import ThumbSizeSlider from "$lib/media-surface/toolbar/ThumbSizeSlider.svelte";
 
   export interface ChildGalleryGridItem {
@@ -47,7 +47,8 @@
         href={`/galleries/${child.id}`}
         class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
       >
-        <GalleryThumbnail
+        <EntityThumbnail
+          kind="gallery"
           title={child.title}
           coverImagePath={child.coverImagePath ?? null}
           previewImagePaths={child.previewImagePaths ?? []}

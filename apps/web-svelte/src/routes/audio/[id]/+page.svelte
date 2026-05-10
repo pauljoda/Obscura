@@ -28,7 +28,7 @@
     fetchStudios,
     fetchTags,
   } from "$lib/api/entities";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import AudioPlayer from "$lib/components/AudioPlayer.svelte";
   import AddToCollectionModal from "$lib/components/AddToCollectionModal.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -658,7 +658,7 @@
             href={`/audio/${child.id}`}
             class="overflow-hidden surface-card-sharp transition-colors hover:border-border-accent group/card"
           >
-            <AudioLibraryThumbnail library={child} gradientIndex={i} />
+            <EntityThumbnail kind="audio-library" library={child} gradientIndex={i} />
             <div class="space-y-1 p-2">
               <h3 class="truncate text-sm font-medium text-text-primary">{child.title}</h3>
               <p class="text-[0.68rem] text-text-muted">

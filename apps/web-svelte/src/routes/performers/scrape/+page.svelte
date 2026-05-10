@@ -8,7 +8,6 @@
     Play,
     Square,
     Users,
-    Image as ImageIcon,
   } from "@lucide/svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import {
@@ -22,9 +21,9 @@
     ScraperPackage,
     NormalizedPerformerScrapeResult,
   } from "$lib/api/types";
-  import { toApiUrl } from "$lib/api/core";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
   interface PerformerRow {
     performer: PerformerItem;
@@ -271,13 +270,13 @@
             )}
           >
             <div class="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
-              {#if row.performer.imagePath}
-                <img src={toApiUrl(row.performer.imagePath)!} alt="" class="w-full h-full object-cover" />
-              {:else}
-                <div class="w-full h-full flex items-center justify-center">
-                  <ImageIcon class="h-3 w-3 text-text-disabled/40" />
-                </div>
-              {/if}
+              <EntityThumbnail
+                kind="performer"
+                performer={row.performer}
+                compact
+                showChips={false}
+                class="h-full w-full"
+              />
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-sm text-text-primary truncate">{row.performer.name}</div>

@@ -920,7 +920,7 @@ export interface SearchResultItem {
   href: string;
   rating: number | null;
   score: number;
-  meta: Record<string, string | number | boolean | null>;
+  meta: Record<string, string | number | boolean | string[] | null>;
 }
 
 export interface SearchResultGroup {

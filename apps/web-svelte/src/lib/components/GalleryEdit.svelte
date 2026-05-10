@@ -25,7 +25,7 @@
   } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
-  import GalleryThumbnail from "./thumbnails/GalleryThumbnail.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import NsfwBlur from "./nsfw/NsfwBlur.svelte";
   import {
     DateField,
@@ -277,12 +277,14 @@
       Cover
     </h4>
     <div class="surface-well overflow-hidden">
-      <GalleryThumbnail
+      <EntityThumbnail
+        kind="gallery"
         title={gallery.title}
         coverImagePath={gallery.coverImagePath}
         previewImagePaths={gallery.images.map((i) => toApiUrl(i.thumbnailPath) ?? "").filter(Boolean).slice(0, 4)}
         imageCount={gallery.imageCount}
         isNsfw={gallery.isNsfw}
+        isComic={gallery.isComic}
         updatedAt={gallery.updatedAt}
         size="hero"
       />

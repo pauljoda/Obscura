@@ -5,24 +5,13 @@
   import { Search, X, Clock, ArrowRight, Trash2 } from "@lucide/svelte";
   import { cn, dur, ease, flyDown } from "@obscura/ui-svelte";
   import { fade } from "svelte/transition";
-  import type { SearchResponseDto, SearchResultItem } from "@obscura/contracts";
-  import VideoCard from "$lib/components/VideoCard.svelte";
-  import SeriesThumbnail from "$lib/components/thumbnails/SeriesThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
-  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
-  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
-  import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
-  import type { VideoCardData } from "$lib/video-card-data";
+  import type { SearchResponseDto } from "@obscura/contracts";
+  import SearchResultCard from "$lib/components/SearchResultCard.svelte";
   import { useSearch } from "$lib/stores/search.svelte";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { entityTerms } from "$lib/terminology";
   import { fetchSearch } from "$lib/api/media";
   import { recentSearches } from "$lib/stores/recent-searches.svelte";
-  import { SEARCH_KIND_CONFIG } from "./search-kind-config";
-  import { toApiUrl } from "$lib/api/core";
   import { buildHrefWithFrom } from "$lib/back-navigation";
 
   const search = useSearch();
@@ -88,38 +77,6 @@
     if (trimmed) recent.add(trimmed);
     closePalette();
     void goto(buildHrefWithFrom(href, currentPath));
-  }
-
-  function videoSearchItemToCardData(item: SearchResultItem): VideoCardData {
-    const meta = item.meta ?? {};
-    const durationSeconds =
-      typeof meta.durationSeconds === "number" ? meta.durationSeconds : undefined;
-    return {
-      id: item.id,
-      href: buildHrefWithFrom(item.href, currentPath),
-      title: item.title,
-      thumbnail: toApiUrl(item.imagePath ?? undefined),
-      cardThumbnail: toApiUrl(
-        (meta.cardThumbnailPath as string | null | undefined) ?? undefined,
-      ),
-      trickplaySprite: toApiUrl(
-        (meta.spritePath as string | null | undefined) ?? undefined,
-      ),
-      trickplayVtt: toApiUrl(
-        (meta.trickplayVttPath as string | null | undefined) ?? undefined,
-      ),
-      scrubDurationSeconds: durationSeconds,
-      duration:
-        typeof meta.durationFormatted === "string" ? meta.durationFormatted : undefined,
-      resolution: typeof meta.resolution === "string" ? meta.resolution : undefined,
-      codec: typeof meta.codec === "string" ? meta.codec : undefined,
-      fileSize:
-        typeof meta.fileSizeFormatted === "string" ? meta.fileSizeFormatted : undefined,
-      studio: typeof meta.studio === "string" ? meta.studio : undefined,
-      views: typeof meta.views === "number" ? meta.views : undefined,
-      rating: item.rating ?? undefined,
-      hasSubtitles: false,
-    };
   }
 
   function submitSearch() {
@@ -283,146 +240,13 @@
                   <span class="text-[0.6rem] text-text-disabled">{group.total}</span>
                 </div>
                 {#each group.items as item, itemIndex (item.id)}
-                  {#if item.kind === "video"}
-                    <VideoCard
-                      video={videoSearchItemToCardData(item)}
-                      variant="compact"
-                      index={itemIndex}
-                      onSelect={navigateTo}
-                    />
-                  {:else}
-                    {@const Icon = SEARCH_KIND_CONFIG[item.kind]?.icon}
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-fast hover:bg-surface-2"
-                      onclick={() => navigateTo(item.href)}
-                    >
-                      <div
-                        class={cn(
-                          "flex shrink-0 items-center justify-center overflow-hidden bg-surface-1",
-                          item.kind === "performer"
-                            ? "h-8 w-8"
-                            : item.kind === "video-series" || item.kind === "gallery"
-                              ? "h-10 w-7"
-                              : "h-8 w-8",
-                        )}
-                      >
-                        {#if item.kind === "video-series"}
-                          <SeriesThumbnail
-                            title={item.title}
-                            coverImagePath={item.imagePath}
-                            isNsfw={item.meta?.isNsfw === true}
-                            videoCount={typeof item.meta?.videoCount === "number"
-                              ? item.meta.videoCount
-                              : null}
-                            showCount={false}
-                            class="h-full w-full"
-                          />
-                        {:else if item.kind === "gallery"}
-                          <GalleryThumbnail
-                            title={item.title}
-                            coverImagePath={item.imagePath}
-                            imageCount={typeof item.meta?.imageCount === "number"
-                              ? item.meta.imageCount
-                              : null}
-                            isNsfw={item.meta?.isNsfw === true}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showCount={false}
-                          />
-                        {:else if item.kind === "image"}
-                          <ImageThumbnail
-                            title={item.title}
-                            thumbnailPath={item.imagePath}
-                            previewPath={typeof item.meta?.previewPath === "string"
-                              ? item.meta.previewPath
-                              : null}
-                            isVideo={typeof item.meta?.previewPath === "string" && !!item.meta.previewPath}
-                            isNsfw={item.meta?.isNsfw === true}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showChips={false}
-                          />
-                        {:else if item.kind === "performer"}
-                          <PerformerThumbnail
-                            performer={{
-                              name: item.title,
-                              imagePath: item.imagePath,
-                              isNsfw: item.meta?.isNsfw === true,
-                              videoCount: typeof item.meta?.videoCount === "number" ? item.meta.videoCount : 0,
-                              seriesCount: typeof item.meta?.seriesCount === "number" ? item.meta.seriesCount : 0,
-                              galleryCount: typeof item.meta?.galleryCount === "number" ? item.meta.galleryCount : 0,
-                              imageCount: typeof item.meta?.imageCount === "number" ? item.meta.imageCount : 0,
-                              audioLibraryCount: typeof item.meta?.audioLibraryCount === "number" ? item.meta.audioLibraryCount : 0,
-                              audioTrackCount: typeof item.meta?.audioTrackCount === "number" ? item.meta.audioTrackCount : 0,
-                            }}
-                            compact
-                            showChips={false}
-                            class="h-full w-full"
-                          />
-                        {:else if item.kind === "studio"}
-                          <StudioThumbnail
-                            studio={{
-                              name: item.title,
-                              imagePath: item.imagePath,
-                              isNsfw: item.meta?.isNsfw === true,
-                            }}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showChips={false}
-                          />
-                        {:else if item.kind === "tag"}
-                          <TagThumbnail
-                            tag={{
-                              name: item.title,
-                              imagePath: item.imagePath,
-                              isNsfw: item.meta?.isNsfw === true,
-                            }}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showLabel={false}
-                          />
-                        {:else if item.kind === "audio-library"}
-                          <AudioLibraryThumbnail
-                            library={{
-                              title: item.title,
-                              coverImagePath: item.imagePath,
-                              isNsfw: item.meta?.isNsfw === true,
-                            }}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showChips={false}
-                            showPlayOverlay={false}
-                          />
-                        {:else if item.kind === "audio-track"}
-                          <AudioTrackThumbnail
-                            track={{
-                              title: item.title,
-                              coverImagePath: item.imagePath,
-                              isNsfw: item.meta?.isNsfw === true,
-                            }}
-                            size="compact"
-                            aspectClass="h-full w-full"
-                            showChips={false}
-                            showPlayOverlay={false}
-                          />
-                        {:else if item.imagePath}
-                          <img src={toApiUrl(item.imagePath)} alt="" class="h-full w-full object-cover" />
-                        {:else if Icon}
-                          <Icon class="h-3.5 w-3.5 text-text-disabled" />
-                        {/if}
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <div class="truncate text-sm text-text-primary">{item.title}</div>
-                        {#if item.subtitle}
-                          <div class="truncate text-[0.68rem] text-text-muted">{item.subtitle}</div>
-                        {/if}
-                      </div>
-                      <span class="tag-chip tag-chip-default shrink-0 text-[0.6rem]">
-                        {SEARCH_KIND_CONFIG[item.kind]?.label ?? item.kind}
-                      </span>
-                    </button>
-                  {/if}
+                  <SearchResultCard
+                    {item}
+                    index={itemIndex}
+                    variant="compact"
+                    {currentPath}
+                    onSelect={navigateTo}
+                  />
                 {/each}
               </div>
             {/each}

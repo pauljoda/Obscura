@@ -3,7 +3,6 @@
   import { onMount } from "svelte";
   import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
   import { deleteImage, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
   import ComicReader from "$lib/components/ComicReader.svelte";
@@ -11,6 +10,7 @@
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
   import ChildGalleryGrid from "$lib/components/galleries/ChildGalleryGrid.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
   import InlineRating from "$lib/components/InlineRating.svelte";
@@ -410,14 +410,13 @@
                   href={`/performers/${p.id}`}
                   class="inline-flex items-center gap-1.5 tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                 >
-                  {#if p.imagePath}
-                    <img
-                      src={toApiUrl(p.imagePath)}
-                      alt=""
-                      class="h-4 w-3 object-cover flex-shrink-0"
-                      loading="lazy"
-                    />
-                  {/if}
+                  <EntityThumbnail
+                    kind="performer"
+                    performer={p}
+                    compact
+                    showChips={false}
+                    class="h-4 w-3 flex-shrink-0"
+                  />
                   {p.name}
                 </a>
               {/each}

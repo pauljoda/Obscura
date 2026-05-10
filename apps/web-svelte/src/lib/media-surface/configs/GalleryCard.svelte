@@ -3,7 +3,7 @@
   import { Images, Layers } from "@lucide/svelte";
   import type { GalleryListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
 
   let {
@@ -38,7 +38,8 @@
       class="flex items-center gap-3 py-2 pl-11 pr-3 text-body-sm hover:bg-surface-2 transition-colors duration-fast"
     >
       <div class="w-20 shrink-0">
-        <GalleryThumbnail
+        <EntityThumbnail
+          kind="gallery"
           title={item.title}
           coverImagePath={item.coverImagePath}
           previewImagePaths={item.previewImagePaths}
@@ -91,7 +92,8 @@
       class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
     >
       <div class={onToggleSelect ? "p-1" : ""}>
-        <GalleryThumbnail
+        <EntityThumbnail
+          kind="gallery"
           title={item.title}
           coverImagePath={item.coverImagePath}
           previewImagePaths={item.previewImagePaths}

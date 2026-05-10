@@ -1,11 +1,8 @@
 <script lang="ts">
   import { Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
   import type { CollectionItemDto, CollectionEntityType } from "@obscura/contracts";
-  import VideoThumbnail from "$lib/components/thumbnails/VideoThumbnail.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import AudioTrackThumbnail from "$lib/components/thumbnails/AudioTrackThumbnail.svelte";
-  import { videoListItemToCardData } from "$lib/video-card-data";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import { collectionItemToThumbnailProps } from "$lib/components/thumbnails/thumbnail-adapters";
   import {
     getEntityHref,
     getEntityTitle,
@@ -47,74 +44,13 @@
   const entity = $derived(
     (item.entity ?? {}) as Record<string, unknown>,
   );
+  const thumbnailProps = $derived(collectionItemToThumbnailProps(item, title));
 </script>
 
 {#snippet card()}
   <div class="surface-card media-card-shell group relative h-full overflow-hidden">
     <div class="relative">
-      {#if item.entityType === "video"}
-        <VideoThumbnail
-          video={videoListItemToCardData({
-            id: item.entityId,
-            title,
-            thumbnailPath: (entity.thumbnailPath as string | null | undefined) ?? null,
-            cardThumbnailPath: (entity.cardThumbnailPath as string | null | undefined) ?? null,
-            spritePath: (entity.spritePath as string | null | undefined) ?? null,
-            trickplayVttPath: (entity.trickplayVttPath as string | null | undefined) ?? null,
-            duration: (entity.duration as number | null | undefined) ?? null,
-            durationFormatted:
-              (entity.durationFormatted as string | null | undefined) ?? null,
-            resolution: (entity.resolution as string | null | undefined) ?? null,
-            codec: (entity.codec as string | null | undefined) ?? null,
-            isNsfw: (entity.isNsfw as boolean | undefined) ?? false,
-            hasSubtitles: (entity.hasSubtitles as boolean | undefined) ?? false,
-            seasonNumber: (entity.seasonNumber as number | null | undefined) ?? null,
-            episodeNumber: (entity.episodeNumber as number | null | undefined) ?? null,
-            updatedAt: entity.updatedAt as string | undefined,
-          })}
-          size="grid"
-        />
-      {:else if item.entityType === "gallery"}
-        <GalleryThumbnail
-          title={title}
-          coverImagePath={(entity.coverImagePath as string | null | undefined) ?? null}
-          previewImagePaths={
-            (entity.previewImagePaths as string[] | null | undefined) ?? []
-          }
-          imageCount={(entity.imageCount as number | null | undefined) ?? null}
-          isNsfw={(entity.isNsfw as boolean | undefined) ?? false}
-          updatedAt={(entity.updatedAt as string | null | undefined) ?? null}
-          aspectClass="aspect-video"
-          showCount={false}
-        />
-      {:else if item.entityType === "image"}
-        <ImageThumbnail
-          title={title}
-          thumbnailPath={(entity.thumbnailPath as string | null | undefined) ?? null}
-          previewPath={(entity.previewPath as string | null | undefined) ?? null}
-          isVideo={!!(entity.previewPath as string | null | undefined)}
-          isNsfw={(entity.isNsfw as boolean | undefined) ?? false}
-          width={(entity.width as number | null | undefined) ?? null}
-          height={(entity.height as number | null | undefined) ?? null}
-          updatedAt={(entity.updatedAt as string | null | undefined) ?? null}
-          aspectClass="aspect-video"
-          showChips={false}
-        />
-      {:else if item.entityType === "audio-track"}
-        <AudioTrackThumbnail
-          track={{
-            title,
-            coverImagePath: (entity.coverImagePath as string | null | undefined) ?? null,
-            libraryCoverImagePath:
-              (entity.libraryCoverImagePath as string | null | undefined) ?? null,
-            trackNumber: (entity.trackNumber as number | null | undefined) ?? null,
-            isNsfw: (entity.isNsfw as boolean | undefined) ?? false,
-          }}
-          aspectClass="aspect-video"
-          showChips={false}
-          showPlayOverlay={false}
-        />
-      {/if}
+      <EntityThumbnail {...thumbnailProps} size="grid" />
 
       <div
         class={`absolute bottom-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 text-[0.6rem] font-mono uppercase ${colorClass} z-20`}

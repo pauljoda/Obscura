@@ -1,6 +1,6 @@
 <script lang="ts">
   import { User, Star } from "@lucide/svelte";
-  import PerformerThumbnail from "./thumbnails/PerformerThumbnail.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import { entityTerms } from "$lib/terminology";
 
   export interface PerformerEmbed {
@@ -40,7 +40,8 @@
           class="surface-card-sharp flex items-center gap-3 p-2.5 pr-4 hover:border-border-accent transition-colors"
         >
           <div class="h-12 w-9 flex-shrink-0">
-            <PerformerThumbnail
+            <EntityThumbnail
+              kind="performer"
               performer={{
                 name: p.name,
                 imagePath: p.imagePath,

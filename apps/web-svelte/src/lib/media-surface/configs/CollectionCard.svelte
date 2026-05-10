@@ -2,7 +2,7 @@
   import { Badge, Checkbox, cn } from "@obscura/ui-svelte";
   import type { CollectionListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import CollectionThumbnail from "$lib/components/thumbnails/CollectionThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
   let {
     item,
@@ -22,7 +22,7 @@
       <Checkbox checked={selected} onchange={() => onToggleSelect?.()} />
     {/if}
     <a href={`/collections/${item.id}`} class="w-16 shrink-0">
-      <CollectionThumbnail collection={item} gradientIndex={index} size="list" />
+      <EntityThumbnail kind="collection" collection={item} gradientIndex={index} size="list" />
     </a>
     <a
       href={`/collections/${item.id}`}
@@ -40,7 +40,7 @@
     href={`/collections/${item.id}`}
     class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
   >
-    <CollectionThumbnail collection={item} gradientIndex={index} />
+    <EntityThumbnail kind="collection" collection={item} gradientIndex={index} />
     <div class="p-2.5 space-y-1">
       <h4 class="truncate text-body font-medium text-text-primary">{item.name}</h4>
       <div class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">

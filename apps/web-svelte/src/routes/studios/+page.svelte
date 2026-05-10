@@ -13,7 +13,7 @@
     type ViewMode,
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
-  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { cn } from "@obscura/ui-svelte";
   import { deleteStudio, updateStudio } from "$lib/api/entities";
   import {
@@ -359,7 +359,7 @@
             onchange={() => toggleSelectedStudio(studio.id)}
           />
           <a href={`/studios/${studio.id}`} class="w-16 shrink-0">
-            <StudioThumbnail {studio} gradientIndex={i} size="list" showChips={false} />
+            <EntityThumbnail kind="studio" {studio} gradientIndex={i} size="list" showChips={false} />
           </a>
           <a
             href={`/studios/${studio.id}`}
@@ -384,7 +384,7 @@
           animate:flip={{ duration: dur.moderate, easing: ease.mechanical }}
           in:fade|global={{ duration: dur.normal, delay: Math.min(i * 12, 150), easing: ease.enter }}
         >
-          <StudioThumbnail {studio} gradientIndex={i} />
+          <EntityThumbnail kind="studio" {studio} gradientIndex={i} />
           <div class="p-2.5 space-y-1.5">
             <h4 class="truncate text-body font-medium text-text-primary">{studio.name}</h4>
             <div class="flex flex-wrap items-center gap-1">

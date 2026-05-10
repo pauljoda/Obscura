@@ -4,10 +4,9 @@
     X,
     Loader2,
     ChevronDown,
-    Image as ImageIcon,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { entityTerms } from "$lib/terminology";
   import type { PerformerRow } from "$lib/identify/scrape-types";
   import StatusDot from "./StatusDot.svelte";
@@ -65,17 +64,13 @@
     <StatusDot status={row.status} />
 
     <div class="flex-shrink-0 h-10 w-8 overflow-hidden bg-surface-3">
-      {#if row.performer.imagePath}
-        <img
-          src={toApiUrl(row.performer.imagePath)!}
-          alt=""
-          class="w-full h-full object-cover"
-        />
-      {:else}
-        <div class="w-full h-full flex items-center justify-center">
-          <ImageIcon class="h-3 w-3 text-text-disabled/40" />
-        </div>
-      {/if}
+      <EntityThumbnail
+        kind="performer"
+        performer={row.performer}
+        compact
+        showChips={false}
+        class="h-full w-full"
+      />
     </div>
 
     <div class="flex-1 min-w-0">

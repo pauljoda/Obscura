@@ -2,14 +2,13 @@
   import {
     Check,
     ChevronDown,
-    Library,
     Loader2,
     ScanSearch,
     X,
     Layers,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { AudioLibraryRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 
@@ -55,17 +54,16 @@
   >
     <StatusDot status={row.status} />
 
-    {#if row.library.coverImagePath}
-      <img
-        src={toApiUrl(row.library.coverImagePath)}
-        alt=""
-        class="w-10 h-10 object-cover flex-shrink-0"
+    <div class="h-10 w-10 flex-shrink-0 overflow-hidden">
+      <EntityThumbnail
+        kind="audio-library"
+        library={row.library}
+        size="compact"
+        aspectClass="h-full w-full"
+        showChips={false}
+        showPlayOverlay={false}
       />
-    {:else}
-      <div class="w-10 h-10 bg-surface-3 flex items-center justify-center flex-shrink-0">
-        <Library class="h-4 w-4 text-text-disabled" />
-      </div>
-    {/if}
+    </div>
 
     <div class="flex-1 min-w-0">
       <p class="text-[0.8rem] font-medium truncate">{row.library.title}</p>

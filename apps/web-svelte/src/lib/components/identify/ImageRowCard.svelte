@@ -2,14 +2,13 @@
   import {
     Check,
     ChevronDown,
-    Image as ImageIcon,
     Loader2,
     ScanSearch,
     X,
     Layers,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import type { ImageRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 
@@ -55,17 +54,19 @@
   >
     <StatusDot status={row.status} />
 
-    {#if row.image.thumbnailPath}
-      <img
-        src={toApiUrl(row.image.thumbnailPath)}
-        alt=""
-        class="w-10 h-10 object-cover flex-shrink-0"
+    <div class="h-10 w-10 flex-shrink-0 overflow-hidden">
+      <EntityThumbnail
+        kind="image"
+        title={row.image.title}
+        thumbnailPath={row.image.thumbnailPath}
+        previewPath={row.image.previewPath}
+        isNsfw={row.image.isNsfw}
+        isVideo={row.image.isVideo}
+        size="compact"
+        aspectClass="h-full w-full"
+        showChips={false}
       />
-    {:else}
-      <div class="w-10 h-10 bg-surface-3 flex items-center justify-center flex-shrink-0">
-        <ImageIcon class="h-4 w-4 text-text-disabled" />
-      </div>
-    {/if}
+    </div>
 
     <div class="flex-1 min-w-0">
       <p class="text-[0.8rem] font-medium truncate">{row.image.title}</p>

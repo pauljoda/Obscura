@@ -27,9 +27,10 @@
     ScrapeResult,
     NormalizedScrapeResult,
   } from "$lib/api/types";
-  import { toApiUrl } from "$lib/api/core";
   import { entityTerms } from "$lib/terminology";
   import ProviderSelector from "$lib/components/ProviderSelector.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
 
   interface ScrapeState {
     scraping: boolean;
@@ -287,11 +288,12 @@
                   selectedVideoId === video.id && "border-border-accent bg-accent-950/30",
                 )}
               >
-                {#if video.thumbnailPath}
-                  <img src={toApiUrl(video.thumbnailPath)} alt="" class="w-16 h-10 object-cover flex-shrink-0" />
-                {:else}
-                  <div class="w-16 h-10 bg-surface-3 flex-shrink-0"></div>
-                {/if}
+                <EntityThumbnail
+                  kind="video"
+                  video={videoListItemToCardData(video)}
+                  size="compact"
+                  class="w-16 h-10 flex-shrink-0"
+                />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm truncate">{video.title}</p>
                   <p class="text-text-disabled text-xs mt-0.5">
@@ -312,11 +314,12 @@
         {#if selectedVideo}
           <div class="surface-panel p-4">
             <div class="flex items-start gap-4">
-              {#if selectedVideo.thumbnailPath}
-                <img src={toApiUrl(selectedVideo.thumbnailPath)} alt="" class="w-40 h-24 object-cover flex-shrink-0" />
-              {:else}
-                <div class="w-40 h-24 bg-surface-3 flex-shrink-0"></div>
-              {/if}
+              <EntityThumbnail
+                kind="video"
+                video={videoListItemToCardData(selectedVideo)}
+                size="list"
+                class="w-40 h-24 flex-shrink-0"
+              />
               <div class="flex-1 min-w-0">
                 <h3 class="text-sm font-semibold">{selectedVideo.title}</h3>
                 <p class="text-mono-sm text-text-muted mt-1 truncate">{selectedVideo.filePath}</p>

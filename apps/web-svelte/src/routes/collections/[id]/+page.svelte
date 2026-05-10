@@ -29,7 +29,7 @@
   import { deleteCollection, fetchCollectionItems, refreshCollection, removeCollectionItems } from "$lib/api/media";
   import { toApiUrl } from "$lib/api/core";
   import CollectionItemCard from "$lib/components/collections/CollectionItemCard.svelte";
-  import CollectionThumbnail from "$lib/components/thumbnails/CollectionThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
 
   type ViewMode = "mixed" | "by-type";
@@ -182,7 +182,7 @@
 
     <div class="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:gap-7 sm:p-7">
       <div class="relative w-full max-w-52 flex-shrink-0 border border-border-default shadow-[0_20px_60px_rgba(0,0,0,0.55)] sm:w-48 md:w-56">
-        <CollectionThumbnail collection={c} size="hero" loading="eager" />
+        <EntityThumbnail kind="collection" collection={c} size="hero" loading="eager" />
       </div>
 
       <div class="min-w-0 flex-1 space-y-4">

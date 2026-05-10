@@ -3,7 +3,7 @@
   import { receiveThumb, sendThumb } from "@obscura/ui-svelte";
   import type { ImageListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
 
   interface ImageCardItem extends ImageListItemDto {
     /** Set when this card is the source of an open lightbox so the
@@ -40,7 +40,8 @@
       onclick={() => onActivate?.()}
       class="w-14 shrink-0 border-0 bg-transparent p-0"
     >
-      <ImageThumbnail
+      <EntityThumbnail
+        kind="image"
         title={item.title}
         thumbnailPath={item.thumbnailPath}
         previewPath={item.previewPath}
@@ -72,7 +73,8 @@
     class="block w-full border-0 p-0 hover:ring-1 hover:ring-border-accent transition-all duration-fast"
     style:aspect-ratio={feedHasNaturalSize ? aspectRatio() : undefined}
   >
-    <ImageThumbnail
+    <EntityThumbnail
+      kind="image"
       title={item.title}
       thumbnailPath={item.thumbnailPath}
       previewPath={item.previewPath}
@@ -96,7 +98,8 @@
         in:receiveThumb={{ key: item.id }}
         out:sendThumb={{ key: item.id }}
       >
-        <ImageThumbnail
+        <EntityThumbnail
+          kind="image"
           title={item.title}
           thumbnailPath={item.thumbnailPath}
           previewPath={item.previewPath}

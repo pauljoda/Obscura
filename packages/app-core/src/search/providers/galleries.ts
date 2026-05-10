@@ -14,6 +14,10 @@ import {
   ne,
 } from "drizzle-orm";
 import { galleryVisibleSql, imageVisibleSql } from "../../library-root-visibility";
+import {
+  isComicGalleryRow,
+  isComicSeriesGalleryRow,
+} from "../../gallery-comics";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -22,6 +26,15 @@ import type {
 } from "../types";
 
 const { galleries, galleryTags, tags, images } = schema;
+
+function largestImageAspectRatio(
+  items: Array<{ width: number | null; height: number | null }>,
+): number | null {
+  const candidate = items
+    .filter((item) => item.width != null && item.height != null && item.height > 0)
+    .sort((a, b) => (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0))[0];
+  return candidate?.width && candidate.height ? candidate.width / candidate.height : null;
+}
 
 export const createGalleriesSearchProvider: SearchProviderFactory = (
   db: AppDb,
@@ -80,6 +93,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
           imageCount: galleries.imageCount,
           rating: galleries.rating,
           galleryType: galleries.galleryType,
+          zipFilePath: galleries.zipFilePath,
           isNsfw: galleries.isNsfw,
           score: scoreExpr,
         })
@@ -98,6 +112,8 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
           .select({
             galleryId: images.galleryId,
             imageId: images.id,
+            width: images.width,
+            height: images.height,
           })
           .from(images)
           .where(and(inArray(images.galleryId, galleryIds), imageVisibleSql(images.filePath)))
@@ -105,12 +121,38 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
       : [];
 
     const previewMap = new Map<string, string[]>();
+    const previewAspectMap = new Map<string, Array<{ width: number | null; height: number | null }>>();
     for (const preview of previewRows) {
       if (!preview.galleryId) continue;
       const current = previewMap.get(preview.galleryId) ?? [];
       if (current.length >= 4) continue;
       current.push(`/assets/images/${preview.imageId}/thumb`);
       previewMap.set(preview.galleryId, current);
+
+      const aspectCandidates = previewAspectMap.get(preview.galleryId) ?? [];
+      aspectCandidates.push({ width: preview.width, height: preview.height });
+      previewAspectMap.set(preview.galleryId, aspectCandidates);
+    }
+
+    const childRows = galleryIds.length
+      ? await db
+          .select({
+            id: galleries.id,
+            parentId: galleries.parentId,
+            galleryType: galleries.galleryType,
+            zipFilePath: galleries.zipFilePath,
+            imageCount: galleries.imageCount,
+          })
+          .from(galleries)
+          .where(inArray(galleries.parentId, galleryIds))
+      : [];
+    const childrenByParent = new Map<string, typeof childRows>();
+    for (const child of childRows) {
+      if (!child.parentId) continue;
+      childrenByParent.set(child.parentId, [
+        ...(childrenByParent.get(child.parentId) ?? []),
+        child,
+      ]);
     }
 
     return {
@@ -128,7 +170,11 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
           imageCount: r.imageCount,
           galleryType: r.galleryType,
           isNsfw: r.isNsfw,
-          previewImagePaths: JSON.stringify(previewMap.get(r.id) ?? []),
+          isComic:
+            isComicGalleryRow(r) ||
+            isComicSeriesGalleryRow(r, childrenByParent.get(r.id) ?? []),
+          coverAspectRatio: largestImageAspectRatio(previewAspectMap.get(r.id) ?? []),
+          previewImagePaths: previewMap.get(r.id) ?? [],
         },
       })),
     };

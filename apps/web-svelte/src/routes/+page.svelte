@@ -12,16 +12,10 @@
   } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import { toApiUrl } from "$lib/api/core";
-  import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
-  import NsfwBlur from "$lib/components/nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "$lib/components/nsfw/NsfwShowModeChip.svelte";
   import VideoCard from "$lib/components/VideoCard.svelte";
   import SeriesCard from "$lib/components/SeriesCard.svelte";
-  import GalleryThumbnail from "$lib/components/thumbnails/GalleryThumbnail.svelte";
-  import ImageThumbnail from "$lib/components/thumbnails/ImageThumbnail.svelte";
-  import PerformerThumbnail from "$lib/components/thumbnails/PerformerThumbnail.svelte";
-  import StudioThumbnail from "$lib/components/thumbnails/StudioThumbnail.svelte";
-  import AudioLibraryThumbnail from "$lib/components/thumbnails/AudioLibraryThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { videoListItemToCardData } from "$lib/video-card-data";
   import { useNsfw } from "$lib/nsfw/store.svelte";
 
@@ -241,12 +235,16 @@
                   href={`/galleries/${g.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <GalleryThumbnail
+                  <EntityThumbnail
+                    kind="gallery"
                     title={g.title}
                     coverImagePath={g.coverImagePath}
                     previewImagePaths={g.previewImagePaths}
                     imageCount={g.imageCount}
                     isNsfw={g.isNsfw}
+                    isComic={g.isComic}
+                    aspectRatio={g.isComic ? null : g.coverAspectRatio}
+                    fit={g.isComic ? "contain" : "cover"}
                     size="grid"
                   />
                   <div class="p-2.5">
@@ -275,7 +273,8 @@
                   href={`/images/${img.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <ImageThumbnail
+                  <EntityThumbnail
+                    kind="image"
                     title={img.title}
                     thumbnailPath={img.thumbnailPath}
                     previewPath={img.previewPath}
@@ -308,7 +307,7 @@
                   href={`/audio/${a.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block group/card"
                 >
-                  <AudioLibraryThumbnail library={a} gradientIndex={i} />
+                  <EntityThumbnail kind="audio-library" library={a} gradientIndex={i} />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{a.title}</h3>
                     <p class="text-xs text-text-muted mt-0.5">
@@ -351,9 +350,10 @@
                   href={`/performers/${p.id}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <PerformerThumbnail
+                  <EntityThumbnail
+                    kind="performer"
                     performer={p}
-                    gradientFallback={VIDEO_CARD_GRADIENTS[0]}
+                    gradientIndex={0}
                   />
                   <div class="p-2">
                     <h3 class="truncate text-[0.8rem] font-medium">{p.name}</h3>
@@ -383,7 +383,7 @@
                   href={`/studios/${encodeURIComponent(s.name)}`}
                   class="surface-card-sharp overflow-hidden hover:border-border-accent transition-colors duration-fast block"
                 >
-                  <StudioThumbnail studio={s} />
+                  <EntityThumbnail kind="studio" studio={s} />
                   <div class="p-2.5">
                     <h3 class="truncate text-sm font-medium">{s.name}</h3>
                   </div>

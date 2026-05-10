@@ -8,7 +8,8 @@
     Layers,
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
-  import { toApiUrl } from "$lib/api/core";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
   import type { VideoRow } from "$lib/identify/scrape-types";
   import StatusDot from "./StatusDot.svelte";
 
@@ -47,15 +48,12 @@
   >
     <StatusDot status={row.status} />
 
-    {#if row.video.thumbnailPath}
-      <img
-        src={toApiUrl(row.video.thumbnailPath)}
-        alt=""
-        class="w-16 h-10 object-cover flex-shrink-0"
-      />
-    {:else}
-      <div class="w-16 h-10 bg-surface-3 flex-shrink-0"></div>
-    {/if}
+    <EntityThumbnail
+      kind="video"
+      video={videoListItemToCardData(row.video)}
+      size="compact"
+      class="w-16 h-10 flex-shrink-0"
+    />
 
     <div class="flex-1 min-w-0">
       <p class="text-[0.8rem] font-medium truncate">{row.video.title}</p>

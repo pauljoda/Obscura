@@ -10,7 +10,7 @@
   } from "$lib/components/FilterBar.svelte";
   import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import TagThumbnail from "$lib/components/thumbnails/TagThumbnail.svelte";
+  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import { deleteTag, updateTag } from "$lib/api/entities";
@@ -375,7 +375,7 @@
             onchange={() => toggleSelectedTag(tag.id)}
           />
           <a href={`/tags/${encodeURIComponent(tag.name)}`} class="w-16 shrink-0">
-            <TagThumbnail {tag} size="list" showLabel={false} />
+            <EntityThumbnail kind="tag" {tag} size="list" showLabel={false} />
           </a>
           <a
             href={`/tags/${encodeURIComponent(tag.name)}`}
@@ -405,7 +405,7 @@
                   href={`/tags/${encodeURIComponent(tag.name)}`}
                   title={`${tag.name} — ${(tag.videoCount ?? 0) + (tag.imageCount ?? 0)} uses`}
                 >
-                  <TagThumbnail {tag} />
+                  <EntityThumbnail kind="tag" {tag} />
                 </a>
               {/each}
             </div>
@@ -422,7 +422,7 @@
                   href={`/tags/${encodeURIComponent(tag.name)}`}
                   title={tag.name}
                 >
-                  <TagThumbnail {tag} muted />
+                  <EntityThumbnail kind="tag" {tag} muted />
                 </a>
               {/each}
             </div>

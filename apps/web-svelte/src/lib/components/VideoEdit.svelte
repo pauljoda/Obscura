@@ -32,9 +32,10 @@
   } from "$lib/api/videos";
   import { fetchTags, fetchPerformers, fetchStudios } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
-  import { toApiUrl } from "$lib/api/core";
   import { entityTerms } from "$lib/terminology";
   import NsfwTagLabel from "./nsfw/NsfwTagLabel.svelte";
+  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import { videoListItemToCardData } from "$lib/video-card-data";
   import {
     DateField,
     EditFormShell,
@@ -387,9 +388,13 @@
                     href={`/performers/${p.id}`}
                     class="inline-flex items-center gap-1.5 tag-chip tag-chip-default hover:tag-chip-accent transition-colors cursor-pointer"
                   >
-                    {#if p.imagePath}
-                      <img src={toApiUrl(p.imagePath)} alt="" class="h-4 w-3 object-cover flex-shrink-0" loading="lazy" />
-                    {/if}
+                    <EntityThumbnail
+                      kind="performer"
+                      performer={p}
+                      compact
+                      showChips={false}
+                      class="h-4 w-3 flex-shrink-0"
+                    />
                     {p.name}
                   </a>
                 {/each}
@@ -446,13 +451,12 @@
             class="relative group aspect-video surface-well overflow-hidden cursor-pointer"
             onclick={enterEditMode}
           >
-            {#if v.thumbnailPath}
-              <img src={toApiUrl(v.thumbnailPath)} alt={v.title} class="w-full h-full object-cover" />
-            {:else}
-              <div class="w-full h-full flex items-center justify-center gradient-thumb-3">
-                <ImageIcon class="h-8 w-8 text-text-disabled" />
-              </div>
-            {/if}
+            <EntityThumbnail
+              kind="video"
+              video={videoListItemToCardData(v)}
+              size="hero"
+              class="h-full w-full"
+            />
             <div class="thumb-edit-overlay">
               <Pencil class="h-5 w-5 text-text-primary" />
               <span class="text-xs text-text-muted">Edit to change</span>
@@ -593,13 +597,12 @@
             Thumbnail
           </h4>
           <div class="relative aspect-video surface-well overflow-hidden">
-            {#if v.thumbnailPath}
-              <img src={toApiUrl(v.thumbnailPath)} alt={v.title} class="w-full h-full object-cover" />
-            {:else}
-              <div class="w-full h-full flex items-center justify-center gradient-thumb-3">
-                <ImageIcon class="h-8 w-8 text-text-disabled" />
-              </div>
-            {/if}
+            <EntityThumbnail
+              kind="video"
+              video={videoListItemToCardData(v)}
+              size="hero"
+              class="h-full w-full"
+            />
           </div>
           <input
             bind:this={thumbnailInput}
