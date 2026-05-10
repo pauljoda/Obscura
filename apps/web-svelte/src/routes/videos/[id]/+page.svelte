@@ -417,6 +417,7 @@
           bind:handle={playerHandle}
           src={toApiUrl(video.streamUrl)}
           directSrc={toApiUrl(video.directStreamUrl)}
+          codec={video.codec}
           poster={toApiUrl(video.thumbnailPath)}
           markers={video.markers.map((m) => ({ id: m.id, time: m.seconds, title: m.title }))}
           duration={video.duration ?? undefined}

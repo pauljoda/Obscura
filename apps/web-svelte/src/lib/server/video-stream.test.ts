@@ -140,6 +140,8 @@ describe("serveVideoSource", () => {
         "copy",
         "-c:a",
         "aac",
+        "-tag:v",
+        "hvc1",
         "-movflags",
         "frag_keyframe+empty_moov+default_base_moof",
       ]),

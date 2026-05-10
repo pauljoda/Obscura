@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  adaptiveAutoLevelSelection,
+  canUseDirectPlayback,
   chooseInitialPlaybackMode,
   computeVideoLoadState,
   requestedModeFromQualityMode,
@@ -34,6 +36,40 @@ describe("video-player-load", () => {
     expect(state.effectiveMode).toBe("direct");
     expect(state.loadKey).toBe(
       "/api/video-stream/video-1/hls2/master.m3u8|/api/video-stream/video-1/source|direct",
+    );
+  });
+
+  it("requires browser HEVC support before direct-playing HEVC sources", () => {
+    const unsupported = canUseDirectPlayback({
+      directSrc: "/api/video-stream/video-1/source",
+      codec: "HEVC",
+      canPlayType: () => "",
+    });
+
+    const supported = canUseDirectPlayback({
+      directSrc: "/api/video-stream/video-1/source",
+      codec: "h265",
+      canPlayType: (mime) => (mime.includes("hvc1") ? "probably" : ""),
+    });
+
+    expect(unsupported).toBe(false);
+    expect(supported).toBe(true);
+  });
+
+  it("starts HEVC sources in adaptive mode when direct playback is unsupported", () => {
+    const state = computeVideoLoadState({
+      src: "/api/video-stream/video-1/hls2/master.m3u8",
+      directSrc: "/api/video-stream/video-1/source",
+      defaultPlaybackMode: "direct",
+      directPlayable: false,
+      requestedMode: "direct",
+      prevSrcKey: "",
+    });
+
+    expect(state.isNewSource).toBe(true);
+    expect(state.effectiveMode).toBe("hls");
+    expect(state.loadKey).toBe(
+      "/api/video-stream/video-1/hls2/master.m3u8|/api/video-stream/video-1/source|hls",
     );
   });
 
@@ -78,5 +114,13 @@ describe("video-player-load", () => {
 
     expect(seeded.loadKey).toBe(auto.loadKey);
     expect(seeded.effectiveMode).toBe("hls");
+  });
+
+  it("leaves automatic adaptive startup to hls.js instead of forcing the top level", () => {
+    expect(adaptiveAutoLevelSelection()).toEqual({
+      currentLevel: -1,
+      startLevel: -1,
+      nextAutoLevel: -1,
+    });
   });
 });

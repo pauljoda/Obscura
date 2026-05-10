@@ -181,8 +181,12 @@ async function ensureCacheDir(
 
 /** Promise cache so concurrent requests for the same segment share one
  *  ffmpeg invocation instead of racing to write the same file. Key:
- *  `${videoId}/${segIndex}`. */
+ *  `${videoId}/${rendition.name}/${segIndex}`. */
 const inflight = new Map<string, Promise<string>>();
+
+function inflightKey(videoId: string, renditionName: string, segIndex: number): string {
+  return `${videoId}/${renditionName}/${segIndex}`;
+}
 
 async function encodeSegment(
   videoId: string,
@@ -312,6 +316,37 @@ async function encodeSegment(
   }
 }
 
+function prefetchSegment(
+  videoId: string,
+  sourcePath: string,
+  duration: number,
+  rendition: HlsRendition,
+  segIndex: number,
+): void {
+  const total = segmentCount(duration);
+  if (segIndex < 0 || segIndex >= total) return;
+
+  const outputPath = getSegmentPath(videoId, rendition.name, segIndex);
+  if (existsSync(outputPath)) return;
+
+  const key = inflightKey(videoId, rendition.name, segIndex);
+  if (inflight.has(key)) return;
+
+  log(videoId, `prefetch ${rendition.name} segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
+  const promise = encodeSegment(videoId, sourcePath, rendition, segIndex)
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      log(videoId, `prefetch ${rendition.name} segment ${segIndex} failed: ${message}`);
+      throw err;
+    })
+    .finally(() => {
+      inflight.delete(key);
+    });
+  inflight.set(key, promise);
+
+  void promise.catch(() => {});
+}
+
 /** Return the on-disk path for the given segment, transcoding it first if
  *  it isn't already cached. Concurrent requests for the same segment share
  *  one ffmpeg invocation via the `inflight` map. */
@@ -330,18 +365,27 @@ export async function getSegment(
   await ensureCacheDir(videoId, sourcePath, duration, [rendition]);
 
   const outputPath = getSegmentPath(videoId, rendition.name, segIndex);
-  if (existsSync(outputPath)) return outputPath;
+  if (existsSync(outputPath)) {
+    prefetchSegment(videoId, sourcePath, duration, rendition, segIndex + 1);
+    return outputPath;
+  }
 
-  const key = `${videoId}/${rendition.name}/${segIndex}`;
+  const key = inflightKey(videoId, rendition.name, segIndex);
   const existing = inflight.get(key);
-  if (existing) return existing;
+  if (existing) {
+    const segmentPath = await existing;
+    prefetchSegment(videoId, sourcePath, duration, rendition, segIndex + 1);
+    return segmentPath;
+  }
 
   log(videoId, `encode ${rendition.name} segment ${segIndex} (t=${segIndex * SEGMENT_DURATION}s)`);
   const promise = encodeSegment(videoId, sourcePath, rendition, segIndex).finally(() => {
     inflight.delete(key);
   });
   inflight.set(key, promise);
-  return promise;
+  const segmentPath = await promise;
+  prefetchSegment(videoId, sourcePath, duration, rendition, segIndex + 1);
+  return segmentPath;
 }
 
 /** Test hook: clear the in-memory inflight map. */

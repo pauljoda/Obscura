@@ -55,6 +55,8 @@
   import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
   import {
+    adaptiveAutoLevelSelection,
+    canUseDirectPlayback,
     chooseInitialPlaybackMode,
     computeVideoLoadState,
     requestedModeFromQualityMode,
@@ -78,6 +80,7 @@
   interface Props {
     src?: string;
     directSrc?: string;
+    codec?: string | null;
     poster?: string;
     markers?: VideoPlayerMarker[];
     duration?: number;
@@ -106,6 +109,7 @@
   let {
     src,
     directSrc,
+    codec,
     poster,
     markers = [],
     duration: propDuration,
@@ -216,6 +220,13 @@
     if (level.name) return level.name.toUpperCase();
     if (level.height) return `${level.height}p`;
     return `Level ${index + 1}`;
+  }
+
+  function applyAdaptiveAutoLevelSelection(hls: Hls) {
+    const selection = adaptiveAutoLevelSelection();
+    hls.currentLevel = selection.currentLevel;
+    hls.startLevel = selection.startLevel;
+    hls.nextAutoLevel = selection.nextAutoLevel;
   }
 
   function describeMediaError(error: MediaError | null): string {
@@ -486,8 +497,14 @@
       seededRenditions = [];
       return;
     }
+    if (!videoEl) return;
     const statusUrl = hlsStatusUrlForSrc(src);
     if (!statusUrl) return;
+    const directPlayable = canUseDirectPlayback({
+      directSrc,
+      codec,
+      canPlayType: videoEl.canPlayType.bind(videoEl),
+    });
     const controller = new AbortController();
     void (async () => {
       const status = await fetchHlsStatus(statusUrl, controller.signal);
@@ -495,7 +512,7 @@
       seededRenditions = status.renditions;
       const hasRealLevels = qualityOptions.some((opt) => typeof opt.value === "number");
       if (!hasRealLevels) {
-        qualityOptions = renditionsToQualityOptions(status.renditions, Boolean(directSrc));
+        qualityOptions = renditionsToQualityOptions(status.renditions, Boolean(directSrc && directPlayable));
       }
     })();
     return () => controller.abort();
@@ -539,6 +556,7 @@
     if (!videoEl) return;
     const currentSrc = src;
     const currentDirectSrc = directSrc;
+    const currentCodec = codec;
     const localVideoEl = videoEl;
     const currentPropDuration = propDuration;
     const currentDefaultPlaybackMode = defaultPlaybackMode;
@@ -548,11 +566,17 @@
     const videoEl = localVideoEl!;
     let cancelled = false;
     const hlsLoadAbort = new AbortController();
+    const directPlayable = canUseDirectPlayback({
+      directSrc: currentDirectSrc,
+      codec: currentCodec,
+      canPlayType: videoEl.canPlayType.bind(videoEl),
+    });
 
     const { srcKey, isNewSource, effectiveMode, loadKey } = computeVideoLoadState({
       src: currentSrc,
       directSrc: currentDirectSrc,
       defaultPlaybackMode: currentDefaultPlaybackMode,
+      directPlayable,
       requestedMode,
       prevSrcKey,
     });
@@ -577,11 +601,12 @@
       deferredSeekTarget = null;
       const seeded = seededRenditions;
       if (seeded.length > 0) {
-        qualityOptions = renditionsToQualityOptions(seeded, Boolean(currentDirectSrc));
+        qualityOptions = renditionsToQualityOptions(seeded, Boolean(currentDirectSrc && directPlayable));
       } else {
         qualityOptions = chooseInitialPlaybackMode({
           src: currentSrc,
           directSrc: currentDirectSrc,
+          directPlayable,
           defaultPlaybackMode: currentDefaultPlaybackMode,
         }) === "direct"
           ? [
@@ -661,7 +686,7 @@
             if (cancelled || hlsLoadAbort.signal.aborted) return;
             hlsInitializing = false;
             usingAdaptiveStream = false;
-            if (currentDirectSrc) {
+            if (currentDirectSrc && directPlayable) {
               qualityMode = "direct";
               playerNotice = `Adaptive stream unavailable — switched to direct. (${
                 err instanceof Error ? err.message : "unknown error"
@@ -682,6 +707,7 @@
           const hls = new Hls({
             startLevel: -1,
             capLevelToPlayerSize: true,
+            capLevelOnFPSDrop: true,
             maxBufferLength: 30,
             backBufferLength: 90,
             manifestLoadPolicy: {
@@ -705,6 +731,8 @@
           hlsRef = hls;
           hls.attachMedia(videoEl!);
           usingAdaptiveStream = true;
+          let mediaErrorRecoveries = 0;
+          let networkErrorRecoveries = 0;
 
           hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(currentSrc));
 
@@ -714,12 +742,11 @@
               .map((level, index) => ({ value: index, label: getLevelLabel(level, index) }))
               .reverse();
             const options: QualityOption[] = [
-              ...(currentDirectSrc ? [{ value: "direct" as const, label: "Direct" }] : []),
+              ...(currentDirectSrc && directPlayable ? [{ value: "direct" as const, label: "Direct" }] : []),
               { value: "auto" as const, label: "Auto" },
               ...hlsLevels,
             ];
             qualityOptions = options;
-            const highestLevel = Math.max(hls.levels.length - 1, 0);
 
             const seedName = pendingSeedName;
             pendingSeedName = null;
@@ -734,10 +761,9 @@
                 qualityMode = matchIdx;
                 activeQualityLabel = getLevelLabel(hls.levels[matchIdx] ?? {}, matchIdx);
               } else {
-                hls.currentLevel = -1;
-                hls.nextAutoLevel = highestLevel;
+                applyAdaptiveAutoLevelSelection(hls);
                 qualityMode = "auto";
-                activeQualityLabel = getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel);
+                activeQualityLabel = null;
               }
             } else if (typeof qualityModeRef === "number") {
               const target = qualityModeRef as number;
@@ -745,10 +771,8 @@
               hls.nextLevel = target;
               activeQualityLabel = getLevelLabel(hls.levels[target] ?? {}, target);
             } else {
-              hls.currentLevel = -1;
-              hls.startLevel = highestLevel;
-              hls.nextAutoLevel = highestLevel;
-              activeQualityLabel = getLevelLabel(hls.levels[highestLevel] ?? {}, highestLevel);
+              applyAdaptiveAutoLevelSelection(hls);
+              activeQualityLabel = null;
             }
 
             bandwidthEstimate = Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null;
@@ -771,15 +795,27 @@
             bandwidthEstimate = Number.isFinite(hls.bandwidthEstimate) ? hls.bandwidthEstimate : null;
           });
 
-          hls.on(Hls.Events.ERROR, (_: unknown, data: { fatal?: boolean }) => {
+          hls.on(Hls.Events.ERROR, (_: unknown, data: { fatal?: boolean; type?: string }) => {
             if (!data.fatal) return;
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaErrorRecoveries < 1) {
+              mediaErrorRecoveries += 1;
+              hls.recoverMediaError();
+              playerNotice = "Adaptive playback recovered after a media decode error.";
+              return;
+            }
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR && networkErrorRecoveries < 1) {
+              networkErrorRecoveries += 1;
+              hls.startLoad();
+              playerNotice = "Adaptive playback recovered after a segment loading error.";
+              return;
+            }
             hls.destroy();
             hlsRef = null;
             usingAdaptiveStream = false;
             hlsInitializing = false;
             pendingAutoPlay = false;
             pendingSeekTime = null;
-            if (currentDirectSrc) {
+            if (currentDirectSrc && directPlayable) {
               qualityMode = "direct";
               playerNotice = "Adaptive stream failed — switched to direct.";
               videoEl!.src = currentDirectSrc;
@@ -855,10 +891,8 @@
     const hls = hlsRef;
     if (!hls) return;
     if (qualityMode === "auto") {
-      const highestLevel = Math.max(hls.levels.length - 1, 0);
-      hls.currentLevel = -1;
-      hls.startLevel = highestLevel;
-      hls.nextAutoLevel = highestLevel;
+      applyAdaptiveAutoLevelSelection(hls);
+      activeQualityLabel = null;
       return;
     }
     if (typeof qualityMode === "number") {

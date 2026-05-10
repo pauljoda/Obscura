@@ -261,6 +261,17 @@ function getDirectPrepareMode(codecs: {
     : "transcode";
 }
 
+function isHevcCodec(codec: string | null): boolean {
+  const normalized = codec?.trim().toLowerCase();
+  return normalized === "hevc" || normalized === "h265" || normalized === "h.265";
+}
+
+function appendHevcMp4TagIfNeeded(args: string[], codecs: { video: string | null }) {
+  if (isHevcCodec(codecs.video)) {
+    args.push("-tag:v", "hvc1");
+  }
+}
+
 async function isCacheFresh(id: string, sourcePath: string): Promise<boolean> {
   const metaPath = getRemuxMetadataPath(id);
   const cachePath = getRemuxCachePath(id);
@@ -407,6 +418,10 @@ async function buildRemuxCache(id: string, sourcePath: string): Promise<string> 
     );
   }
 
+  if (mode !== "transcode") {
+    appendHevcMp4TagIfNeeded(ffmpegArgs, codecs);
+  }
+
   ffmpegArgs.push(
     "-movflags",
     "+faststart",
@@ -427,7 +442,8 @@ async function buildRemuxCache(id: string, sourcePath: string): Promise<string> 
 }
 
 async function streamPreparedVideoSource(sourcePath: string): Promise<Response> {
-  const mode = getDirectPrepareMode(await probeCodecs(sourcePath));
+  const codecs = await probeCodecs(sourcePath);
+  const mode = getDirectPrepareMode(codecs);
   const ffmpegArgs = [
     "-hide_banner",
     "-loglevel",
@@ -472,6 +488,10 @@ async function streamPreparedVideoSource(sourcePath: string): Promise<Response> 
       "-b:a",
       "160k",
     );
+  }
+
+  if (mode !== "transcode") {
+    appendHevcMp4TagIfNeeded(ffmpegArgs, codecs);
   }
 
   ffmpegArgs.push(
