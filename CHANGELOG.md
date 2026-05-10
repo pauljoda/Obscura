@@ -62,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now always exposes the audio-track selector, including single-track videos where it shows the default audio track.
 - Mobile video playback now groups the quality selector with fullscreen so the audio selector has room on the left side of the control row.
 - Mobile video playback now keeps the audio selector sized to its label instead of stretching across the control row.
+- Desktop video playback controls now stay grouped together after the mobile audio-selector layout changes.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

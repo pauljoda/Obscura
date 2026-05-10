@@ -1231,7 +1231,7 @@
           </span>
         </div>
 
-        <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-2 sm:contents">
+        <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
           <div class="flex min-w-0 shrink items-center gap-2 sm:contents">
           {#if subtitleTracks.length > 0}
             <div class="relative">
