@@ -46,8 +46,10 @@
   let frames = $state<TrickplayFrame[] | null>(null);
   let error = $state(false);
   let dragging = $state(false);
+  let previewTime = $state<number | null>(null);
   let dragStartX = 0;
   let dragStartTime = 0;
+  let dragTargetTime = 0;
   let rafId = 0;
   let wheelIdleTimer: number | null = null;
 
@@ -71,11 +73,17 @@
     }
   }
 
-  function notifyWheelScrubActivity() {
+  function scheduleWheelScrubCommit(time: number) {
     onStripInteractionChange?.(true);
     clearWheelIdleTimer();
+    previewTime = time;
     wheelIdleTimer = window.setTimeout(() => {
       wheelIdleTimer = null;
+      const commitTime = previewTime;
+      previewTime = null;
+      if (commitTime !== null) {
+        onSeek(commitTime);
+      }
       onStripInteractionChange?.(false);
     }, 320);
   }
@@ -103,7 +111,7 @@
         rafId = requestAnimationFrame(tick);
         return;
       }
-      applyPosition(currentTime ?? videoEl?.currentTime ?? 0);
+      applyPosition(previewTime ?? currentTime ?? videoEl?.currentTime ?? 0);
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -125,11 +133,10 @@
       e.stopPropagation();
       const pixelsPerSecond = trackWidth / duration;
       const timeDelta = raw / pixelsPerSecond;
-      const current = currentTime ?? videoEl?.currentTime ?? 0;
+      const current = previewTime ?? currentTime ?? videoEl?.currentTime ?? 0;
       const newTime = Math.max(0, Math.min(duration, current + timeDelta));
       applyPosition(newTime);
-      onSeek(newTime);
-      notifyWheelScrubActivity();
+      scheduleWheelScrubCommit(newTime);
     };
 
     const syncListener = () => {
@@ -153,26 +160,33 @@
   });
 
   function handlePointerDown(e: PointerEvent) {
-    if (!frames) return;
+    if (!frames || duration <= 0 || trackWidth <= 0) return;
     clearWheelIdleTimer();
     onStripInteractionChange?.(true);
     dragging = true;
     dragStartX = e.clientX;
     dragStartTime = currentTime ?? videoEl?.currentTime ?? 0;
+    dragTargetTime = dragStartTime;
+    previewTime = dragStartTime;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function handlePointerMove(e: PointerEvent) {
-    if (!dragging || !frames) return;
+    if (!dragging || !frames || duration <= 0 || trackWidth <= 0) return;
     const dx = e.clientX - dragStartX;
     const pixelsPerSecond = trackWidth / duration;
     const timeDelta = -dx / pixelsPerSecond;
     const newTime = Math.max(0, Math.min(duration, dragStartTime + timeDelta));
+    dragTargetTime = newTime;
+    previewTime = newTime;
     applyPosition(newTime);
-    onSeek(newTime);
   }
 
-  function endPointer() {
+  function endPointer(commit = true) {
+    if (dragging && commit) {
+      onSeek(dragTargetTime);
+    }
+    previewTime = null;
     dragging = false;
     clearWheelIdleTimer();
     onStripInteractionChange?.(false);
@@ -205,8 +219,8 @@
       style:height="{STRIP_HEIGHT}px"
       onpointerdown={handlePointerDown}
       onpointermove={handlePointerMove}
-      onpointerup={endPointer}
-      onpointercancel={endPointer}
+      onpointerup={() => endPointer(true)}
+      onpointercancel={() => endPointer(false)}
     >
       <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-black/60 to-transparent"></div>
       <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-black/60 to-transparent"></div>

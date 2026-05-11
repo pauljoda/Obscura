@@ -130,7 +130,8 @@ export function buildTrickplayFrameFfmpegArgs(input: {
   // fail on a large fraction of real-world sources (HDR, phone video,
   // rendered animation). Standardising on JPEG-range here is correct.
   const vf = [
-    `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease`,
+    `scale=${input.frameWidth}:${input.frameHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2`,
+    `setsar=1`,
     `pad=${input.frameWidth}:${input.frameHeight}:(ow-iw)/2:(oh-ih)/2`,
     `format=yuvj420p`,
   ].join(",");

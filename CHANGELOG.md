@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now has a Vidstack-powered proof-of-concept player that keeps Obscura's filmstrip scrubber while adding a built-in audio-track selector for multi-audio streams.
 - Video playback now keeps Vidstack's stable media engine while restoring Obscura's full Dark Room controls, including brass square transport buttons, custom captions, filmstrip scrubbing, audio tracks, quality, speed, and fullscreen menus.
 - Video playback controls now fit more consistently across desktop and mobile, with one active playback-mode status chip and subtitle styling at the top of the captions menu.
+- Adaptive video playback now waits for the HLS package to report ready before attaching the stream, and filmstrip drag or wheel scrubbing commits the final target instead of snapping back to the loaded range.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
@@ -63,6 +64,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Mobile video playback now groups the quality selector with fullscreen so the audio selector has room on the left side of the control row.
 - Mobile video playback now keeps the audio selector sized to its label instead of stretching across the control row.
 - Desktop video playback controls now stay grouped together after the mobile audio-selector layout changes.
+- Adaptive video playback now polls HLS readiness before loading the manifest, preventing expected warmup 503 responses from reaching the player.
+- Filmstrip drag and wheel scrubbing now preview the target position and commit one seek at the end of the interaction.
+- Trickplay preview generation now normalizes sample aspect ratio before padding frames, preventing wide/anamorphic sources from failing with padded-dimension errors.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 
 ### Docs

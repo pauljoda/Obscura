@@ -55,7 +55,7 @@ describe("preview trickplay planning", () => {
     // format=yuvj420p tail is required so the mjpeg encoder accepts
     // full-range YUV sources (HDR, phone video, rendered animation).
     expect(args).toContain(
-      "scale=160:90:force_original_aspect_ratio=decrease,pad=160:90:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
+      "scale=160:90:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1,pad=160:90:(ow-iw)/2:(oh-ih)/2,format=yuvj420p",
     );
     expect(args).toContain("-q:v");
     expect(args).toContain("4");

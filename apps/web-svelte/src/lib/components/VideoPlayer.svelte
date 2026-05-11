@@ -48,6 +48,10 @@
   } from "vidstack";
   import type { MediaPlayerElement } from "vidstack/elements";
   import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
+  import {
+    HLS_RETRY_AFTER_SECONDS,
+    type HlsStatus,
+  } from "@obscura/contracts/media";
   import type { SubtitleCueDto } from "$lib/api/types";
   import { fetchVideoSubtitleCues } from "$lib/api/videos";
   import { portal } from "$lib/actions/portal";
@@ -59,6 +63,7 @@
   import {
     adaptiveHlsBufferConfig,
     canUseDirectPlayback,
+    hlsStatusUrlForSrc,
   } from "$lib/player/video-player-load";
   import {
     layoutPlayerMobileFlyout,
@@ -156,6 +161,7 @@
   let lastSourceKey = "";
   let pendingSeekTime: number | null = null;
   let pendingAutoPlay = false;
+  let hlsReadySrc: string | undefined = $state();
 
   let playbackMode = $state<PlaybackMode>("hls");
   let qualityMode = $state<QualityMode>("auto");
@@ -211,7 +217,8 @@
   const effectiveMode = $derived<PlaybackMode>(
     playbackMode === "direct" && directSrc && directPlayable ? "direct" : "hls",
   );
-  const playerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
+  const requestedPlayerSrc = $derived(effectiveMode === "direct" ? directSrc : src);
+  const playerSrc = $derived(requestedPlayerSrc === hlsReadySrc ? requestedPlayerSrc : undefined);
   const progress = $derived(duration > 0 ? (currentTime / duration) * 100 : 0);
   const hasFilmStrip = $derived(Boolean(trickplaySprite && trickplayVtt && duration > 0));
   const activeSubtitleId = $derived(
@@ -524,6 +531,10 @@
     }
   }
 
+  function wait(ms: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
   function updateActiveCue() {
     if (!activeSubtitleId || activeTrackCues.length === 0) {
       if (activeCueText !== null) {
@@ -561,6 +572,60 @@
     activeQualityLabel = null;
     playTracked = false;
     autoSelected = false;
+  });
+
+  $effect(() => {
+    const nextSrc = requestedPlayerSrc;
+    if (!nextSrc) {
+      hlsReadySrc = undefined;
+      return;
+    }
+
+    const statusUrl = effectiveMode === "hls" ? hlsStatusUrlForSrc(nextSrc) : null;
+    if (!statusUrl) {
+      hlsReadySrc = nextSrc;
+      return;
+    }
+
+    let cancelled = false;
+    hlsReadySrc = undefined;
+    buffering = true;
+    playerNotice = "Preparing adaptive stream...";
+
+    const poll = async () => {
+      while (!cancelled) {
+        try {
+          const response = await fetch(statusUrl, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`HLS status failed (${response.status})`);
+          }
+          const status = (await response.json()) as HlsStatus;
+          if (status.state === "ready") {
+            if (!cancelled) {
+              hlsReadySrc = nextSrc;
+              playerNotice = null;
+            }
+            return;
+          }
+          if (status.state === "error") {
+            throw new Error(status.error ?? "HLS generation failed");
+          }
+        } catch (error) {
+          if (!cancelled) {
+            playerNotice = error instanceof Error ? error.message : String(error);
+            buffering = false;
+          }
+          return;
+        }
+        await wait(HLS_RETRY_AFTER_SECONDS * 1000);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+    };
   });
 
   $effect(() => {
@@ -915,7 +980,7 @@
           {/if}
         </media-provider>
       </media-player>
-    {:else if playerSrc}
+    {:else if requestedPlayerSrc}
       <div class="obscura-media-engine flex items-center justify-center">
         <Loader class="h-5 w-5 animate-spin text-white/40" />
       </div>
