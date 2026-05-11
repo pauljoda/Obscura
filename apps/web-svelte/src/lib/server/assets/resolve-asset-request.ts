@@ -314,23 +314,31 @@ async function handleBookPageAsset(
   kind: string,
   range: string | null,
 ): Promise<Response> {
+  const page = await deps.getBookPageRecord(id);
+  if (!page) return notFound("Book page not found");
+
   if (kind === "thumb") {
     const thumbPath = firstExistingPath(cacheCandidates("book-pages", id, "thumb.jpg"));
-    if (!thumbPath) {
-      return notFound("Book page thumbnail not found");
+    if (thumbPath) {
+      return streamFile(thumbPath, {
+        "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
+        "Content-Type": "image/jpeg",
+      });
     }
-    return streamFile(thumbPath, {
-      "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
-      "Content-Type": "image/jpeg",
-    });
+    return serveBookPageFull(page, range);
   }
 
   if (kind !== "full") {
     return notFound("Unknown asset kind");
   }
 
-  const page = await deps.getBookPageRecord(id);
-  if (!page) return notFound("Book page not found");
+  return serveBookPageFull(page, range);
+}
+
+function serveBookPageFull(
+  page: { filePath: string; format: string | null },
+  range: string | null,
+): Response {
   if (page.filePath.includes("::")) {
     const [zipPath, memberPath] = page.filePath.split("::");
     const data = extractZipMember(zipPath, memberPath);

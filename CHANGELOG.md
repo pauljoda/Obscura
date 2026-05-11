@@ -87,6 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Trickplay preview generation now normalizes sample aspect ratio before padding frames, preventing wide/anamorphic sources from failing with padded-dimension errors.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 - Book covers now come from the first page in reading order, and book previews now scrub through chapter covers for multi-chapter books or page spreads for one-shot comics.
+- Book cover thumbnails now fall back to the underlying comic page while generated thumbnails are still being built, and book detail pages now label comic creators as Artists.
 
 ### Docs
 

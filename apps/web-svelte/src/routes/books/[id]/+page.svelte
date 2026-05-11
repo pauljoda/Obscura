@@ -258,7 +258,7 @@
       {#if book.performers.length > 0}
         <div>
           <div class="mb-3 flex items-center justify-between">
-            <h4 class="text-kicker">Cast & Crew</h4>
+            <h4 class="text-kicker">Artists</h4>
           </div>
           <div class="scrollbar-hidden flex gap-3 overflow-x-auto pb-2">
             {#each book.performers as performer (performer.id)}
