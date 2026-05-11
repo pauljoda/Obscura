@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
 - Comic reader page turns now preload nearby pages, so paged reading feels instant instead of flashing while the next image loads.
-- Long breadcrumb trails now collapse behind a tappable overflow menu on mobile, and returning from a detail page now restores the previous library scroll position.
+- Long breadcrumb trails now collapse behind a tappable overflow menu on mobile, and browser back now restores warm library pages with their loaded items and scroll position.
 - Filtered library views now re-check their saved filters when reopened, so comics that become Read disappear from Unread lists without manually toggling the filter.
 - Image and gallery browsing now feels more consistent after filters and on touch devices: filtered image results open in the lightbox correctly, Feed view follows the thumbnail-size control, and gallery preview scrubbing works on mobile.
 - The top breadcrumb bar now shows media context on detail pages, so episodes link back through their series/season context and image/gallery pages show a clearer path back up.
@@ -50,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Sub-gallery cards on gallery detail pages now use a persisted size slider, matching the rest of the library browsing surfaces.
 - Comic reader paged mode now preloads the previous and next two pages around the current spread to prevent page-turn flashes.
 - Mobile breadcrumbs now collapse parent levels into a stacked overflow menu instead of overlapping the current page title on narrow screens.
-- Browser back navigation now restores the previous page's scroll position inside Obscura's custom app scroller.
+- Browser back navigation now restores the previous media surface's loaded items and scroll position through SvelteKit history snapshots.
 - Filtered media surfaces now verify hydrated or cached first-page data against active saved filters before trusting it, fixing stale Gallery lists after read-progress changes.
 - Filtered Images results now keep the lightbox item list in sync with the cards on screen, so clicking filtered or newly loaded images opens the expected item.
 - Images Feed view now responds to the thumbnail-size slider instead of staying at a fixed width.

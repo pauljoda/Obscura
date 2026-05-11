@@ -94,15 +94,15 @@
         {/each}
       {/if}
     </nav>
-    <nav class="flex min-w-0 items-center gap-1.5 text-mono-sm sm:hidden" aria-label="Breadcrumb">
+    <nav class="flex min-w-0 items-center gap-1 text-mono-sm sm:hidden" aria-label="Breadcrumb">
       {#if mobileCrumbItems.length === 0}
         <span class="truncate text-text-muted">Dashboard</span>
       {:else}
         {#each mobileCrumbItems as item, i (`${item.kind}-${i}`)}
-          <span class="flex min-w-0 items-center gap-1.5">
-            {#if i > 0}
-              <span class="shrink-0 text-text-disabled">/</span>
-            {/if}
+          {#if i > 0 && mobileCrumbItems[i - 1]?.kind !== "overflow"}
+            <span class="shrink-0 text-text-disabled">/</span>
+          {/if}
+          <span class="flex min-w-0 items-center">
             {#if item.kind === "overflow"}
               <span class="relative shrink-0">
                 <button

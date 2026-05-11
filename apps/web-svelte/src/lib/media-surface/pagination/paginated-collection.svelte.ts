@@ -50,6 +50,10 @@ export interface PaginatedCollection<T extends { id: string }> {
   reset(): void;
   /** Abort in-flight requests; call from $effect cleanup on unmount. */
   dispose(): void;
+  /** Capture the currently loaded window for SvelteKit history snapshots. */
+  captureSnapshot(): PageHydrate<T>;
+  /** Restore a previously captured loaded window. */
+  restoreSnapshot(snapshot: PageHydrate<T>): void;
 }
 
 function signatureOf<T extends { id: string }>(p: PageHydrate<T>): string {
@@ -164,6 +168,25 @@ export function createPaginatedCollection<T extends { id: string }>(
     abortInflight();
   }
 
+  function captureSnapshot(): PageHydrate<T> {
+    return {
+      items,
+      total,
+      loadedStart,
+    };
+  }
+
+  function restoreSnapshot(snapshot: PageHydrate<T>): void {
+    generation++;
+    abortInflight();
+    items = snapshot.items;
+    total = snapshot.total;
+    loadedStart = snapshot.loadedStart;
+    loading = false;
+    error = null;
+    lastHydrateSignature = signatureOf(snapshot);
+  }
+
   return {
     get items() {
       return items;
@@ -190,5 +213,7 @@ export function createPaginatedCollection<T extends { id: string }>(
     hydrate,
     reset,
     dispose,
+    captureSnapshot,
+    restoreSnapshot,
   };
 }

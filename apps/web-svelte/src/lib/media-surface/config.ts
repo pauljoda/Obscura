@@ -251,3 +251,15 @@ export interface MediaSurfaceConfig<T extends { id: string }, F extends string =
   /** Called when the user activates a card (click without modifier keys). */
   onItemActivate?: (item: T, index: number) => void;
 }
+
+export interface MediaSurfaceSnapshot<T extends { id: string }> {
+  items: T[];
+  total: number;
+  loadedStart: number;
+  selectedIds: string[];
+}
+
+export interface MediaSurfaceSnapshotApi<T extends { id: string }> {
+  capture: () => MediaSurfaceSnapshot<T>;
+  restore: (snapshot: MediaSurfaceSnapshot<T>) => void;
+}

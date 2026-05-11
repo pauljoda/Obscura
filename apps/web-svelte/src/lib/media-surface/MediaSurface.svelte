@@ -16,6 +16,7 @@
   } from "./prefs/surface-prefs.svelte";
   import { encodeSurfacePrefs } from "./prefs/prefs-codec";
   import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+  import { usePageSnapshots } from "$lib/stores/page-snapshots.svelte";
   import { prefersReducedMotion } from "$lib/hooks/prefers-reduced-motion.svelte";
   import ThumbnailGrid from "./body/ThumbnailGrid.svelte";
   import ListBody from "./body/ListBody.svelte";
@@ -62,6 +63,7 @@
   });
   // svelte-ignore state_referenced_locally
   const presetsApi = createServerPresets(surfacePresetsKey(config.surfaceId));
+  const pageSnapshots = usePageSnapshots();
 
   const reducedMotion = prefersReducedMotion();
   let randomSortSeed = $state(createRandomSortSeed());
@@ -141,6 +143,21 @@
 
   onMount(() => {
     let disposed = false;
+    const unregisterSnapshot = pageSnapshots.registerSurface(config.surfaceId, {
+      capture: () => ({
+        ...coll.captureSnapshot(),
+        selectedIds: [...selectedIds],
+      }),
+      restore: (snapshot) => {
+        coll.restoreSnapshot({
+          items: snapshot.items,
+          total: snapshot.total,
+          loadedStart: snapshot.loadedStart,
+        });
+        selectedIds = new Set(snapshot.selectedIds);
+        onSelectionChange?.(selectedIds);
+      },
+    });
     void (async () => {
       await prefsStore.load();
       if (disposed || (config.initial && config.initial.items.length > 0)) return;
@@ -149,6 +166,7 @@
     void presetsApi.load();
     return () => {
       disposed = true;
+      unregisterSnapshot();
       coll.dispose();
     };
   });

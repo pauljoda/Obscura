@@ -1,8 +1,9 @@
 <script lang="ts">
   import "../app.css";
 
-  import { afterNavigate, beforeNavigate } from "$app/navigation";
+  import { afterNavigate } from "$app/navigation";
   import { tick } from "svelte";
+  import type { Snapshot } from "@sveltejs/kit";
   import { cn } from "@obscura/ui-svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
@@ -13,9 +14,9 @@
 
   import { provideNsfw } from "$lib/nsfw/store.svelte";
   import { provideAppChrome } from "$lib/stores/app-chrome.svelte";
+  import { providePageSnapshots, type AppPageSnapshot } from "$lib/stores/page-snapshots.svelte";
   import { provideSearch } from "$lib/stores/search.svelte";
   import { providePlaylist } from "$lib/stores/playlist.svelte";
-  import { createPreviousPageScrollRestorer } from "$lib/scroll-restoration";
 
   let { data, children: pageContent } = $props();
 
@@ -29,47 +30,47 @@
   provideSearch();
   const playlist = providePlaylist();
   let mainScroller = $state<HTMLElement | null>(null);
-  const scrollRestorer = createPreviousPageScrollRestorer();
 
   $effect(() => {
     void playlist.hydrate();
   });
 
-  beforeNavigate(({ from, type }) => {
-    scrollRestorer.captureBeforeNavigation({
-      fromHref: from?.url.href,
-      navigationType: type,
-      position: {
-        top: mainScroller?.scrollTop ?? 0,
-        left: mainScroller?.scrollLeft ?? 0,
-      },
-    });
-  });
-
   afterNavigate(({ from, to, type }) => {
-    const restorePosition = scrollRestorer.restoreAfterNavigation({
-      toHref: to?.url.href,
-      navigationType: type,
-    });
-    if (restorePosition) {
-      void tick().then(() => {
-        mainScroller?.scrollTo({ top: restorePosition.top, left: restorePosition.left });
-      });
-      return;
-    }
-
-    if (
-      !scrollRestorer.shouldResetAfterNavigation({
-        fromPathname: from?.url.pathname,
-        toPathname: to?.url.pathname,
-        navigationType: type,
-      })
-    ) {
-      return;
-    }
-
+    if (!from || !to || type === "popstate") return;
+    if (from.url.pathname === to.url.pathname) return;
     mainScroller?.scrollTo({ top: 0, left: 0 });
   });
+
+  function restoreMainScroller(snapshot: { top: number; left: number }) {
+    void tick().then(() => {
+      let tries = 0;
+      const run = () => {
+        const scroller = mainScroller;
+        if (!scroller) return;
+        scroller.scrollTo({ top: snapshot.top, left: snapshot.left });
+        tries += 1;
+        const canReachTarget =
+          snapshot.top <= 0 ||
+          scroller.scrollTop >= snapshot.top ||
+          scroller.scrollHeight - scroller.clientHeight >= snapshot.top;
+        if (!canReachTarget && tries < 20) requestAnimationFrame(run);
+      };
+      requestAnimationFrame(run);
+    });
+  }
+
+  const pageSnapshots = providePageSnapshots({
+    captureScroll: () => ({
+      top: mainScroller?.scrollTop ?? 0,
+      left: mainScroller?.scrollLeft ?? 0,
+    }),
+    restoreScroll: restoreMainScroller,
+  });
+
+  export const snapshot: Snapshot<AppPageSnapshot> = {
+    capture: () => pageSnapshots.capture(),
+    restore: (saved) => pageSnapshots.restore(saved),
+  };
 
   const bottomDockPadding = $derived(
     chrome.bottomDockInsetPx > 0 ? `${chrome.bottomDockInsetPx + 16}px` : "0px",

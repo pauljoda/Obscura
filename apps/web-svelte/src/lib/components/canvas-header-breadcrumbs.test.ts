@@ -26,6 +26,7 @@ describe("getCanvasHeaderBreadcrumbItems", () => {
       {
         kind: "overflow",
         label: "More breadcrumbs",
+        separatorAfter: false,
         items: [
           { label: "Videos", href: "/videos", isLast: false },
           { label: "Series", href: "/series?series=s1", isLast: false },

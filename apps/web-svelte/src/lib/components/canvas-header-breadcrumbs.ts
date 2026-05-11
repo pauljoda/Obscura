@@ -9,6 +9,7 @@ export type CanvasHeaderBreadcrumbItem =
   | {
       kind: "overflow";
       label: string;
+      separatorAfter: false;
       items: CanvasHeaderBreadcrumb[];
     };
 
@@ -30,6 +31,7 @@ export function getCanvasHeaderBreadcrumbItems(
     {
       kind: "overflow",
       label: "More breadcrumbs",
+      separatorAfter: false,
       items: previousLinks,
     },
     { kind: "crumb", ...current },

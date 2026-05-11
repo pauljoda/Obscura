@@ -246,6 +246,32 @@ describe("createPaginatedCollection", () => {
     expect(coll.error).toBeNull();
   });
 
+  it("captures and restores loaded collection state for history snapshots", async () => {
+    const fetcher = vi.fn(async ({ offset, limit }: { offset: number; limit: number }) => ({
+      items: makeItems(offset, limit),
+      total: 50,
+    }));
+    const coll = createPaginatedCollection<TestItem>({
+      pageSize: 10,
+      fetcher,
+      initial: { items: makeItems(0, 10), total: 50, loadedStart: 0 },
+    });
+
+    await coll.loadMore();
+    flushSync();
+    const snapshot = coll.captureSnapshot();
+
+    coll.hydrate({ items: makeItems(40, 5), total: 50, loadedStart: 40 });
+    coll.restoreSnapshot(snapshot);
+
+    expect(coll.items.map((item) => item.id)).toEqual(
+      makeItems(0, 20).map((item) => item.id),
+    );
+    expect(coll.total).toBe(50);
+    expect(coll.loadedStart).toBe(0);
+    expect(coll.loadKey).toBe(20);
+  });
+
   it("does not refire while loading", async () => {
     let resolveFetch!: (page: { items: TestItem[]; total: number }) => void;
     const fetcher = vi.fn(
