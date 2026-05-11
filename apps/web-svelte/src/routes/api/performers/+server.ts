@@ -14,6 +14,7 @@ const QUERY_KEYS = [
   "order",
   "gender",
   "favorite",
+  "isNsfw",
   "country",
   "limit",
   "offset",

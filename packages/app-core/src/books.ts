@@ -34,6 +34,7 @@ import {
 import {
   buildBooleanCondition,
   buildDateConditions,
+  buildNsfwFlagConditions,
   buildOrderBy,
   buildRatingConditions,
   parsePagination,
@@ -374,6 +375,7 @@ export interface ListBooksQuery {
   dateFrom?: string;
   dateTo?: string;
   organized?: string;
+  isNsfw?: string;
   read?: string;
   randomSeed?: string;
 }
@@ -382,7 +384,7 @@ export async function listBooksRead(db: AppDb, query: ListBooksQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 60, 200);
   const conditions: SQL[] = [eq(books.bookType, "comic"), bookVisibleSql(books.libraryRootId)];
 
-  if (query.nsfw === "off") conditions.push(ne(books.isNsfw, true));
+  conditions.push(...buildNsfwFlagConditions(books.isNsfw, query.nsfw, query.isNsfw));
   if (query.search) {
     const term = `%${query.search}%`;
     conditions.push(orBookSearch(term));

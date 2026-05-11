@@ -40,6 +40,7 @@ import {
 import {
   buildBooleanCondition,
   buildDateConditions,
+  buildNsfwFlagConditions,
   buildOrderBy,
   buildRatingConditions,
   buildResolutionConditions,
@@ -169,6 +170,7 @@ export interface ListGalleriesQuery {
   dateTo?: string;
   imageCountMin?: string;
   organized?: string;
+  isNsfw?: string;
   nsfw?: string;
   randomSeed?: string;
 }
@@ -179,9 +181,7 @@ export async function listGalleriesRead(db: AppDb, query: ListGalleriesQuery) {
 
   conditions.push(...buildHierarchyScopeConditions(galleries.parentId, query));
 
-  if (query.nsfw === "off") {
-    conditions.push(eq(galleries.isNsfw, false));
-  }
+  conditions.push(...buildNsfwFlagConditions(galleries.isNsfw, query.nsfw, query.isNsfw));
   if (query.search) {
     const term = `%${query.search}%`;
     conditions.push(
@@ -1403,6 +1403,7 @@ export interface ListImagesQuery {
   dateTo?: string;
   resolution?: string;
   organized?: string;
+  isNsfw?: string;
   randomSeed?: string;
 }
 
@@ -1476,7 +1477,7 @@ function buildImageDimensionCondition(values: string[]): SQL | undefined {
 export async function listImagesRead(db: AppDb, query: ListImagesQuery) {
   const { limit, offset } = parsePagination(query.limit, query.offset, 80, 200);
   const conditions: SQL[] = [imageVisibleSql(images.filePath)];
-  if (query.nsfw === "off") conditions.push(ne(images.isNsfw, true));
+  conditions.push(...buildNsfwFlagConditions(images.isNsfw, query.nsfw, query.isNsfw));
   if (query.search) {
     const term = `%${query.search}%`;
     conditions.push(

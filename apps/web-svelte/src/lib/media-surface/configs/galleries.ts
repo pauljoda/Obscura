@@ -18,6 +18,7 @@ type GalleryFilterType =
   | "date"
   | "dateFrom"
   | "dateTo"
+  | "isNsfw"
   | "tag"
   | "performer"
   | "studio";
@@ -48,6 +49,15 @@ export function galleriesSurfaceConfig(
       label: "Date",
       rangeTypes: { min: "dateFrom", max: "dateTo" },
     },
+    {
+      kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
+      ],
+    },
   ];
 
   return {
@@ -63,6 +73,7 @@ export function galleriesSurfaceConfig(
       const ratingMax = prefs.activeFilters.find((f) => f.type === "ratingMax")?.value;
       const dateFrom = prefs.activeFilters.find((f) => f.type === "dateFrom")?.value;
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
+      const isNsfw = prefs.activeFilters.find((f) => f.type === "isNsfw")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const tags = prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
       const performers = prefs.activeFilters
@@ -83,6 +94,7 @@ export function galleriesSurfaceConfig(
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           dateFrom,
           dateTo,
+          isNsfw,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -128,6 +140,7 @@ export function galleriesSurfaceConfig(
       "ratingMax",
       "dateFrom",
       "dateTo",
+      "isNsfw",
       "studio",
     ]),
     searchPlaceholder: "Search galleries...",

@@ -23,6 +23,7 @@ type ImageFilterType =
   | "dateTo"
   | "resolution"
   | "organized"
+  | "isNsfw"
   | "format"
   | "animated"
   | "dimension"
@@ -86,6 +87,15 @@ export function imagesSurfaceConfig(
         { value: "false", label: "Not organized" },
       ],
     },
+    {
+      kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
+      ],
+    },
   ];
 
   return {
@@ -103,6 +113,7 @@ export function imagesSurfaceConfig(
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
       const resolution = prefs.activeFilters.find((f) => f.type === "resolution")?.value;
       const organized = prefs.activeFilters.find((f) => f.type === "organized")?.value;
+      const isNsfw = prefs.activeFilters.find((f) => f.type === "isNsfw")?.value;
       const animated = prefs.activeFilters.find((f) => f.type === "animated")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const format = prefs.activeFilters.filter((f) => f.type === "format").map((f) => f.value);
@@ -133,6 +144,7 @@ export function imagesSurfaceConfig(
           dateTo,
           resolution,
           organized,
+          isNsfw,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -185,6 +197,7 @@ export function imagesSurfaceConfig(
       "dateTo",
       "resolution",
       "organized",
+      "isNsfw",
       "animated",
       "studio",
     ]),

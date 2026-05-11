@@ -15,6 +15,7 @@ type BookFilterType =
   | "dateFrom"
   | "dateTo"
   | "organized"
+  | "isNsfw"
   | "read"
   | "tag"
   | "performer"
@@ -57,6 +58,15 @@ export function booksSurfaceConfig(
     },
     {
       kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
+      ],
+    },
+    {
+      kind: "enum",
       filterType: "read",
       label: "Library flags",
       options: [
@@ -80,6 +90,7 @@ export function booksSurfaceConfig(
       const dateFrom = prefs.activeFilters.find((f) => f.type === "dateFrom")?.value;
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
       const organized = prefs.activeFilters.find((f) => f.type === "organized")?.value;
+      const isNsfw = prefs.activeFilters.find((f) => f.type === "isNsfw")?.value;
       const read = prefs.activeFilters.find((f) => f.type === "read")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const tags = prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
@@ -101,6 +112,7 @@ export function booksSurfaceConfig(
           dateFrom,
           dateTo,
           organized,
+          isNsfw,
           read,
           nsfw: args.nsfwMode,
           limit,
@@ -148,6 +160,7 @@ export function booksSurfaceConfig(
       "dateFrom",
       "dateTo",
       "organized",
+      "isNsfw",
       "read",
       "studio",
     ]),

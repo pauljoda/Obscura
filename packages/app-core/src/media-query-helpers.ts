@@ -2,6 +2,7 @@ import {
   asc,
   desc,
   eq,
+  ne,
   and,
   or,
   gte,
@@ -153,6 +154,18 @@ export function buildBooleanCondition(
   if (value === "true") return eq(col, true);
   if (value === "false") return eq(col, false);
   return undefined;
+}
+
+export function buildNsfwFlagConditions(
+  col: Column,
+  nsfwMode: string | undefined,
+  isNsfw: string | undefined,
+): SQL[] {
+  const conditions: SQL[] = [];
+  if (nsfwMode === "off") conditions.push(ne(col, true));
+  const explicit = buildBooleanCondition(col, isNsfw);
+  if (explicit) conditions.push(explicit);
+  return conditions;
 }
 
 export const RESOLUTION_MAP: Record<string, [number, number]> = {

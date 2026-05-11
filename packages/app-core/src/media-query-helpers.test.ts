@@ -3,6 +3,7 @@ import {
   buildRandomizedSortSql,
   buildBooleanCondition,
   buildDateConditions,
+  buildNsfwFlagConditions,
   buildResolutionConditions,
   parsePagination,
 } from "./media-query-helpers";
@@ -33,6 +34,13 @@ describe("media-query-helpers", () => {
     expect(
       buildDateConditions(schema.images.date, "bad-date", "also-bad"),
     ).toHaveLength(0);
+  });
+
+  it("keeps the global NSFW visibility guard when an explicit NSFW flag filter is active", () => {
+    expect(buildNsfwFlagConditions(schema.images.isNsfw, "off", "true")).toHaveLength(2);
+    expect(buildNsfwFlagConditions(schema.images.isNsfw, "on", "true")).toHaveLength(1);
+    expect(buildNsfwFlagConditions(schema.images.isNsfw, "on", "false")).toHaveLength(1);
+    expect(buildNsfwFlagConditions(schema.images.isNsfw, "on", undefined)).toHaveLength(0);
   });
 
   it("returns a single or combined resolution condition", () => {

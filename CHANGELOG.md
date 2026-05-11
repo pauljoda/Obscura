@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Completed comic chapters now show as Read instead of lingering as 100% progress, with Mark read and Re-read actions available from book, chapter, and volume views.
 - Book and gallery scans now recover from stale image thumbnail and fingerprint jobs left behind by older gallery-to-Books migrations, so deleted legacy page rows no longer keep failing in the worker.
 - Identify result messages are now easier to read and dismiss, with solid alert styling, a close button, and automatic timeout behavior.
+- Media surfaces with filters now include Is NSFW and Not NSFW library-flag filters while still respecting the global hide-NSFW mode.
 
 ### Docs
 
@@ -134,6 +135,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic book scans no longer create volumes from non-volume chapter wrapper folders, and rescans now remove empty volume rows left behind by older scan rules.
 - Stale image thumbnail, image fingerprint, and book page thumbnail jobs now complete as harmless no-ops when their target row was already removed by a scan or migration.
 - Identify no-result messages now use a more legible solid surface, can be dismissed directly, and disappear automatically after a short delay.
+- Filtered media surfaces now support explicit NSFW and not-NSFW filtering across videos, images, galleries, books, audio libraries, and actors without bypassing the global NSFW visibility guard.
 
 ### Docs
 

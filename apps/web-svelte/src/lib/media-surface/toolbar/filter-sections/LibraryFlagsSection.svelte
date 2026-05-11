@@ -12,6 +12,8 @@
     showComic?: boolean;
     /** When true, include read/unread comic progress filters. */
     showRead?: boolean;
+    /** When true, include explicit NSFW / not NSFW filters. */
+    showNsfw?: boolean;
   }
 
   let {
@@ -20,11 +22,18 @@
     showInteractive = true,
     showComic = false,
     showRead = false,
+    showNsfw = false,
   }: Props = $props();
 
   const choices = $derived([
     { type: "organized", value: "true", label: "Organized", chipLabel: "Organized" },
     { type: "organized", value: "false", label: "Not organized", chipLabel: "Organized" },
+    ...(showNsfw
+      ? [
+          { type: "isNsfw", value: "true", label: "Is NSFW", chipLabel: "NSFW" },
+          { type: "isNsfw", value: "false", label: "Not NSFW", chipLabel: "NSFW" },
+        ]
+      : []),
     ...(showInteractive
       ? [
           { type: "interactive", value: "true", label: "Interactive", chipLabel: "Interactive" },

@@ -14,6 +14,7 @@ type PerformerFilterType =
   | "gender"
   | "country"
   | "favorite"
+  | "isNsfw"
   | "hasImage";
 
 interface BuildArgs {
@@ -34,6 +35,15 @@ export function performersSurfaceConfig(
       label: "Rating",
       rangeTypes: { min: "ratingMin", max: "ratingMax" },
     },
+    {
+      kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
+      ],
+    },
   ];
 
   return {
@@ -50,6 +60,7 @@ export function performersSurfaceConfig(
       const gender = prefs.activeFilters.find((f) => f.type === "gender")?.value;
       const country = prefs.activeFilters.find((f) => f.type === "country")?.value;
       const favorite = prefs.activeFilters.find((f) => f.type === "favorite")?.value;
+      const isNsfw = prefs.activeFilters.find((f) => f.type === "isNsfw")?.value;
       const hasImage = prefs.activeFilters.find((f) => f.type === "hasImage")?.value;
       const response = await fetchPerformers(
         {
@@ -60,6 +71,7 @@ export function performersSurfaceConfig(
           gender,
           country,
           favorite,
+          isNsfw,
           hasImage,
           ratingMin: ratingMin ? Number(ratingMin) : undefined,
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
@@ -101,6 +113,7 @@ export function performersSurfaceConfig(
       "gender",
       "country",
       "favorite",
+      "isNsfw",
       "hasImage",
     ]),
     searchPlaceholder: "Search actors...",

@@ -16,6 +16,7 @@ type AudioFilterType =
   | "ratingMin"
   | "ratingMax"
   | "organized"
+  | "isNsfw"
   | "tag"
   | "performer"
   | "studio";
@@ -49,6 +50,15 @@ export function audioSurfaceConfig(
         { value: "false", label: "Not organized" },
       ],
     },
+    {
+      kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
+      ],
+    },
   ];
 
   return {
@@ -63,6 +73,7 @@ export function audioSurfaceConfig(
       const ratingMin = prefs.activeFilters.find((f) => f.type === "ratingMin")?.value;
       const ratingMax = prefs.activeFilters.find((f) => f.type === "ratingMax")?.value;
       const organized = prefs.activeFilters.find((f) => f.type === "organized")?.value;
+      const isNsfw = prefs.activeFilters.find((f) => f.type === "isNsfw")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const response = await fetchAudioLibraries(
         {
@@ -73,6 +84,7 @@ export function audioSurfaceConfig(
           ratingMin: ratingMin ? Number(ratingMin) : undefined,
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           organized,
+          isNsfw,
           studio,
           tag: prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value),
           performer: prefs.activeFilters.filter((f) => f.type === "performer").map((f) => f.value),
@@ -121,6 +133,7 @@ export function audioSurfaceConfig(
       "ratingMin",
       "ratingMax",
       "organized",
+      "isNsfw",
     ]),
     searchPlaceholder: "Search audio...",
     thumbSize: { min: 2, max: 8, default: 5, label: "Album card size" },

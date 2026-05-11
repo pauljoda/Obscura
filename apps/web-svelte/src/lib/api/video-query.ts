@@ -17,6 +17,7 @@ export interface FetchVideosParams {
   durationMin?: number;
   durationMax?: number;
   organized?: string;
+  isNsfw?: string;
   interactive?: string;
   hasFile?: string;
   played?: string;
@@ -45,6 +46,7 @@ export function buildFetchVideosQuery(params: FetchVideosParams): string {
       durationMin: params.durationMin,
       durationMax: params.durationMax,
       organized: params.organized,
+      isNsfw: params.isNsfw,
       interactive: params.interactive,
       hasFile: params.hasFile,
       played: params.played,

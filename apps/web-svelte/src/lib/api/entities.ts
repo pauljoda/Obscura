@@ -39,6 +39,7 @@ export async function fetchPerformers(params?: {
   randomSeed?: string;
   gender?: string;
   favorite?: string;
+  isNsfw?: string;
   country?: string;
   ratingMin?: number;
   ratingMax?: number;
@@ -56,6 +57,7 @@ export async function fetchPerformers(params?: {
     randomSeed: params?.randomSeed,
     gender: params?.gender,
     favorite: params?.favorite,
+    isNsfw: params?.isNsfw,
     country: params?.country,
     ratingMin: params?.ratingMin,
     ratingMax: params?.ratingMax,

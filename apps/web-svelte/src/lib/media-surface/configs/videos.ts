@@ -28,6 +28,7 @@ type VideoFilterType =
   | "resolution"
   | "codec"
   | "organized"
+  | "isNsfw"
   | "interactive"
   | "played"
   | "hasFile"
@@ -110,6 +111,15 @@ export function videosSurfaceConfig(
       options: [
         { value: "true", label: "Organized" },
         { value: "false", label: "Not organized" },
+      ],
+    },
+    {
+      kind: "enum",
+      filterType: "isNsfw",
+      label: "Library flags",
+      options: [
+        { value: "true", label: "Is NSFW" },
+        { value: "false", label: "Not NSFW" },
       ],
     },
     {
@@ -231,6 +241,7 @@ export function videosSurfaceConfig(
       "duration",
       "resolution",
       "organized",
+      "isNsfw",
       "interactive",
       "played",
       "hasFile",

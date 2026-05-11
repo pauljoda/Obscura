@@ -20,6 +20,7 @@ const SCALAR_KEYS = [
   "dateTo",
   "trackCountMin",
   "organized",
+  "isNsfw",
   "nsfw",
   "randomSeed",
 ] as const;

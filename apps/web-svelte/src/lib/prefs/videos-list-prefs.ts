@@ -168,6 +168,7 @@ export function videosListPrefsToFetchParams(
   const dateTo = p.activeFilters.find((f) => f.type === "dateTo")?.value;
   const durationPreset = p.activeFilters.find((f) => f.type === "duration")?.value;
   const organized = p.activeFilters.find((f) => f.type === "organized")?.value;
+  const isNsfw = p.activeFilters.find((f) => f.type === "isNsfw")?.value;
   const interactive = p.activeFilters.find((f) => f.type === "interactive")?.value;
   const hasFile = p.activeFilters.find((f) => f.type === "hasFile")?.value;
   const played = p.activeFilters.find((f) => f.type === "played")?.value;
@@ -196,6 +197,8 @@ export function videosListPrefsToFetchParams(
     durationMax: dur.durationMax,
     organized:
       organized === "true" || organized === "false" ? organized : undefined,
+    isNsfw:
+      isNsfw === "true" || isNsfw === "false" ? isNsfw : undefined,
     interactive:
       interactive === "true" || interactive === "false" ? interactive : undefined,
     hasFile: hasFile === "true" || hasFile === "false" ? hasFile : undefined,

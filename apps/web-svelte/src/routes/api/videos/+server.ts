@@ -18,6 +18,7 @@ const SCALAR_KEYS = [
   "durationMin",
   "durationMax",
   "organized",
+  "isNsfw",
   "interactive",
   "hasFile",
   "played",

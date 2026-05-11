@@ -68,6 +68,7 @@ export async function fetchGalleries(params?: {
   dateTo?: string;
   imageCountMin?: number;
   organized?: string;
+  isNsfw?: string;
   nsfw?: string;
   limit?: number;
   offset?: number;
@@ -88,6 +89,7 @@ export async function fetchGalleries(params?: {
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
+      isNsfw: params?.isNsfw,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -114,6 +116,7 @@ export async function fetchBooks(params?: {
   dateFrom?: string;
   dateTo?: string;
   organized?: string;
+  isNsfw?: string;
   read?: string;
   nsfw?: string;
   limit?: number;
@@ -131,6 +134,7 @@ export async function fetchBooks(params?: {
       dateFrom: params?.dateFrom,
       dateTo: params?.dateTo,
       organized: params?.organized,
+      isNsfw: params?.isNsfw,
       read: params?.read,
       nsfw: params?.nsfw,
       limit: params?.limit,
@@ -247,6 +251,7 @@ export async function fetchAudioLibraries(params?: {
   dateTo?: string;
   trackCountMin?: number;
   organized?: string;
+  isNsfw?: string;
   nsfw?: string;
   limit?: number;
   offset?: number;
@@ -266,6 +271,7 @@ export async function fetchAudioLibraries(params?: {
       dateTo: params?.dateTo,
       trackCountMin: params?.trackCountMin,
       organized: params?.organized,
+      isNsfw: params?.isNsfw,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -293,6 +299,7 @@ export async function fetchAudioTracks(params?: {
   dateFrom?: string;
   dateTo?: string;
   organized?: string;
+  isNsfw?: string;
   nsfw?: string;
   limit?: number;
   offset?: number;
@@ -312,6 +319,7 @@ export async function fetchAudioTracks(params?: {
       dateFrom: params?.dateFrom,
       dateTo: params?.dateTo,
       organized: params?.organized,
+      isNsfw: params?.isNsfw,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -429,6 +437,7 @@ export async function fetchImages(params?: {
   dateTo?: string;
   resolution?: string;
   organized?: string;
+  isNsfw?: string;
   limit?: number;
   offset?: number;
 }, options?: RequestOptions): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
@@ -448,6 +457,7 @@ export async function fetchImages(params?: {
       dateTo: params?.dateTo,
       resolution: params?.resolution,
       organized: params?.organized,
+      isNsfw: params?.isNsfw,
       limit: params?.limit,
       offset: params?.offset,
     },

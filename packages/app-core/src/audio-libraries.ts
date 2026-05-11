@@ -32,6 +32,7 @@ import {
 import {
   buildBooleanCondition,
   buildDateConditions,
+  buildNsfwFlagConditions,
   buildOrderBy,
   buildRatingConditions,
   parsePagination,
@@ -95,6 +96,7 @@ export interface ListAudioLibrariesQuery {
   dateTo?: string;
   trackCountMin?: string;
   organized?: string;
+  isNsfw?: string;
   nsfw?: string;
   randomSeed?: string;
 }
@@ -116,7 +118,7 @@ export async function listAudioLibrariesRead(
       )!,
     );
   }
-  if (query.nsfw === "off") conditions.push(eq(audioLibraries.isNsfw, false));
+  conditions.push(...buildNsfwFlagConditions(audioLibraries.isNsfw, query.nsfw, query.isNsfw));
   conditions.push(
     ...buildRatingConditions(audioLibraries.rating, query.ratingMin, query.ratingMax),
   );

@@ -41,6 +41,7 @@ import {
 } from "./errors";
 import {
   MAX_ENTITY_LIST_LIMIT,
+  buildNsfwFlagConditions,
   buildResolutionConditions,
   parsePagination,
   buildRandomizedSortSql,
@@ -111,6 +112,7 @@ export interface ListVideosQuery {
   durationMin?: string;
   durationMax?: string;
   organized?: string;
+  isNsfw?: string;
   hasFile?: string;
   played?: string;
   tag?: string | string[];
@@ -712,7 +714,7 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
   if (wantEpisodes) {
     const conds: SQL[] = [];
     conds.push(videoEpisodeVisibleSql(videoEpisodes.seriesId));
-    if (query.nsfw === "off") conds.push(ne(videoEpisodes.isNsfw, true));
+    conds.push(...buildNsfwFlagConditions(videoEpisodes.isNsfw, query.nsfw, query.isNsfw));
     if (query.search) {
       const term = `%${query.search}%`;
       conds.push(
@@ -972,7 +974,7 @@ export async function listVideosRead(db: AppDb, query: ListVideosQuery) {
   if (wantMovies) {
     const conds: SQL[] = [];
     conds.push(videoMovieVisibleSql(videoMovies.libraryRootId));
-    if (query.nsfw === "off") conds.push(ne(videoMovies.isNsfw, true));
+    conds.push(...buildNsfwFlagConditions(videoMovies.isNsfw, query.nsfw, query.isNsfw));
     if (query.search) {
       const term = `%${query.search}%`;
       conds.push(

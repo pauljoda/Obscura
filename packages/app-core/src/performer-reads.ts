@@ -26,6 +26,7 @@ import {
   performerSeriesCountExpr,
   performerTotalSceneCountExpr,
 } from "./appearance-count-expressions";
+import { buildNsfwFlagConditions } from "./media-query-helpers";
 
 const { performers } = schema;
 
@@ -42,6 +43,7 @@ export interface ListPerformersQuery {
   order?: string;
   gender?: string;
   favorite?: string;
+  isNsfw?: string;
   country?: string;
   limit?: string;
   offset?: string;
@@ -116,9 +118,7 @@ export async function listPerformersRead(
 
   const conditions = [];
 
-  if (sfwOnly) {
-    conditions.push(ne(performers.isNsfw, true));
-  }
+  conditions.push(...buildNsfwFlagConditions(performers.isNsfw, query.nsfw, query.isNsfw));
 
   if (query.search) {
     const term = `%${query.search}%`;

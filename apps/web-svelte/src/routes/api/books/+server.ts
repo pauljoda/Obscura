@@ -14,6 +14,7 @@ const SCALAR_KEYS = [
   "dateFrom",
   "dateTo",
   "organized",
+  "isNsfw",
   "read",
   "nsfw",
   "randomSeed",
