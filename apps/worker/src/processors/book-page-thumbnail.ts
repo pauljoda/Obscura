@@ -20,7 +20,10 @@ export async function processBookPageThumbnail(job: Job) {
     .where(eq(bookPages.id, pageId))
     .limit(1);
 
-  if (!page) throw new Error("Book page not found");
+  if (!page) {
+    console.warn(`[book-page-thumbnail] dropped stale job for missing book page ${pageId}`);
+    return;
+  }
 
   await markJobActive(job, "book-page-thumbnail", {
     type: "book-page",

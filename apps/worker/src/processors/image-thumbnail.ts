@@ -21,7 +21,8 @@ export async function processImageThumbnail(job: Job) {
     .limit(1);
 
   if (!image) {
-    throw new Error("Image not found");
+    console.warn(`[image-thumbnail] dropped stale job for missing image ${imageId}`);
+    return;
   }
 
   await markJobActive(job, "image-thumbnail", {

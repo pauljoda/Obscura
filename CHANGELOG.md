@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic reading now marks the current chapter complete when the end action appears, and the final chapter shows a clear no-next-chapter close action.
 - Book scans now only create comic volumes from explicit volume subfolders, keeping loose chapter archives and chapter wrapper folders under the book itself.
 - Completed comic chapters now show as Read instead of lingering as 100% progress, with Mark read and Re-read actions available from book, chapter, and volume views.
+- Book and gallery scans now recover from stale image thumbnail and fingerprint jobs left behind by older gallery-to-Books migrations, so deleted legacy page rows no longer keep failing in the worker.
 
 ### Docs
 
@@ -130,6 +131,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery-style book thumbnails now keep click navigation active while preview scrubbing is visible.
 - Comic book scans no longer create volumes from same-named wrapper folders or metadata-only volume numbers; volume grouping now requires a real volume subfolder inside a book entry.
 - Comic book scans no longer create volumes from non-volume chapter wrapper folders, and rescans now remove empty volume rows left behind by older scan rules.
+- Stale image thumbnail, image fingerprint, and book page thumbnail jobs now complete as harmless no-ops when their target row was already removed by a scan or migration.
 
 ### Docs
 
