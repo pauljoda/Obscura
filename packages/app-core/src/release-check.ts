@@ -1,4 +1,5 @@
 const DEFAULT_RELEASE_URL = "https://api.github.com/repos/pauljoda/Obscura/releases/latest";
+const DEFAULT_RELEASE_REDIRECT_URL = "https://github.com/pauljoda/Obscura/releases/latest";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export type ReleaseUpdateStatusKind = "available" | "current" | "unknown";
@@ -70,6 +71,46 @@ function unknownStatus(localVersion: string, checkedAt: Date, error: unknown): R
   };
 }
 
+function statusFromRelease(localVersion: string, checkedAt: Date, latestVersion: string, latestUrl: string) {
+  const updateAvailable = compareReleaseVersions(latestVersion, localVersion) > 0;
+
+  return {
+    status: updateAvailable ? "available" : "current",
+    localVersion,
+    latestVersion,
+    latestUrl,
+    updateAvailable,
+    checkedAt: checkedAt.toISOString(),
+    fromCache: false,
+  } satisfies ReleaseUpdateStatus;
+}
+
+function versionFromReleaseUrl(url: string): string | null {
+  const tag = url.match(/\/releases\/tag\/([^/?#]+)/)?.[1];
+  return tag ? normalizeReleaseVersion(decodeURIComponent(tag)) : null;
+}
+
+async function fetchLatestReleaseFromRedirect(
+  fetchImpl: typeof fetch,
+  localVersion: string,
+  checkedAt: Date,
+): Promise<ReleaseUpdateStatus | null> {
+  const response = await fetchImpl(DEFAULT_RELEASE_REDIRECT_URL, {
+    method: "HEAD",
+    headers: {
+      "user-agent": "Obscura update checker",
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const latestUrl = response.url;
+  const latestVersion = versionFromReleaseUrl(latestUrl);
+  if (!latestVersion) return null;
+
+  return statusFromRelease(localVersion, checkedAt, latestVersion, latestUrl);
+}
+
 async function runReleaseUpdateCheck(options: Required<Pick<ReleaseUpdateCheckOptions, "localVersion">> &
   Pick<ReleaseUpdateCheckOptions, "fetchImpl" | "now" | "releaseUrl">): Promise<ReleaseUpdateStatus> {
   const now = options.now?.() ?? new Date();
@@ -97,18 +138,13 @@ async function runReleaseUpdateCheck(options: Required<Pick<ReleaseUpdateCheckOp
       throw new Error("GitHub release payload was incomplete");
     }
 
-    const updateAvailable = compareReleaseVersions(latestVersion, options.localVersion) > 0;
-
-    return {
-      status: updateAvailable ? "available" : "current",
-      localVersion: options.localVersion,
-      latestVersion,
-      latestUrl,
-      updateAvailable,
-      checkedAt: now.toISOString(),
-      fromCache: false,
-    };
+    return statusFromRelease(options.localVersion, now, latestVersion, latestUrl);
   } catch (error) {
+    const fallbackStatus = await fetchLatestReleaseFromRedirect(fetchImpl, options.localVersion, now).catch(
+      () => null,
+    );
+    if (fallbackStatus) return fallbackStatus;
+
     return unknownStatus(options.localVersion, now, error);
   }
 }

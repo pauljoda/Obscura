@@ -78,6 +78,25 @@ describe("checkForReleaseUpdate", () => {
     expect(status.error).toBe("offline");
   });
 
+  it("falls back to the public latest-release redirect when the API is rate limited", async () => {
+    const redirectResponse = new Response("", { status: 200 });
+    Object.defineProperty(redirectResponse, "url", {
+      value: "https://github.com/pauljoda/Obscura/releases/tag/v0.23.0",
+    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: "rate limited" }), { status: 403 }))
+      .mockResolvedValueOnce(redirectResponse);
+
+    const status = await checkForReleaseUpdate({ localVersion: "0.22.1-dev", fetchImpl });
+
+    expect(status.status).toBe("available");
+    expect(status.latestVersion).toBe("0.23.0");
+    expect(status.latestUrl).toBe("https://github.com/pauljoda/Obscura/releases/tag/v0.23.0");
+    expect(status.updateAvailable).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it("caches daily checks and bypasses cache when forced", async () => {
     const fetchImpl = vi
       .fn()
