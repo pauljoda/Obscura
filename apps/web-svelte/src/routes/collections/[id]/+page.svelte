@@ -3,6 +3,7 @@
   import { page } from "$app/state";
   import {
     CheckSquare,
+    BookOpen,
     Edit,
     FolderOpen,
     Grid3X3,
@@ -46,7 +47,7 @@
   let deleting = $state(false);
   let removing = $state(false);
 
-  const typeOrder: CollectionEntityType[] = ["video", "gallery", "image", "audio-track"];
+  const typeOrder: CollectionEntityType[] = ["video", "gallery", "book", "image", "audio-track"];
   const modeIcons: Record<CollectionMode, typeof Hand> = {
     manual: Hand,
     dynamic: Zap,
@@ -60,12 +61,14 @@
   const typeLabels: Record<CollectionEntityType, string> = {
     video: "Videos",
     gallery: "Galleries",
+    book: "Books",
     image: "Images",
     "audio-track": "Audio",
   };
   const typeIcons: Record<CollectionEntityType, typeof Film> = {
     video: Film,
     gallery: Images,
+    book: BookOpen,
     image: ImageIcon,
     "audio-track": Music,
   };
@@ -79,6 +82,7 @@
     const grouped: Record<CollectionEntityType, CollectionItemDto[]> = {
       video: [],
       gallery: [],
+      book: [],
       image: [],
       "audio-track": [],
     };

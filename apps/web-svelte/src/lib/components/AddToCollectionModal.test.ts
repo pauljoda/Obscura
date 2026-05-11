@@ -37,7 +37,7 @@ describe("AddToCollectionModal", () => {
           name: "Favorites",
           mode: "manual",
           itemCount: 12,
-          typeCounts: { video: 12, gallery: 0, image: 0, "audio-track": 0 },
+          typeCounts: { video: 12, gallery: 0, book: 0, image: 0, "audio-track": 0 },
         },
       ],
     });

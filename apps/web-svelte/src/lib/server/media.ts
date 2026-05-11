@@ -2,6 +2,8 @@ import type {
   GalleryDetailDto,
   GalleryListItemDto,
   GalleryStatsDto,
+  BookDetailDto,
+  BookListItemDto,
   ImageDetailDto,
   ImageListItemDto,
   ScrapeResultDto,
@@ -44,8 +46,6 @@ export async function fetchGalleries(
     dateTo?: string;
     imageCountMin?: number;
     organized?: string;
-    comic?: string;
-    read?: string;
     nsfw?: string;
     limit?: number;
     offset?: number;
@@ -68,8 +68,6 @@ export async function fetchGalleries(
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
-      comic: params?.comic,
-      read: params?.read,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -107,6 +105,65 @@ export async function fetchGalleryStats() {
   });
 }
 
+export async function fetchBooks(
+  params?: {
+    search?: string;
+    sort?: string;
+    order?: string;
+    randomSeed?: string;
+    tag?: string[];
+    performer?: string[];
+    studio?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    organized?: string;
+    read?: string;
+    nsfw?: string;
+    limit?: number;
+    offset?: number;
+  },
+  options?: { fetch?: typeof fetch },
+) {
+  const qs = buildQueryString(
+    {
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      randomSeed: params?.randomSeed,
+      studio: params?.studio,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      organized: params?.organized,
+      read: params?.read,
+      nsfw: params?.nsfw,
+      limit: params?.limit,
+      offset: params?.offset,
+    },
+    {
+      tag: params?.tag,
+      performer: params?.performer,
+    },
+  );
+
+  return serverFetch<{ books: BookListItemDto[]; total: number; limit: number; offset: number }>(
+    `/books${qs}`,
+    { fetch: options?.fetch },
+  );
+}
+
+export async function fetchBookDetail(
+  id: string,
+  params?: { nsfw?: string },
+  options?: { fetch?: typeof fetch },
+) {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return serverFetch<BookDetailDto>(`/books/${id}${qs}`, { fetch: options?.fetch });
+}
+
 export async function fetchImages(
   params?: {
     search?: string;
@@ -127,7 +184,6 @@ export async function fetchImages(
     dateTo?: string;
     resolution?: string;
     organized?: string;
-    comic?: string;
     limit?: number;
     offset?: number;
   },
@@ -149,7 +205,6 @@ export async function fetchImages(
       dateTo: params?.dateTo,
       resolution: params?.resolution,
       organized: params?.organized,
-      comic: params?.comic,
       limit: params?.limit,
       offset: params?.offset,
     },

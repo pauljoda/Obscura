@@ -204,6 +204,13 @@
       "when": 1778461313593,
       "tag": "0028_freezing_marvel_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1778469813012,
+      "tag": "0029_plain_photon",
+      "breakpoints": true
     }
   ]
 }

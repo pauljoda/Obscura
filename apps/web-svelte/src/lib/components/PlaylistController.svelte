@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronUp, Film, Images, Layers, Music, Repeat, Shuffle, SkipBack, SkipForward, X } from "@lucide/svelte";
+  import { BookOpen, ChevronDown, ChevronUp, Film, Images, Layers, Music, Repeat, Shuffle, SkipBack, SkipForward, X } from "@lucide/svelte";
   import type { CollectionEntityType } from "@obscura/contracts";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
   import { getEntityHref } from "./collections/collection-item-helpers";
@@ -10,6 +10,7 @@
   const typeIcons: Record<CollectionEntityType, typeof Film> = {
     video: Film,
     gallery: Images,
+    book: BookOpen,
     image: Layers,
     "audio-track": Music,
   };

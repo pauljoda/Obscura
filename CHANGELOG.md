@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+- Comics now live under a top-level Books section instead of being mixed into Galleries. Existing archive comic galleries are migrated into book/chapter/page records, old gallery detail links redirect to the new book detail page, and users should enable Books scanning on the relevant library roots to keep discovering ZIP/CBZ comics.
 - NSFW collections now stay hidden in SFW mode from the first browser render, and direct links to hidden detail pages now return to the dashboard instead of showing an error page.
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
@@ -31,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Galleries now behave as ordinary image galleries again: comic/read filters, gallery reader actions, and the merge-comic-series affordance have moved out of the Galleries browsing flow.
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
 - The video player now uses Vidstack's tested media engine and HLS provider behind Obscura's custom controls, captions, menus, and filmstrip strip.
@@ -40,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
 - Library settings now include a Show cast controls toggle so users can hide the video player's cast button if they do not want remote playback available.
 
 ### Fixed

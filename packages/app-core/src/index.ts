@@ -20,6 +20,7 @@ export * from "./library-roots-crud";
 export * from "./library-settings-writes";
 export * from "./media-file-ignores";
 export * from "./gallery-media";
+export * from "./books";
 export * from "./audio-libraries";
 export * from "./audio-tracks";
 export * from "./network";

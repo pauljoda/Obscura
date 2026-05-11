@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
+  import { BookOpen, Film, Images, Layers, Music, Hand, Zap } from "@lucide/svelte";
   import type { CollectionItemDto, CollectionEntityType } from "@obscura/contracts";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import { collectionItemToThumbnailProps } from "$lib/components/thumbnails/thumbnail-adapters";
@@ -22,12 +22,14 @@
   const typeIcons: Record<CollectionEntityType, typeof Film> = {
     video: Film,
     gallery: Images,
+    book: BookOpen,
     image: Layers,
     "audio-track": Music,
   };
   const typeColors: Record<CollectionEntityType, string> = {
     video: "bg-blue-500/20 text-blue-300",
     gallery: "bg-green-500/20 text-green-300",
+    book: "bg-amber-500/20 text-amber-300",
     image: "bg-purple-500/20 text-purple-300",
     "audio-track": "bg-amber-500/20 text-amber-300",
   };

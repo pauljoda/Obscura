@@ -18,8 +18,6 @@ type GalleryFilterType =
   | "date"
   | "dateFrom"
   | "dateTo"
-  | "comic"
-  | "read"
   | "tag"
   | "performer"
   | "studio";
@@ -32,7 +30,6 @@ interface BuildArgs {
   root?: string;
   onMutated?: () => void | Promise<void>;
   onConfirmDelete?: (selected: GalleryListItemDto[]) => void;
-  onMergeSeries?: (selected: GalleryListItemDto[]) => void;
 }
 
 export function galleriesSurfaceConfig(
@@ -51,24 +48,6 @@ export function galleriesSurfaceConfig(
       label: "Date",
       rangeTypes: { min: "dateFrom", max: "dateTo" },
     },
-    {
-      kind: "enum",
-      filterType: "comic",
-      label: "Library flags",
-      options: [
-        { value: "true", label: "Comic" },
-        { value: "false", label: "Not comic" },
-      ],
-    },
-    {
-      kind: "enum",
-      filterType: "read",
-      label: "Library flags",
-      options: [
-        { value: "unread", label: "Unread" },
-        { value: "read", label: "Read" },
-      ],
-    },
   ];
 
   return {
@@ -84,8 +63,6 @@ export function galleriesSurfaceConfig(
       const ratingMax = prefs.activeFilters.find((f) => f.type === "ratingMax")?.value;
       const dateFrom = prefs.activeFilters.find((f) => f.type === "dateFrom")?.value;
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
-      const comic = prefs.activeFilters.find((f) => f.type === "comic")?.value;
-      const read = prefs.activeFilters.find((f) => f.type === "read")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const tags = prefs.activeFilters.filter((f) => f.type === "tag").map((f) => f.value);
       const performers = prefs.activeFilters
@@ -106,8 +83,6 @@ export function galleriesSurfaceConfig(
           ratingMax: ratingMax ? Number(ratingMax) : undefined,
           dateFrom,
           dateTo,
-          comic,
-          read,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -153,21 +128,12 @@ export function galleriesSurfaceConfig(
       "ratingMax",
       "dateFrom",
       "dateTo",
-      "comic",
-      "read",
       "studio",
     ]),
     searchPlaceholder: "Search galleries...",
     thumbSize: { min: 2, max: 8, default: 4, label: "Gallery card size" },
     bulkItemLabel: "galleries",
     bulkActions: [
-      {
-        id: "merge-series",
-        label: "Merge into series",
-        handler: async (selected) => {
-          args.onMergeSeries?.(selected);
-        },
-      },
       {
         id: "mark-nsfw",
         label: "Mark NSFW",

@@ -23,25 +23,12 @@ describe("/api/galleries route", () => {
     listGalleriesRead.mockResolvedValue({ galleries: [], total: 0, limit: 50, offset: 0 });
   });
 
-  it("passes comic filter params through to app-core", async () => {
+  it("does not pass retired comic gallery params through to app-core", async () => {
     const { GET } = await import("./+server");
-    const url = new URL("http://localhost/api/galleries?comic=false");
+    const url = new URL("http://localhost/api/galleries?comic=false&read=unread");
 
     await GET({ url } as never);
 
-    expect(listGalleriesRead).toHaveBeenCalledWith(db, {
-      comic: "false",
-    });
-  });
-
-  it("passes reading-status filter params through to app-core", async () => {
-    const { GET } = await import("./+server");
-    const url = new URL("http://localhost/api/galleries?read=unread");
-
-    await GET({ url } as never);
-
-    expect(listGalleriesRead).toHaveBeenCalledWith(db, {
-      read: "unread",
-    });
+    expect(listGalleriesRead).toHaveBeenCalledWith(db, {});
   });
 });

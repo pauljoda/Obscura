@@ -54,6 +54,23 @@
     stacked={props.stacked}
     gradientIndex={props.gradientIndex}
   />
+{:else if props.kind === "book"}
+  <GalleryThumbnail
+    title={props.title}
+    coverImagePath={props.coverImagePath}
+    imageCount={props.pageCount}
+    isNsfw={props.isNsfw ?? false}
+    updatedAt={props.updatedAt}
+    size={props.size}
+    aspectClass={props.aspectClass}
+    aspectRatio={props.aspectRatio}
+    loading={props.loading}
+    fit={props.fit ?? "contain"}
+    class={props.class}
+    gradientFallback={props.gradientFallback}
+    showCount={props.showCount}
+    gradientIndex={props.gradientIndex}
+  />
 {:else if props.kind === "image"}
   <ImageThumbnail
     title={props.title}

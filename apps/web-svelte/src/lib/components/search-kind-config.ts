@@ -1,6 +1,7 @@
 import type { EntityKind } from "@obscura/contracts";
 import {
   Building2,
+  BookOpen,
   Film,
   FolderOpen,
   Image,
@@ -18,6 +19,7 @@ export const ALL_SEARCH_KINDS: EntityKind[] = [
   "studio",
   "tag",
   "gallery",
+  "book",
   "image",
   "audio-library",
   "audio-track",
@@ -36,6 +38,7 @@ export const SEARCH_KIND_CONFIG: Record<EntityKind, SearchKindConfig> = {
   studio: { label: "Studios", icon: Building2, href: "/studios" },
   tag: { label: "Tags", icon: Tag, href: "/tags" },
   gallery: { label: "Galleries", icon: Images, href: "/galleries" },
+  book: { label: "Books", icon: BookOpen, href: "/books" },
   image: { label: "Images", icon: Image, href: "/images" },
   "audio-library": { label: "Audio Libraries", icon: Music, href: "/audio" },
   "audio-track": { label: "Audio Tracks", icon: Music, href: "/audio" },

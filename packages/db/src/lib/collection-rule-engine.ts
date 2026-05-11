@@ -46,6 +46,7 @@ const {
   videoMovies,
   videoSeries,
   galleries,
+  books,
   images,
   audioTracks,
   videoEpisodeTags,
@@ -54,6 +55,8 @@ const {
   videoMoviePerformers,
   galleryTags,
   galleryPerformers,
+  bookTags,
+  bookPerformers,
   imageTags,
   imagePerformers,
   audioTrackTags,
@@ -176,6 +179,31 @@ const ENTITY_META: Record<
       performerIdCol: galleryPerformers.performerId,
     },
     studioIdExpr: galleries.studioId,
+    studioOperator: "direct",
+  },
+  book: {
+    table: books,
+    idCol: books.id,
+    columns: {
+      title: books.title,
+      rating: books.rating,
+      date: books.date,
+      organized: books.organized,
+      isNsfw: books.isNsfw,
+      createdAt: books.createdAt,
+      imageCount: books.pageCount,
+    },
+    tagJoin: {
+      table: bookTags,
+      entityIdCol: bookTags.bookId,
+      tagIdCol: bookTags.tagId,
+    },
+    performerJoin: {
+      table: bookPerformers,
+      entityIdCol: bookPerformers.bookId,
+      performerIdCol: bookPerformers.performerId,
+    },
+    studioIdExpr: books.studioId,
     studioOperator: "direct",
   },
   image: {
@@ -547,6 +575,7 @@ export async function evaluateRuleTree(
 
   const otherTypes: Array<Exclude<CollectionEntityType, "video">> = [
     "gallery",
+    "book",
     "image",
     "audio-track",
   ];
@@ -582,6 +611,7 @@ export async function previewRuleTree(
   const byType: Record<CollectionEntityType, number> = {
     video: 0,
     gallery: 0,
+    book: 0,
     image: 0,
     "audio-track": 0,
   };
@@ -600,6 +630,7 @@ export async function previewRuleTree(
 
   const otherTypes: Array<Exclude<CollectionEntityType, "video">> = [
     "gallery",
+    "book",
     "image",
     "audio-track",
   ];

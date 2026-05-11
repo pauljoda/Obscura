@@ -59,6 +59,9 @@ export interface AssetResolverDeps {
   getImageRecord(
     id: string,
   ): Promise<{ filePath: string; format: string | null } | null>;
+  getBookPageRecord(
+    id: string,
+  ): Promise<{ filePath: string; format: string | null } | null>;
   getCollectionDetail(id: string): Promise<{ coverImagePath: string | null }>;
 }
 
@@ -305,6 +308,50 @@ async function handleImageAsset(
   return streamFile(image.filePath, headers);
 }
 
+async function handleBookPageAsset(
+  deps: AssetResolverDeps,
+  id: string,
+  kind: string,
+  range: string | null,
+): Promise<Response> {
+  if (kind === "thumb") {
+    const thumbPath = firstExistingPath(cacheCandidates("book-pages", id, "thumb.jpg"));
+    if (!thumbPath) {
+      return notFound("Book page thumbnail not found");
+    }
+    return streamFile(thumbPath, {
+      "Cache-Control": MUTABLE_ASSET_CACHE_CONTROL,
+      "Content-Type": "image/jpeg",
+    });
+  }
+
+  if (kind !== "full") {
+    return notFound("Unknown asset kind");
+  }
+
+  const page = await deps.getBookPageRecord(id);
+  if (!page) return notFound("Book page not found");
+  if (page.filePath.includes("::")) {
+    const [zipPath, memberPath] = page.filePath.split("::");
+    const data = extractZipMember(zipPath, memberPath);
+    if (!data) return notFound("Book page not available");
+    return sendBuffer(data, {
+      "Cache-Control": PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
+      "Content-Type": mimeForFile(memberPath),
+    });
+  }
+
+  if (!existsSync(page.filePath)) return notFound("Book page file not found");
+  return streamFileWithRange(
+    page.filePath,
+    {
+      "Cache-Control": PRIVATE_HOURLY_ASSET_CACHE_CONTROL,
+      "Content-Type": mimeForFile(page.filePath),
+    },
+    range,
+  );
+}
+
 async function handleCollectionCover(
   deps: AssetResolverDeps,
   id: string,
@@ -376,6 +423,18 @@ export async function resolveAssetRequest(
 
   if (family === "images" && segments.length === 3) {
     return handleImageAsset(deps, id, kind, range);
+  }
+
+  if (family === "book-pages" && segments.length === 3) {
+    return handleBookPageAsset(deps, id, kind, range);
+  }
+
+  if (family === "books" && segments.length === 3 && kind === "cover") {
+    return serveFirstMatchingFile(
+      cacheCandidates("books", id, "cover-custom.jpg"),
+      "Book cover not found",
+      MUTABLE_ASSET_CACHE_CONTROL,
+    );
   }
 
   if (family === "audio-libraries" && segments.length === 3 && kind === "cover") {

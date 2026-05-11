@@ -35,6 +35,8 @@ import { processFingerprint } from "./processors/fingerprint.js";
 import { processPreview } from "./processors/preview.js";
 import { processMetadataImport } from "./processors/metadata-import.js";
 import { processGalleryScan } from "./processors/gallery-scan.js";
+import { processBookScan } from "./processors/book-scan.js";
+import { processBookPageThumbnail } from "./processors/book-page-thumbnail.js";
 import { processImageThumbnail } from "./processors/image-thumbnail.js";
 import { processImageFingerprint } from "./processors/image-fingerprint.js";
 import { processAudioScan } from "./processors/audio-scan.js";
@@ -52,6 +54,8 @@ const processorByQueue: Record<QueueName, (job: JobLike) => Promise<void>> = {
   preview: processPreview,
   "metadata-import": processMetadataImport,
   "gallery-scan": processGalleryScan,
+  "book-scan": processBookScan,
+  "book-page-thumbnail": processBookPageThumbnail,
   "image-thumbnail": processImageThumbnail,
   "image-fingerprint": processImageFingerprint,
   "audio-scan": processAudioScan,

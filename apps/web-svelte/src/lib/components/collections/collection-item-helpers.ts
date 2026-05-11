@@ -10,6 +10,9 @@ export function getEntityHref(item: CollectionItemDto, from?: string): string {
     case "gallery":
       base = `/galleries/${item.entityId}`;
       break;
+    case "book":
+      base = `/books/${item.entityId}`;
+      break;
     case "image":
       base = `/images/${item.entityId}`;
       break;
@@ -37,6 +40,8 @@ export function getEntityThumbnail(item: CollectionItemDto): string | null {
         (entity.thumbnailPath as string | null)) as string | null;
     case "gallery":
       return (entity.coverImagePath as string | null) ?? null;
+    case "book":
+      return (entity.coverImagePath as string | null) ?? null;
     case "image":
       return (entity.thumbnailPath as string | null) ?? null;
     case "audio-track":
@@ -58,6 +63,12 @@ export function getEntityMeta(item: CollectionItemDto): string | null {
     case "gallery": {
       const count = entity.imageCount as number | null;
       return count ? `${count} images` : null;
+    }
+    case "book": {
+      const chapters = entity.chapterCount as number | null;
+      const pages = entity.pageCount as number | null;
+      if (chapters) return `${chapters} chapter${chapters === 1 ? "" : "s"}`;
+      return pages ? `${pages} pages` : null;
     }
     case "image": {
       const w = entity.width as number | null;

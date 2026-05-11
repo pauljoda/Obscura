@@ -16,7 +16,7 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
     id: "scans",
     title: "Library scans",
     description: "High-level discovery across configured media roots.",
-    queueNames: ["library-scan", "gallery-scan", "audio-scan"],
+    queueNames: ["library-scan", "gallery-scan", "book-scan", "audio-scan"],
   },
   {
     id: "maintenance",
@@ -38,9 +38,9 @@ export const JOB_QUEUE_SECTIONS: readonly JobQueueSection[] = [
   },
   {
     id: "gallery-images",
-    title: "Gallery image pipeline",
-    description: "Thumbnails and fingerprints for gallery images.",
-    queueNames: ["image-thumbnail", "image-fingerprint"],
+    title: "Image and book pipeline",
+    description: "Thumbnails and fingerprints for gallery images and book pages.",
+    queueNames: ["image-thumbnail", "image-fingerprint", "book-page-thumbnail"],
   },
   {
     id: "audio-pipeline",

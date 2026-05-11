@@ -7,6 +7,8 @@
 import type {
   GalleryDetailDto,
   GalleryListItemDto,
+  BookDetailDto,
+  BookListItemDto,
   ImageDetailDto,
   ImageListItemDto,
   JobRunDto,
@@ -75,6 +77,8 @@ export type TagDetail = TagDetailDto;
 
 // ─── Gallery / Image aliases ────────────────────────────────────
 export type GalleryListItem = GalleryListItemDto;
+export type BookListItem = BookListItemDto;
+export type BookDetail = BookDetailDto;
 export type { GalleryDetailDto, ImageDetailDto, ImageListItemDto };
 
 // ─── Jobs / Library aliases ─────────────────────────────────────

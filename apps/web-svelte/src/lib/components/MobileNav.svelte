@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Film, Images, Users, Activity } from "@lucide/svelte";
+  import { BookOpen, Film, Images, Users } from "@lucide/svelte";
   import { page } from "$app/state";
   import { cn } from "@obscura/ui-svelte";
   import MobileMoreSheet from "./MobileMoreSheet.svelte";
@@ -8,14 +8,15 @@
   const primaryTabs = [
     { label: "Videos", href: "/videos", icon: Film },
     { label: "Galleries", href: "/galleries", icon: Images },
+    { label: "Books", href: "/books", icon: BookOpen },
     { label: "Actors", href: "/performers", icon: Users },
-    { label: "Jobs", href: "/jobs", icon: Activity },
   ];
 
   const moreRoutes = [
     "/",
     "/search",
     "/images",
+    "/jobs",
     "/studios",
     "/tags",
     "/collections",

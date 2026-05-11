@@ -14,6 +14,7 @@ describe("summarizeActiveLibraryRoots", () => {
         scanVideos: true,
         scanImages: false,
         scanAudio: false,
+        scanBooks: false,
       },
       {
         id: "root-mixed",
@@ -22,6 +23,7 @@ describe("summarizeActiveLibraryRoots", () => {
         scanVideos: true,
         scanImages: true,
         scanAudio: false,
+        scanBooks: true,
       },
       {
         id: "root-disabled",
@@ -30,6 +32,7 @@ describe("summarizeActiveLibraryRoots", () => {
         scanVideos: true,
         scanImages: true,
         scanAudio: true,
+        scanBooks: true,
       },
       {
         id: "root-audio",
@@ -38,12 +41,23 @@ describe("summarizeActiveLibraryRoots", () => {
         scanVideos: false,
         scanImages: false,
         scanAudio: true,
+        scanBooks: false,
+      },
+      {
+        id: "root-books",
+        path: "/media/books",
+        enabled: true,
+        scanVideos: false,
+        scanImages: false,
+        scanAudio: false,
+        scanBooks: true,
       },
     ]);
 
     expect(scope.videoRootIds).toEqual(["root-video", "root-mixed"]);
     expect(scope.imageRootPaths).toEqual(["/media/mixed"]);
     expect(scope.audioRootPaths).toEqual(["/media/audio"]);
+    expect(scope.bookRootPaths).toEqual(["/media/mixed", "/media/books"]);
   });
 });
 

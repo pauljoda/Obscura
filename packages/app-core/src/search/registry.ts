@@ -8,6 +8,7 @@ import { createStudiosSearchProvider } from "./providers/studios";
 import { createTagsSearchProvider } from "./providers/tags";
 import { createGalleriesSearchProvider } from "./providers/galleries";
 import { createImagesSearchProvider } from "./providers/images";
+import { createBooksSearchProvider } from "./providers/books";
 
 export function createSearchProviders(
   db: AppDb,
@@ -19,6 +20,7 @@ export function createSearchProviders(
     ["studio", createStudiosSearchProvider(db)],
     ["tag", createTagsSearchProvider(db)],
     ["gallery", createGalleriesSearchProvider(db)],
+    ["book", createBooksSearchProvider(db)],
     ["image", createImagesSearchProvider(db)],
   ]);
 }

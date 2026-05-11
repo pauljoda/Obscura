@@ -8,12 +8,14 @@ export interface LibraryRootVisibilityRow {
   scanVideos: boolean;
   scanImages: boolean;
   scanAudio: boolean;
+  scanBooks: boolean;
 }
 
 export interface ActiveLibraryRootsSummary {
   videoRootIds: string[];
   imageRootPaths: string[];
   audioRootPaths: string[];
+  bookRootPaths: string[];
 }
 
 function unique<T>(values: T[]) {
@@ -46,6 +48,9 @@ export function summarizeActiveLibraryRoots(
     ),
     audioRootPaths: unique(
       enabledRoots.filter((root) => root.scanAudio).map((root) => root.path),
+    ),
+    bookRootPaths: unique(
+      enabledRoots.filter((root) => root.scanBooks).map((root) => root.path),
     ),
   };
 }
@@ -148,6 +153,27 @@ export function audioTrackVisibleSql(filePathColumn: Column | SQL) {
     FROM library_roots lr
     WHERE lr.enabled IS TRUE
       AND lr.scan_audio IS TRUE
+      AND ${pathMatchesRootSql(filePathColumn, rootPath)}
+  )`;
+}
+
+export function bookVisibleSql(libraryRootIdColumn: Column | SQL) {
+  return sql`EXISTS (
+    SELECT 1
+    FROM library_roots lr
+    WHERE lr.id = ${libraryRootIdColumn}
+      AND lr.enabled IS TRUE
+      AND lr.scan_books IS TRUE
+  )`;
+}
+
+export function bookPageVisibleSql(filePathColumn: Column | SQL) {
+  const rootPath = sql.raw("lr.path");
+  return sql`EXISTS (
+    SELECT 1
+    FROM library_roots lr
+    WHERE lr.enabled IS TRUE
+      AND lr.scan_books IS TRUE
       AND ${pathMatchesRootSql(filePathColumn, rootPath)}
   )`;
 }

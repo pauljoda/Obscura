@@ -51,14 +51,12 @@ describe("/api/images route", () => {
     });
   });
 
-  it("passes comic filter params through to app-core", async () => {
+  it("does not pass retired comic image params through to app-core", async () => {
     const { GET } = await import("./+server");
     const url = new URL("http://localhost/api/images?comic=true");
 
     await GET({ url } as never);
 
-    expect(listImagesRead).toHaveBeenCalledWith(db, {
-      comic: "true",
-    });
+    expect(listImagesRead).toHaveBeenCalledWith(db, {});
   });
 });

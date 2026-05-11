@@ -10,7 +10,7 @@ import { getWebDb } from "$lib/server/db";
 export const GET: RequestHandler = async ({ url }) => {
   const db = await getWebDb();
   const query: ListLibrariesQuery = {};
-  for (const key of ["scanVideos", "scanImages", "scanAudio", "enabled"] as const) {
+  for (const key of ["scanVideos", "scanImages", "scanAudio", "scanBooks", "enabled"] as const) {
     const v = url.searchParams.get(key);
     if (v !== null) query[key] = v;
   }

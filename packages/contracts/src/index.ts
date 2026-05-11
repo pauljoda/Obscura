@@ -82,6 +82,18 @@ export const queueDefinitions = [
     concurrency: 1,
   },
   {
+    name: "book-scan",
+    label: "Book Scan",
+    description: "Discovers comic books in configured media roots",
+    concurrency: 1,
+  },
+  {
+    name: "book-page-thumbnail",
+    label: "Book Page Thumbnail",
+    description: "Generates thumbnails for comic book pages",
+    concurrency: 1,
+  },
+  {
     name: "image-thumbnail",
     label: "Image Thumbnail",
     description: "Generates thumbnails and lightweight previews for images",
@@ -225,6 +237,7 @@ export const jobTriggerKinds = [
   "schedule",
   "library-scan",
   "gallery-scan",
+  "book-scan",
   "audio-scan",
   "system",
 ] as const;
@@ -244,6 +257,7 @@ export interface LibraryRootSummaryDto {
   scanVideos: boolean;
   scanImages: boolean;
   scanAudio: boolean;
+  scanBooks: boolean;
 }
 
 export interface UploadVideoResponseDto {
@@ -276,6 +290,7 @@ export interface LibraryRootDto {
   scanVideos: boolean;
   scanImages: boolean;
   scanAudio: boolean;
+  scanBooks: boolean;
   isNsfw: boolean;
   lastScannedAt: string | null;
   createdAt: string;
@@ -530,6 +545,102 @@ export interface GalleryStatsDto {
   totalGalleries: number;
   totalImages: number;
   recentCount: number;
+}
+
+// ─── Book DTOs ───────────────────────────────────────────────────
+
+export type BookType = "comic";
+
+export interface BookListItemDto {
+  id: string;
+  bookType: BookType;
+  title: string;
+  details: string | null;
+  coverImagePath: string | null;
+  pageCount: number;
+  chapterCount: number;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  date: string | null;
+  studioId: string | null;
+  studioName: string | null;
+  performers: { id: string; name: string }[];
+  tags: TagEmbedDto[];
+  readCompleted: boolean;
+  progress: BookProgressDto | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookDetailDto {
+  id: string;
+  bookType: BookType;
+  title: string;
+  details: string | null;
+  coverImagePath: string | null;
+  pageCount: number;
+  chapterCount: number;
+  rating: number | null;
+  organized: boolean;
+  isNsfw: boolean;
+  date: string | null;
+  studioId: string | null;
+  studioName: string | null;
+  tags: TagEmbedDto[];
+  readCompleted: boolean;
+  progress: BookProgressDto | null;
+  createdAt: string;
+  updatedAt: string;
+  folderPath: string | null;
+  relativePath: string;
+  urls: string[];
+  studio: { id: string; name: string; url: string | null } | null;
+  performers: { id: string; name: string; gender: string | null; imagePath: string | null; isNsfw: boolean }[];
+  chapters: BookChapterDto[];
+}
+
+export interface BookChapterDto {
+  id: string;
+  bookId: string;
+  title: string;
+  chapterNumber: number;
+  archivePath: string;
+  relativePath: string;
+  pageCount: number;
+  coverImagePath: string | null;
+  pages: BookPageDto[];
+}
+
+export interface BookPageDto {
+  id: string;
+  bookId: string;
+  chapterId: string;
+  title: string;
+  width: number | null;
+  height: number | null;
+  format: string | null;
+  thumbnailPath: string | null;
+  fullPath: string;
+  sortOrder: number;
+}
+
+export interface BookProgressDto {
+  bookId: string;
+  chapterId: string | null;
+  pageIndex: number;
+  pageCount: number;
+  readerMode: "paged" | "webtoon";
+  completedAt: string | null;
+  updatedAt: string;
+}
+
+export interface BookProgressPatchDto {
+  chapterId?: string | null;
+  pageIndex?: number;
+  pageCount?: number;
+  readerMode?: "paged" | "webtoon";
+  completedAt?: string | null;
 }
 
 // ─── Image DTOs ──────────────────────────────────────────────────
@@ -911,7 +1022,7 @@ export interface NormalizedPerformerResult {
 
 // ─── Search DTOs ────────────────────────────────────────────────
 
-export type EntityKind = "video" | "video-series" | "performer" | "studio" | "tag" | "gallery" | "image" | "audio-library" | "audio-track";
+export type EntityKind = "video" | "video-series" | "performer" | "studio" | "tag" | "gallery" | "image" | "book" | "audio-library" | "audio-track";
 
 export interface SearchResultItem {
   id: string;
@@ -1087,7 +1198,7 @@ export interface AudioTrackMarkerDto {
 
 export type CollectionMode = "manual" | "dynamic" | "hybrid";
 export type CollectionCoverMode = "mosaic" | "custom" | "item";
-export type CollectionEntityType = "video" | "gallery" | "image" | "audio-track";
+export type CollectionEntityType = "video" | "gallery" | "image" | "book" | "audio-track";
 export type CollectionItemSource = "manual" | "dynamic";
 
 // ─── Collection Rule Tree ──────────────────────────────────────

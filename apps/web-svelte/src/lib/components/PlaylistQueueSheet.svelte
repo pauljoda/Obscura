@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X, Film, Images, Layers, Music, ListMusic } from "@lucide/svelte";
+  import { X, BookOpen, Film, Images, Layers, Music, ListMusic } from "@lucide/svelte";
   import type { CollectionEntityType } from "@obscura/contracts";
   import { toApiUrl } from "$lib/api/core";
   import { usePlaylist } from "$lib/stores/playlist.svelte";
@@ -20,6 +20,7 @@
   const typeIcons: Record<CollectionEntityType, typeof Film> = {
     video: Film,
     gallery: Images,
+    book: BookOpen,
     image: Layers,
     "audio-track": Music,
   };

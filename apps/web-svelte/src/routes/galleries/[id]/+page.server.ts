@@ -1,13 +1,11 @@
 import type { PageServerLoad } from "./$types";
 import { fetchGalleryDetail } from "$lib/server/media";
-import { error } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
+import { getBookLegacyGalleryRedirectRead } from "@obscura/app-core";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
-import { loadFormFactorUiPrefObjects, loadUiPrefObject } from "$lib/server/ui-prefs";
-import {
-  comicReadingProgressKey,
-  defaultComicProgress,
-} from "$lib/components/comic-progress";
+import { loadFormFactorUiPrefObjects } from "$lib/server/ui-prefs";
+import { getWebDb } from "$lib/server/db";
 
 const PAGE_SIZE = 120;
 
@@ -34,14 +32,17 @@ export const load: PageServerLoad = async ({ params, depends, fetch, cookies }) 
         "galleries:interiorView",
         { cols: 3 },
       ),
-      comicProgress: await loadUiPrefObject(
-        comicReadingProgressKey(params.id),
-        defaultComicProgress,
-      ),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (/404/.test(message)) error(404, "Gallery not found");
+    if (/404/.test(message)) {
+      const legacy = await getBookLegacyGalleryRedirectRead(await getWebDb(), params.id);
+      if (legacy) {
+        const chapter = legacy.chapterId ? `?chapter=${legacy.chapterId}` : "";
+        redirect(308, `/books/${legacy.bookId}${chapter}`);
+      }
+      error(404, "Gallery not found");
+    }
     throw err;
   }
 };

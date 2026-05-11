@@ -32,6 +32,7 @@
   const entityTypeOptions: { value: CollectionEntityType; label: string }[] = [
     { value: "video", label: "Video" },
     { value: "gallery", label: "Gallery" },
+    { value: "book", label: "Book" },
     { value: "image", label: "Image" },
     { value: "audio-track", label: "Audio" },
   ];

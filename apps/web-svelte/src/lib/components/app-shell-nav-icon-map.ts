@@ -2,6 +2,7 @@ import type { Component } from "svelte";
 import {
   Activity,
   Building2,
+  BookOpen,
   Film,
   FolderOpen,
   Image,
@@ -21,6 +22,7 @@ export const appShellNavIconMap: Record<string, Component<Record<string, unknown
   "layout-dashboard": LayoutDashboard as unknown as Component<Record<string, unknown>>,
   film: Film as unknown as Component<Record<string, unknown>>,
   images: Images as unknown as Component<Record<string, unknown>>,
+  "book-open": BookOpen as unknown as Component<Record<string, unknown>>,
   image: Image as unknown as Component<Record<string, unknown>>,
   music: Music as unknown as Component<Record<string, unknown>>,
   users: Users as unknown as Component<Record<string, unknown>>,

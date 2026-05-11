@@ -4,7 +4,7 @@ import { resolveExistingMediaPath } from "@obscura/media-core";
 import { schema, type AppDb } from "@obscura/db";
 import type { AssetResolverDeps } from "./resolve-asset-request";
 
-const { galleries, images, librarySettings, videoEpisodes, videoMovies } = schema;
+const { galleries, images, bookPages, librarySettings, videoEpisodes, videoMovies } = schema;
 
 export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
   return {
@@ -114,6 +114,15 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
         .where(eq(images.id, id))
         .limit(1);
       return image ?? null;
+    },
+
+    async getBookPageRecord(id) {
+      const [page] = await db
+        .select({ filePath: bookPages.filePath, format: bookPages.format })
+        .from(bookPages)
+        .where(eq(bookPages.id, id))
+        .limit(1);
+      return page ?? null;
     },
 
     async getCollectionDetail(id) {

@@ -7,6 +7,7 @@
     Film,
     FolderOpen,
     Image as ImageIcon,
+    BookOpen,
     Loader2,
     Music,
     Plus,
@@ -48,6 +49,7 @@
   let newRootScanVideos = $state(true);
   let newRootScanImages = $state(true);
   let newRootScanAudio = $state(true);
+  let newRootScanBooks = $state(false);
   let newRootIsNsfw = $state(false);
 
   const rootsVisible = $derived.by(() => {
@@ -85,6 +87,7 @@
         scanVideos: newRootScanVideos,
         scanImages: newRootScanImages,
         scanAudio: newRootScanAudio,
+        scanBooks: newRootScanBooks,
         isNsfw: newRootIsNsfw,
       });
       onMessage("Library root added.");
@@ -116,7 +119,7 @@
 
   async function handleToggleMediaType(
     root: LibraryRoot,
-    field: "scanVideos" | "scanImages" | "scanAudio",
+    field: "scanVideos" | "scanImages" | "scanAudio" | "scanBooks",
   ) {
     const next = !root[field];
     roots = roots.map((r) => (r.id === root.id ? { ...r, [field]: next } : r));
@@ -268,6 +271,12 @@
               description="Scan audio files"
               checked={newRootScanAudio}
               onChange={(v) => (newRootScanAudio = v)}
+            />
+            <ToggleCard
+              label="Books"
+              description="Scan ZIP/CBZ comic archives"
+              checked={newRootScanBooks}
+              onChange={(v) => (newRootScanBooks = v)}
             />
             <ToggleCard
               label="NSFW"
@@ -439,6 +448,27 @@
               >
                 <Music class="h-3.5 w-3.5" />
                 Audio
+              </button>
+
+              <button
+                type="button"
+                onclick={() => void handleToggleMediaType(root, "scanBooks")}
+                title={
+                  root.scanBooks && root.scanImages
+                    ? "Books and Images: ZIP/CBZ files can appear in both"
+                    : root.scanBooks
+                      ? "Books: scanning"
+                      : "Books: skipped"
+                }
+                class={cn(
+                  "flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium border transition-all duration-fast",
+                  root.scanBooks
+                    ? "bg-accent-950/30 border-border-accent text-text-accent shadow-[var(--shadow-glow-accent)]"
+                    : "bg-surface-1 border-border-subtle text-text-disabled hover:text-text-muted hover:border-border-default",
+                )}
+              >
+                <BookOpen class="h-3.5 w-3.5" />
+                Books
               </button>
 
               <div class="w-px h-4 bg-border-subtle mx-1 hidden sm:block"></div>

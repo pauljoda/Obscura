@@ -15,6 +15,7 @@ export const appShellSections = [
       { label: "Series", href: "/series", icon: "folder" },
       { label: "Images", href: "/images", icon: "image" },
       { label: "Galleries", href: "/galleries", icon: "images" },
+      { label: "Books", href: "/books", icon: "book-open" },
       { label: "Audio", href: "/audio", icon: "music" },
       { label: "Actors", href: "/performers", icon: "users" },
       { label: "Studios", href: "/studios", icon: "building" },

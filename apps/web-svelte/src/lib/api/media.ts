@@ -6,6 +6,10 @@ import type {
   AudioLibraryStatsDto,
   AudioTrackListItemDto,
   AudioTrackPatchDto,
+  BookDetailDto,
+  BookListItemDto,
+  BookProgressDto,
+  BookProgressPatchDto,
   GalleryDetailDto,
   GalleryListItemDto,
   GalleryImagesPageDto,
@@ -64,8 +68,6 @@ export async function fetchGalleries(params?: {
   dateTo?: string;
   imageCountMin?: number;
   organized?: string;
-  comic?: string;
-  read?: string;
   nsfw?: string;
   limit?: number;
   offset?: number;
@@ -86,8 +88,6 @@ export async function fetchGalleries(params?: {
       dateTo: params?.dateTo,
       imageCountMin: params?.imageCountMin,
       organized: params?.organized,
-      comic: params?.comic,
-      read: params?.read,
       nsfw: params?.nsfw,
       limit: params?.limit,
       offset: params?.offset,
@@ -99,6 +99,65 @@ export async function fetchGalleries(params?: {
   );
 
   return fetchApi(`/galleries${qs}`, { signal: options?.signal });
+}
+
+export async function fetchBooks(params?: {
+  search?: string;
+  sort?: string;
+  order?: "asc" | "desc";
+  randomSeed?: string;
+  tag?: string[];
+  performer?: string[];
+  studio?: string;
+  ratingMin?: number;
+  ratingMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  organized?: string;
+  read?: string;
+  nsfw?: string;
+  limit?: number;
+  offset?: number;
+}, options?: RequestOptions): Promise<{ books: BookListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildQueryString(
+    {
+      search: params?.search,
+      sort: params?.sort,
+      order: params?.order,
+      randomSeed: params?.randomSeed,
+      studio: params?.studio,
+      ratingMin: params?.ratingMin,
+      ratingMax: params?.ratingMax,
+      dateFrom: params?.dateFrom,
+      dateTo: params?.dateTo,
+      organized: params?.organized,
+      read: params?.read,
+      nsfw: params?.nsfw,
+      limit: params?.limit,
+      offset: params?.offset,
+    },
+    {
+      tag: params?.tag,
+      performer: params?.performer,
+    },
+  );
+
+  return fetchApi(`/books${qs}`, { signal: options?.signal });
+}
+
+export async function fetchBookDetail(id: string, params?: { nsfw?: string }): Promise<BookDetailDto> {
+  const qs = buildQueryString({ nsfw: params?.nsfw });
+  return fetchApi(`/books/${id}${qs}`);
+}
+
+export async function updateBookProgress(
+  id: string,
+  patch: BookProgressPatchDto,
+): Promise<BookProgressDto> {
+  return fetchApi(`/books/${id}/progress`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
 }
 
 export async function fetchAudioLibraries(params?: {
@@ -299,7 +358,6 @@ export async function fetchImages(params?: {
   dateTo?: string;
   resolution?: string;
   organized?: string;
-  comic?: string;
   limit?: number;
   offset?: number;
 }, options?: RequestOptions): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
@@ -319,7 +377,6 @@ export async function fetchImages(params?: {
       dateTo: params?.dateTo,
       resolution: params?.resolution,
       organized: params?.organized,
-      comic: params?.comic,
       limit: params?.limit,
       offset: params?.offset,
     },

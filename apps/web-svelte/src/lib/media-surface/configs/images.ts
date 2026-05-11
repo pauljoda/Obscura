@@ -23,7 +23,6 @@ type ImageFilterType =
   | "dateTo"
   | "resolution"
   | "organized"
-  | "comic"
   | "format"
   | "animated"
   | "dimension"
@@ -87,15 +86,6 @@ export function imagesSurfaceConfig(
         { value: "false", label: "Not organized" },
       ],
     },
-    {
-      kind: "enum",
-      filterType: "comic",
-      label: "Library flags",
-      options: [
-        { value: "true", label: "Comic" },
-        { value: "false", label: "Not comic" },
-      ],
-    },
   ];
 
   return {
@@ -113,7 +103,6 @@ export function imagesSurfaceConfig(
       const dateTo = prefs.activeFilters.find((f) => f.type === "dateTo")?.value;
       const resolution = prefs.activeFilters.find((f) => f.type === "resolution")?.value;
       const organized = prefs.activeFilters.find((f) => f.type === "organized")?.value;
-      const comic = prefs.activeFilters.find((f) => f.type === "comic")?.value;
       const animated = prefs.activeFilters.find((f) => f.type === "animated")?.value;
       const studio = prefs.activeFilters.find((f) => f.type === "studio")?.value;
       const format = prefs.activeFilters.filter((f) => f.type === "format").map((f) => f.value);
@@ -144,7 +133,6 @@ export function imagesSurfaceConfig(
           dateTo,
           resolution,
           organized,
-          comic,
           nsfw: args.nsfwMode,
           limit,
           offset,
@@ -197,7 +185,6 @@ export function imagesSurfaceConfig(
       "dateTo",
       "resolution",
       "organized",
-      "comic",
       "animated",
       "studio",
     ]),

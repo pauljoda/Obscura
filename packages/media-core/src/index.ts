@@ -1337,6 +1337,14 @@ export function getGeneratedGalleryDir(galleryId: string) {
   return path.join(getCacheRootDir(), "galleries", galleryId);
 }
 
+export function getGeneratedBookPageDir(pageId: string) {
+  return path.join(getCacheRootDir(), "book-pages", pageId);
+}
+
+export function getGeneratedBookDir(bookId: string) {
+  return path.join(getCacheRootDir(), "books", bookId);
+}
+
 export function getGeneratedCollectionDir(collectionId: string) {
   return path.join(getCacheRootDir(), "collections", collectionId);
 }

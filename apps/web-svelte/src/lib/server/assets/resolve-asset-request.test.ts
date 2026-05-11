@@ -12,6 +12,7 @@ function createDeps(
     getMetadataStorageDedicated: async () => true,
     getGalleryCover: async () => ({ found: false, coverImageId: null }),
     getImageRecord: async () => null,
+    getBookPageRecord: async () => null,
     getCollectionDetail: async () => ({ coverImagePath: null }),
     ...overrides,
   };

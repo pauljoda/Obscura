@@ -4,6 +4,7 @@ export type EntityThumbnailKind =
   | "video"
   | "video-series"
   | "gallery"
+  | "book"
   | "image"
   | "performer"
   | "studio"
@@ -57,6 +58,14 @@ export type EntityThumbnailProps =
       isComic?: boolean | null;
       updatedAt?: string | null;
       stacked?: boolean;
+    } & EntityThumbnailCommon)
+  | ({
+      kind: "book";
+      title: string;
+      coverImagePath?: string | null;
+      pageCount?: number | null;
+      isNsfw?: boolean | null;
+      updatedAt?: string | null;
     } & EntityThumbnailCommon)
   | ({
       kind: "image";

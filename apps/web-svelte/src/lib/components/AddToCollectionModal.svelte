@@ -130,7 +130,13 @@
 
       await addCollectionItems(collection.id, { items: itemsToAdd });
 
-      const typeCounts = { video: 0, gallery: 0, image: 0, "audio-track": 0 };
+      const typeCounts: Record<CollectionEntityType, number> = {
+        video: 0,
+        gallery: 0,
+        book: 0,
+        image: 0,
+        "audio-track": 0,
+      };
       for (const item of itemsToAdd) {
         typeCounts[item.entityType] += 1;
       }
@@ -140,7 +146,7 @@
           ...collection,
           itemCount: itemsToAdd.length,
           typeCounts,
-        } as CollectionListItemDto,
+        } satisfies CollectionListItemDto,
         ...collections,
       ];
       addedIds = [...addedIds, collection.id];

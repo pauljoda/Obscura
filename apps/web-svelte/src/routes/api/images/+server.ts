@@ -17,7 +17,6 @@ const SCALAR_KEYS = [
   "dateTo",
   "resolution",
   "organized",
-  "comic",
   "animated",
   "randomSeed",
 ] as const;

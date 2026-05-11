@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { eq, inArray } from "drizzle-orm";
-import { getGeneratedImageDir, getGeneratedVideoDir } from "@obscura/media-core";
+import { getGeneratedBookPageDir, getGeneratedImageDir, getGeneratedVideoDir } from "@obscura/media-core";
 import type { AppDb } from "../types";
 import * as schema from "../schema";
 
@@ -10,6 +10,8 @@ const {
   libraryRoots,
   images,
   galleries,
+  books,
+  bookPages,
   videoEpisodes,
   videoMovies,
   videoSeasons,
@@ -43,6 +45,12 @@ export async function removeGeneratedImageDirs(imageIds: string[]) {
   }
 }
 
+export async function removeGeneratedBookPageDirs(pageIds: string[]) {
+  for (const pageId of pageIds) {
+    await rm(getGeneratedBookPageDir(pageId), { recursive: true, force: true });
+  }
+}
+
 /**
  * Remove DB rows (and generated dirs) for media no longer under any
  * enabled library root, and videos whose files disappeared from disk.
@@ -55,12 +63,14 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
       path: libraryRoots.path,
       scanVideos: libraryRoots.scanVideos,
       scanImages: libraryRoots.scanImages,
+      scanBooks: libraryRoots.scanBooks,
     })
     .from(libraryRoots)
     .where(eq(libraryRoots.enabled, true));
 
   const videoRootPaths = allRoots.filter((r) => r.scanVideos).map((r) => r.path);
   const imageRootPaths = allRoots.filter((r) => r.scanImages).map((r) => r.path);
+  const bookRootPaths = allRoots.filter((r) => r.scanBooks).map((r) => r.path);
 
   // Safety: if there are no video-enabled roots at all, skip the
   // orphan-delete step entirely. An empty `videoRootPaths` would
@@ -200,5 +210,33 @@ export async function pruneUntrackedLibraryReferences(db: AppDb) {
       .where(inArray(galleries.parentId, orphanedGalleryIds));
 
     await db.delete(galleries).where(inArray(galleries.id, orphanedGalleryIds));
+  }
+
+  // ── Books ───────────────────────────────────────────────────────
+  const allKnownBooks =
+    bookRootPaths.length > 0
+      ? await db
+          .select({
+            id: books.id,
+            folderPath: books.folderPath,
+            relativePath: books.relativePath,
+          })
+          .from(books)
+      : [];
+
+  const orphanedBookIds = allKnownBooks
+    .filter((book) => {
+      const backingPath = book.folderPath ?? book.relativePath;
+      return !isPathWithinAnyRoot(backingPath, bookRootPaths);
+    })
+    .map((book) => book.id);
+
+  if (orphanedBookIds.length > 0) {
+    const pageRows = await db
+      .select({ id: bookPages.id })
+      .from(bookPages)
+      .where(inArray(bookPages.bookId, orphanedBookIds));
+    await removeGeneratedBookPageDirs(pageRows.map((page) => page.id));
+    await db.delete(books).where(inArray(books.id, orphanedBookIds));
   }
 }

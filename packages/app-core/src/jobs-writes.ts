@@ -17,6 +17,7 @@ import {
 
 const {
   audioTracks,
+  bookPages,
   jobRuns,
   libraryRoots,
   librarySettings,
@@ -210,6 +211,50 @@ async function enqueueGalleryScans(
   return { jobIds: createdJobIds, skipped };
 }
 
+async function enqueueBookScans(
+  db: AppDb,
+  trigger: QueueTrigger,
+  sfwOnly: boolean,
+  deps: JobsWriteDeps,
+) {
+  const roots = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.enabled, true))
+    .orderBy(libraryRoots.path);
+
+  const enqueue = deps.enqueueJob ?? defaultEnqueueJob(db);
+  const createdJobIds: string[] = [];
+  let skipped = 0;
+
+  for (const root of roots) {
+    if (!root.scanBooks) {
+      skipped += 1;
+      continue;
+    }
+
+    const job = await enqueue({
+      queueName: "book-scan",
+      jobName: "book-root-scan",
+      data: {
+        libraryRootId: root.id,
+        ...(sfwOnly ? { sfwOnly: true } : {}),
+      },
+      target: {
+        type: "library-root",
+        id: root.id,
+        label: root.label,
+      },
+      trigger,
+    });
+
+    if (job) createdJobIds.push(String(job.id));
+    else skipped += 1;
+  }
+
+  return { jobIds: createdJobIds, skipped };
+}
+
 async function enqueueAudioScans(
   db: AppDb,
   trigger: QueueTrigger,
@@ -292,6 +337,40 @@ async function enqueueMissingAudioTrackJobs(
         type: "audio-track",
         id: track.id,
         label: track.title,
+      },
+      trigger,
+    });
+
+    if (job) createdJobIds.push(String(job.id));
+    else skipped += 1;
+  }
+
+  return { jobIds: createdJobIds, skipped };
+}
+
+async function enqueueMissingBookPageJobs(
+  db: AppDb,
+  trigger: QueueTrigger,
+  deps: JobsWriteDeps,
+) {
+  const rows = await db
+    .select({ id: bookPages.id, title: bookPages.title })
+    .from(bookPages)
+    .where(isNull(bookPages.thumbnailPath));
+
+  const enqueue = deps.enqueueJob ?? defaultEnqueueJob(db);
+  const createdJobIds: string[] = [];
+  let skipped = 0;
+
+  for (const row of rows) {
+    const job = await enqueue({
+      queueName: "book-page-thumbnail",
+      jobName: "book-page-thumbnail",
+      data: { pageId: row.id },
+      target: {
+        type: "book-page",
+        id: row.id,
+        label: row.title,
       },
       trigger,
     });
@@ -497,8 +576,12 @@ export async function runQueueWrite(
     result = await enqueueLibraryScans(db, trigger, input.sfwOnly, deps);
   } else if (queueName === "gallery-scan") {
     result = await enqueueGalleryScans(db, trigger, input.sfwOnly, deps);
+  } else if (queueName === "book-scan") {
+    result = await enqueueBookScans(db, trigger, input.sfwOnly, deps);
   } else if (queueName === "audio-scan") {
     result = await enqueueAudioScans(db, trigger, input.sfwOnly, deps);
+  } else if (queueName === "book-page-thumbnail") {
+    result = await enqueueMissingBookPageJobs(db, trigger, deps);
   } else if (
     queueName === "audio-probe" ||
     queueName === "audio-fingerprint" ||

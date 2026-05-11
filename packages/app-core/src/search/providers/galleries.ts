@@ -14,10 +14,6 @@ import {
   ne,
 } from "drizzle-orm";
 import { galleryVisibleSql, imageVisibleSql } from "../../library-root-visibility";
-import {
-  isComicGalleryRow,
-  isComicSeriesGalleryRow,
-} from "../../gallery-comics";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -134,27 +130,6 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
       previewAspectMap.set(preview.galleryId, aspectCandidates);
     }
 
-    const childRows = galleryIds.length
-      ? await db
-          .select({
-            id: galleries.id,
-            parentId: galleries.parentId,
-            galleryType: galleries.galleryType,
-            zipFilePath: galleries.zipFilePath,
-            imageCount: galleries.imageCount,
-          })
-          .from(galleries)
-          .where(inArray(galleries.parentId, galleryIds))
-      : [];
-    const childrenByParent = new Map<string, typeof childRows>();
-    for (const child of childRows) {
-      if (!child.parentId) continue;
-      childrenByParent.set(child.parentId, [
-        ...(childrenByParent.get(child.parentId) ?? []),
-        child,
-      ]);
-    }
-
     return {
       total,
       items: rows.map((r) => ({
@@ -170,9 +145,7 @@ export const createGalleriesSearchProvider: SearchProviderFactory = (
           imageCount: r.imageCount,
           galleryType: r.galleryType,
           isNsfw: r.isNsfw,
-          isComic:
-            isComicGalleryRow(r) ||
-            isComicSeriesGalleryRow(r, childrenByParent.get(r.id) ?? []),
+          isComic: false,
           coverAspectRatio: largestImageAspectRatio(previewAspectMap.get(r.id) ?? []),
           previewImagePaths: previewMap.get(r.id) ?? [],
         },

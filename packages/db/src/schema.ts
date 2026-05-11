@@ -105,6 +105,7 @@ export const performersRelations = relations(performers, ({ many }) => ({
   imagePerformers: many(imagePerformers),
   audioLibraryPerformers: many(audioLibraryPerformers),
   audioTrackPerformers: many(audioTrackPerformers),
+  bookPerformers: many(bookPerformers),
 }));
 
 // ─── Tags ───────────────────────────────────────────────────────────
@@ -139,6 +140,7 @@ export const tagsRelations = relations(tags, ({ many, one }) => ({
   imageTags: many(imageTags),
   audioLibraryTags: many(audioLibraryTags),
   audioTrackTags: many(audioTrackTags),
+  bookTags: many(bookTags),
   parent: one(tags, { fields: [tags.parentId], references: [tags.id] }),
 }));
 
@@ -154,6 +156,7 @@ export const libraryRoots = pgTable(
     scanVideos: boolean("scan_videos").default(true).notNull(),
     scanImages: boolean("scan_images").default(true).notNull(),
     scanAudio: boolean("scan_audio").default(true).notNull(),
+    scanBooks: boolean("scan_books").default(false).notNull(),
     isNsfw: boolean("is_nsfw").default(false).notNull(),
     lastScannedAt: timestamp("last_scanned_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -812,6 +815,228 @@ export const imageTagsRelations = relations(imageTags, ({ one }) => ({
   tag: one(tags, {
     fields: [imageTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+// ─── Books ────────────────────────────────────────────────────────
+export const books = pgTable(
+  "books",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    libraryRootId: uuid("library_root_id")
+      .references(() => libraryRoots.id, { onDelete: "cascade" })
+      .notNull(),
+    bookType: text("book_type").notNull().default("comic"),
+    title: text("title").notNull(),
+    sortTitle: text("sort_title"),
+    details: text("details"),
+    date: text("date"),
+    rating: integer("rating"),
+    organized: boolean("organized").default(false).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    urls: jsonb("urls").$type<string[]>().default([]).notNull(),
+    folderPath: text("folder_path"),
+    relativePath: text("relative_path").notNull(),
+    coverPageId: uuid("cover_page_id"),
+    coverImagePath: text("cover_image_path"),
+    pageCount: integer("page_count").default(0).notNull(),
+    chapterCount: integer("chapter_count").default(0).notNull(),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    studioId: uuid("studio_id").references(() => studios.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("books_library_root_idx").on(table.libraryRootId),
+    index("books_type_idx").on(table.bookType),
+    index("books_studio_idx").on(table.studioId),
+    index("books_date_idx").on(table.date),
+    index("books_rating_idx").on(table.rating),
+    index("books_created_at_idx").on(table.createdAt),
+    index("books_folder_path_idx").on(table.folderPath),
+    uniqueIndex("books_root_relative_idx").on(table.libraryRootId, table.relativePath),
+  ],
+);
+
+export const bookChapters = pgTable(
+  "book_chapters",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookId: uuid("book_id")
+      .references(() => books.id, { onDelete: "cascade" })
+      .notNull(),
+    title: text("title").notNull(),
+    chapterNumber: integer("chapter_number").default(1).notNull(),
+    archivePath: text("archive_path").notNull(),
+    relativePath: text("relative_path").notNull(),
+    pageCount: integer("page_count").default(0).notNull(),
+    coverPageId: uuid("cover_page_id"),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("book_chapters_archive_path_idx").on(table.archivePath),
+    index("book_chapters_book_idx").on(table.bookId),
+    index("book_chapters_book_number_idx").on(table.bookId, table.chapterNumber),
+  ],
+);
+
+export const bookPages = pgTable(
+  "book_pages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookId: uuid("book_id")
+      .references(() => books.id, { onDelete: "cascade" })
+      .notNull(),
+    chapterId: uuid("chapter_id")
+      .references(() => bookChapters.id, { onDelete: "cascade" })
+      .notNull(),
+    title: text("title").notNull(),
+    filePath: text("file_path").notNull(),
+    fileSize: real("file_size"),
+    width: integer("width"),
+    height: integer("height"),
+    format: text("format"),
+    thumbnailPath: text("thumbnail_path"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    isNsfw: boolean("is_nsfw").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("book_pages_file_path_idx").on(table.filePath),
+    index("book_pages_book_idx").on(table.bookId),
+    index("book_pages_chapter_idx").on(table.chapterId),
+    index("book_pages_chapter_sort_idx").on(table.chapterId, table.sortOrder),
+  ],
+);
+
+export const bookReadProgress = pgTable(
+  "book_read_progress",
+  {
+    bookId: uuid("book_id")
+      .references(() => books.id, { onDelete: "cascade" })
+      .primaryKey(),
+    chapterId: uuid("chapter_id").references(() => bookChapters.id, { onDelete: "set null" }),
+    pageIndex: integer("page_index").default(0).notNull(),
+    pageCount: integer("page_count").default(0).notNull(),
+    readerMode: text("reader_mode").default("paged").notNull(),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+);
+
+export const bookPerformers = pgTable(
+  "book_performers",
+  {
+    bookId: uuid("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    performerId: uuid("performer_id")
+      .notNull()
+      .references(() => performers.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("book_performers_pk").on(table.bookId, table.performerId),
+    index("book_performers_performer_idx").on(table.performerId),
+  ],
+);
+
+export const bookTags = pgTable(
+  "book_tags",
+  {
+    bookId: uuid("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("book_tags_pk").on(table.bookId, table.tagId),
+    index("book_tags_tag_idx").on(table.tagId),
+  ],
+);
+
+export const bookLegacyGalleryMap = pgTable(
+  "book_legacy_gallery_map",
+  {
+    galleryId: uuid("gallery_id").primaryKey(),
+    bookId: uuid("book_id")
+      .references(() => books.id, { onDelete: "cascade" })
+      .notNull(),
+    chapterId: uuid("chapter_id").references(() => bookChapters.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("book_legacy_gallery_map_book_idx").on(table.bookId),
+  ],
+);
+
+export const booksRelations = relations(books, ({ one, many }) => ({
+  libraryRoot: one(libraryRoots, {
+    fields: [books.libraryRootId],
+    references: [libraryRoots.id],
+  }),
+  studio: one(studios, { fields: [books.studioId], references: [studios.id] }),
+  chapters: many(bookChapters),
+  pages: many(bookPages),
+  bookPerformers: many(bookPerformers),
+  bookTags: many(bookTags),
+  progress: one(bookReadProgress, {
+    fields: [books.id],
+    references: [bookReadProgress.bookId],
+  }),
+}));
+
+export const bookChaptersRelations = relations(bookChapters, ({ one, many }) => ({
+  book: one(books, { fields: [bookChapters.bookId], references: [books.id] }),
+  pages: many(bookPages),
+  progressRows: many(bookReadProgress),
+}));
+
+export const bookPagesRelations = relations(bookPages, ({ one }) => ({
+  book: one(books, { fields: [bookPages.bookId], references: [books.id] }),
+  chapter: one(bookChapters, {
+    fields: [bookPages.chapterId],
+    references: [bookChapters.id],
+  }),
+}));
+
+export const bookReadProgressRelations = relations(bookReadProgress, ({ one }) => ({
+  book: one(books, { fields: [bookReadProgress.bookId], references: [books.id] }),
+  chapter: one(bookChapters, {
+    fields: [bookReadProgress.chapterId],
+    references: [bookChapters.id],
+  }),
+}));
+
+export const bookPerformersRelations = relations(bookPerformers, ({ one }) => ({
+  book: one(books, { fields: [bookPerformers.bookId], references: [books.id] }),
+  performer: one(performers, {
+    fields: [bookPerformers.performerId],
+    references: [performers.id],
+  }),
+}));
+
+export const bookTagsRelations = relations(bookTags, ({ one }) => ({
+  book: one(books, { fields: [bookTags.bookId], references: [books.id] }),
+  tag: one(tags, { fields: [bookTags.tagId], references: [tags.id] }),
+}));
+
+export const bookLegacyGalleryMapRelations = relations(bookLegacyGalleryMap, ({ one }) => ({
+  book: one(books, { fields: [bookLegacyGalleryMap.bookId], references: [books.id] }),
+  chapter: one(bookChapters, {
+    fields: [bookLegacyGalleryMap.chapterId],
+    references: [bookChapters.id],
   }),
 }));
 

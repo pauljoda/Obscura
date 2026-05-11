@@ -23,6 +23,7 @@ import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import {
   enqueueGalleryRootJob,
   enqueueAudioRootJob,
+  enqueueBookRootJob,
   enqueueCollectionRefreshAll,
   enqueuePendingVideoJob,
 } from "../lib/enqueue.js";
@@ -676,6 +677,15 @@ export async function processLibraryScan(job: Job): Promise<void> {
   const scanImages = root.scanImages ?? true;
   if (scanImages) {
     await enqueueGalleryRootJob(
+      root,
+      { by: "library-scan", label: `Queued during ${root.label} scan` },
+      gallerySfwOpts,
+    );
+  }
+
+  const scanBooks = root.scanBooks ?? false;
+  if (scanBooks) {
+    await enqueueBookRootJob(
       root,
       { by: "library-scan", label: `Queued during ${root.label} scan` },
       gallerySfwOpts,

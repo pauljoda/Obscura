@@ -104,6 +104,17 @@ export function searchResultToThumbnailProps(
         gradientIndex: index,
       };
     }
+    case "book":
+      return {
+        kind: "book",
+        title: item.title,
+        coverImagePath: item.imagePath,
+        pageCount: numberValue(meta.pageCount),
+        isNsfw: booleanValue(meta.isNsfw),
+        aspectClass: "aspect-[2/3]",
+        fit: "contain",
+        gradientIndex: index,
+      };
     case "image":
       return {
         kind: "image",
@@ -225,6 +236,17 @@ export function collectionItemToThumbnailProps(
         showCount: false,
       };
     }
+    case "book":
+      return {
+        kind: "book",
+        title,
+        coverImagePath: stringValue(entity.coverImagePath),
+        pageCount: numberValue(entity.pageCount),
+        isNsfw: booleanValue(entity.isNsfw),
+        aspectClass: "aspect-[2/3]",
+        fit: "contain",
+        showCount: false,
+      };
     case "image":
       return {
         kind: "image",

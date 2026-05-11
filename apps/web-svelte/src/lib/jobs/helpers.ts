@@ -2,6 +2,7 @@ import type { LedStatus, BadgeVariant } from "@obscura/ui-svelte";
 import type { JobRun, QueueSummary } from "$lib/api/types";
 import {
   Cpu,
+  BookOpen,
   DatabaseZap,
   FileSearch,
   Fingerprint,
@@ -19,7 +20,9 @@ export const queueIcons: Record<string, QueueIcon> = {
   preview: Image,
   "metadata-import": DatabaseZap,
   "gallery-scan": FolderSearch,
+  "book-scan": BookOpen,
   "image-thumbnail": Image,
+  "book-page-thumbnail": BookOpen,
   "image-fingerprint": Fingerprint,
 };
 
@@ -93,6 +96,8 @@ export function describeTrigger(job: JobRun): string {
       return "Queued during library scan";
     case "gallery-scan":
       return "Queued during gallery scan";
+    case "book-scan":
+      return "Queued during book scan";
     case "system":
       return "Queued by the system";
     default:

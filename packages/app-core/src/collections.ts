@@ -37,6 +37,7 @@ import { buildOrderBy, parsePagination, type SortConfig } from "./media-query-he
 import { getGalleriesByIdsRead, getImagesByIdsRead } from "./gallery-media";
 import { getTracksByIdsRead } from "./audio-tracks";
 import { getVideosByIdsRead } from "./video-collection-reads";
+import { getBooksByIdsRead } from "./books";
 
 const { collections, collectionItems } = schema;
 const COLLECTION_COVER_FILE = "cover-custom.jpg";
@@ -74,6 +75,7 @@ async function computeTypeCounts(
   const typeCounts: Record<CollectionEntityType, number> = {
     video: 0,
     gallery: 0,
+    book: 0,
     image: 0,
     "audio-track": 0,
   };
@@ -206,6 +208,11 @@ async function loadEntitiesForItems(
   if (idsByType.gallery?.length) {
     for (const gallery of await getGalleriesByIdsRead(db, idsByType.gallery)) {
       entityMap.set(`gallery:${gallery.id}`, gallery as Record<string, unknown>);
+    }
+  }
+  if (idsByType.book?.length) {
+    for (const book of await getBooksByIdsRead(db, idsByType.book)) {
+      entityMap.set(`book:${book.id}`, book as unknown as Record<string, unknown>);
     }
   }
   if (idsByType.image?.length) {

@@ -3,6 +3,7 @@ import type { QueueName } from "@obscura/contracts";
 import {
   db,
   images,
+  bookPages,
   audioTracks,
   collections,
   videoEpisodes,
@@ -136,6 +137,41 @@ export async function enqueuePendingImageJob(
   });
 }
 
+export async function enqueuePendingBookPageJob(
+  queueName: QueueName,
+  pageId: string,
+  trigger: QueueTrigger = {},
+) {
+  if (
+    await hasPendingJob(queueName, {
+      type: "book-page",
+      id: pageId,
+    })
+  ) {
+    return;
+  }
+
+  const [page] = await db
+    .select({ id: bookPages.id, title: bookPages.title })
+    .from(bookPages)
+    .where(eq(bookPages.id, pageId))
+    .limit(1);
+
+  if (!page) return;
+
+  await enqueueJobIfNeeded({
+    queueName,
+    jobName: `book-page-${queueName}`,
+    data: { pageId },
+    target: {
+      type: "book-page",
+      id: page.id,
+      label: page.title,
+    },
+    trigger,
+  });
+}
+
 export async function enqueueLibraryRootJob(
   root: { id: string; label: string; path: string; recursive: boolean },
   trigger: QueueTrigger = {}
@@ -221,6 +257,27 @@ export async function enqueueAudioRootJob(
   await enqueueJobIfNeeded({
     queueName: "audio-scan",
     jobName: "audio-root-scan",
+    data: {
+      libraryRootId: root.id,
+      ...(opts?.sfwOnly ? { sfwOnly: true } : {}),
+    },
+    target: {
+      type: "library-root",
+      id: root.id,
+      label: root.label,
+    },
+    trigger,
+  });
+}
+
+export async function enqueueBookRootJob(
+  root: { id: string; label: string },
+  trigger: QueueTrigger = {},
+  opts?: { sfwOnly?: boolean },
+) {
+  await enqueueJobIfNeeded({
+    queueName: "book-scan",
+    jobName: "book-root-scan",
     data: {
       libraryRootId: root.id,
       ...(opts?.sfwOnly ? { sfwOnly: true } : {}),

@@ -1,11 +1,10 @@
 <script lang="ts">
   import { invalidate, invalidateAll } from "$app/navigation";
   import { onMount } from "svelte";
-  import { BookOpen, Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
+  import { Images, LayoutGrid, LayoutList, Pencil, Rows3 } from "@lucide/svelte";
   import { Badge, dur } from "@obscura/ui-svelte";
   import { deleteImage, updateGallery } from "$lib/api/media";
   import type { ImageListItemDto } from "@obscura/contracts";
-  import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import ImageLightbox from "$lib/components/ImageLightbox.svelte";
   import GalleryEdit from "$lib/components/GalleryEdit.svelte";
@@ -23,17 +22,6 @@
     formFactorUiPrefKey,
   } from "$lib/prefs/form-factor-prefs";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
-  import {
-    canResumeComic,
-    comicProgressLabel,
-    comicProgressPercent,
-    comicReadingProgressKey,
-    defaultComicProgress,
-    isComicComplete,
-    normalizeComicProgress,
-    validateComicProgress,
-    type ComicReadingProgress,
-  } from "$lib/components/comic-progress";
 
   type ChildGalleryViewPrefs = { cols: number };
   const childGalleryPrefsDefault: ChildGalleryViewPrefs = { cols: 3 };
@@ -73,19 +61,10 @@
   let lightboxOpen = $state(false);
   let lightboxIndex = $state(0);
   let lightboxSourceId = $state<string | null>(null);
-  let readerOpen = $state(false);
-  let readerIndex = $state(0);
   let editing = $state(false);
   let deleteDialogOpen = $state(false);
   let pendingDelete = $state<ImageListItemDto[]>([]);
   let bulkBusy = $state(false);
-  // svelte-ignore state_referenced_locally
-  const comicProgressPrefs = createServerPrefs<ComicReadingProgress>(
-    comicReadingProgressKey(data.gallery.id),
-    defaultComicProgress,
-    data.comicProgress,
-    validateComicProgress,
-  );
   // svelte-ignore state_referenced_locally
   const childGalleryPrefs = createServerPrefs<ChildGalleryViewPrefs>(
     formFactorUiPrefKey("galleries:interiorView", childGalleryFormFactor),
@@ -94,73 +73,12 @@
     validateChildGalleryPrefs,
   );
   const childGalleryCols = $derived(childGalleryPrefs.current.cols);
-  const comicProgress = $derived(
-    normalizeComicProgress(comicProgressPrefs.current, images.length),
-  );
-  const comicComplete = $derived(isComicComplete(comicProgress, images.length));
-  const canResume = $derived(canResumeComic(comicProgress, images.length) && !comicComplete);
-  const progressLabel = $derived(comicProgressLabel(comicProgress.pageIndex, images.length));
-  const progressPercent = $derived(comicProgressPercent(comicProgress.pageIndex, images.length));
-
-  async function flushComicProgressAndRefreshLists() {
-    await comicProgressPrefs.flush();
-    await invalidate("galleries");
-  }
 
   onMount(() => {
-    void comicProgressPrefs.load();
     void childGalleryPrefs.load();
   });
 
-  function saveComicProgress(nextIndex: number) {
-    if (!g.isComic || images.length === 0) return;
-    const normalized = normalizeComicProgress(
-      { ...comicProgressPrefs.current, pageIndex: nextIndex },
-      images.length,
-    );
-    const reachedEnd = normalized.pageIndex >= images.length - 1;
-    comicProgressPrefs.update({
-      pageIndex: normalized.pageIndex,
-      pageCount: images.length,
-      readerMode: normalized.readerMode,
-      updatedAt: new Date().toISOString(),
-      completedAt: reachedEnd
-        ? normalized.completedAt ?? new Date().toISOString()
-        : normalized.completedAt ?? null,
-    });
-    if (reachedEnd) {
-      void flushComicProgressAndRefreshLists();
-    }
-  }
-
-  function saveComicReaderMode(readerMode: "paged" | "webtoon") {
-    if (!g.isComic || images.length === 0) return;
-    comicProgressPrefs.update({
-      ...comicProgressPrefs.current,
-      pageIndex: readerIndex,
-      pageCount: images.length,
-      readerMode,
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  async function closeReader() {
-    saveComicProgress(readerIndex);
-    readerOpen = false;
-    await flushComicProgressAndRefreshLists();
-  }
-
-  function openComicReaderAt(i: number) {
-    readerIndex = normalizeComicProgress({ pageIndex: i }, images.length).pageIndex;
-    saveComicProgress(readerIndex);
-    readerOpen = true;
-  }
-
   function openAt(i: number) {
-    if (g.isComic) {
-      openComicReaderAt(i);
-      return;
-    }
     openLightboxAt(i);
   }
 
@@ -177,10 +95,6 @@
       lightboxIndex = images.length - 1;
     } else {
       lightboxIndex = existingIndex;
-    }
-    if (g.isComic) {
-      openComicReaderAt(existingIndex < 0 ? images.length - 1 : existingIndex);
-      return;
     }
     lightboxSourceId = item.id;
     lightboxOpen = true;
@@ -218,7 +132,6 @@
   }
 
   const visibleChildGalleries = $derived(g.children ?? []);
-  const performerLabel = $derived(g.isComic ? "Authors" : "Performers");
   const galleryImageSurface = $derived(
     imagesSurfaceConfig({
       initial: { items: data.gallery.images, total: data.gallery.imageTotal },
@@ -227,9 +140,9 @@
       nsfwMode: data.nsfwMode,
       galleryId: g.id,
       surfaceId: `gallery:${g.id}:images`,
-      defaultViewMode: g.isComic ? "grid" : "masonry",
-      defaultSortBy: g.isComic ? "natural" : "recent",
-      defaultSortDir: g.isComic ? "asc" : "desc",
+      defaultViewMode: "masonry",
+      defaultSortBy: "recent",
+      defaultSortDir: "desc",
       layoutByViewMode: { masonry: "masonry", grid: "grid", list: "list" },
       viewModes: [
         { mode: "masonry", icon: Rows3, label: "Masonry view" },
@@ -311,35 +224,6 @@
       {/if}
     </div>
     <div class="flex items-center gap-2">
-      {#if g.isComic && images.length > 0}
-        {#if canResume}
-          <div class="comic-progress-summary">
-            <div class="flex items-center justify-between gap-3">
-              <span>{progressLabel}</span>
-              <span>{progressPercent}%</span>
-            </div>
-            <div class="comic-progress-track" aria-hidden="true">
-              <div class="comic-progress-fill" style:width={`${progressPercent}%`}></div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onclick={() => openComicReaderAt(comicProgress.pageIndex)}
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-accent text-text-accent shadow-[0_0_18px_rgba(196,154,90,0.18)] hover:text-text-accent-bright transition-colors"
-          >
-            <BookOpen class="h-3.5 w-3.5" />
-            Resume
-          </button>
-        {/if}
-        <button
-          type="button"
-          onclick={() => openAt(0)}
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] border border-border-default hover:border-border-accent hover:text-text-accent transition-colors"
-        >
-          <BookOpen class="h-3.5 w-3.5" />
-          {comicComplete ? "Re-read" : "Read"}
-        </button>
-      {/if}
       {#if !editing}
         <button
           type="button"
@@ -403,7 +287,7 @@
       <div class="surface-well p-4 space-y-4">
         {#if g.performers && g.performers.length > 0}
           <div class="space-y-2">
-            <h2 class="text-kicker">{performerLabel}</h2>
+            <h2 class="text-kicker">Performers</h2>
             <div class="flex flex-wrap gap-1.5">
               {#each g.performers as p (p.id)}
                 <a
@@ -494,43 +378,3 @@
     onRatingChange={patchImageRating}
   />
 {/if}
-
-{#if readerOpen}
-  <ComicReader
-    {images}
-    initialIndex={readerIndex}
-    initialMode={comicProgress.readerMode}
-    title={g.title}
-    onIndexChange={(index) => {
-      readerIndex = index;
-      saveComicProgress(index);
-    }}
-    onModeChange={saveComicReaderMode}
-    onClose={() => void closeReader()}
-  />
-{/if}
-
-<style>
-  .comic-progress-summary {
-    min-width: 9rem;
-    border: 1px solid rgb(255 255 255 / 0.12);
-    background: rgb(0 0 0 / 0.42);
-    padding: 0.42rem 0.55rem;
-    font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
-    font-size: 0.66rem;
-    line-height: 1;
-    color: rgb(210 215 226 / 0.82);
-  }
-
-  .comic-progress-track {
-    margin-top: 0.38rem;
-    height: 0.16rem;
-    background: rgb(255 255 255 / 0.12);
-  }
-
-  .comic-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #9f6f2f, #c49a5a);
-    box-shadow: 0 0 14px rgb(196 154 90 / 0.28);
-  }
-</style>

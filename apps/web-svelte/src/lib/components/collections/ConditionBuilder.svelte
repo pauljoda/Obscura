@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Loader2, Film, Images, Layers, Music } from "@lucide/svelte";
+  import { Loader2, BookOpen, Film, Images, Layers, Music } from "@lucide/svelte";
   import type {
     CollectionRuleGroup,
     CollectionRulePreviewDto,
@@ -48,12 +48,14 @@
   const typeLabels: Record<CollectionEntityType, string> = {
     video: "videos",
     gallery: "galleries",
+    book: "books",
     image: "images",
     "audio-track": "audio tracks",
   };
   const typeIcons: Record<CollectionEntityType, typeof Film> = {
     video: Film,
     gallery: Images,
+    book: BookOpen,
     image: Layers,
     "audio-track": Music,
   };

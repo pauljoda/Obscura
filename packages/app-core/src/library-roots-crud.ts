@@ -17,6 +17,7 @@ export interface ListLibrariesQuery {
   scanVideos?: string;
   scanImages?: string;
   scanAudio?: string;
+  scanBooks?: string;
   enabled?: string;
 }
 
@@ -34,12 +35,14 @@ export async function listLibraryRootsRead(
   const scanVideos = parseBool(query.scanVideos);
   const scanImages = parseBool(query.scanImages);
   const scanAudio = parseBool(query.scanAudio);
+  const scanBooks = parseBool(query.scanBooks);
   const enabled = parseBool(query.enabled);
 
   const filters: SQL[] = [];
   if (scanVideos != null) filters.push(eq(libraryRoots.scanVideos, scanVideos));
   if (scanImages != null) filters.push(eq(libraryRoots.scanImages, scanImages));
   if (scanAudio != null) filters.push(eq(libraryRoots.scanAudio, scanAudio));
+  if (scanBooks != null) filters.push(eq(libraryRoots.scanBooks, scanBooks));
   if (enabled != null) filters.push(eq(libraryRoots.enabled, enabled));
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
@@ -59,6 +62,7 @@ export interface CreateLibraryRootBody {
   scanVideos?: boolean;
   scanImages?: boolean;
   scanAudio?: boolean;
+  scanBooks?: boolean;
 }
 
 export async function createLibraryRootWrite(
@@ -78,6 +82,7 @@ export async function createLibraryRootWrite(
       scanVideos: body.scanVideos ?? true,
       scanImages: body.scanImages ?? true,
       scanAudio: body.scanAudio ?? true,
+      scanBooks: body.scanBooks ?? false,
     })
     .returning();
   return created;
@@ -91,6 +96,7 @@ export interface UpdateLibraryRootBody {
   scanVideos?: boolean;
   scanImages?: boolean;
   scanAudio?: boolean;
+  scanBooks?: boolean;
   isNsfw?: boolean;
 }
 
@@ -127,6 +133,7 @@ export async function updateLibraryRootWrite(
       scanVideos: body.scanVideos ?? existing.scanVideos,
       scanImages: body.scanImages ?? existing.scanImages,
       scanAudio: body.scanAudio ?? existing.scanAudio,
+      scanBooks: body.scanBooks ?? existing.scanBooks,
       isNsfw: body.isNsfw ?? existing.isNsfw,
       updatedAt: new Date(),
     })
