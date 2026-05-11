@@ -32,6 +32,7 @@ export * from "./plugin-registry";
 export * from "./playlist-session";
 export * from "./provider-lists";
 export * from "./queue-writes";
+export * from "./release-check";
 export * from "./search";
 export * from "./studio-reads";
 export * from "./studio-writes";
