@@ -27,12 +27,21 @@ export function createDbAssetDeps(db: AppDb): AssetResolverDeps {
     },
 
     async getMetadataStorageDedicated() {
-      const [existing] = await db.select().from(librarySettings).limit(1);
+      const metadataStorageSelection = {
+        metadataStorageDedicated: librarySettings.metadataStorageDedicated,
+      };
+      const [existing] = await db
+        .select(metadataStorageSelection)
+        .from(librarySettings)
+        .limit(1);
       if (existing) {
         return existing.metadataStorageDedicated ?? true;
       }
 
-      const [created] = await db.insert(librarySettings).values({}).returning();
+      const [created] = await db
+        .insert(librarySettings)
+        .values({})
+        .returning(metadataStorageSelection);
       return created.metadataStorageDedicated ?? true;
     },
 

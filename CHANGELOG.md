@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Adaptive playback no longer fails on first load when generated asset requests race a newly added library setting before every request has observed the latest migration.
 - NSFW collections no longer reappear from the browser's client-side pagination fetch while SFW mode is active.
 - NSFW detail pages now redirect back to the dashboard while SFW mode is active, avoiding hidden-content stubs and server errors from saved or typed URLs.
 - Gallery and video scans now mark linked tags, artists, and studios as NSFW when those links come from an NSFW library root.
