@@ -212,6 +212,8 @@ export const librarySettings = pgTable("library_settings", {
   subtitleOpacity: real("subtitle_opacity").default(1).notNull(),
   /** Default playback mode for the video player. "direct" streams the source file; "hls" uses the adaptive HLS pipeline. */
   defaultPlaybackMode: text("default_playback_mode").default("direct").notNull(),
+  /** When true, the video player shows remote playback / casting controls. */
+  showCastControls: boolean("show_cast_controls").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

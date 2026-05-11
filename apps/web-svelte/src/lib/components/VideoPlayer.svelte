@@ -22,6 +22,8 @@
   import { onMount } from "svelte";
   import {
     Captions,
+    Cast,
+    ChevronLeft,
     ChevronDown,
     Gauge,
     Loader,
@@ -47,14 +49,17 @@
     type VideoQuality,
   } from "vidstack";
   import type { MediaPlayerElement } from "vidstack/elements";
-  import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
+  import {
+    subtitleDisplayStyles,
+    type SubtitleAppearance,
+    type VideoSubtitleTrackDto,
+  } from "@obscura/contracts";
   import {
     HLS_RETRY_AFTER_SECONDS,
     type HlsStatus,
   } from "@obscura/contracts/media";
   import type { SubtitleCueDto } from "$lib/api/types";
   import { fetchVideoSubtitleCues } from "$lib/api/videos";
-  import { portal } from "$lib/actions/portal";
   import {
     enterMediaFullscreen,
     exitDocumentFullscreen,
@@ -66,10 +71,6 @@
     hlsStatusUrlForSrc,
   } from "$lib/player/video-player-load";
   import {
-    layoutPlayerMobileFlyout,
-    playerFlyoutStyleToString,
-  } from "$lib/player/flyout-layout";
-  import {
     captionClassName,
     pickPreferredSubtitleTrack,
     readLocalSubtitleAppearance,
@@ -78,7 +79,6 @@
   } from "$lib/player/subtitle-appearance";
   import AssSubtitleOverlay from "./AssSubtitleOverlay.svelte";
   import FilmStrip from "./FilmStrip.svelte";
-  import SubtitleSettingsPanel from "./SubtitleSettingsPanel.svelte";
 
   interface Props {
     src?: string;
@@ -103,6 +103,7 @@
       appearance: SubtitleAppearance;
     };
     defaultPlaybackMode?: "direct" | "hls";
+    showCastControls?: boolean;
     onEnded?: () => void;
     autoPlay?: boolean;
     handle?: VideoPlayerHandle;
@@ -110,6 +111,7 @@
 
   type PlaybackMode = "direct" | "hls";
   type QualityMode = "direct" | "auto" | number;
+  type SettingsView = "root" | "quality" | "speed" | "audio" | "captions" | "subtitle-style";
 
   interface QualityOption {
     value: QualityMode;
@@ -142,13 +144,13 @@
     subtitleChoiceLocked = false,
     subtitleDefaults,
     defaultPlaybackMode,
+    showCastControls = true,
     onEnded,
     autoPlay = false,
     handle = $bindable(),
   }: Props = $props();
 
   const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
-  const PLAYER_MENU_GUTTER_PX = 12;
 
   let containerEl: HTMLDivElement | undefined = $state();
   let player: MediaPlayerElement | undefined = $state();
@@ -189,16 +191,10 @@
     time: number;
   } | null>(null);
 
-  let qualityMenuOpen = $state(false);
-  let audioMenuOpen = $state(false);
-  let speedMenuOpen = $state(false);
-  let subtitleMenuOpen = $state(false);
-  let subtitleSettingsOpen = $state(false);
-  let qualityMenuButton: HTMLButtonElement | undefined = $state();
-  let audioMenuButton: HTMLButtonElement | undefined = $state();
-  let subtitleMenuButton: HTMLButtonElement | undefined = $state();
-  let playerMenuFlyoutStyle = $state<string | null>(null);
-  let playerMenuIsSm = $state(false);
+  let settingsMenuRendered = $state(false);
+  let settingsMenuClosing = $state(false);
+  let settingsView = $state<SettingsView>("root");
+  let settingsCloseTimer: number | null = null;
 
   let internalSubtitleId = $state<string | null>(null);
   let activeTrackCues = $state<SubtitleCueDto[]>([]);
@@ -245,6 +241,13 @@
   const displayedAudioTrackLabel = $derived(
     selectedAudioTrackLabel ?? displayedAudioTracks.find((track) => track.selected)?.label ?? "Audio",
   );
+  const activeSubtitleLabel = $derived.by(() => {
+    if (!activeSubtitleId) return "Off";
+    const track = subtitleTracks.find((candidate) => candidate.id === activeSubtitleId);
+    if (!track) return "On";
+    const lang = languageLabel(track.language);
+    return track.label ? `${lang} - ${track.label}` : lang;
+  });
 
   const assTrackForRender = $derived.by(() => {
     if (!activeSubtitleId) return null;
@@ -300,16 +303,20 @@
   }
 
   function closeMenus() {
-    qualityMenuOpen = false;
-    audioMenuOpen = false;
-    speedMenuOpen = false;
-    subtitleMenuOpen = false;
+    closeSettings();
   }
 
   function clearControlsTimer() {
     if (controlsTimeout) {
       window.clearTimeout(controlsTimeout);
       controlsTimeout = null;
+    }
+  }
+
+  function clearSettingsCloseTimer() {
+    if (settingsCloseTimer) {
+      window.clearTimeout(settingsCloseTimer);
+      settingsCloseTimer = null;
     }
   }
 
@@ -405,7 +412,7 @@
   function selectAudioTrack(index: number) {
     if (index < 0) {
       selectedAudioTrackLabel = displayedAudioTrackLabel;
-      audioMenuOpen = false;
+      closeMenus();
       return;
     }
     const track = player?.audioTracks?.toArray?.()[index];
@@ -413,7 +420,7 @@
     track.selected = true;
     selectedAudioTrackLabel = audioTrackLabel(track, index);
     refreshAudioTracks();
-    audioMenuOpen = false;
+    closeMenus();
   }
 
   function requestPlaybackMode(nextQualityMode: QualityMode) {
@@ -444,7 +451,21 @@
   function selectSubtitle(id: string | null) {
     if (controlledSubtitleId === undefined) internalSubtitleId = id;
     onActiveSubtitleTrackIdChange?.(id);
-    subtitleMenuOpen = false;
+    closeMenus();
+  }
+
+  function toggleSubtitles() {
+    if (activeSubtitleId) {
+      selectSubtitle(null);
+      return;
+    }
+    const preferred = subtitleDefaults
+      ? pickPreferredSubtitleTrack(
+          subtitleTracks.map((track) => ({ id: track.id, language: track.language })),
+          subtitleDefaults.preferredLanguages,
+        )
+      : null;
+    selectSubtitle(preferred ?? subtitleTracks[0]?.id ?? null);
   }
 
   function handleAppearanceChange(next: SubtitleAppearance) {
@@ -495,7 +516,53 @@
     if (!player) return;
     player.playbackRate = nextRate;
     playbackRate = nextRate;
-    speedMenuOpen = false;
+    closeMenus();
+  }
+
+  function requestCast(event: MouseEvent) {
+    if (!player) return;
+    const remote = (player as unknown as {
+      remoteControl?: {
+        requestAirPlay?: (trigger?: Event) => void;
+        requestGoogleCast?: (trigger?: Event) => void;
+      };
+    }).remoteControl;
+    if (!remote) {
+      playerNotice = "Casting is not available for this player.";
+      return;
+    }
+    if ("WebKitPlaybackTargetAvailabilityEvent" in window) {
+      remote.requestAirPlay?.(event);
+      return;
+    }
+    remote.requestGoogleCast?.(event);
+  }
+
+  function openSettings(view: SettingsView = "root") {
+    clearSettingsCloseTimer();
+    settingsView = view;
+    settingsMenuRendered = true;
+    settingsMenuClosing = false;
+  }
+
+  function closeSettings() {
+    if (!settingsMenuRendered || settingsMenuClosing) return;
+    clearSettingsCloseTimer();
+    settingsMenuClosing = true;
+    settingsCloseTimer = window.setTimeout(() => {
+      settingsMenuRendered = false;
+      settingsMenuClosing = false;
+      settingsView = "root";
+      settingsCloseTimer = null;
+    }, 180);
+  }
+
+  function toggleSettings() {
+    if (settingsMenuRendered && !settingsMenuClosing) {
+      closeSettings();
+      return;
+    }
+    openSettings();
   }
 
   function toggleFullscreen() {
@@ -630,66 +697,6 @@
 
   $effect(() => {
     if (propDuration && propDuration > duration) duration = propDuration;
-  });
-
-  $effect(() => {
-    if (!subtitleMenuOpen && !qualityMenuOpen && !audioMenuOpen) {
-      playerMenuFlyoutStyle = null;
-      return;
-    }
-
-    subtitleMenuButton;
-    qualityMenuButton;
-    audioMenuButton;
-
-    const mql = window.matchMedia("(min-width: 640px)");
-    const runLayout = () => {
-      const isSm = mql.matches;
-      playerMenuIsSm = isSm;
-      const trigger = subtitleMenuOpen
-        ? subtitleMenuButton
-        : audioMenuOpen
-          ? audioMenuButton
-          : qualityMenuButton;
-      if (!trigger) {
-        playerMenuFlyoutStyle = null;
-        return;
-      }
-      const flyoutLayout = layoutPlayerMobileFlyout(trigger.getBoundingClientRect(), {
-        vh: window.innerHeight,
-        vw: window.innerWidth,
-        maxHeightVh: 0.6,
-        preferredWidth: subtitleMenuOpen ? 360 : audioMenuOpen ? 260 : 220,
-        minWidth: subtitleMenuOpen ? 220 : audioMenuOpen ? 200 : 140,
-        gutter: PLAYER_MENU_GUTTER_PX,
-      });
-      playerMenuFlyoutStyle = playerFlyoutStyleToString(
-        isSm
-          ? flyoutLayout
-          : {
-              ...flyoutLayout,
-              left: `${PLAYER_MENU_GUTTER_PX}px`,
-              right: `${PLAYER_MENU_GUTTER_PX}px`,
-              width: undefined,
-              minWidth: undefined,
-              maxWidth: undefined,
-            },
-      );
-    };
-
-    runLayout();
-    const onMql = () => runLayout();
-    mql.addEventListener("change", onMql);
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", runLayout);
-    vv?.addEventListener("scroll", runLayout);
-    window.addEventListener("resize", runLayout);
-    return () => {
-      mql.removeEventListener("change", onMql);
-      vv?.removeEventListener("resize", runLayout);
-      vv?.removeEventListener("scroll", runLayout);
-      window.removeEventListener("resize", runLayout);
-    };
   });
 
   $effect(() => {
@@ -834,6 +841,7 @@
     window.addEventListener("keydown", handleKey);
     return () => {
       clearControlsTimer();
+      clearSettingsCloseTimer();
       window.removeEventListener("keydown", handleKey);
       onActiveCueChange?.(null);
     };
@@ -1024,16 +1032,6 @@
       </div>
     {/if}
 
-    {#if subtitleSettingsOpen}
-      <SubtitleSettingsPanel
-        {appearance}
-        onChange={handleAppearanceChange}
-        onClose={() => (subtitleSettingsOpen = false)}
-        onReset={handleAppearanceReset}
-        hasLocalOverride={localAppearance != null}
-      />
-    {/if}
-
     <div
       class={cn(
         "pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 sm:px-4 pb-8 sm:pb-12 pt-3 sm:pt-4 transition-opacity duration-normal",
@@ -1149,7 +1147,7 @@
       )}
     >
       <div class="flex flex-col gap-2">
-        <div class="pointer-events-auto order-2 py-1 sm:py-1.5">
+        <div class="pointer-events-auto order-2 py-2 sm:order-1 sm:py-2.5">
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="video-progress-track mobile-video-progress group/track"
@@ -1235,293 +1233,319 @@
           </div>
         {/if}
 
-      <div class="pointer-events-auto order-1 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-start sm:gap-2.5">
-          <div class="hidden items-center gap-2.5 sm:flex">
-          <button
-            type="button"
-            onclick={() => seek(-10)}
-            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
-            title="Skip back 10s"
-            aria-label="Skip back 10s"
-          >
-            <RotateCcw class="h-4 w-4" />
-            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
-          </button>
-          <button
-            type="button"
-            onclick={togglePlay}
-            class="flex h-9 w-9 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
-            aria-label={playing ? "Pause" : "Play"}
-          >
-            {#if buffering}
-              <Loader class="h-3.5 w-3.5 animate-spin" />
-            {:else if playing}
-              <Pause class="h-3.5 w-3.5" fill="currentColor" />
-            {:else}
-              <span class="play-glyph" aria-hidden="true"></span>
-            {/if}
-          </button>
-          <button
-            type="button"
-            onclick={() => seek(10)}
-            class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
-            title="Skip forward 10s"
-            aria-label="Skip forward 10s"
-          >
-            <RotateCw class="h-4 w-4" />
-            <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
-          </button>
-
-          </div>
-
-          <div class="hidden sm:flex items-center gap-2 text-white/80">
-            <button type="button" onclick={toggleMute} class="transition-colors hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
-              {#if muted}<VolumeX class="h-4 w-4" />{:else}<Volume2 class="h-4 w-4" />{/if}
-            </button>
-            <input
-              aria-label="Volume"
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={muted ? 0 : volume}
-              oninput={(event) => handleVolumeChange(Number(event.currentTarget.value))}
-              class="obscura-range h-1.5 w-20"
-            />
-          </div>
-
-          <span class="shrink-0 whitespace-nowrap text-mono-tabular text-glow-phosphor text-[0.7rem] sm:text-xs">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
-        </div>
-
-        <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-          <div class="flex min-w-0 shrink items-center gap-2 sm:contents">
-          {#if subtitleTracks.length > 0}
-            <div class="relative">
+        <div class="pointer-events-auto order-1 flex flex-col gap-2 sm:order-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex w-full items-center justify-end gap-2 sm:w-auto sm:justify-start sm:gap-2.5">
+            <div class="hidden items-center gap-2.5 sm:flex">
               <button
                 type="button"
-                bind:this={subtitleMenuButton}
-                onclick={() => {
-                  subtitleMenuOpen = !subtitleMenuOpen;
-                  qualityMenuOpen = false;
-                  audioMenuOpen = false;
-                  speedMenuOpen = false;
-                }}
-                aria-label="Subtitles"
-                class={cn(
-                  "player-control-button subtitle-control-button text-[0.56rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
-                  activeSubtitleId ? "text-accent-100" : "text-white/82",
-                )}
+                onclick={() => seek(-10)}
+                class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
+                title="Skip back 10s"
+                aria-label="Skip back 10s"
               >
-                <span class="subtitle-control-glyph" aria-hidden="true">
-                  <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <ChevronDown class="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
-                </span>
+                <RotateCcw class="h-4 w-4" />
+                <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
               </button>
-              {#if subtitleMenuOpen}
-                <div
-                  use:portal
+              <button
+                type="button"
+                onclick={togglePlay}
+                class="flex h-9 w-9 items-center justify-center bg-gradient-to-b from-accent-400 to-accent-500 text-accent-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_0_14px_rgba(199,155,92,0.2)] transition-all hover:from-accent-300 hover:to-accent-400 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_0_20px_rgba(199,155,92,0.28)]"
+                aria-label={playing ? "Pause" : "Play"}
+              >
+                {#if buffering}
+                  <Loader class="h-3.5 w-3.5 animate-spin" />
+                {:else if playing}
+                  <Pause class="h-3.5 w-3.5" fill="currentColor" />
+                {:else}
+                  <span class="play-glyph" aria-hidden="true"></span>
+                {/if}
+              </button>
+              <button
+                type="button"
+                onclick={() => seek(10)}
+                class="relative flex h-9 w-7 items-center justify-center text-white/70 transition-colors hover:text-white"
+                title="Skip forward 10s"
+                aria-label="Skip forward 10s"
+              >
+                <RotateCw class="h-4 w-4" />
+                <span class="absolute mt-[1px] text-[0.45rem] font-bold">10</span>
+              </button>
+            </div>
+
+            <div class="hidden sm:flex items-center gap-2 text-white/80">
+              <button type="button" onclick={toggleMute} class="transition-colors hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
+                {#if muted}<VolumeX class="h-4 w-4" />{:else}<Volume2 class="h-4 w-4" />{/if}
+              </button>
+              <input
+                aria-label="Volume"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={muted ? 0 : volume}
+                oninput={(event) => handleVolumeChange(Number(event.currentTarget.value))}
+                class="obscura-range h-1.5 w-20"
+              />
+            </div>
+
+            <span class="shrink-0 whitespace-nowrap text-mono-tabular text-glow-phosphor text-[0.7rem] sm:text-xs">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+
+          <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+            <div class="flex min-w-0 shrink items-center gap-2">
+              {#if subtitleTracks.length > 0}
+                <button
+                  type="button"
+                  onclick={toggleSubtitles}
+                  aria-label={activeSubtitleId ? "Turn captions off" : "Turn captions on"}
                   class={cn(
-                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
-                    playerMenuIsSm && "min-w-[220px] max-w-[360px]",
+                    "player-control-button subtitle-control-button text-[0.56rem] transition-colors hover:border-white/20 hover:text-white sm:text-[0.72rem]",
+                    activeSubtitleId ? "text-accent-100" : "text-white/82",
                   )}
-                  style={playerMenuFlyoutStyle ?? undefined}
                 >
-                  <button
-                    type="button"
-                    onclick={() => {
-                      subtitleSettingsOpen = true;
-                      subtitleMenuOpen = false;
-                    }}
-                    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-white/78 transition-colors hover:bg-white/8 hover:text-white sm:py-2 sm:text-sm"
-                  >
-                    <Sliders class="h-3.5 w-3.5" />
-                    <span>Subtitle style...</span>
-                  </button>
-                  <div class="my-1 border-t border-white/10"></div>
-                  <button
-                    type="button"
-                    onclick={() => selectSubtitle(null)}
-                    class={cn(
-                      "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
-                      !activeSubtitleId
-                        ? "bg-accent-500/18 text-accent-100"
-                        : "text-white/78 hover:bg-white/8 hover:text-white",
-                    )}
-                  >
-                    <span>Off</span>
-                    {#if !activeSubtitleId}
-                      <span class="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>
-                    {/if}
-                  </button>
-                  {#each subtitleTracks as track (track.id)}
-                    {@const isActive = activeSubtitleId === track.id}
-                    {@const lang = languageLabel(track.language)}
-                    {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
+                  <Captions class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </button>
+              {/if}
+            </div>
+
+            <div class="relative flex min-w-0 items-center justify-end gap-2">
+              <button
+                type="button"
+                onclick={toggleSettings}
+                class={cn(
+                  "player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white",
+                  settingsMenuRendered &&
+                    !settingsMenuClosing &&
+                    "border-accent-500/40 text-accent-100 shadow-[var(--shadow-glow-accent)]",
+                )}
+                aria-label="Player settings"
+                aria-expanded={settingsMenuRendered && !settingsMenuClosing}
+              >
+                <Settings2 class="h-3 w-3 sm:h-4 sm:w-4" />
+              </button>
+
+              {#if showCastControls}
+                <button
+                  type="button"
+                  onclick={requestCast}
+                  class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+                  aria-label="Cast"
+                  title="Cast"
+                >
+                  <Cast class="h-3 w-3 sm:h-4 sm:w-4" />
+                </button>
+              {/if}
+
+              <button
+                type="button"
+                onclick={toggleFullscreen}
+                class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
+                aria-label="Fullscreen"
+              >
+                <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
+              </button>
+
+              {#if settingsMenuRendered}
+                <button
+                  type="button"
+                  class={cn("player-settings-backdrop", settingsMenuClosing && "is-closing")}
+                  aria-label="Close player settings"
+                  onclick={(event) => {
+                    event.stopPropagation();
+                    closeSettings();
+                  }}
+                ></button>
+                <div
+                  class={cn("player-settings-menu player-dropdown", settingsMenuClosing && "is-closing")}
+                  role="menu"
+                  aria-label="Player settings menu"
+                >
+                  {#if settingsView !== "root"}
                     <button
                       type="button"
-                      onclick={() => selectSubtitle(track.id)}
-                      class={cn(
-                        "flex w-full items-center justify-between gap-2 px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
-                        isActive
-                          ? "bg-accent-500/18 text-accent-100"
-                          : "text-white/78 hover:bg-white/8 hover:text-white",
-                      )}
+                      class="player-settings-back"
+                      onclick={() => (settingsView = "root")}
                     >
-                      <span class="min-w-0 flex-1 truncate">{displayName}</span>
-                      <span class="shrink-0 text-[0.55rem] sm:text-[0.6rem] uppercase tracking-[0.16em] text-white/50">
-                        {track.source}
+                      <ChevronLeft class="h-4 w-4" />
+                      <span>
+                        {settingsView === "quality"
+                          ? "Quality"
+                          : settingsView === "speed"
+                            ? "Speed"
+                            : settingsView === "audio"
+                              ? "Audio"
+                              : settingsView === "captions"
+                                ? "Captions"
+                                : "Subtitle style"}
                       </span>
                     </button>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
+                  {/if}
 
-          {#if displayedAudioTracks.length > 0}
-            <div class="relative min-w-0 shrink sm:flex-none">
-              <button
-                type="button"
-                bind:this={audioMenuButton}
-                onclick={() => {
-                  audioMenuOpen = !audioMenuOpen;
-                  qualityMenuOpen = false;
-                  subtitleMenuOpen = false;
-                  speedMenuOpen = false;
-                }}
-                class="player-control-button max-w-[9.5rem] min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
-                aria-label="Audio track"
-              >
-                <span class="min-w-0 truncate">{displayedAudioTrackLabel}</span>
-                <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
-              </button>
-              {#if audioMenuOpen}
-                <div
-                  use:portal
-                  class={cn(
-                    "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
-                    playerMenuIsSm && "min-w-[200px] max-w-[260px]",
-                  )}
-                  style={playerMenuFlyoutStyle ?? undefined}
-                >
-                  {#each displayedAudioTracks as track (track.id)}
+                  {#if settingsView === "root"}
+                    <button type="button" class="player-settings-row" onclick={() => openSettings("quality")}>
+                      <Gauge class="h-4 w-4" />
+                      <span>Quality</span>
+                      <span class="player-settings-value">{selectedQualityLabel ?? "Auto"}</span>
+                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+                    </button>
+                    <button type="button" class="player-settings-row" onclick={() => openSettings("speed")}>
+                      <RotateCw class="h-4 w-4" />
+                      <span>Speed</span>
+                      <span class="player-settings-value">{playbackRate === 1 ? "Normal" : `${playbackRate}x`}</span>
+                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+                    </button>
+                    <button type="button" class="player-settings-row" onclick={() => openSettings("audio")}>
+                      <Volume2 class="h-4 w-4" />
+                      <span>Audio</span>
+                      <span class="player-settings-value">{displayedAudioTrackLabel}</span>
+                      <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+                    </button>
+                    {#if subtitleTracks.length > 0}
+                      <button type="button" class="player-settings-row" onclick={() => openSettings("captions")}>
+                        <Captions class="h-4 w-4" />
+                        <span>Captions</span>
+                        <span class="player-settings-value">{activeSubtitleLabel}</span>
+                        <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                      <button type="button" class="player-settings-row" onclick={() => openSettings("subtitle-style")}>
+                        <Sliders class="h-4 w-4" />
+                        <span>Subtitle style</span>
+                        <span class="player-settings-value">Custom</span>
+                        <ChevronDown class="h-3.5 w-3.5 -rotate-90" />
+                      </button>
+                    {/if}
+                  {:else if settingsView === "quality"}
+                    {#each qualityOptions as option (String(option.value))}
+                      <button
+                        type="button"
+                        onclick={() => requestPlaybackMode(option.value)}
+                        class={cn("player-settings-option", qualityMode === option.value && "is-active")}
+                      >
+                        <span>{option.label}</span>
+                        {#if qualityMode === option.value}<span>On</span>{/if}
+                      </button>
+                    {/each}
+                  {:else if settingsView === "speed"}
+                    {#each PLAYBACK_RATES as rate (rate)}
+                      <button
+                        type="button"
+                        onclick={() => applyPlaybackRate(rate)}
+                        class={cn("player-settings-option", playbackRate === rate && "is-active")}
+                      >
+                        <span>{rate === 1 ? "Normal" : `${rate}x`}</span>
+                        {#if playbackRate === rate}<span>On</span>{/if}
+                      </button>
+                    {/each}
+                  {:else if settingsView === "audio"}
+                    {#each displayedAudioTracks as track (track.id)}
+                      <button
+                        type="button"
+                        onclick={() => selectAudioTrack(track.index)}
+                        class={cn("player-settings-option", track.selected && "is-active")}
+                      >
+                        <span class="min-w-0 truncate">{track.label}</span>
+                        {#if track.selected}<span>On</span>{/if}
+                      </button>
+                    {/each}
+                  {:else if settingsView === "captions"}
                     <button
                       type="button"
-                      onclick={() => selectAudioTrack(track.index)}
-                      class={cn(
-                        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors",
-                        track.selected
-                          ? "bg-accent-500/18 text-accent-100"
-                          : "text-white/78 hover:bg-white/8 hover:text-white",
-                      )}
+                      onclick={() => selectSubtitle(null)}
+                      class={cn("player-settings-option", !activeSubtitleId && "is-active")}
                     >
-                      <span class="min-w-0 flex-1 truncate">{track.label}</span>
-                      {#if track.selected}
-                        <span class="text-[0.6rem] uppercase tracking-[0.16em]">On</span>
-                      {/if}
+                      <span>Off</span>
+                      {#if !activeSubtitleId}<span>On</span>{/if}
                     </button>
-                  {/each}
+                    {#each subtitleTracks as track (track.id)}
+                      {@const isActive = activeSubtitleId === track.id}
+                      {@const lang = languageLabel(track.language)}
+                      {@const displayName = track.label ? `${lang} - ${track.label}` : lang}
+                      <button
+                        type="button"
+                        onclick={() => selectSubtitle(track.id)}
+                        class={cn("player-settings-option", isActive && "is-active")}
+                      >
+                        <span class="min-w-0 flex-1 truncate">{displayName}</span>
+                        <span>{isActive ? "On" : track.source}</span>
+                      </button>
+                    {/each}
+                  {:else if settingsView === "subtitle-style"}
+                    <div class="space-y-3 p-2">
+                      <div class="grid gap-1.5">
+                        {#each subtitleDisplayStyles as style (style)}
+                          <button
+                            type="button"
+                            onclick={() => handleAppearanceChange({ ...appearance, style })}
+                            class={cn("player-settings-option", appearance.style === style && "is-active")}
+                          >
+                            <span class="capitalize">{style}</span>
+                            {#if appearance.style === style}<span>On</span>{/if}
+                          </button>
+                        {/each}
+                      </div>
+
+                      <label class="player-settings-slider">
+                        <span>Text size</span>
+                        <span>{appearance.fontScale.toFixed(2)}x</span>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="3"
+                          step="0.05"
+                          value={appearance.fontScale}
+                          oninput={(event) =>
+                            handleAppearanceChange({ ...appearance, fontScale: Number(event.currentTarget.value) })}
+                        />
+                      </label>
+
+                      <label class="player-settings-slider">
+                        <span>Position</span>
+                        <span>{Math.round(appearance.positionPercent)}%</span>
+                        <input
+                          type="range"
+                          min="10"
+                          max="98"
+                          step="1"
+                          value={appearance.positionPercent}
+                          oninput={(event) =>
+                            handleAppearanceChange({
+                              ...appearance,
+                              positionPercent: Number(event.currentTarget.value),
+                            })}
+                        />
+                      </label>
+
+                      <label class="player-settings-slider">
+                        <span>Opacity</span>
+                        <span>{Math.round(appearance.opacity * 100)}%</span>
+                        <input
+                          type="range"
+                          min="0.2"
+                          max="1"
+                          step="0.05"
+                          value={appearance.opacity}
+                          oninput={(event) =>
+                            handleAppearanceChange({ ...appearance, opacity: Number(event.currentTarget.value) })}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onclick={handleAppearanceReset}
+                        disabled={localAppearance == null}
+                        class={cn("player-settings-reset", localAppearance == null && "is-disabled")}
+                      >
+                        Reset to library defaults
+                      </button>
+                    </div>
+                  {/if}
                 </div>
               {/if}
             </div>
-          {/if}
-          </div>
-
-          <div class="flex min-w-0 items-center justify-end gap-2 sm:contents">
-          <div class="relative">
-            <button
-              type="button"
-              aria-label={`Quality menu, ${selectedQualityLabel ?? "Quality"}`}
-              bind:this={qualityMenuButton}
-              onclick={() => {
-                qualityMenuOpen = !qualityMenuOpen;
-                audioMenuOpen = false;
-                speedMenuOpen = false;
-                subtitleMenuOpen = false;
-              }}
-              class="player-control-button min-w-0 justify-between gap-1 px-1.5 text-[0.58rem] text-white/82 transition-colors hover:border-white/20 hover:text-white sm:gap-1.5 sm:px-3 sm:text-[0.72rem]"
-            >
-              <span class="min-w-0 truncate">{selectedQualityLabel ?? "Quality"}</span>
-              <ChevronDown class="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
-            </button>
-            {#if qualityMenuOpen}
-              <div
-                use:portal
-                class={cn(
-                  "fixed z-[200] overflow-y-auto overscroll-contain player-dropdown p-1",
-                  playerMenuIsSm && "min-w-[140px] max-w-[220px]",
-                )}
-                style={playerMenuFlyoutStyle ?? undefined}
-              >
-                {#each qualityOptions as option (String(option.value))}
-                  <button
-                    type="button"
-                    onclick={() => requestPlaybackMode(option.value)}
-                    class={cn(
-                      "flex w-full items-center justify-between px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm transition-colors",
-                      qualityMode === option.value
-                        ? "bg-accent-500/18 text-accent-100"
-                        : "text-white/78 hover:bg-white/8 hover:text-white",
-                    )}
-                  >
-                    <span>{option.label}</span>
-                    {#if qualityMode === option.value}
-                      <span class="text-[0.6rem] sm:text-[0.68rem] uppercase tracking-[0.16em]">On</span>
-                    {/if}
-                  </button>
-                {/each}
-              </div>
-            {/if}
-          </div>
-
-          <div class="relative hidden sm:block">
-            <button
-              type="button"
-              onclick={() => {
-                speedMenuOpen = !speedMenuOpen;
-                qualityMenuOpen = false;
-                audioMenuOpen = false;
-                subtitleMenuOpen = false;
-              }}
-              class="player-control-button justify-between gap-1.5 px-3 text-[0.72rem] text-white/82 transition-colors hover:border-white/20 hover:text-white"
-            >
-              {playbackRate}x
-              <ChevronDown class="h-3.5 w-3.5" />
-            </button>
-            {#if speedMenuOpen}
-              <div class="absolute bottom-12 right-0 min-w-[112px] max-h-[60vh] overflow-y-auto overscroll-contain player-dropdown p-1">
-                {#each PLAYBACK_RATES as rate (rate)}
-                  <button
-                    type="button"
-                    onclick={() => applyPlaybackRate(rate)}
-                    class={cn(
-                      "block w-full px-3 py-2 text-left text-sm transition-colors",
-                      playbackRate === rate
-                        ? "bg-accent-500/18 text-accent-100"
-                        : "text-white/78 hover:bg-white/8 hover:text-white",
-                    )}
-                  >
-                    {rate}x
-                  </button>
-                {/each}
-              </div>
-            {/if}
-          </div>
-
-          <button
-            type="button"
-            onclick={toggleFullscreen}
-            class="player-control-button justify-center p-0 text-white/80 transition-colors hover:border-white/20 hover:text-white"
-            aria-label="Fullscreen"
-          >
-              <Maximize class="h-3 w-3 sm:h-4 sm:w-4" />
-            </button>
           </div>
         </div>
-      </div>
       </div>
     </div>
   </div>
@@ -1648,6 +1672,192 @@
     width: 1.24rem;
   }
 
+  .player-settings-menu {
+    animation: player-settings-sheet-in 180ms ease-out;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: min(64dvh, 28rem);
+    min-width: min(25rem, calc(100vw - 1.5rem));
+    overflow-y: auto;
+    padding: 0.35rem;
+    position: fixed;
+    right: 0.75rem;
+    z-index: 210;
+  }
+
+  .player-settings-menu.is-closing {
+    animation: player-settings-sheet-out 160ms ease-in forwards;
+  }
+
+  .player-settings-backdrop {
+    background: rgba(0, 0, 0, 0.38);
+    border: 0;
+    bottom: 0;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 205;
+  }
+
+  .player-settings-backdrop.is-closing {
+    animation: player-settings-backdrop-out 160ms ease-in forwards;
+  }
+
+  .player-settings-row,
+  .player-settings-option,
+  .player-settings-back {
+    align-items: center;
+    border: 1px solid transparent;
+    color: rgba(255, 255, 255, 0.82);
+    display: grid;
+    gap: 0.75rem;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+    width: 100%;
+  }
+
+  .player-settings-row {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  .player-settings-option {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .player-settings-back {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+    font-size: 0.75rem;
+    font-weight: 600;
+    grid-template-columns: auto minmax(0, 1fr);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .player-settings-row:hover,
+  .player-settings-option:hover,
+  .player-settings-back:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  .player-settings-option.is-active {
+    background: rgba(196, 154, 90, 0.16);
+    border-color: rgba(196, 154, 90, 0.42);
+    color: var(--color-accent-100);
+  }
+
+  .player-settings-value {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 0.7rem;
+    min-width: 0;
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .player-settings-slider {
+    color: rgba(255, 255, 255, 0.78);
+    display: grid;
+    font-size: 0.72rem;
+    gap: 0.45rem;
+    grid-template-columns: 1fr auto;
+  }
+
+  .player-settings-slider input {
+    accent-color: var(--color-accent-500);
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .player-settings-reset {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.78);
+    padding: 0.55rem 0.75rem;
+    transition:
+      border-color 120ms ease,
+      color 120ms ease;
+    width: 100%;
+  }
+
+  .player-settings-reset:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+  }
+
+  .player-settings-reset.is-disabled {
+    border-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.3);
+    cursor: not-allowed;
+  }
+
+  @keyframes player-settings-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(calc(100% + 1.25rem));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes player-settings-sheet-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(calc(100% + 1.25rem));
+    }
+  }
+
+  @keyframes player-settings-backdrop-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes player-settings-flyout-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.45rem) scaleY(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scaleY(1);
+    }
+  }
+
+  @keyframes player-settings-flyout-out {
+    from {
+      opacity: 1;
+      transform: translateY(0) scaleY(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(0.45rem) scaleY(0.96);
+    }
+  }
+
   .mobile-video-progress {
     height: 5px;
   }
@@ -1682,6 +1892,24 @@
     .subtitle-control-glyph {
       gap: 0.28rem;
       width: 2rem;
+    }
+
+    .player-settings-menu {
+      animation: player-settings-flyout-in 160ms ease-out;
+      bottom: 3rem;
+      min-width: 19rem;
+      transform-origin: bottom right;
+      position: absolute;
+      right: 0;
+      width: 22rem;
+    }
+
+    .player-settings-menu.is-closing {
+      animation: player-settings-flyout-out 140ms ease-in forwards;
+    }
+
+    .player-settings-backdrop {
+      display: none;
     }
   }
 </style>

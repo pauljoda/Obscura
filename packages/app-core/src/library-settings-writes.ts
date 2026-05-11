@@ -107,6 +107,8 @@ export async function updateLibrarySettingsWrite(
       defaultPlaybackMode: normalizePlaybackMode(
         payload.defaultPlaybackMode ?? settings.defaultPlaybackMode,
       ),
+      showCastControls:
+        payload.showCastControls ?? settings.showCastControls ?? true,
       updatedAt: new Date(),
     })
     .where(eq(librarySettings.id, settings.id))

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import VideoPlayer from "./VideoPlayer.svelte";
 import type { SubtitleAppearance, VideoSubtitleTrackDto } from "@obscura/contracts";
@@ -129,7 +129,7 @@ describe("VideoPlayer", () => {
     });
   });
 
-  it("renders the Vidstack playback shell with active playback status and quality controls", () => {
+  it("renders the Vidstack playback shell with active status, settings, and cast controls", async () => {
     render(VideoPlayer, {
       props: {
         src: "/api/video-stream/video-1/hls2/master.m3u8",
@@ -140,8 +140,29 @@ describe("VideoPlayer", () => {
 
     expect(screen.getByTestId("vidstack-video-player")).toBeInTheDocument();
     expect(screen.getByText("Adaptive HLS")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Audio track" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Quality menu/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cast" })).toBeInTheDocument();
+    const settingsButton = screen.getByRole("button", { name: "Player settings" });
+    await fireEvent.click(settingsButton);
+    expect(screen.getByRole("menu", { name: "Player settings menu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Quality/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Audio/ })).toBeInTheDocument();
+
+    await fireEvent.click(settingsButton);
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Player settings menu" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("hides cast controls when the library setting disables them", () => {
+    render(VideoPlayer, {
+      props: {
+        src: "/api/video-stream/video-1/hls2/master.m3u8",
+        defaultPlaybackMode: "hls",
+        showCastControls: false,
+      },
+    });
+
+    expect(screen.queryByRole("button", { name: "Cast" })).not.toBeInTheDocument();
   });
 
   it("waits for hls2 readiness before attaching the manifest to Vidstack", async () => {

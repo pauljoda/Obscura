@@ -326,6 +326,8 @@ export interface LibrarySettingsDto {
   subtitleOpacity: number;
   /** Default playback mode the video player boots into on each new source. */
   defaultPlaybackMode: PlaybackMode;
+  /** When true, the video player shows remote playback / casting controls. */
+  showCastControls: boolean;
   createdAt: string;
   updatedAt: string;
 }

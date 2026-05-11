@@ -1,12 +1,12 @@
 <script module lang="ts">
-  export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only";
+  export type TranscriptPanelVariant = "full" | "tracks-only" | "list-only" | "compact";
 </script>
 
 <script lang="ts">
   import {
     Check,
+    Layout,
     Loader2,
-    PanelRightClose,
     PanelRightOpen,
     Pencil,
     Trash2,
@@ -50,9 +50,10 @@
     onDockToggle,
   }: Props = $props();
 
-  const showTrackManagement = $derived(variant !== "list-only");
+  const showTrackManagement = $derived(variant !== "list-only" && variant !== "compact");
   const showTranscriptList = $derived(variant !== "tracks-only");
   const isListOnly = $derived(variant === "list-only");
+  const isCompact = $derived(variant === "compact");
 
   let cues = $state<SubtitleCueDto[]>([]);
   let loadingCues = $state(false);
@@ -237,6 +238,67 @@
   }
 </script>
 
+{#if isCompact}
+  <div class="surface-card-sharp border-border-default bg-surface-1/90">
+    <div class="flex items-center justify-between border-b border-border-default px-3 py-2">
+      <span class="text-[0.66rem] uppercase tracking-[0.16em] text-text-muted">Transcript</span>
+      {#if onDockToggle}
+        <button
+          type="button"
+          onclick={onDockToggle}
+          class="inline-flex items-center gap-1.5 border border-border-default px-2 py-0.5 text-[0.62rem] text-text-muted transition-colors duration-fast hover:border-border-accent hover:text-text-accent"
+          title="Move transcript back into the tab"
+        >
+          <Layout class="h-3 w-3" />
+          Theatre
+        </button>
+      {/if}
+    </div>
+    <div
+      bind:this={listEl}
+      onscroll={handleScroll}
+      class="max-h-[min(32dvh,15rem)] overflow-y-auto py-1"
+    >
+      {#if loadingCues}
+        <div class="flex items-center justify-center py-5 text-[0.76rem] text-text-muted">
+          <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+          Loading cues...
+        </div>
+      {:else if cuesError}
+        <div class="px-3 py-4 text-[0.76rem] text-error-text">{cuesError}</div>
+      {:else if !activeTrackId}
+        <div class="px-3 py-4 text-center text-[0.76rem] text-text-muted">
+          Select a subtitle track to view its transcript.
+        </div>
+      {:else if cues.length === 0}
+        <div class="px-3 py-4 text-center text-[0.76rem] text-text-muted">No cues in this track.</div>
+      {:else}
+        {#each cues as cue, idx (idx)}
+          {@const isCurrent = idx === currentIndex}
+          {@const isPast = currentIndex >= 0 ? idx < currentIndex : cue.end <= currentTime}
+          <button
+            type="button"
+            data-cue-index={idx}
+            onclick={() => onSeek(cue.start)}
+            class={cn(
+              "block w-full border-l-2 px-3 py-1.5 text-left text-[0.78rem] leading-snug transition-colors duration-fast",
+              isCurrent
+                ? "border-accent-500 bg-accent-950/60 text-text-primary text-shadow-cue"
+                : isPast
+                  ? "border-transparent text-text-muted opacity-65"
+                  : "border-transparent text-text-secondary",
+            )}
+          >
+            <span class="mr-2 text-mono-tabular text-[0.62rem] uppercase tracking-[0.1em] text-text-disabled">
+              {formatTime(cue.start)}
+            </span>
+            <span class="whitespace-pre-line">{cue.text}</span>
+          </button>
+        {/each}
+      {/if}
+    </div>
+  </div>
+{:else}
 <div class={cn("flex flex-col", isListOnly ? "h-full min-h-0 space-y-0" : "space-y-4")}>
   {#if showTrackManagement}
     <div class="surface-card-sharp p-3 space-y-3">
@@ -246,12 +308,12 @@
           <button
             type="button"
             onclick={onDockToggle}
-            class="hidden lg:inline-flex items-center gap-1.5 border border-border-default px-2 py-0.5 text-[0.65rem] text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
+            class="inline-flex items-center gap-1.5 border border-border-default px-2 py-0.5 text-[0.65rem] text-text-muted hover:border-border-accent hover:text-text-accent transition-colors duration-fast"
             title={isDocked ? "Move transcript back into this tab" : "Dock transcript next to the video"}
           >
             {#if isDocked}
-              <PanelRightClose class="h-3 w-3" />
-              Undock
+              <Layout class="h-3 w-3" />
+              Theatre
             {:else}
               <PanelRightOpen class="h-3 w-3" />
               Dock next to video
@@ -427,7 +489,7 @@
               title="Move transcript back into the tab"
               aria-label="Undock transcript"
             >
-              <PanelRightClose class="h-3.5 w-3.5" />
+              <Layout class="h-3.5 w-3.5" />
             </button>
           {/if}
         </div>
@@ -482,3 +544,4 @@
     </div>
   {/if}
 </div>
+{/if}

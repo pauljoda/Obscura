@@ -55,6 +55,7 @@
       subtitlePositionPercent: s.subtitlePositionPercent ?? 88,
       subtitleOpacity: s.subtitleOpacity ?? 1,
       defaultPlaybackMode: (s.defaultPlaybackMode ?? "direct") as PlaybackMode,
+      showCastControls: s.showCastControls ?? true,
     };
   }
 
@@ -81,6 +82,7 @@
     subtitlePositionPercent: 88,
     subtitleOpacity: 1,
     defaultPlaybackMode: "direct",
+    showCastControls: true,
     createdAt: "",
     updatedAt: "",
   };
@@ -446,6 +448,16 @@
         {/each}
       </div>
     </div>
+
+    <ToggleCard
+      label="Show cast controls"
+      description="Shows the cast button in the video player. Turn this off if you never cast or want to avoid accidental remote playback."
+      checked={settings.showCastControls}
+      onChange={(checked) => {
+        settings = { ...settings, showCastControls: checked };
+        void autoSaveSetting({ showCastControls: checked });
+      }}
+    />
   </section>
 
   <div class="border-t border-border-subtle"></div>

@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now keeps Vidstack's stable media engine while restoring Obscura's full Dark Room controls, including brass square transport buttons, custom captions, filmstrip scrubbing, audio tracks, quality, speed, and fullscreen menus.
 - Video playback controls now fit more consistently across desktop and mobile, with one active playback-mode status chip and subtitle styling at the top of the captions menu.
 - Adaptive video playback now waits for the HLS package to report ready before attaching the stream, and filmstrip drag or wheel scrubbing commits the final target instead of snapping back to the loaded range.
+- Video playback now uses one YouTube-style settings menu for quality, speed, audio, captions, and subtitle styling, with animated mobile/desktop menus and a cast button that can be hidden from Settings.
+- Mobile transcript docking now shows a compact live transcript directly under the video instead of doing nothing on small screens.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
 
 ### Changed
@@ -31,7 +33,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
 - The video player now uses Vidstack's tested media engine and HLS provider behind Obscura's custom controls, captions, menus, and filmstrip strip.
+- The video player now groups quality, speed, audio, captions, and subtitle styling inside a single responsive settings flyout/sheet, with the scrub bar above desktop buttons and below mobile buttons.
+- Transcript dock controls now use sidebar/theatre-style icons to better communicate moving the transcript between docked and normal page layouts.
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
+
+### Added
+
+- Library settings now include a Show cast controls toggle so users can hide the video player's cast button if they do not want remote playback available.
 
 ### Fixed
 

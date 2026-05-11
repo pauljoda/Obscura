@@ -72,8 +72,8 @@
   let librarySettings = $state<LibrarySettings | null>(null);
 
   // ── Transcript dock plumbing ───────────────────────────────────────
-  /** User's persisted preference. Effective dock state additionally
-   *  requires subtitles + a desktop viewport. */
+  /** User's persisted preference. Desktop docks beside the video; mobile
+   *  docks a compact transcript directly under the player. */
   let userWantsDock = $state(false);
   let dockVideoPercent = $state(80);
   let isDesktopViewport = $state(false);
@@ -83,8 +83,12 @@
 
   const hasSubtitles = $derived((video.subtitleTracks?.length ?? 0) > 0);
   const subtitlesEnabled = $derived(activeSubtitleId != null);
+  const isTranscriptDockActive = $derived(userWantsDock && hasSubtitles && subtitlesEnabled);
   const isTranscriptDocked = $derived(
     userWantsDock && hasSubtitles && subtitlesEnabled && isDesktopViewport,
+  );
+  const isTranscriptInlineDocked = $derived(
+    isTranscriptDockActive && !isDesktopViewport,
   );
   const subtitleDefaults = $derived(
     librarySettings
@@ -103,6 +107,7 @@
   const defaultPlaybackMode = $derived<"direct" | "hls">(
     librarySettings?.defaultPlaybackMode === "hls" ? "hls" : "direct",
   );
+  const showCastControls = $derived(librarySettings?.showCastControls ?? true);
 
   function handleSeek(time: number) {
     playerHandle?.seekTo(time);
@@ -431,9 +436,26 @@
           {subtitleChoiceLocked}
           {subtitleDefaults}
           {defaultPlaybackMode}
+          {showCastControls}
           autoPlay={playlist.isActive && playlist.isPlaylistItem("video", video.id)}
           onEnded={() => playlist.reportContentEnded("video", video.id)}
         />
+        {#if isTranscriptInlineDocked}
+          <div class="mt-2 lg:hidden">
+            <VideoTranscriptPanel
+              videoId={video.id}
+              tracks={video.subtitleTracks ?? []}
+              activeTrackId={activeSubtitleId}
+              onActiveTrackIdChange={handleActiveSubtitleChange}
+              currentTime={displayTime}
+              onSeek={handleSeek}
+              onTracksChanged={refreshVideo}
+              variant="compact"
+              isDocked
+              onDockToggle={toggleTranscriptDock}
+            />
+          </div>
+        {/if}
       </div>
       {#if isTranscriptDocked}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -690,10 +712,14 @@
   {:else if activeTab === "Markers"}
     <VideoMarkerEditor {video} {getCurrentTime} {displayTime} onRefresh={refreshVideo} />
   {:else if activeTab === "Transcript"}
-    {#if isTranscriptDocked}
+    {#if isTranscriptDockActive}
       <div class="space-y-3">
         <div class="surface-well px-3 py-2 text-[0.78rem] text-text-muted flex items-center justify-between gap-2">
-          <span>Transcript is docked next to the video.</span>
+          <span>
+            {isTranscriptDocked
+              ? "Transcript is docked next to the video."
+              : "Transcript is docked under the video."}
+          </span>
           <button
             type="button"
             onclick={toggleTranscriptDock}
