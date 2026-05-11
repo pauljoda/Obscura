@@ -17,6 +17,7 @@
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import { toApiUrl } from "$lib/api/core";
+  import { getChapterProgressDisplay, getCurrentChapterProgressDisplay } from "$lib/book-progress";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
 
   let { data }: { data: PageData } = $props();
@@ -61,11 +62,7 @@
     readerScope === "volume" && selectedVolume ? selectedVolume.chapters : selectedChapter ? [selectedChapter] : [],
   );
   const readerPages = $derived(readerChapters.flatMap((chapter) => chapter.pages.map(pageToImage)));
-  const progressLabel = $derived(
-    book.progress && book.progress.pageCount > 0
-      ? `${Math.min(book.progress.pageIndex + 1, book.progress.pageCount)} / ${book.progress.pageCount}`
-      : null,
-  );
+  const currentProgress = $derived(getCurrentChapterProgressDisplay(book));
 
   function pageToImage(page: BookPageDto): ImageListItemDto {
     return {
@@ -273,7 +270,7 @@
               {/if}
               {#if book.date}<span>{book.date}</span>{/if}
               <span>{book.pageCount} page{book.pageCount === 1 ? "" : "s"}</span>
-              {#if progressLabel}<span>{progressLabel}</span>{/if}
+              {#if currentProgress}<span>{currentProgress.summaryLabel}</span>{/if}
             </div>
 
             <div class="mt-5 flex flex-wrap items-center gap-2">
@@ -317,6 +314,34 @@
               <p class="mt-5 max-w-3xl whitespace-pre-wrap text-[0.95rem] leading-relaxed text-white/80">
                 {book.details}
               </p>
+            {/if}
+
+            {#if currentProgress}
+              <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="text-[0.62rem] uppercase tracking-[0.14em] text-text-muted">
+                      {currentProgress.isComplete ? "Last completed chapter" : "Current chapter"}
+                    </div>
+                    <div class="mt-1 truncate text-[0.86rem] font-medium text-text-primary">
+                      {currentProgress.chapterLabel}
+                    </div>
+                  </div>
+                  <div class="flex-shrink-0 font-mono text-[0.72rem] text-text-accent">
+                    {currentProgress.percent}%
+                  </div>
+                </div>
+                <div class="mt-2 flex items-center justify-between gap-3 text-[0.72rem] text-text-muted">
+                  <span>{currentProgress.pageLabel}</span>
+                  <span>{currentProgress.isComplete ? "Read" : "In progress"}</span>
+                </div>
+                <div class="mt-2 h-1 border border-white/10 bg-black/40">
+                  <div
+                    class="h-full bg-gradient-to-r from-[#7a5228] via-[#c49a5a] to-[#f3d69c] shadow-[0_0_14px_rgba(196,154,90,0.55)]"
+                    style:width={`${currentProgress.percent}%`}
+                  ></div>
+                </div>
+              </div>
             {/if}
 
             {#if book.tags.length > 0}
@@ -434,6 +459,7 @@
           {/if}
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {#each visibleChapters as chapter (chapter.id)}
+                {@const chapterProgress = getChapterProgressDisplay(book, chapter)}
                 <a
                   href={`/books/${book.id}/chapters/${chapter.id}`}
                   class="group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent"
@@ -453,8 +479,20 @@
                   <div class="space-y-1 px-2.5 py-2">
                     <h3 class="truncate text-[0.82rem] font-medium text-text-primary">{chapter.title}</h3>
                     <div class="text-[0.68rem] text-text-muted">
-                      {chapter.pageCount} page{chapter.pageCount === 1 ? "" : "s"}
+                      {#if chapterProgress}
+                        {chapterProgress.pageLabel}
+                      {:else}
+                        {chapter.pageCount} page{chapter.pageCount === 1 ? "" : "s"}
+                      {/if}
                     </div>
+                    {#if chapterProgress}
+                      <div class="h-1 border border-white/10 bg-black/40">
+                        <div
+                          class="h-full bg-gradient-to-r from-[#7a5228] via-[#c49a5a] to-[#f3d69c] shadow-[0_0_10px_rgba(196,154,90,0.45)]"
+                          style:width={`${chapterProgress.percent}%`}
+                        ></div>
+                      </div>
+                    {/if}
                   </div>
                 </a>
               {/each}

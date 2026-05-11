@@ -9,6 +9,7 @@
   import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import { getChapterProgressDisplay } from "$lib/book-progress";
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
 
   let { data }: { data: PageData } = $props();
@@ -30,6 +31,7 @@
   const volume = $derived(
     book.volumes.find((item) => item.chapters.some((child) => child.id === chapter.id)) ?? null,
   );
+  const chapterProgress = $derived(getChapterProgressDisplay(book, chapter));
 
   function pageToImage(page: BookPageDto): ImageListItemDto {
     return {
@@ -139,7 +141,7 @@
         class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
       >
         <Play class="h-3.5 w-3.5" />
-        Read chapter
+        {chapterProgress && !chapterProgress.isComplete ? "Resume chapter" : "Read chapter"}
       </button>
     {/if}
   </div>
@@ -186,11 +188,40 @@
             <span class="border border-white/10 bg-black/30 px-2 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-white/60">
               {chapter.pageCount} page{chapter.pageCount === 1 ? "" : "s"}
             </span>
+            {#if chapterProgress}
+              <span class="border border-white/10 bg-black/30 px-2 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-text-accent">
+                {chapterProgress.detailLabel}
+              </span>
+            {/if}
           </div>
 
           <h2 class="mt-4 max-w-4xl font-heading text-2xl font-semibold leading-tight text-text-primary sm:text-4xl">
             {chapter.title}
           </h2>
+
+          {#if chapterProgress}
+            <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-[0.62rem] uppercase tracking-[0.14em] text-text-muted">
+                    Reading progress
+                  </div>
+                  <div class="mt-1 truncate text-[0.86rem] font-medium text-text-primary">
+                    {chapterProgress.pageLabel}
+                  </div>
+                </div>
+                <div class="flex-shrink-0 font-mono text-[0.72rem] text-text-accent">
+                  {chapterProgress.percent}%
+                </div>
+              </div>
+              <div class="mt-2 h-1 border border-white/10 bg-black/40">
+                <div
+                  class="h-full bg-gradient-to-r from-[#7a5228] via-[#c49a5a] to-[#f3d69c] shadow-[0_0_14px_rgba(196,154,90,0.55)]"
+                  style:width={`${chapterProgress.percent}%`}
+                ></div>
+              </div>
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -202,7 +233,7 @@
           onclick={() => openReaderAt(readerIndex)}
           class="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
         >
-          Read chapter
+          {chapterProgress && !chapterProgress.isComplete ? "Resume chapter" : "Read chapter"}
         </button>
       {/snippet}
 

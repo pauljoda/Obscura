@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Mangadex added as a plugin in the community plugins
 - Added update checker in app, so you can see when a new version is released
 - Upgrades from older dev builds now complete even when duplicate legacy comic gallery rows point at the same ZIP or CBZ archive, preserving one migrated book and chapter while retiring the duplicate gallery records.
+- Book and chapter detail pages now show saved comic reading progress as the current chapter plus page progress, making resume state easier to understand at a glance.
 
 ### Docs
 
@@ -59,6 +60,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The video player now groups quality, speed, audio, captions, and subtitle styling inside a single responsive settings flyout/sheet, with the scrub bar above desktop buttons and below mobile buttons.
 - Transcript dock controls now use sidebar/theatre-style icons to better communicate moving the transcript between docked and normal page layouts.
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
+- Book root and chapter pages now describe comic reading progress with chapter names, page labels, and progress meters instead of bare saved page numbers.
 
 ### Added
 
