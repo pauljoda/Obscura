@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { ArrowLeft, BookOpen, HardDrive, Play } from "@lucide/svelte";
+  import { ArrowLeft, ArrowRight, BookOpen, HardDrive, Play, RotateCcw } from "@lucide/svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import { updateBookProgress } from "$lib/api/media";
@@ -32,6 +32,9 @@
     book.volumes.find((item) => item.chapters.some((child) => child.id === chapter.id)) ?? null,
   );
   const chapterProgress = $derived(getChapterProgressDisplay(book, chapter));
+  const primaryReadLabel = $derived(
+    chapterProgress ? (chapterProgress.isComplete ? "Re-read chapter" : "Resume chapter") : "Read chapter",
+  );
 
   function pageToImage(page: BookPageDto): ImageListItemDto {
     return {
@@ -61,6 +64,10 @@
   function openReaderAt(index: number) {
     readerIndex = Math.max(0, Math.min(index, Math.max(0, readerPages.length - 1)));
     readerOpen = true;
+  }
+
+  function openPrimaryReader() {
+    openReaderAt(chapterProgress?.isComplete ? 0 : readerIndex);
   }
 
   async function saveProgress(index = readerIndex, completedAt?: string | null) {
@@ -137,11 +144,11 @@
     {#if readerPages.length > 0}
       <button
         type="button"
-        onclick={() => openReaderAt(readerIndex)}
+        onclick={openPrimaryReader}
         class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
       >
         <Play class="h-3.5 w-3.5" />
-        {chapterProgress && !chapterProgress.isComplete ? "Resume chapter" : "Read chapter"}
+        {primaryReadLabel}
       </button>
     {/if}
   </div>
@@ -199,6 +206,38 @@
             {chapter.title}
           </h2>
 
+          {#if readerPages.length > 0}
+            <div class="mt-5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onclick={openPrimaryReader}
+                class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+              >
+                <Play class="h-3.5 w-3.5" />
+                {primaryReadLabel}
+              </button>
+              {#if chapterProgress && !chapterProgress.isComplete}
+                <button
+                  type="button"
+                  onclick={() => openReaderAt(0)}
+                  class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                >
+                  <RotateCcw class="h-3.5 w-3.5" />
+                  Start over
+                </button>
+              {/if}
+              {#if nextChapter}
+                <a
+                  href={`/books/${book.id}/chapters/${nextChapter.id}`}
+                  class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                >
+                  Next chapter
+                  <ArrowRight class="h-3.5 w-3.5" />
+                </a>
+              {/if}
+            </div>
+          {/if}
+
           {#if chapterProgress}
             <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
               <div class="flex items-center justify-between gap-3">
@@ -230,10 +269,10 @@
       {#snippet action()}
         <button
           type="button"
-          onclick={() => openReaderAt(readerIndex)}
+          onclick={openPrimaryReader}
           class="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
         >
-          {chapterProgress && !chapterProgress.isComplete ? "Resume chapter" : "Read chapter"}
+          {primaryReadLabel}
         </button>
       {/snippet}
 

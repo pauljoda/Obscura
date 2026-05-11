@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Transcript dock controls now use sidebar/theatre-style icons to better communicate moving the transcript between docked and normal page layouts.
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
 - Book root and chapter pages now describe comic reading progress with chapter names, page labels, and progress meters instead of bare saved page numbers.
+- Book chapter detail pages now surface Read, Resume, Re-read, Start over, and Next chapter actions directly in the chapter hero.
 
 ### Added
 
