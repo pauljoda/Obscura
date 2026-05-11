@@ -77,6 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Identify provider flyouts now close as soon as a provider is selected, so the disabled Identify button prevents repeat submissions while the lookup is running.
 - Book migration now deduplicates legacy archive-gallery book and chapter insert targets before conversion, preventing startup migration failures on databases with duplicate ZIP or CBZ gallery rows.
 - Release update checks now fall back to GitHub's public latest-release redirect when the API rate limit is exhausted, keeping update detection useful without requiring authentication.
 - Adaptive playback no longer fails on first load when generated asset requests race a newly added library setting before every request has observed the latest migration.

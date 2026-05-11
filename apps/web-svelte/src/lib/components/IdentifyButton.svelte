@@ -522,6 +522,8 @@
   }
 
   async function runProvider(provider: IdentifyProvider) {
+    if (busy) return;
+    open = false;
     const realId = provider.id.replace(/^(plugin|stashbox|scraper):/, "");
     if (provider.kind === "plugin") {
       const plugin = eligiblePlugins.find((p) => p.id === realId);

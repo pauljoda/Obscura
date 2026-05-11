@@ -1,16 +1,18 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import IdentifyButtonHarness from "./IdentifyButton.test-harness.svelte";
 
-const { fetchInstalledPlugins, fetchInstalledScrapers, fetchStashBoxEndpoints } =
+const { executePlugin, fetchInstalledPlugins, fetchInstalledScrapers, fetchStashBoxEndpoints } =
   vi.hoisted(() => ({
+    executePlugin: vi.fn(),
     fetchInstalledPlugins: vi.fn(),
     fetchInstalledScrapers: vi.fn(),
     fetchStashBoxEndpoints: vi.fn(),
   }));
 
 vi.mock("$lib/api/scrapers", () => ({
-  executePlugin: vi.fn(),
+  acceptPluginResult: vi.fn(),
+  executePlugin,
   fetchInstalledPlugins,
   fetchInstalledScrapers,
   fetchStashBoxEndpoints,
@@ -29,6 +31,7 @@ vi.mock("$lib/nsfw/aware-providers", () => ({
 
 describe("IdentifyButton", () => {
   beforeEach(() => {
+    executePlugin.mockReset();
     fetchInstalledPlugins.mockReset();
     fetchInstalledScrapers.mockReset();
     fetchStashBoxEndpoints.mockReset();
@@ -81,5 +84,33 @@ describe("IdentifyButton", () => {
       right: "12px",
     });
     expect(menu?.getAttribute("style")).toContain("max-height:");
+  });
+
+  it("dismisses the provider flyout after a provider is selected", async () => {
+    let resolveIdentify: (value: unknown) => void = () => {};
+    executePlugin.mockReturnValue(
+      new Promise((resolve) => {
+        resolveIdentify = resolve;
+      }),
+    );
+    render(IdentifyButtonHarness, {
+      props: {
+        entityKind: "video_series",
+        entityId: "series-1",
+        title: "Blue's Clues & You!",
+        label: "Identify Series",
+      },
+    });
+
+    const identifyButton = screen.getByRole("button", { name: /identify series/i });
+    await fireEvent.click(identifyButton);
+
+    await fireEvent.click(await screen.findByRole("button", { name: /the movie database/i }));
+
+    await waitFor(() => expect(executePlugin).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText("Identify from")).not.toBeInTheDocument());
+    expect(identifyButton).toBeDisabled();
+
+    resolveIdentify({ ok: false, result: null });
   });
 });
