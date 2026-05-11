@@ -1,7 +1,8 @@
 <script lang="ts">
   import "../app.css";
 
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, beforeNavigate } from "$app/navigation";
+  import { tick } from "svelte";
   import { cn } from "@obscura/ui-svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import CanvasHeader from "$lib/components/CanvasHeader.svelte";
@@ -14,6 +15,7 @@
   import { provideAppChrome } from "$lib/stores/app-chrome.svelte";
   import { provideSearch } from "$lib/stores/search.svelte";
   import { providePlaylist } from "$lib/stores/playlist.svelte";
+  import { createPreviousPageScrollRestorer } from "$lib/scroll-restoration";
 
   let { data, children: pageContent } = $props();
 
@@ -27,14 +29,45 @@
   provideSearch();
   const playlist = providePlaylist();
   let mainScroller = $state<HTMLElement | null>(null);
+  const scrollRestorer = createPreviousPageScrollRestorer();
 
   $effect(() => {
     void playlist.hydrate();
   });
 
+  beforeNavigate(({ from, type }) => {
+    scrollRestorer.captureBeforeNavigation({
+      fromHref: from?.url.href,
+      navigationType: type,
+      position: {
+        top: mainScroller?.scrollTop ?? 0,
+        left: mainScroller?.scrollLeft ?? 0,
+      },
+    });
+  });
+
   afterNavigate(({ from, to, type }) => {
-    if (!from || !to || type === "popstate") return;
-    if (from.url.pathname === to.url.pathname) return;
+    const restorePosition = scrollRestorer.restoreAfterNavigation({
+      toHref: to?.url.href,
+      navigationType: type,
+    });
+    if (restorePosition) {
+      void tick().then(() => {
+        mainScroller?.scrollTo({ top: restorePosition.top, left: restorePosition.left });
+      });
+      return;
+    }
+
+    if (
+      !scrollRestorer.shouldResetAfterNavigation({
+        fromPathname: from?.url.pathname,
+        toPathname: to?.url.pathname,
+        navigationType: type,
+      })
+    ) {
+      return;
+    }
+
     mainScroller?.scrollTo({ top: 0, left: 0 });
   });
 
