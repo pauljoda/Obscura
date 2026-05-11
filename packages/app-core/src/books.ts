@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { mkdir, rename, rm, unlink } from "node:fs/promises";
+import path from "node:path";
 import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { schema, type AppDb } from "@obscura/db";
 import type {
@@ -7,8 +10,23 @@ import type {
   BookProgressDto,
   BookProgressPatchDto,
 } from "@obscura/contracts";
-import { NotFoundError } from "./errors";
+import {
+  extractComicInfoFromZip,
+  fileNameToTitle,
+  getGeneratedBookPageDir,
+  parseZipImageMembers,
+} from "@obscura/media-core";
+import { InternalError, NotFoundError, ValidationError } from "./errors";
 import { bookVisibleSql, bookPageVisibleSql } from "./library-root-visibility";
+import { ignoreMediaFilePath } from "./media-file-ignores";
+import { enqueueQueueJob } from "./queue-writes";
+import {
+  assertDirExists,
+  resolveCollisionSafePath,
+  validateUploadInput,
+  writeUploadBuffer,
+  type UploadFileInput,
+} from "./upload-utils";
 import {
   buildBooleanCondition,
   buildDateConditions,
@@ -31,6 +49,7 @@ const {
   bookLegacyGalleryMap,
   performers,
   studios,
+  libraryRoots,
   tags,
 } = schema;
 
@@ -85,6 +104,132 @@ function toPageDto(page: typeof bookPages.$inferSelect): BookPageDto {
   };
 }
 
+function bookPageThumbPath(pageId: string) {
+  return `/assets/book-pages/${pageId}/thumb`;
+}
+
+function sanitizeFolderName(value: string): string {
+  return value
+    .trim()
+    .replace(/[/:\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 180)
+    .trim();
+}
+
+function relativeToRoot(rootPath: string, filePath: string) {
+  return path.relative(rootPath, filePath) || path.basename(filePath);
+}
+
+async function refreshBookCounts(db: AppDb, bookId: string) {
+  await db.execute(sql`
+    WITH cover AS (
+      SELECT bp.id
+      FROM book_pages bp
+      INNER JOIN book_chapters bc ON bc.id = bp.chapter_id
+      WHERE bp.book_id = ${bookId}
+      ORDER BY bc.chapter_number ASC, bc.title ASC, bp.sort_order ASC
+      LIMIT 1
+    )
+    UPDATE books SET
+      page_count = (SELECT count(*) FROM book_pages WHERE book_id = ${bookId}),
+      chapter_count = (SELECT count(*) FROM book_chapters WHERE book_id = ${bookId}),
+      cover_page_id = (SELECT id FROM cover),
+      cover_image_path = CASE
+        WHEN (SELECT id FROM cover) IS NULL THEN NULL
+        ELSE '/assets/book-pages/' || (SELECT id FROM cover)::text || '/thumb'
+      END,
+      updated_at = NOW()
+    WHERE id = ${bookId}
+  `);
+}
+
+async function enqueueBookPageThumbnail(db: AppDb, pageId: string, title: string) {
+  await enqueueQueueJob(db, {
+    queueName: "book-page-thumbnail",
+    data: { pageId },
+    target: {
+      type: "book-page",
+      id: pageId,
+      label: title,
+    },
+    trigger: {
+      by: "manual",
+      label: "Queued after book update",
+    },
+  });
+}
+
+async function createChapterFromArchive(
+  db: AppDb,
+  input: {
+    bookId: string;
+    archivePath: string;
+    rootPath: string;
+    title?: string | null;
+    chapterNumber?: number | null;
+    isNsfw: boolean;
+  },
+) {
+  const members = parseZipImageMembers(input.archivePath);
+  if (members.length === 0) {
+    throw new ValidationError("Comic archive does not contain readable image pages");
+  }
+  let comicInfo: ReturnType<typeof extractComicInfoFromZip> | null = null;
+  try {
+    comicInfo = extractComicInfoFromZip(input.archivePath);
+  } catch {
+    comicInfo = null;
+  }
+  const chapterTitle =
+    input.title?.trim() || comicInfo?.title?.trim() || fileNameToTitle(input.archivePath);
+  const chapterNumber =
+    Number.isInteger(input.chapterNumber) && input.chapterNumber! > 0
+      ? input.chapterNumber!
+      : Number.parseInt(comicInfo?.number ?? "", 10) || 1;
+
+  const [chapter] = await db
+    .insert(bookChapters)
+    .values({
+      bookId: input.bookId,
+      title: chapterTitle,
+      chapterNumber,
+      archivePath: input.archivePath,
+      relativePath: relativeToRoot(input.rootPath, input.archivePath),
+      pageCount: members.length,
+    })
+    .returning({ id: bookChapters.id });
+  if (!chapter) throw new InternalError("Failed to create book chapter");
+
+  let coverPageId: string | null = null;
+  for (let i = 0; i < members.length; i += 1) {
+    const memberPath = members[i]!;
+    const pageTitle = fileNameToTitle(memberPath);
+    const [page] = await db
+      .insert(bookPages)
+      .values({
+        bookId: input.bookId,
+        chapterId: chapter.id,
+        title: pageTitle,
+        filePath: `${input.archivePath}::${memberPath}`,
+        sortOrder: i,
+        isNsfw: input.isNsfw,
+      })
+      .returning({ id: bookPages.id, title: bookPages.title });
+    if (!page) continue;
+    coverPageId ??= page.id;
+    await enqueueBookPageThumbnail(db, page.id, page.title);
+  }
+
+  await db
+    .update(bookChapters)
+    .set({ coverPageId, updatedAt: new Date() })
+    .where(eq(bookChapters.id, chapter.id));
+
+  await refreshBookCounts(db, input.bookId);
+  return chapter;
+}
+
 async function decorateBookItems(
   db: AppDb,
   rows: (typeof books.$inferSelect)[],
@@ -93,7 +238,7 @@ async function decorateBookItems(
   if (rows.length === 0) return [];
   const ids = rows.map((book) => book.id);
 
-  const [studioRows, performerRows, tagRows, progressRows] = await Promise.all([
+  const [studioRows, performerRows, tagRows, progressRows, pageRows] = await Promise.all([
     db
       .select({ id: studios.id, name: studios.name })
       .from(studios)
@@ -121,6 +266,24 @@ async function decorateBookItems(
       .where(inArray(bookTags.bookId, ids))
       .orderBy(asc(tags.name)),
     db.select().from(bookReadProgress).where(inArray(bookReadProgress.bookId, ids)),
+    db
+      .select({
+        bookId: bookPages.bookId,
+        chapterId: bookPages.chapterId,
+        pageId: bookPages.id,
+        chapterNumber: bookChapters.chapterNumber,
+        chapterTitle: bookChapters.title,
+        sortOrder: bookPages.sortOrder,
+      })
+      .from(bookPages)
+      .innerJoin(bookChapters, eq(bookPages.chapterId, bookChapters.id))
+      .where(and(inArray(bookPages.bookId, ids), bookPageVisibleSql(bookPages.filePath)))
+      .orderBy(
+        asc(bookPages.bookId),
+        asc(bookChapters.chapterNumber),
+        asc(bookChapters.title),
+        asc(bookPages.sortOrder),
+      ),
   ]);
 
   const studioById = new Map(studioRows.map((studio) => [studio.id, studio.name]));
@@ -135,15 +298,36 @@ async function decorateBookItems(
     tagsByBook.set(row.bookId, [...(tagsByBook.get(row.bookId) ?? []), row]);
   }
   const progressByBook = new Map(progressRows.map((progress) => [progress.bookId, progress]));
+  const pagesByBook = new Map<string, typeof pageRows>();
+  const chapterPreviewPagesByBook = new Map<string, typeof pageRows>();
+  const seenChapterIds = new Set<string>();
+  for (const page of pageRows) {
+    pagesByBook.set(page.bookId, [...(pagesByBook.get(page.bookId) ?? []), page]);
+    const chapterKey = `${page.bookId}:${page.chapterId}`;
+    if (!seenChapterIds.has(chapterKey)) {
+      seenChapterIds.add(chapterKey);
+      chapterPreviewPagesByBook.set(page.bookId, [
+        ...(chapterPreviewPagesByBook.get(page.bookId) ?? []),
+        page,
+      ]);
+    }
+  }
 
   return rows.map((book) => {
     const progress = toProgressDto(progressByBook.get(book.id) ?? null);
+    const orderedPages = pagesByBook.get(book.id) ?? [];
+    const previewPages =
+      book.chapterCount > 1
+        ? (chapterPreviewPagesByBook.get(book.id) ?? [])
+        : orderedPages;
+    const firstPageId = orderedPages[0]?.pageId ?? null;
     return {
       id: book.id,
       bookType: "comic",
       title: book.title,
       details: book.details,
-      coverImagePath: book.coverImagePath,
+      coverImagePath: firstPageId ? bookPageThumbPath(firstPageId) : book.coverImagePath,
+      previewImagePaths: previewPages.slice(0, 4).map((page) => bookPageThumbPath(page.pageId)),
       pageCount: book.pageCount,
       chapterCount: book.chapterCount,
       rating: book.rating,
@@ -378,6 +562,364 @@ export async function updateBookProgressWrite(
     .returning();
 
   return toProgressDto(progress)!;
+}
+
+export async function updateBookWrite(
+  db: AppDb,
+  id: string,
+  patch: {
+    title?: string;
+    details?: string | null;
+    date?: string | null;
+    rating?: number | null;
+    organized?: boolean;
+    isNsfw?: boolean;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+  },
+) {
+  const [existing] = await db.select({ id: books.id }).from(books).where(eq(books.id, id)).limit(1);
+  if (!existing) throw new NotFoundError("Book not found");
+
+  const update: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.title !== undefined) {
+    const title = patch.title.trim();
+    if (!title) throw new ValidationError("Title is required");
+    update.title = title;
+  }
+  if (patch.details !== undefined) update.details = patch.details?.trim() || null;
+  if (patch.date !== undefined) update.date = patch.date?.trim() || null;
+  if (patch.rating !== undefined) update.rating = patch.rating;
+  if (patch.organized !== undefined) update.organized = patch.organized;
+  if (patch.isNsfw !== undefined) update.isNsfw = patch.isNsfw;
+  if (patch.studioName !== undefined) {
+    const name = patch.studioName?.trim();
+    if (!name) {
+      update.studioId = null;
+    } else {
+      const [existingStudio] = await db
+        .select({ id: studios.id })
+        .from(studios)
+        .where(sql`lower(${studios.name}) = lower(${name})`)
+        .limit(1);
+      update.studioId =
+        existingStudio?.id ??
+        (
+          await db
+            .insert(studios)
+            .values({ name, isNsfw: patch.isNsfw ?? false })
+            .returning({ id: studios.id })
+        )[0]!.id;
+    }
+  }
+
+  if (Object.keys(update).length > 1) {
+    await db.update(books).set(update).where(eq(books.id, id));
+    if (patch.isNsfw !== undefined) {
+      await db.update(bookPages).set({ isNsfw: patch.isNsfw }).where(eq(bookPages.bookId, id));
+    }
+  }
+
+  if (patch.performerNames) {
+    await db.delete(bookPerformers).where(eq(bookPerformers.bookId, id));
+    for (const name of patch.performerNames) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      const [existingPerformer] = await db
+        .select({ id: performers.id })
+        .from(performers)
+        .where(sql`lower(${performers.name}) = lower(${trimmed})`)
+        .limit(1);
+      const performerId =
+        existingPerformer?.id ??
+        (
+          await db
+            .insert(performers)
+            .values({ name: trimmed, isNsfw: patch.isNsfw ?? false })
+            .returning({ id: performers.id })
+        )[0]!.id;
+      await db.insert(bookPerformers).values({ bookId: id, performerId }).onConflictDoNothing();
+    }
+  }
+
+  if (patch.tagNames) {
+    await db.delete(bookTags).where(eq(bookTags.bookId, id));
+    for (const name of patch.tagNames) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      const [existingTag] = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(sql`lower(${tags.name}) = lower(${trimmed})`)
+        .limit(1);
+      const tagId =
+        existingTag?.id ??
+        (
+          await db
+            .insert(tags)
+            .values({ name: trimmed, isNsfw: patch.isNsfw ?? false })
+            .returning({ id: tags.id })
+        )[0]!.id;
+      await db.insert(bookTags).values({ bookId: id, tagId }).onConflictDoNothing();
+    }
+  }
+
+  return { ok: true as const, id };
+}
+
+export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false) {
+  const [book] = await db
+    .select({ id: books.id })
+    .from(books)
+    .where(eq(books.id, id))
+    .limit(1);
+  if (!book) throw new NotFoundError("Book not found");
+
+  const chapters = await db
+    .select({ archivePath: bookChapters.archivePath })
+    .from(bookChapters)
+    .where(eq(bookChapters.bookId, id));
+
+  if (!deleteFile) {
+    for (const chapter of chapters) {
+      await ignoreMediaFilePath(db, { path: chapter.archivePath, entityType: "book" });
+    }
+  }
+
+  const pageRows = await db.select({ id: bookPages.id }).from(bookPages).where(eq(bookPages.bookId, id));
+  await db.delete(books).where(eq(books.id, id));
+
+  for (const page of pageRows) {
+    await rm(getGeneratedBookPageDir(page.id), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+  }
+
+  if (deleteFile) {
+    for (const chapter of chapters) {
+      if (chapter.archivePath && existsSync(chapter.archivePath)) {
+        await unlink(chapter.archivePath).catch(() => undefined);
+      }
+    }
+  }
+
+  return { ok: true as const };
+}
+
+export async function uploadRootBookWrite(
+  db: AppDb,
+  libraryRootId: string,
+  file: UploadFileInput,
+) {
+  const [root] = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.id, libraryRootId))
+    .limit(1);
+  if (!root) throw new NotFoundError("Library root not found");
+  if (!root.enabled) throw new ValidationError("Selected library root is disabled");
+  if (!root.scanBooks) {
+    throw new ValidationError("Selected library root is not configured to receive book uploads");
+  }
+  await assertDirExists(root.path);
+  const { safeName } = validateUploadInput(file, "book");
+  const dest = await resolveCollisionSafePath(root.path, safeName);
+  await writeUploadBuffer(dest, file.buffer);
+  await enqueueQueueJob(db, {
+    queueName: "book-scan",
+    data: { libraryRootId: root.id },
+    target: { type: "library-root", id: root.id, label: root.label },
+    trigger: { by: "manual", label: `Queued after upload to ${root.label}` },
+  });
+  return { ok: true as const, path: dest, libraryRootId: root.id };
+}
+
+export async function uploadBookChapterWrite(
+  db: AppDb,
+  bookId: string,
+  file: UploadFileInput,
+) {
+  const [book] = await db
+    .select({
+      id: books.id,
+      title: books.title,
+      folderPath: books.folderPath,
+      libraryRootId: books.libraryRootId,
+      isNsfw: books.isNsfw,
+    })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
+  if (!book) throw new NotFoundError("Book not found");
+  const [root] = await db
+    .select()
+    .from(libraryRoots)
+    .where(eq(libraryRoots.id, book.libraryRootId))
+    .limit(1);
+  if (!root) throw new NotFoundError("Library root not found");
+
+  const targetDir = book.folderPath ?? root.path;
+  await mkdir(targetDir, { recursive: true });
+  await assertDirExists(targetDir);
+  const { safeName } = validateUploadInput(file, "book");
+  const dest = await resolveCollisionSafePath(targetDir, safeName);
+  await writeUploadBuffer(dest, file.buffer);
+
+  const chapter = await createChapterFromArchive(db, {
+    bookId: book.id,
+    archivePath: dest,
+    rootPath: root.path,
+    isNsfw: book.isNsfw,
+  });
+
+  return { ok: true as const, id: chapter.id, bookId: book.id };
+}
+
+export async function mergeBooksIntoSeriesWrite(
+  db: AppDb,
+  body: {
+    title: string;
+    books: Array<{ id: string; title?: string; sequence?: number }>;
+  },
+) {
+  const title = body.title?.trim();
+  if (!title) throw new ValidationError("Book title is required");
+  const requested = body.books ?? [];
+  if (requested.length < 1) throw new ValidationError("Choose at least one book to merge");
+  const requestedIds = [...new Set(requested.map((item) => item.id).filter(Boolean))];
+
+  const bookRows = await db
+    .select({
+      id: books.id,
+      title: books.title,
+      libraryRootId: books.libraryRootId,
+      folderPath: books.folderPath,
+      relativePath: books.relativePath,
+      details: books.details,
+      date: books.date,
+      rating: books.rating,
+      organized: books.organized,
+      isNsfw: books.isNsfw,
+      studioId: books.studioId,
+    })
+    .from(books)
+    .where(inArray(books.id, requestedIds));
+  if (bookRows.length !== requestedIds.length) throw new NotFoundError("One or more books were not found");
+  const rootIds = new Set(bookRows.map((book) => book.libraryRootId));
+  if (rootIds.size !== 1) throw new ValidationError("Selected books must be in the same library root");
+  const [root] = await db.select().from(libraryRoots).where(eq(libraryRoots.id, bookRows[0]!.libraryRootId)).limit(1);
+  if (!root) throw new NotFoundError("Library root not found");
+
+  const chapterRows = await db
+    .select({
+      id: bookChapters.id,
+      bookId: bookChapters.bookId,
+      title: bookChapters.title,
+      archivePath: bookChapters.archivePath,
+      chapterNumber: bookChapters.chapterNumber,
+    })
+    .from(bookChapters)
+    .where(inArray(bookChapters.bookId, requestedIds))
+    .orderBy(asc(bookChapters.chapterNumber), asc(bookChapters.title));
+  if (chapterRows.length === 0) throw new ValidationError("Selected books do not have chapters to merge");
+
+  const folderName = sanitizeFolderName(title);
+  const firstDir = path.dirname(chapterRows[0]!.archivePath);
+  const targetDir =
+    path.basename(firstDir).toLowerCase() === folderName.toLowerCase()
+      ? firstDir
+      : path.join(firstDir, folderName);
+  const targetParent = path.dirname(targetDir);
+  for (const chapter of chapterRows) {
+    const dir = path.dirname(chapter.archivePath);
+    if (path.resolve(dir) !== path.resolve(targetDir) && path.resolve(dir) !== path.resolve(targetParent)) {
+      throw new ValidationError("Selected books must live in the same folder or target book folder");
+    }
+  }
+  await mkdir(targetDir, { recursive: true });
+
+  const inputById = new Map(requested.map((item, index) => [item.id, { ...item, index }]));
+  const targetBook = bookRows.find((book) => path.resolve(book.folderPath ?? "") === path.resolve(targetDir)) ?? bookRows[0]!;
+  const movedByArchive = new Map<string, string>();
+  for (const chapter of chapterRows) {
+    const destination = path.join(targetDir, path.basename(chapter.archivePath));
+    if (path.resolve(destination) === path.resolve(chapter.archivePath)) continue;
+    if (existsSync(destination)) {
+      throw new ValidationError(`A file already exists at ${destination}`);
+    }
+    await rename(chapter.archivePath, destination);
+    movedByArchive.set(chapter.archivePath, destination);
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(books)
+      .set({
+        title,
+        folderPath: targetDir,
+        relativePath: relativeToRoot(root.path, targetDir),
+        isNsfw: bookRows.every((book) => book.isNsfw),
+        updatedAt: new Date(),
+      })
+      .where(eq(books.id, targetBook.id));
+
+    const chaptersByBook = new Map<string, typeof chapterRows>();
+    for (const chapter of chapterRows) {
+      chaptersByBook.set(chapter.bookId, [...(chaptersByBook.get(chapter.bookId) ?? []), chapter]);
+    }
+    let sequence = 1;
+    for (const book of bookRows.sort((a, b) => (inputById.get(a.id)?.index ?? 0) - (inputById.get(b.id)?.index ?? 0))) {
+      const input = inputById.get(book.id);
+      for (const chapter of chaptersByBook.get(book.id) ?? []) {
+        const archivePath = movedByArchive.get(chapter.archivePath) ?? chapter.archivePath;
+        const nextTitle =
+          (chaptersByBook.get(book.id)?.length === 1 ? input?.title?.trim() : null) ||
+          chapter.title ||
+          fileNameToTitle(archivePath);
+        await tx
+          .update(bookChapters)
+          .set({
+            bookId: targetBook.id,
+            title: nextTitle,
+            chapterNumber: sequence,
+            archivePath,
+            relativePath: relativeToRoot(root.path, archivePath),
+            updatedAt: new Date(),
+          })
+          .where(eq(bookChapters.id, chapter.id));
+
+        const oldPrefix = `${chapter.archivePath}::`;
+        const newPrefix = `${archivePath}::`;
+        if (oldPrefix !== newPrefix) {
+          const pageRows = await tx
+            .select({ id: bookPages.id, filePath: bookPages.filePath })
+            .from(bookPages)
+            .where(eq(bookPages.chapterId, chapter.id));
+          for (const page of pageRows) {
+            if (!page.filePath.startsWith(oldPrefix)) continue;
+            await tx
+              .update(bookPages)
+              .set({
+                bookId: targetBook.id,
+                filePath: `${newPrefix}${page.filePath.slice(oldPrefix.length)}`,
+                updatedAt: new Date(),
+              })
+              .where(eq(bookPages.id, page.id));
+          }
+        } else {
+          await tx.update(bookPages).set({ bookId: targetBook.id }).where(eq(bookPages.chapterId, chapter.id));
+        }
+        sequence += 1;
+      }
+    }
+    const sourceIds = requestedIds.filter((id) => id !== targetBook.id);
+    if (sourceIds.length > 0) await tx.delete(books).where(inArray(books.id, sourceIds));
+  });
+
+  await refreshBookCounts(db, targetBook.id);
+  return { ok: true as const, id: targetBook.id, targetDir };
 }
 
 export async function getBookLegacyGalleryRedirectRead(db: AppDb, galleryId: string) {

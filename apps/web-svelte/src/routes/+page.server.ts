@@ -2,6 +2,7 @@ import type { PageServerLoad } from "./$types";
 import { fetchVideoCards, fetchSeries } from "$lib/server/videos";
 import {
   fetchGalleries,
+  fetchBooks,
   fetchImages,
   fetchAudioLibraries,
   fetchPerformers,
@@ -10,6 +11,7 @@ import {
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
 import type {
   GalleryListItemDto,
+  BookListItemDto,
   ImageListItemDto,
   AudioLibraryListItemDto,
   VideoSeriesListItemDto,
@@ -20,7 +22,7 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
 
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
 
-  const [videosRes, galleriesRes, imagesRes, audioRes, seriesRes, performersRes, studiosRes] =
+  const [videosRes, galleriesRes, booksRes, imagesRes, audioRes, seriesRes, performersRes, studiosRes] =
     await Promise.all([
       fetchVideoCards(
         { sort: "recent", order: "desc", limit: 50, nsfw: nsfwMode },
@@ -28,6 +30,12 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
       ).catch(() => ({ videos: [], total: 0, limit: 50, offset: 0 })),
       fetchGalleries({ limit: 12, nsfw: nsfwMode }, { fetch }).catch(() => ({
         galleries: [] as GalleryListItemDto[],
+        total: 0,
+        limit: 12,
+        offset: 0,
+      })),
+      fetchBooks({ limit: 12, sort: "recent", order: "desc", nsfw: nsfwMode }, { fetch }).catch(() => ({
+        books: [] as BookListItemDto[],
         total: 0,
         limit: 12,
         offset: 0,
@@ -74,6 +82,7 @@ export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
     featuredVideos,
     recentVideos,
     galleries: galleriesRes.galleries,
+    books: booksRes.books,
     images: imagesRes.images,
     audioLibraries: audioRes.items,
     series: seriesRes.items,

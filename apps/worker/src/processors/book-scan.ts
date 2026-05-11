@@ -263,15 +263,24 @@ export async function processBookScan(job: Job) {
       .set({ coverPageId, updatedAt: new Date() })
       .where(eq(bookChapters.id, chapterId));
 
-    const coverPatch = coverPageId
-      ? sql`, cover_page_id = ${coverPageId}, cover_image_path = ${`/assets/book-pages/${coverPageId}/thumb`}`
-      : sql``;
     await db.execute(sql`
+      WITH cover AS (
+        SELECT bp.id
+        FROM book_pages bp
+        INNER JOIN book_chapters bc ON bc.id = bp.chapter_id
+        WHERE bp.book_id = ${bookId}
+        ORDER BY bc.chapter_number ASC, bc.title ASC, bp.sort_order ASC
+        LIMIT 1
+      )
       UPDATE books SET
         page_count = (SELECT count(*) FROM book_pages WHERE book_id = ${bookId}),
         chapter_count = (SELECT count(*) FROM book_chapters WHERE book_id = ${bookId}),
+        cover_page_id = (SELECT id FROM cover),
+        cover_image_path = CASE
+          WHEN (SELECT id FROM cover) IS NULL THEN NULL
+          ELSE '/assets/book-pages/' || (SELECT id FROM cover)::text || '/thumb'
+        END,
         updated_at = NOW()
-        ${coverPatch}
       WHERE id = ${bookId}
     `);
 

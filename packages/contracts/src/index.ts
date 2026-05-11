@@ -557,6 +557,7 @@ export interface BookListItemDto {
   title: string;
   details: string | null;
   coverImagePath: string | null;
+  previewImagePaths: string[];
   pageCount: number;
   chapterCount: number;
   rating: number | null;
@@ -579,6 +580,7 @@ export interface BookDetailDto {
   title: string;
   details: string | null;
   coverImagePath: string | null;
+  previewImagePaths: string[];
   pageCount: number;
   chapterCount: number;
   rating: number | null;

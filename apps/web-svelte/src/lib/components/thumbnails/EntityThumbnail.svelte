@@ -58,6 +58,7 @@
   <GalleryThumbnail
     title={props.title}
     coverImagePath={props.coverImagePath}
+    previewImagePaths={props.previewImagePaths}
     imageCount={props.pageCount}
     isNsfw={props.isNsfw ?? false}
     updatedAt={props.updatedAt}

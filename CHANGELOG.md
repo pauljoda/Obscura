@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### What's New
 
 - Comics now live under a top-level Books section instead of being mixed into Galleries. Existing archive comic galleries are migrated into book/chapter/page records, old gallery detail links redirect to the new book detail page, and users should enable Books scanning on the relevant library roots to keep discovering ZIP/CBZ comics.
+- Books now use the same library browsing tools as the rest of Obscura, including saved search/filter presets, responsive thumbnail sizing, shared thumbnails in dashboard/search/collections, chapter previews, upload/delete actions, and merging standalone comics into one chaptered book.
 - NSFW collections now stay hidden in SFW mode from the first browser render, and direct links to hidden detail pages now return to the dashboard instead of showing an error page.
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
@@ -33,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Galleries now behave as ordinary image galleries again: comic/read filters, gallery reader actions, and the merge-comic-series affordance have moved out of the Galleries browsing flow.
+- Books browsing now uses the shared media surface toolbar, mobile/desktop preferences, grid/list cards, and gallery-style scrub previews instead of a custom one-off grid.
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
 - Browser caching now uses short private cache windows for page data and mutable artwork, plus private immutable caching for generated media assets.
 - The video player now uses Vidstack's tested media engine and HLS provider behind Obscura's custom controls, captions, menus, and filmstrip strip.
@@ -43,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
+- Added book upload, delete, metadata update, and merge-into-book actions so comic archives can be managed from the Books section.
 - Library settings now include a Show cast controls toggle so users can hide the video player's cast button if they do not want remote playback available.
 
 ### Fixed
@@ -83,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Filmstrip drag and wheel scrubbing now preview the target position and commit one seek at the end of the interaction.
 - Trickplay preview generation now normalizes sample aspect ratio before padding frames, preventing wide/anamorphic sources from failing with padded-dimension errors.
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
+- Book covers now come from the first page in reading order, and book previews now scrub through chapter covers for multi-chapter books or page spreads for one-shot comics.
 
 ### Docs
 

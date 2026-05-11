@@ -12,6 +12,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { bookVisibleSql } from "../../library-root-visibility";
+import { getBooksByIdsRead } from "../../books";
 import type {
   SearchProvider,
   SearchProviderFactory,
@@ -85,24 +86,31 @@ export const createBooksSearchProvider: SearchProviderFactory = (
       db.select({ total: count() }).from(books).where(where),
     ]);
 
+    const decoratedRows = await getBooksByIdsRead(db, rows.map((row) => row.id));
+    const decoratedById = new Map(decoratedRows.map((book) => [book.id, book]));
+
     return {
       total: countResult[0]?.total ?? 0,
-      items: rows.map((row) => ({
-        id: row.id,
-        kind: "book" as const,
-        title: row.title,
-        subtitle: `${row.chapterCount} chapter${row.chapterCount === 1 ? "" : "s"} · ${row.pageCount} pages`,
-        imagePath: row.coverImagePath,
-        href: `/books/${row.id}`,
-        rating: row.rating,
-        score: row.score,
-        meta: {
-          pageCount: row.pageCount,
-          chapterCount: row.chapterCount,
-          bookType: "comic",
-          isNsfw: row.isNsfw,
-        },
-      })),
+      items: rows.map((row) => {
+        const decorated = decoratedById.get(row.id);
+        return {
+          id: row.id,
+          kind: "book" as const,
+          title: row.title,
+          subtitle: `${row.chapterCount} chapter${row.chapterCount === 1 ? "" : "s"} · ${row.pageCount} pages`,
+          imagePath: decorated?.coverImagePath ?? row.coverImagePath,
+          href: `/books/${row.id}`,
+          rating: row.rating,
+          score: row.score,
+          meta: {
+            pageCount: row.pageCount,
+            chapterCount: row.chapterCount,
+            bookType: "comic",
+            isNsfw: row.isNsfw,
+            previewImagePaths: decorated?.previewImagePaths ?? [],
+          },
+        };
+      }),
     };
   },
 });

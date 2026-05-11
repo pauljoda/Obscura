@@ -150,6 +150,41 @@ export async function fetchBookDetail(id: string, params?: { nsfw?: string }): P
   return fetchApi(`/books/${id}${qs}`);
 }
 
+export async function updateBook(
+  id: string,
+  data: {
+    title?: string;
+    details?: string | null;
+    date?: string | null;
+    rating?: number | null;
+    organized?: boolean;
+    isNsfw?: boolean;
+    studioName?: string | null;
+    performerNames?: string[];
+    tagNames?: string[];
+  },
+): Promise<{ ok: true; id: string }> {
+  return fetchApi(`/books/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBook(id: string, deleteFile?: boolean): Promise<{ ok: true }> {
+  const qs = deleteFile ? "?deleteFile=true" : "";
+  return fetchApi(`/books/${id}${qs}`, { method: "DELETE" });
+}
+
+export async function mergeBooksIntoSeries(data: {
+  title: string;
+  books: Array<{ id: string; title?: string; sequence?: number }>;
+}): Promise<{ ok: true; id: string; targetDir: string }> {
+  return fetchApi("/books/merge-series", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function updateBookProgress(
   id: string,
   patch: BookProgressPatchDto,

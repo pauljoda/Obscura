@@ -83,6 +83,19 @@ export class Uploader {
       return;
     }
 
+    if (target.kind === "book" && !target.bookId && !target.libraryRootId) {
+      const roots = await this.loadBookRoots(files);
+      if (!roots) return;
+      if (roots.length === 1) {
+        this.resolvedRootId = roots[0]!.id;
+        await this.runUploads(files, { rootId: roots[0]!.id });
+        return;
+      }
+      this.pendingFiles = files;
+      this.candidateRoots = roots;
+      return;
+    }
+
     await this.runUploads(files);
   };
 
@@ -169,6 +182,23 @@ export class Uploader {
     }
   }
 
+  private async loadBookRoots(files: File[]) {
+    try {
+      const resp = await fetchApi<{ roots: LibraryRootSummaryDto[] }>(
+        "/libraries?scanBooks=true&enabled=true",
+      );
+      const roots = resp.roots ?? [];
+      if (roots.length === 0) {
+        this.failAll(files, "No enabled book library root can receive uploads");
+        return null;
+      }
+      return roots;
+    } catch (error) {
+      this.failAll(files, error instanceof Error ? error.message : "Could not load libraries");
+      return null;
+    }
+  }
+
   private failAll(files: File[], error: string) {
     this.files = files.map((file) => ({ file, status: "error", error }));
   }
@@ -232,6 +262,17 @@ export class Uploader {
       const libraryRootId = explicit.rootId ?? target.libraryRootId ?? this.resolvedRootId;
       if (!libraryRootId) throw new Error("No library root selected for image upload");
       await uploadFile("/images/upload", file, { libraryRootId });
+      return;
+    }
+
+    if (target.kind === "book") {
+      if (target.bookId) {
+        await uploadFile(`/books/${target.bookId}/chapters/upload`, file);
+        return;
+      }
+      const libraryRootId = explicit.rootId ?? target.libraryRootId ?? this.resolvedRootId;
+      if (!libraryRootId) throw new Error("No library root selected for book upload");
+      await uploadFile("/books/upload", file, { libraryRootId });
       return;
     }
 

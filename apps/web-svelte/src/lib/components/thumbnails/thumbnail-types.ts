@@ -63,6 +63,7 @@ export type EntityThumbnailProps =
       kind: "book";
       title: string;
       coverImagePath?: string | null;
+      previewImagePaths?: string[] | null;
       pageCount?: number | null;
       isNsfw?: boolean | null;
       updatedAt?: string | null;

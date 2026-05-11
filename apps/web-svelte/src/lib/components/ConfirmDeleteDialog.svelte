@@ -4,6 +4,7 @@
     | "image"
     | "audio-track"
     | "gallery"
+    | "book"
     | "audio-library"
     | "series";
 </script>
@@ -40,6 +41,7 @@
     image: { singular: "image", plural: "images" },
     "audio-track": { singular: "track", plural: "tracks" },
     gallery: { singular: "gallery", plural: "galleries" },
+    book: { singular: "book", plural: "books" },
     "audio-library": { singular: "audio library", plural: "audio libraries" },
     series: { singular: "series", plural: "series" },
   };

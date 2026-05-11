@@ -4,7 +4,7 @@ import { schema, type AppDb } from "@obscura/db";
 
 const { mediaFileIgnores } = schema;
 
-export type IgnoredMediaEntityType = "video" | "image" | "audio";
+export type IgnoredMediaEntityType = "video" | "image" | "audio" | "book";
 
 export async function ignoreMediaFilePath(
   db: AppDb,

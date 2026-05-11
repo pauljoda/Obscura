@@ -28,7 +28,7 @@
   import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
   import LegacyVideoReviewDrawer from "./identify/LegacyVideoReviewDrawer.svelte";
 
-  type EntityKind = "video_series" | "video_movie" | "video_episode";
+  type EntityKind = "video_series" | "video_movie" | "video_episode" | "book";
   type ProviderKind = "plugin" | "stashbox" | "scraper";
 
   interface IdentifyProvider {
@@ -54,11 +54,13 @@
     video_series: ["seriesCascade", "seriesByName", "folderByName"],
     video_movie: ["movieByName", "videoByName"],
     video_episode: ["episodeByName", "episodeByFragment", "videoByName"],
+    book: ["bookByName", "comicByName", "mangaByName"],
   };
   const ACTION_BY_KIND: Record<EntityKind, string[]> = {
     video_series: ["seriesCascade", "seriesByName", "folderByName"],
     video_movie: ["movieByName", "videoByName"],
     video_episode: ["episodeByName", "episodeByFragment", "videoByName"],
+    book: ["bookByName", "comicByName", "mangaByName"],
   };
 
   let plugins = $state<InstalledPlugin[]>([]);
@@ -82,7 +84,7 @@
   let searchQuery = $state("");
   let searchInputEl: HTMLInputElement | undefined = $state();
 
-  const isVideoEntity = $derived(entityKind !== "video_series");
+  const isVideoEntity = $derived(entityKind !== "video_series" && entityKind !== "book");
 
   $effect(() => {
     if (
@@ -136,7 +138,7 @@
       return eligibleCapabilities.some((key) => !!caps[key]);
     }),
   );
-  const supportsLegacyVideoProviders = $derived(entityKind !== "video_series");
+  const supportsLegacyVideoProviders = $derived(entityKind !== "video_series" && entityKind !== "book");
   const eligibleScrapers = $derived(
     supportsLegacyVideoProviders
       ? visibleScrapers.filter((s) => {
@@ -256,6 +258,8 @@
     label ??
       (entityKind === "video_movie"
         ? "Identify Movie"
+        : entityKind === "book"
+          ? "Identify Book"
         : entityKind === "video_series"
           ? "Identify Series"
           : "Re-identify"),
@@ -460,12 +464,16 @@
     if (entityKind === "video_series") {
       return "Install an enabled series-capable Obscura plugin and try again.";
     }
+    if (entityKind === "book") {
+      return "Install an enabled book-capable Obscura plugin and try again.";
+    }
     return "Install an enabled Obscura plugin, Stash-Box endpoint, or community scraper and try again.";
   }
 
   function entityKindReadable(kind: EntityKind): string {
     if (kind === "video_movie") return "movie";
     if (kind === "video_series") return "series";
+    if (kind === "book") return "book";
     return "episode";
   }
 </script>
@@ -603,7 +611,7 @@
   {/if}
 </div>
 
-{#if drawerOpen}
+{#if drawerOpen && entityKind !== "book"}
   <CascadeReviewDrawer
     scrapeResultId={drawerOpen}
     {entityKind}

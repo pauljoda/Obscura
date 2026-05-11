@@ -7,9 +7,10 @@ import type {
 export type UploadTarget =
   | { kind: "video"; libraryRootId?: string; videoSeriesId?: string; seasonNumber?: number | null }
   | { kind: "image"; libraryRootId?: string; galleryId?: string }
-  | { kind: "audio"; audioLibraryId?: string };
+  | { kind: "audio"; audioLibraryId?: string }
+  | { kind: "book"; libraryRootId?: string; bookId?: string };
 
-export type UploadCategory = "video" | "image" | "audio";
+export type UploadCategory = "video" | "image" | "audio" | "book";
 
 export interface UploadFileProgress {
   file: File;
@@ -31,6 +32,8 @@ export function categoryForTarget(target: UploadTarget): UploadCategory {
       return "image";
     case "audio":
       return "audio";
+    case "book":
+      return "book";
   }
 }
 
@@ -42,6 +45,8 @@ export function acceptForCategory(category: UploadCategory): string {
       return "image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp,.tif,.tiff";
     case "audio":
       return "audio/*,.mp3,.flac,.m4a,.aac,.ogg,.opus,.wav,.wma";
+    case "book":
+      return ".zip,.cbz,application/zip,application/octet-stream";
   }
 }
 

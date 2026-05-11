@@ -46,6 +46,10 @@ const uploadCategories = {
       ".wma",
     ]),
   },
+  book: {
+    mimePrefix: "application/",
+    extensions: new Set([".zip", ".cbz"]),
+  },
 } as const;
 
 export type UploadCategory = keyof typeof uploadCategories;
@@ -86,6 +90,7 @@ export function validateUploadMetadata(
   if (
     mime &&
     !mime.startsWith(config.mimePrefix) &&
+    !(category === "book" && (mime === "application/zip" || mime === "application/x-cbz")) &&
     mime !== "application/octet-stream"
   ) {
     throw new ValidationError(`Unsupported ${category} mime type "${mime}"`);

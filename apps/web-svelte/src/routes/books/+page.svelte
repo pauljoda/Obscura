@@ -1,17 +1,61 @@
 <script lang="ts">
-  import { BookOpen, Search } from "@lucide/svelte";
-  import { Badge } from "@obscura/ui-svelte";
+  import { goto, invalidateAll } from "$app/navigation";
+  import { BookOpen } from "@lucide/svelte";
+  import type { BookListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
+  import BookMergeSeriesDialog from "$lib/components/BookMergeSeriesDialog.svelte";
+  import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
+  import ImportButton from "$lib/components/ImportButton.svelte";
+  import UploadDropZone from "$lib/components/UploadDropZone.svelte";
+  import { deleteBook } from "$lib/api/media";
+  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
+  import { booksSurfaceConfig } from "$lib/media-surface/configs/books";
 
   let { data }: { data: PageData } = $props();
   const hasComics = $derived(data.total > 0);
+  let pendingDelete = $state<BookListItemDto[]>([]);
+  let deleteDialogOpen = $state(false);
+  let mergeDialogOpen = $state(false);
+  let pendingMerge = $state<BookListItemDto[]>([]);
+  let bulkBusy = $state(false);
+
+  const config = $derived(
+    booksSurfaceConfig({
+      initial: { items: data.books, total: data.total },
+      pageSize: data.pageSize,
+      page: data.page,
+      nsfwMode: data.nsfwMode,
+      onMutated: () => invalidateAll(),
+      onConfirmDelete: (selected) => {
+        pendingDelete = selected;
+        deleteDialogOpen = true;
+      },
+      onMerge: (selected) => {
+        pendingMerge = selected;
+        mergeDialogOpen = true;
+      },
+    }),
+  );
+
+  async function confirmDelete(deleteFromDisk: boolean) {
+    if (bulkBusy) return;
+    bulkBusy = true;
+    try {
+      await Promise.all(pendingDelete.map((book) => deleteBook(book.id, deleteFromDisk)));
+      deleteDialogOpen = false;
+      pendingDelete = [];
+      await invalidateAll();
+    } finally {
+      bulkBusy = false;
+    }
+  }
 </script>
 
 <svelte:head>
   <title>Books — Obscura</title>
 </svelte:head>
 
+<UploadDropZone target={{ kind: "book" }}>
 <div class="space-y-5">
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div class="space-y-1">
@@ -21,7 +65,10 @@
       </h1>
       <p class="text-[0.78rem] text-text-muted">Browse comics and future book formats in your library</p>
     </div>
-    <span class="mt-1 text-mono-sm text-text-disabled">{data.total.toLocaleString()} total</span>
+    <div class="flex items-center gap-2">
+      <ImportButton target={{ kind: "book" }} />
+      <span class="mt-1 text-mono-sm text-text-disabled">{data.total.toLocaleString()} total</span>
+    </div>
   </div>
 
   <div class="flex items-center gap-1 border-b border-border-subtle">
@@ -36,53 +83,33 @@
     {/if}
   </div>
 
-  <form method="GET" class="flex max-w-lg items-center gap-2 border border-border-default bg-surface-1 px-3 py-2">
-    <Search class="h-4 w-4 text-text-disabled" />
-    <input
-      name="search"
-      value={data.search}
-      placeholder="Search books..."
-      class="min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-disabled focus:outline-none"
-    />
-    <button type="submit" class="text-mono-sm text-text-muted hover:text-text-accent">Search</button>
-  </form>
-
-  {#if data.books.length > 0}
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-      {#each data.books as book, index (book.id)}
-        <a
-          href={`/books/${book.id}`}
-          class="group block overflow-hidden border border-border-subtle bg-surface-1 transition-colors hover:border-border-accent"
-        >
-          <EntityThumbnail
-            kind="book"
-            title={book.title}
-            coverImagePath={book.coverImagePath}
-            pageCount={book.pageCount}
-            isNsfw={book.isNsfw}
-            aspectClass="aspect-[2/3]"
-            fit="contain"
-            gradientIndex={index}
-          />
-          <div class="space-y-1 p-2">
-            <h2 class="truncate text-[0.78rem] font-medium text-text-primary group-hover:text-text-accent">
-              {book.title}
-            </h2>
-            <div class="flex flex-wrap items-center gap-1 text-[0.62rem] text-text-muted">
-              <span>{book.chapterCount} chapter{book.chapterCount === 1 ? "" : "s"}</span>
-              <span>·</span>
-              <span>{book.pageCount} pages</span>
-              {#if book.readCompleted}<Badge variant="accent">Read</Badge>{/if}
-              {#if book.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
-            </div>
-          </div>
-        </a>
-      {/each}
-    </div>
-  {:else}
-    <div class="surface-well flex flex-col items-center justify-center py-16 text-center">
-      <BookOpen class="mb-2 h-8 w-8 text-text-disabled" />
-      <p class="text-sm text-text-muted">No comic books found</p>
-    </div>
-  {/if}
+  <MediaSurface
+    {config}
+    initialPrefsByFormFactor={data.surfacePrefs}
+    legacyPrefsKey="books:filterPresets"
+  />
 </div>
+</UploadDropZone>
+
+<ConfirmDeleteDialog
+  open={deleteDialogOpen}
+  entityType="book"
+  count={pendingDelete.length}
+  loading={bulkBusy}
+  allowDeleteFromDisk
+  onClose={() => (deleteDialogOpen = false)}
+  onDeleteFromLibrary={() => void confirmDelete(false)}
+  onDeleteFromDisk={() => void confirmDelete(true)}
+/>
+
+<BookMergeSeriesDialog
+  open={mergeDialogOpen}
+  books={pendingMerge}
+  onClose={() => (mergeDialogOpen = false)}
+  onMerged={(bookId) => {
+    mergeDialogOpen = false;
+    pendingMerge = [];
+    void invalidateAll();
+    void goto(`/books/${bookId}`);
+  }}
+/>

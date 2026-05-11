@@ -12,6 +12,8 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
   const sort = url.searchParams.get("sort") ?? "recent";
   const orderRaw = url.searchParams.get("order");
   const order: "asc" | "desc" = orderRaw === "asc" || orderRaw === "desc" ? orderRaw : "desc";
+  const ratingMin = url.searchParams.get("ratingMin");
+  const ratingMax = url.searchParams.get("ratingMax");
   const pageParam = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
@@ -21,6 +23,14 @@ export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => 
       sort,
       order,
       read: url.searchParams.get("read") ?? undefined,
+      ratingMin: ratingMin ? Number(ratingMin) : undefined,
+      ratingMax: ratingMax ? Number(ratingMax) : undefined,
+      dateFrom: url.searchParams.get("dateFrom") ?? undefined,
+      dateTo: url.searchParams.get("dateTo") ?? undefined,
+      organized: url.searchParams.get("organized") ?? undefined,
+      studio: url.searchParams.get("studio") ?? undefined,
+      tag: url.searchParams.getAll("tag"),
+      performer: url.searchParams.getAll("performer"),
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
       nsfw: nsfwMode,

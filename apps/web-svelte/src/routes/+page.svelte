@@ -3,6 +3,7 @@
   import {
     Play,
     Film,
+    BookOpen,
     Layers,
     Image as ImageIcon,
     Music,
@@ -31,6 +32,9 @@
   const galleries = $derived(
     data.galleries.filter((g) => nsfw.mode === "show" || !g.isNsfw),
   );
+  const books = $derived(
+    data.books.filter((b) => nsfw.mode === "show" || !b.isNsfw),
+  );
   const images = $derived(
     data.images.filter((i) => nsfw.mode === "show" || !i.isNsfw),
   );
@@ -49,6 +53,7 @@
     featuredVideos.length > 0 ||
       recentVideos.length > 0 ||
       galleries.length > 0 ||
+      books.length > 0 ||
       images.length > 0 ||
       audioLibraries.length > 0 ||
       series.length > 0 ||
@@ -251,6 +256,43 @@
                     <h3 class="truncate text-sm font-medium">{g.title}</h3>
                     <p class="text-xs text-text-muted mt-0.5">
                       {g.imageCount} image{g.imageCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </a>
+              </div>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
+      {#if books.length > 0}
+        <section>
+          <h2 class="mb-6 flex items-center gap-2 text-xl font-semibold">
+            <BookOpen class="h-5 w-5 text-accent-500" />
+            Recent Books
+          </h2>
+          <div class="scrollbar-hidden flex snap-x snap-mandatory gap-4 overflow-x-auto pb-6">
+            {#each books as book, i (book.id)}
+              <div class="w-48 flex-none snap-start md:w-56">
+                <a
+                  href={`/books/${book.id}`}
+                  class="surface-card-sharp group/card block overflow-hidden transition-colors duration-fast hover:border-border-accent"
+                >
+                  <EntityThumbnail
+                    kind="book"
+                    title={book.title}
+                    coverImagePath={book.coverImagePath}
+                    previewImagePaths={book.previewImagePaths}
+                    pageCount={book.pageCount}
+                    isNsfw={book.isNsfw}
+                    aspectClass="aspect-[2/3]"
+                    fit="contain"
+                    gradientIndex={i}
+                  />
+                  <div class="p-2.5">
+                    <h3 class="truncate text-sm font-medium">{book.title}</h3>
+                    <p class="mt-0.5 text-xs text-text-muted">
+                      {book.chapterCount} chapter{book.chapterCount === 1 ? "" : "s"}
                     </p>
                   </div>
                 </a>
