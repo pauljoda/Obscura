@@ -104,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Documented the in-app release update alert design, covering daily GitHub release checks, dev-version comparison, sidebar badging, and changelog refresh behavior.
 - Documented the CPU-first streaming stability plan, including HEVC direct-play detection, smoother adaptive HLS behavior, and the later Linux Docker GPU support path.
 
 ## [0.22.0] - 2026-05-09
