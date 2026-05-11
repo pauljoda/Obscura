@@ -9,6 +9,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface AudioLibraryThumbLike {
     id?: string | null;
@@ -17,6 +18,7 @@
     iconPath?: string | null;
     isNsfw?: boolean | null;
     trackCount?: number | null;
+    rating?: number | null;
   }
 
   interface Props {
@@ -133,6 +135,8 @@
         {library.trackCount}
       </div>
     {/if}
+
+    <ThumbnailRatingChip rating={library.rating} class="absolute top-1 left-1" />
   {/if}
 
   <NsfwShowModeChip

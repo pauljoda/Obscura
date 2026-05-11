@@ -8,6 +8,7 @@
   import { toApiUrl } from "$lib/api/core";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface Props {
     title?: string;
@@ -21,6 +22,7 @@
     size?: ImageThumbnailSize;
     aspectClass?: string;
     loading?: "eager" | "lazy";
+    rating?: number | null;
     class?: string;
     showChips?: boolean;
   }
@@ -37,6 +39,7 @@
     size = "grid",
     aspectClass,
     loading = "lazy",
+    rating = null,
     class: className,
     showChips = true,
   }: Props = $props();
@@ -159,4 +162,5 @@
       class="pointer-events-none absolute bottom-1 right-1 z-10"
     />
   {/if}
+  <ThumbnailRatingChip {rating} class="absolute top-1 right-1" />
 </div>

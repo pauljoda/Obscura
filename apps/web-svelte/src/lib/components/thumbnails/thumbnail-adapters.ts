@@ -74,6 +74,7 @@ export function searchResultToThumbnailProps(
       return {
         kind: "video",
         video: searchResultToVideoCardData(item, currentPath),
+        rating: item.rating,
         gradientIndex: index,
       };
     case "video-series":
@@ -83,6 +84,7 @@ export function searchResultToThumbnailProps(
         coverImagePath: item.imagePath,
         isNsfw: booleanValue(meta.isNsfw),
         videoCount: numberValue(meta.videoCount),
+        rating: item.rating,
         gradientIndex: index,
       };
     case "gallery": {
@@ -101,6 +103,7 @@ export function searchResultToThumbnailProps(
         aspectRatio: isComic ? null : numberValue(meta.coverAspectRatio),
         aspectClass: previewBackedSeries && !isComic ? "aspect-[4/3]" : undefined,
         fit: isComic || previewBackedSeries ? "contain" : "cover",
+        rating: item.rating,
         gradientIndex: index,
       };
     }
@@ -114,6 +117,7 @@ export function searchResultToThumbnailProps(
         isNsfw: booleanValue(meta.isNsfw),
         aspectClass: "aspect-[2/3]",
         fit: "contain",
+        rating: item.rating,
         gradientIndex: index,
       };
     case "image":
@@ -126,6 +130,7 @@ export function searchResultToThumbnailProps(
         isNsfw: booleanValue(meta.isNsfw),
         width: numberValue(meta.width),
         height: numberValue(meta.height),
+        rating: item.rating,
       };
     case "performer":
       return {
@@ -140,6 +145,7 @@ export function searchResultToThumbnailProps(
           imageCount: numberValue(meta.imageCount),
           audioLibraryCount: numberValue(meta.audioLibraryCount),
           audioTrackCount: numberValue(meta.audioTrackCount),
+          rating: item.rating,
         },
         gradientIndex: index,
       };
@@ -150,6 +156,7 @@ export function searchResultToThumbnailProps(
           name: item.title,
           imagePath: item.imagePath,
           isNsfw: booleanValue(meta.isNsfw),
+          rating: item.rating,
         },
         gradientIndex: index,
       };
@@ -164,6 +171,7 @@ export function searchResultToThumbnailProps(
           imageCount: numberValue(meta.imageCount),
           galleryCount: numberValue(meta.galleryCount),
           audioTrackCount: numberValue(meta.audioTrackCount),
+          rating: item.rating,
         },
       };
     case "audio-library":
@@ -174,6 +182,7 @@ export function searchResultToThumbnailProps(
           coverImagePath: item.imagePath,
           isNsfw: booleanValue(meta.isNsfw),
           trackCount: numberValue(meta.trackCount),
+          rating: item.rating,
         },
         gradientIndex: index,
       };
@@ -185,6 +194,7 @@ export function searchResultToThumbnailProps(
           coverImagePath: item.imagePath,
           isNsfw: booleanValue(meta.isNsfw),
           trackNumber: numberValue(meta.trackNumber),
+          rating: item.rating,
         },
         gradientIndex: index,
       };
@@ -235,6 +245,7 @@ export function collectionItemToThumbnailProps(
         aspectClass: "aspect-video",
         fit: isComic ? "contain" : "cover",
         showCount: false,
+        rating: numberValue(entity.rating),
       };
     }
     case "book":
@@ -248,6 +259,7 @@ export function collectionItemToThumbnailProps(
         aspectClass: "aspect-[2/3]",
         fit: "contain",
         showCount: false,
+        rating: numberValue(entity.rating),
       };
     case "image":
       return {
@@ -262,6 +274,7 @@ export function collectionItemToThumbnailProps(
         updatedAt: stringValue(entity.updatedAt),
         aspectClass: "aspect-video",
         showChips: false,
+        rating: numberValue(entity.rating),
       };
     case "audio-track":
       return {
@@ -272,6 +285,7 @@ export function collectionItemToThumbnailProps(
           libraryCoverImagePath: stringValue(entity.libraryCoverImagePath),
           trackNumber: numberValue(entity.trackNumber),
           isNsfw: booleanValue(entity.isNsfw),
+          rating: numberValue(entity.rating),
         },
         aspectClass: "aspect-video",
         showChips: false,

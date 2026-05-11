@@ -14,7 +14,7 @@ describe("thumbnail adapters", () => {
       subtitle: "24 images",
       imagePath: "/assets/galleries/gallery-1/cover",
       href: "/galleries/gallery-1",
-      rating: null,
+      rating: 80,
       score: 90,
       meta: {
         imageCount: 24,
@@ -39,6 +39,32 @@ describe("thumbnail adapters", () => {
       aspectRatio: null,
       fit: "contain",
       gradientIndex: 3,
+      rating: 80,
+    });
+  });
+
+  it("maps rated search result entities to thumbnail rating props", () => {
+    const item: SearchResultItem = {
+      id: "book-1",
+      kind: "book",
+      title: "Rated Book",
+      subtitle: "20 pages",
+      imagePath: "/assets/books/book-1/cover",
+      href: "/books/book-1",
+      rating: 60,
+      score: 90,
+      meta: {
+        pageCount: 20,
+        isNsfw: false,
+        previewImagePaths: ["/assets/book-pages/page-1/thumb"],
+      },
+    };
+
+    expect(searchResultToThumbnailProps(item)).toMatchObject({
+      kind: "book",
+      title: "Rated Book",
+      coverImagePath: "/assets/books/book-1/cover",
+      rating: 60,
     });
   });
 

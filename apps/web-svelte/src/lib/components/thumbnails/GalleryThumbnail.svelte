@@ -9,6 +9,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
   import { scrubIndexFromClientX } from "./gallery-thumbnail-scrub";
 
   interface Props {
@@ -27,6 +28,7 @@
     class?: string;
     gradientFallback?: string;
     showCount?: boolean;
+    rating?: number | null;
     stacked?: boolean;
     gradientIndex?: number;
   }
@@ -47,6 +49,7 @@
     class: className,
     gradientFallback,
     showCount = true,
+    rating = null,
     stacked = false,
     gradientIndex,
   }: Props = $props();
@@ -244,7 +247,12 @@
 
     <NsfwShowModeChip
       {isNsfw}
-      class="pointer-events-none absolute top-1 right-1 z-10"
+      class="pointer-events-none absolute bottom-1 right-1 z-10"
+    />
+
+    <ThumbnailRatingChip
+      {rating}
+      class="absolute top-1 right-1"
     />
 
     {#if previews.length > 1 && (size === "grid" || size === "hero" || size === "list")}

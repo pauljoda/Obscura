@@ -23,6 +23,7 @@
   import { toApiUrl } from "$lib/api/core";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface TagThumbLike {
     name: string;
@@ -33,6 +34,7 @@
     imageCount?: number | null;
     galleryCount?: number | null;
     audioTrackCount?: number | null;
+    rating?: number | null;
   }
 
   interface Props {
@@ -119,6 +121,8 @@
       class="pointer-events-none absolute left-1.5 top-1.5 h-3.5 w-3.5 fill-current text-accent-400 drop-shadow-[0_0_6px_rgba(196,154,90,0.8)]"
     />
   {/if}
+
+  <ThumbnailRatingChip rating={tag.rating} class="absolute right-1.5 top-1.5" />
 
   <NsfwShowModeChip
     isNsfw={tag.isNsfw ?? false}

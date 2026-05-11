@@ -8,12 +8,14 @@
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
   import type { VideoCardData } from "$lib/video-card-data";
   import { createTrickplayScrub } from "$lib/player/trickplay-scrub.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface Props {
     video: VideoCardData;
     size?: VideoThumbnailSize;
     imageLoading?: "eager" | "lazy";
     gradient?: string;
+    rating?: number | null;
     class?: string;
   }
 
@@ -22,6 +24,7 @@
     size = "grid",
     imageLoading = "lazy",
     gradient,
+    rating,
     class: className,
   }: Props = $props();
 
@@ -74,6 +77,7 @@
 
   const showChips = $derived(size === "grid" || size === "hero");
   const showListOverlays = $derived(size === "list");
+  const displayRating = $derived(rating ?? video.rating ?? null);
 
   function formatHoverTime(seconds: number) {
     const total = Math.max(0, Math.floor(seconds));
@@ -198,15 +202,16 @@
       <NsfwShowModeChip isNsfw={video.isNsfw} />
     </div>
 
-    {#if video.episodeNumber != null}
-      <div class="pointer-events-none absolute left-1.5 top-1.5 z-[25]">
+    <div class="pointer-events-none absolute left-1.5 top-1.5 z-[25] flex flex-col items-start gap-1">
+      {#if video.episodeNumber != null}
         <span class="bg-bg/80 px-1 py-0.5 font-mono text-[0.55rem] text-text-muted">
           {video.seasonNumber != null
             ? `S${String(video.seasonNumber).padStart(2, "0")}E${String(video.episodeNumber).padStart(2, "0")}`
             : `E${String(video.episodeNumber).padStart(2, "0")}`}
         </span>
-      </div>
-    {/if}
+      {/if}
+      <ThumbnailRatingChip rating={displayRating} />
+    </div>
   {:else if showListOverlays}
     <div
       class="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col items-end gap-0.5"
@@ -226,6 +231,7 @@
           {video.duration}
         </span>
       {/if}
+      <ThumbnailRatingChip rating={displayRating} />
     </div>
   {/if}
 

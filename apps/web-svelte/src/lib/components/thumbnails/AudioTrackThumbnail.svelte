@@ -9,6 +9,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface AudioTrackThumbLike {
     id?: string | null;
@@ -19,6 +20,7 @@
     libraryCoverImagePath?: string | null;
     trackNumber?: number | null;
     isNsfw?: boolean | null;
+    rating?: number | null;
   }
 
   interface Props {
@@ -76,7 +78,7 @@
     }
   });
 
-  const showFullChrome = $derived(size === "grid" || size === "hero");
+  const showFullChrome = $derived(size === "grid" || size === "hero" || size === "list");
 </script>
 
 <div class={cn("relative overflow-hidden bg-surface-1 group/track-thumb", aspect, className)}>
@@ -121,6 +123,8 @@
         #{track.trackNumber}
       </div>
     {/if}
+
+    <ThumbnailRatingChip rating={track.rating} class="absolute top-1 left-1" />
   {/if}
 
   <NsfwShowModeChip

@@ -20,6 +20,7 @@
     size={props.size}
     imageLoading={props.imageLoading ?? props.loading}
     gradient={props.gradientFallback}
+    rating={props.rating}
     class={props.class}
   />
 {:else if props.kind === "video-series"}
@@ -30,6 +31,7 @@
     updatedAt={props.updatedAt}
     isNsfw={props.isNsfw ?? false}
     videoCount={props.videoCount}
+    rating={props.rating}
     loading={props.loading}
     showCount={props.showCount}
     class={props.class}
@@ -51,6 +53,7 @@
     class={props.class}
     gradientFallback={props.gradientFallback}
     showCount={props.showCount}
+    rating={props.rating}
     stacked={props.stacked}
     gradientIndex={props.gradientIndex}
   />
@@ -70,6 +73,7 @@
     class={props.class}
     gradientFallback={props.gradientFallback}
     showCount={props.showCount}
+    rating={props.rating}
     gradientIndex={props.gradientIndex}
   />
 {:else if props.kind === "image"}
@@ -85,6 +89,7 @@
     size={props.size}
     aspectClass={props.aspectClass}
     loading={props.loading}
+    rating={props.rating}
     class={props.class}
     showChips={props.showChips}
   />

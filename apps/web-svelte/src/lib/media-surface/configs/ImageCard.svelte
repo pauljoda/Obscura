@@ -49,6 +49,7 @@
         isVideo={item.isVideo}
         width={item.width}
         height={item.height}
+        rating={item.rating}
         size="list"
         showChips={false}
       />
@@ -82,6 +83,7 @@
       isVideo={item.isVideo}
       width={item.width}
       height={item.height}
+      rating={item.rating}
       size="grid"
       aspectClass={feedHasNaturalSize ? "h-full w-full" : undefined}
     />
@@ -107,6 +109,7 @@
           isVideo={item.isVideo}
           width={item.width}
           height={item.height}
+          rating={item.rating}
           size="grid"
           aspectClass="h-full w-full"
         />

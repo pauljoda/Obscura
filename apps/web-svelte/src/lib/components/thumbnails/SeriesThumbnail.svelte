@@ -5,6 +5,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface Props {
     title: string;
@@ -13,6 +14,7 @@
     updatedAt?: string | null;
     isNsfw?: boolean;
     videoCount?: number | null;
+    rating?: number | null;
     loading?: "eager" | "lazy";
     showCount?: boolean;
     class?: string;
@@ -25,6 +27,7 @@
     updatedAt = null,
     isNsfw = false,
     videoCount = null,
+    rating = null,
     loading = "lazy",
     showCount = true,
     class: className,
@@ -102,8 +105,9 @@
 
   <NsfwShowModeChip
     {isNsfw}
-    class="pointer-events-none absolute bottom-2 right-2 z-10"
+    class="pointer-events-none absolute bottom-1.5 right-1.5 z-10"
   />
+  <ThumbnailRatingChip {rating} class="absolute right-1.5 top-1.5" />
   {#if showCount && videoCount != null}
     <div
       class="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/70 px-1.5 py-0.5 text-[0.65rem] text-white/90 backdrop-blur-sm"

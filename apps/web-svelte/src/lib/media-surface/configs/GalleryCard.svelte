@@ -46,6 +46,7 @@
           imageCount={item.imageCount}
           isNsfw={item.isNsfw}
           isComic={item.isComic}
+          rating={item.rating}
           size="list"
           aspectRatio={coverAspectRatio}
           fit={item.isComic || previewBackedSeries ? "contain" : "cover"}
@@ -100,6 +101,7 @@
           imageCount={item.imageCount}
           isNsfw={item.isNsfw}
           isComic={item.isComic}
+          rating={item.rating}
           size="grid"
           aspectRatio={coverAspectRatio}
           aspectClass={previewBackedSeries && !item.isComic ? "aspect-[4/3]" : undefined}

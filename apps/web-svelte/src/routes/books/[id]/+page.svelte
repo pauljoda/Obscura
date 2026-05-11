@@ -58,6 +58,9 @@
   const readerChapters = $derived(selectedChapter ? [selectedChapter] : []);
   const readerPages = $derived(readerChapters.flatMap((chapter) => chapter.pages.map(pageToImage)));
   const currentProgress = $derived(getCurrentChapterProgressDisplay(book));
+  const currentProgressChapter = $derived(
+    currentProgress ? book.chapters.find((chapter) => chapter.id === currentProgress.chapterId) ?? null : null,
+  );
   const selectedChapterProgress = $derived(
     selectedChapter ? getChapterProgressDisplay(book, selectedChapter) : null,
   );
@@ -109,6 +112,13 @@
 
   function openReaderAt(index: number) {
     readerIndex = Math.max(0, Math.min(index, Math.max(0, readerPages.length - 1)));
+    readerOpen = true;
+  }
+
+  function resumeCurrentChapter() {
+    if (!book.progress?.chapterId || !currentProgressChapter) return;
+    selectedChapterId = currentProgressChapter.id;
+    readerIndex = Math.max(0, Math.min(book.progress.pageIndex, Math.max(0, currentProgressChapter.pageCount - 1)));
     readerOpen = true;
   }
 
@@ -361,7 +371,12 @@
             {/if}
 
             {#if currentProgress?.showMeter}
-              <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
+              <button
+                type="button"
+                onclick={resumeCurrentChapter}
+                class="mt-5 block w-full max-w-xl border border-border-subtle bg-glass-1 p-3 text-left shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md transition-colors duration-fast hover:border-border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50"
+                aria-label={`Resume ${currentProgress.chapterLabel}`}
+              >
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-[0.62rem] uppercase tracking-[0.14em] text-text-muted">
@@ -377,7 +392,7 @@
                 </div>
                 <div class="mt-2 flex items-center justify-between gap-3 text-[0.72rem] text-text-muted">
                   <span>{currentProgress.pageLabel}</span>
-                  <span>In progress</span>
+                  <span>Resume</span>
                 </div>
                 <div class="mt-2 h-1 border border-white/10 bg-black/40">
                   <div
@@ -385,7 +400,7 @@
                     style:width={`${currentProgress.percent}%`}
                   ></div>
                 </div>
-              </div>
+              </button>
             {/if}
 
             {#if book.tags.length > 0}

@@ -10,6 +10,7 @@
   import { VIDEO_CARD_GRADIENTS } from "$lib/dashboard-utils";
   import NsfwBlur from "../nsfw/NsfwBlur.svelte";
   import NsfwShowModeChip from "../nsfw/NsfwShowModeChip.svelte";
+  import ThumbnailRatingChip from "./ThumbnailRatingChip.svelte";
 
   interface StudioThumbLike {
     name: string;
@@ -20,6 +21,7 @@
     videoCount?: number | null;
     imageAppearanceCount?: number | null;
     audioLibraryCount?: number | null;
+    rating?: number | null;
   }
 
   interface Props {
@@ -137,6 +139,8 @@
       class="pointer-events-none absolute right-1.5 top-1.5 h-3.5 w-3.5 fill-current text-accent-500 drop-shadow-[0_0_6px_rgba(199,155,92,0.65)]"
     />
   {/if}
+
+  <ThumbnailRatingChip rating={studio.rating} class="absolute left-1.5 top-1.5" />
 
   {#if showChipRow && chips.length > 0}
     <div class="pointer-events-none absolute bottom-1 left-1 right-1 flex flex-wrap gap-1">

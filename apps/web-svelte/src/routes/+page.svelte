@@ -248,6 +248,7 @@
                     imageCount={g.imageCount}
                     isNsfw={g.isNsfw}
                     isComic={g.isComic}
+                    rating={g.rating}
                     aspectRatio={g.isComic ? null : g.coverAspectRatio}
                     fit={g.isComic ? "contain" : "cover"}
                     size="grid"
@@ -285,6 +286,7 @@
                     previewImagePaths={book.previewImagePaths}
                     pageCount={book.pageCount}
                     isNsfw={book.isNsfw}
+                    rating={book.rating}
                     aspectClass="aspect-[2/3]"
                     fit="contain"
                     gradientIndex={i}
@@ -324,6 +326,7 @@
                     isVideo={img.isVideo}
                     width={img.width}
                     height={img.height}
+                    rating={img.rating}
                     size="hero"
                   />
                   <div class="p-2.5">

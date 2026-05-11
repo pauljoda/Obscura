@@ -26,6 +26,7 @@
     updatedAt={series.updatedAt}
     isNsfw={series.isNsfw}
     videoCount={series.visibleSfwVideoCount}
+    rating={series.rating}
   />
 
   <div class={cn("px-2.5", compact ? "space-y-0.5 py-1.5" : "space-y-1.5 py-2.5")}>

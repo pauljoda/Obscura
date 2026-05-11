@@ -24,6 +24,7 @@ export interface EntityThumbnailCommon {
   showChips?: boolean;
   showCount?: boolean;
   showPlayOverlay?: boolean;
+  rating?: number | null;
   fit?: "cover" | "contain";
   gradientFallback?: string;
   gradientIndex?: number;
@@ -93,6 +94,7 @@ export type EntityThumbnailProps =
         imageAppearanceCount?: number | null;
         audioLibraryCount?: number | null;
         audioTrackCount?: number | null;
+        rating?: number | null;
       };
     } & EntityThumbnailCommon)
   | ({
@@ -106,6 +108,7 @@ export type EntityThumbnailProps =
         videoCount?: number | null;
         imageAppearanceCount?: number | null;
         audioLibraryCount?: number | null;
+        rating?: number | null;
       };
     } & EntityThumbnailCommon)
   | ({
@@ -119,6 +122,7 @@ export type EntityThumbnailProps =
         imageCount?: number | null;
         galleryCount?: number | null;
         audioTrackCount?: number | null;
+        rating?: number | null;
       };
     } & EntityThumbnailCommon)
   | ({
@@ -140,6 +144,7 @@ export type EntityThumbnailProps =
         iconPath?: string | null;
         isNsfw?: boolean | null;
         trackCount?: number | null;
+        rating?: number | null;
       };
     } & EntityThumbnailCommon)
   | ({
@@ -151,5 +156,6 @@ export type EntityThumbnailProps =
         libraryCoverImagePath?: string | null;
         trackNumber?: number | null;
         isNsfw?: boolean | null;
+        rating?: number | null;
       };
     } & EntityThumbnailCommon);
