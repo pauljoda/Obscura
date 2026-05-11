@@ -145,6 +145,36 @@ A root can mix standalone archives and series folders at the same time:
     └── Saga 002.cbz
 ```
 
+### Volume folders
+
+For manga and long comic runs, you can organize chapter archives into volume folders. Obscura treats the folder structure as the source of truth: the book folder contains volume folders, and each volume folder contains chapter archives.
+
+```text
+/library/books
+└── The Promised Neverland
+    ├── Volume 01
+    │   ├── The Promised Neverland 001.cbz
+    │   ├── The Promised Neverland 002.cbz
+    │   └── The Promised Neverland 003.cbz
+    ├── Volume 02
+    │   ├── The Promised Neverland 008.cbz
+    │   └── The Promised Neverland 009.cbz
+    └── The Promised Neverland 185.cbz  → loose chapter
+```
+
+Recognized volume folder names include:
+
+- `Volume 01`, `Volume 1`
+- `Vol. 1`, `Vol 01`
+- `v01`, `V1`
+- `Book 1`
+
+Volume folders are internal groups, not separate books. The book detail page shows volumes first when they exist; selecting a volume opens the chapters in that volume, and selecting a chapter opens its pages. Chapters that are not inside a recognized volume folder stay loose and remain visible alongside the volume groups.
+
+You can self-organize volumes by moving archives on disk and rescanning. Identify providers can also suggest volume grouping; accepting those suggestions moves matched chapter archives into volume folders using collision-safe moves. Obscura checks every destination before moving anything, and only updates the database after the filesystem moves succeed.
+
+Volume covers are stored on the volume group, not copied onto every chapter. You can edit a volume cover from the book edit view just like chapter covers.
+
 ### ComicInfo.xml
 
 If an archive contains a `ComicInfo.xml` file, Obscura reads it during the scan:
@@ -154,6 +184,7 @@ If an archive contains a `ComicInfo.xml` file, Obscura reads it during the scan:
 | `<Series>` | Book title (overrides folder name) |
 | `<Title>` | Chapter title (overrides filename) |
 | `<Number>` | Chapter number |
+| `<Volume>` | Volume number when archives are otherwise flat |
 | `<Publisher>` | Studio |
 | `<Writer>`, `<Penciller>`, `<Artist>`, etc. | Performers (creators) |
 | `<Genre>`, `<Tags>` | Tags |

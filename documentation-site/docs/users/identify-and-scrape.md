@@ -78,6 +78,26 @@ The drawer is structured top-down:
 
 In the database, `scrape_results.cascadeParentId` links a child episode result to the series-level result that produced it. Accepting at the series level commits the whole tree as one transaction; you don't have to chase episodes one by one.
 
+## Book and manga identify
+
+Books use the same review-and-accept workflow, with a book-specific drawer for chapters and volumes. This is especially useful for manga plugins such as MangaDex, where the provider may know the title metadata, volume covers, chapter titles, and chapter-to-volume grouping.
+
+When a book result includes volume data, the drawer shows **Volume groups** as collapsible rows:
+
+- Each volume row has its own cover picker.
+- Expanding a volume shows the local chapters that will be moved into that volume.
+- Unchecking a volume leaves those chapters loose so you can handle them manually.
+- Loose chapters appear in their own section and use the same chapter row controls as grouped chapters.
+- Chapter rows can apply a provider title and, when available, an exact chapter cover.
+
+Accepting a checked volume group organizes the matching archives on disk. For example, accepting volume 1 for chapters 1-7 creates or reuses a folder such as `Volume 01/` under the book folder and moves those chapter archives into it. The move is preflighted first: if any destination path already exists, the accept aborts before moving files.
+
+Volume covers attach to the volume group itself. They are not used as chapter covers unless the provider also supplies exact chapter images.
+
+:::tip
+The folder layout remains authoritative. If a provider cannot infer all volumes, you can move chapter archives into `Volume 01`, `Vol. 2`, `v03`, or similar folders yourself and rescan.
+:::
+
 ## Plugin management (`/plugins`)
 
 The Identify dropdown only shows providers you've **installed**. The plugins page is where you manage them.
