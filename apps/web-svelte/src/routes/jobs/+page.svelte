@@ -6,6 +6,7 @@
     Ban,
     Clock,
     Cpu,
+    Eye,
     ListChecks,
     RefreshCw,
     Square,
@@ -21,7 +22,13 @@
   import type { JobRun, JobsDashboard } from "$lib/api/types";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { groupQueuesForJobDashboard } from "$lib/jobs/queue-sections";
-  import { describeRunResult, displayJobHeading } from "$lib/jobs/helpers";
+  import {
+    describeRunResult,
+    displayJobHeading,
+    errorFingerprint,
+    formatRelativeTimeShort,
+  } from "$lib/jobs/helpers";
+  import { dismissedErrors } from "$lib/stores/dismissed-errors.svelte";
   import OverviewStat from "$lib/components/jobs/OverviewStat.svelte";
   import QueueCard from "$lib/components/jobs/QueueCard.svelte";
   import ActiveJobCard from "$lib/components/jobs/ActiveJobCard.svelte";
@@ -65,6 +72,7 @@
   }
 
   onMount(() => {
+    dismissedErrors.init();
     void loadDashboard();
     pollTimer = setInterval(() => void loadDashboard(), 5000);
   });
@@ -159,6 +167,7 @@
           ? `${parts.join("; ").replace(/^\w/, (c) => c.toUpperCase())}.`
           : "Nothing to clear.";
       error = null;
+      dismissedErrors.clearAll();
       await loadDashboard();
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to acknowledge failures";
@@ -174,11 +183,44 @@
   const totalQueued = $derived(
     dashboard?.queues.reduce((sum, queue) => sum + queue.backlog, 0) ?? 0,
   );
-  const totalFailed = $derived(dashboard?.failedJobs.length ?? 0);
-  const retainedCompleted = $derived(dashboard?.completedJobs.length ?? 0);
-  const canAcknowledgeFailures = $derived(
-    totalFailed > 0 || (dashboard?.queues ?? []).some((q) => q.failed > 0),
+  const trueFailedTotal = $derived(
+    dashboard?.queues.reduce((sum, q) => sum + q.failed, 0) ?? 0,
   );
+  const visibleFailedJobs = $derived(
+    (dashboard?.failedJobs ?? []).filter(
+      (job) => !dismissedErrors.isDismissed(errorFingerprint(job)),
+    ),
+  );
+  const suppressedFailedCount = $derived(
+    (dashboard?.failedJobs ?? []).length - visibleFailedJobs.length,
+  );
+  const canAcknowledgeFailures = $derived(
+    trueFailedTotal > 0 || (dashboard?.queues ?? []).some((q) => q.failed > 0),
+  );
+
+  // Group active jobs by queue for dense display
+  const groupedActiveJobs = $derived(() => {
+    const jobs = dashboard?.activeJobs ?? [];
+    if (jobs.length === 0) return [];
+    const groups = new Map<string, { queueLabel: string; jobs: typeof jobs }>();
+    for (const job of jobs) {
+      const existing = groups.get(job.queueName);
+      if (existing) {
+        existing.jobs.push(job);
+      } else {
+        groups.set(job.queueName, { queueLabel: job.queueLabel, jobs: [job] });
+      }
+    }
+    return [...groups.entries()]
+      .map(([queueName, { queueLabel, jobs: qJobs }]) => ({
+        queueName,
+        queueLabel,
+        jobs: qJobs,
+        activeCount: qJobs.filter((j) => j.status === "active").length,
+        waitingCount: qJobs.filter((j) => j.status === "waiting" || j.status === "delayed").length,
+      }))
+      .sort((a, b) => b.activeCount - a.activeCount || b.waitingCount - a.waitingCount);
+  });
 </script>
 
 <svelte:head>
@@ -254,15 +296,15 @@
     <OverviewStat
       icon={AlertTriangle}
       label="Failures"
-      value={totalFailed}
-      detail={totalFailed > 0 ? "Needs review or clearing" : "No uncleared failures"}
-      accent={totalFailed > 0}
-      danger={totalFailed > 0}
+      value={trueFailedTotal}
+      detail={trueFailedTotal > 0 ? "Needs review or clearing" : "No uncleared failures"}
+      accent={trueFailedTotal > 0}
+      danger={trueFailedTotal > 0}
     />
     <OverviewStat
       icon={ListChecks}
-      label="Retained Done"
-      value={retainedCompleted}
+      label="Last Scan"
+      value={formatRelativeTimeShort(dashboard?.lastScanAt ?? null)}
       detail={dashboard?.schedule.enabled
         ? `Auto scan every ${dashboard.schedule.intervalMinutes}m`
         : "Auto scan disabled"}
@@ -349,23 +391,37 @@
         </span>
       </div>
     </div>
-    <div class="space-y-2">
-      {#if dashboard?.activeJobs.length}
-        {#each dashboard.activeJobs as job (job.id)}
-          <ActiveJobCard
-            {job}
-            nsfwMode={nsfw.mode}
-            {cancellingJobRunId}
-            onCancelJob={handleCancelJob}
-          />
+    {#if groupedActiveJobs().length}
+      <div class="surface-card no-lift overflow-hidden">
+        {#each groupedActiveJobs() as { queueName, queueLabel, jobs: qJobs, activeCount, waitingCount } (queueName)}
+          <div class="border-b border-border-subtle/50 last:border-0">
+            <div class="flex items-center justify-between bg-surface-2/50 px-3 py-1.5">
+              <span
+                class="text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-text-muted"
+              >
+                {queueLabel}
+              </span>
+              <span class="text-[0.65rem] text-text-disabled">
+                {#if activeCount > 0}{activeCount} running{/if}{#if activeCount > 0 && waitingCount > 0} · {/if}{#if waitingCount > 0}{waitingCount} queued{/if}
+              </span>
+            </div>
+            {#each qJobs as job (job.id)}
+              <ActiveJobCard
+                {job}
+                nsfwMode={nsfw.mode}
+                {cancellingJobRunId}
+                onCancelJob={handleCancelJob}
+              />
+            {/each}
+          </div>
         {/each}
-      {:else}
-        <EmptyPanel
-          title="No active or queued jobs"
-          detail="When work is triggered, the active queue and backlog will show up here first."
-        />
-      {/if}
-    </div>
+      </div>
+    {:else}
+      <EmptyPanel
+        title="No active or queued jobs"
+        detail="When work is triggered, the active queue and backlog will show up here first."
+      />
+    {/if}
   </section>
 
   <div class="border-t border-border-subtle"></div>
@@ -380,7 +436,7 @@
         </h2>
       </div>
       <div class="flex items-center gap-2">
-        {#if totalFailed > 0}
+        {#if trueFailedTotal > 0}
           <button
             type="button"
             onclick={() => void handleAcknowledgeFailures("all")}
@@ -392,20 +448,48 @@
           </button>
         {/if}
         <span class="text-mono-sm text-text-disabled">
-          {totalFailed} uncleared
+          {visibleFailedJobs.length} shown
+          {#if trueFailedTotal > (dashboard?.failedJobs ?? []).length}
+            · {trueFailedTotal} total
+          {/if}
         </span>
       </div>
     </div>
     <div class="space-y-2">
-      {#if dashboard?.failedJobs.length}
-        {#each dashboard.failedJobs as job (job.id)}
-          <FailedJobCard {job} nsfwMode={nsfw.mode} />
+      {#if visibleFailedJobs.length}
+        {#each visibleFailedJobs as job (job.id)}
+          <FailedJobCard
+            {job}
+            nsfwMode={nsfw.mode}
+            onDismiss={(fp) => dismissedErrors.dismiss(fp)}
+          />
         {/each}
+      {:else if dashboard?.failedJobs.length && suppressedFailedCount > 0}
+        <!-- All visible errors are suppressed -->
       {:else}
         <EmptyPanel
           title="No active failures"
           detail="Failed jobs stay here until you clear them, so this list should stay short and actionable."
         />
+      {/if}
+      {#if suppressedFailedCount > 0}
+        <div
+          class="flex items-center justify-between px-1 py-1.5 text-[0.72rem] text-text-disabled"
+        >
+          <span
+            >{suppressedFailedCount} error type{suppressedFailedCount === 1
+              ? ""
+              : "s"} suppressed</span
+          >
+          <button
+            type="button"
+            onclick={() => dismissedErrors.clearAll()}
+            class="flex items-center gap-1 text-text-muted transition-colors hover:text-text-primary"
+          >
+            <Eye class="h-3 w-3" />
+            Show all
+          </button>
+        </div>
       {/if}
     </div>
   </section>
@@ -421,7 +505,9 @@
           Recently Finished
         </h2>
       </div>
-      <span class="text-mono-sm text-text-disabled">{retainedCompleted} retained</span>
+      <span class="text-mono-sm text-text-disabled"
+        >{dashboard?.completedJobs.length ?? 0} shown</span
+      >
     </div>
     <div class="surface-card no-lift overflow-hidden">
       <div class="divide-y divide-border-subtle/50">
@@ -431,7 +517,7 @@
           {/each}
         {:else}
           <div class="px-4 py-6 text-center text-sm text-text-disabled">
-            No retained completions.
+            No recent completions.
           </div>
         {/if}
       </div>

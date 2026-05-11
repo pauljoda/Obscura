@@ -134,6 +134,32 @@ export function jobBadgeVariant(job: JobRun): BadgeVariant {
   return isForceRebuildJob(job) ? "error" : "accent";
 }
 
+export function formatDuration(job: JobRun): string {
+  if (!job.startedAt || !job.finishedAt) return "–";
+  const ms = new Date(job.finishedAt).getTime() - new Date(job.startedAt).getTime();
+  if (ms < 0) return "–";
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+export function formatRelativeTimeShort(value: string | null): string {
+  if (!value) return "Never";
+  const diffMs = Date.now() - new Date(value).getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000));
+  if (diffMinutes < 1) return "now";
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
+}
+
+export function errorFingerprint(job: Pick<JobRun, "queueName" | "error">): string {
+  return `${job.queueName}:${(job.error ?? "").trim().slice(0, 200)}`;
+}
+
 export function describeRunResult(
   queueName: string,
   enqueued: number,

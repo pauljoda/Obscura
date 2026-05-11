@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book and gallery scans now recover from stale image thumbnail and fingerprint jobs left behind by older gallery-to-Books migrations, so deleted legacy page rows no longer keep failing in the worker.
 - Identify result messages are now easier to read and dismiss, with solid alert styling, a close button, and automatic timeout behavior.
 - Media surfaces with filters now include Is NSFW and Not NSFW library-flag filters while still respecting the global hide-NSFW mode.
+- The Job Control page is now denser and easier to scan: active jobs are grouped by queue type with a compact row layout, errors show individually with a Suppress button to hide repeated noise, completed jobs include their duration, and the overview replaces "Retained Done" with a Last Scan timestamp.
 
 ### Docs
 
@@ -29,6 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
+- Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
+- Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
+- Job Control overview replaced the confusing "Retained Done" count with a Last Scan timestamp that shows when the most recent library scan finished and whether auto-scan is enabled.
+- Job Control failures are now loaded up to 50 at a time (was 24), and the header shows the true total count from queue stats alongside the number displayed.
 - Comics now live under a top-level Books section instead of being mixed into Galleries. Existing archive comic galleries are migrated into book/chapter/page records, old gallery detail links redirect to the new book detail page, and users should enable Books scanning on the relevant library roots to keep discovering ZIP/CBZ comics.
 - Books now use the same library browsing tools as the rest of Obscura, including saved search/filter presets, responsive thumbnail sizing, shared thumbnails in dashboard/search/collections, chapter previews, upload/delete actions, and merging standalone comics into one chaptered book.
 - Comic reading now flows from one chapter into the next inside the same lightbox, with a Next Chapter action at the end of webtoon and paged reading.

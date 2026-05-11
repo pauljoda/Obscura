@@ -358,7 +358,8 @@ export async function getJobsDashboardRead(
   });
 
   const activeLimit = sfwOnly ? 72 : 24;
-  const failedLimit = sfwOnly ? 72 : 24;
+  const failedDisplayLimit = 50;
+  const failedLimit = sfwOnly ? failedDisplayLimit * 3 : failedDisplayLimit * 2;
   const completedLimit = sfwOnly ? 36 : 12;
   const recentLimit = sfwOnly ? 54 : 18;
 
@@ -421,7 +422,7 @@ export async function getJobsDashboardRead(
         rows.slice(0, 24),
       ),
       filterSfwJobs(db, failedJobsRaw, sfwOnly).then((rows) =>
-        rows.slice(0, 24),
+        rows.slice(0, failedDisplayLimit),
       ),
       filterSfwJobs(db, completedJobsRaw, sfwOnly).then((rows) =>
         rows.slice(0, 12),
