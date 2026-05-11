@@ -1341,6 +1341,10 @@ export function getGeneratedBookPageDir(pageId: string) {
   return path.join(getCacheRootDir(), "book-pages", pageId);
 }
 
+export function getGeneratedBookChapterDir(chapterId: string) {
+  return path.join(getCacheRootDir(), "book-chapters", chapterId);
+}
+
 export function getGeneratedBookDir(bookId: string) {
   return path.join(getCacheRootDir(), "books", bookId);
 }

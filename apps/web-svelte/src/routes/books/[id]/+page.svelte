@@ -120,9 +120,9 @@
     await saveProgress(readerIndex);
   }
 
-  async function refreshBook() {
+  async function refreshBook(closeEditor = true) {
     await invalidate(`books:${book.id}`);
-    editing = false;
+    if (closeEditor) editing = false;
   }
 
   async function confirmDelete(deleteFromDisk: boolean) {
@@ -294,6 +294,7 @@
         <BookEdit
           {book}
           onSaved={() => void refreshBook()}
+          onChanged={() => void refreshBook(false)}
           onCancel={() => (editing = false)}
         />
       {/if}

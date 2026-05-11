@@ -26,6 +26,7 @@ export const apiRoutes = {
   bookDetail: "/books/:id",
   bookProgress: "/books/:id/progress",
   bookPageAssets: "/assets/book-pages/:id/*",
+  bookChapterCoverAsset: "/assets/book-chapters/:id/cover",
   bookCoverAsset: "/assets/books/:id/cover",
   studios: "/studios",
   performers: "/performers",

@@ -15,6 +15,7 @@
   import { updateBook } from "$lib/api/media";
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
+  import BookChapterCoverEditor from "./BookChapterCoverEditor.svelte";
   import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import {
     DateField,
@@ -31,10 +32,11 @@
   interface Props {
     book: BookDetailDto;
     onSaved?: () => void;
+    onChanged?: () => void;
     onCancel?: () => void;
   }
 
-  let { book, onSaved, onCancel }: Props = $props();
+  let { book, onSaved, onChanged, onCancel }: Props = $props();
 
   const nsfw = useNsfw();
 
@@ -123,97 +125,105 @@
   </div>
 {/if}
 
-<div class="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
-  <EditFormShell
-    title="Edit book"
-    onSave={() => void handleSave()}
-    onCancel={() => onCancel?.()}
-    {saving}
-    saveDisabled={!title.trim()}
-    saveLabel="Save changes"
-    {error}
-  >
-    <TextField
-      label="Title"
-      icon={FileText}
-      value={title}
-      onChange={(value) => (title = value)}
-      placeholder="Book title"
-      required
-    />
-    <SearchSelect
-      label="Studio"
-      icon={Building2}
-      value={studioName}
-      onChange={(value) => (studioName = value)}
-      options={studioSuggestions}
-      placeholder="Pick a studio..."
-      canAddNew
-    />
-    <DateField
-      label="Date"
-      icon={Calendar}
-      value={date}
-      onChange={(value) => (date = value)}
-    />
-    <TextAreaField
-      label="Details"
-      value={details}
-      onChange={(value) => (details = value)}
-      placeholder="Synopsis or notes"
-    />
-    <TagSelect
-      label="Artists"
-      icon={User}
-      values={artistNames}
-      onChange={(next) => (artistNames = next)}
-      options={artistSuggestions}
-      placeholder="Add artist..."
-    />
-    <TagSelect
-      label="Tags"
-      icon={TagIcon}
-      values={tagNames}
-      onChange={(next) => (tagNames = next)}
-      options={tagSuggestions}
-      placeholder="Add tag..."
-    />
-    <div class="grid gap-4 sm:grid-cols-2">
-      <ToggleChip
-        value={organized}
-        onChange={(value) => (organized = value)}
-        onLabel="Organized"
-        offLabel="Mark organized"
-        icon={CheckCircle2}
+<div class="space-y-5">
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
+    <EditFormShell
+      title="Edit book"
+      onSave={() => void handleSave()}
+      onCancel={() => onCancel?.()}
+      {saving}
+      saveDisabled={!title.trim()}
+      saveLabel="Save changes"
+      {error}
+    >
+      <TextField
+        label="Title"
+        icon={FileText}
+        value={title}
+        onChange={(value) => (title = value)}
+        placeholder="Book title"
+        required
       />
-      <ToggleChip
-        value={isNsfw}
-        onChange={(value) => (isNsfw = value)}
-        onLabel="Marked NSFW"
-        offLabel="Mark as NSFW"
-        icon={AlertTriangle}
-        variant="warning"
+      <SearchSelect
+        label="Studio"
+        icon={Building2}
+        value={studioName}
+        onChange={(value) => (studioName = value)}
+        options={studioSuggestions}
+        placeholder="Pick a studio..."
+        canAddNew
       />
-    </div>
-  </EditFormShell>
+      <DateField
+        label="Date"
+        icon={Calendar}
+        value={date}
+        onChange={(value) => (date = value)}
+      />
+      <TextAreaField
+        label="Details"
+        value={details}
+        onChange={(value) => (details = value)}
+        placeholder="Synopsis or notes"
+      />
+      <TagSelect
+        label="Artists"
+        icon={User}
+        values={artistNames}
+        onChange={(next) => (artistNames = next)}
+        options={artistSuggestions}
+        placeholder="Add artist..."
+      />
+      <TagSelect
+        label="Tags"
+        icon={TagIcon}
+        values={tagNames}
+        onChange={(next) => (tagNames = next)}
+        options={tagSuggestions}
+        placeholder="Add tag..."
+      />
+      <div class="grid gap-4 sm:grid-cols-2">
+        <ToggleChip
+          value={organized}
+          onChange={(value) => (organized = value)}
+          onLabel="Organized"
+          offLabel="Mark organized"
+          icon={CheckCircle2}
+        />
+        <ToggleChip
+          value={isNsfw}
+          onChange={(value) => (isNsfw = value)}
+          onLabel="Marked NSFW"
+          offLabel="Mark as NSFW"
+          icon={AlertTriangle}
+          variant="warning"
+        />
+      </div>
+    </EditFormShell>
 
-  <div class="space-y-3">
-    <h4 class="text-kicker flex items-center gap-2">
-      <BookOpen class="h-3.5 w-3.5" />
-      Cover
-    </h4>
-    <div class="surface-well overflow-hidden">
-      <EntityThumbnail
-        kind="book"
-        title={book.title}
-        coverImagePath={book.coverImagePath}
-        previewImagePaths={book.previewImagePaths}
-        pageCount={book.pageCount}
-        isNsfw={book.isNsfw}
-        size="hero"
-        aspectClass="aspect-[2/3]"
-        fit="contain"
-      />
+    <div class="space-y-3">
+      <h4 class="text-kicker flex items-center gap-2">
+        <BookOpen class="h-3.5 w-3.5" />
+        Cover
+      </h4>
+      <div class="surface-well overflow-hidden">
+        <EntityThumbnail
+          kind="book"
+          title={book.title}
+          coverImagePath={book.coverImagePath}
+          previewImagePaths={book.previewImagePaths}
+          pageCount={book.pageCount}
+          isNsfw={book.isNsfw}
+          size="hero"
+          aspectClass="aspect-[2/3]"
+          fit="contain"
+        />
+      </div>
     </div>
   </div>
+
+  <BookChapterCoverEditor
+    chapters={book.chapters}
+    isNsfw={book.isNsfw}
+    onChanged={onChanged}
+  />
 </div>

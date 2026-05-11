@@ -437,6 +437,14 @@ export async function resolveAssetRequest(
     return handleBookPageAsset(deps, id, kind, range);
   }
 
+  if (family === "book-chapters" && segments.length === 3 && kind === "cover") {
+    return serveFirstMatchingFile(
+      cacheCandidates("book-chapters", id, "cover-custom.jpg"),
+      "Book chapter cover not found",
+      MUTABLE_ASSET_CACHE_CONTROL,
+    );
+  }
+
   if (family === "books" && segments.length === 3 && kind === "cover") {
     return serveFirstMatchingFile(
       cacheCandidates("books", id, "cover-custom.jpg"),

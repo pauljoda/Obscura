@@ -610,7 +610,9 @@ export interface BookChapterDto {
   archivePath: string;
   relativePath: string;
   pageCount: number;
+  coverPageId: string | null;
   coverImagePath: string | null;
+  hasCustomCover: boolean;
   pages: BookPageDto[];
 }
 

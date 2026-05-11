@@ -1,0 +1,1 @@
+ALTER TABLE "book_chapters" ADD COLUMN "cover_image_path" text;

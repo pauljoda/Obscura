@@ -207,7 +207,11 @@ export async function processBookScan(job: Job) {
     await attachBookRelations(bookId, comicInfo, bookIsNsfw);
 
     const [existingChapter] = await db
-      .select({ id: bookChapters.id })
+      .select({
+        id: bookChapters.id,
+        coverPageId: bookChapters.coverPageId,
+        coverImagePath: bookChapters.coverImagePath,
+      })
       .from(bookChapters)
       .where(eq(bookChapters.archivePath, archivePath))
       .limit(1);
@@ -285,7 +289,10 @@ export async function processBookScan(job: Job) {
       }
     }
 
-    const coverPageId = pageIds[0] ?? null;
+    const coverPageId =
+      existingChapter?.coverPageId || existingChapter?.coverImagePath
+        ? existingChapter.coverPageId
+        : (pageIds[0] ?? null);
     await db
       .update(bookChapters)
       .set({ coverPageId, updatedAt: new Date() })

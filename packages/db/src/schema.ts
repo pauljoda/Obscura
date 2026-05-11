@@ -874,6 +874,7 @@ export const bookChapters = pgTable(
     relativePath: text("relative_path").notNull(),
     pageCount: integer("page_count").default(0).notNull(),
     coverPageId: uuid("cover_page_id"),
+    coverImagePath: text("cover_image_path"),
     externalIds: jsonb("external_ids")
       .$type<Record<string, string>>()
       .default({})

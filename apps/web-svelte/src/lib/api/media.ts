@@ -170,6 +170,29 @@ export async function updateBook(
   });
 }
 
+export async function setBookChapterCoverFromPage(
+  chapterId: string,
+  pageId: string,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return fetchApi(`/book-chapters/${chapterId}/cover`, {
+    method: "POST",
+    body: JSON.stringify({ pageId }),
+  });
+}
+
+export async function uploadBookChapterCover(
+  chapterId: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/book-chapters/${chapterId}/cover/upload`, file);
+}
+
+export async function deleteBookChapterCover(
+  chapterId: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/book-chapters/${chapterId}/cover`, { method: "DELETE" });
+}
+
 export async function deleteBook(id: string, deleteFile?: boolean): Promise<{ ok: true }> {
   const qs = deleteFile ? "?deleteFile=true" : "";
   return fetchApi(`/books/${id}${qs}`, { method: "DELETE" });

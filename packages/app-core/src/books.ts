@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, rename, rm, unlink } from "node:fs/promises";
+import { mkdir, rename, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { schema, type AppDb } from "@obscura/db";
@@ -13,6 +13,7 @@ import type {
 import {
   extractComicInfoFromZip,
   fileNameToTitle,
+  getGeneratedBookChapterDir,
   getGeneratedBookPageDir,
   parseZipImageMembers,
 } from "@obscura/media-core";
@@ -499,17 +500,23 @@ export async function getBookDetailRead(
     urls: book.urls,
     studio: studioRow[0] ?? null,
     performers: (nsfwMode === "off" ? performerRows.filter((p) => !p.isNsfw) : performerRows),
-    chapters: chapterRows.map((chapter) => ({
-      id: chapter.id,
-      bookId: chapter.bookId,
-      title: chapter.title,
-      chapterNumber: chapter.chapterNumber,
-      archivePath: chapter.archivePath,
-      relativePath: chapter.relativePath,
-      pageCount: chapter.pageCount,
-      coverImagePath: chapter.coverPageId ? `/assets/book-pages/${chapter.coverPageId}/thumb` : null,
-      pages: (pagesByChapter.get(chapter.id) ?? []).map(toPageDto),
-    })),
+    chapters: chapterRows.map((chapter) => {
+      const chapterPages = pagesByChapter.get(chapter.id) ?? [];
+      const coverPageId = chapter.coverPageId ?? chapterPages[0]?.id ?? null;
+      return {
+        id: chapter.id,
+        bookId: chapter.bookId,
+        title: chapter.title,
+        chapterNumber: chapter.chapterNumber,
+        archivePath: chapter.archivePath,
+        relativePath: chapter.relativePath,
+        pageCount: chapter.pageCount,
+        coverPageId: chapter.coverPageId,
+        coverImagePath: chapter.coverImagePath ?? (coverPageId ? `/assets/book-pages/${coverPageId}/thumb` : null),
+        hasCustomCover: Boolean(chapter.coverImagePath),
+        pages: chapterPages.map(toPageDto),
+      };
+    }),
   };
 }
 
@@ -704,6 +711,130 @@ export async function updateBookWrite(
   return { ok: true as const, id };
 }
 
+const BOOK_CHAPTER_COVER_FILE = "cover-custom.jpg";
+
+function bookChapterCoverPath(chapterId: string) {
+  return `/assets/book-chapters/${chapterId}/cover`;
+}
+
+async function deleteBookChapterCustomCoverFile(chapterId: string) {
+  const customPath = path.join(getGeneratedBookChapterDir(chapterId), BOOK_CHAPTER_COVER_FILE);
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    /* non-fatal */
+  }
+}
+
+export async function setBookChapterCoverPageWrite(
+  db: AppDb,
+  chapterId: string,
+  pageId: string,
+) {
+  const [chapter] = await db
+    .select({ id: bookChapters.id })
+    .from(bookChapters)
+    .where(eq(bookChapters.id, chapterId))
+    .limit(1);
+  if (!chapter) throw new NotFoundError("Chapter not found");
+
+  const [page] = await db
+    .select({ id: bookPages.id })
+    .from(bookPages)
+    .where(and(eq(bookPages.id, pageId), eq(bookPages.chapterId, chapterId)))
+    .limit(1);
+  if (!page) throw new NotFoundError("Book page not found");
+
+  await deleteBookChapterCustomCoverFile(chapterId);
+  await db
+    .update(bookChapters)
+    .set({
+      coverPageId: pageId,
+      coverImagePath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookChapters.id, chapterId));
+
+  return {
+    ok: true as const,
+    coverImagePath: bookPageThumbPath(pageId),
+  };
+}
+
+export async function uploadBookChapterCoverWrite(
+  db: AppDb,
+  chapterId: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const [chapter] = await db
+    .select({ id: bookChapters.id })
+    .from(bookChapters)
+    .where(eq(bookChapters.id, chapterId))
+    .limit(1);
+  if (!chapter) throw new NotFoundError("Chapter not found");
+
+  const dir = getGeneratedBookChapterDir(chapterId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, BOOK_CHAPTER_COVER_FILE), buffer);
+
+  const coverImagePath = bookChapterCoverPath(chapterId);
+  await db
+    .update(bookChapters)
+    .set({
+      coverPageId: null,
+      coverImagePath,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookChapters.id, chapterId));
+
+  return {
+    ok: true as const,
+    coverImagePath,
+  };
+}
+
+export async function setBookChapterCoverFromUrlWrite(
+  db: AppDb,
+  chapterId: string,
+  imageUrl: string,
+) {
+  let buffer: Buffer;
+  if (imageUrl.startsWith("data:image/")) {
+    const b64 = imageUrl.split(",")[1];
+    if (!b64) throw new ValidationError("Bad data URL");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new InternalError(`Image download failed: HTTP ${res.status}`);
+    }
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+  return uploadBookChapterCoverWrite(db, chapterId, buffer);
+}
+
+export async function deleteBookChapterCoverWrite(db: AppDb, chapterId: string) {
+  const [chapter] = await db
+    .select({ id: bookChapters.id })
+    .from(bookChapters)
+    .where(eq(bookChapters.id, chapterId))
+    .limit(1);
+  if (!chapter) throw new NotFoundError("Chapter not found");
+
+  await deleteBookChapterCustomCoverFile(chapterId);
+  await db
+    .update(bookChapters)
+    .set({
+      coverPageId: null,
+      coverImagePath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookChapters.id, chapterId));
+
+  return { ok: true as const };
+}
+
 export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false) {
   const [book] = await db
     .select({ id: books.id })
@@ -713,7 +844,7 @@ export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false)
   if (!book) throw new NotFoundError("Book not found");
 
   const chapters = await db
-    .select({ archivePath: bookChapters.archivePath })
+    .select({ id: bookChapters.id, archivePath: bookChapters.archivePath })
     .from(bookChapters)
     .where(eq(bookChapters.bookId, id));
 
@@ -728,6 +859,12 @@ export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false)
 
   for (const page of pageRows) {
     await rm(getGeneratedBookPageDir(page.id), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+  }
+  for (const chapter of chapters) {
+    await rm(getGeneratedBookChapterDir(chapter.id), {
       recursive: true,
       force: true,
     }).catch(() => undefined);
