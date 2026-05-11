@@ -1,5 +1,10 @@
 import path from "node:path";
-import { fileNameToTitle, type ComicInfoMetadata } from "@obscura/media-core";
+import {
+  bookVolumeFolderName,
+  duplicatedBookVolumeFolderNameRepair,
+  fileNameToTitle,
+  type ComicInfoMetadata,
+} from "@obscura/media-core";
 
 export interface ComicBookArchivePlanInput {
   archivePath: string;
@@ -35,15 +40,30 @@ function parseChapterNumber(value: string | undefined, fallback: string): number
   return Number.isFinite(parsed) && parsed > 0 ? Math.max(1, Math.round(parsed)) : 1;
 }
 
-function parseVolumeFolderName(value: string): { number: number | null; title: string } | null {
+function parseVolumeFolderName(value: string): {
+  number: number | null;
+  title: string;
+  relativeName: string;
+} | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
+  const repaired = duplicatedBookVolumeFolderNameRepair(trimmed);
+  if (repaired) {
+    const parsed = Number.parseInt(repaired.replace(/^Volume\s+/i, ""), 10);
+    return {
+      number: Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null,
+      title: repaired,
+      relativeName: repaired,
+    };
+  }
   const explicit = trimmed.match(/^(?:volume|vol\.?|v|book)\s*0*([0-9]+(?:\.[0-9]+)?)$/i);
   if (explicit) {
     const parsed = Number.parseFloat(explicit[1] ?? "");
+    const number = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
     return {
-      number: Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null,
-      title: trimmed,
+      number,
+      title: number == null ? trimmed : bookVolumeFolderName(number),
+      relativeName: trimmed,
     };
   }
   return null;
@@ -52,7 +72,7 @@ function parseVolumeFolderName(value: string): { number: number | null; title: s
 function volumeTitle(number: number | null, fallback?: string | null): string | null {
   if (fallback?.trim()) return fallback.trim();
   if (number == null) return null;
-  return `Volume ${String(number).padStart(2, "0")}`;
+  return bookVolumeFolderName(number);
 }
 
 export function inferComicBookArchivePlan(
@@ -83,7 +103,7 @@ export function inferComicBookArchivePlan(
   const volumeNumber = folderBackedVolume?.number ?? metadataVolumeNumber;
   const volumeTitleValue = volumeTitle(volumeNumber, folderBackedVolume?.title ?? null);
   const volumeRelativePath = folderBackedVolume
-    ? folderSegments.join(path.sep)
+    ? [...folderSegments.slice(0, -1), folderBackedVolume.relativeName].join(path.sep)
     : null;
 
   const bookFolderSegments =

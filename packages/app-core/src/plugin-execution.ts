@@ -3,7 +3,7 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { schema, type AppDb } from "@obscura/db";
-import { getGeneratedBookVolumeDir } from "@obscura/media-core";
+import { bookVolumeFolderName, getGeneratedBookVolumeDir } from "@obscura/media-core";
 import {
   loadTypeScriptPlugin,
   PluginExecutionError,
@@ -431,18 +431,7 @@ function volumeNumberKey(value: unknown): string | null {
 }
 
 function volumeFolderName(volumeNumber: string, title?: string | null): string {
-  const numeric = Number.parseInt(volumeNumber, 10);
-  const base = Number.isFinite(numeric)
-    ? `Volume ${String(numeric).padStart(2, "0")}`
-    : `Volume ${volumeNumber}`;
-  const suffix = title?.trim() && title.trim().toLowerCase() !== base.toLowerCase()
-    ? ` - ${title.trim()}`
-    : "";
-  return `${base}${suffix}`
-    .replace(/[/:\\]/g, " ")
-    .replace(/\s+/g, " ")
-    .slice(0, 160)
-    .trim();
+  return bookVolumeFolderName(volumeNumber, title);
 }
 
 function volumeCoverEntries(value: unknown): Array<{

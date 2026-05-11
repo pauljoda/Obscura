@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book and chapter detail pages now show saved comic reading progress as the current chapter plus page progress, making resume state easier to understand at a glance.
 - Identify queues now focus on unorganized media by default, and accepted metadata results mark the item organized so future review sessions stay focused on unfinished entries.
 - Comic archive folders that only wrap a same-named ZIP or CBZ now scan as loose comic chapters instead of creating an unexpected volume.
+- Manga volume folders now stay named `Volume 01`, `Volume 02`, and so on even when provider metadata calls them `Volume 1`; the next book scan also repairs existing duplicated folders like `Volume 01 - Volume 1`.
 - Comic reading now marks the current chapter complete when the end action appears, and the final chapter shows a clear no-next-chapter close action.
 - Book scans now only create comic volumes from explicit volume subfolders, keeping loose chapter archives and chapter wrapper folders under the book itself.
 - Completed comic chapters now show as Read instead of lingering as 100% progress, with Mark read and Re-read actions available from book, chapter, and volume views.
@@ -92,6 +93,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- Accepted book metadata no longer creates duplicated on-disk volume folder names such as `Volume 01 - Volume 1`, and book scans repair already-created duplicate volume folders while preserving existing chapter/page records.
 - Identify provider flyouts now close as soon as a provider is selected, so the disabled Identify button prevents repeat submissions while the lookup is running.
 - Accepted plugin metadata results now mark series, books, galleries, images, albums, and tracks as organized, even when the accepted fields only update artwork or linked metadata.
 - Book migration now deduplicates legacy archive-gallery book and chapter insert targets before conversion, preventing startup migration failures on databases with duplicate ZIP or CBZ gallery rows.

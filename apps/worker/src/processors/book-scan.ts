@@ -1,9 +1,11 @@
 import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { readdir, readFile, rename } from "node:fs/promises";
 import { and, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverImageFilesAndDirs,
+  duplicatedBookVolumeFolderNameRepair,
   extractComicInfoFromZip,
   fileNameToTitle,
   parseZipImageMembers,
@@ -120,6 +122,137 @@ function resolveBookFolderPath(
   return path.dirname(archivePath);
 }
 
+interface VolumeFolderRepair {
+  fromPath: string;
+  toPath: string;
+  fromRelativePath: string;
+  toRelativePath: string;
+}
+
+async function repairDuplicateBookVolumeFolders(
+  rootPath: string,
+  recursive: boolean,
+): Promise<VolumeFolderRepair[]> {
+  const repairs: VolumeFolderRepair[] = [];
+
+  async function walk(dirPath: string) {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+
+      const currentPath = path.join(dirPath, entry.name);
+      const repairedName = duplicatedBookVolumeFolderNameRepair(entry.name);
+      let nextPath = currentPath;
+
+      if (repairedName) {
+        const repairedPath = path.join(dirPath, repairedName);
+        if (!existsSync(repairedPath)) {
+          await rename(currentPath, repairedPath);
+          nextPath = repairedPath;
+          repairs.push({
+            fromPath: currentPath,
+            toPath: repairedPath,
+            fromRelativePath: path.relative(rootPath, currentPath) || entry.name,
+            toRelativePath: path.relative(rootPath, repairedPath) || repairedName,
+          });
+        }
+      }
+
+      if (recursive) {
+        await walk(nextPath);
+      }
+    }
+  }
+
+  await walk(rootPath);
+  return repairs;
+}
+
+function replacePathPrefix(value: string | null, fromPrefix: string, toPrefix: string): string | null {
+  if (!value) return value;
+  if (value === fromPrefix) return toPrefix;
+  if (value.startsWith(`${fromPrefix}${path.sep}`)) {
+    return `${toPrefix}${value.slice(fromPrefix.length)}`;
+  }
+  return value;
+}
+
+async function patchRepairedBookVolumeFolders(
+  libraryRootId: string,
+  repairs: VolumeFolderRepair[],
+) {
+  if (repairs.length === 0) return;
+
+  const volumeRows = await db
+    .select({
+      id: bookVolumes.id,
+      folderPath: bookVolumes.folderPath,
+      relativePath: bookVolumes.relativePath,
+    })
+    .from(bookVolumes)
+    .innerJoin(books, eq(books.id, bookVolumes.bookId))
+    .where(eq(books.libraryRootId, libraryRootId));
+
+  for (const row of volumeRows) {
+    let folderPath = row.folderPath;
+    let relativePath = row.relativePath;
+    for (const repair of repairs) {
+      folderPath = replacePathPrefix(folderPath, repair.fromPath, repair.toPath);
+      relativePath = replacePathPrefix(relativePath, repair.fromRelativePath, repair.toRelativePath);
+    }
+    if (folderPath !== row.folderPath || relativePath !== row.relativePath) {
+      await db
+        .update(bookVolumes)
+        .set({ folderPath, relativePath, updatedAt: new Date() })
+        .where(eq(bookVolumes.id, row.id));
+    }
+  }
+
+  const chapterRows = await db
+    .select({
+      id: bookChapters.id,
+      archivePath: bookChapters.archivePath,
+      relativePath: bookChapters.relativePath,
+    })
+    .from(bookChapters)
+    .innerJoin(books, eq(books.id, bookChapters.bookId))
+    .where(eq(books.libraryRootId, libraryRootId));
+
+  for (const row of chapterRows) {
+    let archivePath = row.archivePath;
+    let relativePath = row.relativePath;
+    for (const repair of repairs) {
+      archivePath = replacePathPrefix(archivePath, repair.fromPath, repair.toPath) ?? archivePath;
+      relativePath = replacePathPrefix(relativePath, repair.fromRelativePath, repair.toRelativePath) ?? relativePath;
+    }
+    if (archivePath !== row.archivePath || relativePath !== row.relativePath) {
+      await db
+        .update(bookChapters)
+        .set({ archivePath, relativePath, updatedAt: new Date() })
+        .where(eq(bookChapters.id, row.id));
+    }
+  }
+
+  const pageRows = await db
+    .select({ id: bookPages.id, filePath: bookPages.filePath })
+    .from(bookPages)
+    .innerJoin(books, eq(books.id, bookPages.bookId))
+    .where(eq(books.libraryRootId, libraryRootId));
+
+  for (const row of pageRows) {
+    let filePath = row.filePath;
+    for (const repair of repairs) {
+      filePath = replacePathPrefix(filePath, repair.fromPath, repair.toPath) ?? filePath;
+    }
+    if (filePath !== row.filePath) {
+      await db
+        .update(bookPages)
+        .set({ filePath, updatedAt: new Date() })
+        .where(eq(bookPages.id, row.id));
+    }
+  }
+}
+
 async function readVolumeSidecar(folderPath: string | null): Promise<{
   title?: string;
   volumeNumber?: number | null;
@@ -170,6 +303,9 @@ export async function processBookScan(job: Job) {
     id: root.id,
     label: root.label,
   });
+
+  const repairedVolumeFolders = await repairDuplicateBookVolumeFolders(root.path, root.recursive);
+  await patchRepairedBookVolumeFolders(root.id, repairedVolumeFolders);
 
   const discovery = await discoverImageFilesAndDirs(root.path, root.recursive);
   const ignoredPaths = await listIgnoredMediaPathsUnderRoot(db, root.path);

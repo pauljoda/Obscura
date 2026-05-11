@@ -111,6 +111,58 @@ export function fileNameToTitle(filePath: string) {
     .replace(htmlEntityPattern, (match) => htmlEntities[match.toLowerCase()] ?? match);
 }
 
+function bookVolumeNumberKey(value: string | number): string {
+  if (typeof value === "number" && Number.isFinite(value)) return String(Math.round(value));
+  return String(value).trim();
+}
+
+function numericBookVolume(value: string | number): number | null {
+  const key = bookVolumeNumberKey(value);
+  if (!/^\d+$/.test(key)) return null;
+  const parsed = Number.parseInt(key, 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function normalizedVolumeOnlyTitle(value: string): number | null {
+  const match = value.trim().match(/^(?:volume|vol\.?|v|book)\s*0*([0-9]+)$/i);
+  if (!match) return null;
+  const parsed = Number.parseInt(match[1] ?? "", 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+export function bookVolumeFolderName(volumeNumber: string | number, title?: string | null): string {
+  const numeric = numericBookVolume(volumeNumber);
+  const key = bookVolumeNumberKey(volumeNumber);
+  const base = numeric != null
+    ? `Volume ${String(numeric).padStart(2, "0")}`
+    : `Volume ${key}`;
+  const trimmedTitle = title?.trim() ?? "";
+  const redundantTitle =
+    trimmedTitle.length > 0 &&
+    numeric != null &&
+    normalizedVolumeOnlyTitle(trimmedTitle) === numeric;
+  const suffix =
+    trimmedTitle && !redundantTitle && trimmedTitle.toLowerCase() !== base.toLowerCase()
+      ? ` - ${trimmedTitle}`
+      : "";
+  return `${base}${suffix}`
+    .replace(/[/:\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 160)
+    .trim();
+}
+
+export function duplicatedBookVolumeFolderNameRepair(folderName: string): string | null {
+  const trimmed = folderName.trim();
+  const match = trimmed.match(/^volume\s+0*([0-9]+)\s+-\s+(.+)$/i);
+  if (!match) return null;
+  const volumeNumber = Number.parseInt(match[1] ?? "", 10);
+  if (!Number.isSafeInteger(volumeNumber)) return null;
+  if (normalizedVolumeOnlyTitle(match[2] ?? "") !== volumeNumber) return null;
+  const canonical = bookVolumeFolderName(volumeNumber);
+  return canonical === trimmed ? null : canonical;
+}
+
 export async function runProcess(
   command: string,
   args: string[],

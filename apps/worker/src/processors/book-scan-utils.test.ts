@@ -145,4 +145,21 @@ describe("inferComicBookArchivePlan", () => {
       volumeRelativePath: path.join("A Series", "Volume 01"),
     });
   });
+
+  it("recognizes old duplicated volume folders as the intended canonical volume", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "A Series", "Volume 01 - Volume 1", "Chapter 01.cbz"),
+        rootPath: root,
+        comicInfo: { title: "Chapter 01", urls: [], creators: [], tags: [] },
+      }),
+    ).toMatchObject({
+      bookTitle: "A Series",
+      chapterTitle: "Chapter 01",
+      bookRelativePath: "A Series",
+      volumeNumber: 1,
+      volumeTitle: "Volume 01",
+      volumeRelativePath: path.join("A Series", "Volume 01"),
+    });
+  });
 });
