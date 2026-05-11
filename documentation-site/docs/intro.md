@@ -1,54 +1,84 @@
 ---
 sidebar_position: 1
-title: Start Here
-description: What Obscura is and where to go next.
+title: About Obscura
+sidebar_label: About Obscura
+description: A private, self-hosted home for your entire media collection — videos, comics, books, galleries, and audio.
 ---
 
-# Welcome to Obscura
+# Obscura
 
-Obscura is a **private, self-hosted media browser** for a single trusted user on a private LAN. It is video-first, but comics, images, galleries, audio, collections, performers, studios, and tags are all first-class library entities.
+**A private screening room for your entire library.**
 
-The app ships as a **single Docker image** with PostgreSQL, ffmpeg, the SvelteKit web server, and the background worker bundled together. You mount `/data` for application state and `/media` for your library, then drive everything from the web UI on port `8008`.
+Obscura is a self-hosted media browser that brings your videos, movies, TV series, comics, manga, books, image galleries, and audio into one organized, searchable interface — running entirely on your own hardware, on your own network.
+
+There are no cloud accounts, no subscriptions, and no data leaves your home. Everything runs inside a single Docker container. You provide the media; Obscura handles the rest.
 
 ![Obscura dashboard](/img/screenshots/dashboard.png)
 
-## What Obscura does
+## What Obscura manages
 
-| Capability | What it gets you |
+| Media type | What you get |
 | --- | --- |
-| **HLS streaming** | Videos transcode on demand via ffmpeg, with cached renditions and trickplay sprites. |
-| **Comic reader and organizer** | cbz/zip archives and image-folder galleries keep natural page order, series grouping, reading progress, and paged or webtoon reading modes. |
-| **Universal Identify** | One identify engine across videos, series, galleries, images, audio libraries, audio tracks. |
-| **Plugin-powered metadata** | Native TypeScript and Python plugins, plus Stash-compatible YAML scrapers and StashBox endpoints. |
-| **Cinematic UI** | Dark Room visual system: sharp edges, brass accent, glass surfaces, mobile-first. |
-| **Real operations** | A live job dashboard backed by pg-boss and a `job_runs` ledger you can inspect. |
-| **One container** | PostgreSQL 16, ffmpeg, audiowaveform, the perceptual-hash binary — all baked in. |
+| **Videos & Movies** | HLS adaptive streaming, on-demand transcoding, trickplay sprites, frame-strip scrubbing, markers. |
+| **TV Series** | Season and episode organization inferred from your folder layout, with full metadata and per-episode progress. |
+| **Comics & Manga** | cbz/zip archives and image folders organized into series, with natural page order, ComicInfo metadata, reading progress, and a dedicated paged or webtoon reader. |
+| **Books** | Your reading collection alongside every other media type — browsable, searchable, and readable from any device. |
+| **Image Galleries** | Folder-based and archive-based galleries with grid and lightbox modes, ratings, tags, and performer/studio linking. |
+| **Audio** | Albums, tracks, cover art, waveforms, performer and studio linking, shuffle, and a built-in player. |
+| **Performers, Studios & Tags** | Rich cross-referenced entities that span every media type — link a performer to their videos, audio, and galleries from one profile. |
 
-## Pick a track
+## How it works
 
-There are three ways into these docs depending on what you're doing today.
+1. **Run the Docker image** — PostgreSQL, ffmpeg, and the web server ship as one container. No external dependencies.
+2. **Mount your media** — point one or more directories at `/media` and register them as library roots in Settings.
+3. **Scan** — Obscura walks your library, fingerprints files, generates thumbnails and previews, and organizes everything into the appropriate library type.
+4. **Identify** — run the identify engine to pull in metadata from plugins and scrapers. Titles, cover art, cast, ratings, and descriptions fill in automatically.
+5. **Browse and play** — open the app from any browser on your local network.
 
-### I want to run Obscura
+## Key capabilities
 
-Start at [Quick Start](./users/quick-start.md). Then read [First Boot](./users/first-boot.md) before pointing it at a real library. Scanning, identify, settings, and operations follow from there.
+### Metadata, everywhere
 
-The project also has a [subreddit](https://www.reddit.com/r/ObscuraMediaApp/) for app updates and discussion.
+Every entity — video, comic, book, audio track, performer, studio — carries the same rich metadata surface: title, cover art, description, ratings, tags, and provenance. Plugin-powered providers handle identification automatically, with Stash-compatible scrapers and StashDB endpoints supported natively.
 
-### I want to understand the code
+### Mobile-first
 
-Start at [Architecture](./developers/architecture.md). [Monorepo Layout](./developers/monorepo.md), [Database](./developers/database.md), [API & Jobs](./developers/api-and-jobs.md), and [HLS Streaming](./developers/hls-streaming.md) drill into each layer. [Contributing](./developers/contributing.md) covers commit, changelog, and release flow.
+Every view is designed for a phone first. Browse, search, play, and read from any device on your network. Touch targets, gesture navigation, and bottom navigation are designed before the desktop expansion — not bolted on after.
 
-### I want to write a plugin
+### One container
 
-Start at [Plugins · Overview](./plugins/overview.md). [Manifest](./plugins/manifest.md) and [Capabilities](./plugins/capabilities.md) are the reference; [TypeScript](./plugins/typescript-plugin.md) and [Python](./plugins/python-plugin.md) walk through real plugins end-to-end.
+PostgreSQL 16, ffmpeg, audiowaveform, and the background worker all run inside one Docker image. Mount `/data` for application state, mount your media under `/media`, expose port `8008`, and you're running. No environment variables required.
 
-## Conventions used in these docs
+### Plugin system
 
-- **Code blocks** are copy-paste ready — paths use `/data` and `/media` as defaults, swap in yours.
-- **File references** use `path/to/file.ts` so you can open them in your editor; line refs look like `file.ts:42`.
-- **Admonitions** (info / tip / warning) flag things that are easy to miss or get wrong.
-- **Screenshots** show the live app — your build may differ slightly as features land.
+Extend Obscura with TypeScript or Python plugins that add metadata providers, scrapers, and identify sources. The community scraper index is built in — browse, install, and enable scrapers directly from the Settings page.
 
-:::tip
-Obscura is pre-1.0. We do not maintain backwards-compatibility shims between schema breaks. When something destructive changes, you'll see a one-time gate in the UI explaining what happens and asking for consent. The [Upgrading](./users/upgrading.md) page covers the policy.
+### Background jobs you can see
+
+Scanning, probing, transcoding, and scraping all happen as background jobs. The Operations dashboard shows every running and queued job in real time so you always know what the system is doing.
+
+---
+
+## Get started
+
+### New to Obscura?
+
+Start with the [Quick Start](./users/quick-start.md) guide. It walks through the one-command Docker install, volume setup, and first boot in about five minutes. Then read [First Boot](./users/first-boot.md) before pointing it at a real library.
+
+### Coming from Stash?
+
+Obscura supports native StashDB endpoints and is compatible with community Stash scrapers. See [Stash Compatibility](./plugins/stash-compat.md) for migration guidance.
+
+### Want to write a plugin?
+
+Start at [Plugins · Overview](./plugins/overview.md). The [Manifest](./plugins/manifest.md) and [Capabilities](./plugins/capabilities.md) pages are the reference; the [TypeScript](./plugins/typescript-plugin.md) and [Python](./plugins/python-plugin.md) guides walk through real plugins end-to-end.
+
+### Want to understand the code?
+
+Start at [Architecture](./developers/architecture.md). [Monorepo Layout](./developers/monorepo.md), [Database](./developers/database.md), and [API & Jobs](./developers/api-and-jobs.md) drill into each layer.
+
+---
+
+:::tip Pre-1.0 note
+Obscura is under active development. We do not maintain backwards-compatibility shims between schema breaks. When something destructive changes, a one-time gate in the UI explains what's happening and asks for consent before proceeding. The [Upgrading](./users/upgrading.md) page covers the policy.
 :::

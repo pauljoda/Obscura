@@ -10,7 +10,10 @@ import styles from './index.module.css';
 const CAPABILITIES = [
   'Videos',
   'Series',
+  'Movies',
   'Comics',
+  'Manga',
+  'Books',
   'Galleries',
   'Images',
   'Audio',
@@ -22,46 +25,46 @@ const CAPABILITIES = [
 
 const FEATURES = [
   {
-    kicker: 'Comics',
-    title: 'Comic archives read like books',
+    kicker: 'Reading',
+    title: 'Comics, manga, and books',
     body:
-      'cbz/zip archives and image folders scan as gallery series, keep natural page order, import ComicInfo metadata, track read/unread progress, and open in paged or webtoon reader modes.',
+      'cbz/zip archives, image folders, and book files scan as organized series. Natural page order, ComicInfo metadata, reading progress, and a dedicated paged or webtoon reader — all in the same library as your videos.',
   },
   {
     kicker: 'Streaming',
     title: 'On-demand HLS',
     body:
-      'Videos transcode to HLS via ffmpeg as they are needed. Cached renditions are served directly from the SvelteKit app — no separate media server required.',
+      'Videos transcode to HLS via ffmpeg as they are needed. Cached renditions are served directly from the app — no separate media server, no manual format conversion.',
+  },
+  {
+    kicker: 'Audio',
+    title: 'Your music collection, organized',
+    body:
+      'Albums, tracks, cover art, waveforms, performer and studio linking. The same metadata pipeline as every other media type, with shuffle and a built-in player.',
   },
   {
     kicker: 'Metadata',
-    title: 'Plugin-powered scrapers',
+    title: 'Plugin-powered identification',
     body:
-      'Native TypeScript and Python plugins, plus Stash-compatible scrapers, expose providers for movies, series, performers, galleries, and audio behind one identify engine.',
+      'TypeScript and Python plugins expose providers for movies, series, comics, performers, galleries, and audio. One identify engine covers your entire library.',
   },
   {
     kicker: 'Operations',
     title: 'Background jobs you can see',
     body:
-      'pg-boss handles scan, probe, thumbnail, sprite, HLS, and import jobs. The Operations dashboard mirrors job state so you always know what the worker is doing.',
+      'Scan, probe, thumbnail, sprite, HLS, and import jobs run in the background. The Operations dashboard mirrors every job in real time — so you always know what the system is doing.',
   },
   {
     kicker: 'Library',
     title: 'Folders are the schema',
     body:
-      'Movies, flat series, and seasoned series are inferred from depth under each library root. Sidecars merge cleanly without overwriting your edits.',
-  },
-  {
-    kicker: 'Identify',
-    title: 'pHash, OSHash, MD5',
-    body:
-      'A Stash-compatible perceptual hash pipeline lets you identify videos against StashBox-protocol servers and contribute fingerprints back to the community index.',
+      'Movies, flat series, and seasoned series are inferred from your folder depth. Sidecars and sidecar metadata merge cleanly without overwriting your edits.',
   },
   {
     kicker: 'Deploy',
     title: 'One Docker image',
     body:
-      'PostgreSQL, ffmpeg, the SvelteKit web server, and the worker ship as a single image. Mount /data and /media, expose port 8008, and you are running.',
+      'PostgreSQL, ffmpeg, the web server, and the worker ship as a single image. Mount /data and /media, expose port 8008, and you are running. Nothing else required.',
   },
 ];
 
@@ -69,28 +72,28 @@ const SHOWCASE = [
   {
     title: 'A dashboard built like an instrument panel.',
     body:
-      'Library activity, recent scans, and provider status read like a control room — dense, dark, and only colorful when something is active.',
+      'Every media type at a glance — recent activity, library totals, scan state, and job status. Dense, dark, and purposeful.',
     image: '/img/screenshots/dashboard.png',
     alt: 'Obscura dashboard',
   },
   {
-    title: 'Scenes designed for the screening room.',
+    title: 'Rich video playback, start to finish.',
     body:
-      'A cinematic scene detail page with HLS playback, trickplay sprites, transcripts, subtitle controls, and inline metadata editing.',
+      'HLS adaptive streaming, trickplay frame strip, multi-language subtitles with a dockable transcript panel, and inline metadata editing — all in one page.',
     image: '/img/screenshots/scene-detail.png',
-    alt: 'Scene detail page',
+    alt: 'Video detail page with player and transcript',
   },
   {
-    title: 'Comic galleries organized for reading.',
+    title: 'Comics and books organized for reading.',
     body:
-      'Archive chapters and image folders live in the gallery system, with natural page order, reader progress, and a dedicated paged or webtoon reader.',
+      'Archive chapters and image folders scan into organized series. Natural page order, read/unread progress, and a dedicated reader with paged or webtoon mode.',
     image: '/img/screenshots/gallery-detail.png',
     alt: 'Gallery detail page',
   },
   {
     title: 'Mobile is first-class, not a fallback.',
     body:
-      'Browse, search, and play from any phone on your LAN. Touch targets, sheets, and bottom navigation are designed before the desktop expansion.',
+      'Browse, search, read, and play from any phone on your network. Every view is designed for touch before it scales up to desktop.',
     image: '/img/screenshots/mobile-scene-detail.png',
     alt: 'Obscura on mobile',
     portrait: true,
@@ -108,31 +111,31 @@ function Hero() {
       <div className={`container ${styles.heroInner}`}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>
-            <span className={styles.led} aria-hidden /> Self-hosted media, documented
+            <span className={styles.led} aria-hidden /> Private · Self-hosted · Your media
           </p>
           <Heading as="h1" className={styles.heroTitle}>
-            A private screening room
+            One place for your
             <br />
-            for your <span className={styles.heroAccent}>entire</span> library.
+            <span className={styles.heroAccent}>entire</span> collection.
           </Heading>
           <p className={styles.heroSubtitle}>
-            Obscura is a video-first, self-hosted media browser. Galleries, audio,
-            comics, performers, and plugin-powered metadata are first-class — and
-            the whole thing fits in one Docker image.
+            Obscura is a self-hosted media browser for videos, comics, books, audio,
+            and galleries — organized, searchable, and playable from any device on
+            your network. One Docker image. No cloud. No configuration.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primaryAction} to="/docs/users/quick-start">
-              Quick start
+              Get started
               <span className={styles.actionArrow} aria-hidden>→</span>
             </Link>
-            <Link className={styles.secondaryAction} to="/docs/developers/architecture">
-              Read the architecture
+            <Link className={styles.secondaryAction} to="/docs/intro">
+              Learn more
             </Link>
           </div>
           <dl className={styles.metaRow}>
             <div>
-              <dt>Stack</dt>
-              <dd>SvelteKit · pg-boss · Postgres 16</dd>
+              <dt>Media types</dt>
+              <dd>Video · Comics · Books · Audio · Galleries</dd>
             </div>
             <div>
               <dt>Footprint</dt>
@@ -186,49 +189,49 @@ function Pathways() {
     <section className={styles.pathways}>
       <div className="container">
         <div className={styles.sectionHeader}>
-          <p className={styles.kicker}>Choose a track</p>
+          <p className={styles.kicker}>Where do you want to go?</p>
           <Heading as="h2" className={styles.sectionTitle}>
-            Three doors. Same dark room.
+            Start where you are.
           </Heading>
           <p className={styles.sectionLead}>
-            Most readers fall into one of three roles. Pick the one that matches what
-            you are about to do — every page links to the others when you need them.
+            Pick the track that matches what you are about to do — every page links
+            to the others when you need them.
           </p>
         </div>
         <div className={styles.pathGrid}>
           <Link className={styles.pathItem} to="/docs/users/quick-start">
-            <span className={styles.pathKicker}>01 · Users</span>
-            <strong className={styles.pathTitle}>Run it on your network</strong>
+            <span className={styles.pathKicker}>01 · Run it</span>
+            <strong className={styles.pathTitle}>Set up your media library</strong>
             <p className={styles.pathBody}>
-              Install with Docker, mount your media, and start scanning. Library
-              organization, settings, and operations live here.
+              Install with Docker in minutes. Mount your media directories, run a
+              scan, and start browsing. No accounts, no configuration, no cloud.
             </p>
             <span className={styles.pathCta}>
               Quick start
               <em aria-hidden>→</em>
             </span>
           </Link>
-          <Link className={styles.pathItem} to="/docs/developers/architecture">
-            <span className={styles.pathKicker}>02 · Developers</span>
-            <strong className={styles.pathTitle}>Understand the system</strong>
-            <p className={styles.pathBody}>
-              SvelteKit, the worker, Postgres, and the shared packages. How code
-              moves from the UI all the way to the database.
-            </p>
-            <span className={styles.pathCta}>
-              Architecture
-              <em aria-hidden>→</em>
-            </span>
-          </Link>
           <Link className={styles.pathItem} to="/docs/plugins/overview">
-            <span className={styles.pathKicker}>03 · Plugin authors</span>
-            <strong className={styles.pathTitle}>Build a metadata provider</strong>
+            <span className={styles.pathKicker}>02 · Extend it</span>
+            <strong className={styles.pathTitle}>Build a metadata plugin</strong>
             <p className={styles.pathBody}>
-              Manifests, capabilities, auth, and the execution envelope. Write
-              providers in TypeScript, Python, or as a Stash adapter.
+              Write providers in TypeScript or Python to identify videos, comics,
+              performers, audio, and more. The community scraper index is built in.
             </p>
             <span className={styles.pathCta}>
               Build plugins
+              <em aria-hidden>→</em>
+            </span>
+          </Link>
+          <Link className={styles.pathItem} to="/docs/developers/architecture">
+            <span className={styles.pathKicker}>03 · Understand it</span>
+            <strong className={styles.pathTitle}>Explore the architecture</strong>
+            <p className={styles.pathBody}>
+              SvelteKit, the worker, Postgres, and the shared packages. How code
+              moves from the UI all the way to the database and job queue.
+            </p>
+            <span className={styles.pathCta}>
+              Architecture
               <em aria-hidden>→</em>
             </span>
           </Link>
@@ -245,8 +248,12 @@ function Features() {
         <div className={styles.sectionHeader}>
           <p className={styles.kicker}>What it does</p>
           <Heading as="h2" className={styles.sectionTitle}>
-            Built for one user, on one network, with everything in one place.
+            Every type of media. One place. Your network.
           </Heading>
+          <p className={styles.sectionLead}>
+            Obscura is built for a single trusted user on a private LAN. It doesn't
+            need the internet, and it doesn't phone home. Everything runs on your hardware.
+          </p>
         </div>
         <div className={styles.featureGrid}>
           {FEATURES.map((f) => (
@@ -311,12 +318,12 @@ function CtaBlock() {
         <div>
           <p className={styles.kicker}>Ready when you are</p>
           <Heading as="h2" className={styles.ctaTitle}>
-            One container. One port. Your library.
+            Your entire library. One container. Five minutes.
           </Heading>
         </div>
         <div className={styles.ctaActions}>
           <Link className={styles.primaryAction} to="/docs/users/quick-start">
-            Run it now
+            Get started
             <span className={styles.actionArrow} aria-hidden>→</span>
           </Link>
           <Link
@@ -329,7 +336,7 @@ function CtaBlock() {
             className={styles.secondaryAction}
             href="https://www.reddit.com/r/ObscuraMediaApp/"
           >
-            Join the subreddit
+            Join the community
           </Link>
         </div>
       </div>
@@ -342,7 +349,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={siteConfig.title}
-      description="Documentation for the Obscura self-hosted media browser."
+      description="Obscura is a private, self-hosted media browser for videos, comics, books, audio, and galleries. One Docker image. No cloud. No configuration."
     >
       <Hero />
       <main>

@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Obscura Docs',
-  tagline: 'Self-hosted media library documentation',
+  title: 'Obscura',
+  tagline: 'A private, self-hosted home for your entire media collection.',
   favicon: 'img/logo.svg',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -95,7 +95,7 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Start here',
+              label: 'About Obscura',
               to: '/docs/intro',
             },
             {

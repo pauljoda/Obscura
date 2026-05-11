@@ -40,28 +40,29 @@
 
 ## What is Obscura?
 
-Obscura is a **modern alternative for anyone who wants a Stash-style private media library** with a focus on usability, polish, and quality-of-life. It is also a comic reader and organizer: cbz/zip archives and image-folder galleries sit beside videos, images, and audio as core library types. Stash is a great project with a deep ecosystem — Obscura keeps the core idea (a self-hosted, metadata-rich library with community scrapers) and rebuilds the experience around a refined mobile-first UI, a streamlined scanning pipeline, and a single Docker image with zero configuration.
+Obscura is a **private, self-hosted home for your entire media collection.** Videos, movies, TV series, comics, manga, books, image galleries, and audio all live together in one refined interface — organized, searchable, and ready to play from any device on your local network.
 
-If you like the Stash model but want a faster, cleaner interface that feels native on phones and desktops alike, Obscura is built for you.
+It runs as a single Docker container: PostgreSQL, ffmpeg, and the web server are all bundled together. Mount your media directories, open a browser, and you're watching. No external databases, no cloud accounts, no data leaves your network.
 
-Discussions can be conducted here, or via the [Obscura subreddit](https://www.reddit.com/r/ObscuraMediaApp/), where I will post updates on the app.
+Discussions and community updates live on the [Obscura subreddit](https://www.reddit.com/r/ObscuraMediaApp/).
 
 ---
 
 ## Highlights
 
-- **Video, comics, images, galleries, and audio** — all first-class library entities, not afterthoughts.
-- **SFW / NSFW split personality** — swap the entire library between safe-for-work and full modes with a global keyboard shortcut on desktop or a hidden gesture on mobile.
-- **Mobile first** — built for phones from day one. The desktop view is an expansion of the mobile design, not the other way around.
-- **Stash-compatible metadata** — native StashDB support and full compatibility with community Stash scraper plugins.
-- **Bulk scrape everything** — pick what to identify and Obscura iterates every installed scraper for you. No more one-by-one.
-- **Rich playback** — HLS adaptive streaming with on-demand ffmpeg transcoding, a scrollable/grabable frame strip, and one-click marker + thumbnail creation from any frame.
-- **Subtitles & live transcripts** — multi-language sidecar / embedded / uploaded tracks, three player caption styles, a clickable transcript panel that can dock next to the video on desktop.
-- **Comic reader and organizer** — cbz/zip archives and image folders scan into gallery series, keep natural page order, track reading progress, and open in paged or webtoon reading modes.
-- **Link everything together** — scenes, comic galleries, audio, performers, and studios all cross-reference with the same rich metadata surface.
+- **Every media type, first-class** — videos, movies, TV series, comics, manga, books, image galleries, and audio libraries are all treated equally. No second-class formats.
+- **Mobile first** — built for phones from day one. The desktop view is an expansion of the mobile layout, not the other way around.
+- **Rich video playback** — HLS adaptive streaming with on-demand ffmpeg transcoding, a scrollable frame strip, and one-click marker + thumbnail creation from any frame.
+- **Subtitles & live transcripts** — multi-language sidecar / embedded / uploaded tracks, three caption styles, and a dockable transcript panel that reads alongside the video on desktop.
+- **Comic and book reader** — cbz/zip archives and image folders scan as series, keep natural page order, import ComicInfo metadata, track reading progress, and open in paged spreads or vertical webtoon mode.
+- **Audio libraries** — organize and play your music and audio collection with the same metadata pipeline: albums, tracks, cover art, waveforms, performers, and shuffle support.
+- **Plugin-powered metadata** — TypeScript, Python, and Stash-compatible scraper plugins expose providers for videos, series, performers, galleries, and audio. StashDB is supported natively.
+- **Bulk identify** — select a batch of unmatched items and Obscura iterates every installed provider. No more identifying things one at a time.
+- **Everything cross-referenced** — videos, comics, audio, performers, studios, and tags all link to each other through the same rich metadata surface.
 - **Automated scanning** — point it at a folder, walk away. Obscura scans on a schedule and notices new files.
-- **Command palette + global search** — `⌘K` from anywhere, or a dedicated search page with scene, performer, studio, tag, and gallery results.
-- **Drag-and-drop uploads** — add files from the browser, remove from the library, or remove from disk entirely.
+- **Command palette + global search** — `⌘K` from anywhere, or a dedicated search page spanning all library types.
+- **Content filtering** — mark library roots as restricted to keep sensitive content out of shared views; switch with a keyboard shortcut or a gesture on mobile.
+- **Drag-and-drop uploads** — add files from the browser, remove from the library, or delete from disk entirely.
 - **One image, one port** — everything runs in a single Docker container. No external Postgres, no Redis URLs, no env wrangling.
 
 ---
@@ -205,9 +206,9 @@ Library-wide defaults — auto-enable on load, preferred-language priority list 
   <img src="docs/screenshots/settings-subtitles.png" alt="Global subtitle settings with live preview" width="100%" />
 </p>
 
-### Strong Metadata, Everywhere
+### Rich Metadata, Everywhere
 
-Every entity carries the same rich metadata surface — title, studio, performers, tags, ratings, custom notes, and provenance. StashDB and community Stash scrapers are supported natively, so migrating is painless.
+Every entity — videos, comics, books, audio, performers, studios — carries the same metadata surface: title, studio, performers, tags, ratings, custom notes, and provenance. Plugin-powered providers cover everything, and StashDB / community Stash scrapers are supported natively for existing collections.
 
 <p align="center">
   <img src="docs/screenshots/performers.png" alt="Performers" width="49%" />
@@ -222,9 +223,9 @@ Select a batch of unmatched scenes, galleries, or performers and Obscura will it
   <img src="docs/screenshots/scrape.png" alt="Bulk identify" width="100%" />
 </p>
 
-### Community Scrapers
+### Community Scrapers & Plugins
 
-Browse, install, enable, and disable community Stash scrapers directly from the UI. The full public index is built in — no manual file copying.
+Browse, install, enable, and disable community scraper plugins directly from the UI. Stash-compatible scrapers and StashDB endpoints are supported alongside native TypeScript and Python plugins — the full public scraper index is built in, no manual file copying required.
 
 <p align="center">
   <img src="docs/screenshots/scrapers.png" alt="Community scrapers" width="100%" />
@@ -234,11 +235,15 @@ Browse, install, enable, and disable community Stash scrapers directly from the 
 
 Folder-based and archive-based galleries are first-class. Browse, tag, rate, link authors/performers and studios, and view them in grid or lightbox modes.
 
-Comics are part of the same gallery system instead of a separate silo. Drop in cbz/zip archives or image folders, and Obscura keeps page filenames in natural reading order, imports ComicInfo metadata where available, groups chapter archives into series-style galleries, tracks read/unread progress, and opens comics in a dedicated reader with paged spreads or vertical webtoon mode.
+Comics and manga are part of the same gallery system — not a separate silo. Drop in cbz/zip archives or image folders, and Obscura keeps page filenames in natural reading order, imports ComicInfo metadata where available, groups chapter archives into series-style galleries, tracks read/unread progress, and opens them in a dedicated reader with paged spreads or vertical webtoon mode.
 
 <p align="center">
   <img src="docs/screenshots/galleries.png" alt="Galleries" width="100%" />
 </p>
+
+### Books
+
+The book reader brings the same organized, metadata-rich experience to your reading collection. Books live alongside comics, galleries, and videos in one unified library — browsable, searchable, and readable from any device on your network.
 
 ### Audio Libraries
 
@@ -273,9 +278,9 @@ A live view of every queue and job — library scan, probe, fingerprint, thumbna
   <img src="docs/screenshots/jobs.png" alt="Job control" width="100%" />
 </p>
 
-### SFW / NSFW Mode
+### Content Filtering
 
-Flip the entire library between safe-for-work and full modes with a global keyboard shortcut on desktop, or a hidden gesture on mobile. Per-root NSFW flags propagate to all scenes, images, galleries, audio libraries, and tracks under that path.
+Mark any library root as restricted to keep specific content out of shared or public views. Flip the filter globally with a keyboard shortcut on desktop or a hidden gesture on mobile. The flag propagates to all videos, images, galleries, audio libraries, and tracks under that root.
 
 ### First-Class Mobile
 
