@@ -54,6 +54,24 @@ describe("inferComicBookArchivePlan", () => {
     });
   });
 
+  it("numbers loose archives in a book folder without creating volumes", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "For the Travel Records", "For the Travel Records 02.zip"),
+        rootPath: root,
+        comicInfo: null,
+      }),
+    ).toMatchObject({
+      bookTitle: "For the Travel Records",
+      chapterTitle: "For the Travel Records 02",
+      chapterNumber: 2,
+      bookRelativePath: "For the Travel Records",
+      volumeNumber: null,
+      volumeTitle: null,
+      volumeRelativePath: null,
+    });
+  });
+
   it("does not treat a top-level same-named wrapper folder as a volume", () => {
     expect(
       inferComicBookArchivePlan({
@@ -91,6 +109,40 @@ describe("inferComicBookArchivePlan", () => {
       volumeNumber: null,
       volumeTitle: null,
       volumeRelativePath: null,
+    });
+  });
+
+  it("keeps non-volume chapter wrapper folders loose under their book", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "A Series", "Chapter 01", "Pages.cbz"),
+        rootPath: root,
+        comicInfo: { title: "Chapter 01", urls: [], creators: [], tags: [] },
+      }),
+    ).toMatchObject({
+      bookTitle: "A Series",
+      chapterTitle: "Chapter 01",
+      bookRelativePath: "A Series",
+      volumeNumber: null,
+      volumeTitle: null,
+      volumeRelativePath: null,
+    });
+  });
+
+  it("only creates volumes from explicit volume subfolders inside a book", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "A Series", "Volume 01", "Chapter 01.cbz"),
+        rootPath: root,
+        comicInfo: { title: "Chapter 01", urls: [], creators: [], tags: [] },
+      }),
+    ).toMatchObject({
+      bookTitle: "A Series",
+      chapterTitle: "Chapter 01",
+      bookRelativePath: "A Series",
+      volumeNumber: 1,
+      volumeTitle: "Volume 01",
+      volumeRelativePath: path.join("A Series", "Volume 01"),
     });
   });
 });

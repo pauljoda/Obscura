@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book and chapter detail pages now show saved comic reading progress as the current chapter plus page progress, making resume state easier to understand at a glance.
 - Identify queues now focus on unorganized media by default, and accepted metadata results mark the item organized so future review sessions stay focused on unfinished entries.
 - Comic archive folders that only wrap a same-named ZIP or CBZ now scan as loose comic chapters instead of creating an unexpected volume.
+- Comic reading now marks the current chapter complete when the end action appears, and the final chapter shows a clear no-next-chapter close action.
+- Book scans now only create comic volumes from explicit volume subfolders, keeping loose chapter archives and chapter wrapper folders under the book itself.
 
 ### Docs
 
@@ -90,6 +92,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Gallery and video scans now mark linked tags, artists, and studios as NSFW when those links come from an NSFW library root.
 - Sub-gallery cards on gallery detail pages now use a persisted size slider, matching the rest of the library browsing surfaces.
 - Comic reader paged mode now preloads the previous and next two pages around the current spread to prevent page-turn flashes.
+- Comic reader end actions now persist the last readable page as complete before moving to the next chapter, and final chapters now close from a "No next chapter" action instead of leaving the reader stuck at the end.
 - Mobile breadcrumbs now collapse parent levels into a stacked overflow menu instead of overlapping the current page title on narrow screens.
 - Browser back navigation now restores the previous media surface's loaded items and scroll position through SvelteKit history snapshots.
 - Filtered media surfaces now verify hydrated or cached first-page data against active saved filters before trusting it, fixing stale Gallery lists after read-progress changes.
@@ -124,6 +127,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book cover thumbnails now fall back to the underlying comic page while generated thumbnails are still being built, and book detail pages now label comic creators as Artists.
 - Gallery-style book thumbnails now keep click navigation active while preview scrubbing is visible.
 - Comic book scans no longer create volumes from same-named wrapper folders or metadata-only volume numbers; volume grouping now requires a real volume subfolder inside a book entry.
+- Comic book scans no longer create volumes from non-volume chapter wrapper folders, and rescans now remove empty volume rows left behind by older scan rules.
 
 ### Docs
 

@@ -60,19 +60,22 @@
   let nextChapterBusy = $state(false);
 
   const hasNextChapter = $derived(Boolean(onNextChapter));
+  const hasEndAction = $derived(images.length > 0);
   const nextChapterTitle = $derived(nextChapterLabel?.trim() ? nextChapterLabel : "Next chapter");
-  const finalPageIndex = $derived(hasNextChapter ? images.length : -1);
-  const showingNextChapterPage = $derived(
-    readerMode === "paged" && hasNextChapter && index === finalPageIndex,
+  const chapterEndTitle = $derived(hasNextChapter ? nextChapterTitle : "No next chapter");
+  const chapterEndActionLabel = $derived(hasNextChapter ? "Continue reading" : "Close reader");
+  const finalPageIndex = $derived(hasEndAction ? images.length : -1);
+  const showingChapterEndPage = $derived(
+    readerMode === "paged" && hasEndAction && index === finalPageIndex,
   );
   const spread = $derived(
-    showingNextChapterPage
+    showingChapterEndPage
       ? []
       : comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover }),
   );
   const counterText = $derived(
-    showingNextChapterPage
-      ? "Next chapter"
+    showingChapterEndPage
+      ? chapterEndTitle
       : spread.length > 1
       ? `${spread[0] + 1}-${spread[spread.length - 1] + 1} / ${images.length}`
       : `${Math.min(index + 1, images.length)} / ${images.length}`,
@@ -86,11 +89,15 @@
 
   function setReaderIndex(nextIndex: number) {
     const maxIndex =
-      readerMode === "paged" && hasNextChapter ? images.length : Math.max(0, images.length - 1);
+      readerMode === "paged" && hasEndAction ? images.length : Math.max(0, images.length - 1);
     const clampedIndex = Math.max(0, Math.min(nextIndex, maxIndex));
     if (clampedIndex === index) return;
     index = clampedIndex;
-    if (index < images.length) onIndexChange?.(index);
+    if (index < images.length) {
+      onIndexChange?.(index);
+    } else {
+      reportReadableEnd();
+    }
   }
 
   function setReaderMode(mode: ReaderMode) {
@@ -103,11 +110,11 @@
   }
 
   function goNext() {
-    if (showingNextChapterPage) {
-      void goNextChapter();
+    if (showingChapterEndPage) {
+      void goChapterEndAction();
       return;
     }
-    if (hasNextChapter && isLastReadableSpread()) {
+    if (hasEndAction && isLastReadableSpread()) {
       setReaderIndex(finalPageIndex);
       return;
     }
@@ -115,7 +122,7 @@
   }
 
   function goPrev() {
-    if (showingNextChapterPage) {
+    if (showingChapterEndPage) {
       setReaderIndex(lastReadableIndex());
       return;
     }
@@ -132,8 +139,23 @@
     return (visibleSpread.at(-1) ?? index) >= images.length - 1;
   }
 
+  function reportReadableEnd() {
+    if (images.length <= 0) return;
+    onIndexChange?.(lastReadableIndex());
+  }
+
+  async function goChapterEndAction() {
+    if (hasNextChapter) {
+      await goNextChapter();
+      return;
+    }
+    reportReadableEnd();
+    onClose();
+  }
+
   async function goNextChapter() {
     if (!onNextChapter || !hasNextChapter || nextChapterBusy) return;
+    reportReadableEnd();
     nextChapterBusy = true;
     try {
       await onNextChapter();
@@ -392,23 +414,23 @@
             </NsfwBlur>
           </div>
         {/each}
-        {#if hasNextChapter}
+        {#if hasEndAction}
           <div class="flex w-full justify-center px-4 py-10 sm:py-14">
             <button
               type="button"
               data-reader-control
-              onclick={() => void goNextChapter()}
+              onclick={() => void goChapterEndAction()}
               disabled={nextChapterBusy}
               class="reader-next-chapter-button"
             >
               <span class="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-text-accent">
-                Next Chapter
+                {hasNextChapter ? "Next Chapter" : "No next chapter"}
               </span>
               <span class="mt-2 block max-w-[26rem] truncate text-lg font-semibold text-text-primary">
-                {nextChapterTitle}
+                {chapterEndTitle}
               </span>
               <span class="mt-3 inline-flex items-center gap-2 text-[0.76rem] text-white/70">
-                Continue reading
+                {chapterEndActionLabel}
                 <ChevronRight class="h-4 w-4" />
               </span>
             </button>
@@ -419,7 +441,7 @@
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="reader-stage items-center justify-center overflow-hidden bg-black p-0 sm:px-14 sm:py-3" onpointerup={handleReaderTap}>
-      {#if images.length > 1 || hasNextChapter}
+      {#if images.length > 1 || hasEndAction}
         <button
           type="button"
           onclick={goPrev}
@@ -447,21 +469,21 @@
           spread.length > 1 ? "max-w-7xl" : "max-w-5xl"
         }`}
       >
-        {#if showingNextChapterPage}
+        {#if showingChapterEndPage}
           <div class="reader-next-chapter-page" data-reader-control>
             <div class="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-text-accent">
-              Next Chapter
+              {hasNextChapter ? "Next Chapter" : "No next chapter"}
             </div>
             <h3 class="mt-3 max-w-[32rem] text-center font-heading text-2xl font-semibold text-text-primary sm:text-4xl">
-              {nextChapterTitle}
+              {chapterEndTitle}
             </h3>
             <button
               type="button"
-              onclick={() => void goNextChapter()}
+              onclick={() => void goChapterEndAction()}
               disabled={nextChapterBusy}
               class="reader-next-chapter-action"
             >
-              Continue reading
+              {chapterEndActionLabel}
               <ChevronRight class="h-4 w-4" />
             </button>
           </div>
@@ -496,7 +518,7 @@
       </button>
       <div class="font-mono text-[0.68rem] text-text-muted">{counterText}</div>
       <button type="button" onclick={goNext} class="reader-mode-button">
-        {showingNextChapterPage ? "Start" : "Next"}
+        {showingChapterEndPage ? (hasNextChapter ? "Start" : "Close") : "Next"}
         <ChevronRight class="h-4 w-4" />
       </button>
     </div>

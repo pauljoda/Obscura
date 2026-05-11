@@ -168,6 +168,44 @@ describe("ComicReader", () => {
     expect(onIndexChange).toHaveBeenCalledWith(1);
   });
 
+  it("reports the final readable page when moving to the chapter end action", async () => {
+    const onIndexChange = vi.fn();
+    const { getByLabelText } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: images.length - 1,
+        title: "Comic",
+        nextChapterLabel: "Chapter Two",
+        onClose: vi.fn(),
+        onIndexChange: onIndexChange as never,
+        onNextChapter: vi.fn(),
+      },
+    });
+
+    await fireEvent.click(getByLabelText("Next page"));
+
+    expect(onIndexChange).toHaveBeenCalledWith(images.length - 1);
+  });
+
+  it("shows a close action when there is no next chapter", async () => {
+    const onClose = vi.fn();
+    const { getAllByText, getByLabelText, getByText } = render(ComicReader, {
+      props: {
+        images,
+        initialIndex: images.length - 1,
+        title: "Comic",
+        onClose,
+      },
+    });
+
+    await fireEvent.click(getByLabelText("Next page"));
+
+    expect(getAllByText("No next chapter").length).toBeGreaterThan(0);
+    await fireEvent.click(getByText("Close reader"));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("preloads nearby paged images in the document head", async () => {
     render(ComicReader, {
       props: {

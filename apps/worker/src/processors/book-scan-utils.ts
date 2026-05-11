@@ -67,12 +67,10 @@ export function inferComicBookArchivePlan(
   const archiveName = path.basename(fileName, path.extname(fileName));
   const sameNamedWrapperFolder = parentFolder === archiveName;
   const explicitVolumeFolder =
-    parentFolder && folderSegments.length >= 2 && !sameNamedWrapperFolder
+    parentFolder && folderSegments.length >= 2
       ? parseVolumeFolderName(parentFolder)
       : null;
-  const folderBackedVolume =
-    explicitVolumeFolder ??
-    (folderSegments.length >= 2 && !sameNamedWrapperFolder ? { number: null, title: parentFolder } : null);
+  const folderBackedVolume = explicitVolumeFolder;
   const fallbackTitle = fileNameToTitle(input.archivePath);
   const chapterNumber = parseChapterNumber(input.comicInfo?.number, input.archivePath);
   const hasFolder = containingFolder !== ".";
@@ -91,6 +89,8 @@ export function inferComicBookArchivePlan(
   const bookFolderSegments =
     folderBackedVolume || (sameNamedWrapperFolder && folderSegments.length >= 2)
       ? folderSegments.slice(0, -1)
+      : folderSegments.length >= 2
+        ? folderSegments.slice(0, 1)
       : folderSegments;
   const bookFolderName = bookFolderSegments.at(-1) ?? path.basename(containingFolder);
   const bookTitle = metadataSeries || (hasFolder ? bookFolderName : (metadataTitle || fallbackTitle));

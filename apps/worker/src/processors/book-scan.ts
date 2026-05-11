@@ -424,6 +424,14 @@ export async function processBookScan(job: Job) {
   }
 
   await db.execute(sql`
+    DELETE FROM book_volumes bv
+    USING books b
+    WHERE bv.book_id = b.id
+      AND b.library_root_id = ${root.id}
+      AND NOT EXISTS (SELECT 1 FROM book_chapters bc WHERE bc.volume_id = bv.id)
+  `);
+
+  await db.execute(sql`
     DELETE FROM books b
     WHERE b.library_root_id = ${root.id}
       AND NOT EXISTS (SELECT 1 FROM book_chapters bc WHERE bc.book_id = b.id)
