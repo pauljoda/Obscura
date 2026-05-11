@@ -474,6 +474,67 @@ function volumeCoverEntries(value: unknown): Array<{
   return entries;
 }
 
+function imageCandidateUrl(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const url = (value as Record<string, unknown>).url;
+  return typeof url === "string" && url.trim() ? url.trim() : null;
+}
+
+function imageCandidateUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const urls: string[] = [];
+  for (const item of value) {
+    const url = imageCandidateUrl(item);
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+function resolvePluginImageSelection(
+  value: string | null | undefined,
+  proposed: Record<string, unknown>,
+): string | null | undefined {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("plugin-image:")) return trimmed || null;
+
+  const parts = trimmed.split(":");
+  const kind = parts[1];
+  if (kind === "bookCover") {
+    const index = integerChapterNumber(parts[2]);
+    const urls = imageCandidateUrls(proposed.imageCandidates);
+    return index == null ? null : (urls[index] ?? null);
+  }
+  if (kind === "volumeCover") {
+    const volumeNumber = parts[2];
+    const index = integerChapterNumber(parts[3]);
+    if (!volumeNumber || index == null || !Array.isArray(proposed.volumeCovers)) return null;
+    const urls = proposed.volumeCovers
+      .filter((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+        const record = item as Record<string, unknown>;
+        return volumeNumberKey(record.volumeNumber ?? record.volume) === volumeNumber;
+      })
+      .map(imageCandidateUrl)
+      .filter((url): url is string => Boolean(url));
+    return urls[index] ?? null;
+  }
+  if (kind === "chapterCover") {
+    const chapterNumber = parts[2];
+    const index = integerChapterNumber(parts[3]);
+    if (!chapterNumber || index == null) return null;
+    const urls: string[] = [];
+    const chapterMap = recordOrNull(proposed.chapterImageByNumber);
+    const exact = imageCandidateUrl(chapterMap?.[chapterNumber]);
+    if (exact) urls.push(exact);
+    for (const url of imageCandidateUrls(proposed.chapterImageCandidates)) {
+      if (!urls.includes(url)) urls.push(url);
+    }
+    return urls[index] ?? null;
+  }
+  return null;
+}
+
 function chapterVolumeMap(value: unknown): Map<number, string> {
   const record = recordOrNull(value);
   const out = new Map<number, string>();
@@ -551,7 +612,9 @@ async function applyBookVolumePluginMetadata(
     if (!selectedImages || !Object.prototype.hasOwnProperty.call(selectedImages, key)) return undefined;
     const value = selectedImages[key];
     if (value == null) return null;
-    const trimmed = value.trim();
+    const resolved = resolvePluginImageSelection(value, proposed);
+    if (resolved == null) return null;
+    const trimmed = resolved.trim();
     return trimmed || null;
   };
   for (const cover of volumeCovers) {
@@ -749,6 +812,12 @@ async function applyBookChapterPluginMetadata(
       url: value?.trim() ?? "",
     }))
     .filter((entry) => entry.chapterId && entry.url);
+  const explicitChapterCoverIds = new Set(
+    Object.keys(selectedImages ?? {})
+      .filter((key) => key.startsWith("chapterCover:"))
+      .map((key) => key.slice("chapterCover:".length))
+      .filter(Boolean),
+  );
   const manualChapterTitles = Object.entries(selectedImages ?? {})
     .filter(([key, value]) => key.startsWith("chapterTitle:") && typeof value === "string")
     .map(([key, value]) => ({
@@ -781,15 +850,36 @@ async function applyBookChapterPluginMetadata(
     .where(eq(bookChapters.bookId, bookId));
 
   if (fieldsToApply.has("image") && manualChapterCovers.length > 0) {
-    const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+    const chapterById = new Map(chapters.map((chapter) => [chapter.id, chapter]));
     for (const entry of manualChapterCovers) {
-      if (!chapterIds.has(entry.chapterId)) continue;
+      const chapter = chapterById.get(entry.chapterId);
+      if (!chapter) continue;
+      const resolvedUrl = resolvePluginImageSelection(entry.url, proposed) ?? "";
+      if (!resolvedUrl) continue;
       try {
-        await setBookChapterCoverFromUrlWrite(db, entry.chapterId, entry.url);
+        await setBookChapterCoverFromUrlWrite(db, entry.chapterId, resolvedUrl);
       } catch (error) {
         console.warn(
           `[plugins/accept] cover download failed for book chapter ${entry.chapterId}: ${toErrorMessage(error)}`,
         );
+      }
+    }
+  }
+
+  if (fieldsToApply.has("image")) {
+    const chapterImageByNumber = recordOrNull(proposed.chapterImageByNumber);
+    if (chapterImageByNumber) {
+      for (const chapter of chapters) {
+        if (explicitChapterCoverIds.has(chapter.id)) continue;
+        const url = imageCandidateUrl(chapterImageByNumber[String(chapter.chapterNumber)]);
+        if (!url) continue;
+        try {
+          await setBookChapterCoverFromUrlWrite(db, chapter.id, url);
+        } catch (error) {
+          console.warn(
+            `[plugins/accept] cover download failed for book chapter ${chapter.id}: ${toErrorMessage(error)}`,
+          );
+        }
       }
     }
   }
@@ -828,7 +918,7 @@ async function applyBookChapterPluginMetadata(
 
   const matchedChapterCover =
     typeof selectedMatchedChapterCover === "string" && selectedMatchedChapterCover.trim()
-      ? selectedMatchedChapterCover.trim()
+      ? (resolvePluginImageSelection(selectedMatchedChapterCover, proposed)?.trim() ?? null)
       : null;
   if (fieldsToApply.has("image") && matchedChapterCover) {
     try {
@@ -1023,9 +1113,9 @@ async function applyNonVideoPluginResult(
         Object.prototype.hasOwnProperty.call(selectedImages, "poster"));
     const selectedBookCover =
       typeof selectedImages?.cover === "string" && selectedImages.cover.trim()
-        ? selectedImages.cover.trim()
+        ? (resolvePluginImageSelection(selectedImages.cover, proposed ?? {})?.trim() ?? null)
         : typeof selectedImages?.poster === "string" && selectedImages.poster.trim()
-          ? selectedImages.poster.trim()
+          ? (resolvePluginImageSelection(selectedImages.poster, proposed ?? {})?.trim() ?? null)
           : null;
     const bookCoverUrl = hasSelectedBookCover ? selectedBookCover : result.proposedImageUrl;
     if (fieldsToApply.has("image") && bookCoverUrl) {

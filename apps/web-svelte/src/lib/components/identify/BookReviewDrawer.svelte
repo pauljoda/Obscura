@@ -269,29 +269,56 @@
   }
 
   function selectedImagesForAccept(): BookSelectedImages {
-    const next: BookSelectedImages = { ...selectedImages };
+    const next: BookSelectedImages = {};
     const result = row.result;
     if (!result) return next;
+    if (Object.prototype.hasOwnProperty.call(selectedImages, "cover")) {
+      next.cover = imageSelectionForAccept(
+        selectedImages.cover,
+        "bookCover",
+        bookCoverCandidates(result),
+      );
+    }
     for (const group of volumeGroups(result)) {
       next[volumeGroupKey(group.volumeNumber)] = volumeState(group.volumeNumber).accepted
         ? "accept"
         : "loose";
       const coverKey = volumeCoverKey(group.volumeNumber);
-      if (!Object.prototype.hasOwnProperty.call(next, coverKey) && group.cover?.url) {
-        next[coverKey] = group.cover.url;
+      if (Object.prototype.hasOwnProperty.call(selectedImages, coverKey)) {
+        next[coverKey] = imageSelectionForAccept(
+          selectedImages[coverKey],
+          `volumeCover:${group.volumeNumber}`,
+          volumeCoverCandidates(result, group.volumeNumber),
+        );
       }
     }
     for (const chapter of chapters) {
       const key = chapterImageKey(chapter.id);
-      if (Object.prototype.hasOwnProperty.call(next, key)) continue;
-      const exact = exactChapterCandidate(result, chapter);
-      if (exact) next[key] = exact.url;
+      if (Object.prototype.hasOwnProperty.call(selectedImages, key)) {
+        next[key] = imageSelectionForAccept(
+          selectedImages[key],
+          `chapterCover:${chapter.chapterNumber}`,
+          chapterCandidatesFor(result, chapter),
+        );
+      }
       if (chapterTitleIsEnabled(result, chapter)) {
         const title = chapterTitleValue(result, chapter).trim();
         if (title) next[chapterTitleKey(chapter.id)] = title;
       }
     }
     return next;
+  }
+
+  function imageSelectionForAccept(
+    value: string | null | undefined,
+    refKind: string,
+    candidates: ImageCandidate[],
+  ): string | null | undefined {
+    if (value == null) return value;
+    const index = candidates.findIndex((candidate) => candidate.url === value);
+    if (index >= 0) return `plugin-image:${refKind}:${index}`;
+    if (value.startsWith("data:image/")) return undefined;
+    return value;
   }
 
   function volumeSortValue(value: string): number {

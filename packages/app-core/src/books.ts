@@ -139,8 +139,12 @@ async function refreshBookCounts(db: AppDb, bookId: string) {
     UPDATE books SET
       page_count = (SELECT count(*) FROM book_pages WHERE book_id = ${bookId}),
       chapter_count = (SELECT count(*) FROM book_chapters WHERE book_id = ${bookId}),
-      cover_page_id = (SELECT id FROM cover),
+      cover_page_id = CASE
+        WHEN cover_image_path = '/assets/books/' || ${bookId}::text || '/cover' THEN cover_page_id
+        ELSE (SELECT id FROM cover)
+      END,
       cover_image_path = CASE
+        WHEN cover_image_path = '/assets/books/' || ${bookId}::text || '/cover' THEN cover_image_path
         WHEN (SELECT id FROM cover) IS NULL THEN NULL
         ELSE '/assets/book-pages/' || (SELECT id FROM cover)::text || '/thumb'
       END,
@@ -331,7 +335,7 @@ async function decorateBookItems(
       bookType: "comic",
       title: book.title,
       details: book.details,
-      coverImagePath: firstPageId ? bookPageThumbPath(firstPageId) : book.coverImagePath,
+      coverImagePath: book.coverImagePath ?? (firstPageId ? bookPageThumbPath(firstPageId) : null),
       previewImagePaths: previewPages.slice(0, 4).map((page) => bookPageThumbPath(page.pageId)),
       pageCount: book.pageCount,
       chapterCount: book.chapterCount,
