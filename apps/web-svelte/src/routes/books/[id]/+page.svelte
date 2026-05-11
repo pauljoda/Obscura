@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto, invalidate, invalidateAll } from "$app/navigation";
-  import { BookOpen, HardDrive, Pencil, Play, Trash2 } from "@lucide/svelte";
+  import { BookOpen, Check, HardDrive, Pencil, Play, Trash2 } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
@@ -54,6 +54,16 @@
   const readerChapters = $derived(selectedChapter ? [selectedChapter] : []);
   const readerPages = $derived(readerChapters.flatMap((chapter) => chapter.pages.map(pageToImage)));
   const currentProgress = $derived(getCurrentChapterProgressDisplay(book));
+  const selectedChapterProgress = $derived(
+    selectedChapter ? getChapterProgressDisplay(book, selectedChapter) : null,
+  );
+  const primaryReadLabel = $derived(
+    selectedChapterProgress
+      ? selectedChapterProgress.isComplete
+        ? "Re-read"
+        : "Resume"
+      : "Read",
+  );
 
   function pageToImage(page: BookPageDto): ImageListItemDto {
     return {
@@ -102,13 +112,20 @@
     if (readerPages.length === 0) return;
     const position = positionForReaderIndex(index);
     if (!position.chapter) return;
+    const nextCompletedAt =
+      completedAt === undefined &&
+      book.progress?.chapterId === position.chapter.id &&
+      book.progress.completedAt
+        ? book.progress.completedAt
+        : completedAt;
     await updateBookProgress(book.id, {
       chapterId: position.chapter.id,
       pageIndex: position.pageIndex,
       pageCount: position.pageCount,
       readerMode,
-      completedAt,
+      completedAt: nextCompletedAt,
     });
+    if (nextCompletedAt) await invalidate(`books:${book.id}`);
   }
 
   function handleIndexChange(index: number) {
@@ -131,13 +148,29 @@
       readerMode,
       completedAt: new Date().toISOString(),
     });
+    await invalidate(`books:${book.id}`);
     selectedChapterId = nextChapter.id;
     readerIndex = 0;
   }
 
+  async function markSelectedChapterRead() {
+    if (!selectedChapter || readerPages.length === 0) return;
+    const lastIndex = Math.max(0, readerPages.length - 1);
+    readerIndex = lastIndex;
+    await updateBookProgress(book.id, {
+      chapterId: selectedChapter.id,
+      pageIndex: lastIndex,
+      pageCount: readerPages.length,
+      readerMode,
+      completedAt: new Date().toISOString(),
+    });
+    await invalidate(`books:${book.id}`);
+  }
+
   async function closeReader() {
     readerOpen = false;
-    await saveProgress(readerIndex);
+    const reachedEnd = readerPages.length > 0 && readerIndex >= readerPages.length - 1;
+    await saveProgress(readerIndex, reachedEnd ? new Date().toISOString() : undefined);
   }
 
   async function refreshBook(closeEditor = true) {
@@ -274,8 +307,18 @@
                   class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
                 >
                   <Play class="h-3.5 w-3.5" />
-                  {book.progress ? "Resume" : "Read"}
+                  {primaryReadLabel}
                 </button>
+                {#if !selectedChapterProgress?.isComplete}
+                  <button
+                    type="button"
+                    onclick={() => void markSelectedChapterRead()}
+                    class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                  >
+                    <Check class="h-3.5 w-3.5" />
+                    Mark read
+                  </button>
+                {/if}
               {/if}
               <button
                 type="button"
@@ -293,12 +336,12 @@
               </p>
             {/if}
 
-            {#if currentProgress}
+            {#if currentProgress?.showMeter}
               <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-[0.62rem] uppercase tracking-[0.14em] text-text-muted">
-                      {currentProgress.isComplete ? "Last completed chapter" : "Current chapter"}
+                      Current chapter
                     </div>
                     <div class="mt-1 truncate text-[0.86rem] font-medium text-text-primary">
                       {currentProgress.chapterLabel}
@@ -310,7 +353,7 @@
                 </div>
                 <div class="mt-2 flex items-center justify-between gap-3 text-[0.72rem] text-text-muted">
                   <span>{currentProgress.pageLabel}</span>
-                  <span>{currentProgress.isComplete ? "Read" : "In progress"}</span>
+                  <span>In progress</span>
                 </div>
                 <div class="mt-2 h-1 border border-white/10 bg-black/40">
                   <div
@@ -438,12 +481,12 @@
                     <h3 class="truncate text-[0.82rem] font-medium text-text-primary">{chapter.title}</h3>
                     <div class="text-[0.68rem] text-text-muted">
                       {#if chapterProgress}
-                        {chapterProgress.pageLabel}
+                        {chapterProgress.isComplete ? "Read" : chapterProgress.pageLabel}
                       {:else}
                         {chapter.pageCount} page{chapter.pageCount === 1 ? "" : "s"}
                       {/if}
                     </div>
-                    {#if chapterProgress}
+                    {#if chapterProgress?.showMeter}
                       <div class="h-1 border border-white/10 bg-black/40">
                         <div
                           class="h-full bg-gradient-to-r from-[#7a5228] via-[#c49a5a] to-[#f3d69c] shadow-[0_0_10px_rgba(196,154,90,0.45)]"

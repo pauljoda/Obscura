@@ -42,8 +42,10 @@ describe("book progress display", () => {
       chapters[1],
     );
 
-    expect(display?.detailLabel).toBe("Chapter read - Page 24 of 24");
+    expect(display?.detailLabel).toBe("Read");
+    expect(display?.pageLabel).toBeNull();
     expect(display?.percent).toBe(100);
+    expect(display?.showMeter).toBe(false);
   });
 
   it("does not expose progress on a chapter detail page for another chapter", () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import { ArrowLeft, ArrowRight, BookOpen, HardDrive, Play, RotateCcw } from "@lucide/svelte";
+  import { goto, invalidate } from "$app/navigation";
+  import { ArrowLeft, ArrowRight, BookOpen, Check, HardDrive, Play, RotateCcw } from "@lucide/svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import { updateBookProgress } from "$lib/api/media";
@@ -74,13 +74,18 @@
 
   async function saveProgress(index = readerIndex, completedAt?: string | null) {
     if (readerPages.length === 0) return;
+    const nextCompletedAt =
+      completedAt === undefined && book.progress?.chapterId === chapter.id && book.progress.completedAt
+        ? book.progress.completedAt
+        : completedAt;
     await updateBookProgress(book.id, {
       chapterId: chapter.id,
       pageIndex: index,
       pageCount: readerPages.length,
       readerMode,
-      completedAt,
+      completedAt: nextCompletedAt,
     });
+    if (nextCompletedAt) await invalidate(`books:${book.id}`);
   }
 
   function handleIndexChange(index: number) {
@@ -103,12 +108,28 @@
       readerMode,
       completedAt: new Date().toISOString(),
     });
+    await invalidate(`books:${book.id}`);
     await goto(`/books/${book.id}/chapters/${nextChapter.id}`);
+  }
+
+  async function markChapterRead() {
+    if (readerPages.length === 0) return;
+    const lastIndex = Math.max(0, readerPages.length - 1);
+    readerIndex = lastIndex;
+    await updateBookProgress(book.id, {
+      chapterId: chapter.id,
+      pageIndex: lastIndex,
+      pageCount: readerPages.length,
+      readerMode,
+      completedAt: new Date().toISOString(),
+    });
+    await invalidate(`books:${book.id}`);
   }
 
   async function closeReader() {
     readerOpen = false;
-    await saveProgress(readerIndex);
+    const reachedEnd = readerPages.length > 0 && readerIndex >= readerPages.length - 1;
+    await saveProgress(readerIndex, reachedEnd ? new Date().toISOString() : undefined);
   }
 
   $effect(() => {
@@ -220,6 +241,16 @@
                 <Play class="h-3.5 w-3.5" />
                 {primaryReadLabel}
               </button>
+              {#if !chapterProgress?.isComplete}
+                <button
+                  type="button"
+                  onclick={() => void markChapterRead()}
+                  class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                >
+                  <Check class="h-3.5 w-3.5" />
+                  Mark read
+                </button>
+              {/if}
               {#if chapterProgress && !chapterProgress.isComplete}
                 <button
                   type="button"
@@ -242,7 +273,7 @@
             </div>
           {/if}
 
-          {#if chapterProgress}
+          {#if chapterProgress?.showMeter}
             <div class="mt-5 max-w-xl border border-border-subtle bg-glass-1 p-3 shadow-[0_0_24px_rgba(196,154,90,0.08)] backdrop-blur-md">
               <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">

@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic archive folders that only wrap a same-named ZIP or CBZ now scan as loose comic chapters instead of creating an unexpected volume.
 - Comic reading now marks the current chapter complete when the end action appears, and the final chapter shows a clear no-next-chapter close action.
 - Book scans now only create comic volumes from explicit volume subfolders, keeping loose chapter archives and chapter wrapper folders under the book itself.
+- Completed comic chapters now show as Read instead of lingering as 100% progress, with Mark read and Re-read actions available from book, chapter, and volume views.
 
 ### Docs
 
@@ -93,6 +94,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Sub-gallery cards on gallery detail pages now use a persisted size slider, matching the rest of the library browsing surfaces.
 - Comic reader paged mode now preloads the previous and next two pages around the current spread to prevent page-turn flashes.
 - Comic reader end actions now persist the last readable page as complete before moving to the next chapter, and final chapters now close from a "No next chapter" action instead of leaving the reader stuck at the end.
+- Comic reading completion now refreshes book detail data immediately, so Read badges and read filters update as soon as a chapter is completed or manually marked read.
 - Mobile breadcrumbs now collapse parent levels into a stacked overflow menu instead of overlapping the current page title on narrow screens.
 - Browser back navigation now restores the previous media surface's loaded items and scroll position through SvelteKit history snapshots.
 - Filtered media surfaces now verify hydrated or cached first-page data against active saved filters before trusting it, fixing stale Gallery lists after read-progress changes.

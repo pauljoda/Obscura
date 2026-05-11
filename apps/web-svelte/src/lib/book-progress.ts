@@ -14,7 +14,8 @@ export type BookChapterProgressDisplay = {
   pageCount: number;
   percent: number;
   isComplete: boolean;
-  pageLabel: string;
+  showMeter: boolean;
+  pageLabel: string | null;
   summaryLabel: string;
   detailLabel: string;
 };
@@ -45,7 +46,7 @@ function buildProgressDisplay(
   const percent = Math.min(100, Math.max(0, Math.round((currentPage / pageCount) * 100)));
   const isComplete = Boolean(progress.completedAt);
   const chapterLabel = `Ch. ${chapter.chapterNumber}: ${chapter.title}`;
-  const pageLabel = `Page ${currentPage} of ${pageCount}`;
+  const pageLabel = isComplete ? null : `Page ${currentPage} of ${pageCount}`;
 
   return {
     chapterId: chapter.id,
@@ -54,8 +55,9 @@ function buildProgressDisplay(
     pageCount,
     percent,
     isComplete,
+    showMeter: !isComplete,
     pageLabel,
-    summaryLabel: `${isComplete ? "Read" : "Reading"} ${chapterLabel} - ${pageLabel}`,
-    detailLabel: `${isComplete ? "Chapter read" : "Reading progress"} - ${pageLabel}`,
+    summaryLabel: isComplete ? `Read ${chapterLabel}` : `Reading ${chapterLabel} - ${pageLabel}`,
+    detailLabel: isComplete ? "Read" : `Reading progress - ${pageLabel}`,
   };
 }
