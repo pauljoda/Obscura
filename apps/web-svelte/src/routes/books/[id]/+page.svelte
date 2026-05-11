@@ -35,6 +35,12 @@
   const selectedChapter = $derived(
     book.chapters.find((chapter) => chapter.id === selectedChapterId) ?? book.chapters[0] ?? null,
   );
+  const selectedChapterIndex = $derived(
+    selectedChapter ? book.chapters.findIndex((chapter) => chapter.id === selectedChapter.id) : -1,
+  );
+  const nextChapter = $derived(
+    selectedChapterIndex >= 0 ? book.chapters[selectedChapterIndex + 1] ?? null : null,
+  );
   const readerPages = $derived((selectedChapter?.pages ?? []).map(pageToImage));
   const progressLabel = $derived(
     book.progress && book.progress.pageCount > 0
@@ -92,6 +98,19 @@
   function handleModeChange(mode: "paged" | "webtoon") {
     readerMode = mode;
     void saveProgress(readerIndex);
+  }
+
+  async function handleNextChapter() {
+    if (!selectedChapter || !nextChapter) return;
+    await updateBookProgress(book.id, {
+      chapterId: selectedChapter.id,
+      pageIndex: Math.max(0, readerPages.length - 1),
+      pageCount: readerPages.length,
+      readerMode,
+      completedAt: new Date().toISOString(),
+    });
+    selectedChapterId = nextChapter.id;
+    readerIndex = 0;
   }
 
   async function closeReader() {
@@ -370,9 +389,11 @@
     images={readerPages}
     initialIndex={readerIndex}
     initialMode={readerMode}
+    nextChapterLabel={nextChapter?.title ?? null}
     title={`${book.title}${selectedChapter ? ` · ${selectedChapter.title}` : ""}`}
     onIndexChange={handleIndexChange}
     onModeChange={handleModeChange}
+    onNextChapter={nextChapter ? handleNextChapter : undefined}
     onClose={() => void closeReader()}
   />
 {/if}

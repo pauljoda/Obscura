@@ -30,9 +30,11 @@
     initialIndex: number;
     initialMode?: ReaderMode;
     title?: string;
+    nextChapterLabel?: string | null;
     onClose: () => void;
     onIndexChange?: (index: number) => void;
     onModeChange?: (mode: ReaderMode) => void;
+    onNextChapter?: () => void | Promise<void>;
   }
 
   let {
@@ -40,9 +42,11 @@
     initialIndex,
     initialMode = "paged",
     title = "Comic",
+    nextChapterLabel = null,
     onClose,
     onIndexChange,
     onModeChange,
+    onNextChapter,
   }: Props = $props();
 
   let readerMode = $state<ReaderMode>(untrack(() => initialMode));
@@ -53,12 +57,23 @@
   let controlsTimer: number | null = null;
   let webtoonStage: HTMLElement | undefined = $state();
   let programmaticWebtoonScroll = false;
+  let nextChapterBusy = $state(false);
 
+  const hasNextChapter = $derived(Boolean(onNextChapter));
+  const nextChapterTitle = $derived(nextChapterLabel?.trim() ? nextChapterLabel : "Next chapter");
+  const finalPageIndex = $derived(hasNextChapter ? images.length : -1);
+  const showingNextChapterPage = $derived(
+    readerMode === "paged" && hasNextChapter && index === finalPageIndex,
+  );
   const spread = $derived(
-    comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover }),
+    showingNextChapterPage
+      ? []
+      : comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover }),
   );
   const counterText = $derived(
-    spread.length > 1
+    showingNextChapterPage
+      ? "Next chapter"
+      : spread.length > 1
       ? `${spread[0] + 1}-${spread[spread.length - 1] + 1} / ${images.length}`
       : `${Math.min(index + 1, images.length)} / ${images.length}`,
   );
@@ -70,23 +85,66 @@
   );
 
   function setReaderIndex(nextIndex: number) {
-    if (nextIndex === index) return;
-    index = nextIndex;
-    onIndexChange?.(index);
+    const maxIndex =
+      readerMode === "paged" && hasNextChapter ? images.length : Math.max(0, images.length - 1);
+    const clampedIndex = Math.max(0, Math.min(nextIndex, maxIndex));
+    if (clampedIndex === index) return;
+    index = clampedIndex;
+    if (index < images.length) onIndexChange?.(index);
   }
 
   function setReaderMode(mode: ReaderMode) {
     if (mode === readerMode) return;
     readerMode = mode;
+    if (mode === "webtoon" && index >= images.length) {
+      setReaderIndex(lastReadableIndex());
+    }
     onModeChange?.(mode);
   }
 
   function goNext() {
+    if (showingNextChapterPage) {
+      void goNextChapter();
+      return;
+    }
+    if (hasNextChapter && isLastReadableSpread()) {
+      setReaderIndex(finalPageIndex);
+      return;
+    }
     setReaderIndex(nextComicIndex(index, images.length, { pageMode, firstPageIsCover }));
   }
 
   function goPrev() {
+    if (showingNextChapterPage) {
+      setReaderIndex(lastReadableIndex());
+      return;
+    }
     setReaderIndex(previousComicIndex(index, images.length, { pageMode, firstPageIsCover }));
+  }
+
+  function lastReadableIndex() {
+    return Math.max(0, images.length - 1);
+  }
+
+  function isLastReadableSpread() {
+    if (images.length <= 0) return true;
+    const visibleSpread = comicSpreadForIndex(index, images.length, { pageMode, firstPageIsCover });
+    return (visibleSpread.at(-1) ?? index) >= images.length - 1;
+  }
+
+  async function goNextChapter() {
+    if (!onNextChapter || !hasNextChapter || nextChapterBusy) return;
+    nextChapterBusy = true;
+    try {
+      await onNextChapter();
+      index = 0;
+      showControlsTemporarily();
+      if (readerMode === "webtoon") {
+        void scrollWebtoonToIndex(0);
+      }
+    } finally {
+      nextChapterBusy = false;
+    }
   }
 
   function imageSrc(image: ImageListItemDto) {
@@ -334,12 +392,34 @@
             </NsfwBlur>
           </div>
         {/each}
+        {#if hasNextChapter}
+          <div class="flex w-full justify-center px-4 py-10 sm:py-14">
+            <button
+              type="button"
+              data-reader-control
+              onclick={() => void goNextChapter()}
+              disabled={nextChapterBusy}
+              class="reader-next-chapter-button"
+            >
+              <span class="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-text-accent">
+                Next Chapter
+              </span>
+              <span class="mt-2 block max-w-[26rem] truncate text-lg font-semibold text-text-primary">
+                {nextChapterTitle}
+              </span>
+              <span class="mt-3 inline-flex items-center gap-2 text-[0.76rem] text-white/70">
+                Continue reading
+                <ChevronRight class="h-4 w-4" />
+              </span>
+            </button>
+          </div>
+        {/if}
       </div>
     </div>
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="reader-stage items-center justify-center overflow-hidden bg-black p-0 sm:px-14 sm:py-3" onpointerup={handleReaderTap}>
-      {#if images.length > 1}
+      {#if images.length > 1 || hasNextChapter}
         <button
           type="button"
           onclick={goPrev}
@@ -367,20 +447,40 @@
           spread.length > 1 ? "max-w-7xl" : "max-w-5xl"
         }`}
       >
-        {#each spread as pageIndex (pageIndex)}
-          {@const image = images[pageIndex]}
-          {#if image}
-            <NsfwBlur isNsfw={image.isNsfw} class="flex h-full min-w-0 flex-1 items-center justify-center">
-              <img
-                src={imageSrc(image)}
-                alt={image.title}
-                class="max-h-full max-w-full object-contain shadow-[0_0_30px_rgba(0,0,0,0.45)]"
-                loading="eager"
-                decoding="async"
-              />
-            </NsfwBlur>
-          {/if}
-        {/each}
+        {#if showingNextChapterPage}
+          <div class="reader-next-chapter-page" data-reader-control>
+            <div class="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-text-accent">
+              Next Chapter
+            </div>
+            <h3 class="mt-3 max-w-[32rem] text-center font-heading text-2xl font-semibold text-text-primary sm:text-4xl">
+              {nextChapterTitle}
+            </h3>
+            <button
+              type="button"
+              onclick={() => void goNextChapter()}
+              disabled={nextChapterBusy}
+              class="reader-next-chapter-action"
+            >
+              Continue reading
+              <ChevronRight class="h-4 w-4" />
+            </button>
+          </div>
+        {:else}
+          {#each spread as pageIndex (pageIndex)}
+            {@const image = images[pageIndex]}
+            {#if image}
+              <NsfwBlur isNsfw={image.isNsfw} class="flex h-full min-w-0 flex-1 items-center justify-center">
+                <img
+                  src={imageSrc(image)}
+                  alt={image.title}
+                  class="max-h-full max-w-full object-contain shadow-[0_0_30px_rgba(0,0,0,0.45)]"
+                  loading="eager"
+                  decoding="async"
+                />
+              </NsfwBlur>
+            {/if}
+          {/each}
+        {/if}
       </div>
     </div>
   {/if}
@@ -396,7 +496,7 @@
       </button>
       <div class="font-mono text-[0.68rem] text-text-muted">{counterText}</div>
       <button type="button" onclick={goNext} class="reader-mode-button">
-        Next
+        {showingNextChapterPage ? "Start" : "Next"}
         <ChevronRight class="h-4 w-4" />
       </button>
     </div>
@@ -560,6 +660,73 @@
     color: rgb(250 232 198);
     box-shadow: 0 0 18px rgb(196 154 90 / 0.2);
     outline: none;
+  }
+
+  .reader-next-chapter-button,
+  .reader-next-chapter-page {
+    border: 1px solid rgb(196 154 90 / 0.34);
+    background:
+      linear-gradient(135deg, rgb(196 154 90 / 0.13), rgb(255 255 255 / 0.04)),
+      rgb(13 17 23 / 0.88);
+    box-shadow: 0 0 34px rgb(196 154 90 / 0.16);
+    backdrop-filter: blur(16px);
+  }
+
+  .reader-next-chapter-button {
+    width: min(100%, 34rem);
+    padding: 1.25rem;
+    text-align: center;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 150ms ease;
+  }
+
+  .reader-next-chapter-button:hover,
+  .reader-next-chapter-button:focus-visible,
+  .reader-next-chapter-action:hover,
+  .reader-next-chapter-action:focus-visible {
+    border-color: rgb(196 154 90 / 0.68);
+    box-shadow: 0 0 30px rgb(196 154 90 / 0.26);
+    outline: none;
+  }
+
+  .reader-next-chapter-button:hover,
+  .reader-next-chapter-button:focus-visible {
+    transform: translateY(-1px);
+  }
+
+  .reader-next-chapter-page {
+    display: flex;
+    min-height: min(32rem, 72vh);
+    width: min(100%, 44rem);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .reader-next-chapter-action {
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgb(196 154 90 / 0.46);
+    background: rgb(0 0 0 / 0.62);
+    padding: 0.7rem 0.95rem;
+    color: rgb(250 232 198);
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .reader-next-chapter-button:disabled,
+  .reader-next-chapter-action:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 
   .reader-check {
