@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 title: Library Organization
-description: How Obscura classifies movies, flat series, and seasoned series from your folder layout.
+description: How Obscura classifies videos, books, galleries, and audio from your folder layout.
 ---
 
 # Library Organization
@@ -104,24 +104,89 @@ The video scanner skips anything it can identify as a generated artifact, sample
 
 This means you can keep a `_samples/` folder next to a movie without it polluting the library — as long as the sample names contain `-sample` or `_sample`.
 
+## Books
+
+Books are a separate library type from galleries. Enable **Scan books** on a library root to have Obscura look for archives inside it.
+
+### Supported formats
+
+The book scanner reads `.cbz` and `.zip` archives. Plain image folders are galleries (see below), not books.
+
+### Standalone book
+
+An archive at the **root level** (not inside a subfolder) becomes a single-chapter book. The book title is taken from `ComicInfo.xml` inside the archive if present, otherwise from the filename.
+
+```text
+/library/books
+├── The Arrival.cbz           → book: "The Arrival"  (1 chapter)
+├── Watchmen.zip              → book: "Watchmen"      (1 chapter)
+└── My Manga Vol 3.cbz        → book: "My Manga Vol 3" (1 chapter)
+```
+
+### Multi-chapter series
+
+Archives **inside a subfolder** are grouped into one book. The subfolder name becomes the book title; each archive becomes a chapter. Chapter numbers are read from `ComicInfo.xml` or inferred from the trailing number in the filename.
+
+```text
+/library/books
+└── Saga
+    ├── Saga 001.cbz          → chapter 1
+    ├── Saga 002.cbz          → chapter 2
+    └── Saga 003.cbz          → chapter 3
+```
+
+A root can mix standalone archives and series folders at the same time:
+
+```text
+/library/books
+├── The Arrival.cbz           → standalone book
+└── Saga
+    ├── Saga 001.cbz
+    └── Saga 002.cbz
+```
+
+### ComicInfo.xml
+
+If an archive contains a `ComicInfo.xml` file, Obscura reads it during the scan:
+
+| ComicInfo field | Used as |
+| --- | --- |
+| `<Series>` | Book title (overrides folder name) |
+| `<Title>` | Chapter title (overrides filename) |
+| `<Number>` | Chapter number |
+| `<Publisher>` | Studio |
+| `<Writer>`, `<Penciller>`, `<Artist>`, etc. | Performers (creators) |
+| `<Genre>`, `<Tags>` | Tags |
+| `<Summary>` | Book description |
+| `<AgeRating>`, `<Manga>` | Used to infer NSFW flag |
+
+Fields already edited in the UI are not overwritten by a rescan.
+
+### Reading progress
+
+Obscura tracks read/unread progress per chapter. The reader opens in paged (spread) mode or vertical webtoon mode; your last-used mode persists per book. Chapter-to-chapter navigation flows without leaving the reader.
+
+---
+
 ## Galleries, images, and audio
 
 Video classification is depth-based; the other media types use simpler rules.
 
 ### Galleries
 
-A **gallery** is either:
+A **gallery** is a **folder of images** under a root with `scan_galleries` enabled. Each folder of images becomes one gallery.
 
-- A **folder of images** under a root with `scan_galleries` enabled, or
-- A **zip / cbz / cbr archive** treated as a virtual gallery (file paths look like `/path/archive.cbz::member/file.jpg`).
+Images directly inside a root become loose images, not a gallery. Group them in a subfolder if you want gallery semantics.
 
-Images directly inside a root become loose images, not a gallery. Group them in a folder if you want gallery semantics.
+Page images are sorted with natural filename ordering (`page2.jpg` before `page10.jpg`).
 
-Comic libraries use the same gallery model. Put chapter archives inside a series folder to have Obscura group them under that folder; leave cbz/zip files at the library root if you want each archive to appear as a standalone gallery. Page images are sorted with natural filename ordering (`page2.jpg` before `page10.jpg`), and `ComicInfo.xml` metadata is imported when it is present in a folder or archive.
+:::note
+Comic and manga archives (`.cbz`, `.zip`) are part of the **Books** library, not Galleries. Enable **Scan books** on the root — not **Scan galleries** — to pick them up.
+:::
 
 ### Images
 
-Files matching the supported image formats (JPEG, PNG, WebP, AVIF, HEIF, GIF) are imported individually if they're not part of a gallery folder. They're scanned by roots with `scan_images` enabled.
+Files matching the supported image formats (JPEG, PNG, WebP, AVIF, HEIF, GIF) are imported individually if they are not part of a gallery folder. They are scanned by roots with `scan_images` enabled.
 
 ### Audio
 
@@ -137,7 +202,7 @@ Audio scans look for **library folders**. The convention mirrors music libraries
     └── 01 - Single Track.flac
 ```
 
-Each folder becomes an `audioLibrary`; tracks inside become `audioTracks`. ID3 tags and embedded cover art are read during the audio probe job.
+Each folder becomes an audio library; tracks inside become audio tracks. ID3 tags and embedded cover art are read during the audio probe job.
 
 ## When to rescan
 

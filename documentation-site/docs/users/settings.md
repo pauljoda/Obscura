@@ -25,7 +25,7 @@ Each row is one library root. **Add library root** opens a form:
 | **Path** | A path **inside the container**, e.g. `/media/movies`. |
 | **Label** | Optional display name. |
 | **Recursive** | Walk subdirectories. Almost always **on**. |
-| **Scan videos** / **Scan galleries** / **Scan audio** / **Scan images** | Independent scan-type flags. Pick what's actually under this path. |
+| **Scan videos** / **Scan books** / **Scan galleries** / **Scan audio** / **Scan images** | Independent scan-type flags. Pick what's actually under this path. Books (`.cbz`/`.zip` archives) and galleries (image folders) are separate flags — enable the one that matches the content. |
 | **Is NSFW** | Mark every entity discovered under this root as NSFW by default. |
 
 ### Global scan behavior
@@ -153,6 +153,6 @@ You normally don't touch these directly, but if you're scripting maintenance or 
 SELECT * FROM library_settings;
 
 -- See your roots
-SELECT id, path, label, scan_videos, scan_galleries, scan_audio, scan_images
+SELECT id, path, label, scan_videos, scan_books, scan_galleries, scan_audio, scan_images
 FROM library_roots;
 ```
