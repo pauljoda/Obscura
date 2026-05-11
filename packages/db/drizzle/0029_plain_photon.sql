@@ -177,6 +177,24 @@ book_sources AS (
 	FROM archive_galleries
 	ORDER BY legacy_book_gallery_id, created_at
 ),
+book_targets AS (
+	SELECT DISTINCT ON (library_root_id, relative_path)
+		library_root_id,
+		title,
+		details,
+		date,
+		rating,
+		organized,
+		is_nsfw,
+		urls,
+		folder_path,
+		relative_path,
+		studio_id,
+		created_at,
+		updated_at
+	FROM book_sources
+	ORDER BY library_root_id, relative_path, created_at
+),
 inserted_books AS (
 	INSERT INTO books (
 		library_root_id,
@@ -209,7 +227,7 @@ inserted_books AS (
 		studio_id,
 		created_at,
 		updated_at
-	FROM book_sources
+	FROM book_targets
 	ON CONFLICT (library_root_id, relative_path) DO UPDATE SET
 		title = EXCLUDED.title,
 		details = EXCLUDED.details,
@@ -272,6 +290,18 @@ chapter_sources AS (
 		ROW_NUMBER() OVER (PARTITION BY blgm.book_id ORDER BY ag.title, ag.zip_file_path) AS chapter_number
 	FROM archive_galleries ag
 	INNER JOIN book_legacy_gallery_map blgm ON blgm.gallery_id = ag.legacy_book_gallery_id
+),
+chapter_targets AS (
+	SELECT DISTINCT ON (zip_file_path)
+		book_id,
+		title,
+		chapter_number,
+		zip_file_path,
+		image_count,
+		created_at,
+		updated_at
+	FROM chapter_sources
+	ORDER BY zip_file_path, chapter_number, created_at
 )
 INSERT INTO book_chapters (
 	book_id,
@@ -294,7 +324,7 @@ SELECT
 	NULL,
 	created_at,
 	updated_at
-FROM chapter_sources
+FROM chapter_targets
 ON CONFLICT (archive_path) DO UPDATE SET
 	book_id = EXCLUDED.book_id,
 	title = EXCLUDED.title,

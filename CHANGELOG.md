@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
 - Mangadex added as a plugin in the community plugins
 - Added update checker in app, so you can see when a new version is released
-- Upgrades from older dev builds now complete even when duplicate legacy comic gallery rows point at the same ZIP or CBZ archive.
+- Upgrades from older dev builds now complete even when duplicate legacy comic gallery rows point at the same ZIP or CBZ archive, preserving one migrated book and chapter while retiring the duplicate gallery records.
 
 ### Docs
 
@@ -74,7 +74,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- Book migration now deduplicates legacy archive-gallery insert targets before converting them into Books records, preventing startup migration failures on databases with duplicate ZIP or CBZ gallery rows.
+- Book migration now deduplicates legacy archive-gallery book and chapter insert targets before conversion, preventing startup migration failures on databases with duplicate ZIP or CBZ gallery rows.
 - Release update checks now fall back to GitHub's public latest-release redirect when the API rate limit is exhausted, keeping update detection useful without requiring authentication.
 - Adaptive playback no longer fails on first load when generated asset requests race a newly added library setting before every request has observed the latest migration.
 - NSFW collections no longer reappear from the browser's client-side pagination fetch while SFW mode is active.
