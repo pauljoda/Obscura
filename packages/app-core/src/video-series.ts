@@ -230,6 +230,7 @@ function toSeriesListItem(
     relativePath: series.relativePath,
     parentId: null,
     depth: 0,
+    organized: series.organized,
     isNsfw: series.isNsfw,
     coverImagePath: series.posterPath,
     backdropImagePath: series.backdropPath,
@@ -655,6 +656,7 @@ export async function getVideoSeriesLibraryDetailRead(
 
 export interface UpdateVideoSeriesBody {
   isNsfw?: boolean;
+  organized?: boolean;
   customName?: string | null;
   details?: string | null;
   studioName?: string | null;
@@ -679,6 +681,7 @@ export async function updateVideoSeriesWrite(
   await db.transaction(async (tx) => {
     const updatePatch: Record<string, unknown> = { updatedAt: new Date() };
     if (patch.isNsfw !== undefined) updatePatch.isNsfw = patch.isNsfw;
+    if (patch.organized !== undefined) updatePatch.organized = patch.organized;
     if (patch.details !== undefined) updatePatch.overview = patch.details;
     if (patch.rating !== undefined) updatePatch.rating = patch.rating;
     if (patch.date !== undefined) updatePatch.firstAirDate = patch.date;

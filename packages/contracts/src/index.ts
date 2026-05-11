@@ -399,6 +399,7 @@ export interface VideoSeriesListItemDto {
   relativePath: string;
   parentId: string | null;
   depth: number;
+  organized: boolean;
   isNsfw: boolean;
   coverImagePath: string | null;
   backdropImagePath: string | null;

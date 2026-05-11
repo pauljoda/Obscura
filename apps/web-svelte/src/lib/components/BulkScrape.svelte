@@ -38,6 +38,7 @@
     fetchBooks,
     fetchImages,
     fetchAudioLibraries,
+    fetchAudioTracks,
   } from "$lib/api/media";
   import type {
     VideoRow,
@@ -115,6 +116,7 @@
     acceptAllImages,
   } from "$lib/identify/image-runner";
   import type { MutableFlag } from "$lib/identify/runner-utils";
+  import { filterIdentifyQueueItems } from "$lib/identify/identify-queue";
   import { entityTerms } from "$lib/terminology";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
@@ -161,6 +163,12 @@
   let loadingMorePerformers = $state(false);
   let allStudios = $state<StudioItem[]>([]);
   let allTags = $state<TagItem[]>([]);
+  let allSeries = $state<VideoSeriesRow["series"][]>([]);
+  let allBooks = $state<BookRow["book"][]>([]);
+  let allGalleries = $state<GalleryRow["gallery"][]>([]);
+  let allImages = $state<ImageRow["image"][]>([]);
+  let allAudioLibraries = $state<AudioLibraryRow["library"][]>([]);
+  let allAudioTracks = $state<AudioTrackRow["track"][]>([]);
 
   let running = $state(false);
   let autoAccept = $state(false);
@@ -325,7 +333,8 @@
           if (!series.parentId) return true;
           return false;
         });
-        seriesRows = contentSeries.map((series) => ({
+        allSeries = contentSeries;
+        seriesRows = filterIdentifyQueueItems(contentSeries, showAll).map((series) => ({
           series,
           status: "pending",
           selectedFields: new Set(VIDEO_SERIES_FIELDS),
@@ -338,22 +347,24 @@
           limit: 500,
           offset: 0,
         }));
-        bookRows = booksRes.books.map((book) => ({
+        allBooks = booksRes.books;
+        bookRows = filterIdentifyQueueItems(booksRes.books, showAll).map((book) => ({
           book,
           status: "pending",
           selectedFields: new Set(BOOK_FIELDS),
         }));
       } else if (nextTab === "galleries") {
         const galleriesRes = await fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 }));
-        galleryRows = galleriesRes.galleries.map((gallery) => ({
+        allGalleries = galleriesRes.galleries;
+        galleryRows = filterIdentifyQueueItems(galleriesRes.galleries, showAll).map((gallery) => ({
           gallery,
           status: "pending",
           selectedFields: new Set(GALLERY_FIELDS),
         }));
       } else if (nextTab === "images") {
         const imagesRes = await fetchImages({}).catch(() => ({ images: [], total: 0, limit: 100, offset: 0 }));
-        imageRows = imagesRes.images
-          .filter((img) => !img.organized)
+        allImages = imagesRes.images;
+        imageRows = filterIdentifyQueueItems(imagesRes.images, showAll)
           .map((image) => ({
             image,
             status: "pending",
@@ -361,14 +372,20 @@
           }));
       } else if (nextTab === "audio-libraries") {
         const audioRes = await fetchAudioLibraries({}).catch(() => ({ items: [], total: 0 }));
-        audioLibraryRows = audioRes.items.map((library) => ({
+        allAudioLibraries = audioRes.items;
+        audioLibraryRows = filterIdentifyQueueItems(audioRes.items, showAll).map((library) => ({
           library,
           status: "pending",
           selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
         }));
       } else if (nextTab === "audio-tracks") {
-        audioTrackRows = [];
-        void AUDIO_TRACK_FIELDS;
+        const tracksRes = await fetchAudioTracks({}).catch(() => ({ items: [], total: 0 }));
+        allAudioTracks = tracksRes.items;
+        audioTrackRows = filterIdentifyQueueItems(tracksRes.items, showAll).map((track) => ({
+          track,
+          status: "pending",
+          selectedFields: new Set(AUDIO_TRACK_FIELDS),
+        }));
       }
       markLoaded(nextTab);
     } finally {
@@ -438,7 +455,24 @@
     void allPerformers;
     void allStudios;
     void allTags;
-    if (!allVideos.length && !allPerformers.length && !allStudios.length && !allTags.length)
+    void allSeries;
+    void allBooks;
+    void allGalleries;
+    void allImages;
+    void allAudioLibraries;
+    void allAudioTracks;
+    if (
+      !allVideos.length &&
+      !allPerformers.length &&
+      !allStudios.length &&
+      !allTags.length &&
+      !allSeries.length &&
+      !allBooks.length &&
+      !allGalleries.length &&
+      !allImages.length &&
+      !allAudioLibraries.length &&
+      !allAudioTracks.length
+    )
       return;
 
     untrack(() => {
@@ -490,6 +524,67 @@
             tag: tagItem,
             status: "pending",
             selectedFields: new Set(),
+          },
+      );
+
+      const existingSeries = new Map(seriesRows.map((r) => [r.series.id, r]));
+      seriesRows = filterIdentifyQueueItems(allSeries, showAll).map(
+        (series) =>
+          existingSeries.get(series.id) ?? {
+            series,
+            status: "pending",
+            selectedFields: new Set(VIDEO_SERIES_FIELDS),
+            wizardStep: "idle",
+          },
+      );
+
+      const existingBook = new Map(bookRows.map((r) => [r.book.id, r]));
+      bookRows = filterIdentifyQueueItems(allBooks, showAll).map(
+        (book) =>
+          existingBook.get(book.id) ?? {
+            book,
+            status: "pending",
+            selectedFields: new Set(BOOK_FIELDS),
+          },
+      );
+
+      const existingGallery = new Map(galleryRows.map((r) => [r.gallery.id, r]));
+      galleryRows = filterIdentifyQueueItems(allGalleries, showAll).map(
+        (gallery) =>
+          existingGallery.get(gallery.id) ?? {
+            gallery,
+            status: "pending",
+            selectedFields: new Set(GALLERY_FIELDS),
+          },
+      );
+
+      const existingImage = new Map(imageRows.map((r) => [r.image.id, r]));
+      imageRows = filterIdentifyQueueItems(allImages, showAll).map(
+        (image) =>
+          existingImage.get(image.id) ?? {
+            image,
+            status: "pending",
+            selectedFields: new Set(IMAGE_FIELDS),
+          },
+      );
+
+      const existingAudioLibrary = new Map(audioLibraryRows.map((r) => [r.library.id, r]));
+      audioLibraryRows = filterIdentifyQueueItems(allAudioLibraries, showAll).map(
+        (library) =>
+          existingAudioLibrary.get(library.id) ?? {
+            library,
+            status: "pending",
+            selectedFields: new Set(AUDIO_LIBRARY_FIELDS),
+          },
+      );
+
+      const existingAudioTrack = new Map(audioTrackRows.map((r) => [r.track.id, r]));
+      audioTrackRows = filterIdentifyQueueItems(allAudioTracks, showAll).map(
+        (track) =>
+          existingAudioTrack.get(track.id) ?? {
+            track,
+            status: "pending",
+            selectedFields: new Set(AUDIO_TRACK_FIELDS),
           },
       );
     });
@@ -1082,8 +1177,10 @@
               All {entityTerms.performers.toLowerCase()} have complete metadata.
             {:else if tab === "studios"}
               All {entityTerms.studios.toLowerCase()} have complete metadata.
-            {:else}
+            {:else if tab === "tags"}
               All {entityTerms.tags.toLowerCase()} loaded.
+            {:else}
+              All {activeTabLabel()} are organized!
             {/if}
           </p>
         </div>

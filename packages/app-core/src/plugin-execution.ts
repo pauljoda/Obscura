@@ -1016,7 +1016,7 @@ async function applySeriesPluginResult(
   result: Awaited<ReturnType<typeof loadScrapeResult>>,
   fieldsToApply: Set<string>,
 ) {
-  const patch: Record<string, unknown> = {};
+  const patch: Record<string, unknown> = { organized: true };
 
   if (fieldsToApply.has("title") && result.proposedTitle) {
     patch.customName = result.proposedTitle;
@@ -1088,7 +1088,7 @@ async function applyNonVideoPluginResult(
   fieldsToApply: Set<string>,
   selectedImages?: Record<string, string | null | undefined>,
 ) {
-  const patch: Record<string, unknown> = {};
+  const patch: Record<string, unknown> = { organized: true };
 
   if (fieldsToApply.has("title") && result.proposedTitle) {
     patch.title = result.proposedTitle;

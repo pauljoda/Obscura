@@ -311,6 +311,7 @@ export async function updateSeries(
     tagNames?: string[];
     rating?: number | null;
     date?: string | null;
+    organized?: boolean;
   },
 ): Promise<{ ok: true; id: string }> {
   return fetchApi(`/video-series/${id}`, {

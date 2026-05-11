@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added update checker in app, so you can see when a new version is released
 - Upgrades from older dev builds now complete even when duplicate legacy comic gallery rows point at the same ZIP or CBZ archive, preserving one migrated book and chapter while retiring the duplicate gallery records.
 - Book and chapter detail pages now show saved comic reading progress as the current chapter plus page progress, making resume state easier to understand at a glance.
+- Identify queues now focus on unorganized media by default, and accepted metadata results mark the item organized so future review sessions stay focused on unfinished entries.
 
 ### Docs
 
@@ -62,6 +63,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Search, collection, detail, and review surfaces now render entity artwork through the central thumbnail entrypoint instead of route-local image markup.
 - Book root and chapter pages now describe comic reading progress with chapter names, page labels, and progress meters instead of bare saved page numbers.
 - Book chapter detail pages now surface Read, Resume, Re-read, Start over, and Next chapter actions directly in the chapter hero.
+- Identify queues now hide organized series, books, galleries, images, albums, tracks, and videos by default while preserving Show all for broader review.
 
 ### Added
 
@@ -78,6 +80,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - Identify provider flyouts now close as soon as a provider is selected, so the disabled Identify button prevents repeat submissions while the lookup is running.
+- Accepted plugin metadata results now mark series, books, galleries, images, albums, and tracks as organized, even when the accepted fields only update artwork or linked metadata.
 - Book migration now deduplicates legacy archive-gallery book and chapter insert targets before conversion, preventing startup migration failures on databases with duplicate ZIP or CBZ gallery rows.
 - Release update checks now fall back to GitHub's public latest-release redirect when the API rate limit is exhausted, keeping update detection useful without requiring authentication.
 - Adaptive playback no longer fails on first load when generated asset requests race a newly added library setting before every request has observed the latest migration.
