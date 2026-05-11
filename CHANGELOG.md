@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 ### What's New
 
+- Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
+- Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
+- Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
+- Mangadex added as a plugin in the community plugins
+- Added update checker in app, so you can see when a new version is released
+
+### Changed
+
 - Comics now live under a top-level Books section instead of being mixed into Galleries. Existing archive comic galleries are migrated into book/chapter/page records, old gallery detail links redirect to the new book detail page, and users should enable Books scanning on the relevant library roots to keep discovering ZIP/CBZ comics.
 - Books now use the same library browsing tools as the rest of Obscura, including saved search/filter presets, responsive thumbnail sizing, shared thumbnails in dashboard/search/collections, chapter previews, upload/delete actions, and merging standalone comics into one chaptered book.
 - Comic reading now flows from one chapter into the next inside the same lightbox, with a Next Chapter action at the end of webtoon and paged reading.
@@ -38,9 +46,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Video playback now uses one YouTube-style settings menu for quality, speed, audio, captions, and subtitle styling, with animated mobile/desktop menus and a cast button that can be hidden from Settings.
 - Mobile transcript docking now shows a compact live transcript directly under the video instead of doing nothing on small screens.
 - Entity thumbnails now use one shared visual path across browsing, search, collections, related-media, and review queues, so videos, comics, images, actors, studios, tags, and audio items keep the same presentation wherever they appear.
-
-### Changed
-
 - Galleries now behave as ordinary image galleries again: comic/read filters, gallery reader actions, and the merge-comic-series affordance have moved out of the Galleries browsing flow.
 - Books browsing now uses the shared media surface toolbar, mobile/desktop preferences, grid/list cards, and gallery-style scrub previews instead of a custom one-off grid.
 - Detail pages can now provide explicit breadcrumbs to the app header instead of relying only on URL segments.
