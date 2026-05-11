@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book cards and book detail pages now rely on the existing red NSFW marker instead of also showing a redundant yellow NSFW badge.
 - Book editing now includes chapter cover controls so each chapter can use an uploaded image, the first page, any selected page, or the default first-page behavior.
 - Books now participate in plugin-based identification, including bulk review, language-aware candidate picking, book/chapter cover selection, and NSFW-aware MangaDex-style metadata results.
+- Obscura now checks GitHub for newer releases and highlights the app version when an update is available, with a direct release link in the changelog dialog.
 - Book scans now carry NSFW root and adult ComicInfo metadata through to linked artists, tags, and studios.
 - NSFW collections now stay hidden in SFW mode from the first browser render, and direct links to hidden detail pages now return to the dashboard instead of showing an error page.
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
@@ -58,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added Books cross-reference tabs to actor, tag, and studio detail pages.
 - Added book chapter cover APIs for upload, page selection, reset, and metadata-service cover downloads.
 - Added Books to the plugin identification workflow, with normalized book/comic/manga capabilities, review cards, candidate language filters, and accepted metadata writes for book and chapter cover art.
+- Added a best-effort in-app release check that compares the installed version to the latest GitHub release once per day and supports manual refresh from the changelog dialog.
 - Library settings now include a Show cast controls toggle so users can hide the video player's cast button if they do not want remote playback available.
 
 ### Fixed

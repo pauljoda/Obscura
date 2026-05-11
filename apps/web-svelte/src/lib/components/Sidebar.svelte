@@ -5,7 +5,7 @@
   import { appShellNavIconMap } from "./app-shell-nav-icon-map";
   import LogoMark from "./LogoMark.svelte";
   import ChangelogDialog from "./ChangelogDialog.svelte";
-  import { APP_VERSION } from "$lib/version";
+  import { APP_VERSION, fetchReleaseUpdateStatus, type ReleaseUpdateStatus } from "$lib/version";
 
   interface Props {
     collapsed: boolean;
@@ -14,13 +14,21 @@
 
   let { collapsed, onToggle }: Props = $props();
   let hovered = $state(false);
+  let releaseStatus = $state<ReleaseUpdateStatus | null>(null);
   const isExpanded = $derived(!collapsed || hovered);
+  const updateAvailable = $derived(releaseStatus?.updateAvailable === true);
   const pathname = $derived(page.url.pathname);
   const docsHref = "https://pauljoda.github.io/Obscura/docs/users/quick-start";
 
   function isActive(href: string): boolean {
     return pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
   }
+
+  $effect(() => {
+    void fetchReleaseUpdateStatus().then((status) => {
+      releaseStatus = status;
+    });
+  });
 </script>
 
 <aside
@@ -140,10 +148,10 @@
     <ChangelogDialog version={APP_VERSION}>
       <div
         class="group flex h-8 items-center overflow-hidden whitespace-nowrap text-text-muted transition-colors duration-fast hover:bg-surface-2 hover:text-text-primary"
-        title={!isExpanded ? "Changelog" : undefined}
+        title={!isExpanded ? (updateAvailable ? "Update available" : "Changelog") : undefined}
       >
         <div class="flex w-8 shrink-0 items-center justify-center">
-          <span class="led led-sm led-idle"></span>
+          <span class={cn("led led-sm", updateAvailable ? "led-active" : "led-idle")}></span>
         </div>
         <div
           class={cn(
@@ -153,6 +161,9 @@
         >
           <span class="text-mono-sm text-text-disabled transition-colors group-hover:text-text-accent">
             v{APP_VERSION}
+            {#if updateAvailable}
+              <span class="sr-only">Update available</span>
+            {/if}
           </span>
         </div>
       </div>

@@ -80,7 +80,8 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { X } from "@lucide/svelte";
+  import { RefreshCw, X } from "@lucide/svelte";
+  import { fetchReleaseUpdateStatus, type ReleaseUpdateStatus } from "$lib/version";
 
   const communityLinks = [
     {
@@ -104,10 +105,15 @@
 
   let open = $state(false);
   let content = $state<string | null>(null);
+  let releaseStatus = $state<ReleaseUpdateStatus | null>(null);
   let loading = $state(false);
+  let checkingRelease = $state(false);
   let dialogRef: HTMLDialogElement | null = $state(null);
 
   const blocks = $derived(content ? parseChangelog(content) : []);
+  const updateAvailable = $derived(
+    releaseStatus?.updateAvailable === true && !!releaseStatus.latestVersion && !!releaseStatus.latestUrl,
+  );
 
   async function loadChangelog() {
     if (content || loading) return;
@@ -122,6 +128,16 @@
     }
   }
 
+  async function loadReleaseStatus(force = false) {
+    if (checkingRelease) return;
+    checkingRelease = true;
+    try {
+      releaseStatus = await fetchReleaseUpdateStatus(fetch, { force });
+    } finally {
+      checkingRelease = false;
+    }
+  }
+
   $effect(() => {
     if (!dialogRef) return;
     if (open) dialogRef.showModal();
@@ -131,6 +147,7 @@
   function handleOpen() {
     open = true;
     void loadChangelog();
+    void loadReleaseStatus();
   }
 
   function handleBackdropClick(event: MouseEvent) {
@@ -186,6 +203,16 @@
             {link.label}
           </a>
         {/each}
+        <button
+          type="button"
+          onclick={() => void loadReleaseStatus(true)}
+          disabled={checkingRelease}
+          class="inline-flex h-8 w-8 items-center justify-center border border-border-subtle bg-surface-2/80 text-text-muted transition hover:border-border-accent hover:text-text-accent hover:shadow-[0_0_18px_rgba(196,154,90,0.18)] focus-visible:border-border-accent focus-visible:text-text-accent focus-visible:outline-none focus-visible:shadow-[0_0_18px_rgba(196,154,90,0.22)] disabled:cursor-wait disabled:opacity-60"
+          aria-label="Check for updates"
+          title="Check for updates"
+        >
+          <RefreshCw class={checkingRelease ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+        </button>
       </div>
     </div>
     <button
@@ -198,6 +225,19 @@
     </button>
   </div>
   <div class="scrollbar-hidden flex-1 overflow-y-auto px-5 py-4">
+    {#if updateAvailable}
+      <a
+        href={releaseStatus?.latestUrl ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mb-4 flex items-center justify-between gap-3 border border-border-accent bg-glass-2 px-3 py-2 text-xs text-text-primary shadow-[0_0_22px_rgba(196,154,90,0.14)] transition hover:text-text-accent"
+      >
+        <span class="font-heading font-bold uppercase tracking-wider">
+          Update available: v{releaseStatus?.latestVersion}
+        </span>
+        <span class="font-mono text-[10px] text-text-disabled">GitHub release</span>
+      </a>
+    {/if}
     {#if loading}
       <p class="animate-pulse text-xs text-text-disabled">Loading changelog...</p>
     {:else if content}
