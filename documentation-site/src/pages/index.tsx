@@ -111,17 +111,17 @@ function Hero() {
       <div className={`container ${styles.heroInner}`}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>
-            <span className={styles.led} aria-hidden /> Private · Self-hosted · Your media
+            <span className={styles.led} aria-hidden /> Self-hosted media browser
           </p>
           <Heading as="h1" className={styles.heroTitle}>
-            One place for your
+            A private home for your
             <br />
             <span className={styles.heroAccent}>entire</span> collection.
           </Heading>
           <p className={styles.heroSubtitle}>
             Obscura is a self-hosted media browser for videos, comics, books, audio,
             and galleries — organized, searchable, and playable from any device on
-            your network. One Docker image. No cloud. No configuration.
+            your network. Everything runs in a single Docker container on your hardware.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primaryAction} to="/docs/users/quick-start">
@@ -189,13 +189,12 @@ function Pathways() {
     <section className={styles.pathways}>
       <div className="container">
         <div className={styles.sectionHeader}>
-          <p className={styles.kicker}>Where do you want to go?</p>
+          <p className={styles.kicker}>Documentation</p>
           <Heading as="h2" className={styles.sectionTitle}>
-            Start where you are.
+            Where to start
           </Heading>
           <p className={styles.sectionLead}>
-            Pick the track that matches what you are about to do — every page links
-            to the others when you need them.
+            Pick the section that matches what you are trying to do.
           </p>
         </div>
         <div className={styles.pathGrid}>
@@ -203,8 +202,8 @@ function Pathways() {
             <span className={styles.pathKicker}>01 · Run it</span>
             <strong className={styles.pathTitle}>Set up your media library</strong>
             <p className={styles.pathBody}>
-              Install with Docker in minutes. Mount your media directories, run a
-              scan, and start browsing. No accounts, no configuration, no cloud.
+              Install with Docker, mount your media directories, run a scan, and
+              start browsing. Library organization, settings, and operations live here.
             </p>
             <span className={styles.pathCta}>
               Quick start
@@ -248,11 +247,11 @@ function Features() {
         <div className={styles.sectionHeader}>
           <p className={styles.kicker}>What it does</p>
           <Heading as="h2" className={styles.sectionTitle}>
-            Every type of media. One place. Your network.
+            What Obscura manages
           </Heading>
           <p className={styles.sectionLead}>
-            Obscura is built for a single trusted user on a private LAN. It doesn't
-            need the internet, and it doesn't phone home. Everything runs on your hardware.
+            Built for a single trusted user on a private network. All processing happens
+            locally — no internet access required, no external services.
           </p>
         </div>
         <div className={styles.featureGrid}>
@@ -316,9 +315,8 @@ function CtaBlock() {
     <section className={styles.cta}>
       <div className={`container ${styles.ctaInner}`}>
         <div>
-          <p className={styles.kicker}>Ready when you are</p>
           <Heading as="h2" className={styles.ctaTitle}>
-            Your entire library. One container. Five minutes.
+            Run it on your own hardware
           </Heading>
         </div>
         <div className={styles.ctaActions}>
