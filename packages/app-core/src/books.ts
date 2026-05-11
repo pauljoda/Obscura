@@ -178,9 +178,7 @@ export function resolveBookArtwork(input: {
     ? input.storedCoverImagePath!
     : null;
   const coverImagePath = customCover ?? pagePreviews[0] ?? null;
-  const previewImagePaths = customCover
-    ? [customCover, ...pagePreviews].slice(0, input.previewLimit ?? 4)
-    : pagePreviews;
+  const previewImagePaths = customCover ? [customCover] : pagePreviews;
   return { coverImagePath, previewImagePaths };
 }
 
@@ -928,6 +926,39 @@ export async function uploadBookCoverWrite(
     .where(eq(books.id, bookId));
 
   return { ok: true as const, coverImagePath };
+}
+
+async function deleteBookCustomCoverFile(bookId: string) {
+  const customPath = path.join(getGeneratedBookDir(bookId), BOOK_COVER_FILE);
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    /* non-fatal */
+  }
+}
+
+export async function deleteBookCoverWrite(db: AppDb, bookId: string) {
+  const [book] = await db
+    .select({ id: books.id })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
+  if (!book) throw new NotFoundError("Book not found");
+
+  await deleteBookCustomCoverFile(bookId);
+  await db
+    .update(books)
+    .set({ coverPageId: null, coverImagePath: null, updatedAt: new Date() })
+    .where(eq(books.id, bookId));
+  await refreshBookCounts(db, bookId);
+
+  const [updated] = await db
+    .select({ coverImagePath: books.coverImagePath })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
+
+  return { ok: true as const, coverImagePath: updated?.coverImagePath ?? null };
 }
 
 export async function setBookCoverFromUrlWrite(

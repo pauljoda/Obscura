@@ -4,7 +4,7 @@
   import { Badge } from "@obscura/ui-svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
-  import { deleteBook, updateBookProgress } from "$lib/api/media";
+  import { deleteBook, updateBook, updateBookProgress } from "$lib/api/media";
   import BookEdit from "$lib/components/BookEdit.svelte";
   import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -13,6 +13,7 @@
   import HierarchyShell from "$lib/components/shared/HierarchyShell.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
@@ -21,7 +22,10 @@
   import { useAppChrome, type AppBreadcrumb } from "$lib/stores/app-chrome.svelte";
 
   let { data }: { data: PageData } = $props();
-  const book = $derived(data.book);
+  let overrideRating = $state<number | null | undefined>(undefined);
+  const book = $derived(
+    overrideRating === undefined ? data.book : { ...data.book, rating: overrideRating },
+  );
   const appChrome = useAppChrome();
 
   // svelte-ignore state_referenced_locally
@@ -178,6 +182,18 @@
     if (closeEditor) editing = false;
   }
 
+  async function handleRatingSave(next: number | null) {
+    const previous = book.rating ?? null;
+    overrideRating = next;
+    try {
+      await updateBook(book.id, { rating: next });
+      await invalidate(`books:${book.id}`);
+    } catch {
+      overrideRating = previous;
+      throw new Error("Failed to update rating");
+    }
+  }
+
   async function confirmDelete(deleteFromDisk: boolean) {
     if (deleteBusy) return;
     deleteBusy = true;
@@ -281,6 +297,14 @@
               {#if book.date}<span>{book.date}</span>{/if}
               <span>{book.pageCount} page{book.pageCount === 1 ? "" : "s"}</span>
               {#if currentProgress}<span>{currentProgress.summaryLabel}</span>{/if}
+            </div>
+
+            <div class="mt-3">
+              <InlineRating
+                value={book.rating}
+                onSave={handleRatingSave}
+                ariaLabelPrefix="Rate book with"
+              />
             </div>
 
             <div class="mt-5 flex flex-wrap items-center gap-2">

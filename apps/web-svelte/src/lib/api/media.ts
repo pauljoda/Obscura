@@ -174,6 +174,19 @@ export async function updateBook(
   });
 }
 
+export async function uploadBookCover(
+  id: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/books/${id}/cover/upload`, file);
+}
+
+export async function deleteBookCover(
+  id: string,
+): Promise<{ ok: true; coverImagePath: string | null }> {
+  return fetchApi(`/books/${id}/cover`, { method: "DELETE" });
+}
+
 export async function setBookChapterCoverFromPage(
   chapterId: string,
   pageId: string,

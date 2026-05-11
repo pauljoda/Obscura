@@ -21,7 +21,7 @@ describe("resolveBookArtwork", () => {
     });
 
     expect(artwork.coverImagePath).toBe("/assets/books/book-1/cover");
-    expect(artwork.previewImagePaths[0]).toBe("/assets/books/book-1/cover");
+    expect(artwork.previewImagePaths).toEqual(["/assets/books/book-1/cover"]);
   });
 
   it("ignores stale generated page covers and falls back to the first page in volume order", () => {

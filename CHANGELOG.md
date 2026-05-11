@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Media surfaces with filters now include Is NSFW and Not NSFW library-flag filters while still respecting the global hide-NSFW mode.
 - The Job Control page is now denser and easier to scan: active jobs are grouped by queue type with a compact row layout, errors show individually with a Suppress button to hide repeated noise, completed jobs include their duration, and the overview replaces "Retained Done" with a Last Scan timestamp.
 - Book thumbnails now keep user-selected cover art as the default and first preview image, falling back to the first page in volume or chapter order only when no custom cover exists.
+- Book series pages now expose root cover upload/clear controls and rating controls again, so series artwork and ratings can be managed from the book itself.
 
 ### Docs
 
@@ -146,6 +147,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify no-result messages now use a more legible solid surface, can be dismissed directly, and disappear automatically after a short delay.
 - Filtered media surfaces now support explicit NSFW and not-NSFW filtering across videos, images, galleries, books, audio libraries, and actors without bypassing the global NSFW visibility guard.
 - Book thumbnails now distinguish custom cover art from generated page-cover fallbacks, so stale page-cover paths no longer override the user-selected cover and fallback covers follow volume/chapter reading order.
+- Book edit mode now includes root book cover upload and clear actions, and book ratings now appear on book detail pages and book cards instead of only existing as a hidden sortable field.
 
 ### Docs
 

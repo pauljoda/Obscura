@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge, Checkbox } from "@obscura/ui-svelte";
-  import { BookOpen, Files, Landmark } from "@lucide/svelte";
+  import { BookOpen, Files, Landmark, Star } from "@lucide/svelte";
   import type { BookListItemDto } from "@obscura/contracts";
   import type { CardProps } from "$lib/media-surface/config";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
@@ -62,6 +62,12 @@
             <Files class="h-3 w-3" />
             {item.pageCount} page{item.pageCount === 1 ? "" : "s"}
           </span>
+          {#if item.rating != null && item.rating > 0}
+            <span class="inline-flex items-center gap-1 text-text-accent">
+              <Star class="h-3 w-3 fill-current" />
+              {Math.round(item.rating / 20)}
+            </span>
+          {/if}
           {#if item.studioName}
             <span class="inline-flex min-w-0 items-center gap-1 text-text-accent">
               <Landmark class="h-3 w-3 shrink-0" />
@@ -118,6 +124,12 @@
             <Files class="h-3 w-3" />
             {item.pageCount} page{item.pageCount === 1 ? "" : "s"}
           </span>
+          {#if item.rating != null && item.rating > 0}
+            <span class="inline-flex items-center gap-1 text-text-accent">
+              <Star class="h-3 w-3 fill-current" />
+              {Math.round(item.rating / 20)}
+            </span>
+          {/if}
           {#if item.studioName}<span class="truncate text-text-accent">· {item.studioName}</span>{/if}
           {#if item.readCompleted}<Badge variant="accent">Read</Badge>{/if}
         </div>

@@ -2,11 +2,11 @@
   import { onMount, untrack } from "svelte";
   import {
     AlertTriangle,
-    BookOpen,
     Building2,
     Calendar,
     CheckCircle2,
     FileText,
+    Star,
     Tag as TagIcon,
     User,
   } from "@lucide/svelte";
@@ -16,8 +16,9 @@
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import BookChapterCoverEditor from "./BookChapterCoverEditor.svelte";
+  import BookRootCoverEditor from "./BookRootCoverEditor.svelte";
   import BookVolumeCoverEditor from "./BookVolumeCoverEditor.svelte";
-  import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
+  import StarRatingPicker from "./StarRatingPicker.svelte";
   import {
     DateField,
     EditFormShell,
@@ -44,6 +45,7 @@
   let title = $state(untrack(() => book.title));
   let details = $state(untrack(() => book.details ?? ""));
   let date = $state(untrack(() => book.date ?? ""));
+  let rating = $state<number | null>(untrack(() => book.rating ?? null));
   let isNsfw = $state(untrack(() => book.isNsfw));
   let organized = $state(untrack(() => book.organized));
   let studioName = $state(untrack(() => book.studio?.name ?? ""));
@@ -104,6 +106,7 @@
         title: title.trim(),
         details: details.trim() || null,
         date: date.trim() || null,
+        rating,
         isNsfw,
         organized,
         studioName: studioName.trim() || null,
@@ -160,6 +163,17 @@
         value={date}
         onChange={(value) => (date = value)}
       />
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-1.5 text-[0.68rem] uppercase tracking-[0.14em] text-text-muted">
+          <Star class="h-3.5 w-3.5" />
+          Rating
+        </div>
+        <StarRatingPicker
+          value={rating}
+          onChange={(value) => (rating = value)}
+          ariaLabelPrefix="Rate book with"
+        />
+      </div>
       <TextAreaField
         label="Details"
         value={details}
@@ -201,25 +215,7 @@
       </div>
     </EditFormShell>
 
-    <div class="space-y-3">
-      <h4 class="text-kicker flex items-center gap-2">
-        <BookOpen class="h-3.5 w-3.5" />
-        Cover
-      </h4>
-      <div class="surface-well overflow-hidden">
-        <EntityThumbnail
-          kind="book"
-          title={book.title}
-          coverImagePath={book.coverImagePath}
-          previewImagePaths={book.previewImagePaths}
-          pageCount={book.pageCount}
-          isNsfw={book.isNsfw}
-          size="hero"
-          aspectClass="aspect-[2/3]"
-          fit="contain"
-        />
-      </div>
-    </div>
+    <BookRootCoverEditor {book} onChanged={onChanged} />
   </div>
 
   <BookVolumeCoverEditor
