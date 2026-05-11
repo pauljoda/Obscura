@@ -163,6 +163,18 @@ function toImageCandidates(value: unknown): ImageCandidate[] | undefined {
   return candidates.length > 0 ? candidates : undefined;
 }
 
+function toImageCandidateMap(value: unknown): Record<string, ImageCandidate> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const out: Record<string, ImageCandidate> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const candidate = toImageCandidates([raw])?.[0];
+    const normalizedKey = key.trim();
+    if (!normalizedKey || !candidate) continue;
+    out[normalizedKey] = candidate;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 // ─── Video Result Normalizer ───────────────────────────────────────
 
 export function normalizeVideoResult(
@@ -290,6 +302,7 @@ export function normalizeBookResult(
     chapterNumber: toNumber(raw.chapterNumber ?? raw.chapter_number),
     imageCandidates: toImageCandidates(raw.imageCandidates),
     chapterImageCandidates: toImageCandidates(raw.chapterImageCandidates),
+    chapterImageByNumber: toImageCandidateMap(raw.chapterImageByNumber),
     externalIds: toExternalIds(raw.externalIds),
     candidates: toCandidates<NormalizedBookCandidate>(raw.candidates),
     isNsfw: toBoolean(raw.isNsfw),

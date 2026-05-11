@@ -49,6 +49,12 @@ export function bookResult(
     chapterImageCandidates: Array.isArray(raw.chapterImageCandidates)
       ? (raw.chapterImageCandidates as NormalizedBookIdentifyResult["chapterImageCandidates"])
       : undefined,
+    chapterImageByNumber:
+      raw.chapterImageByNumber &&
+      typeof raw.chapterImageByNumber === "object" &&
+      !Array.isArray(raw.chapterImageByNumber)
+        ? (raw.chapterImageByNumber as NormalizedBookIdentifyResult["chapterImageByNumber"])
+        : undefined,
     externalIds:
       raw.externalIds && typeof raw.externalIds === "object"
         ? (raw.externalIds as Record<string, string>)

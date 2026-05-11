@@ -307,6 +307,7 @@ export interface NormalizedBookResult {
   chapterNumber?: number | null;
   imageCandidates?: ImageCandidate[];
   chapterImageCandidates?: ImageCandidate[];
+  chapterImageByNumber?: Record<string, ImageCandidate>;
   externalIds?: Record<string, string>;
   candidates?: NormalizedBookCandidate[];
   isNsfw?: boolean;

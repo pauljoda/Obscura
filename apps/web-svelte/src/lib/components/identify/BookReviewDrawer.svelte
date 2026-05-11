@@ -72,6 +72,26 @@
     return fallbackImageCandidate(r.chapterImageUrl ?? r.imageUrl, "plugin");
   }
 
+  function exactChapterCandidate(
+    r: NormalizedBookIdentifyResult,
+    chapter: BookChapterDto,
+  ): ImageCandidate | null {
+    return r.chapterImageByNumber?.[String(chapter.chapterNumber)] ?? null;
+  }
+
+  function chapterCandidatesFor(
+    r: NormalizedBookIdentifyResult,
+    chapter: BookChapterDto,
+  ): ImageCandidate[] {
+    const exact = exactChapterCandidate(r, chapter);
+    const candidates = chapterCoverCandidates(r);
+    if (!exact) return candidates;
+    return [
+      exact,
+      ...candidates.filter((candidate) => candidate.url !== exact.url),
+    ];
+  }
+
   function chapterImageKey(chapterId: string): string {
     return `chapterCover:${chapterId}`;
   }
@@ -159,7 +179,7 @@
   async function doAccept() {
     busy = true;
     try {
-      await onAccept(selectedImages);
+      await onAccept(selectedImagesForAccept());
     } finally {
       busy = false;
     }
@@ -168,11 +188,24 @@
   async function doAcceptNext() {
     busy = true;
     try {
-      if (onAcceptAndNext) await onAcceptAndNext(selectedImages);
-      else await onAccept(selectedImages);
+      if (onAcceptAndNext) await onAcceptAndNext(selectedImagesForAccept());
+      else await onAccept(selectedImagesForAccept());
     } finally {
       busy = false;
     }
+  }
+
+  function selectedImagesForAccept(): BookSelectedImages {
+    const next: BookSelectedImages = { ...selectedImages };
+    const result = row.result;
+    if (!result) return next;
+    for (const chapter of chapters) {
+      const key = chapterImageKey(chapter.id);
+      if (Object.prototype.hasOwnProperty.call(next, key)) continue;
+      const exact = exactChapterCandidate(result, chapter);
+      if (exact) next[key] = exact.url;
+    }
+    return next;
   }
 </script>
 
@@ -328,8 +361,15 @@
                     <ImagePicker
                       label={`Ch. ${chapter.chapterNumber}`}
                       aspect="poster"
-                      candidates={chapterCoverCandidates(r)}
-                      value={selectedImages[chapterImageKey(chapter.id)] ?? null}
+                      candidates={chapterCandidatesFor(r, chapter)}
+                      value={
+                        Object.prototype.hasOwnProperty.call(
+                          selectedImages,
+                          chapterImageKey(chapter.id),
+                        )
+                          ? selectedImages[chapterImageKey(chapter.id)]
+                          : (exactChapterCandidate(r, chapter)?.url ?? null)
+                      }
                       onSelect={(url) => setChapterCover(chapter.id, url)}
                     />
                     <p class="truncate text-[0.62rem] text-text-muted" title={chapter.title}>
