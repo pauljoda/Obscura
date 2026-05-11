@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { schema, type AppDb } from "@obscura/db";
 import type {
   BookDetailDto,
+  BookVolumeDto,
   BookListItemDto,
   BookPageDto,
   BookProgressDto,
@@ -16,6 +17,7 @@ import {
   getGeneratedBookChapterDir,
   getGeneratedBookDir,
   getGeneratedBookPageDir,
+  getGeneratedBookVolumeDir,
   parseZipImageMembers,
 } from "@obscura/media-core";
 import { InternalError, NotFoundError, ValidationError } from "./errors";
@@ -43,6 +45,7 @@ import {
 
 const {
   books,
+  bookVolumes,
   bookChapters,
   bookPages,
   bookPerformers,
@@ -457,7 +460,7 @@ export async function getBookDetailRead(
   const [base] = await decorateBookItems(db, [book], nsfwMode);
   if (!base) throw new NotFoundError("Book not found");
 
-  const [studioRow, performerRows, chapterRows, pageRows] = await Promise.all([
+  const [studioRow, performerRows, volumeRows, chapterRows, pageRows] = await Promise.all([
     book.studioId
       ? db
           .select({ id: studios.id, name: studios.name, url: studios.url })
@@ -479,6 +482,11 @@ export async function getBookDetailRead(
       .orderBy(asc(performers.name)),
     db
       .select()
+      .from(bookVolumes)
+      .where(eq(bookVolumes.bookId, id))
+      .orderBy(asc(bookVolumes.volumeNumber), asc(bookVolumes.title)),
+    db
+      .select()
       .from(bookChapters)
       .where(eq(bookChapters.bookId, id))
       .orderBy(asc(bookChapters.chapterNumber), asc(bookChapters.title)),
@@ -494,6 +502,48 @@ export async function getBookDetailRead(
     pagesByChapter.set(page.chapterId, [...(pagesByChapter.get(page.chapterId) ?? []), page]);
   }
 
+  const chapters = chapterRows.map((chapter) => {
+    const chapterPages = pagesByChapter.get(chapter.id) ?? [];
+    const coverPageId = chapter.coverPageId ?? chapterPages[0]?.id ?? null;
+    return {
+      id: chapter.id,
+      bookId: chapter.bookId,
+      volumeId: chapter.volumeId,
+      title: chapter.title,
+      chapterNumber: chapter.chapterNumber,
+      archivePath: chapter.archivePath,
+      relativePath: chapter.relativePath,
+      pageCount: chapter.pageCount,
+      coverPageId: chapter.coverPageId,
+      coverImagePath: chapter.coverImagePath ?? (coverPageId ? `/assets/book-pages/${coverPageId}/thumb` : null),
+      hasCustomCover: Boolean(chapter.coverImagePath),
+      pages: chapterPages.map(toPageDto),
+    };
+  });
+  const chaptersByVolume = new Map<string, typeof chapters>();
+  for (const chapter of chapters) {
+    if (!chapter.volumeId) continue;
+    chaptersByVolume.set(chapter.volumeId, [...(chaptersByVolume.get(chapter.volumeId) ?? []), chapter]);
+  }
+  const volumes: BookVolumeDto[] = volumeRows.map((volume) => {
+    const volumeChapters = chaptersByVolume.get(volume.id) ?? [];
+    const pageCount = volumeChapters.reduce((sum, chapter) => sum + chapter.pageCount, 0);
+    return {
+      id: volume.id,
+      bookId: volume.bookId,
+      volumeNumber: volume.volumeNumber,
+      title: volume.title,
+      folderPath: volume.folderPath,
+      relativePath: volume.relativePath,
+      coverImagePath: volume.coverImagePath,
+      hasCustomCover: Boolean(volume.coverImagePath),
+      pageCount,
+      chapterCount: volumeChapters.length,
+      externalIds: volume.externalIds ?? {},
+      chapters: volumeChapters,
+    };
+  });
+
   return {
     ...base,
     folderPath: book.folderPath,
@@ -501,23 +551,8 @@ export async function getBookDetailRead(
     urls: book.urls,
     studio: studioRow[0] ?? null,
     performers: (nsfwMode === "off" ? performerRows.filter((p) => !p.isNsfw) : performerRows),
-    chapters: chapterRows.map((chapter) => {
-      const chapterPages = pagesByChapter.get(chapter.id) ?? [];
-      const coverPageId = chapter.coverPageId ?? chapterPages[0]?.id ?? null;
-      return {
-        id: chapter.id,
-        bookId: chapter.bookId,
-        title: chapter.title,
-        chapterNumber: chapter.chapterNumber,
-        archivePath: chapter.archivePath,
-        relativePath: chapter.relativePath,
-        pageCount: chapter.pageCount,
-        coverPageId: chapter.coverPageId,
-        coverImagePath: chapter.coverImagePath ?? (coverPageId ? `/assets/book-pages/${coverPageId}/thumb` : null),
-        hasCustomCover: Boolean(chapter.coverImagePath),
-        pages: chapterPages.map(toPageDto),
-      };
-    }),
+    volumes,
+    chapters,
   };
 }
 
@@ -769,6 +804,10 @@ function bookChapterCoverPath(chapterId: string) {
   return `/assets/book-chapters/${chapterId}/cover`;
 }
 
+function bookVolumeCoverPath(volumeId: string) {
+  return `/assets/book-volumes/${volumeId}/cover`;
+}
+
 async function deleteBookChapterCustomCoverFile(chapterId: string) {
   const customPath = path.join(getGeneratedBookChapterDir(chapterId), BOOK_CHAPTER_COVER_FILE);
   try {
@@ -866,6 +905,87 @@ export async function setBookChapterCoverFromUrlWrite(
   return uploadBookChapterCoverWrite(db, chapterId, buffer);
 }
 
+async function deleteBookVolumeCustomCoverFile(volumeId: string) {
+  const customPath = path.join(getGeneratedBookVolumeDir(volumeId), BOOK_CHAPTER_COVER_FILE);
+  try {
+    if (existsSync(customPath)) await unlink(customPath);
+  } catch {
+    /* non-fatal */
+  }
+}
+
+export async function uploadBookVolumeCoverWrite(
+  db: AppDb,
+  volumeId: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const [volume] = await db
+    .select({ id: bookVolumes.id })
+    .from(bookVolumes)
+    .where(eq(bookVolumes.id, volumeId))
+    .limit(1);
+  if (!volume) throw new NotFoundError("Volume not found");
+
+  const dir = getGeneratedBookVolumeDir(volumeId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, BOOK_CHAPTER_COVER_FILE), buffer);
+
+  const coverImagePath = bookVolumeCoverPath(volumeId);
+  await db
+    .update(bookVolumes)
+    .set({
+      coverImagePath,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookVolumes.id, volumeId));
+
+  return {
+    ok: true as const,
+    coverImagePath,
+  };
+}
+
+export async function setBookVolumeCoverFromUrlWrite(
+  db: AppDb,
+  volumeId: string,
+  imageUrl: string,
+) {
+  let buffer: Buffer;
+  if (imageUrl.startsWith("data:image/")) {
+    const b64 = imageUrl.split(",")[1];
+    if (!b64) throw new ValidationError("Bad data URL");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new InternalError(`Image download failed: HTTP ${res.status}`);
+    }
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+  return uploadBookVolumeCoverWrite(db, volumeId, buffer);
+}
+
+export async function deleteBookVolumeCoverWrite(db: AppDb, volumeId: string) {
+  const [volume] = await db
+    .select({ id: bookVolumes.id })
+    .from(bookVolumes)
+    .where(eq(bookVolumes.id, volumeId))
+    .limit(1);
+  if (!volume) throw new NotFoundError("Volume not found");
+
+  await deleteBookVolumeCustomCoverFile(volumeId);
+  await db
+    .update(bookVolumes)
+    .set({
+      coverImagePath: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookVolumes.id, volumeId));
+
+  return { ok: true as const };
+}
+
 export async function deleteBookChapterCoverWrite(db: AppDb, chapterId: string) {
   const [chapter] = await db
     .select({ id: bookChapters.id })
@@ -907,6 +1027,7 @@ export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false)
   }
 
   const pageRows = await db.select({ id: bookPages.id }).from(bookPages).where(eq(bookPages.bookId, id));
+  const volumeRows = await db.select({ id: bookVolumes.id }).from(bookVolumes).where(eq(bookVolumes.bookId, id));
   await db.delete(books).where(eq(books.id, id));
 
   for (const page of pageRows) {
@@ -917,6 +1038,12 @@ export async function deleteBookWrite(db: AppDb, id: string, deleteFile = false)
   }
   for (const chapter of chapters) {
     await rm(getGeneratedBookChapterDir(chapter.id), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
+  }
+  for (const volume of volumeRows) {
+    await rm(getGeneratedBookVolumeDir(volume.id), {
       recursive: true,
       force: true,
     }).catch(() => undefined);

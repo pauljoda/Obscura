@@ -861,6 +861,32 @@ export const books = pgTable(
   ],
 );
 
+export const bookVolumes = pgTable(
+  "book_volumes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookId: uuid("book_id")
+      .references(() => books.id, { onDelete: "cascade" })
+      .notNull(),
+    volumeNumber: integer("volume_number"),
+    title: text("title").notNull(),
+    folderPath: text("folder_path"),
+    relativePath: text("relative_path"),
+    coverImagePath: text("cover_image_path"),
+    externalIds: jsonb("external_ids")
+      .$type<Record<string, string>>()
+      .default({})
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("book_volumes_book_idx").on(table.bookId),
+    uniqueIndex("book_volumes_book_number_idx").on(table.bookId, table.volumeNumber),
+    uniqueIndex("book_volumes_book_relative_idx").on(table.bookId, table.relativePath),
+  ],
+);
+
 export const bookChapters = pgTable(
   "book_chapters",
   {
@@ -868,6 +894,7 @@ export const bookChapters = pgTable(
     bookId: uuid("book_id")
       .references(() => books.id, { onDelete: "cascade" })
       .notNull(),
+    volumeId: uuid("volume_id").references(() => bookVolumes.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     chapterNumber: integer("chapter_number").default(1).notNull(),
     archivePath: text("archive_path").notNull(),
@@ -988,6 +1015,7 @@ export const booksRelations = relations(books, ({ one, many }) => ({
     references: [libraryRoots.id],
   }),
   studio: one(studios, { fields: [books.studioId], references: [studios.id] }),
+  volumes: many(bookVolumes),
   chapters: many(bookChapters),
   pages: many(bookPages),
   bookPerformers: many(bookPerformers),
@@ -1000,8 +1028,14 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 
 export const bookChaptersRelations = relations(bookChapters, ({ one, many }) => ({
   book: one(books, { fields: [bookChapters.bookId], references: [books.id] }),
+  volume: one(bookVolumes, { fields: [bookChapters.volumeId], references: [bookVolumes.id] }),
   pages: many(bookPages),
   progressRows: many(bookReadProgress),
+}));
+
+export const bookVolumesRelations = relations(bookVolumes, ({ one, many }) => ({
+  book: one(books, { fields: [bookVolumes.bookId], references: [books.id] }),
+  chapters: many(bookChapters),
 }));
 
 export const bookPagesRelations = relations(bookPages, ({ one }) => ({

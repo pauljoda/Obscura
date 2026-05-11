@@ -142,6 +142,12 @@ export interface NormalizedGalleryCandidate {
 
 export type NormalizedBookCandidate = NormalizedGalleryCandidate;
 
+export interface NormalizedBookVolumeCover extends ImageCandidate {
+  volumeNumber: string;
+  title?: string | null;
+  externalIds?: Record<string, string>;
+}
+
 export interface ImageRow {
   image: ImageListItemDto;
   status: RowStatus;
@@ -214,6 +220,9 @@ export interface NormalizedBookIdentifyResult {
   imageCandidates?: ImageCandidate[];
   chapterImageCandidates?: ImageCandidate[];
   chapterImageByNumber?: Record<string, ImageCandidate>;
+  volumeCovers?: NormalizedBookVolumeCover[];
+  chapterVolumeByNumber?: Record<string, string>;
+  chapterTitleByNumber?: Record<string, string>;
   externalIds?: Record<string, string>;
   candidates?: NormalizedBookCandidate[];
   isNsfw?: boolean;

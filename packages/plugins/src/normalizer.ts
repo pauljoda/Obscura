@@ -14,6 +14,7 @@ import type {
   NormalizedGalleryCandidate,
   NormalizedBookResult,
   NormalizedBookCandidate,
+  NormalizedBookVolumeCover,
   NormalizedImageResult,
   NormalizedAudioTrackResult,
   NormalizedAudioLibraryResult,
@@ -175,6 +176,37 @@ function toImageCandidateMap(value: unknown): Record<string, ImageCandidate> | u
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+function toStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const normalizedKey = key.trim();
+    const normalizedValue = trimOrNull(raw);
+    if (!normalizedKey || !normalizedValue) continue;
+    out[normalizedKey] = normalizedValue;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function toVolumeCovers(value: unknown): NormalizedBookVolumeCover[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out: NormalizedBookVolumeCover[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    const candidate = toImageCandidates([item])?.[0];
+    const volumeNumber = trimOrNull(item.volumeNumber ?? item.volume);
+    if (!candidate || !volumeNumber) continue;
+    out.push({
+      ...candidate,
+      volumeNumber,
+      title: trimOrNull(item.title),
+      externalIds: toExternalIds(item.externalIds),
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 // ─── Video Result Normalizer ───────────────────────────────────────
 
 export function normalizeVideoResult(
@@ -303,6 +335,9 @@ export function normalizeBookResult(
     imageCandidates: toImageCandidates(raw.imageCandidates),
     chapterImageCandidates: toImageCandidates(raw.chapterImageCandidates),
     chapterImageByNumber: toImageCandidateMap(raw.chapterImageByNumber),
+    volumeCovers: toVolumeCovers(raw.volumeCovers),
+    chapterVolumeByNumber: toStringRecord(raw.chapterVolumeByNumber),
+    chapterTitleByNumber: toStringRecord(raw.chapterTitleByNumber),
     externalIds: toExternalIds(raw.externalIds),
     candidates: toCandidates<NormalizedBookCandidate>(raw.candidates),
     isNsfw: toBoolean(raw.isNsfw),

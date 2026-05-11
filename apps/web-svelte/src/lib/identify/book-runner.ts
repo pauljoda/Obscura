@@ -55,6 +55,21 @@ export function bookResult(
       !Array.isArray(raw.chapterImageByNumber)
         ? (raw.chapterImageByNumber as NormalizedBookIdentifyResult["chapterImageByNumber"])
         : undefined,
+    volumeCovers: Array.isArray(raw.volumeCovers)
+      ? (raw.volumeCovers as NormalizedBookIdentifyResult["volumeCovers"])
+      : undefined,
+    chapterVolumeByNumber:
+      raw.chapterVolumeByNumber &&
+      typeof raw.chapterVolumeByNumber === "object" &&
+      !Array.isArray(raw.chapterVolumeByNumber)
+        ? (raw.chapterVolumeByNumber as NormalizedBookIdentifyResult["chapterVolumeByNumber"])
+        : undefined,
+    chapterTitleByNumber:
+      raw.chapterTitleByNumber &&
+      typeof raw.chapterTitleByNumber === "object" &&
+      !Array.isArray(raw.chapterTitleByNumber)
+        ? (raw.chapterTitleByNumber as NormalizedBookIdentifyResult["chapterTitleByNumber"])
+        : undefined,
     externalIds:
       raw.externalIds && typeof raw.externalIds === "object"
         ? (raw.externalIds as Record<string, string>)

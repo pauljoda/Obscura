@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Check, Loader2 } from "@lucide/svelte";
-  import type { BookChapterDto, ImageCandidate } from "@obscura/contracts";
+  import { Check, ChevronDown, Loader2 } from "@lucide/svelte";
+  import type { BookChapterDto, BookVolumeDto, ImageCandidate } from "@obscura/contracts";
   import { Checkbox, cn } from "@obscura/ui-svelte";
   import { fetchBookDetail } from "$lib/api/media";
   import { executePlugin, fetchScrapeResult } from "$lib/api/scrapers";
@@ -11,7 +11,6 @@
     NormalizedBookIdentifyResult,
   } from "$lib/identify/identify-types";
   import { bookResult } from "$lib/identify/book-runner";
-  import { entityTerms } from "$lib/terminology";
   import ReviewDrawer from "./ReviewDrawer.svelte";
   import ToggleableField from "../scrape/ToggleableField.svelte";
   import CandidatePicker from "./CandidatePicker.svelte";
@@ -52,7 +51,11 @@
   let rerunError = $state<string | null>(null);
   let pickedCandidate = $state<string | null>(null);
   let selectedImages = $state<BookSelectedImages>({});
+  let volumeStates = $state<Record<string, { accepted: boolean; expanded: boolean }>>({});
+  let chapterTitleEnabled = $state<Record<string, boolean>>({});
+  let chapterTitleValues = $state<Record<string, string>>({});
   let chapters = $state<BookChapterDto[]>([]);
+  let volumes = $state<BookVolumeDto[]>([]);
   let chaptersLoading = $state(false);
   let chapterError = $state<string | null>(null);
 
@@ -68,8 +71,7 @@
 
   function chapterCoverCandidates(r: NormalizedBookIdentifyResult): ImageCandidate[] {
     if (r.chapterImageCandidates?.length) return r.chapterImageCandidates;
-    if (r.imageCandidates?.length) return r.imageCandidates;
-    return fallbackImageCandidate(r.chapterImageUrl ?? r.imageUrl, "plugin");
+    return fallbackImageCandidate(r.chapterImageUrl, "plugin");
   }
 
   function exactChapterCandidate(
@@ -101,6 +103,73 @@
     selectedImages = { ...selectedImages, [key]: url };
   }
 
+  function chapterTitleKey(chapterId: string): string {
+    return `chapterTitle:${chapterId}`;
+  }
+
+  function exactChapterTitle(
+    r: NormalizedBookIdentifyResult,
+    chapter: BookChapterDto,
+  ): string | null {
+    return r.chapterTitleByNumber?.[String(chapter.chapterNumber)]?.trim() || null;
+  }
+
+  function chapterTitleValue(r: NormalizedBookIdentifyResult, chapter: BookChapterDto): string {
+    return chapterTitleValues[chapter.id] ?? exactChapterTitle(r, chapter) ?? chapter.title;
+  }
+
+  function chapterTitleIsEnabled(r: NormalizedBookIdentifyResult, chapter: BookChapterDto): boolean {
+    if (Object.prototype.hasOwnProperty.call(chapterTitleEnabled, chapter.id)) {
+      return chapterTitleEnabled[chapter.id] ?? false;
+    }
+    return Boolean(exactChapterTitle(r, chapter));
+  }
+
+  function setChapterTitleEnabled(chapterId: string, enabled: boolean) {
+    chapterTitleEnabled = { ...chapterTitleEnabled, [chapterId]: enabled };
+  }
+
+  function setChapterTitleValue(chapterId: string, title: string) {
+    chapterTitleValues = { ...chapterTitleValues, [chapterId]: title };
+  }
+
+  function volumeGroupKey(volumeNumber: string): string {
+    return `volumeGroup:${volumeNumber}`;
+  }
+
+  function volumeCoverKey(volumeNumber: string): string {
+    return `volumeCover:${volumeNumber}`;
+  }
+
+  function volumeCoverCandidates(
+    r: NormalizedBookIdentifyResult,
+    volumeNumber: string,
+  ): ImageCandidate[] {
+    return (r.volumeCovers ?? []).filter(
+      (candidate) => String(candidate.volumeNumber) === volumeNumber,
+    );
+  }
+
+  function volumeState(volumeNumber: string): { accepted: boolean; expanded: boolean } {
+    return volumeStates[volumeNumber] ?? { accepted: true, expanded: true };
+  }
+
+  function setVolumeAccepted(volumeNumber: string, accepted: boolean) {
+    const current = volumeState(volumeNumber);
+    volumeStates = {
+      ...volumeStates,
+      [volumeNumber]: { ...current, accepted },
+    };
+  }
+
+  function toggleVolumeExpanded(volumeNumber: string) {
+    const current = volumeState(volumeNumber);
+    volumeStates = {
+      ...volumeStates,
+      [volumeNumber]: { ...current, expanded: !current.expanded },
+    };
+  }
+
   $effect(() => {
     const bookId = row.book.id;
     let cancelled = false;
@@ -109,11 +178,15 @@
 
     void fetchBookDetail(bookId, { nsfw: includeNsfw ? "show" : "off" })
       .then((detail) => {
-        if (!cancelled) chapters = detail.chapters;
+        if (!cancelled) {
+          chapters = detail.chapters;
+          volumes = detail.volumes;
+        }
       })
       .catch((err) => {
         if (!cancelled) {
           chapters = [];
+          volumes = [];
           chapterError = err instanceof Error ? err.message : "Failed to load chapters";
         }
       })
@@ -199,13 +272,85 @@
     const next: BookSelectedImages = { ...selectedImages };
     const result = row.result;
     if (!result) return next;
+    for (const group of volumeGroups(result)) {
+      next[volumeGroupKey(group.volumeNumber)] = volumeState(group.volumeNumber).accepted
+        ? "accept"
+        : "loose";
+      const coverKey = volumeCoverKey(group.volumeNumber);
+      if (!Object.prototype.hasOwnProperty.call(next, coverKey) && group.cover?.url) {
+        next[coverKey] = group.cover.url;
+      }
+    }
     for (const chapter of chapters) {
       const key = chapterImageKey(chapter.id);
       if (Object.prototype.hasOwnProperty.call(next, key)) continue;
       const exact = exactChapterCandidate(result, chapter);
       if (exact) next[key] = exact.url;
+      if (chapterTitleIsEnabled(result, chapter)) {
+        const title = chapterTitleValue(result, chapter).trim();
+        if (title) next[chapterTitleKey(chapter.id)] = title;
+      }
     }
     return next;
+  }
+
+  function volumeSortValue(value: string): number {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  }
+
+  function volumeGroups(r: NormalizedBookIdentifyResult): Array<{
+    volumeNumber: string;
+    title: string;
+    cover: ImageCandidate | null;
+    chapters: BookChapterDto[];
+  }> {
+    const numbers: string[] = [];
+    for (const cover of r.volumeCovers ?? []) {
+      const value = String(cover.volumeNumber);
+      if (cover.volumeNumber && !numbers.includes(value)) numbers.push(value);
+    }
+    for (const volumeNumber of Object.values(r.chapterVolumeByNumber ?? {})) {
+      const value = String(volumeNumber);
+      if (volumeNumber && !numbers.includes(value)) numbers.push(value);
+    }
+
+    return numbers
+      .sort((a, b) => volumeSortValue(a) - volumeSortValue(b) || a.localeCompare(b))
+      .map((volumeNumber) => {
+        const cover = r.volumeCovers?.find((item) => String(item.volumeNumber) === volumeNumber) ?? null;
+        const existingVolume = volumes.find((item) => String(item.volumeNumber ?? "") === volumeNumber) ?? null;
+        const groupedChapters = chapters.filter(
+          (chapter) => r.chapterVolumeByNumber?.[String(chapter.chapterNumber)] === volumeNumber,
+        );
+        return {
+          volumeNumber,
+          title: cover?.title ?? existingVolume?.title ?? `Volume ${volumeNumber}`,
+          cover,
+          chapters: groupedChapters.length > 0 ? groupedChapters : (existingVolume?.chapters ?? []),
+        };
+      })
+      .filter((group) => group.chapters.length > 0);
+  }
+
+  function acceptedVolumeChapterIds(r: NormalizedBookIdentifyResult): string[] {
+    const ids: string[] = [];
+    for (const group of volumeGroups(r)) {
+      if (!volumeState(group.volumeNumber).accepted) continue;
+      for (const chapter of group.chapters) {
+        if (!ids.includes(chapter.id)) ids.push(chapter.id);
+      }
+    }
+    return ids;
+  }
+
+  function looseChapters(r: NormalizedBookIdentifyResult): BookChapterDto[] {
+    const grouped = acceptedVolumeChapterIds(r);
+    return chapters.filter((chapter) => !grouped.includes(chapter.id));
+  }
+
+  function hasChapterEdits(r: NormalizedBookIdentifyResult): boolean {
+    return chapterCoverCandidates(r).length > 0 || Boolean(r.chapterTitleByNumber);
   }
 </script>
 
@@ -258,6 +403,43 @@
     <div class="p-5 space-y-4">
       {#if row.result}
         {@const r = row.result}
+        {#snippet chapterEditRow(chapter: BookChapterDto)}
+          <div class="grid gap-3 border border-border-subtle/40 bg-surface-2/30 p-2.5 sm:grid-cols-[70px_1fr]">
+            <ImagePicker
+              label={`Ch. ${chapter.chapterNumber}`}
+              aspect="poster"
+              candidates={chapterCandidatesFor(r, chapter)}
+              value={
+                Object.prototype.hasOwnProperty.call(
+                  selectedImages,
+                  chapterImageKey(chapter.id),
+                )
+                  ? selectedImages[chapterImageKey(chapter.id)]
+                  : (exactChapterCandidate(r, chapter)?.url ?? null)
+              }
+              onSelect={(url) => setChapterCover(chapter.id, url)}
+              class="w-[70px]"
+            />
+            <div class="min-w-0 space-y-2">
+              <div class="flex items-center gap-2">
+                <Checkbox
+                  checked={chapterTitleIsEnabled(r, chapter)}
+                  onchange={(e) => setChapterTitleEnabled(chapter.id, (e.currentTarget as HTMLInputElement).checked)}
+                />
+                <span class="text-kicker">Title</span>
+              </div>
+              <input
+                value={chapterTitleValue(r, chapter)}
+                oninput={(e) => setChapterTitleValue(chapter.id, (e.currentTarget as HTMLInputElement).value)}
+                disabled={!chapterTitleIsEnabled(r, chapter)}
+                class="w-full border border-border-subtle bg-surface-1 px-2 py-1.5 text-[0.76rem] text-text-primary disabled:opacity-50"
+              />
+              <p class="truncate text-[0.62rem] text-text-muted" title={chapter.title}>
+                Local: {chapter.title}
+              </p>
+            </div>
+          </div>
+        {/snippet}
         {#if r.candidates && r.candidates.length > 0}
           <div class="-mx-5 -mt-5">
             <CandidatePicker
@@ -315,7 +497,7 @@
                     checked={row.selectedFields.has("performers")}
                     onchange={() => onToggleField("performers")}
                   />
-                  <span class="text-kicker">{entityTerms.performers}</span>
+                  <span class="text-kicker">Artists</span>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   {#each r.performerNames as name (name)}
@@ -342,10 +524,97 @@
             {/if}
           </div>
         </div>
-        {#if chapterCoverCandidates(r).length > 0}
+        {#if volumeGroups(r).length > 0}
           <div class="border-t border-border-subtle pt-4">
             <div class="mb-3 flex items-center justify-between gap-3">
-              <span class="text-kicker">Chapter covers</span>
+              <span class="text-kicker">Volume groups</span>
+              <span class="text-[0.62rem] text-text-muted">
+                Accepted groups will move their matched chapters into volume folders.
+              </span>
+            </div>
+            <div class="overflow-hidden border border-border-subtle">
+              {#each volumeGroups(r) as group (group.volumeNumber)}
+                {@const state = volumeState(group.volumeNumber)}
+                <div class="border-b border-border-subtle/50 last:border-b-0">
+                  <div
+                    class="flex w-full items-center gap-4 px-4 py-4 text-left hover:bg-surface-2/40"
+                  >
+                    <Checkbox
+                      size="md"
+                      checked={state.accepted}
+                      onchange={(e) => {
+                        e.stopPropagation();
+                        setVolumeAccepted(
+                          group.volumeNumber,
+                          (e.currentTarget as HTMLInputElement).checked,
+                        );
+                      }}
+                      title="Accept this volume group"
+                    />
+                    <div class="w-24 flex-shrink-0">
+                      <ImagePicker
+                        label="Volume cover"
+                        aspect="poster"
+                        candidates={volumeCoverCandidates(r, group.volumeNumber)}
+                        value={
+                          Object.prototype.hasOwnProperty.call(
+                            selectedImages,
+                            volumeCoverKey(group.volumeNumber),
+                          )
+                            ? selectedImages[volumeCoverKey(group.volumeNumber)]
+                            : (group.cover?.url ?? null)
+                        }
+                        onSelect={(url) =>
+                          (selectedImages = {
+                            ...selectedImages,
+                            [volumeCoverKey(group.volumeNumber)]: url,
+                          })}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onclick={() => toggleVolumeExpanded(group.volumeNumber)}
+                      class="flex min-w-0 flex-1 items-center gap-4 text-left"
+                    >
+                      <div class="min-w-0 flex-1">
+                        <div class="truncate text-[1rem] font-semibold text-text-primary">{group.title}</div>
+                        <div class="mt-1 text-[0.7rem] text-text-muted">
+                          {group.chapters.length} chapter{group.chapters.length === 1 ? "" : "s"} · {state.accepted ? "will be grouped" : "will stay loose"}
+                        </div>
+                      </div>
+                      <span class="hidden text-[0.62rem] text-text-disabled sm:inline">
+                        {group.chapters.map((chapter) => `Ch. ${chapter.chapterNumber}`).join(", ")}
+                      </span>
+                      <ChevronDown
+                        class={cn(
+                          "h-3.5 w-3.5 flex-shrink-0 text-text-disabled transition-transform duration-fast",
+                          state.expanded && "rotate-180",
+                        )}
+                      />
+                    </button>
+                  </div>
+                  {#if state.expanded}
+                    <div class="space-y-2 border-t border-border-subtle/50 bg-surface-2/20 p-3">
+                      {#if !state.accepted}
+                        <p class="text-[0.68rem] text-text-muted">
+                          This volume is unchecked. Its chapters will remain loose and are editable below.
+                        </p>
+                      {:else}
+                        {#each group.chapters as chapter (chapter.id)}
+                          {@render chapterEditRow(chapter)}
+                        {/each}
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+        {#if hasChapterEdits(r) && looseChapters(r).length > 0}
+          <div class="border-t border-border-subtle pt-4">
+            <div class="mb-3 flex items-center justify-between gap-3">
+              <span class="text-kicker">Loose chapters</span>
               {#if chaptersLoading}
                 <span class="flex items-center gap-1.5 text-[0.62rem] text-text-muted">
                   <Loader2 class="h-3 w-3 animate-spin" /> loading chapters...
@@ -354,28 +623,10 @@
             </div>
             {#if chapterError}
               <p class="text-[0.68rem] text-status-error-text">{chapterError}</p>
-            {:else if chapters.length > 0}
-              <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {#each chapters as chapter (chapter.id)}
-                  <div class="space-y-1">
-                    <ImagePicker
-                      label={`Ch. ${chapter.chapterNumber}`}
-                      aspect="poster"
-                      candidates={chapterCandidatesFor(r, chapter)}
-                      value={
-                        Object.prototype.hasOwnProperty.call(
-                          selectedImages,
-                          chapterImageKey(chapter.id),
-                        )
-                          ? selectedImages[chapterImageKey(chapter.id)]
-                          : (exactChapterCandidate(r, chapter)?.url ?? null)
-                      }
-                      onSelect={(url) => setChapterCover(chapter.id, url)}
-                    />
-                    <p class="truncate text-[0.62rem] text-text-muted" title={chapter.title}>
-                      {chapter.title}
-                    </p>
-                  </div>
+            {:else if looseChapters(r).length > 0}
+              <div class="space-y-2">
+                {#each looseChapters(r) as chapter (chapter.id)}
+                  {@render chapterEditRow(chapter)}
                 {/each}
               </div>
             {:else if !chaptersLoading}

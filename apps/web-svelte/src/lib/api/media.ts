@@ -193,6 +193,19 @@ export async function deleteBookChapterCover(
   return fetchApi(`/book-chapters/${chapterId}/cover`, { method: "DELETE" });
 }
 
+export async function uploadBookVolumeCover(
+  volumeId: string,
+  file: File,
+): Promise<{ ok: true; coverImagePath: string }> {
+  return uploadFile(`/book-volumes/${volumeId}/cover/upload`, file);
+}
+
+export async function deleteBookVolumeCover(
+  volumeId: string,
+): Promise<{ ok: true }> {
+  return fetchApi(`/book-volumes/${volumeId}/cover`, { method: "DELETE" });
+}
+
 export async function deleteBook(id: string, deleteFile?: boolean): Promise<{ ok: true }> {
   const qs = deleteFile ? "?deleteFile=true" : "";
   return fetchApi(`/books/${id}${qs}`, { method: "DELETE" });

@@ -79,6 +79,7 @@ export const {
   audioTrackPerformers,
   audioTrackTags,
   books,
+  bookVolumes,
   bookChapters,
   bookPages,
   bookPerformers,

@@ -34,12 +34,13 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   use:portal
-  class="fixed inset-0 z-[190] flex justify-end bg-bg/70"
+  class="review-drawer-shell fixed inset-0 z-[190] flex justify-end"
   onclick={(e) => {
     if (e.target === e.currentTarget) onClose();
   }}
 >
-  <div class="review-drawer-panel flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
+  <div class="review-drawer-backdrop" aria-hidden="true"></div>
+  <div class="review-drawer-panel relative z-10 flex h-full w-full max-w-3xl flex-col border-l border-border-subtle shadow-2xl">
     <div class="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
       <div class="min-w-0 flex-1">
         <div class="text-[0.6rem] uppercase tracking-[0.14em] text-text-muted">
@@ -117,5 +118,21 @@
    */
   .review-drawer-panel {
     background-color: rgb(13, 16, 23);
+    transform: translateZ(0);
+  }
+
+  .review-drawer-shell {
+    isolation: isolate;
+    contain: paint;
+  }
+
+  .review-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: rgba(8, 10, 15, 0.72);
+    transform: translateZ(0);
+    will-change: opacity;
   }
 </style>

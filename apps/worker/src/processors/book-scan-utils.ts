@@ -13,6 +13,9 @@ export interface ComicBookArchivePlan {
   chapterNumber: number;
   relativePath: string;
   bookRelativePath: string;
+  volumeNumber: number | null;
+  volumeTitle: string | null;
+  volumeRelativePath: string | null;
 }
 
 export function isSupportedComicBookArchive(filePath: string): boolean {
@@ -32,20 +35,59 @@ function parseChapterNumber(value: string | undefined, fallback: string): number
   return Number.isFinite(parsed) && parsed > 0 ? Math.max(1, Math.round(parsed)) : 1;
 }
 
+function parseVolumeFolderName(value: string): { number: number | null; title: string } | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const explicit = trimmed.match(/^(?:volume|vol\.?|v|book)\s*0*([0-9]+(?:\.[0-9]+)?)$/i);
+  if (explicit) {
+    const parsed = Number.parseFloat(explicit[1] ?? "");
+    return {
+      number: Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null,
+      title: trimmed,
+    };
+  }
+  return null;
+}
+
+function volumeTitle(number: number | null, fallback?: string | null): string | null {
+  if (fallback?.trim()) return fallback.trim();
+  if (number == null) return null;
+  return `Volume ${String(number).padStart(2, "0")}`;
+}
+
 export function inferComicBookArchivePlan(
   input: ComicBookArchivePlanInput,
 ): ComicBookArchivePlan {
   const relativePath = path.relative(input.rootPath, input.archivePath) || path.basename(input.archivePath);
   const containingFolder = path.dirname(relativePath);
+  const segments = relativePath.split(path.sep).filter(Boolean);
+  const fileName = segments.at(-1) ?? path.basename(input.archivePath);
+  const folderSegments = segments.slice(0, -1);
+  const parentFolder = folderSegments.at(-1) ?? "";
+  const explicitVolumeFolder = parentFolder ? parseVolumeFolderName(parentFolder) : null;
+  const folderBackedVolume =
+    explicitVolumeFolder ??
+    (folderSegments.length >= 2 ? { number: null, title: parentFolder } : null);
   const fallbackTitle = fileNameToTitle(input.archivePath);
   const chapterNumber = parseChapterNumber(input.comicInfo?.number, input.archivePath);
   const hasFolder = containingFolder !== ".";
   const metadataSeries = input.comicInfo?.series?.trim();
   const metadataTitle = input.comicInfo?.title?.trim();
+  const metadataVolumeNumber =
+    Number.isFinite(input.comicInfo?.volume) && (input.comicInfo?.volume ?? 0) > 0
+      ? Math.round(input.comicInfo!.volume!)
+      : null;
+  const volumeNumber = folderBackedVolume?.number ?? metadataVolumeNumber;
+  const volumeTitleValue = volumeTitle(volumeNumber, folderBackedVolume?.title ?? null);
+  const volumeRelativePath = folderBackedVolume
+    ? folderSegments.join(path.sep)
+    : null;
 
-  const bookTitle = metadataSeries || (hasFolder ? path.basename(containingFolder) : (metadataTitle || fallbackTitle));
+  const bookFolderSegments = folderBackedVolume ? folderSegments.slice(0, -1) : folderSegments;
+  const bookFolderName = bookFolderSegments.at(-1) ?? path.basename(containingFolder);
+  const bookTitle = metadataSeries || (hasFolder ? bookFolderName : (metadataTitle || fallbackTitle));
   const chapterTitle = metadataTitle || (hasFolder ? fallbackTitle : bookTitle);
-  const bookRelativePath = hasFolder ? containingFolder : relativePath;
+  const bookRelativePath = hasFolder ? (bookFolderSegments.join(path.sep) || containingFolder) : fileName;
 
   return {
     bookTitle,
@@ -53,5 +95,8 @@ export function inferComicBookArchivePlan(
     chapterNumber,
     relativePath,
     bookRelativePath,
+    volumeNumber,
+    volumeTitle: volumeTitleValue,
+    volumeRelativePath,
   };
 }

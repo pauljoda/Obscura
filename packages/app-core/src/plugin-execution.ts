@@ -1,5 +1,9 @@
-import { eq } from "drizzle-orm";
+import { existsSync } from "node:fs";
+import { mkdir, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { eq, sql } from "drizzle-orm";
 import { schema, type AppDb } from "@obscura/db";
+import { getGeneratedBookVolumeDir } from "@obscura/media-core";
 import {
   loadTypeScriptPlugin,
   PluginExecutionError,
@@ -19,6 +23,7 @@ import { updateAudioTrackWrite } from "./audio-tracks";
 import {
   setBookChapterCoverFromUrlWrite,
   setBookCoverFromUrlWrite,
+  setBookVolumeCoverFromUrlWrite,
   updateBookWrite,
 } from "./books";
 import { setVideoSeriesCoverFromUrlWrite, updateVideoSeriesWrite } from "./video-series";
@@ -27,7 +32,11 @@ import { deriveProposedResultFromPluginOutput } from "./plugin-proposed-result";
 
 const {
   bookChapters,
+  bookPages,
+  bookVolumes,
   books,
+  librarySettings,
+  libraryRoots,
   pluginAuth,
   pluginPackages,
   scrapeResults,
@@ -414,6 +423,308 @@ function integerChapterNumber(value: unknown): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+function volumeNumberKey(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(Math.round(value));
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function volumeFolderName(volumeNumber: string, title?: string | null): string {
+  const numeric = Number.parseInt(volumeNumber, 10);
+  const base = Number.isFinite(numeric)
+    ? `Volume ${String(numeric).padStart(2, "0")}`
+    : `Volume ${volumeNumber}`;
+  const suffix = title?.trim() && title.trim().toLowerCase() !== base.toLowerCase()
+    ? ` - ${title.trim()}`
+    : "";
+  return `${base}${suffix}`
+    .replace(/[/:\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .slice(0, 160)
+    .trim();
+}
+
+function volumeCoverEntries(value: unknown): Array<{
+  volumeNumber: string;
+  title: string | null;
+  url: string;
+  externalIds: Record<string, string>;
+}> {
+  if (!Array.isArray(value)) return [];
+  const entries: Array<{
+    volumeNumber: string;
+    title: string | null;
+    url: string;
+    externalIds: Record<string, string>;
+  }> = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    const volumeNumber = volumeNumberKey(item.volumeNumber ?? item.volume);
+    const url = typeof item.url === "string" ? item.url.trim() : "";
+    if (!volumeNumber || !url) continue;
+    entries.push({
+      volumeNumber,
+      title: typeof item.title === "string" && item.title.trim() ? item.title.trim() : null,
+      url,
+      externalIds: stringRecordOrNull(item.externalIds) ?? {},
+    });
+  }
+  return entries;
+}
+
+function chapterVolumeMap(value: unknown): Map<number, string> {
+  const record = recordOrNull(value);
+  const out = new Map<number, string>();
+  if (!record) return out;
+  for (const [chapterKey, rawVolume] of Object.entries(record)) {
+    const chapterNumber = integerChapterNumber(chapterKey);
+    const volumeNumber = volumeNumberKey(rawVolume);
+    if (chapterNumber == null || !volumeNumber) continue;
+    out.set(chapterNumber, volumeNumber);
+  }
+  return out;
+}
+
+async function applyBookVolumePluginMetadata(
+  db: AppDb,
+  bookId: string,
+  proposed: Record<string, unknown>,
+  fieldsToApply: Set<string>,
+  selectedImages?: Record<string, string | null | undefined>,
+) {
+  const volumeCovers = volumeCoverEntries(proposed.volumeCovers);
+  const chapterToVolume = chapterVolumeMap(proposed.chapterVolumeByNumber);
+  for (const [chapterNumber, volumeNumber] of [...chapterToVolume.entries()]) {
+    if (selectedImages?.[`volumeGroup:${volumeNumber}`] === "loose") {
+      chapterToVolume.delete(chapterNumber);
+    }
+  }
+  if (chapterToVolume.size === 0) return;
+
+  const [book] = await db
+    .select({
+      id: books.id,
+      title: books.title,
+      folderPath: books.folderPath,
+      relativePath: books.relativePath,
+      libraryRootId: books.libraryRootId,
+    })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
+  if (!book) return;
+
+  const [root] = await db
+    .select({ path: libraryRoots.path })
+    .from(libraryRoots)
+    .where(eq(libraryRoots.id, book.libraryRootId))
+    .limit(1);
+  if (!root) return;
+
+  const chapters = await db
+    .select({
+      id: bookChapters.id,
+      chapterNumber: bookChapters.chapterNumber,
+      archivePath: bookChapters.archivePath,
+      relativePath: bookChapters.relativePath,
+    })
+    .from(bookChapters)
+    .where(eq(bookChapters.bookId, bookId));
+  const localChapterNumbers = new Set(chapters.map((chapter) => chapter.chapterNumber));
+  for (const chapterNumber of [...chapterToVolume.keys()]) {
+    if (!localChapterNumbers.has(chapterNumber)) chapterToVolume.delete(chapterNumber);
+  }
+  if (chapterToVolume.size === 0) return;
+
+  const bookFolder = book.folderPath ?? path.join(root.path, book.relativePath);
+  const [settings] = await db
+    .select({ metadataStorageDedicated: librarySettings.metadataStorageDedicated })
+    .from(librarySettings)
+    .limit(1);
+  const metadataStorageDedicated = settings?.metadataStorageDedicated ?? true;
+  const volumeByNumber = new Map<string, (typeof volumeCovers)[number]>();
+  const mappedVolumeNumbers = new Set(chapterToVolume.values());
+  const selectedVolumeCover = (volumeNumber: string): string | null | undefined => {
+    const key = `volumeCover:${volumeNumber}`;
+    if (!selectedImages || !Object.prototype.hasOwnProperty.call(selectedImages, key)) return undefined;
+    const value = selectedImages[key];
+    if (value == null) return null;
+    const trimmed = value.trim();
+    return trimmed || null;
+  };
+  for (const cover of volumeCovers) {
+    if (mappedVolumeNumbers.size > 0 && !mappedVolumeNumbers.has(cover.volumeNumber)) continue;
+    const selectedCoverUrl = selectedVolumeCover(cover.volumeNumber);
+    if (selectedCoverUrl === null) {
+      if (!volumeByNumber.has(cover.volumeNumber)) {
+        volumeByNumber.set(cover.volumeNumber, { ...cover, url: "" });
+      }
+      continue;
+    }
+    if (selectedCoverUrl && cover.url !== selectedCoverUrl) continue;
+    if (!volumeByNumber.has(cover.volumeNumber)) {
+      volumeByNumber.set(cover.volumeNumber, {
+        ...cover,
+        url: selectedCoverUrl ?? cover.url,
+      });
+    }
+  }
+  for (const volumeNumber of chapterToVolume.values()) {
+    if (!volumeByNumber.has(volumeNumber)) {
+      const selectedCoverUrl = selectedVolumeCover(volumeNumber);
+      volumeByNumber.set(volumeNumber, {
+        volumeNumber,
+        title: null,
+        url: selectedCoverUrl ?? "",
+        externalIds: {},
+      });
+    }
+  }
+
+  const moves: Array<{
+    chapterId: string;
+    from: string;
+    to: string;
+    nextRelativePath: string;
+    volumeNumber: string;
+  }> = [];
+  for (const chapter of chapters) {
+    const volumeNumber = chapterToVolume.get(chapter.chapterNumber);
+    if (!volumeNumber) continue;
+    const cover = volumeByNumber.get(volumeNumber);
+    const volumeDir = path.join(bookFolder, volumeFolderName(volumeNumber, cover?.title));
+    const to = path.join(volumeDir, path.basename(chapter.archivePath));
+    if (path.resolve(chapter.archivePath) === path.resolve(to)) continue;
+    moves.push({
+      chapterId: chapter.id,
+      from: chapter.archivePath,
+      to,
+      nextRelativePath: path.relative(root.path, to) || path.basename(to),
+      volumeNumber,
+    });
+  }
+
+  for (const move of moves) {
+    if (existsSync(move.to)) {
+      throw new ConflictError(`Cannot move chapter into volume; destination already exists: ${move.to}`);
+    }
+  }
+  for (const move of moves) {
+    await mkdir(path.dirname(move.to), { recursive: true });
+  }
+  for (const move of moves) {
+    await rename(move.from, move.to);
+  }
+
+  const volumeIds = new Map<string, string>();
+  const existingVolumes = await db
+    .select()
+    .from(bookVolumes)
+    .where(eq(bookVolumes.bookId, bookId));
+  for (const [volumeNumber, cover] of volumeByNumber.entries()) {
+    const parsedNumber = Number.parseInt(volumeNumber, 10);
+    const normalizedNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
+    const title = cover.title ?? volumeFolderName(volumeNumber);
+    const folderPath = path.join(bookFolder, volumeFolderName(volumeNumber, cover.title));
+    const relativePath = path.relative(root.path, folderPath) || path.basename(folderPath);
+    const current = existingVolumes.find((row) =>
+      (normalizedNumber != null && row.volumeNumber === normalizedNumber) ||
+      row.relativePath === relativePath,
+    );
+    if (current) {
+      await db
+        .update(bookVolumes)
+        .set({
+          volumeNumber: normalizedNumber,
+          title,
+          folderPath,
+          relativePath,
+          externalIds: { ...(current.externalIds ?? {}), ...cover.externalIds },
+          updatedAt: new Date(),
+        })
+        .where(eq(bookVolumes.id, current.id));
+      volumeIds.set(volumeNumber, current.id);
+    } else {
+      const [created] = await db
+        .insert(bookVolumes)
+        .values({
+          bookId,
+          volumeNumber: normalizedNumber,
+          title,
+          folderPath,
+          relativePath,
+          externalIds: cover.externalIds,
+        })
+        .returning({ id: bookVolumes.id });
+      volumeIds.set(volumeNumber, created.id);
+    }
+  }
+
+  for (const move of moves) {
+    const volumeId = volumeIds.get(move.volumeNumber);
+    if (!volumeId) continue;
+    await db
+      .update(bookChapters)
+      .set({
+        volumeId,
+        archivePath: move.to,
+        relativePath: move.nextRelativePath,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookChapters.id, move.chapterId));
+    await db
+      .update(bookPages)
+      .set({
+        filePath: sql`replace(${bookPages.filePath}, ${move.from + "::"}, ${move.to + "::"})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookPages.chapterId, move.chapterId));
+  }
+
+  const movedChapterIds = new Set(moves.map((move) => move.chapterId));
+  for (const chapter of chapters) {
+    if (movedChapterIds.has(chapter.id)) continue;
+    const volumeNumber = chapterToVolume.get(chapter.chapterNumber);
+    const volumeId = volumeNumber ? volumeIds.get(volumeNumber) : null;
+    if (!volumeId) continue;
+    await db
+      .update(bookChapters)
+      .set({ volumeId, updatedAt: new Date() })
+      .where(eq(bookChapters.id, chapter.id));
+  }
+
+  for (const [volumeNumber, cover] of volumeByNumber.entries()) {
+    const volumeId = volumeIds.get(volumeNumber);
+    if (!volumeId) continue;
+    const volumeChapters = chapters.filter((chapter) => chapterToVolume.get(chapter.chapterNumber) === volumeNumber);
+    const folderPath = path.join(bookFolder, volumeFolderName(volumeNumber, cover.title));
+    await mkdir(folderPath, { recursive: true });
+    const metadataDir = metadataStorageDedicated ? getGeneratedBookVolumeDir(volumeId) : folderPath;
+    await mkdir(metadataDir, { recursive: true });
+    await writeFile(
+      path.join(metadataDir, ".obscura-volume.json"),
+      JSON.stringify({
+        title: cover.title ?? volumeFolderName(volumeNumber),
+        volumeNumber,
+        externalIds: cover.externalIds,
+        coverSource: cover.url || null,
+        chapters: volumeChapters.map((chapter) => path.basename(chapter.archivePath)),
+      }, null, 2),
+    ).catch(() => undefined);
+    if (fieldsToApply.has("image") && cover.url) {
+      try {
+        await setBookVolumeCoverFromUrlWrite(db, volumeId, cover.url);
+      } catch (error) {
+        console.warn(
+          `[plugins/accept] cover download failed for book volume ${volumeId}: ${toErrorMessage(error)}`,
+        );
+      }
+    }
+  }
+}
+
 async function applyBookChapterPluginMetadata(
   db: AppDb,
   bookId: string,
@@ -423,6 +734,8 @@ async function applyBookChapterPluginMetadata(
 ) {
   const proposed = recordOrNull(result.proposedResult);
   if (!proposed) return;
+
+  await applyBookVolumePluginMetadata(db, bookId, proposed, fieldsToApply, selectedImages);
 
   const externalIds = stringRecordOrNull(proposed.externalIds);
   const mangadexChapter = externalIds?.mangadexChapter;
@@ -436,6 +749,13 @@ async function applyBookChapterPluginMetadata(
       url: value?.trim() ?? "",
     }))
     .filter((entry) => entry.chapterId && entry.url);
+  const manualChapterTitles = Object.entries(selectedImages ?? {})
+    .filter(([key, value]) => key.startsWith("chapterTitle:") && typeof value === "string")
+    .map(([key, value]) => ({
+      chapterId: key.slice("chapterTitle:".length),
+      title: value?.trim() ?? "",
+    }))
+    .filter((entry) => entry.chapterId && entry.title);
   const selectedMatchedChapterCover =
     selectedImages && Object.prototype.hasOwnProperty.call(selectedImages, "chapterCover")
       ? selectedImages.chapterCover
@@ -443,6 +763,7 @@ async function applyBookChapterPluginMetadata(
 
   if (
     manualChapterCovers.length === 0 &&
+    manualChapterTitles.length === 0 &&
     selectedMatchedChapterCover === undefined &&
     !mangadexChapter &&
     chapterNumber == null
@@ -470,6 +791,17 @@ async function applyBookChapterPluginMetadata(
           `[plugins/accept] cover download failed for book chapter ${entry.chapterId}: ${toErrorMessage(error)}`,
         );
       }
+    }
+  }
+
+  if (manualChapterTitles.length > 0) {
+    const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+    for (const entry of manualChapterTitles) {
+      if (!chapterIds.has(entry.chapterId)) continue;
+      await db
+        .update(bookChapters)
+        .set({ title: entry.title, updatedAt: new Date() })
+        .where(eq(bookChapters.id, entry.chapterId));
     }
   }
 

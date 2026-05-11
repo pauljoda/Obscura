@@ -599,12 +599,29 @@ export interface BookDetailDto {
   urls: string[];
   studio: { id: string; name: string; url: string | null } | null;
   performers: { id: string; name: string; gender: string | null; imagePath: string | null; isNsfw: boolean }[];
+  volumes: BookVolumeDto[];
+  chapters: BookChapterDto[];
+}
+
+export interface BookVolumeDto {
+  id: string;
+  bookId: string;
+  volumeNumber: number | null;
+  title: string;
+  folderPath: string | null;
+  relativePath: string | null;
+  coverImagePath: string | null;
+  hasCustomCover: boolean;
+  pageCount: number;
+  chapterCount: number;
+  externalIds: Record<string, string>;
   chapters: BookChapterDto[];
 }
 
 export interface BookChapterDto {
   id: string;
   bookId: string;
+  volumeId: string | null;
   title: string;
   chapterNumber: number;
   archivePath: string;

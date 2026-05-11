@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { and, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
@@ -13,6 +14,7 @@ import {
   db,
   libraryRoots,
   books,
+  bookVolumes,
   bookChapters,
   bookPages,
   bookPerformers,
@@ -107,6 +109,50 @@ function firstNonEmpty(...values: Array<string | null | undefined>) {
   return values.find((value) => value && value.trim().length > 0)?.trim();
 }
 
+function resolveBookFolderPath(
+  rootPath: string,
+  plan: ReturnType<typeof inferComicBookArchivePlan>,
+  archivePath: string,
+) {
+  if (plan.bookRelativePath && plan.bookRelativePath !== plan.relativePath) {
+    return path.join(rootPath, plan.bookRelativePath);
+  }
+  return path.dirname(archivePath);
+}
+
+async function readVolumeSidecar(folderPath: string | null): Promise<{
+  title?: string;
+  volumeNumber?: number | null;
+  externalIds?: Record<string, string>;
+} | null> {
+  if (!folderPath) return null;
+  try {
+    const parsed = JSON.parse(
+      await readFile(path.join(folderPath, ".obscura-volume.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const volumeNumber =
+      typeof parsed.volumeNumber === "number"
+        ? parsed.volumeNumber
+        : typeof parsed.volumeNumber === "string"
+          ? Number.parseInt(parsed.volumeNumber, 10)
+          : null;
+    const externalIds =
+      parsed.externalIds && typeof parsed.externalIds === "object" && !Array.isArray(parsed.externalIds)
+        ? Object.fromEntries(
+            Object.entries(parsed.externalIds as Record<string, unknown>)
+              .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim().length > 0),
+          )
+        : undefined;
+    return {
+      title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : undefined,
+      volumeNumber: Number.isFinite(volumeNumber) ? Math.round(volumeNumber!) : null,
+      externalIds,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function processBookScan(job: Job) {
   const sfwOnly = Boolean(job.data.sfwOnly);
   const libraryRootId = String(job.data.libraryRootId);
@@ -169,9 +215,10 @@ export async function processBookScan(job: Job) {
       .where(and(eq(books.libraryRootId, root.id), eq(books.relativePath, plan.bookRelativePath)))
       .limit(1);
 
+    const bookFolderPath = resolveBookFolderPath(root.path, plan, archivePath);
     const bookPatch = {
       title: plan.bookTitle,
-      folderPath: path.dirname(archivePath),
+      folderPath: bookFolderPath,
       relativePath: plan.bookRelativePath,
       details: firstNonEmpty(existingBook?.details, comicInfo?.summary) ?? null,
       date: firstNonEmpty(existingBook?.date, comicInfo?.date) ?? null,
@@ -192,7 +239,7 @@ export async function processBookScan(job: Job) {
           libraryRootId: root.id,
           bookType: "comic",
           title: plan.bookTitle,
-          folderPath: path.dirname(archivePath),
+          folderPath: bookFolderPath,
           relativePath: plan.bookRelativePath,
           details: comicInfo?.summary ?? null,
           date: comicInfo?.date ?? null,
@@ -205,6 +252,55 @@ export async function processBookScan(job: Job) {
     }
 
     await attachBookRelations(bookId, comicInfo, bookIsNsfw);
+
+    let volumeId: string | null = null;
+    if (plan.volumeTitle) {
+      const volumeFolderPath = plan.volumeRelativePath ? path.join(root.path, plan.volumeRelativePath) : null;
+      const sidecar = await readVolumeSidecar(volumeFolderPath);
+      const volumeTitle = sidecar?.title ?? plan.volumeTitle;
+      const volumeNumber = sidecar?.volumeNumber ?? plan.volumeNumber;
+      const [existingVolume] = await db
+        .select({ id: bookVolumes.id, externalIds: bookVolumes.externalIds })
+        .from(bookVolumes)
+        .where(
+          and(
+            eq(bookVolumes.bookId, bookId),
+            plan.volumeRelativePath
+              ? eq(bookVolumes.relativePath, plan.volumeRelativePath)
+              : volumeNumber == null
+                ? eq(bookVolumes.title, volumeTitle)
+                : eq(bookVolumes.volumeNumber, volumeNumber),
+          ),
+        )
+        .limit(1);
+      if (existingVolume) {
+        volumeId = existingVolume.id;
+        await db
+          .update(bookVolumes)
+          .set({
+            volumeNumber,
+            title: volumeTitle,
+            folderPath: volumeFolderPath,
+            relativePath: plan.volumeRelativePath,
+            externalIds: { ...(existingVolume.externalIds ?? {}), ...(sidecar?.externalIds ?? {}) },
+            updatedAt: new Date(),
+          })
+          .where(eq(bookVolumes.id, volumeId));
+      } else {
+        const [createdVolume] = await db
+          .insert(bookVolumes)
+          .values({
+            bookId,
+            volumeNumber,
+            title: volumeTitle,
+            folderPath: volumeFolderPath,
+            relativePath: plan.volumeRelativePath,
+            externalIds: sidecar?.externalIds ?? {},
+          })
+          .returning({ id: bookVolumes.id });
+        volumeId = createdVolume.id;
+      }
+    }
 
     const [existingChapter] = await db
       .select({
@@ -219,6 +315,7 @@ export async function processBookScan(job: Job) {
     let chapterId: string;
     const chapterPatch = {
       bookId,
+      volumeId,
       title: plan.chapterTitle,
       chapterNumber: plan.chapterNumber,
       archivePath,
@@ -234,6 +331,7 @@ export async function processBookScan(job: Job) {
         .insert(bookChapters)
         .values({
           bookId,
+          volumeId,
           title: plan.chapterTitle,
           chapterNumber: plan.chapterNumber,
           archivePath,

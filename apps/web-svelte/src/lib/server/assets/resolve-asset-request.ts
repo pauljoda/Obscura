@@ -445,6 +445,14 @@ export async function resolveAssetRequest(
     );
   }
 
+  if (family === "book-volumes" && segments.length === 3 && kind === "cover") {
+    return serveFirstMatchingFile(
+      cacheCandidates("book-volumes", id, "cover-custom.jpg"),
+      "Book volume cover not found",
+      MUTABLE_ASSET_CACHE_CONTROL,
+    );
+  }
+
   if (family === "books" && segments.length === 3 && kind === "cover") {
     return serveFirstMatchingFile(
       cacheCandidates("books", id, "cover-custom.jpg"),

@@ -114,7 +114,7 @@
   );
 </script>
 
-<div class="border-b border-border-accent/30 bg-surface-2/40 p-4">
+<div class="candidate-picker border-b border-border-accent/30 p-4">
   <div
     class="mb-2 flex items-center gap-2 text-[0.6rem] uppercase tracking-[0.14em] text-text-muted"
   >
@@ -153,19 +153,22 @@
         onclick={() => onPick(id)}
         disabled={rerunning}
         class={cn(
-          "surface-card no-lift flex gap-2 p-2 text-left transition-colors",
+          "candidate-card surface-card no-lift flex gap-2 p-2 text-left transition-colors",
           isPicked && "border-border-accent",
           rerunning && "opacity-50 cursor-not-allowed",
         )}
       >
-        {#if c.posterUrl}
-          <img
-            src={c.posterUrl}
-            alt=""
-            loading="lazy"
-            class="h-16 w-12 flex-shrink-0 object-cover"
-          />
-        {/if}
+        <div class="candidate-thumb h-16 w-12 flex-shrink-0 overflow-hidden bg-surface-3">
+          {#if c.posterUrl}
+            <img
+              src={c.posterUrl}
+              alt=""
+              loading="eager"
+              decoding="async"
+              class="h-full w-full object-cover"
+            />
+          {/if}
+        </div>
         <div class="min-w-0 flex-1 space-y-0.5">
           <div class="truncate text-[0.72rem] font-medium">{c.title}</div>
           {#if candidateMeta(c)}
@@ -179,3 +182,19 @@
     {/each}
   </div>
 </div>
+
+<style>
+  .candidate-picker {
+    isolation: isolate;
+    contain: paint;
+    background-color: rgb(16, 20, 29);
+    transform: translateZ(0);
+  }
+
+  .candidate-card,
+  .candidate-thumb,
+  .candidate-thumb :global(img) {
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+</style>

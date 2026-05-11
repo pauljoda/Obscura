@@ -2,7 +2,7 @@
   import { goto, invalidate, invalidateAll } from "$app/navigation";
   import { BookOpen, HardDrive, Pencil, Play, Trash2 } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
-  import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
+  import type { BookChapterDto, BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import { deleteBook, updateBookProgress } from "$lib/api/media";
   import BookEdit from "$lib/components/BookEdit.svelte";
@@ -24,8 +24,16 @@
   const appChrome = useAppChrome();
 
   // svelte-ignore state_referenced_locally
-  let selectedChapterId = $state(data.chapterId ?? book.progress?.chapterId ?? book.chapters[0]?.id ?? null);
+  const initialChapterId = data.chapterId ?? data.book.progress?.chapterId ?? data.book.chapters[0]?.id ?? null;
+  // svelte-ignore state_referenced_locally
+  let selectedVolumeId = $state(
+    data.book.volumes.find((volume) => volume.chapters.some((chapter) => chapter.id === initialChapterId))?.id ??
+      data.book.volumes[0]?.id ??
+      null,
+  );
+  let selectedChapterId = $state(initialChapterId);
   let readerOpen = $state(false);
+  let readerScope = $state<"chapter" | "volume">("chapter");
   let editing = $state(false);
   let deleteDialogOpen = $state(false);
   let deleteBusy = $state(false);
@@ -34,8 +42,14 @@
   // svelte-ignore state_referenced_locally
   let readerMode = $state<"paged" | "webtoon">(book.progress?.readerMode ?? "paged");
 
+  const hasVolumes = $derived(book.volumes.length > 0);
+  const selectedVolume = $derived(book.volumes.find((volume) => volume.id === selectedVolumeId) ?? book.volumes[0] ?? null);
+  const visibleChapters = $derived(hasVolumes ? (selectedVolume?.chapters ?? []) : book.chapters);
   const selectedChapter = $derived(
-    book.chapters.find((chapter) => chapter.id === selectedChapterId) ?? book.chapters[0] ?? null,
+    visibleChapters.find((chapter) => chapter.id === selectedChapterId) ??
+      visibleChapters[0] ??
+      book.chapters[0] ??
+      null,
   );
   const selectedChapterIndex = $derived(
     selectedChapter ? book.chapters.findIndex((chapter) => chapter.id === selectedChapter.id) : -1,
@@ -43,7 +57,10 @@
   const nextChapter = $derived(
     selectedChapterIndex >= 0 ? book.chapters[selectedChapterIndex + 1] ?? null : null,
   );
-  const readerPages = $derived((selectedChapter?.pages ?? []).map(pageToImage));
+  const readerChapters = $derived(
+    readerScope === "volume" && selectedVolume ? selectedVolume.chapters : selectedChapter ? [selectedChapter] : [],
+  );
+  const readerPages = $derived(readerChapters.flatMap((chapter) => chapter.pages.map(pageToImage)));
   const progressLabel = $derived(
     book.progress && book.progress.pageCount > 0
       ? `${Math.min(book.progress.pageIndex + 1, book.progress.pageCount)} / ${book.progress.pageCount}`
@@ -75,17 +92,43 @@
     };
   }
 
-  function openReaderAt(index: number) {
-    readerIndex = Math.max(0, Math.min(index, Math.max(0, readerPages.length - 1)));
+  function chapterStartIndex(chapter: BookChapterDto) {
+    let offset = 0;
+    for (const item of readerChapters) {
+      if (item.id === chapter.id) return offset;
+      offset += item.pages.length;
+    }
+    return 0;
+  }
+
+  function positionForReaderIndex(index: number) {
+    let offset = 0;
+    for (const chapter of readerChapters) {
+      const nextOffset = offset + chapter.pages.length;
+      if (index < nextOffset) {
+        return { chapter, pageIndex: index - offset, pageCount: chapter.pages.length };
+      }
+      offset = nextOffset;
+    }
+    const chapter = readerChapters.at(-1) ?? selectedChapter;
+    return { chapter, pageIndex: Math.max(0, (chapter?.pages.length ?? 1) - 1), pageCount: chapter?.pages.length ?? 0 };
+  }
+
+  function openReaderAt(index: number, scope: "chapter" | "volume" = "chapter") {
+    readerScope = scope;
+    const baseIndex = scope === "volume" && selectedChapter ? chapterStartIndex(selectedChapter) + index : index;
+    readerIndex = Math.max(0, Math.min(baseIndex, Math.max(0, readerPages.length - 1)));
     readerOpen = true;
   }
 
   async function saveProgress(index = readerIndex, completedAt?: string | null) {
-    if (!selectedChapter || readerPages.length === 0) return;
+    if (readerPages.length === 0) return;
+    const position = positionForReaderIndex(index);
+    if (!position.chapter) return;
     await updateBookProgress(book.id, {
-      chapterId: selectedChapter.id,
-      pageIndex: index,
-      pageCount: readerPages.length,
+      chapterId: position.chapter.id,
+      pageIndex: position.pageIndex,
+      pageCount: position.pageCount,
       readerMode,
       completedAt,
     });
@@ -112,6 +155,9 @@
       completedAt: new Date().toISOString(),
     });
     selectedChapterId = nextChapter.id;
+    selectedVolumeId =
+      book.volumes.find((volume) => volume.chapters.some((chapter) => chapter.id === nextChapter.id))?.id ??
+      selectedVolumeId;
     readerIndex = 0;
   }
 
@@ -333,16 +379,63 @@
         </div>
       {/if}
 
-      {#if book.chapters.length > 0}
-        <HierarchySection title="Chapters">
+      {#if hasVolumes}
+        <HierarchySection title="Volumes">
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {#each book.chapters as chapter (chapter.id)}
+              {#each book.volumes as volume (volume.id)}
                 <button
                   type="button"
                   onclick={() => {
-                    selectedChapterId = chapter.id;
+                    selectedVolumeId = volume.id;
+                    selectedChapterId = volume.chapters[0]?.id ?? null;
                     readerIndex = 0;
                   }}
+                  class={`group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent ${selectedVolume?.id === volume.id ? "border-border-accent" : ""}`}
+                >
+                  <div class="relative aspect-[2/3] bg-surface-2">
+                    <EntityThumbnail
+                      kind="book"
+                      title={volume.title}
+                      coverImagePath={volume.coverImagePath ?? volume.chapters[0]?.coverImagePath ?? null}
+                      pageCount={volume.chapterCount}
+                      isNsfw={book.isNsfw}
+                      aspectClass="aspect-[2/3]"
+                      fit="contain"
+                      showCount={false}
+                    />
+                  </div>
+                  <div class="space-y-1 px-2.5 py-2">
+                    <h3 class="truncate text-[0.82rem] font-medium text-text-primary">{volume.title}</h3>
+                    <div class="text-[0.68rem] text-text-muted">
+                      {volume.chapterCount} chapter{volume.chapterCount === 1 ? "" : "s"} · {volume.pageCount} page{volume.pageCount === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                </button>
+              {/each}
+            </div>
+        </HierarchySection>
+      {/if}
+
+      {#if visibleChapters.length > 0}
+        <HierarchySection title={hasVolumes ? (selectedVolume?.title ?? "Chapters") : "Chapters"}>
+          {#if hasVolumes && selectedVolume}
+            {#snippet action()}
+              <button
+                type="button"
+                onclick={() => {
+                  selectedChapterId = selectedVolume.chapters[0]?.id ?? selectedChapterId;
+                  openReaderAt(0, "volume");
+                }}
+                class="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
+              >
+                Read volume
+              </button>
+            {/snippet}
+          {/if}
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {#each visibleChapters as chapter (chapter.id)}
+                <a
+                  href={`/books/${book.id}/chapters/${chapter.id}`}
                   class="group surface-card overflow-hidden text-left transition-colors duration-fast hover:border-border-accent"
                 >
                   <div class="relative aspect-[2/3] bg-surface-2">
@@ -363,44 +456,7 @@
                       {chapter.pageCount} page{chapter.pageCount === 1 ? "" : "s"}
                     </div>
                   </div>
-                </button>
-              {/each}
-            </div>
-        </HierarchySection>
-      {/if}
-
-      {#if selectedChapter}
-        <HierarchySection title={selectedChapter.title}>
-          {#snippet action()}
-            <button
-              type="button"
-              onclick={() => openReaderAt(readerIndex)}
-              class="text-[0.68rem] text-text-accent hover:text-text-accent-bright"
-            >
-              Read chapter
-            </button>
-          {/snippet}
-
-            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-              {#each selectedChapter.pages as page, index (page.id)}
-                <button
-                  type="button"
-                  class="group overflow-hidden border border-border-subtle bg-surface-1 transition-colors hover:border-border-accent"
-                  onclick={() => openReaderAt(index)}
-                >
-                  <EntityThumbnail
-                    kind="image"
-                    title={page.title}
-                    thumbnailPath={page.thumbnailPath}
-                    width={page.width}
-                    height={page.height}
-                    aspectClass="aspect-[2/3]"
-                    showChips={false}
-                  />
-                  <div class="truncate px-1.5 py-1 text-left font-mono text-[0.58rem] text-text-disabled">
-                    {index + 1}
-                  </div>
-                </button>
+                </a>
               {/each}
             </div>
         </HierarchySection>
@@ -415,7 +471,13 @@
     initialIndex={readerIndex}
     initialMode={readerMode}
     nextChapterLabel={nextChapter?.title ?? null}
-    title={`${book.title}${selectedChapter ? ` · ${selectedChapter.title}` : ""}`}
+    title={`${book.title}${
+      readerScope === "volume" && selectedVolume
+        ? ` · ${selectedVolume.title}`
+        : selectedChapter
+          ? ` · ${selectedChapter.title}`
+          : ""
+    }`}
     onIndexChange={handleIndexChange}
     onModeChange={handleModeChange}
     onNextChapter={nextChapter ? handleNextChapter : undefined}

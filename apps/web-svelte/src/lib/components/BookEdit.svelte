@@ -16,6 +16,7 @@
   import { fetchPerformers, fetchStudios, fetchTags } from "$lib/api/entities";
   import { useNsfw } from "$lib/nsfw/store.svelte";
   import BookChapterCoverEditor from "./BookChapterCoverEditor.svelte";
+  import BookVolumeCoverEditor from "./BookVolumeCoverEditor.svelte";
   import EntityThumbnail from "./thumbnails/EntityThumbnail.svelte";
   import {
     DateField,
@@ -220,6 +221,12 @@
       </div>
     </div>
   </div>
+
+  <BookVolumeCoverEditor
+    volumes={book.volumes}
+    isNsfw={book.isNsfw}
+    onChanged={onChanged}
+  />
 
   <BookChapterCoverEditor
     chapters={book.chapters}
