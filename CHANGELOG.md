@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book scans now only create comic volumes from explicit volume subfolders, keeping loose chapter archives and chapter wrapper folders under the book itself.
 - Completed comic chapters now show as Read instead of lingering as 100% progress, with Mark read and Re-read actions available from book, chapter, and volume views.
 - Book and gallery scans now recover from stale image thumbnail and fingerprint jobs left behind by older gallery-to-Books migrations, so deleted legacy page rows no longer keep failing in the worker.
+- Identify result messages are now easier to read and dismiss, with solid alert styling, a close button, and automatic timeout behavior.
 
 ### Docs
 
@@ -132,6 +133,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic book scans no longer create volumes from same-named wrapper folders or metadata-only volume numbers; volume grouping now requires a real volume subfolder inside a book entry.
 - Comic book scans no longer create volumes from non-volume chapter wrapper folders, and rescans now remove empty volume rows left behind by older scan rules.
 - Stale image thumbnail, image fingerprint, and book page thumbnail jobs now complete as harmless no-ops when their target row was already removed by a scan or migration.
+- Identify no-result messages now use a more legible solid surface, can be dismissed directly, and disappear automatically after a short delay.
 
 ### Docs
 

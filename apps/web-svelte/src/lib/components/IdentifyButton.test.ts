@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import IdentifyButtonHarness from "./IdentifyButton.test-harness.svelte";
 
 const { executePlugin, fetchInstalledPlugins, fetchInstalledScrapers, fetchStashBoxEndpoints } =
@@ -31,6 +31,7 @@ vi.mock("$lib/nsfw/aware-providers", () => ({
 
 describe("IdentifyButton", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     executePlugin.mockReset();
     fetchInstalledPlugins.mockReset();
     fetchInstalledScrapers.mockReset();
@@ -61,6 +62,10 @@ describe("IdentifyButton", () => {
         dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("opens its plugin menu as a viewport-positioned flyout", async () => {
@@ -131,5 +136,47 @@ describe("IdentifyButton", () => {
     await waitFor(() => expect(screen.queryByText("Identify from")).not.toBeInTheDocument());
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("The Movie Database: No result found.");
+  });
+
+  it("lets no-result alerts be dismissed without reopening the provider flyout", async () => {
+    executePlugin.mockResolvedValue({ ok: false, result: null });
+    render(IdentifyButtonHarness, {
+      props: {
+        entityKind: "video_series",
+        entityId: "series-1",
+        title: "Blue's Clues & You!",
+        label: "Identify Series",
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: /identify series/i }));
+    await fireEvent.click(await screen.findByRole("button", { name: /the movie database/i }));
+
+    const alert = await screen.findByRole("alert");
+    await fireEvent.click(screen.getByRole("button", { name: /dismiss message/i }));
+
+    expect(alert).not.toBeInTheDocument();
+    expect(screen.queryByText("Identify from")).not.toBeInTheDocument();
+  });
+
+  it("auto-dismisses no-result alerts after a short timeout", async () => {
+    vi.useFakeTimers();
+    executePlugin.mockResolvedValue({ ok: false, result: null });
+    render(IdentifyButtonHarness, {
+      props: {
+        entityKind: "video_series",
+        entityId: "series-1",
+        title: "Blue's Clues & You!",
+        label: "Identify Series",
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: /identify series/i }));
+    await fireEvent.click(await screen.findByRole("button", { name: /the movie database/i }));
+
+    await screen.findByRole("alert");
+    vi.advanceTimersByTime(6_000);
+
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 });

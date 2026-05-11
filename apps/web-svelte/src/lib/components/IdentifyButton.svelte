@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Loader2, ScanSearch, AlertCircle, Search, Info } from "@lucide/svelte";
+  import { Loader2, ScanSearch, AlertCircle, Search, Info, X } from "@lucide/svelte";
   import { cn } from "@obscura/ui-svelte";
   import {
     fetchInstalledScrapers,
@@ -90,6 +90,7 @@
   let menuIsWide = $state(false);
   let searchQuery = $state("");
   let searchInputEl: HTMLInputElement | undefined = $state();
+  const MESSAGE_DISMISS_MS = 6_000;
 
   const isVideoEntity = $derived(entityKind !== "video_series" && entityKind !== "book");
 
@@ -133,6 +134,17 @@
       return;
     }
     queueMicrotask(() => searchInputEl?.focus());
+  });
+
+  $effect(() => {
+    if (open || (!error && !infoMessage)) return;
+
+    const timeout = window.setTimeout(() => {
+      error = null;
+      infoMessage = null;
+    }, MESSAGE_DISMISS_MS);
+
+    return () => window.clearTimeout(timeout);
   });
 
   const visiblePlugins = $derived(filterNsfwAware(plugins));
@@ -561,6 +573,11 @@
     if (kind === "book") return "book";
     return "episode";
   }
+
+  function dismissMessage() {
+    error = null;
+    infoMessage = null;
+  }
 </script>
 
 <div class={cn("relative", className)}>
@@ -587,20 +604,38 @@
   {#if !open && error}
     <div
       role="alert"
-      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(22rem,calc(100vw-1.5rem))] items-start gap-1.5 border border-status-error/30 bg-status-error/10 px-2.5 py-2 text-[0.68rem] text-status-error-text shadow-xl backdrop-blur-md"
+      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(26rem,calc(100vw-1.5rem))] items-start gap-2 border border-status-error/60 bg-[#111216] px-3 py-2.5 text-[0.78rem] leading-snug text-status-error-text shadow-[0_18px_48px_rgba(0,0,0,0.65)]"
     >
-      <AlertCircle class="mt-[1px] h-3 w-3 flex-shrink-0" />
-      <span class="min-w-0">{error}</span>
+      <AlertCircle class="mt-[2px] h-4 w-4 flex-shrink-0" />
+      <span class="min-w-0 flex-1">{error}</span>
+      <button
+        type="button"
+        class="-mr-1 -mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center border border-white/10 bg-black/35 text-text-muted transition-colors hover:border-status-error/60 hover:text-text-primary"
+        aria-label="Dismiss message"
+        title="Dismiss message"
+        onclick={dismissMessage}
+      >
+        <X class="h-3.5 w-3.5" />
+      </button>
     </div>
   {/if}
 
   {#if !open && infoMessage}
     <div
       role="status"
-      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(22rem,calc(100vw-1.5rem))] items-start gap-1.5 border border-white/15 bg-surface-1/95 px-2.5 py-2 text-[0.68rem] text-text-muted shadow-xl backdrop-blur-md"
+      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(26rem,calc(100vw-1.5rem))] items-start gap-2 border border-white/25 bg-[#111216] px-3 py-2.5 text-[0.78rem] leading-snug text-text-primary shadow-[0_18px_48px_rgba(0,0,0,0.65)]"
     >
-      <Info class="mt-[1px] h-3 w-3 flex-shrink-0" />
-      <span class="min-w-0">{infoMessage}</span>
+      <Info class="mt-[2px] h-4 w-4 flex-shrink-0 text-text-muted" />
+      <span class="min-w-0 flex-1">{infoMessage}</span>
+      <button
+        type="button"
+        class="-mr-1 -mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center border border-white/10 bg-black/35 text-text-muted transition-colors hover:border-white/25 hover:text-text-primary"
+        aria-label="Dismiss message"
+        title="Dismiss message"
+        onclick={dismissMessage}
+      >
+        <X class="h-3.5 w-3.5" />
+      </button>
     </div>
   {/if}
 
