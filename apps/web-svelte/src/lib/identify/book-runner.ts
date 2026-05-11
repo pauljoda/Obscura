@@ -1,28 +1,38 @@
 import { acceptPluginResult, type PluginExecuteResult } from "$lib/api/scrapers";
-import type {
-  GalleryRow,
-  NormalizedGalleryIdentifyResult,
-} from "./identify-types";
+import type { BookRow, NormalizedBookIdentifyResult } from "./identify-types";
 import {
   resetPending,
   resolvePluginList,
   seekRow,
   type CommonRunProps,
-  type MutableFlag,
   type PluginInfo,
   type RowUpdater,
 } from "./runner-utils";
 
-export function galleryResult(
+function rawBookPayload(rawResult: Record<string, unknown>): Record<string, unknown> {
+  return rawResult.book && typeof rawResult.book === "object" && !Array.isArray(rawResult.book)
+    ? (rawResult.book as Record<string, unknown>)
+    : rawResult;
+}
+
+function optionalInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+export function bookResult(
   rawResult: Record<string, unknown>,
   normalized: NonNullable<PluginExecuteResult["normalized"]>,
-): NormalizedGalleryIdentifyResult {
+): NormalizedBookIdentifyResult {
+  const raw = rawBookPayload(rawResult);
   return {
     title: normalized.title,
     date: normalized.date,
     details: normalized.details,
-    urls: Array.isArray(rawResult.urls)
-      ? (rawResult.urls as string[])
+    urls: Array.isArray(raw.urls)
+      ? (raw.urls as string[])
       : normalized.url
         ? [normalized.url]
         : [],
@@ -30,28 +40,51 @@ export function galleryResult(
     performerNames: normalized.performerNames ?? [],
     tagNames: normalized.tagNames ?? [],
     imageUrl: normalized.imageUrl,
-    externalIds:
-      rawResult.externalIds && typeof rawResult.externalIds === "object"
-        ? (rawResult.externalIds as Record<string, string>)
-        : undefined,
-    candidates: Array.isArray(rawResult.candidates)
-      ? (rawResult.candidates as NormalizedGalleryIdentifyResult["candidates"])
+    chapterImageUrl:
+      typeof raw.chapterImageUrl === "string" ? raw.chapterImageUrl : undefined,
+    chapterNumber: optionalInteger(raw.chapterNumber),
+    imageCandidates: Array.isArray(raw.imageCandidates)
+      ? (raw.imageCandidates as NormalizedBookIdentifyResult["imageCandidates"])
       : undefined,
-    isNsfw: typeof rawResult.isNsfw === "boolean" ? rawResult.isNsfw : undefined,
+    chapterImageCandidates: Array.isArray(raw.chapterImageCandidates)
+      ? (raw.chapterImageCandidates as NormalizedBookIdentifyResult["chapterImageCandidates"])
+      : undefined,
+    externalIds:
+      raw.externalIds && typeof raw.externalIds === "object"
+        ? (raw.externalIds as Record<string, string>)
+        : undefined,
+    candidates: Array.isArray(raw.candidates)
+      ? (raw.candidates as NormalizedBookIdentifyResult["candidates"])
+      : undefined,
+    isNsfw: typeof raw.isNsfw === "boolean" ? raw.isNsfw : undefined,
   };
 }
 
-function buildGalleryInput(row: GalleryRow, includeNsfw = false): Record<string, unknown> {
+function buildBookInput(row: BookRow, includeNsfw = false): Record<string, unknown> {
   return {
-    name: row.gallery.title,
-    title: row.gallery.title,
+    name: row.book.title,
+    title: row.book.title,
     includeNsfw,
   };
 }
 
-export async function runGalleryIdentify(
-  props: CommonRunProps<GalleryRow>,
-): Promise<void> {
+const BOOK_ATTEMPTS = [
+  { action: "bookByName", capabilityKey: "bookByName" },
+  { action: "mangaByName", capabilityKey: "mangaByName" },
+  { action: "comicByName", capabilityKey: "comicByName" },
+  { action: "bookByFragment", capabilityKey: "bookByFragment" },
+  { action: "mangaByFragment", capabilityKey: "mangaByFragment" },
+  { action: "comicByFragment", capabilityKey: "comicByFragment" },
+] as const;
+
+function attemptsFor(row: BookRow, includeNsfw: boolean) {
+  return BOOK_ATTEMPTS.map((attempt) => ({
+    ...attempt,
+    input: buildBookInput(row, includeNsfw),
+  }));
+}
+
+export async function runBookIdentify(props: CommonRunProps<BookRow>): Promise<void> {
   props.setRunning(true);
   props.abortRef.current = false;
 
@@ -68,17 +101,11 @@ export async function runGalleryIdentify(
     );
 
     try {
-      const { scrapeResultId, result, matchedProvider } = await seekRow({
+      const { scrapeResultId, result, matchedProvider, error } = await seekRow({
         plugins: pluginList,
-        entityId: current.gallery.id,
-        attempts: [
-          {
-            action: "galleryByFragment",
-            input: buildGalleryInput(current, props.includeNsfw),
-            capabilityKey: "galleryByFragment",
-          },
-        ],
-        buildResult: galleryResult,
+        entityId: current.book.id,
+        attempts: attemptsFor(current, props.includeNsfw ?? false),
+        buildResult: bookResult,
       });
 
       if (scrapeResultId && result) {
@@ -110,6 +137,10 @@ export async function runGalleryIdentify(
             ),
           );
         }
+      } else if (error) {
+        props.setRows((prev) =>
+          prev.map((r, idx) => (idx === i ? { ...r, status: "error", error } : r)),
+        );
       } else {
         props.setRows((prev) =>
           prev.map((r, idx) => (idx === i ? { ...r, status: "no-result" } : r)),
@@ -129,10 +160,10 @@ export async function runGalleryIdentify(
   props.setRunning(false);
 }
 
-export async function seekGallerySingle(
+export async function seekBookSingle(
   idx: number,
-  rows: GalleryRow[],
-  setRows: RowUpdater<GalleryRow[]>,
+  rows: BookRow[],
+  setRows: RowUpdater<BookRow[]>,
   plugins: PluginInfo[],
   includeNsfw = false,
 ): Promise<void> {
@@ -143,17 +174,11 @@ export async function seekGallerySingle(
     prev.map((r, i) => (i === idx ? { ...r, status: "scraping" } : r)),
   );
 
-  const { scrapeResultId, result, matchedProvider } = await seekRow({
+  const { scrapeResultId, result, matchedProvider, error } = await seekRow({
     plugins,
-    entityId: row.gallery.id,
-    attempts: [
-      {
-        action: "galleryByFragment",
-        input: buildGalleryInput(row, includeNsfw),
-        capabilityKey: "galleryByFragment",
-      },
-    ],
-    buildResult: galleryResult,
+    entityId: row.book.id,
+    attempts: attemptsFor(row, includeNsfw),
+    buildResult: bookResult,
   });
 
   setRows((prev) =>
@@ -161,17 +186,19 @@ export async function seekGallerySingle(
       i === idx
         ? result
           ? { ...r, status: "found", result, scrapeResultId, matchedProvider }
-          : { ...r, status: "no-result" }
+          : error
+            ? { ...r, status: "error", error }
+            : { ...r, status: "no-result" }
         : r,
     ),
   );
 }
 
-export async function seekGallerySingleByURL(
+export async function seekBookSingleByURL(
   idx: number,
   url: string,
-  rows: GalleryRow[],
-  setRows: RowUpdater<GalleryRow[]>,
+  rows: BookRow[],
+  setRows: RowUpdater<BookRow[]>,
   plugins: PluginInfo[],
   includeNsfw = false,
 ): Promise<void> {
@@ -184,17 +211,27 @@ export async function seekGallerySingleByURL(
     prev.map((r, i) => (i === idx ? { ...r, status: "scraping" } : r)),
   );
 
-  const { scrapeResultId, result, matchedProvider } = await seekRow({
+  const { scrapeResultId, result, matchedProvider, error } = await seekRow({
     plugins,
-    entityId: row.gallery.id,
+    entityId: row.book.id,
     attempts: [
       {
-        action: "galleryByURL",
-        input: { ...buildGalleryInput(row, includeNsfw), url: trimmedUrl },
-        capabilityKey: "galleryByURL",
+        action: "bookByURL",
+        input: { ...buildBookInput(row, includeNsfw), url: trimmedUrl },
+        capabilityKey: "bookByURL",
+      },
+      {
+        action: "mangaByURL",
+        input: { ...buildBookInput(row, includeNsfw), url: trimmedUrl },
+        capabilityKey: "mangaByURL",
+      },
+      {
+        action: "comicByURL",
+        input: { ...buildBookInput(row, includeNsfw), url: trimmedUrl },
+        capabilityKey: "comicByURL",
       },
     ],
-    buildResult: galleryResult,
+    buildResult: bookResult,
   });
 
   setRows((prev) =>
@@ -202,15 +239,17 @@ export async function seekGallerySingleByURL(
       i === idx
         ? result
           ? { ...r, status: "found", result, scrapeResultId, matchedProvider }
-          : { ...r, status: "no-result" }
+          : error
+            ? { ...r, status: "error", error }
+            : { ...r, status: "no-result" }
         : r,
     ),
   );
 }
 
-export async function acceptAllGalleries(
-  rows: GalleryRow[],
-  setRows: RowUpdater<GalleryRow[]>,
+export async function acceptAllBooks(
+  rows: BookRow[],
+  setRows: RowUpdater<BookRow[]>,
 ): Promise<void> {
   const found = rows
     .map((r, i) => ({ row: r, idx: i }))
@@ -232,8 +271,3 @@ export async function acceptAllGalleries(
     }
   }
 }
-
-// ─── Images ───────────────────────────────────────────────────────
-//
-// Same note as galleries: no installed plugin advertises imageByURL yet.
-// The control flow is wired so future plugins land without web changes.

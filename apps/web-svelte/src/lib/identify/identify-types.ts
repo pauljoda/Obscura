@@ -4,6 +4,8 @@
 
 import type {
   VideoSeriesListItemDto,
+  ImageCandidate,
+  BookListItemDto,
   GalleryListItemDto,
   ImageListItemDto,
   AudioLibraryListItemDto,
@@ -13,6 +15,7 @@ import type {
 export type IdentifyTab =
   | "videos"
   | "video-series"
+  | "books"
   | "galleries"
   | "images"
   | "audio-libraries"
@@ -44,6 +47,18 @@ export const GALLERY_FIELDS = [
   "image",
 ] as const;
 export type GalleryField = (typeof GALLERY_FIELDS)[number];
+
+export const BOOK_FIELDS = [
+  "title",
+  "date",
+  "details",
+  "url",
+  "studio",
+  "performers",
+  "tags",
+  "image",
+] as const;
+export type BookField = (typeof BOOK_FIELDS)[number];
 
 export const IMAGE_FIELDS = ["title", "date", "details", "url", "tags"] as const;
 export type ImageField = (typeof IMAGE_FIELDS)[number];
@@ -103,6 +118,30 @@ export interface GalleryRow {
   selectedFields: Set<GalleryField>;
 }
 
+export interface BookRow {
+  book: BookListItemDto;
+  status: RowStatus;
+  result?: NormalizedBookIdentifyResult;
+  scrapeResultId?: string;
+  error?: string;
+  matchedProvider?: string;
+  selectedFields: Set<BookField>;
+}
+
+export interface NormalizedGalleryCandidate {
+  externalIds: Record<string, string>;
+  title: string;
+  year?: number | null;
+  overview?: string | null;
+  posterUrl?: string | null;
+  language?: string | null;
+  contentRating?: string | null;
+  source?: string | null;
+  popularity?: number | null;
+}
+
+export type NormalizedBookCandidate = NormalizedGalleryCandidate;
+
 export interface ImageRow {
   image: ImageListItemDto;
   status: RowStatus;
@@ -156,6 +195,27 @@ export interface NormalizedGalleryIdentifyResult {
   performerNames: string[];
   tagNames: string[];
   imageUrl: string | null;
+  externalIds?: Record<string, string>;
+  candidates?: NormalizedGalleryCandidate[];
+  isNsfw?: boolean;
+}
+
+export interface NormalizedBookIdentifyResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  urls: string[];
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+  chapterImageUrl?: string | null;
+  chapterNumber?: number | null;
+  imageCandidates?: ImageCandidate[];
+  chapterImageCandidates?: ImageCandidate[];
+  externalIds?: Record<string, string>;
+  candidates?: NormalizedBookCandidate[];
+  isNsfw?: boolean;
 }
 
 export interface NormalizedImageIdentifyResult {

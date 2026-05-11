@@ -8,6 +8,7 @@
     fetchStashBoxEndpoints,
     identifyViaStashBox,
     scrapeVideo,
+    acceptPluginResult,
     type InstalledPlugin,
   } from "$lib/api/scrapers";
   import type {
@@ -19,7 +20,10 @@
   } from "$lib/api/types";
   import { fetchVideoDetail, fetchVideoSeriesLibraryDetail } from "$lib/api/videos";
   import { filterNsfwAware } from "$lib/nsfw/aware-providers";
+  import { useNsfw } from "$lib/nsfw/store.svelte";
   import { buildLocalSeasonsInput } from "$lib/identify/identify-video-series-runner";
+  import { BOOK_FIELDS, type BookField, type BookRow } from "$lib/identify/identify-types";
+  import { bookResult } from "$lib/identify/book-runner";
   import { portal } from "$lib/actions/portal";
   import {
     layoutPlayerMobileFlyout,
@@ -27,6 +31,7 @@
   } from "$lib/player/flyout-layout";
   import CascadeReviewDrawer from "./identify/CascadeReviewDrawer.svelte";
   import LegacyVideoReviewDrawer from "./identify/LegacyVideoReviewDrawer.svelte";
+  import BookReviewDrawer from "./identify/BookReviewDrawer.svelte";
 
   type EntityKind = "video_series" | "video_movie" | "video_episode" | "book";
   type ProviderKind = "plugin" | "stashbox" | "scraper";
@@ -49,6 +54,7 @@
   }
 
   let { entityKind, entityId, title, label, class: className }: Props = $props();
+  const nsfw = useNsfw();
 
   const CAPABILITY_BY_KIND: Record<EntityKind, string[]> = {
     video_series: ["seriesCascade", "seriesByName", "folderByName"],
@@ -78,6 +84,7 @@
     normalized: NormalizedScrapeResult;
     matchedScraper: string;
   } | null>(null);
+  let bookReviewRow = $state<BookRow | null>(null);
   let buttonEl: HTMLButtonElement | undefined = $state();
   let menuStyle = $state<string | null>(null);
   let menuIsWide = $state(false);
@@ -341,6 +348,13 @@
     return saved;
   }
 
+  function noPluginResultMessage(pluginName: string) {
+    if (entityKind === "book" && nsfw.mode === "off") {
+      return `${pluginName}: No result found. If this MangaDex title is adult-rated, enable NSFW mode and try again.`;
+    }
+    return `${pluginName}: No result found.`;
+  }
+
   function showLegacyReview(
     result: ScrapeResult,
     normalized: NormalizedScrapeResult,
@@ -348,6 +362,69 @@
   ) {
     legacyReview = { result, normalized, matchedScraper };
     drawerOpen = null;
+    open = false;
+  }
+
+  function updateBookReviewField(field: BookField) {
+    if (!bookReviewRow) return;
+    const selectedFields = new Set(bookReviewRow.selectedFields);
+    if (selectedFields.has(field)) selectedFields.delete(field);
+    else selectedFields.add(field);
+    bookReviewRow = { ...bookReviewRow, selectedFields };
+  }
+
+  async function acceptBookReview(
+    selectedImages?: Record<string, string | null | undefined>,
+  ) {
+    if (!bookReviewRow?.scrapeResultId) return;
+    await acceptPluginResult(
+      bookReviewRow.scrapeResultId,
+      Array.from(bookReviewRow.selectedFields),
+      selectedImages,
+    );
+    reloadAfterAccepted();
+  }
+
+  function showBookReview(
+    saved: ScrapeResult,
+    normalized: NonNullable<Awaited<ReturnType<typeof executePlugin>>["normalized"]>,
+    matchedProvider: string,
+  ) {
+    const rawResult =
+      saved.rawResult && typeof saved.rawResult === "object"
+        ? (saved.rawResult as Record<string, unknown>)
+        : {};
+    bookReviewRow = {
+      book: {
+        id: entityId,
+        bookType: "comic",
+        title,
+        details: null,
+        coverImagePath: null,
+        previewImagePaths: [],
+        pageCount: 0,
+        chapterCount: 0,
+        rating: null,
+        organized: false,
+        isNsfw: false,
+        date: null,
+        studioId: null,
+        studioName: null,
+        performers: [],
+        tags: [],
+        readCompleted: false,
+        progress: null,
+        createdAt: "",
+        updatedAt: "",
+      },
+      status: "found",
+      result: bookResult(rawResult, normalized),
+      scrapeResultId: saved.id,
+      matchedProvider,
+      selectedFields: new Set(BOOK_FIELDS),
+    };
+    drawerOpen = null;
+    legacyReview = null;
     open = false;
   }
 
@@ -362,7 +439,11 @@
           `${plugin.name} does not advertise a ${entityKind} lookup capability.`,
         );
       }
-      let pluginInput: Record<string, unknown> = { title, name: title };
+      let pluginInput: Record<string, unknown> = {
+        title,
+        name: title,
+        includeNsfw: nsfw.mode !== "off",
+      };
       if (entityKind === "video_series") {
         try {
           const detail = await fetchVideoSeriesLibraryDetail(entityId);
@@ -377,10 +458,12 @@
         saveResult: true,
         entityId,
       });
-      if (!res.ok) throw new Error(`${plugin.name} returned no result.`);
+      if (!res.ok || !res.result) throw new Error(noPluginResultMessage(plugin.name));
       const saved = savedScrapeResult(res, plugin.name);
       if (shouldUseLegacyReview(action, res)) {
         showLegacyReview(saved, res.normalized as NormalizedScrapeResult, plugin.name);
+      } else if (entityKind === "book" && res.normalized) {
+        showBookReview(saved, res.normalized, plugin.name);
       } else {
         drawerOpen = saved.id;
         legacyReview = null;
@@ -619,6 +702,21 @@
     label={title}
     onAccepted={reloadAfterAccepted}
     onClose={() => (drawerOpen = null)}
+  />
+{/if}
+
+{#if bookReviewRow}
+  <BookReviewDrawer
+    row={bookReviewRow}
+    onClose={() => (bookReviewRow = null)}
+    onToggleField={updateBookReviewField}
+    onAccept={acceptBookReview}
+    onCandidateResult={(result, scrapeResultId) => {
+      if (bookReviewRow) {
+        bookReviewRow = { ...bookReviewRow, result, scrapeResultId, status: "found" };
+      }
+    }}
+    includeNsfw={nsfw.mode !== "off"}
   />
 {/if}
 

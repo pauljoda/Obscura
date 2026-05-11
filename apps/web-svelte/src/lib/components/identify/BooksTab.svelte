@@ -1,12 +1,12 @@
 <script lang="ts">
   import { acceptPluginResult } from "$lib/api/scrapers";
-  import type { GalleryRow, GalleryField } from "$lib/identify/identify-types";
-  import GalleryRowCard from "./GalleryRowCard.svelte";
-  import GalleryReviewDrawer from "./GalleryReviewDrawer.svelte";
+  import type { BookField, BookRow } from "$lib/identify/identify-types";
+  import BookRowCard from "./BookRowCard.svelte";
+  import BookReviewDrawer from "./BookReviewDrawer.svelte";
 
   interface Props {
-    rows: GalleryRow[];
-    setRows: (updater: (prev: GalleryRow[]) => GalleryRow[]) => void;
+    rows: BookRow[];
+    setRows: (updater: (prev: BookRow[]) => BookRow[]) => void;
     expandedIds: Set<string>;
     toggleExpanded: (id: string) => void;
     onSeekSingle?: (idx: number) => void;
@@ -26,7 +26,7 @@
 
   let reviewingIdx = $state<number | null>(null);
 
-  function toggleField(idx: number, field: GalleryField) {
+  function toggleField(idx: number, field: BookField) {
     setRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
@@ -38,11 +38,18 @@
     );
   }
 
-  async function acceptRow(idx: number) {
+  async function acceptRow(
+    idx: number,
+    selectedImages?: Record<string, string | null | undefined>,
+  ) {
     const row = rows[idx];
     if (!row?.scrapeResultId) return;
     try {
-      await acceptPluginResult(row.scrapeResultId, Array.from(row.selectedFields));
+      await acceptPluginResult(
+        row.scrapeResultId,
+        Array.from(row.selectedFields),
+        selectedImages,
+      );
       setRows((prev) =>
         prev.map((r, i) => (i === idx ? { ...r, status: "accepted" } : r)),
       );
@@ -83,11 +90,11 @@
   );
 </script>
 
-{#each rows as row, idx (row.gallery.id)}
-  <GalleryRowCard
+{#each rows as row, idx (row.book.id)}
+  <BookRowCard
     {row}
-    expanded={expandedIds.has(row.gallery.id)}
-    onToggleExpand={() => toggleExpanded(row.gallery.id)}
+    expanded={expandedIds.has(row.book.id)}
+    onToggleExpand={() => toggleExpanded(row.book.id)}
     onAccept={() => void acceptRow(idx)}
     onDismiss={() => dismissRow(idx)}
     onReview={row.status === "found" ? () => (reviewingIdx = idx) : undefined}
@@ -97,7 +104,7 @@
 {/each}
 
 {#if reviewingIdx !== null}
-  <GalleryReviewDrawer
+  <BookReviewDrawer
     row={rows[reviewingIdx]}
     onClose={() => (reviewingIdx = null)}
     onToggleField={(field) => toggleField(reviewingIdx!, field)}
@@ -111,16 +118,16 @@
       );
     }}
     {includeNsfw}
-    onAccept={async () => {
-      await acceptRow(reviewingIdx!);
+    onAccept={async (selectedImages) => {
+      await acceptRow(reviewingIdx!, selectedImages);
       reviewingIdx = null;
     }}
     onNext={nextIdx !== -1 ? () => (reviewingIdx = nextIdx) : undefined}
     onPrev={prevIdx !== -1 ? () => (reviewingIdx = prevIdx) : undefined}
     hasNext={nextIdx !== -1}
     hasPrev={prevIdx !== -1}
-    onAcceptAndNext={async () => {
-      await acceptRow(reviewingIdx!);
+    onAcceptAndNext={async (selectedImages) => {
+      await acceptRow(reviewingIdx!, selectedImages);
       if (nextIdx !== -1) reviewingIdx = nextIdx;
       else reviewingIdx = null;
     }}

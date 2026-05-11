@@ -2,7 +2,6 @@
   import {
     Check,
     ChevronDown,
-    Images,
     Loader2,
     ScanSearch,
     X,
@@ -11,11 +10,11 @@
   } from "@lucide/svelte";
   import { Badge, cn } from "@obscura/ui-svelte";
   import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
-  import type { GalleryRow } from "$lib/identify/identify-types";
+  import type { BookRow } from "$lib/identify/identify-types";
   import StatusDot from "../scrape/StatusDot.svelte";
 
   interface Props {
-    row: GalleryRow;
+    row: BookRow;
     expanded: boolean;
     onToggleExpand: () => void;
     onAccept: () => void;
@@ -65,25 +64,26 @@
     <StatusDot status={row.status} />
     <div class="h-10 w-10 flex-shrink-0 overflow-hidden">
       <EntityThumbnail
-        kind="gallery"
-        title={row.gallery.title}
-        coverImagePath={row.gallery.coverImagePath}
-        previewImagePaths={row.gallery.previewImagePaths}
-        imageCount={row.gallery.imageCount}
-        isNsfw={row.gallery.isNsfw}
-        isComic={row.gallery.isComic}
+        kind="book"
+        title={row.book.title}
+        coverImagePath={row.book.coverImagePath}
+        previewImagePaths={row.book.previewImagePaths}
+        pageCount={row.book.pageCount}
+        isNsfw={row.book.isNsfw}
         size="compact"
         aspectClass="h-full w-full"
         showCount={false}
       />
     </div>
     <div class="flex-1 min-w-0">
-      <p class="text-[0.8rem] font-medium truncate">{row.gallery.title}</p>
+      <p class="text-[0.8rem] font-medium truncate">{row.book.title}</p>
       <div class="flex items-center gap-2 mt-0.5">
         <span class="text-text-disabled text-[0.65rem]">
-          {row.gallery.imageCount} images
+          {row.book.pageCount} pages
         </span>
-        <span class="text-text-disabled text-[0.65rem]">{row.gallery.galleryType}</span>
+        <span class="text-text-disabled text-[0.65rem]">
+          {row.book.chapterCount} chapters
+        </span>
         {#if row.matchedProvider && row.status !== "pending"}
           <span class="text-text-disabled text-[0.6rem] font-mono">
             via {row.matchedProvider}
@@ -112,8 +112,8 @@
             onSeekSingle?.();
           }}
           class="p-1.5 hover:bg-accent-950/60 text-text-muted hover:text-text-accent transition-colors"
-          title="Identify this gallery"
-          aria-label="Identify this gallery"
+          title="Identify this book"
+          aria-label="Identify this book"
         >
           <ScanSearch class="h-3.5 w-3.5" />
         </button>

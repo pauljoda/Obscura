@@ -9,15 +9,32 @@ import {
   type OscuraPluginManifest,
   type PluginInput,
 } from "@obscura/plugins";
-import { updateGalleryWrite, updateImageWrite } from "./gallery-media";
+import {
+  setGalleryCoverFromUrlWrite,
+  updateGalleryWrite,
+  updateImageWrite,
+} from "./gallery-media";
 import { updateAudioLibraryWrite } from "./audio-libraries";
 import { updateAudioTrackWrite } from "./audio-tracks";
+import {
+  setBookChapterCoverFromUrlWrite,
+  setBookCoverFromUrlWrite,
+  updateBookWrite,
+} from "./books";
 import { setVideoSeriesCoverFromUrlWrite, updateVideoSeriesWrite } from "./video-series";
 import { InternalError, NotFoundError, ValidationError, ConflictError } from "./errors";
 import { deriveProposedResultFromPluginOutput } from "./plugin-proposed-result";
 
-const { pluginAuth, pluginPackages, scrapeResults, videoEpisodes, videoMovies, videoSeries } =
-  schema;
+const {
+  bookChapters,
+  books,
+  pluginAuth,
+  pluginPackages,
+  scrapeResults,
+  videoEpisodes,
+  videoMovies,
+  videoSeries,
+} = schema;
 
 export interface ExecutePluginInput {
   pluginDbId: string;
@@ -30,6 +47,7 @@ export interface ExecutePluginInput {
 export interface AcceptPluginResultInput {
   scrapeResultId: string;
   fields?: string[];
+  selectedImages?: Record<string, string | null | undefined>;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -123,6 +141,14 @@ async function resolveSavedEntityType(
     return "gallery";
   }
 
+  if (
+    action.startsWith("book") ||
+    action.startsWith("comic") ||
+    action.startsWith("manga")
+  ) {
+    return "book";
+  }
+
   if (action.startsWith("image")) {
     return "image";
   }
@@ -161,6 +187,10 @@ function deriveCastNames(
     return rawResult.performerNames as string[];
   }
 
+  if (proposedResult && Array.isArray(proposedResult.performerNames)) {
+    return proposedResult.performerNames as string[];
+  }
+
   if (!proposedResult || !Array.isArray(proposedResult.cast)) {
     if (typeof rawResult.artist === "string" && rawResult.artist.trim()) {
       const parts = rawResult.artist
@@ -188,6 +218,10 @@ function deriveGenreTags(
 ): string[] | null {
   if (Array.isArray(rawResult.tagNames)) {
     return rawResult.tagNames as string[];
+  }
+
+  if (proposedResult && Array.isArray(proposedResult.tagNames)) {
+    return proposedResult.tagNames as string[];
   }
 
   if (!proposedResult || !Array.isArray(proposedResult.genres)) {
@@ -222,16 +256,20 @@ async function maybeSavePluginResult(args: {
   const entityType = await resolveSavedEntityType(args.db, args.action, args.entityId);
   const proposedResult = deriveProposedResultFromPluginOutput(args.result);
   const proposedTitle = (proposedResult?.title ??
+    proposedResult?.name ??
     rawResult.title ??
     rawResult.name ??
     null) as string | null;
   const proposedDate = (proposedResult?.firstAirDate ??
+    proposedResult?.date ??
     rawResult.date ??
     null) as string | null;
   const proposedDetails = (proposedResult?.overview ??
+    proposedResult?.details ??
     rawResult.details ??
     null) as string | null;
   const proposedImageUrl = (firstPosterUrl(proposedResult) ??
+    proposedResult?.imageUrl ??
     rawResult.imageUrl ??
     null) as string | null;
   const castNames = deriveCastNames(rawResult, proposedResult);
@@ -253,9 +291,13 @@ async function maybeSavePluginResult(args: {
       proposedDetails,
       proposedUrl: Array.isArray(rawResult.urls)
         ? ((rawResult.urls[0] as string | undefined) ?? null)
+        : Array.isArray(proposedResult?.urls)
+          ? ((proposedResult.urls[0] as string | undefined) ?? null)
         : ((rawResult.url as string | undefined) ?? null),
       proposedUrls: Array.isArray(rawResult.urls)
         ? (rawResult.urls as string[])
+        : Array.isArray(proposedResult?.urls)
+          ? (proposedResult.urls as string[])
         : null,
       proposedStudioName: (proposedResult?.studioName ??
         rawResult.studioName ??
@@ -349,6 +391,124 @@ function buildDefaultAcceptedFields(fields?: string[]) {
   );
 }
 
+function recordOrNull(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function stringRecordOrNull(value: unknown): Record<string, string> | null {
+  const record = recordOrNull(value);
+  if (!record) return null;
+  const out: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(record)) {
+    if (typeof raw === "string" && raw.trim()) out[key] = raw.trim();
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function integerChapterNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+async function applyBookChapterPluginMetadata(
+  db: AppDb,
+  bookId: string,
+  result: Awaited<ReturnType<typeof loadScrapeResult>>,
+  fieldsToApply: Set<string>,
+  selectedImages?: Record<string, string | null | undefined>,
+) {
+  const proposed = recordOrNull(result.proposedResult);
+  if (!proposed) return;
+
+  const externalIds = stringRecordOrNull(proposed.externalIds);
+  const mangadexChapter = externalIds?.mangadexChapter;
+  const chapterNumber = integerChapterNumber(
+    proposed.chapterNumber ?? externalIds?.chapterNumber,
+  );
+  const manualChapterCovers = Object.entries(selectedImages ?? {})
+    .filter(([key, value]) => key.startsWith("chapterCover:") && typeof value === "string")
+    .map(([key, value]) => ({
+      chapterId: key.slice("chapterCover:".length),
+      url: value?.trim() ?? "",
+    }))
+    .filter((entry) => entry.chapterId && entry.url);
+  const selectedMatchedChapterCover =
+    selectedImages && Object.prototype.hasOwnProperty.call(selectedImages, "chapterCover")
+      ? selectedImages.chapterCover
+      : undefined;
+
+  if (
+    manualChapterCovers.length === 0 &&
+    selectedMatchedChapterCover === undefined &&
+    !mangadexChapter &&
+    chapterNumber == null
+  ) {
+    return;
+  }
+
+  const chapters = await db
+    .select({
+      id: bookChapters.id,
+      chapterNumber: bookChapters.chapterNumber,
+      externalIds: bookChapters.externalIds,
+    })
+    .from(bookChapters)
+    .where(eq(bookChapters.bookId, bookId));
+
+  if (fieldsToApply.has("image") && manualChapterCovers.length > 0) {
+    const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+    for (const entry of manualChapterCovers) {
+      if (!chapterIds.has(entry.chapterId)) continue;
+      try {
+        await setBookChapterCoverFromUrlWrite(db, entry.chapterId, entry.url);
+      } catch (error) {
+        console.warn(
+          `[plugins/accept] cover download failed for book chapter ${entry.chapterId}: ${toErrorMessage(error)}`,
+        );
+      }
+    }
+  }
+
+  const target =
+    (mangadexChapter
+      ? chapters.find((chapter) => chapter.externalIds?.mangadexChapter === mangadexChapter)
+      : null) ??
+    (chapterNumber != null
+      ? chapters.find((chapter) => chapter.chapterNumber === chapterNumber)
+      : null) ??
+    (chapters.length === 1 ? chapters[0] : null);
+
+  if (!target) return;
+
+  if (externalIds) {
+    await db
+      .update(bookChapters)
+      .set({
+        externalIds: { ...(target.externalIds ?? {}), ...externalIds },
+        updatedAt: new Date(),
+      })
+      .where(eq(bookChapters.id, target.id));
+  }
+
+  const matchedChapterCover =
+    typeof selectedMatchedChapterCover === "string" && selectedMatchedChapterCover.trim()
+      ? selectedMatchedChapterCover.trim()
+      : null;
+  if (fieldsToApply.has("image") && matchedChapterCover) {
+    try {
+      await setBookChapterCoverFromUrlWrite(db, target.id, matchedChapterCover);
+    } catch (error) {
+      console.warn(
+        `[plugins/accept] cover download failed for book chapter ${target.id}: ${toErrorMessage(error)}`,
+      );
+    }
+  }
+}
+
 async function applySeriesPluginResult(
   db: AppDb,
   entityId: string,
@@ -372,7 +532,6 @@ async function applySeriesPluginResult(
   if (fieldsToApply.has("tags") && result.proposedTagNames?.length) {
     patch.tagNames = result.proposedTagNames;
   }
-
   if (Object.keys(patch).length > 0) {
     await updateVideoSeriesWrite(
       db,
@@ -426,6 +585,7 @@ async function applyNonVideoPluginResult(
   entityId: string,
   result: Awaited<ReturnType<typeof loadScrapeResult>>,
   fieldsToApply: Set<string>,
+  selectedImages?: Record<string, string | null | undefined>,
 ) {
   const patch: Record<string, unknown> = {};
 
@@ -447,12 +607,16 @@ async function applyNonVideoPluginResult(
   if (fieldsToApply.has("tags") && result.proposedTagNames?.length) {
     patch.tagNames = result.proposedTagNames;
   }
-
-  if (Object.keys(patch).length === 0) {
-    return;
+  if (
+    (result.entityType === "gallery" || result.entityType === "book") &&
+    result.proposedResult &&
+    typeof (result.proposedResult as Record<string, unknown>).isNsfw === "boolean"
+  ) {
+    patch.isNsfw = (result.proposedResult as Record<string, unknown>).isNsfw;
   }
 
   if (result.entityType === "audio_library") {
+    if (Object.keys(patch).length === 0) return;
     await updateAudioLibraryWrite(
       db,
       entityId,
@@ -462,6 +626,7 @@ async function applyNonVideoPluginResult(
   }
 
   if (result.entityType === "audio_track") {
+    if (Object.keys(patch).length === 0) return;
     await updateAudioTrackWrite(
       db,
       entityId,
@@ -471,15 +636,81 @@ async function applyNonVideoPluginResult(
   }
 
   if (result.entityType === "gallery") {
-    await updateGalleryWrite(
-      db,
-      entityId,
-      patch as Parameters<typeof updateGalleryWrite>[2],
-    );
+    if (Object.keys(patch).length > 0) {
+      await updateGalleryWrite(
+        db,
+        entityId,
+        patch as Parameters<typeof updateGalleryWrite>[2],
+      );
+    }
+    if (fieldsToApply.has("image") && result.proposedImageUrl) {
+      try {
+        await setGalleryCoverFromUrlWrite(db, entityId, result.proposedImageUrl);
+      } catch (error) {
+        console.warn(
+          `[plugins/accept] cover download failed for gallery ${entityId}: ${toErrorMessage(error)}`,
+        );
+      }
+    }
+    return;
+  }
+
+  if (result.entityType === "book") {
+    if (Object.keys(patch).length > 0) {
+      await updateBookWrite(
+        db,
+        entityId,
+        patch as Parameters<typeof updateBookWrite>[2],
+      );
+    }
+    const proposed = result.proposedResult as Record<string, unknown> | null;
+    const urlPatch: Record<string, unknown> = {};
+    if (fieldsToApply.has("url") && result.proposedUrls?.length) {
+      urlPatch.urls = result.proposedUrls;
+    }
+    if (proposed?.externalIds && typeof proposed.externalIds === "object") {
+      const [existing] = await db
+        .select({ externalIds: books.externalIds })
+        .from(books)
+        .where(eq(books.id, entityId))
+        .limit(1);
+      urlPatch.externalIds = {
+        ...(existing?.externalIds ?? {}),
+        ...(proposed.externalIds as Record<string, string>),
+      };
+    }
+    if (Object.keys(urlPatch).length > 0) {
+      await db
+        .update(books)
+        .set({ ...urlPatch, updatedAt: new Date() })
+        .where(eq(books.id, entityId));
+    }
+    const hasSelectedBookCover =
+      selectedImages &&
+      (Object.prototype.hasOwnProperty.call(selectedImages, "cover") ||
+        Object.prototype.hasOwnProperty.call(selectedImages, "poster"));
+    const selectedBookCover =
+      typeof selectedImages?.cover === "string" && selectedImages.cover.trim()
+        ? selectedImages.cover.trim()
+        : typeof selectedImages?.poster === "string" && selectedImages.poster.trim()
+          ? selectedImages.poster.trim()
+          : null;
+    const bookCoverUrl = hasSelectedBookCover ? selectedBookCover : result.proposedImageUrl;
+    if (fieldsToApply.has("image") && bookCoverUrl) {
+      try {
+        await setBookCoverFromUrlWrite(db, entityId, bookCoverUrl);
+      } catch (error) {
+        console.warn(
+          `[plugins/accept] cover download failed for book ${entityId}: ${toErrorMessage(error)}`,
+        );
+      }
+    }
+    await applyBookChapterPluginMetadata(db, entityId, result, fieldsToApply, selectedImages);
     return;
   }
 
   if (result.entityType === "image") {
+    if (Object.keys(patch).length === 0) return;
     await updateImageWrite(db, entityId, patch as Parameters<typeof updateImageWrite>[2]);
   }
 }
@@ -527,10 +758,17 @@ export async function acceptPluginResultWrite(
     result.entityType === "audio_library" ||
     result.entityType === "audio_track" ||
     result.entityType === "gallery" ||
+    result.entityType === "book" ||
     result.entityType === "image"
   ) {
     try {
-      await applyNonVideoPluginResult(db, entityId, result, fieldsToApply);
+      await applyNonVideoPluginResult(
+        db,
+        entityId,
+        result,
+        fieldsToApply,
+        input.selectedImages,
+      );
     } catch (error) {
       throw new InternalError(`Failed to apply scrape patch: ${toErrorMessage(error)}`);
     }

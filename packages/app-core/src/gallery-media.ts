@@ -1086,6 +1086,26 @@ export async function uploadGalleryCoverWrite(
   };
 }
 
+export async function setGalleryCoverFromUrlWrite(
+  db: AppDb,
+  galleryId: string,
+  imageUrl: string,
+) {
+  let buffer: Buffer;
+  if (imageUrl.startsWith("data:image/")) {
+    const b64 = imageUrl.split(",")[1];
+    if (!b64) throw new ValidationError("Bad data URL");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new InternalError(`Image download failed: HTTP ${res.status}`);
+    }
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+  return uploadGalleryCoverWrite(db, galleryId, buffer);
+}
+
 const IMAGE_CUSTOM_THUMB_FILE = "thumb-custom.jpg";
 
 export async function setCustomImageThumbnailWrite(

@@ -9,6 +9,7 @@
     Square,
     SkipForward,
     Film,
+    BookOpen,
     FolderOpen,
     Images,
     Image,
@@ -34,6 +35,7 @@
   import { fetchSeries } from "$lib/api/videos";
   import {
     fetchGalleries,
+    fetchBooks,
     fetchImages,
     fetchAudioLibraries,
   } from "$lib/api/media";
@@ -58,6 +60,7 @@
   } from "$lib/identify/scrape-types";
   import type {
     VideoSeriesRow,
+    BookRow,
     GalleryRow,
     ImageRow,
     AudioLibraryRow,
@@ -65,6 +68,7 @@
   } from "$lib/identify/identify-types";
   import {
     VIDEO_SERIES_FIELDS,
+    BOOK_FIELDS,
     GALLERY_FIELDS,
     IMAGE_FIELDS,
     AUDIO_LIBRARY_FIELDS,
@@ -84,6 +88,12 @@
     acceptAllVideoSeries,
   } from "$lib/identify/identify-video-series-runner";
   import {
+    runBookIdentify,
+    seekBookSingle,
+    seekBookSingleByURL,
+    acceptAllBooks,
+  } from "$lib/identify/book-runner";
+  import {
     runAudioLibraryIdentify,
     seekAudioLibrarySingle,
     acceptAllAudioLibraries,
@@ -96,6 +106,7 @@
   import {
     runGalleryIdentify,
     seekGallerySingle,
+    seekGallerySingleByURL,
     acceptAllGalleries,
   } from "$lib/identify/gallery-runner";
   import {
@@ -114,6 +125,7 @@
   import TagsTab from "./scrape/TagsTab.svelte";
   import PhashesTab from "./scrape/PhashesTab.svelte";
   import VideoSeriesTab from "./identify/VideoSeriesTab.svelte";
+  import BooksTab from "./identify/BooksTab.svelte";
   import GalleriesTab from "./identify/GalleriesTab.svelte";
   import ImagesTab from "./identify/ImagesTab.svelte";
   import AudioLibrariesTab from "./identify/AudioLibrariesTab.svelte";
@@ -135,6 +147,7 @@
   let studioRows = $state<StudioRow[]>([]);
   let tagRows = $state<TagRow[]>([]);
   let seriesRows = $state<VideoSeriesRow[]>([]);
+  let bookRows = $state<BookRow[]>([]);
   let galleryRows = $state<GalleryRow[]>([]);
   let imageRows = $state<ImageRow[]>([]);
   let audioLibraryRows = $state<AudioLibraryRow[]>([]);
@@ -166,6 +179,7 @@
   function expandAll() {
     if (tab === "videos") expandedIds = new Set(videoRows.map((r) => r.video.id));
     else if (tab === "video-series") expandedIds = new Set(seriesRows.map((r) => r.series.id));
+    else if (tab === "books") expandedIds = new Set(bookRows.map((r) => r.book.id));
     else if (tab === "galleries") expandedIds = new Set(galleryRows.map((r) => r.gallery.id));
     else if (tab === "images") expandedIds = new Set(imageRows.map((r) => r.image.id));
     else if (tab === "audio-libraries") expandedIds = new Set(audioLibraryRows.map((r) => r.library.id));
@@ -316,6 +330,18 @@
           status: "pending",
           selectedFields: new Set(VIDEO_SERIES_FIELDS),
           wizardStep: "idle",
+        }));
+      } else if (nextTab === "books") {
+        const booksRes = await fetchBooks({ nsfw: nsfw.mode, limit: 500, offset: 0 }).catch(() => ({
+          books: [],
+          total: 0,
+          limit: 500,
+          offset: 0,
+        }));
+        bookRows = booksRes.books.map((book) => ({
+          book,
+          status: "pending",
+          selectedFields: new Set(BOOK_FIELDS),
         }));
       } else if (nextTab === "galleries") {
         const galleriesRes = await fetchGalleries({}).catch(() => ({ galleries: [], total: 0, limit: 100, offset: 0 }));
@@ -474,21 +500,23 @@
       ? videoRows
       : tab === "video-series"
         ? seriesRows
-        : tab === "galleries"
-          ? galleryRows
-          : tab === "images"
-            ? imageRows
-            : tab === "audio-libraries"
-              ? audioLibraryRows
-              : tab === "audio-tracks"
-                ? audioTrackRows
-                : tab === "performers"
-                  ? perfRows
-                  : tab === "studios"
-                    ? studioRows
-                    : tab === "tags"
-                      ? tagRows
-                      : [],
+        : tab === "books"
+          ? bookRows
+          : tab === "galleries"
+            ? galleryRows
+            : tab === "images"
+              ? imageRows
+              : tab === "audio-libraries"
+                ? audioLibraryRows
+                : tab === "audio-tracks"
+                  ? audioTrackRows
+                  : tab === "performers"
+                    ? perfRows
+                    : tab === "studios"
+                      ? studioRows
+                      : tab === "tags"
+                        ? tagRows
+                        : [],
   );
   const foundCount = $derived(rows.filter((r) => r.status === "found").length);
   const acceptedCount = $derived(rows.filter((r) => r.status === "accepted").length);
@@ -517,6 +545,18 @@
           return caps.videoByURL || caps.videoByName || caps.videoByFragment;
         case "video-series":
           return caps.folderByName || caps.folderByFragment || caps.folderCascade;
+        case "books":
+          return (
+            caps.bookByURL ||
+            caps.bookByName ||
+            caps.bookByFragment ||
+            caps.comicByURL ||
+            caps.comicByName ||
+            caps.comicByFragment ||
+            caps.mangaByURL ||
+            caps.mangaByName ||
+            caps.mangaByFragment
+          );
         case "galleries":
           return caps.galleryByURL || caps.galleryByFragment;
         case "images":
@@ -572,6 +612,7 @@
       plugins: pluginsForTab,
       selectedProviderId: selectedScraperId,
       autoAccept,
+      includeNsfw: nsfw.mode !== "off",
       abortRef,
       setRunning: setRunningWrapped,
     };
@@ -596,6 +637,12 @@
         ...pluginRunProps,
         rows: seriesRows,
         setRows: (updater) => (seriesRows = updater(seriesRows)),
+      });
+    } else if (tab === "books") {
+      void runBookIdentify({
+        ...pluginRunProps,
+        rows: bookRows,
+        setRows: (updater) => (bookRows = updater(bookRows)),
       });
     } else if (tab === "galleries") {
       void runGalleryIdentify({
@@ -664,6 +711,10 @@
       await acceptAllVideoSeries(seriesRows, (updater) => (seriesRows = updater(seriesRows)));
       return;
     }
+    if (tab === "books") {
+      await acceptAllBooks(bookRows, (updater) => (bookRows = updater(bookRows)));
+      return;
+    }
     if (tab === "galleries") {
       await acceptAllGalleries(galleryRows, (updater) => (galleryRows = updater(galleryRows)));
       return;
@@ -706,6 +757,7 @@
   }> = $derived([
     { key: "videos", label: entityTerms.videos, icon: Film },
     { key: "video-series", label: entityTerms.series, icon: FolderOpen },
+    { key: "books", label: "Books", icon: BookOpen },
     { key: "galleries", label: "Galleries", icon: Images },
     { key: "images", label: "Images", icon: Image },
     { key: "audio-libraries", label: "Albums", icon: Library },
@@ -1108,6 +1160,31 @@
                 );
               }}
             />
+          {:else if tab === "books"}
+            <BooksTab
+              rows={bookRows}
+              setRows={(updater) => (bookRows = updater(bookRows))}
+              {expandedIds}
+              {toggleExpanded}
+              onSeekSingle={(idx) =>
+                void seekBookSingle(
+                  idx,
+                  bookRows,
+                  (updater) => (bookRows = updater(bookRows)),
+                  pluginListForSeek(),
+                  nsfw.mode !== "off",
+                )}
+              onSeekUrl={(idx, url) =>
+                void seekBookSingleByURL(
+                  idx,
+                  url,
+                  bookRows,
+                  (updater) => (bookRows = updater(bookRows)),
+                  pluginListForSeek(),
+                  nsfw.mode !== "off",
+                )}
+              includeNsfw={nsfw.mode !== "off"}
+            />
           {:else if tab === "galleries"}
             <GalleriesTab
               rows={galleryRows}
@@ -1120,7 +1197,18 @@
                   galleryRows,
                   (updater) => (galleryRows = updater(galleryRows)),
                   pluginListForSeek(),
+                  nsfw.mode !== "off",
                 )}
+              onSeekUrl={(idx, url) =>
+                void seekGallerySingleByURL(
+                  idx,
+                  url,
+                  galleryRows,
+                  (updater) => (galleryRows = updater(galleryRows)),
+                  pluginListForSeek(),
+                  nsfw.mode !== "off",
+                )}
+              includeNsfw={nsfw.mode !== "off"}
             />
           {:else if tab === "images"}
             <ImagesTab

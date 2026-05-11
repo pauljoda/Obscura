@@ -11,6 +11,7 @@ describe("tabSupportsStashBoxProvider", () => {
     const visibleTabs: Tab[] = ["videos", "images", "performers", "studios", "tags"];
     const hiddenTabs: Tab[] = [
       "video-series",
+      "books",
       "galleries",
       "audio-libraries",
       "audio-tracks",
@@ -31,6 +32,7 @@ describe("tabEntityLabel", () => {
   it("names every identify tab for empty-provider messages", () => {
     expect(tabEntityLabel("videos")).toBe("videos");
     expect(tabEntityLabel("video-series")).toBe("series");
+    expect(tabEntityLabel("books")).toBe("books");
     expect(tabEntityLabel("galleries")).toBe("galleries");
     expect(tabEntityLabel("images")).toBe("images");
     expect(tabEntityLabel("audio-libraries")).toBe("albums");

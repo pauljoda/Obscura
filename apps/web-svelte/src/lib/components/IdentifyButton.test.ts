@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import IdentifyButton from "./IdentifyButton.svelte";
+import IdentifyButtonHarness from "./IdentifyButton.test-harness.svelte";
 
 const { fetchInstalledPlugins, fetchInstalledScrapers, fetchStashBoxEndpoints } =
   vi.hoisted(() => ({
@@ -61,7 +61,7 @@ describe("IdentifyButton", () => {
   });
 
   it("opens its plugin menu as a viewport-positioned flyout", async () => {
-    render(IdentifyButton, {
+    render(IdentifyButtonHarness, {
       props: {
         entityKind: "video_series",
         entityId: "series-1",

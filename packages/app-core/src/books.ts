@@ -14,6 +14,7 @@ import {
   extractComicInfoFromZip,
   fileNameToTitle,
   getGeneratedBookChapterDir,
+  getGeneratedBookDir,
   getGeneratedBookPageDir,
   parseZipImageMembers,
 } from "@obscura/media-core";
@@ -712,6 +713,57 @@ export async function updateBookWrite(
 }
 
 const BOOK_CHAPTER_COVER_FILE = "cover-custom.jpg";
+const BOOK_COVER_FILE = "cover-custom.jpg";
+
+function bookCoverPath(bookId: string) {
+  return `/assets/books/${bookId}/cover`;
+}
+
+export async function uploadBookCoverWrite(
+  db: AppDb,
+  bookId: string,
+  buffer: Buffer,
+) {
+  if (!buffer.length) throw new ValidationError("Empty file");
+  const [book] = await db
+    .select({ id: books.id })
+    .from(books)
+    .where(eq(books.id, bookId))
+    .limit(1);
+  if (!book) throw new NotFoundError("Book not found");
+
+  const dir = getGeneratedBookDir(bookId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, BOOK_COVER_FILE), buffer);
+
+  const coverImagePath = bookCoverPath(bookId);
+  await db
+    .update(books)
+    .set({ coverPageId: null, coverImagePath, updatedAt: new Date() })
+    .where(eq(books.id, bookId));
+
+  return { ok: true as const, coverImagePath };
+}
+
+export async function setBookCoverFromUrlWrite(
+  db: AppDb,
+  bookId: string,
+  imageUrl: string,
+) {
+  let buffer: Buffer;
+  if (imageUrl.startsWith("data:image/")) {
+    const b64 = imageUrl.split(",")[1];
+    if (!b64) throw new ValidationError("Bad data URL");
+    buffer = Buffer.from(b64, "base64");
+  } else {
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new InternalError(`Image download failed: HTTP ${res.status}`);
+    }
+    buffer = Buffer.from(await res.arrayBuffer());
+  }
+  return uploadBookCoverWrite(db, bookId, buffer);
+}
 
 function bookChapterCoverPath(chapterId: string) {
   return `/assets/book-chapters/${chapterId}/cover`;

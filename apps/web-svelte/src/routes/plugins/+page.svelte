@@ -72,6 +72,15 @@
     performerByFragment: { label: "Actor by fragment", category: "performer" },
     galleryByURL: { label: "Gallery by URL", category: "gallery" },
     galleryByFragment: { label: "Gallery by fragment", category: "gallery" },
+    bookByURL: { label: "Book by URL", category: "book" },
+    bookByName: { label: "Book by name", category: "book" },
+    bookByFragment: { label: "Book by fragment", category: "book" },
+    comicByURL: { label: "Comic by URL", category: "book" },
+    comicByName: { label: "Comic by name", category: "book" },
+    comicByFragment: { label: "Comic by fragment", category: "book" },
+    mangaByURL: { label: "Manga by URL", category: "book" },
+    mangaByName: { label: "Manga by name", category: "book" },
+    mangaByFragment: { label: "Manga by fragment", category: "book" },
     groupByURL: { label: "Group by URL", category: "group" },
     videoByURL: { label: "Video by URL", category: "scene" },
     videoByName: { label: "Video by name", category: "scene" },
@@ -329,6 +338,38 @@
       authExpandedFor = pluginId;
       authValues = {};
     }
+  }
+
+  function authFieldName(field: { key: string; label: string }) {
+    const key = field.key.toLowerCase();
+    if (key.includes("client_id")) return "client ID";
+    if (key.includes("client_secret")) return "client secret";
+    if (key.includes("username")) return "username";
+    if (key.includes("password")) return "password";
+    if (key.includes("api_key") || key.includes("apikey")) return "API key";
+    if (key.includes("token")) return "token";
+    return field.label.toLowerCase();
+  }
+
+  function authPlaceholder(
+    plugin: InstalledPlugin,
+    field: { key: string; label: string },
+  ) {
+    const name = authFieldName(field);
+    if (plugin.authStatus === "ok") {
+      return `Configured - enter new ${name} to replace`;
+    }
+    if (name === "username" || name === "password") {
+      return `Enter your ${field.label}`;
+    }
+    return `Paste your ${field.label}`;
+  }
+
+  function authLinkLabel(field: { key: string }) {
+    const key = field.key.toLowerCase();
+    if (key.includes("username") || key.includes("password")) return "Open login";
+    if (key.includes("client_id") || key.includes("client_secret")) return "Open settings";
+    return "Get key";
   }
 
   async function handleSaveAuth(plugin: InstalledPlugin) {
@@ -835,7 +876,7 @@
                               rel="noopener noreferrer"
                               class="text-[0.6rem] text-text-accent hover:underline"
                             >
-                              Get key →
+                              {authLinkLabel(field)}
                             </a>
                           {/if}
                         </div>
@@ -849,9 +890,7 @@
                               [field.key]: (e.currentTarget as HTMLInputElement).value,
                             };
                           }}
-                          placeholder={plugin.authStatus === "ok"
-                            ? "••••••••  (configured — enter new value to replace)"
-                            : "Paste your API key"}
+                          placeholder={authPlaceholder(plugin, field)}
                           class="w-full bg-surface-1 border border-border-subtle px-2.5 py-1.5 text-[0.78rem] text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-accent transition-colors font-mono"
                         />
                       </div>

@@ -55,6 +55,7 @@ export interface CommonRunProps<TRow> {
   plugins: PluginInfo[];
   selectedProviderId: string;
   autoAccept: boolean;
+  includeNsfw?: boolean;
   abortRef: MutableFlag;
   setRunning: (running: boolean) => void;
 }
@@ -86,19 +87,18 @@ export async function callPlugin(
   input: Record<string, unknown>,
   entityId: string,
 ): Promise<PluginExecuteResult | null> {
-  try {
-    const res = await withTimeout(
-      executePlugin(pluginId, action, input, {
-        saveResult: true,
-        entityId,
-      }),
-      SEEK_TIMEOUT_MS * 6,
-    );
-    if (res.ok && res.result && res.normalized) return res;
-    return null;
-  } catch {
-    return null;
+  const res = await withTimeout(
+    executePlugin(pluginId, action, input, {
+      saveResult: true,
+      entityId,
+    }),
+    SEEK_TIMEOUT_MS * 6,
+  );
+  if (res.ok && res.result && res.normalized) return res;
+  if (res.ok && res.result && !res.normalized) {
+    throw new Error("Plugin returned a result, but Obscura did not save a normalized scrape result.");
   }
+  return null;
 }
 
 /**
@@ -116,7 +116,9 @@ export async function seekRow<T>(args: {
   scrapeResultId?: string;
   result?: T;
   matchedProvider?: string;
+  error?: string;
 }> {
+  let lastError: string | undefined;
   for (const plugin of args.plugins) {
     for (const attempt of args.attempts) {
       // Honor the plugin's own capability list — don't call an action
@@ -125,12 +127,14 @@ export async function seekRow<T>(args: {
       if (plugin.capabilities && !plugin.capabilities[attempt.capabilityKey]) {
         continue;
       }
-      const res = await callPlugin(
-        plugin.id,
-        attempt.action,
-        attempt.input,
-        args.entityId,
-      );
+      let res: PluginExecuteResult | null = null;
+      try {
+        res = await callPlugin(plugin.id, attempt.action, attempt.input, args.entityId);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Plugin call failed";
+        lastError = `${plugin.name}: ${message}`;
+        continue;
+      }
       if (res && res.result && res.normalized) {
         const savedRow = res.result as Record<string, unknown>;
         const rawResult = (savedRow.rawResult as Record<string, unknown>) ?? {};
@@ -142,7 +146,7 @@ export async function seekRow<T>(args: {
       }
     }
   }
-  return {};
+  return lastError ? { error: lastError } : {};
 }
 
 // Reset every non-accepted row to pending so a re-run replaces stale

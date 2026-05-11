@@ -397,10 +397,11 @@ export async function uninstallPlugin(id: string): Promise<{ ok: boolean }> {
 export async function acceptPluginResult(
   resultId: string,
   fields?: string[],
+  selectedImages?: Record<string, string | null | undefined>,
 ): Promise<{ ok: boolean }> {
   return fetchApi(`/plugins/results/${resultId}/accept`, {
     method: "POST",
-    body: JSON.stringify({ fields }),
+    body: JSON.stringify({ fields, selectedImages }),
   });
 }
 

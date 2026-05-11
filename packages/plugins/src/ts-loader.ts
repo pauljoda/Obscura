@@ -101,9 +101,13 @@ export async function loadTypeScriptPlugin(
   // pulled into the SvelteKit graph.
   let mod: Record<string, unknown>;
   try {
-    mod = isCommonJsEntry
-      ? (requirePlugin(entryPath) as Record<string, unknown>)
-      : await import(/* @vite-ignore */ pathToFileURL(entryPath).href);
+    if (isCommonJsEntry) {
+      const resolvedEntry = requirePlugin.resolve(entryPath);
+      delete requirePlugin.cache[resolvedEntry];
+      mod = requirePlugin(resolvedEntry) as Record<string, unknown>;
+    } else {
+      mod = await import(/* @vite-ignore */ pathToFileURL(entryPath).href);
+    }
   } catch (err) {
     throw new PluginExecutionError(
       `Failed to load plugin: ${err instanceof Error ? err.message : String(err)}`,

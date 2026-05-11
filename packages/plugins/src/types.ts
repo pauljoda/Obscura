@@ -7,6 +7,8 @@
 
 // ─── Plugin Manifest ───────────────────────────────────────────────
 
+import type { ImageCandidate } from "@obscura/contracts";
+
 export type PluginRuntime = "python" | "typescript" | "stash-compat";
 
 export interface PluginAuthField {
@@ -59,6 +61,17 @@ export interface PluginCapabilities {
   galleryByURL?: boolean;
   galleryByFragment?: boolean;
 
+  // Book/comic/manga identification
+  bookByURL?: boolean;
+  bookByName?: boolean;
+  bookByFragment?: boolean;
+  comicByURL?: boolean;
+  comicByName?: boolean;
+  comicByFragment?: boolean;
+  mangaByURL?: boolean;
+  mangaByName?: boolean;
+  mangaByFragment?: boolean;
+
   // Image identification
   imageByURL?: boolean;
 
@@ -102,6 +115,15 @@ export const pluginCapabilityKeys: (keyof PluginCapabilities)[] = [
   "folderCascade",
   "galleryByURL",
   "galleryByFragment",
+  "bookByURL",
+  "bookByName",
+  "bookByFragment",
+  "comicByURL",
+  "comicByName",
+  "comicByFragment",
+  "mangaByURL",
+  "mangaByName",
+  "mangaByFragment",
   "imageByURL",
   "audioByURL",
   "audioByFragment",
@@ -128,6 +150,15 @@ export const obscuraToStashActionMap: Record<string, string> = {
   videoByName: "sceneByName",
   galleryByURL: "galleryByURL",
   galleryByFragment: "galleryByFragment",
+  bookByURL: "bookByURL",
+  bookByName: "bookByName",
+  bookByFragment: "bookByFragment",
+  comicByURL: "comicByURL",
+  comicByName: "comicByName",
+  comicByFragment: "comicByFragment",
+  mangaByURL: "mangaByURL",
+  mangaByName: "mangaByName",
+  mangaByFragment: "mangaByFragment",
   performerByURL: "performerByURL",
   performerByFragment: "performerByFragment",
   performerByName: "performerByName",
@@ -246,6 +277,51 @@ export interface NormalizedGalleryResult {
   tagNames: string[];
   imageUrl: string | null;
   photographer: string | null;
+  externalIds?: Record<string, string>;
+  candidates?: NormalizedGalleryCandidate[];
+  isNsfw?: boolean;
+}
+
+export interface NormalizedGalleryCandidate {
+  externalIds: Record<string, string>;
+  title: string;
+  year?: number | null;
+  overview?: string | null;
+  posterUrl?: string | null;
+  language?: string | null;
+  contentRating?: string | null;
+  source?: string | null;
+  popularity?: number | null;
+}
+
+export interface NormalizedBookResult {
+  title: string | null;
+  date: string | null;
+  details: string | null;
+  urls: string[];
+  studioName: string | null;
+  performerNames: string[];
+  tagNames: string[];
+  imageUrl: string | null;
+  chapterImageUrl?: string | null;
+  chapterNumber?: number | null;
+  imageCandidates?: ImageCandidate[];
+  chapterImageCandidates?: ImageCandidate[];
+  externalIds?: Record<string, string>;
+  candidates?: NormalizedBookCandidate[];
+  isNsfw?: boolean;
+}
+
+export interface NormalizedBookCandidate {
+  externalIds: Record<string, string>;
+  title: string;
+  year?: number | null;
+  overview?: string | null;
+  posterUrl?: string | null;
+  language?: string | null;
+  contentRating?: string | null;
+  source?: string | null;
+  popularity?: number | null;
 }
 
 export interface NormalizedImageResult {
@@ -285,6 +361,7 @@ export type PluginResult =
   | NormalizedVideoResult
   | NormalizedFolderResult
   | NormalizedGalleryResult
+  | NormalizedBookResult
   | NormalizedImageResult
   | NormalizedAudioTrackResult
   | NormalizedAudioLibraryResult;

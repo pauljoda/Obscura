@@ -30,6 +30,7 @@ export type {
 export type Tab =
   | "videos"
   | "video-series"
+  | "books"
   | "galleries"
   | "images"
   | "audio-libraries"
@@ -138,6 +139,8 @@ export function tabEntityLabel(t: Tab): string {
       return entityTerms.videos.toLowerCase();
     case "video-series":
       return entityTerms.series.toLowerCase();
+    case "books":
+      return "books";
     case "galleries":
       return "galleries";
     case "images":

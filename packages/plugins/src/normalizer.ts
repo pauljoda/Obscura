@@ -5,10 +5,15 @@
  * and produces a validated, trimmed, deduplicated result.
  */
 
+import type { ImageCandidate } from "@obscura/contracts";
+
 import type {
   NormalizedVideoResult,
   NormalizedFolderResult,
   NormalizedGalleryResult,
+  NormalizedGalleryCandidate,
+  NormalizedBookResult,
+  NormalizedBookCandidate,
   NormalizedImageResult,
   NormalizedAudioTrackResult,
   NormalizedAudioLibraryResult,
@@ -74,6 +79,19 @@ function toNumber(value: unknown): number | null {
   return null;
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function toBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function trimToUrl(value: unknown): string | null {
   const trimmed = trimOrNull(value);
   if (!trimmed) return null;
@@ -85,6 +103,64 @@ function trimToUrl(value: unknown): string | null {
     return trimmed;
   }
   return null;
+}
+
+function toExternalIds(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const trimmedKey = key.trim();
+    const trimmedValue = trimOrNull(raw);
+    if (!trimmedKey || !trimmedValue) continue;
+    out[trimmedKey] = trimmedValue;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function toCandidates<T extends NormalizedGalleryCandidate | NormalizedBookCandidate>(
+  value: unknown,
+): T[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const candidates: T[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    const title = trimOrNull(item.title);
+    if (!title) continue;
+    candidates.push({
+      externalIds: toExternalIds(item.externalIds) ?? {},
+      title,
+      year: toNumber(item.year) ?? undefined,
+      overview: trimOrNull(item.overview),
+      posterUrl: trimToUrl(item.posterUrl),
+      language: trimOrNull(item.language),
+      contentRating: trimOrNull(item.contentRating),
+      source: trimOrNull(item.source),
+      popularity: toFiniteNumber(item.popularity) ?? undefined,
+    } as T);
+  }
+  return candidates.length > 0 ? candidates : undefined;
+}
+
+function toImageCandidates(value: unknown): ImageCandidate[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const candidates: ImageCandidate[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    const url = trimToUrl(item.url);
+    if (!url) continue;
+    candidates.push({
+      url,
+      language: trimOrNull(item.language),
+      width: toNumber(item.width) ?? undefined,
+      height: toNumber(item.height) ?? undefined,
+      aspectRatio: toFiniteNumber(item.aspectRatio) ?? undefined,
+      rank: toFiniteNumber(item.rank) ?? undefined,
+      source: trimOrNull(item.source) ?? "plugin",
+    });
+  }
+  return candidates.length > 0 ? candidates : undefined;
 }
 
 // ─── Video Result Normalizer ───────────────────────────────────────
@@ -190,6 +266,33 @@ export function normalizeGalleryResult(
     tagNames: toStringArray(raw.tagNames ?? raw.tags),
     imageUrl: trimToUrl(raw.imageUrl ?? raw.image),
     photographer: trimOrNull(raw.photographer),
+    externalIds: toExternalIds(raw.externalIds),
+    candidates: toCandidates<NormalizedGalleryCandidate>(raw.candidates),
+    isNsfw: toBoolean(raw.isNsfw),
+  };
+}
+
+// ─── Book Result Normalizer ────────────────────────────────────────
+
+export function normalizeBookResult(
+  raw: Record<string, unknown>,
+): NormalizedBookResult {
+  return {
+    title: trimOrNull(raw.title ?? raw.name),
+    date: trimOrNull(raw.date),
+    details: trimOrNull(raw.details),
+    urls: toUrlArray(raw.urls ?? raw.url),
+    studioName: trimOrNull(raw.studioName ?? raw.studio),
+    performerNames: toStringArray(raw.performerNames ?? raw.performers),
+    tagNames: toStringArray(raw.tagNames ?? raw.tags),
+    imageUrl: trimToUrl(raw.imageUrl ?? raw.image),
+    chapterImageUrl: trimToUrl(raw.chapterImageUrl ?? raw.chapterImage),
+    chapterNumber: toNumber(raw.chapterNumber ?? raw.chapter_number),
+    imageCandidates: toImageCandidates(raw.imageCandidates),
+    chapterImageCandidates: toImageCandidates(raw.chapterImageCandidates),
+    externalIds: toExternalIds(raw.externalIds),
+    candidates: toCandidates<NormalizedBookCandidate>(raw.candidates),
+    isNsfw: toBoolean(raw.isNsfw),
   };
 }
 
