@@ -114,6 +114,76 @@ function bookPageThumbPath(pageId: string) {
   return `/assets/book-pages/${pageId}/thumb`;
 }
 
+export interface BookArtworkPage {
+  pageId: string;
+  chapterId: string;
+  volumeId: string | null;
+  volumeNumber: number | null;
+  volumeTitle: string | null;
+  chapterNumber: number;
+  chapterTitle: string;
+  sortOrder: number;
+}
+
+export function isCustomBookCoverPath(bookId: string, coverImagePath: string | null | undefined) {
+  return coverImagePath === bookCoverPath(bookId);
+}
+
+function compareNullableNumber(a: number | null, b: number | null) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return a - b;
+}
+
+function compareText(a: string | null | undefined, b: string | null | undefined) {
+  return (a ?? "").localeCompare(b ?? "", undefined, { numeric: true, sensitivity: "base" });
+}
+
+export function orderBookArtworkPages<T extends BookArtworkPage>(pages: T[]): T[] {
+  const hasVolumes = pages.some((page) => page.volumeId);
+  return [...pages].sort((a, b) => {
+    if (hasVolumes && Boolean(a.volumeId) !== Boolean(b.volumeId)) {
+      return a.volumeId ? -1 : 1;
+    }
+    if (hasVolumes) {
+      const volumeNumber = compareNullableNumber(a.volumeNumber, b.volumeNumber);
+      if (volumeNumber !== 0) return volumeNumber;
+      const volumeTitle = compareText(a.volumeTitle, b.volumeTitle);
+      if (volumeTitle !== 0) return volumeTitle;
+      const volumeId = compareText(a.volumeId, b.volumeId);
+      if (volumeId !== 0) return volumeId;
+    }
+    if (a.chapterNumber !== b.chapterNumber) return a.chapterNumber - b.chapterNumber;
+    const chapterTitle = compareText(a.chapterTitle, b.chapterTitle);
+    if (chapterTitle !== 0) return chapterTitle;
+    const chapterId = compareText(a.chapterId, b.chapterId);
+    if (chapterId !== 0) return chapterId;
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return compareText(a.pageId, b.pageId);
+  });
+}
+
+export function resolveBookArtwork(input: {
+  bookId: string;
+  storedCoverImagePath: string | null | undefined;
+  pages: BookArtworkPage[];
+  previewLimit?: number;
+}) {
+  const orderedPages = orderBookArtworkPages(input.pages);
+  const pagePreviews = orderedPages
+    .slice(0, input.previewLimit ?? 4)
+    .map((page) => bookPageThumbPath(page.pageId));
+  const customCover = isCustomBookCoverPath(input.bookId, input.storedCoverImagePath)
+    ? input.storedCoverImagePath!
+    : null;
+  const coverImagePath = customCover ?? pagePreviews[0] ?? null;
+  const previewImagePaths = customCover
+    ? [customCover, ...pagePreviews].slice(0, input.previewLimit ?? 4)
+    : pagePreviews;
+  return { coverImagePath, previewImagePaths };
+}
+
 function sanitizeFolderName(value: string): string {
   return value
     .trim()
@@ -133,8 +203,15 @@ async function refreshBookCounts(db: AppDb, bookId: string) {
       SELECT bp.id
       FROM book_pages bp
       INNER JOIN book_chapters bc ON bc.id = bp.chapter_id
+      LEFT JOIN book_volumes bv ON bv.id = bc.volume_id
       WHERE bp.book_id = ${bookId}
-      ORDER BY bc.chapter_number ASC, bc.title ASC, bp.sort_order ASC
+      ORDER BY (bv.id IS NULL) ASC,
+        bv.volume_number ASC NULLS LAST,
+        bv.title ASC NULLS LAST,
+        bc.chapter_number ASC,
+        bc.title ASC,
+        bp.sort_order ASC,
+        bp.id ASC
       LIMIT 1
     )
     UPDATE books SET
@@ -281,18 +358,26 @@ async function decorateBookItems(
         bookId: bookPages.bookId,
         chapterId: bookPages.chapterId,
         pageId: bookPages.id,
+        volumeId: bookChapters.volumeId,
+        volumeNumber: bookVolumes.volumeNumber,
+        volumeTitle: bookVolumes.title,
         chapterNumber: bookChapters.chapterNumber,
         chapterTitle: bookChapters.title,
         sortOrder: bookPages.sortOrder,
       })
       .from(bookPages)
       .innerJoin(bookChapters, eq(bookPages.chapterId, bookChapters.id))
+      .leftJoin(bookVolumes, eq(bookChapters.volumeId, bookVolumes.id))
       .where(and(inArray(bookPages.bookId, ids), bookPageVisibleSql(bookPages.filePath)))
       .orderBy(
         asc(bookPages.bookId),
+        sql`${bookVolumes.id} IS NULL`,
+        asc(bookVolumes.volumeNumber),
+        asc(bookVolumes.title),
         asc(bookChapters.chapterNumber),
         asc(bookChapters.title),
         asc(bookPages.sortOrder),
+        asc(bookPages.id),
       ),
   ]);
 
@@ -311,7 +396,7 @@ async function decorateBookItems(
   const pagesByBook = new Map<string, typeof pageRows>();
   const chapterPreviewPagesByBook = new Map<string, typeof pageRows>();
   const seenChapterIds = new Set<string>();
-  for (const page of pageRows) {
+  for (const page of orderBookArtworkPages(pageRows)) {
     pagesByBook.set(page.bookId, [...(pagesByBook.get(page.bookId) ?? []), page]);
     const chapterKey = `${page.bookId}:${page.chapterId}`;
     if (!seenChapterIds.has(chapterKey)) {
@@ -330,14 +415,18 @@ async function decorateBookItems(
       book.chapterCount > 1
         ? (chapterPreviewPagesByBook.get(book.id) ?? [])
         : orderedPages;
-    const firstPageId = orderedPages[0]?.pageId ?? null;
+    const artwork = resolveBookArtwork({
+      bookId: book.id,
+      storedCoverImagePath: book.coverImagePath,
+      pages: previewPages,
+    });
     return {
       id: book.id,
       bookType: "comic",
       title: book.title,
       details: book.details,
-      coverImagePath: book.coverImagePath ?? (firstPageId ? bookPageThumbPath(firstPageId) : null),
-      previewImagePaths: previewPages.slice(0, 4).map((page) => bookPageThumbPath(page.pageId)),
+      coverImagePath: artwork.coverImagePath,
+      previewImagePaths: artwork.previewImagePaths,
       pageCount: book.pageCount,
       chapterCount: book.chapterCount,
       rating: book.rating,
@@ -492,19 +581,74 @@ export async function getBookDetailRead(
       .where(eq(bookVolumes.bookId, id))
       .orderBy(asc(bookVolumes.volumeNumber), asc(bookVolumes.title)),
     db
-      .select()
+      .select({
+        id: bookChapters.id,
+        bookId: bookChapters.bookId,
+        volumeId: bookChapters.volumeId,
+        title: bookChapters.title,
+        chapterNumber: bookChapters.chapterNumber,
+        archivePath: bookChapters.archivePath,
+        relativePath: bookChapters.relativePath,
+        pageCount: bookChapters.pageCount,
+        coverPageId: bookChapters.coverPageId,
+        coverImagePath: bookChapters.coverImagePath,
+        externalIds: bookChapters.externalIds,
+        createdAt: bookChapters.createdAt,
+        updatedAt: bookChapters.updatedAt,
+        volumeNumber: bookVolumes.volumeNumber,
+        volumeTitle: bookVolumes.title,
+      })
       .from(bookChapters)
+      .leftJoin(bookVolumes, eq(bookChapters.volumeId, bookVolumes.id))
       .where(eq(bookChapters.bookId, id))
-      .orderBy(asc(bookChapters.chapterNumber), asc(bookChapters.title)),
+      .orderBy(
+        sql`${bookVolumes.id} IS NULL`,
+        asc(bookVolumes.volumeNumber),
+        asc(bookVolumes.title),
+        asc(bookChapters.chapterNumber),
+        asc(bookChapters.title),
+        asc(bookChapters.id),
+      ),
     db
-      .select()
+      .select({
+        id: bookPages.id,
+        bookId: bookPages.bookId,
+        chapterId: bookPages.chapterId,
+        title: bookPages.title,
+        filePath: bookPages.filePath,
+        fileSize: bookPages.fileSize,
+        width: bookPages.width,
+        height: bookPages.height,
+        format: bookPages.format,
+        thumbnailPath: bookPages.thumbnailPath,
+        sortOrder: bookPages.sortOrder,
+        isNsfw: bookPages.isNsfw,
+        createdAt: bookPages.createdAt,
+        updatedAt: bookPages.updatedAt,
+        pageId: bookPages.id,
+        volumeId: bookChapters.volumeId,
+        volumeNumber: bookVolumes.volumeNumber,
+        volumeTitle: bookVolumes.title,
+        chapterNumber: bookChapters.chapterNumber,
+        chapterTitle: bookChapters.title,
+      })
       .from(bookPages)
+      .innerJoin(bookChapters, eq(bookPages.chapterId, bookChapters.id))
+      .leftJoin(bookVolumes, eq(bookChapters.volumeId, bookVolumes.id))
       .where(and(eq(bookPages.bookId, id), bookPageVisibleSql(bookPages.filePath)))
-      .orderBy(asc(bookPages.chapterId), asc(bookPages.sortOrder)),
+      .orderBy(
+        sql`${bookVolumes.id} IS NULL`,
+        asc(bookVolumes.volumeNumber),
+        asc(bookVolumes.title),
+        asc(bookChapters.chapterNumber),
+        asc(bookChapters.title),
+        asc(bookPages.sortOrder),
+        asc(bookPages.id),
+      ),
   ]);
 
   const pagesByChapter = new Map<string, typeof pageRows>();
-  for (const page of pageRows) {
+  for (const page of orderBookArtworkPages(pageRows)) {
     pagesByChapter.set(page.chapterId, [...(pagesByChapter.get(page.chapterId) ?? []), page]);
   }
 
