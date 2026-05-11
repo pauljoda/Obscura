@@ -323,7 +323,7 @@ export async function updateSeries(
 export async function uploadSeriesCover(
   id: string,
   file: File,
-): Promise<{ ok: true; coverImagePath: string }> {
+): Promise<{ ok: true; url: string }> {
   return uploadFile(`/video-series/${id}/cover`, file);
 }
 
@@ -336,7 +336,7 @@ export async function deleteSeriesCover(
 export async function uploadSeriesBackdrop(
   id: string,
   file: File,
-): Promise<{ ok: true; backdropImagePath: string }> {
+): Promise<{ ok: true; url: string }> {
   return uploadFile(`/video-series/${id}/backdrop`, file);
 }
 

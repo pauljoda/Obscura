@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
-  import { Film, FolderOpen, HardDrive, Users } from "@lucide/svelte";
+  import { Film, FolderOpen, HardDrive, Pencil, Users } from "@lucide/svelte";
   import { Checkbox } from "@obscura/ui-svelte";
   import BulkActionBar from "$lib/components/BulkActionBar.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
@@ -19,8 +19,10 @@
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
   import IdentifyButton from "$lib/components/IdentifyButton.svelte";
   import ImportButton from "$lib/components/ImportButton.svelte";
+  import InlineRating from "$lib/components/InlineRating.svelte";
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
+  import VideoSeriesEdit from "$lib/components/VideoSeriesEdit.svelte";
   import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
@@ -118,6 +120,13 @@
   let deleteDialogOpen = $state(false);
   let selectedItemIds = $state.raw(new Set<string>());
   let dataSignature = $state("");
+  let editingSeries = $state(false);
+  let overrideSeriesRating = $state<number | null | undefined>(undefined);
+  const activeSeries = $derived(
+    data.activeSeries && overrideSeriesRating !== undefined
+      ? { ...data.activeSeries, rating: overrideSeriesRating }
+      : data.activeSeries,
+  );
   const loadedStart = $derived((data.page - 1) * data.pageSize);
   const loadedItemCount = $derived(usesRootPrefs ? loadedSeries.length : loadedVideos.length);
   const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedItemCount));
@@ -287,6 +296,8 @@
     loadingMore = false;
     loadMoreError = null;
     selectedItemIds = new Set();
+    editingSeries = false;
+    overrideSeriesRating = undefined;
   });
 
   $effect(() => {
@@ -566,6 +577,23 @@
     }
   }
 
+  async function refreshSeries(closeEditor = true) {
+    await invalidateAll();
+    if (closeEditor) editingSeries = false;
+  }
+
+  async function handleSeriesRatingSave(next: number | null) {
+    if (!data.activeSeries) return;
+    const previous = data.activeSeries.rating ?? null;
+    overrideSeriesRating = next;
+    try {
+      await updateSeries(data.activeSeries.id, { rating: next });
+    } catch {
+      overrideSeriesRating = previous;
+      throw new Error("Failed to update rating");
+    }
+  }
+
   async function deleteSelectedVideos(deleteFromDisk = false) {
     const ids = [...selectedItemIds];
     if (ids.length === 0 || selectionKind !== "videos" || bulkBusy) return;
@@ -665,8 +693,8 @@
     />
   {/if}
 
-  {#if data.activeSeries}
-    {@const series = data.activeSeries}
+  {#if activeSeries}
+    {@const series = activeSeries}
     {@const backdrop = toApiUrl(series.backdropImagePath, series.updatedAt)}
     {@const cover = toApiUrl(series.coverImagePath, series.updatedAt)}
     {@const hasHeroImage = Boolean(backdrop || cover)}
@@ -767,6 +795,14 @@
                 <span>{formatVideoCount(series.visibleSfwVideoCount)}</span>
               </div>
 
+              <div class="mt-3">
+                <InlineRating
+                  value={series.rating}
+                  onSave={handleSeriesRatingSave}
+                  ariaLabelPrefix="Rate series with"
+                />
+              </div>
+
               <div class="mt-5 flex flex-wrap items-center gap-2">
                 <IdentifyButton
                   entityKind="video_series"
@@ -774,6 +810,16 @@
                   title={series.displayTitle}
                   label="Identify Series"
                 />
+                {#if !editingSeries}
+                  <button
+                    type="button"
+                    onclick={() => (editingSeries = true)}
+                    class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                  >
+                    <Pencil class="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                {/if}
               </div>
 
               {#if series.details}
@@ -800,6 +846,15 @@
             </div>
           </div>
         </div>
+
+        {#if editingSeries}
+          <VideoSeriesEdit
+            {series}
+            onSaved={() => void refreshSeries()}
+            onChanged={() => void refreshSeries(false)}
+            onCancel={() => (editingSeries = false)}
+          />
+        {/if}
 
         {#if series.performers && series.performers.length > 0}
           <div>

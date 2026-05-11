@@ -469,6 +469,7 @@ export interface VideoSeriesDetailDto extends VideoSeriesListItemDto {
 
 export interface VideoSeriesPatchDto {
   isNsfw?: boolean;
+  organized?: boolean;
   customName?: string | null;
   details?: string | null;
   studioName?: string | null;

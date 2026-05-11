@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book thumbnails now keep user-selected cover art as the default and first preview image, falling back to the first page in volume or chapter order only when no custom cover exists.
 - Book series pages now expose root cover upload/clear controls and rating controls again, so series artwork and ratings can be managed from the book itself.
 - Book progress cards now resume the current chapter directly, and rated media thumbnails now show a star chip across rated entity types.
+- Video series pages now have their full edit panel again, including metadata, rating, organized/NSFW state, cover art, and backdrop controls.
 
 ### Docs
 
@@ -150,6 +151,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book thumbnails now distinguish custom cover art from generated page-cover fallbacks, so stale page-cover paths no longer override the user-selected cover and fallback covers follow volume/chapter reading order.
 - Book edit mode now includes root book cover upload and clear actions, and book ratings now appear on book detail pages and book cards instead of only existing as a hidden sortable field.
 - Current book progress cards are now clickable resume targets, and shared thumbnails now carry rating data through search, collections, dashboard rows, and media grids for rated videos, series, galleries, books, images, performers, studios, tags, and audio items.
+- Video series detail pages now expose the edit workflow again, restoring metadata fields, rating, organized/NSFW toggles, and cover/backdrop upload and clear actions.
 
 ### Docs
 
