@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Upgrades from older dev builds now complete even when duplicate legacy comic gallery rows point at the same ZIP or CBZ archive, preserving one migrated book and chapter while retiring the duplicate gallery records.
 - Book and chapter detail pages now show saved comic reading progress as the current chapter plus page progress, making resume state easier to understand at a glance.
 - Identify queues now focus on unorganized media by default, and accepted metadata results mark the item organized so future review sessions stay focused on unfinished entries.
+- Comic archive folders that only wrap a same-named ZIP or CBZ now scan as loose comic chapters instead of creating an unexpected volume.
 
 ### Docs
 
@@ -122,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book covers now come from the first page in reading order, and book previews now scrub through chapter covers for multi-chapter books or page spreads for one-shot comics.
 - Book cover thumbnails now fall back to the underlying comic page while generated thumbnails are still being built, and book detail pages now label comic creators as Artists.
 - Gallery-style book thumbnails now keep click navigation active while preview scrubbing is visible.
+- Comic book scans no longer create volumes from same-named wrapper folders or metadata-only volume numbers; volume grouping now requires a real volume subfolder inside a book entry.
 
 ### Docs
 

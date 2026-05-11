@@ -53,4 +53,44 @@ describe("inferComicBookArchivePlan", () => {
       relativePath: path.join("She Was Cute Before", "v02.cbz"),
     });
   });
+
+  it("does not treat a top-level same-named wrapper folder as a volume", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "Volume 01", "Volume 01.cbz"),
+        rootPath: root,
+        comicInfo: {
+          title: "Volume 01",
+          volume: 1,
+          urls: [],
+          creators: [],
+          tags: [],
+        },
+      }),
+    ).toMatchObject({
+      bookTitle: "Volume 01",
+      chapterTitle: "Volume 01",
+      bookRelativePath: "Volume 01",
+      volumeNumber: null,
+      volumeTitle: null,
+      volumeRelativePath: null,
+    });
+  });
+
+  it("keeps same-named chapter wrapper folders loose instead of making volumes", () => {
+    expect(
+      inferComicBookArchivePlan({
+        archivePath: path.join(root, "A Series", "Chapter 01", "Chapter 01.cbz"),
+        rootPath: root,
+        comicInfo: { title: "Chapter 01", urls: [], creators: [], tags: [] },
+      }),
+    ).toMatchObject({
+      bookTitle: "A Series",
+      chapterTitle: "Chapter 01",
+      bookRelativePath: "A Series",
+      volumeNumber: null,
+      volumeTitle: null,
+      volumeRelativePath: null,
+    });
+  });
 });

@@ -64,17 +64,22 @@ export function inferComicBookArchivePlan(
   const fileName = segments.at(-1) ?? path.basename(input.archivePath);
   const folderSegments = segments.slice(0, -1);
   const parentFolder = folderSegments.at(-1) ?? "";
-  const explicitVolumeFolder = parentFolder ? parseVolumeFolderName(parentFolder) : null;
+  const archiveName = path.basename(fileName, path.extname(fileName));
+  const sameNamedWrapperFolder = parentFolder === archiveName;
+  const explicitVolumeFolder =
+    parentFolder && folderSegments.length >= 2 && !sameNamedWrapperFolder
+      ? parseVolumeFolderName(parentFolder)
+      : null;
   const folderBackedVolume =
     explicitVolumeFolder ??
-    (folderSegments.length >= 2 ? { number: null, title: parentFolder } : null);
+    (folderSegments.length >= 2 && !sameNamedWrapperFolder ? { number: null, title: parentFolder } : null);
   const fallbackTitle = fileNameToTitle(input.archivePath);
   const chapterNumber = parseChapterNumber(input.comicInfo?.number, input.archivePath);
   const hasFolder = containingFolder !== ".";
   const metadataSeries = input.comicInfo?.series?.trim();
   const metadataTitle = input.comicInfo?.title?.trim();
   const metadataVolumeNumber =
-    Number.isFinite(input.comicInfo?.volume) && (input.comicInfo?.volume ?? 0) > 0
+    folderBackedVolume && Number.isFinite(input.comicInfo?.volume) && (input.comicInfo?.volume ?? 0) > 0
       ? Math.round(input.comicInfo!.volume!)
       : null;
   const volumeNumber = folderBackedVolume?.number ?? metadataVolumeNumber;
@@ -83,7 +88,10 @@ export function inferComicBookArchivePlan(
     ? folderSegments.join(path.sep)
     : null;
 
-  const bookFolderSegments = folderBackedVolume ? folderSegments.slice(0, -1) : folderSegments;
+  const bookFolderSegments =
+    folderBackedVolume || (sameNamedWrapperFolder && folderSegments.length >= 2)
+      ? folderSegments.slice(0, -1)
+      : folderSegments;
   const bookFolderName = bookFolderSegments.at(-1) ?? path.basename(containingFolder);
   const bookTitle = metadataSeries || (hasFolder ? bookFolderName : (metadataTitle || fallbackTitle));
   const chapterTitle = metadataTitle || (hasFolder ? fallbackTitle : bookTitle);
