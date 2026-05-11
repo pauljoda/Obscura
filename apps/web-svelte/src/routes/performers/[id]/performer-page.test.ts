@@ -121,6 +121,8 @@ describe("performer detail page", () => {
           totalSeries: 0,
           galleries: [],
           totalGalleries: 0,
+          books: [],
+          totalBooks: 0,
           images: [
             {
               id: "image-1",
@@ -184,6 +186,8 @@ describe("performer detail page", () => {
           totalSeries: 0,
           galleries: [],
           totalGalleries: 0,
+          books: [],
+          totalBooks: 0,
           images: [],
           totalImages: 0,
           audioLibraries: [],

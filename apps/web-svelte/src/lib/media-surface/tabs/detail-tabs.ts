@@ -24,11 +24,13 @@ import { videosSurfaceConfig } from "../configs/videos";
 import { galleriesSurfaceConfig } from "../configs/galleries";
 import { imagesSurfaceConfig } from "../configs/images";
 import { audioSurfaceConfig } from "../configs/audio";
+import { booksSurfaceConfig } from "../configs/books";
 import { performersSurfaceConfig } from "../configs/performers";
 import type { MediaTabSpec } from "./MediaTabs.svelte";
 import type {
   AudioLibraryListItemDto,
   AudioTrackListItemDto,
+  BookListItemDto,
   GalleryListItemDto,
   ImageListItemDto,
   VideoSeriesListItemDto,
@@ -47,6 +49,7 @@ export type DetailEntityKind =
 type DetailTabId =
   | "videos"
   | "series"
+  | "books"
   | "galleries"
   | "images"
   | "audio-libraries"
@@ -168,6 +171,51 @@ function galleriesTab(ctx: DetailContext): MediaTabSpec {
     id: "galleries",
     label: "Galleries",
     count: ctx.totals?.galleries,
+    build: () => scopedConfig,
+  };
+}
+
+function booksTab(ctx: DetailContext): MediaTabSpec {
+  const filterValue = galleryFilterValue(ctx);
+  const initial =
+    ctx.initialActive?.tabId === "books"
+      ? {
+          items: ctx.initialActive.items as BookListItemDto[],
+          total: ctx.initialActive.total,
+        }
+      : { items: [], total: 0 };
+  const baseConfig = booksSurfaceConfig({
+    initial,
+    pageSize: PAGE_SIZE,
+    page: 1,
+    nsfwMode: ctx.nsfwMode,
+  });
+  const scopedConfig: any = {
+    ...baseConfig,
+    surfaceId: `${ctx.entityKind}:${ctx.entityId}:books`,
+    fetcher: async (args: any) => {
+      const baseFilters = args.prefs.activeFilters.slice();
+      const scopeFilter =
+        ctx.entityKind === "tag"
+          ? { type: "tag", label: "Tag", value: filterValue }
+          : ctx.entityKind === "performer"
+            ? { type: "performer", label: "Performer", value: filterValue }
+            : { type: "studio", label: "Studio", value: filterValue };
+      const merged = baseFilters.some(
+        (filter: any) => filter.type === scopeFilter.type && filter.value === scopeFilter.value,
+      )
+        ? baseFilters
+        : [...baseFilters, scopeFilter];
+      return baseConfig.fetcher({
+        ...args,
+        prefs: { ...args.prefs, activeFilters: merged as typeof args.prefs.activeFilters },
+      });
+    },
+  };
+  return {
+    id: "books",
+    label: "Books",
+    count: ctx.totals?.books,
     build: () => scopedConfig,
   };
 }
@@ -426,6 +474,7 @@ export function detailTabsFor(ctx: DetailContext): MediaTabSpec[] {
       return [
         videosTab(ctx),
         seriesTab(ctx),
+        booksTab(ctx),
         galleriesTab(ctx),
         imagesTab(ctx),
         audioLibrariesTab(ctx),
@@ -436,6 +485,7 @@ export function detailTabsFor(ctx: DetailContext): MediaTabSpec[] {
       return [
         videosTab(ctx),
         seriesTab(ctx),
+        booksTab(ctx),
         galleriesTab(ctx),
         imagesTab(ctx),
         audioLibrariesTab(ctx),
@@ -445,6 +495,7 @@ export function detailTabsFor(ctx: DetailContext): MediaTabSpec[] {
       return [
         videosTab(ctx),
         seriesTab(ctx),
+        booksTab(ctx),
         galleriesTab(ctx),
         imagesTab(ctx),
         audioLibrariesTab(ctx),

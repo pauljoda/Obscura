@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
-  import { BookOpen, Calendar, FileText, HardDrive, Layers, Play, Rows3, Trash2 } from "@lucide/svelte";
+  import { goto, invalidate, invalidateAll } from "$app/navigation";
+  import { BookOpen, HardDrive, Pencil, Play, Trash2 } from "@lucide/svelte";
   import { Badge } from "@obscura/ui-svelte";
   import type { BookPageDto, ImageListItemDto } from "@obscura/contracts";
   import type { PageData } from "./$types";
   import { deleteBook, updateBookProgress } from "$lib/api/media";
+  import BookEdit from "$lib/components/BookEdit.svelte";
   import ComicReader from "$lib/components/ComicReader.svelte";
   import ConfirmDeleteDialog from "$lib/components/ConfirmDeleteDialog.svelte";
   import HierarchyBreadcrumbs from "$lib/components/shared/HierarchyBreadcrumbs.svelte";
@@ -25,6 +26,7 @@
   // svelte-ignore state_referenced_locally
   let selectedChapterId = $state(data.chapterId ?? book.progress?.chapterId ?? book.chapters[0]?.id ?? null);
   let readerOpen = $state(false);
+  let editing = $state(false);
   let deleteDialogOpen = $state(false);
   let deleteBusy = $state(false);
   // svelte-ignore state_referenced_locally
@@ -118,6 +120,11 @@
     await saveProgress(readerIndex);
   }
 
+  async function refreshBook() {
+    await invalidate(`books:${book.id}`);
+    editing = false;
+  }
+
   async function confirmDelete(deleteFromDisk: boolean) {
     if (deleteBusy) return;
     deleteBusy = true;
@@ -202,7 +209,6 @@
               <span class="border border-white/10 bg-black/30 px-2 py-1 text-[0.62rem] uppercase tracking-[0.14em] text-white/60 backdrop-blur-md">
                 {book.chapterCount} chapter{book.chapterCount === 1 ? "" : "s"}
               </span>
-              {#if book.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
               {#if book.readCompleted}<Badge variant="accent">Read</Badge>{/if}
             </div>
 
@@ -231,6 +237,16 @@
                 title={book.title}
                 label="Identify Book"
               />
+              {#if !editing}
+                <button
+                  type="button"
+                  onclick={() => (editing = true)}
+                  class="surface-card inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.72rem] font-medium transition-colors hover:border-border-accent"
+                >
+                  <Pencil class="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              {/if}
               {#if readerPages.length > 0}
                 <button
                   type="button"
@@ -273,6 +289,14 @@
           </div>
         </div>
       </div>
+
+      {#if editing}
+        <BookEdit
+          {book}
+          onSaved={() => void refreshBook()}
+          onCancel={() => (editing = false)}
+        />
+      {/if}
 
       {#if book.performers.length > 0}
         <div>

@@ -28,6 +28,7 @@ describe("/performers/[id] page server load", () => {
       if (path.startsWith("/videos")) return Promise.resolve({ videos: [], total: 0 });
       if (path.startsWith("/video-series")) return Promise.resolve({ items: [], total: 0 });
       if (path.startsWith("/galleries")) return Promise.resolve({ galleries: [], total: 0 });
+      if (path.startsWith("/books")) return Promise.resolve({ books: [], total: 0 });
       if (path.startsWith("/images")) return Promise.resolve({ images: [], total: 0 });
       if (path.startsWith("/audio-libraries")) return Promise.resolve({ items: [], total: 0 });
       if (path.startsWith("/audio-tracks")) return Promise.resolve({ items: [], total: 0 });
@@ -56,6 +57,7 @@ describe("/performers/[id] page server load", () => {
     expect(paths.some((path) => path.startsWith("/audio-tracks?") && path.includes("performer=Alice+Actor"))).toBe(
       true,
     );
+    expect(paths.some((path) => path.startsWith("/books?") && path.includes("performer=Alice+Actor"))).toBe(true);
     expect(paths.some((path) => path.startsWith("/galleries?") && path.includes("root=all"))).toBe(true);
     expect(paths.some((path) => path.startsWith("/audio-libraries?") && path.includes("root=all"))).toBe(true);
     expect(paths.some((path) => path.includes("performer=performer-1"))).toBe(false);

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comics now live under a top-level Books section instead of being mixed into Galleries. Existing archive comic galleries are migrated into book/chapter/page records, old gallery detail links redirect to the new book detail page, and users should enable Books scanning on the relevant library roots to keep discovering ZIP/CBZ comics.
 - Books now use the same library browsing tools as the rest of Obscura, including saved search/filter presets, responsive thumbnail sizing, shared thumbnails in dashboard/search/collections, chapter previews, upload/delete actions, and merging standalone comics into one chaptered book.
 - Comic reading now flows from one chapter into the next inside the same lightbox, with a Next Chapter action at the end of webtoon and paged reading.
+- Book detail pages now have the same shared metadata editor pattern as other detail views, including title, studio, date, details, artists, tags, organized, and NSFW fields.
+- Actor, tag, and studio detail pages now include Books tabs, and book thumbnails remain clickable while scrubbing previews.
+- Book cards and book detail pages now rely on the existing red NSFW marker instead of also showing a redundant yellow NSFW badge.
+- Book scans now carry NSFW root and adult ComicInfo metadata through to linked artists, tags, and studios.
 - NSFW collections now stay hidden in SFW mode from the first browser render, and direct links to hidden detail pages now return to the dashboard instead of showing an error page.
 - Metadata discovered inside NSFW library roots now inherits the NSFW flag, so comic artists, tags, and studios stay hidden with the media that introduced them.
 - Gallery detail pages now let you resize the sub-gallery cards instead of locking chapter and nested-gallery lists at their largest size.
@@ -48,6 +52,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
 - Added book upload, delete, metadata update, and merge-into-book actions so comic archives can be managed from the Books section.
 - Added an in-reader Next Chapter action for multi-chapter books, preserving the current paged, webtoon, and spread preferences while continuing into the following chapter.
+- Added book detail editing with Obscura's shared form components so comic metadata can be updated directly from the book page.
+- Added Books cross-reference tabs to actor, tag, and studio detail pages.
 - Library settings now include a Show cast controls toggle so users can hide the video player's cast button if they do not want remote playback available.
 
 ### Fixed
@@ -90,6 +96,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Comic gallery search results now carry structured preview and cover-shape metadata, letting search and command palette thumbnails match the main gallery cards.
 - Book covers now come from the first page in reading order, and book previews now scrub through chapter covers for multi-chapter books or page spreads for one-shot comics.
 - Book cover thumbnails now fall back to the underlying comic page while generated thumbnails are still being built, and book detail pages now label comic creators as Artists.
+- Gallery-style book thumbnails now keep click navigation active while preview scrubbing is visible.
 
 ### Docs
 

@@ -8,6 +8,7 @@ import { redirectHiddenNsfwDetail } from "$lib/server/nsfw-page-guard";
 const VIDEO_LIMIT = 60;
 const SERIES_LIMIT = 24;
 const GALLERY_LIMIT = 24;
+const BOOK_LIMIT = 24;
 const IMAGE_LIMIT = 48;
 const AUDIO_LIMIT = 24;
 const AUDIO_TRACK_LIMIT = 36;
@@ -70,6 +71,11 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     limit: GALLERY_LIMIT,
     root: "all",
   });
+  const booksQs = buildQueryString({
+    tag: tagName,
+    nsfw,
+    limit: BOOK_LIMIT,
+  });
   const seriesQs = buildQueryString({
     tag: tagName,
     nsfw,
@@ -94,7 +100,7 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     order: "desc",
   });
 
-  const [videosRes, seriesRes, galleriesRes, imagesRes, audioRes, audioTracksRes] = await Promise.all([
+  const [videosRes, seriesRes, galleriesRes, booksRes, imagesRes, audioRes, audioTracksRes] = await Promise.all([
     serverFetch<{ videos: unknown[]; total: number }>(`/videos${videoQs}`, { fetch }).catch(
       () => ({ videos: [], total: 0 }),
     ),
@@ -104,6 +110,9 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     serverFetch<{ galleries: unknown[]; total: number }>(`/galleries${galleriesQs}`, {
       fetch,
     }).catch(() => ({ galleries: [], total: 0 })),
+    serverFetch<{ books: unknown[]; total: number }>(`/books${booksQs}`, { fetch }).catch(
+      () => ({ books: [], total: 0 }),
+    ),
     serverFetch<{ images: unknown[]; total: number }>(`/images${imagesQs}`, { fetch }).catch(
       () => ({ images: [], total: 0 }),
     ),
@@ -123,6 +132,8 @@ export const load: PageServerLoad = async ({ params, cookies, depends, fetch }) 
     totalSeries: seriesRes.total,
     galleries: galleriesRes.galleries,
     totalGalleries: galleriesRes.total,
+    books: booksRes.books,
+    totalBooks: booksRes.total,
     images: imagesRes.images,
     totalImages: imagesRes.total,
     audioLibraries: audioRes.items,

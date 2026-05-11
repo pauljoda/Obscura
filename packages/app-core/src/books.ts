@@ -611,6 +611,12 @@ export async function updateBookWrite(
             .values({ name, isNsfw: patch.isNsfw ?? false })
             .returning({ id: studios.id })
         )[0]!.id;
+      if (patch.isNsfw === true && existingStudio) {
+        await db
+          .update(studios)
+          .set({ isNsfw: true, updatedAt: new Date() })
+          .where(eq(studios.id, existingStudio.id));
+      }
     }
   }
 
@@ -639,6 +645,12 @@ export async function updateBookWrite(
             .values({ name: trimmed, isNsfw: patch.isNsfw ?? false })
             .returning({ id: performers.id })
         )[0]!.id;
+      if (patch.isNsfw === true && existingPerformer) {
+        await db
+          .update(performers)
+          .set({ isNsfw: true, updatedAt: new Date() })
+          .where(eq(performers.id, existingPerformer.id));
+      }
       await db.insert(bookPerformers).values({ bookId: id, performerId }).onConflictDoNothing();
     }
   }
@@ -661,8 +673,32 @@ export async function updateBookWrite(
             .values({ name: trimmed, isNsfw: patch.isNsfw ?? false })
             .returning({ id: tags.id })
         )[0]!.id;
+      if (patch.isNsfw === true && existingTag) {
+        await db
+          .update(tags)
+          .set({ isNsfw: true, updatedAt: new Date() })
+          .where(eq(tags.id, existingTag.id));
+      }
       await db.insert(bookTags).values({ bookId: id, tagId }).onConflictDoNothing();
     }
+  }
+
+  if (patch.isNsfw === true) {
+    await db.execute(sql`
+      UPDATE studios
+      SET is_nsfw = TRUE, updated_at = NOW()
+      WHERE id IN (SELECT studio_id FROM books WHERE id = ${id} AND studio_id IS NOT NULL)
+    `);
+    await db.execute(sql`
+      UPDATE performers
+      SET is_nsfw = TRUE, updated_at = NOW()
+      WHERE id IN (SELECT performer_id FROM book_performers WHERE book_id = ${id})
+    `);
+    await db.execute(sql`
+      UPDATE tags
+      SET is_nsfw = TRUE, updated_at = NOW()
+      WHERE id IN (SELECT tag_id FROM book_tags WHERE book_id = ${id})
+    `);
   }
 
   return { ok: true as const, id };

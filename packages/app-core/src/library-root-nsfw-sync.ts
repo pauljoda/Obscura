@@ -20,6 +20,8 @@ const {
   videoSeries,
   images,
   galleries,
+  books,
+  bookPages,
   audioLibraries,
   audioTracks,
 } = schema;
@@ -42,6 +44,9 @@ export async function markLinkedMetadataNsfwForLibraryRoot(
       UNION
       SELECT i.studio_id FROM images i
       WHERE i.studio_id IS NOT NULL AND i.file_path LIKE ${pathPrefix}
+      UNION
+      SELECT b.studio_id FROM books b
+      WHERE b.studio_id IS NOT NULL AND b.folder_path LIKE ${pathPrefix}
       UNION
       SELECT al.studio_id FROM audio_libraries al
       WHERE al.studio_id IS NOT NULL AND al.folder_path LIKE ${pathPrefix}
@@ -68,6 +73,10 @@ export async function markLinkedMetadataNsfwForLibraryRoot(
       SELECT ip.performer_id FROM image_performers ip
       INNER JOIN images i ON i.id = ip.image_id
       WHERE i.file_path LIKE ${pathPrefix}
+      UNION
+      SELECT bp.performer_id FROM book_performers bp
+      INNER JOIN books b ON b.id = bp.book_id
+      WHERE b.folder_path LIKE ${pathPrefix}
       UNION
       SELECT alp.performer_id FROM audio_library_performers alp
       INNER JOIN audio_libraries al ON al.id = alp.library_id
@@ -102,6 +111,10 @@ export async function markLinkedMetadataNsfwForLibraryRoot(
       SELECT it.tag_id FROM image_tags it
       INNER JOIN images i ON i.id = it.image_id
       WHERE i.file_path LIKE ${pathPrefix}
+      UNION
+      SELECT bt.tag_id FROM book_tags bt
+      INNER JOIN books b ON b.id = bt.book_id
+      WHERE b.folder_path LIKE ${pathPrefix}
       UNION
       SELECT alt.tag_id FROM audio_library_tags alt
       INNER JOIN audio_libraries al ON al.id = alt.library_id
@@ -161,6 +174,14 @@ export async function syncMediaNsfwWithLibraryRoot(
         )!,
       );
     await db
+      .update(books)
+      .set({ isNsfw: true, updatedAt: now })
+      .where(like(books.folderPath, pathPrefix));
+    await db
+      .update(bookPages)
+      .set({ isNsfw: true, updatedAt: now })
+      .where(like(bookPages.filePath, pathPrefix));
+    await db
       .update(audioLibraries)
       .set({ isNsfw: true, updatedAt: now })
       .where(like(audioLibraries.folderPath, pathPrefix));
@@ -189,6 +210,14 @@ export async function syncMediaNsfwWithLibraryRoot(
         like(galleries.zipFilePath, pathPrefix),
       )!,
     );
+  await db
+    .update(books)
+    .set({ isNsfw: false, updatedAt: now })
+    .where(like(books.folderPath, pathPrefix));
+  await db
+    .update(bookPages)
+    .set({ isNsfw: false, updatedAt: now })
+    .where(like(bookPages.filePath, pathPrefix));
   await db
     .update(audioLibraries)
     .set({ isNsfw: false, updatedAt: now })

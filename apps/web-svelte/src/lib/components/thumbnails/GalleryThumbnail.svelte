@@ -203,7 +203,7 @@
           alt={title}
           {loading}
           decoding="async"
-          class={cn("absolute inset-0 h-full w-full", imageFitClass)}
+          class={cn("pointer-events-none absolute inset-0 h-full w-full", imageFitClass)}
         />
       {:else if previews.length > 0}
         <img
@@ -211,10 +211,10 @@
           alt={title}
           {loading}
           decoding="async"
-          class={cn("absolute inset-0 h-full w-full", imageFitClass)}
+          class={cn("pointer-events-none absolute inset-0 h-full w-full", imageFitClass)}
         />
       {:else}
-        <div class="flex h-full w-full items-center justify-center text-white/25">
+        <div class="pointer-events-none flex h-full w-full items-center justify-center text-white/25">
           <Layers class={iconSize} />
         </div>
       {/if}
@@ -224,7 +224,7 @@
           src={hoverSrc}
           alt=""
           class={cn(
-            "absolute inset-0 h-full w-full transition-opacity duration-fast",
+            "pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-fast",
             imageFitClass,
           )}
           style:opacity={hovering ? 1 : 0}

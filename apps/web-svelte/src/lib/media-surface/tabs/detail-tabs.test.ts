@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { detailTabsFor } from "./detail-tabs";
-import { fetchAudioLibraries, fetchGalleries, fetchImages } from "$lib/api/media";
+import { fetchAudioLibraries, fetchBooks, fetchGalleries, fetchImages } from "$lib/api/media";
 import AudioLibraryCard from "../configs/AudioLibraryCard.svelte";
 import AudioTrackCard from "../configs/AudioTrackCard.svelte";
 import SeriesCardWrapper from "../configs/SeriesCardWrapper.svelte";
@@ -14,6 +14,7 @@ vi.mock("$lib/api/videos", () => ({
 vi.mock("$lib/api/media", () => ({
   fetchAudioLibraries: vi.fn(),
   fetchAudioTracks: vi.fn(),
+  fetchBooks: vi.fn(),
   fetchGalleries: vi.fn(),
   fetchImages: vi.fn(),
 }));
@@ -26,6 +27,7 @@ describe("detailTabsFor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(fetchGalleries).mockResolvedValue({ galleries: [], total: 0, limit: 60, offset: 0 });
+    vi.mocked(fetchBooks).mockResolvedValue({ books: [], total: 0, limit: 60, offset: 0 });
     vi.mocked(fetchAudioLibraries).mockResolvedValue({ items: [], total: 0 });
     vi.mocked(fetchImages).mockResolvedValue({ images: [], total: 0, limit: 60, offset: 0 });
   });
@@ -39,6 +41,7 @@ describe("detailTabsFor", () => {
       totals: {
         videos: 3,
         series: 0,
+        books: 0,
         galleries: 1,
         images: 0,
         "audio-libraries": 0,
@@ -230,6 +233,7 @@ describe("detailTabsFor", () => {
     expect(tabs.map((tab) => tab.id)).toEqual([
       "videos",
       "series",
+      "books",
       "galleries",
       "images",
       "audio-libraries",

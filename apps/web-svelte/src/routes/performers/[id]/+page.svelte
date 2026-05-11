@@ -98,6 +98,7 @@
       totals: {
         videos: data.totalVideos,
         series: data.totalSeries,
+        books: data.totalBooks,
         galleries: data.totalGalleries,
         images: data.totalImages,
         "audio-libraries": data.totalAudioLibraries,

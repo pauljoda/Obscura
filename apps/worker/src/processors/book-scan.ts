@@ -25,7 +25,7 @@ import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueueCollectionRefreshAll, enqueuePendingBookPageJob } from "../lib/enqueue.js";
 import { inferComicBookArchivePlan, isSupportedComicBookArchive } from "./book-scan-utils.js";
 
-async function findOrCreateStudioId(name: string | null | undefined) {
+async function findOrCreateStudioId(name: string | null | undefined, isNsfw: boolean) {
   const trimmed = name?.trim() ?? "";
   if (!trimmed) return null;
   const [existing] = await db
@@ -33,47 +33,74 @@ async function findOrCreateStudioId(name: string | null | undefined) {
     .from(studios)
     .where(ilike(studios.name, trimmed))
     .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db.insert(studios).values({ name: trimmed }).returning({ id: studios.id });
+  if (existing) {
+    if (isNsfw) {
+      await db.update(studios).set({ isNsfw: true, updatedAt: new Date() }).where(eq(studios.id, existing.id));
+    }
+    return existing.id;
+  }
+  const [created] = await db.insert(studios).values({ name: trimmed, isNsfw }).returning({ id: studios.id });
   return created.id;
 }
 
-async function findOrCreatePerformerId(name: string) {
+async function findOrCreatePerformerId(name: string, isNsfw: boolean) {
   const trimmed = name.trim();
   const [existing] = await db
     .select({ id: performers.id })
     .from(performers)
     .where(ilike(performers.name, trimmed))
     .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db.insert(performers).values({ name: trimmed }).returning({ id: performers.id });
+  if (existing) {
+    if (isNsfw) {
+      await db.update(performers).set({ isNsfw: true, updatedAt: new Date() }).where(eq(performers.id, existing.id));
+    }
+    return existing.id;
+  }
+  const [created] = await db.insert(performers).values({ name: trimmed, isNsfw }).returning({ id: performers.id });
   return created.id;
 }
 
-async function findOrCreateTagId(name: string) {
+async function findOrCreateTagId(name: string, isNsfw: boolean) {
   const trimmed = name.trim();
   const [existing] = await db
     .select({ id: tags.id })
     .from(tags)
     .where(ilike(tags.name, trimmed))
     .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db.insert(tags).values({ name: trimmed }).returning({ id: tags.id });
+  if (existing) {
+    if (isNsfw) {
+      await db.update(tags).set({ isNsfw: true, updatedAt: new Date() }).where(eq(tags.id, existing.id));
+    }
+    return existing.id;
+  }
+  const [created] = await db.insert(tags).values({ name: trimmed, isNsfw }).returning({ id: tags.id });
   return created.id;
 }
 
-async function attachBookRelations(bookId: string, comicInfo: ComicInfoMetadata | null) {
+async function attachBookRelations(bookId: string, comicInfo: ComicInfoMetadata | null, isNsfw: boolean) {
   if (!comicInfo) return;
 
   for (const name of comicInfo.creators) {
-    const performerId = await findOrCreatePerformerId(name);
+    const performerId = await findOrCreatePerformerId(name, isNsfw);
     await db.insert(bookPerformers).values({ bookId, performerId }).onConflictDoNothing();
   }
 
   for (const name of comicInfo.tags) {
-    const tagId = await findOrCreateTagId(name);
+    const tagId = await findOrCreateTagId(name, isNsfw);
     await db.insert(bookTags).values({ bookId, tagId }).onConflictDoNothing();
   }
+}
+
+function comicInfoMarksNsfw(comicInfo: ComicInfoMetadata | null) {
+  if (!comicInfo) return false;
+  const candidates = [
+    comicInfo.ageRating,
+    comicInfo.manga,
+    ...comicInfo.tags,
+  ].map((value) => value?.toLowerCase() ?? "");
+  return candidates.some((value) =>
+    /adult|adults only|18\+|mature|explicit|erotic|hentai|nsfw|porn/.test(value),
+  );
 }
 
 function firstNonEmpty(...values: Array<string | null | undefined>) {
@@ -133,7 +160,8 @@ export async function processBookScan(job: Job) {
       rootPath: root.path,
       comicInfo,
     });
-    const studioId = await findOrCreateStudioId(comicInfo?.publisher);
+    const bookIsNsfw = Boolean(root.isNsfw || comicInfoMarksNsfw(comicInfo));
+    const studioId = await findOrCreateStudioId(comicInfo?.publisher, bookIsNsfw);
 
     const [existingBook] = await db
       .select({ id: books.id, details: books.details, date: books.date, urls: books.urls, studioId: books.studioId })
@@ -149,7 +177,7 @@ export async function processBookScan(job: Job) {
       date: firstNonEmpty(existingBook?.date, comicInfo?.date) ?? null,
       urls: existingBook?.urls?.length ? existingBook.urls : (comicInfo?.urls ?? []),
       studioId: existingBook?.studioId ?? studioId,
-      isNsfw: root.isNsfw,
+      isNsfw: bookIsNsfw,
       updatedAt: new Date(),
     };
 
@@ -170,13 +198,13 @@ export async function processBookScan(job: Job) {
           date: comicInfo?.date ?? null,
           urls: comicInfo?.urls ?? [],
           studioId,
-          isNsfw: root.isNsfw,
+          isNsfw: bookIsNsfw,
         })
         .returning({ id: books.id });
       bookId = created.id;
     }
 
-    await attachBookRelations(bookId, comicInfo);
+    await attachBookRelations(bookId, comicInfo, bookIsNsfw);
 
     const [existingChapter] = await db
       .select({ id: bookChapters.id })
@@ -226,7 +254,7 @@ export async function processBookScan(job: Job) {
         pageIds.push(existingPage.id);
         await db
           .update(bookPages)
-          .set({ bookId, chapterId, sortOrder: i, isNsfw: root.isNsfw, updatedAt: new Date() })
+          .set({ bookId, chapterId, sortOrder: i, isNsfw: bookIsNsfw, updatedAt: new Date() })
           .where(eq(bookPages.id, existingPage.id));
         if (!existingPage.thumbnailPath && !sfwOnly) {
           await enqueuePendingBookPageJob("book-page-thumbnail", existingPage.id, {
@@ -245,7 +273,7 @@ export async function processBookScan(job: Job) {
           title: fileNameToTitle(memberPath),
           filePath,
           sortOrder: i,
-          isNsfw: root.isNsfw,
+          isNsfw: bookIsNsfw,
         })
         .returning({ id: bookPages.id });
       pageIds.push(created.id);

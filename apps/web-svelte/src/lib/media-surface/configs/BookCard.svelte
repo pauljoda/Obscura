@@ -72,7 +72,6 @@
         </div>
       </div>
       {#if item.readCompleted}<Badge variant="accent">Read</Badge>{/if}
-      {#if item.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
     </a>
   </div>
 {:else}
@@ -121,7 +120,6 @@
           </span>
           {#if item.studioName}<span class="truncate text-text-accent">· {item.studioName}</span>{/if}
           {#if item.readCompleted}<Badge variant="accent">Read</Badge>{/if}
-          {#if item.isNsfw}<Badge variant="warning">NSFW</Badge>{/if}
         </div>
       </div>
     </a>
