@@ -113,4 +113,23 @@ describe("IdentifyButton", () => {
 
     resolveIdentify({ ok: false, result: null });
   });
+
+  it("shows no-result alerts after the provider flyout is dismissed", async () => {
+    executePlugin.mockResolvedValue({ ok: false, result: null });
+    render(IdentifyButtonHarness, {
+      props: {
+        entityKind: "video_series",
+        entityId: "series-1",
+        title: "Blue's Clues & You!",
+        label: "Identify Series",
+      },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: /identify series/i }));
+    await fireEvent.click(await screen.findByRole("button", { name: /the movie database/i }));
+
+    await waitFor(() => expect(screen.queryByText("Identify from")).not.toBeInTheDocument());
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The Movie Database: No result found.");
+  });
 });

@@ -548,6 +548,78 @@ function chapterVolumeMap(value: unknown): Map<number, string> {
   return out;
 }
 
+function numericVolumeNumber(value: string): number | null {
+  if (!/^\d+$/.test(value.trim())) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function closestVolumeNumber(volumeNumbers: string[], target: number): string | null {
+  let closest: string | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const value of volumeNumbers) {
+    const numeric = numericVolumeNumber(value);
+    if (numeric == null) continue;
+    const distance = Math.abs(numeric - target);
+    const closestNumeric = closest ? numericVolumeNumber(closest) : null;
+    if (distance < closestDistance || (distance === closestDistance && numeric < (closestNumeric ?? Number.MAX_SAFE_INTEGER))) {
+      closest = value;
+      closestDistance = distance;
+    }
+  }
+  return closest;
+}
+
+function inferSparseChapterVolumes(
+  chapterToVolume: Map<number, string>,
+  volumeCovers: Array<{ volumeNumber: string }>,
+  chapters: Array<{ chapterNumber: number }>,
+) {
+  const availableVolumes = Array.from(new Set(volumeCovers.map((cover) => cover.volumeNumber)))
+    .filter((volumeNumber) => numericVolumeNumber(volumeNumber) != null)
+    .sort((a, b) => (numericVolumeNumber(a) ?? 0) - (numericVolumeNumber(b) ?? 0));
+  if (availableVolumes.length === 0 || chapters.length === 0) return;
+
+  const localNumbers = Array.from(new Set(chapters.map((chapter) => chapter.chapterNumber)))
+    .filter((chapterNumber) => Number.isSafeInteger(chapterNumber) && chapterNumber > 0)
+    .sort((a, b) => a - b);
+  if (localNumbers.length === 0) return;
+
+  const localNumberSet = new Set(localNumbers);
+  const mappedVolumes = new Map<string, number[]>();
+  for (const [chapterNumber, volumeNumber] of chapterToVolume.entries()) {
+    if (!localNumberSet.has(chapterNumber)) continue;
+    mappedVolumes.set(volumeNumber, [...(mappedVolumes.get(volumeNumber) ?? []), chapterNumber]);
+  }
+
+  if (mappedVolumes.size === 1) {
+    const [[volumeNumber, mappedChapters]] = Array.from(mappedVolumes.entries());
+    const firstMappedChapter = Math.min(...mappedChapters);
+    const maxLocalChapter = Math.max(...localNumbers);
+    if (maxLocalChapter <= availableVolumes.length * 3) {
+      for (const chapterNumber of localNumbers) {
+        if (chapterNumber >= firstMappedChapter && !chapterToVolume.has(chapterNumber)) {
+          chapterToVolume.set(chapterNumber, volumeNumber);
+        }
+      }
+      return;
+    }
+  }
+
+  const numericVolumes = availableVolumes
+    .map(numericVolumeNumber)
+    .filter((volumeNumber): volumeNumber is number => volumeNumber != null);
+  const maxVolume = Math.max(...numericVolumes);
+  const maxChapter = Math.max(...localNumbers);
+  const chaptersPerVolume = Math.max(1, Math.ceil(maxChapter / Math.max(1, maxVolume)));
+  for (const chapterNumber of localNumbers) {
+    if (chapterToVolume.has(chapterNumber)) continue;
+    const estimatedVolume = Math.max(1, Math.ceil(chapterNumber / chaptersPerVolume));
+    const closest = closestVolumeNumber(availableVolumes, estimatedVolume);
+    if (closest) chapterToVolume.set(chapterNumber, closest);
+  }
+}
+
 async function applyBookVolumePluginMetadata(
   db: AppDb,
   bookId: string,
@@ -557,12 +629,13 @@ async function applyBookVolumePluginMetadata(
 ) {
   const volumeCovers = volumeCoverEntries(proposed.volumeCovers);
   const chapterToVolume = chapterVolumeMap(proposed.chapterVolumeByNumber);
+  const rejectedVolumeNumbers = new Set<string>();
   for (const [chapterNumber, volumeNumber] of [...chapterToVolume.entries()]) {
     if (selectedImages?.[`volumeGroup:${volumeNumber}`] === "loose") {
+      rejectedVolumeNumbers.add(volumeNumber);
       chapterToVolume.delete(chapterNumber);
     }
   }
-  if (chapterToVolume.size === 0) return;
 
   const [book] = await db
     .select({
@@ -596,6 +669,12 @@ async function applyBookVolumePluginMetadata(
   const localChapterNumbers = new Set(chapters.map((chapter) => chapter.chapterNumber));
   for (const chapterNumber of [...chapterToVolume.keys()]) {
     if (!localChapterNumbers.has(chapterNumber)) chapterToVolume.delete(chapterNumber);
+  }
+  inferSparseChapterVolumes(chapterToVolume, volumeCovers, chapters);
+  for (const [chapterNumber, volumeNumber] of [...chapterToVolume.entries()]) {
+    if (rejectedVolumeNumbers.has(volumeNumber) || !localChapterNumbers.has(chapterNumber)) {
+      chapterToVolume.delete(chapterNumber);
+    }
   }
   if (chapterToVolume.size === 0) return;
 

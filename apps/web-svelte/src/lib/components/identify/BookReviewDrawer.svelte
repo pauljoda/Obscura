@@ -150,6 +150,98 @@
     );
   }
 
+  function chapterNumberValue(value: unknown): number | null {
+    if (typeof value === "number" && Number.isInteger(value)) return value;
+    if (typeof value !== "string" || !/^\d+$/.test(value.trim())) return null;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  function numericVolumeValue(value: unknown): number | null {
+    const normalized = typeof value === "number" ? String(value) : String(value ?? "").trim();
+    if (!/^\d+$/.test(normalized)) return null;
+    const parsed = Number.parseInt(normalized, 10);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  function availableVolumeNumbers(r: NormalizedBookIdentifyResult): string[] {
+    const seen = new Set<string>();
+    const numbers: string[] = [];
+    for (const cover of r.volumeCovers ?? []) {
+      const value = String(cover.volumeNumber ?? "").trim();
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      numbers.push(value);
+    }
+    return numbers.sort((a, b) => volumeSortValue(a) - volumeSortValue(b) || a.localeCompare(b));
+  }
+
+  function closestAvailableVolume(available: string[], target: number): string | null {
+    let closest: string | null = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    for (const value of available) {
+      const numeric = numericVolumeValue(value);
+      if (numeric == null) continue;
+      const distance = Math.abs(numeric - target);
+      if (distance < closestDistance || (distance === closestDistance && numeric < (numericVolumeValue(closest) ?? Number.MAX_SAFE_INTEGER))) {
+        closest = value;
+        closestDistance = distance;
+      }
+    }
+    return closest;
+  }
+
+  function inferredChapterVolumeByNumber(r: NormalizedBookIdentifyResult): Map<number, string> {
+    const availableVolumes = availableVolumeNumbers(r);
+    const out = new Map<number, string>();
+    for (const [chapterNumber, volumeNumber] of Object.entries(r.chapterVolumeByNumber ?? {})) {
+      const chapter = chapterNumberValue(chapterNumber);
+      const volume = String(volumeNumber ?? "").trim();
+      if (chapter != null && volume) out.set(chapter, volume);
+    }
+    if (chapters.length === 0 || availableVolumes.length === 0) return out;
+
+    const localNumbers = Array.from(
+      new Set(chapters.map((chapter) => chapterNumberValue(chapter.chapterNumber)).filter((value): value is number => value != null)),
+    ).sort((a, b) => a - b);
+    if (localNumbers.length === 0) return out;
+
+    const numericVolumes = availableVolumes
+      .map(numericVolumeValue)
+      .filter((value): value is number => value != null)
+      .sort((a, b) => a - b);
+    if (numericVolumes.length === 0) return out;
+
+    const mappedVolumes = new Map<string, number[]>();
+    for (const [chapter, volume] of out.entries()) {
+      if (!localNumbers.includes(chapter)) continue;
+      mappedVolumes.set(volume, [...(mappedVolumes.get(volume) ?? []), chapter]);
+    }
+
+    if (mappedVolumes.size === 1) {
+      const [[volume, mappedChapters]] = Array.from(mappedVolumes.entries());
+      const firstMapped = Math.min(...mappedChapters);
+      const maxLocal = Math.max(...localNumbers);
+      if (maxLocal <= numericVolumes.length * 3) {
+        for (const chapter of localNumbers) {
+          if (chapter >= firstMapped && !out.has(chapter)) out.set(chapter, volume);
+        }
+        return out;
+      }
+    }
+
+    const maxChapter = Math.max(...localNumbers);
+    const maxVolume = Math.max(...numericVolumes);
+    const chaptersPerVolume = Math.max(1, Math.ceil(maxChapter / Math.max(1, maxVolume)));
+    for (const chapter of localNumbers) {
+      if (out.has(chapter)) continue;
+      const estimatedVolume = Math.max(1, Math.ceil(chapter / chaptersPerVolume));
+      const closest = closestAvailableVolume(availableVolumes, estimatedVolume);
+      if (closest) out.set(chapter, closest);
+    }
+    return out;
+  }
+
   function volumeState(volumeNumber: string): { accepted: boolean; expanded: boolean } {
     return volumeStates[volumeNumber] ?? { accepted: true, expanded: true };
   }
@@ -332,12 +424,13 @@
     cover: ImageCandidate | null;
     chapters: BookChapterDto[];
   }> {
+    const chapterVolumeMap = inferredChapterVolumeByNumber(r);
     const numbers: string[] = [];
     for (const cover of r.volumeCovers ?? []) {
       const value = String(cover.volumeNumber);
       if (cover.volumeNumber && !numbers.includes(value)) numbers.push(value);
     }
-    for (const volumeNumber of Object.values(r.chapterVolumeByNumber ?? {})) {
+    for (const volumeNumber of chapterVolumeMap.values()) {
       const value = String(volumeNumber);
       if (volumeNumber && !numbers.includes(value)) numbers.push(value);
     }
@@ -348,7 +441,10 @@
         const cover = r.volumeCovers?.find((item) => String(item.volumeNumber) === volumeNumber) ?? null;
         const existingVolume = volumes.find((item) => String(item.volumeNumber ?? "") === volumeNumber) ?? null;
         const groupedChapters = chapters.filter(
-          (chapter) => r.chapterVolumeByNumber?.[String(chapter.chapterNumber)] === volumeNumber,
+          (chapter) => {
+            const chapterNumber = chapterNumberValue(chapter.chapterNumber);
+            return chapterNumber != null && chapterVolumeMap.get(chapterNumber) === volumeNumber;
+          },
         );
         return {
           volumeNumber,

@@ -584,6 +584,26 @@
     {defaultLabel}
   </button>
 
+  {#if !open && error}
+    <div
+      role="alert"
+      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(22rem,calc(100vw-1.5rem))] items-start gap-1.5 border border-status-error/30 bg-status-error/10 px-2.5 py-2 text-[0.68rem] text-status-error-text shadow-xl backdrop-blur-md"
+    >
+      <AlertCircle class="mt-[1px] h-3 w-3 flex-shrink-0" />
+      <span class="min-w-0">{error}</span>
+    </div>
+  {/if}
+
+  {#if !open && infoMessage}
+    <div
+      role="status"
+      class="absolute right-0 top-[calc(100%+0.5rem)] z-[160] flex w-[min(22rem,calc(100vw-1.5rem))] items-start gap-1.5 border border-white/15 bg-surface-1/95 px-2.5 py-2 text-[0.68rem] text-text-muted shadow-xl backdrop-blur-md"
+    >
+      <Info class="mt-[1px] h-3 w-3 flex-shrink-0" />
+      <span class="min-w-0">{infoMessage}</span>
+    </div>
+  {/if}
+
   {#if open}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
