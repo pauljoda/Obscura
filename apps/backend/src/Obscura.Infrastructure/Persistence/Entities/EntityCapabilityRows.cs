@@ -21,6 +21,14 @@ public sealed class EntityPlaybackRow
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
+public sealed class EntityCounterRow
+{
+    public Guid EntityId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public int Value { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 public sealed class EntityFileFingerprintRow
 {
     public Guid Id { get; set; }

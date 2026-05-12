@@ -779,6 +779,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         var tags = await LoadTagReferencesAsync(ids, cancellationToken);
         var files = await LoadFilesAsync(ids, cancellationToken);
         var playback = await LoadPlaybackAsync(ids, cancellationToken);
+        var counters = await LoadCountersAsync(ids, cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
         var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
         var urls = await LoadUrlsAsync(ids, cancellationToken);
@@ -792,6 +793,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                 tags.TryGetValue(row.Id, out var tagRefs);
                 files.TryGetValue(row.Id, out var fileRefs);
                 playback.TryGetValue(row.Id, out var playbackState);
+                counters.TryGetValue(row.Id, out var counterRefs);
                 studios.TryGetValue(row.Id, out var studio);
                 credits.TryGetValue(row.Id, out var creditRefs);
                 urls.TryGetValue(row.Id, out var urlRefs);
@@ -809,6 +811,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                         studio,
                         fileRefs ?? [],
                         playbackState,
+                        counterRefs ?? [],
                         urlRefs ?? [],
                         externalIdRefs ?? [],
                         flag));
@@ -823,6 +826,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         EntityReference? studio,
         IReadOnlyList<EntityFile> files,
         Playback? playback,
+        IReadOnlyList<EntityCounter> counters,
         IReadOnlyList<EntityUrl> urls,
         IReadOnlyList<EntityExternalId> externalIds,
         EntityFlagRow? flag)
@@ -844,7 +848,31 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             capabilities.Add(new CapabilityPlayback(playback));
         }
 
+        if (counters.Count > 0)
+        {
+            capabilities.Add(new CapabilityCounters(counters));
+        }
+
         return capabilities;
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityCounter>>> LoadCountersAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityCounters
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Code)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityCounter>)group
+                    .Select(row => new EntityCounter(row.Code, row.Value))
+                    .ToArray());
     }
 
     private async Task<IReadOnlyList<EntityMarker>> LoadMarkersAsync(

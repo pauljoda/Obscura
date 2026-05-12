@@ -56,6 +56,13 @@ public sealed class EntityProjectionServiceTests
             LastPlayedAt = DateTimeOffset.Parse("2026-05-12T12:00:00Z"),
             UpdatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityCounters.Add(new EntityCounterRow
+        {
+            EntityId = videoId,
+            Code = "orgasm",
+            Value = 3,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityUrls.Add(new EntityUrlRow
         {
             Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
@@ -131,6 +138,9 @@ public sealed class EntityProjectionServiceTests
         var playback = card.GetCapability(CapabilityRegistry.Playback).Value;
         Assert.Equal(2, playback.PlayCount);
         Assert.Equal(TimeSpan.FromSeconds(45), playback.ResumeTime);
+        var counter = Assert.Single(card.GetCapability(CapabilityRegistry.Counters).Items);
+        Assert.Equal("orgasm", counter.Code);
+        Assert.Equal(3, counter.Value);
         var flags = card.GetCapability(CapabilityRegistry.Flags);
         Assert.True(flags.IsFavorite);
         Assert.False(flags.IsNsfw);

@@ -14,6 +14,8 @@ public sealed class CapabilityRegistryTests
             capability.Code == "files" && capability.CapabilityType == typeof(CapabilityFiles));
         Assert.Contains(CapabilityRegistry.All, capability =>
             capability.Code == "playback" && capability.CapabilityType == typeof(CapabilityPlayback));
+        Assert.Contains(CapabilityRegistry.All, capability =>
+            capability.Code == "counters" && capability.CapabilityType == typeof(CapabilityCounters));
         Assert.All(CapabilityRegistry.All, capability =>
         {
             Assert.NotEqual(typeof(ICapabilityKind), capability.GetType());

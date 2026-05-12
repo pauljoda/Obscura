@@ -61,7 +61,8 @@ public sealed record Video(
             CapabilityLinks.Empty,
             CapabilityFlags.Empty,
             CapabilityFiles.Empty,
-            CapabilityPlayback.Empty
+            CapabilityPlayback.Empty,
+            CapabilityCounters.Empty
         ])
 {
     /// <summary>

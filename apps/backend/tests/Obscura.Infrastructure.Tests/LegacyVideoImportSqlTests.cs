@@ -19,6 +19,8 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("v2.entity_urls", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_markers", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_subtitles", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_counters", LegacyVideoImportSql.Import);
+        Assert.Contains("orgasm_count", LegacyVideoImportSql.Import);
     }
 
     [Fact]

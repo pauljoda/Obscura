@@ -206,6 +206,14 @@ public static class LegacyVideoImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_counters (entity_id, code, value, updated_at)
+                SELECT id, 'orgasm', GREATEST(orgasm_count, 0), updated_at
+                FROM public.video_movies
+                WHERE orgasm_count > 0
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
                 FROM public.video_movies
@@ -285,6 +293,14 @@ public static class LegacyVideoImportSql
                 WHERE COALESCE(card_thumbnail_path, thumbnail_path, still_path) IS NOT NULL
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_counters (entity_id, code, value, updated_at)
+                SELECT id, 'orgasm', GREATEST(orgasm_count, 0), updated_at
+                FROM public.video_episodes
+                WHERE orgasm_count > 0
+                ON CONFLICT (entity_id, code) DO UPDATE SET
+                    value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)

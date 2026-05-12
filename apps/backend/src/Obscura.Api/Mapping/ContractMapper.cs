@@ -12,6 +12,7 @@ using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
 using ContractEntityExternalId = Obscura.Contracts.Entities.EntityExternalId;
 using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
+using ContractEntityCounter = Obscura.Contracts.Entities.EntityCounter;
 using ContractEntityUrl = Obscura.Contracts.Entities.EntityUrl;
 using ContractRating = Obscura.Contracts.Entities.Rating;
 using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
@@ -194,6 +195,9 @@ public static class ContractMapper
                 file.Role.ToCode(),
                 file.Path,
                 file.MimeType)).ToArray()),
+            CapabilityCounters counters => new CountersCapability(counters.Items.Select(counter => new ContractEntityCounter(
+                counter.Code,
+                counter.Value)).ToArray()),
             _ => null
         };
 

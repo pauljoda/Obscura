@@ -4,6 +4,7 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { EntityCapabilityCountersCapability } from './entityCapabilityCountersCapability';
 import type { EntityCapabilityCreditsCapability } from './entityCapabilityCreditsCapability';
 import type { EntityCapabilityFilesCapability } from './entityCapabilityFilesCapability';
 import type { EntityCapabilityFlagsCapability } from './entityCapabilityFlagsCapability';
@@ -13,4 +14,4 @@ import type { EntityCapabilityRatingCapability } from './entityCapabilityRatingC
 import type { EntityCapabilityStudioCapability } from './entityCapabilityStudioCapability';
 import type { EntityCapabilityTagsCapability } from './entityCapabilityTagsCapability';
 
-export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability;
+export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability;

@@ -14,4 +14,5 @@ namespace Obscura.Contracts.Entities;
 [JsonDerivedType(typeof(LinksCapability), "links")]
 [JsonDerivedType(typeof(FlagsCapability), "flags")]
 [JsonDerivedType(typeof(FilesCapability), "files")]
+[JsonDerivedType(typeof(CountersCapability), "counters")]
 public abstract record EntityCapability;
