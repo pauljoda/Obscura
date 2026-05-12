@@ -394,8 +394,9 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .Where(row => ids.Contains(row.EntityId))
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
-        var tags = await LoadTagTitlesAsync(ids, cancellationToken);
-        var thumbnails = await LoadFilePathsAsync(ids, EntityFileRole.Thumbnail, cancellationToken);
+        var tags = await LoadTagReferencesAsync(ids, cancellationToken);
+        var files = await LoadFilesAsync(ids, cancellationToken);
+        var playback = await LoadPlaybackAsync(ids, cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
         var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
         var urls = await LoadUrlsAsync(ids, cancellationToken);
@@ -406,8 +407,9 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             {
                 ratings.TryGetValue(row.Id, out var rating);
                 flags.TryGetValue(row.Id, out var flag);
-                tags.TryGetValue(row.Id, out var tagTitles);
-                thumbnails.TryGetValue(row.Id, out var thumbnailUrl);
+                tags.TryGetValue(row.Id, out var tagRefs);
+                files.TryGetValue(row.Id, out var fileRefs);
+                playback.TryGetValue(row.Id, out var playbackState);
                 studios.TryGetValue(row.Id, out var studio);
                 credits.TryGetValue(row.Id, out var creditRefs);
                 urls.TryGetValue(row.Id, out var urlRefs);
@@ -418,12 +420,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                     ResolveKind(row.KindCode),
                     row.Title,
                     null,
-                    BuildSharedCapabilities(
+                    BuildExplicitCapabilities(
                         ratings.ContainsKey(row.Id) ? Rating.FromNullable(rating) : null,
-                        tagTitles ?? [],
+                        tagRefs ?? [],
                         creditRefs ?? [],
                         studio,
-                        thumbnailUrl,
+                        fileRefs ?? [],
+                        playbackState,
                         urlRefs ?? [],
                         externalIdRefs ?? [],
                         flag));
@@ -431,25 +434,36 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .ToArray();
     }
 
-    private static IReadOnlyList<ICapability> BuildSharedCapabilities(
+    private static IReadOnlyList<ICapability> BuildExplicitCapabilities(
         Rating? rating,
-        IReadOnlyList<string> tags,
-        IReadOnlyList<EntityReference> credits,
+        IReadOnlyList<EntityTag> tags,
+        IReadOnlyList<EntityCredit> credits,
         EntityReference? studio,
-        string? thumbnailUrl,
+        IReadOnlyList<EntityFile> files,
+        Playback? playback,
         IReadOnlyList<EntityUrl> urls,
         IReadOnlyList<EntityExternalId> externalIds,
-        EntityFlagRow? flag) =>
-    [
-        new CapabilityRating(rating),
-        new CapabilityTags(tags),
-        new CapabilityCredits(credits),
-        new CapabilityStudio(studio),
-        new CapabilityImages(thumbnailUrl, null),
-        new CapabilityLinks(urls, externalIds),
-        new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
-        CapabilityFiles.Empty
-    ];
+        EntityFlagRow? flag)
+    {
+        var capabilities = new List<ICapability>
+        {
+            new CapabilityRating(rating),
+            new CapabilityTags(tags),
+            new CapabilityCredits(credits),
+            new CapabilityStudio(studio),
+            new CapabilityImages(files.FirstOrDefault(file => file.Role == EntityFileRole.Thumbnail)?.Path, null),
+            new CapabilityLinks(urls, externalIds),
+            new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
+            new CapabilityFiles(files)
+        };
+
+        if (playback is not null)
+        {
+            capabilities.Add(new CapabilityPlayback(playback));
+        }
+
+        return capabilities;
+    }
 
     private async Task<IReadOnlyList<EntityMarker>> LoadMarkersAsync(
         Guid entityId,
@@ -531,7 +545,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                     .ToArray());
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> LoadTagTitlesAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityTag>>> LoadTagReferencesAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -542,7 +556,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         if (tagLinks.Count == 0)
         {
-            return new Dictionary<Guid, IReadOnlyList<string>>();
+            return new Dictionary<Guid, IReadOnlyList<EntityTag>>();
         }
 
         var tagIds = tagLinks.Select(link => link.TagId).Distinct().ToArray();
@@ -556,21 +570,51 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .GroupBy(link => link.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<string>)group
-                    .Select(link => tagTitles[link.TagId])
-                    .OrderBy(title => title, StringComparer.OrdinalIgnoreCase)
+                group => (IReadOnlyList<EntityTag>)group
+                    .Select(link => new EntityTag(new EntityReference(
+                        link.TagId,
+                        EntityKindRegistry.Tag,
+                        tagTitles[link.TagId])))
+                    .OrderBy(tag => tag.Reference.Title, StringComparer.OrdinalIgnoreCase)
                     .ToArray());
     }
 
-    private async Task<IReadOnlyDictionary<Guid, string>> LoadFilePathsAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityFile>>> LoadFilesAsync(
         IReadOnlyList<Guid> entityIds,
-        EntityFileRole role,
         CancellationToken cancellationToken)
     {
-        return await _db.EntityFiles
+        var rows = await _db.EntityFiles
             .AsNoTracking()
-            .Where(file => entityIds.Contains(file.EntityId) && file.Role == role)
-            .ToDictionaryAsync(file => file.EntityId, file => file.Path, cancellationToken);
+            .Where(file => entityIds.Contains(file.EntityId))
+            .OrderBy(file => file.Role)
+            .ThenBy(file => file.Path)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(file => file.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityFile>)group
+                    .Select(file => new EntityFile(file.Role, file.Path, file.MimeType))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, Playback>> LoadPlaybackAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityPlayback
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .ToDictionaryAsync(
+                row => row.EntityId,
+                row => new Playback(
+                    row.PlayCount,
+                    TimeSpan.FromSeconds(row.PlayDurationSeconds),
+                    TimeSpan.FromSeconds(row.ResumeSeconds),
+                    row.LastPlayedAt,
+                    row.CompletedAt),
+                cancellationToken);
     }
 
     private async Task<IReadOnlyDictionary<Guid, EntityReference>> LoadStudioReferencesAsync(
@@ -604,7 +648,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                 });
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityReference>>> LoadCreditReferencesAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityCredit>>> LoadCreditReferencesAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -617,7 +661,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         if (links.Count == 0)
         {
-            return new Dictionary<Guid, IReadOnlyList<EntityReference>>();
+            return new Dictionary<Guid, IReadOnlyList<EntityCredit>>();
         }
 
         var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
@@ -631,11 +675,14 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .GroupBy(link => link.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<EntityReference>)group
+                group => (IReadOnlyList<EntityCredit>)group
                     .Select(link =>
                     {
                         var person = people[link.PersonEntityId];
-                        return new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title);
+                        return new EntityCredit(
+                            new EntityReference(person.Id, ResolveKind(person.KindCode), person.Title),
+                            link.Role,
+                            link.Character);
                     })
                     .ToArray());
     }

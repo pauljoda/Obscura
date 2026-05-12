@@ -45,6 +45,15 @@ public sealed class EntityProjectionServiceTests
             SortOrder = 1,
             CreatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityPlayback.Add(new EntityPlaybackRow
+        {
+            EntityId = videoId,
+            PlayCount = 2,
+            PlayDurationSeconds = 120,
+            ResumeSeconds = 45,
+            LastPlayedAt = DateTimeOffset.Parse("2026-05-12T12:00:00Z"),
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityUrls.Add(new EntityUrlRow
         {
             Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
@@ -73,6 +82,17 @@ public sealed class EntityProjectionServiceTests
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityFiles.Add(new EntityFileRow
+        {
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777778"),
+            EntityId = videoId,
+            Role = EntityFileRole.Source,
+            Path = "/media/videos/a-quiet-scene.mkv",
+            MimeType = "video/x-matroska",
+            SizeBytes = 1024,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -83,13 +103,17 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("video", card.Kind.Code);
         Assert.Equal(4, card.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
         Assert.Equal(["Favorite"], card.GetCapability(CapabilityRegistry.Tags).Values);
+        var tag = Assert.Single(card.GetCapability(CapabilityRegistry.Tags).Items);
+        Assert.Equal(tagId, tag.Reference.Id);
         var studio = card.GetCapability(CapabilityRegistry.Studio).Value;
         Assert.NotNull(studio);
         Assert.Equal(studioId, studio.Id);
         Assert.Equal("Obscura Studio", studio.Title);
-        var credit = Assert.Single(card.GetCapability(CapabilityRegistry.Credits).People);
-        Assert.Equal(personId, credit.Id);
-        Assert.Equal("Ada Person", credit.Title);
+        var credit = Assert.Single(card.GetCapability(CapabilityRegistry.Credits).Items);
+        Assert.Equal(personId, credit.Person.Id);
+        Assert.Equal("Ada Person", credit.Person.Title);
+        Assert.Equal(EntityCreditRole.Person, credit.Role);
+        Assert.Equal("Lead", credit.Character);
         var links = card.GetCapability(CapabilityRegistry.Links);
         var url = Assert.Single(links.Urls);
         Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
@@ -99,6 +123,12 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("12345", externalId.Value);
         Assert.Equal("https://www.themoviedb.org/movie/12345", externalId.Url);
         Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.GetCapability(CapabilityRegistry.Images).ThumbnailUrl);
+        var files = card.GetCapability(CapabilityRegistry.Files).Items;
+        Assert.Contains(files, file => file.Role == EntityFileRole.Thumbnail && file.Path == "/assets/videos/11111111-1111-1111-1111-111111111111/card");
+        Assert.Contains(files, file => file.Role == EntityFileRole.Source && file.Path == "/media/videos/a-quiet-scene.mkv");
+        var playback = card.GetCapability(CapabilityRegistry.Playback).Value;
+        Assert.Equal(2, playback.PlayCount);
+        Assert.Equal(TimeSpan.FromSeconds(45), playback.ResumeTime);
         var flags = card.GetCapability(CapabilityRegistry.Flags);
         Assert.True(flags.IsFavorite);
         Assert.False(flags.IsNsfw);

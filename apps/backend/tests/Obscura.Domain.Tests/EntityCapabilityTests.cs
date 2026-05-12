@@ -12,6 +12,8 @@ public sealed class EntityCapabilityTests
     [Fact]
     public void EntityCapabilityHelpersReturnTypedCapabilitiesByKind()
     {
+        var tagId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var personId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         var entity = new Entity(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             EntityKindRegistry.Video,
@@ -19,7 +21,15 @@ public sealed class EntityCapabilityTests
             null,
             [
                 new CapabilityRating(new Rating(RatingValue.Create(4))),
-                new CapabilityTags(["Favorite"])
+                new CapabilityTags([
+                    new EntityTag(new EntityReference(tagId, EntityKindRegistry.Tag, "Favorite"))
+                ]),
+                new CapabilityCredits([
+                    new EntityCredit(
+                        new EntityReference(personId, EntityKindRegistry.Person, "Ada Person"),
+                        EntityCreditRole.Person,
+                        "Lead")
+                ])
             ]);
 
         Assert.True(entity.HasCapability(CapabilityRegistry.Rating));
@@ -27,6 +37,11 @@ public sealed class EntityCapabilityTests
 
         Assert.IsType<CapabilityRating>(rating);
         Assert.Equal(4, rating.Value?.Value.Value);
+        var tag = Assert.Single(entity.GetCapability(CapabilityRegistry.Tags).Items);
+        Assert.Equal(tagId, tag.Reference.Id);
+        var credit = Assert.Single(entity.GetCapability(CapabilityRegistry.Credits).Items);
+        Assert.Equal(EntityCreditRole.Person, credit.Role);
+        Assert.Equal("Lead", credit.Character);
     }
 
     [Fact]
@@ -53,7 +68,7 @@ public sealed class EntityCapabilityTests
             EntityKindRegistry.Video,
             "Projected Video",
             null,
-            [new CapabilityTags([])]);
+            [CapabilityTags.Empty]);
 
         Assert.False(entity.HasCapability(CapabilityRegistry.Rating));
         Assert.False(entity.TryGetCapability(CapabilityRegistry.Rating, out var rating));

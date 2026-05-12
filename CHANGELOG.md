@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET contracts now use clean API model names without `Dto` suffixes, and the generated Svelte client follows those names directly.
 - The v2 entity model now exposes shared capabilities as modular, typed capability items, making ratings, tags, artwork, links, flags, and files easier to extend across entity kinds.
 - The v2 domain model now keeps typed media and taxonomy extensions wrapped around a shared entity root, making entity-specific details easier to grow without duplicating shared behavior.
+- The v2 entity projection now preserves richer shared capability data, including tag IDs, credit roles and characters, attached files, and playback state.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -93,6 +94,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Refactored v2 .NET registries for codecs, entity kinds, relationships, and capabilities onto shared discovery infrastructure, with capabilities now owning their kind metadata directly instead of separate kind stub classes.
 - Collapsed the v2 .NET registry base classes into one `AbstractRegistry` so each domain registry declares its own lookup key, ordering, and missing-key behavior in one place.
 - Converted v2 .NET media and taxonomy domain extensions to compose the shared entity root instead of inheriting it, added playback as an explicit reusable capability, and removed the stale Domain-to-Contracts project reference.
+- Expanded v2 .NET tag and credit capabilities to keep entity references and role metadata, and hydrated file/playback capabilities from their EF rows instead of returning empty placeholders.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.
