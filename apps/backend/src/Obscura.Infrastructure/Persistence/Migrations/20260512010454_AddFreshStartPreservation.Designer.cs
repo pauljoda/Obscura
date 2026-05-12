@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Obscura.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Obscura.Infrastructure.Persistence;
 namespace Obscura.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ObscuraDbContext))]
-    partial class ObscuraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512010454_AddFreshStartPreservation")]
+    partial class AddFreshStartPreservation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
