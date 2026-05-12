@@ -4,7 +4,11 @@ namespace Obscura.Domain.Capabilities;
 /// Rating capability for an entity that supports user ratings.
 /// </summary>
 /// <param name="Value">Validated rating value, or null when the entity is unrated.</param>
-public sealed record CapabilityRating(Rating? Value) : ICapability
+public sealed record CapabilityRating(Rating? Value) : ICapability<CapabilityRating>
 {
-    public ICapabilityKind Kind => CapabilityRegistry.Rating;
+    /// <inheritdoc />
+    public static ICapabilityKind<CapabilityRating> CapabilityKind { get; } = new CapabilityKind<CapabilityRating>("rating", "Rating");
+
+    /// <inheritdoc />
+    public ICapabilityKind Kind => CapabilityKind;
 }

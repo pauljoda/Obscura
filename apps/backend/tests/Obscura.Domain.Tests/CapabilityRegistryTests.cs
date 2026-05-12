@@ -1,4 +1,5 @@
 using Obscura.Domain.Capabilities;
+using Obscura.Domain.Registries;
 
 namespace Obscura.Domain.Tests;
 
@@ -7,12 +8,10 @@ public sealed class CapabilityRegistryTests
     [Fact]
     public void KnownCapabilitiesAreDiscoveredConcreteImplementations()
     {
-        Assert.True(typeof(CapabilityKind<>).IsAbstract);
         Assert.Contains(CapabilityRegistry.All, capability =>
-            capability is ICapabilityKind && capability.GetType().Name == "RatingCapabilityKind");
+            capability.Code == "rating" && capability.CapabilityType == typeof(CapabilityRating));
         Assert.Contains(CapabilityRegistry.All, capability =>
-            capability is ICapabilityKind && capability.GetType().Name == "FilesCapabilityKind");
-        Assert.IsAssignableFrom<CapabilityKind<CapabilityRating>>(CapabilityRegistry.Rating);
+            capability.Code == "files" && capability.CapabilityType == typeof(CapabilityFiles));
         Assert.All(CapabilityRegistry.All, capability =>
         {
             Assert.NotEqual(typeof(ICapabilityKind), capability.GetType());
@@ -34,6 +33,13 @@ public sealed class CapabilityRegistryTests
         var found = CapabilityRegistry.Require("rating");
 
         Assert.Same(CapabilityRegistry.Rating, found);
+        Assert.Same(CapabilityRating.CapabilityKind, found);
         Assert.Equal(typeof(CapabilityRating), CapabilityRegistry.Rating.CapabilityType);
+    }
+
+    [Fact]
+    public void CapabilityRegistryUsesSharedCodeRegistryInfrastructure()
+    {
+        Assert.True(typeof(CapabilityRegistry).IsSubclassOf(typeof(CodeRegistry<ICapabilityKind>)));
     }
 }

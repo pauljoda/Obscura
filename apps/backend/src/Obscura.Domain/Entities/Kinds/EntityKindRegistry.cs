@@ -1,15 +1,18 @@
+using Obscura.Domain.Registries;
+
 namespace Obscura.Domain.Entities;
 
 /// <summary>
 /// Discovers and exposes code-defined entity kinds.
 /// </summary>
-public static class EntityKindRegistry
+public sealed class EntityKindRegistry : CodeRegistry<IEntityKind>
 {
-    private static readonly Lazy<IReadOnlyList<IEntityKind>> DiscoveredKinds = new(DiscoverKinds);
+    private static readonly EntityKindRegistry Registry = new();
 
-    private static readonly Lazy<IReadOnlyDictionary<string, IEntityKind>> ByCode = new(() => All.ToDictionary(
-        kind => kind.Code,
-        StringComparer.OrdinalIgnoreCase));
+    private EntityKindRegistry()
+        : base(typeof(EntityKindRegistry).Assembly, kind => kind.Code, "entity kind", nameof(IEntityKind))
+    {
+    }
 
     /// <summary>Known video entity kind.</summary>
     public static IEntityKind Video => Require("video");
@@ -62,7 +65,7 @@ public static class EntityKindRegistry
     /// <summary>
     /// Gets every known entity kind in deterministic registry order.
     /// </summary>
-    public static IReadOnlyList<IEntityKind> All => DiscoveredKinds.Value;
+    public static IReadOnlyList<IEntityKind> All => Registry.Items;
 
     /// <summary>
     /// Looks up an entity kind by its stable code.
@@ -71,16 +74,7 @@ public static class EntityKindRegistry
     /// <param name="kind">The matched kind when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out IEntityKind kind)
-    {
-        if (code is not null && ByCode.Value.TryGetValue(code, out var match))
-        {
-            kind = match;
-            return true;
-        }
-
-        kind = default!;
-        return false;
-    }
+        => Registry.TryGetCode(code, out kind);
 
     /// <summary>
     /// Looks up an entity kind by its stable code and fails when storage contains an unknown kind.
@@ -89,25 +83,5 @@ public static class EntityKindRegistry
     /// <returns>The registered entity kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the kind code is not registered.</exception>
     public static IEntityKind Require(string code)
-    {
-        if (TryGet(code, out var kind))
-        {
-            return kind;
-        }
-
-        throw new InvalidOperationException($"Unknown entity kind code '{code}'. Add an {nameof(IEntityKind)} implementation before using it.");
-    }
-
-    private static IReadOnlyList<IEntityKind> DiscoverKinds() =>
-        typeof(EntityKindRegistry)
-            .Assembly
-            .GetTypes()
-            .Where(type =>
-                !type.IsAbstract &&
-                !type.IsInterface &&
-                typeof(IEntityKind).IsAssignableFrom(type) &&
-                type.GetConstructor(Type.EmptyTypes) is not null)
-            .Select(type => (IEntityKind)Activator.CreateInstance(type)!)
-            .OrderBy(kind => kind.Code, StringComparer.Ordinal)
-            .ToArray();
+        => Registry.RequireCode(code);
 }

@@ -1,15 +1,20 @@
+using System.Reflection;
+using Obscura.Domain.Registries;
+
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>
 /// Discovers and exposes code-defined entity capability kinds.
 /// </summary>
-public static class CapabilityRegistry
+public sealed class CapabilityRegistry : CodeRegistry<ICapabilityKind>
 {
-    private static readonly Lazy<IReadOnlyList<ICapabilityKind>> DiscoveredCapabilities = new(DiscoverCapabilities);
+    private const string CapabilityKindPropertyName = "CapabilityKind";
+    private static readonly CapabilityRegistry Registry = new();
 
-    private static readonly Lazy<IReadOnlyDictionary<string, ICapabilityKind>> ByCode = new(() => All.ToDictionary(
-        capability => capability.Code,
-        StringComparer.OrdinalIgnoreCase));
+    private CapabilityRegistry()
+        : base(typeof(CapabilityRegistry).Assembly, capability => capability.Code, "capability", nameof(ICapability))
+    {
+    }
 
     /// <summary>Known rating capability kind.</summary>
     public static ICapabilityKind<CapabilityRating> Rating => Require<CapabilityRating>("rating");
@@ -38,7 +43,7 @@ public static class CapabilityRegistry
     /// <summary>
     /// Gets every known capability kind in deterministic registry order.
     /// </summary>
-    public static IReadOnlyList<ICapabilityKind> All => DiscoveredCapabilities.Value;
+    public static IReadOnlyList<ICapabilityKind> All => Registry.Items;
 
     /// <summary>
     /// Looks up a capability kind by stable code.
@@ -47,16 +52,7 @@ public static class CapabilityRegistry
     /// <param name="capability">The matched capability kind when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out ICapabilityKind capability)
-    {
-        if (code is not null && ByCode.Value.TryGetValue(code, out var match))
-        {
-            capability = match;
-            return true;
-        }
-
-        capability = default!;
-        return false;
-    }
+        => Registry.TryGetCode(code, out capability);
 
     /// <summary>
     /// Looks up a capability kind by code and fails when the code is unknown.
@@ -65,14 +61,7 @@ public static class CapabilityRegistry
     /// <returns>The registered capability kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the capability code is not registered.</exception>
     public static ICapabilityKind Require(string code)
-    {
-        if (TryGet(code, out var capability))
-        {
-            return capability;
-        }
-
-        throw new InvalidOperationException($"Unknown capability code '{code}'. Add an {nameof(ICapabilityKind)} implementation before using it.");
-    }
+        => Registry.RequireCode(code);
 
     private static ICapabilityKind<TCapability> Require<TCapability>(string code)
         where TCapability : class, ICapability
@@ -86,16 +75,30 @@ public static class CapabilityRegistry
         throw new InvalidOperationException($"Capability code '{code}' is not registered for {typeof(TCapability).Name}.");
     }
 
-    private static IReadOnlyList<ICapabilityKind> DiscoverCapabilities() =>
-        typeof(CapabilityRegistry)
-            .Assembly
-            .GetTypes()
-            .Where(type =>
-                !type.IsAbstract &&
-                !type.IsInterface &&
-                typeof(ICapabilityKind).IsAssignableFrom(type) &&
-                type.GetConstructor(Type.EmptyTypes) is not null)
-            .Select(type => (ICapabilityKind)Activator.CreateInstance(type)!)
-            .OrderBy(capability => capability.Code, StringComparer.Ordinal)
-            .ToArray();
+    /// <inheritdoc />
+    protected override bool IsDiscoverableType(Type type) =>
+        !type.IsAbstract &&
+        !type.IsInterface &&
+        typeof(ICapability).IsAssignableFrom(type) &&
+        type.GetInterfaces().Any(IsTypedCapabilityInterface);
+
+    /// <inheritdoc />
+    protected override ICapabilityKind CreateItem(Type type)
+    {
+        var property = type.GetProperty(CapabilityKindPropertyName, BindingFlags.Public | BindingFlags.Static);
+        if (property?.GetValue(null) is not ICapabilityKind capability)
+        {
+            throw new InvalidOperationException($"{type.Name} must expose a public static {CapabilityKindPropertyName} property.");
+        }
+
+        if (capability.CapabilityType != type)
+        {
+            throw new InvalidOperationException($"{type.Name} registered capability kind for {capability.CapabilityType.Name}.");
+        }
+
+        return capability;
+    }
+
+    private static bool IsTypedCapabilityInterface(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ICapability<>);
 }

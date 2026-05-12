@@ -1,15 +1,18 @@
+using Obscura.Domain.Registries;
+
 namespace Obscura.Domain.Entities;
 
 /// <summary>
 /// Discovers and exposes code-defined entity relationships.
 /// </summary>
-public static class EntityRelationshipRegistry
+public sealed class EntityRelationshipRegistry : CodeRegistry<IEntityRelationship>
 {
-    private static readonly Lazy<IReadOnlyList<IEntityRelationship>> DiscoveredRelationships = new(DiscoverRelationships);
+    private static readonly EntityRelationshipRegistry Registry = new();
 
-    private static readonly Lazy<IReadOnlyDictionary<string, IEntityRelationship>> ByCode = new(() => All.ToDictionary(
-        relationship => relationship.Code,
-        StringComparer.OrdinalIgnoreCase));
+    private EntityRelationshipRegistry()
+        : base(typeof(EntityRelationshipRegistry).Assembly, relationship => relationship.Code, "entity relationship", nameof(IEntityRelationship))
+    {
+    }
 
     /// <summary>Relationship from a video series or season to an episode video.</summary>
     public static IEntityRelationship Episode => Require("episode");
@@ -50,7 +53,7 @@ public static class EntityRelationshipRegistry
     /// <summary>
     /// Gets every known entity relationship in deterministic registry order.
     /// </summary>
-    public static IReadOnlyList<IEntityRelationship> All => DiscoveredRelationships.Value;
+    public static IReadOnlyList<IEntityRelationship> All => Registry.Items;
 
     /// <summary>
     /// Gets canonical structural relationships that represent ownership or navigational parentage.
@@ -64,16 +67,7 @@ public static class EntityRelationshipRegistry
     /// <param name="relationship">The matched relationship when the method returns true.</param>
     /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out IEntityRelationship relationship)
-    {
-        if (code is not null && ByCode.Value.TryGetValue(code, out var match))
-        {
-            relationship = match;
-            return true;
-        }
-
-        relationship = default!;
-        return false;
-    }
+        => Registry.TryGetCode(code, out relationship);
 
     /// <summary>
     /// Looks up a relationship by code and fails when storage contains an unknown relationship.
@@ -82,25 +76,5 @@ public static class EntityRelationshipRegistry
     /// <returns>The registered entity relationship.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the relationship code is not registered.</exception>
     public static IEntityRelationship Require(string code)
-    {
-        if (TryGet(code, out var relationship))
-        {
-            return relationship;
-        }
-
-        throw new InvalidOperationException($"Unknown entity relationship code '{code}'. Add an {nameof(IEntityRelationship)} implementation before using it.");
-    }
-
-    private static IReadOnlyList<IEntityRelationship> DiscoverRelationships() =>
-        typeof(EntityRelationshipRegistry)
-            .Assembly
-            .GetTypes()
-            .Where(type =>
-                !type.IsAbstract &&
-                !type.IsInterface &&
-                typeof(IEntityRelationship).IsAssignableFrom(type) &&
-                type.GetConstructor(Type.EmptyTypes) is not null)
-            .Select(type => (IEntityRelationship)Activator.CreateInstance(type)!)
-            .OrderBy(relationship => relationship.Code, StringComparer.Ordinal)
-            .ToArray();
+        => Registry.RequireCode(code);
 }
