@@ -7,6 +7,7 @@
     updateV2EntityRating,
     type V2VideoDetailDto,
   } from "$lib/api/v2";
+  import { v2ApiPath } from "$lib/api/orval-fetch";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -15,7 +16,7 @@
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
 
-  const streamSrc = $derived.by(() => (video ? `/api/videos/${video.id}/stream` : ""));
+  const streamSrc = $derived.by(() => (video ? v2ApiPath(`/videos/${video.id}/stream`) : ""));
   const dimensions = $derived.by(() =>
     video?.width && video?.height ? `${video.width} x ${video.height}` : "Unknown resolution",
   );

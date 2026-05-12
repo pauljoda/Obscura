@@ -2,9 +2,14 @@ import { dev } from "$app/environment";
 import { env } from "$env/dynamic/public";
 import { API_BASE } from "./core";
 
-const V2_API_BASE =
+export const V2_API_BASE =
   env.PUBLIC_V2_API_URL ||
   (dev && API_BASE === "/api" ? "http://127.0.0.1:8010/api" : API_BASE);
+
+export function v2ApiPath(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${V2_API_BASE}${normalizedPath.startsWith("/api/") ? normalizedPath.slice(4) : normalizedPath}`;
+}
 
 export async function orvalFetch<TData>(
   url: string,
@@ -17,7 +22,7 @@ export async function orvalFetch<TData>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${V2_API_BASE}${path}`, {
+  const response = await fetch(v2ApiPath(path), {
     ...init,
     headers,
   });
