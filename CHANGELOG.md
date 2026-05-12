@@ -86,6 +86,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Tags and Studios now use server-side search, filters, sorting, pagination, and shared bulk actions instead of loading and reshaping the full list in the browser.
 - Media list API calls now share one query encoder across client and server fetchers, keeping repeated filters and pagination parameters consistent across library pages.
 - Book and gallery scans now reuse the shared metadata relation helpers, preserving NSFW propagation while reducing duplicated studio, actor, and tag lookup logic.
+- Video series pagination and bulk-selection logic now lives in focused helpers, keeping the hierarchy page behavior unchanged while making future maintenance safer.
 
 ### Added
 

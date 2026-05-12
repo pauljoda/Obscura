@@ -23,7 +23,6 @@
   import NsfwTagLabel from "$lib/components/nsfw/NsfwTagLabel.svelte";
   import UploadDropZone from "$lib/components/UploadDropZone.svelte";
   import VideoSeriesEdit from "$lib/components/VideoSeriesEdit.svelte";
-  import { mergeUniquePage } from "$lib/media-surface/pagination/load-more";
   import { entityTerms, formatVideoCount } from "$lib/terminology";
   import { toApiUrl } from "$lib/api/core";
   import {
@@ -55,6 +54,16 @@
     type SeriesSortOption,
     type SortDir,
   } from "$lib/prefs/series-list-prefs";
+  import {
+    applySeriesPageMerge,
+    getSeriesLoadedWindow,
+    seriesPageHref,
+  } from "./series-page-pagination";
+  import {
+    getSelectionState,
+    selectAllVisibleIds,
+    toggleSelectedId,
+  } from "./series-page-selection";
 
   let { data } = $props();
   const appChrome = useAppChrome();
@@ -129,13 +138,16 @@
   );
   const loadedStart = $derived((data.page - 1) * data.pageSize);
   const loadedItemCount = $derived(usesRootPrefs ? loadedSeries.length : loadedVideos.length);
-  const loadedEnd = $derived(Math.min(loadedTotal, loadedStart + loadedItemCount));
-  const hasMoreItems = $derived(
-    (usesRootPrefs || showsVideos) && loadedEnd < loadedTotal,
+  const loadedWindow = $derived(
+    getSeriesLoadedWindow({
+      loadedStart,
+      itemCount: loadedItemCount,
+      total: loadedTotal,
+      pageSize: data.pageSize,
+    }),
   );
-  const nextPageNumber = $derived(
-    Math.floor((loadedStart + loadedItemCount) / data.pageSize) + 1,
-  );
+  const hasMoreItems = $derived((usesRootPrefs || showsVideos) && loadedWindow.hasMore);
+  const nextPageNumber = $derived(loadedWindow.nextPageNumber);
   // svelte-ignore state_referenced_locally
   let seriesViewMode = $state<ViewMode>(data.prefs.viewMode);
   const currentViewMode = $derived(usesRootPrefs ? seriesViewMode : data.view);
@@ -151,9 +163,10 @@
         ? loadedVideos.map((video) => video.id)
         : [],
   );
-  const allVisibleSelected = $derived(
-    visibleSelectionIds.length > 0 && visibleSelectionIds.every((id) => selectedItemIds.has(id)),
+  const selectionState = $derived(
+    getSelectionState(selectedItemIds, visibleSelectionIds),
   );
+  const allVisibleSelected = $derived(selectionState.allVisibleSelected);
   const uploadTarget = $derived(
     data.activeSeries
       ? {
@@ -476,11 +489,7 @@
   }
 
   function pageHref(nextPage: number): string {
-    const params = new URLSearchParams(page.url.searchParams);
-    if (nextPage > 1) params.set("page", String(nextPage));
-    else params.delete("page");
-    const qs = params.toString();
-    return qs ? `/series?${qs}` : "/series";
+    return seriesPageHref(page.url, nextPage);
   }
 
   async function loadMoreItems() {
@@ -508,7 +517,7 @@
           limit: data.pageSize,
           offset,
         });
-        const merged = mergeUniquePage({
+        const merged = applySeriesPageMerge({
           current: loadedSeries,
           incoming: response.items,
           loadedStart,
@@ -529,7 +538,7 @@
           offset,
           nsfw: data.initialNsfwMode,
         });
-        const merged = mergeUniquePage({
+        const merged = applySeriesPageMerge({
           current: loadedVideos,
           incoming: response.videos,
           loadedStart,
@@ -546,14 +555,15 @@
   }
 
   function toggleSelectedItem(id: string) {
-    const next = new Set(selectedItemIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    selectedItemIds = next;
+    selectedItemIds = toggleSelectedId(selectedItemIds, id);
   }
 
   function selectAllVisibleItems() {
-    selectedItemIds = allVisibleSelected ? new Set() : new Set(visibleSelectionIds);
+    selectedItemIds = selectAllVisibleIds(
+      selectedItemIds,
+      visibleSelectionIds,
+      allVisibleSelected,
+    );
   }
 
   function clearSelectedItems() {
