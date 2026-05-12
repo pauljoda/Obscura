@@ -140,6 +140,7 @@ No bridges, no staging tables, no legacy-schema snapshots. Early users expect br
 
 - TypeScript is required across apps and packages.
 - Prefer typed contracts over ad hoc object shapes.
+- Public classes, records, interfaces, and non-trivial public methods should have rich documentation comments that explain the domain meaning, parameters, return values, and important behavior. Prefer C# XML documentation comments for .NET code so IDEs surface the intent while editing.
 - Add tests with new logic when behavior can regress.
 - Keep app boundaries explicit: UI and HTTP ingress in `apps/web-svelte`, heavy work in `apps/worker`, shared logic in `packages/*`.
 

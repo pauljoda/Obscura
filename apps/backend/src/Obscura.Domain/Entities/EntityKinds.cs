@@ -1,5 +1,8 @@
 namespace Obscura.Domain.Entities;
 
+/// <summary>
+/// Central registry for the entity kinds that the v2 backend understands.
+/// </summary>
 public static class EntityKinds
 {
     private static readonly EntityKind[] Known =
@@ -22,8 +25,17 @@ public static class EntityKinds
         kind => kind.Code,
         StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Gets every known entity kind in deterministic registry order.
+    /// </summary>
     public static IReadOnlyList<EntityKind> All => Known;
 
+    /// <summary>
+    /// Looks up an entity kind by its stable code.
+    /// </summary>
+    /// <param name="code">Kind code from storage, a route, or an API filter.</param>
+    /// <param name="kind">The matched kind when the method returns true.</param>
+    /// <returns>True when the code is known; otherwise false.</returns>
     public static bool TryGet(string? code, out EntityKind kind)
     {
         if (code is not null && ByCode.TryGetValue(code, out var match))

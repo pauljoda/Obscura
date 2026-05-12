@@ -8,16 +8,24 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
+/// <summary>
+/// Projects v2 PostgreSQL entity rows into Domain objects used by application services.
+/// </summary>
 public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;
 
+    /// <summary>
+    /// Creates an entity projection service over the EF Core v2 context.
+    /// </summary>
+    /// <param name="db">Database context that owns v2 entity and capability tables.</param>
     public EntityProjectionService(ObscuraDbContext db)
     {
         _db = db;
     }
 
+    /// <inheritdoc />
     public async Task<EntityPage> ListAsync(
         string? kind,
         string? query,
@@ -57,6 +65,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return new EntityPage(entities, nextCursor);
     }
 
+    /// <inheritdoc />
     public async Task<Entity?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var row = await _db.Entities
@@ -73,6 +82,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return (await BuildEntitiesAsync([row], cancellationToken)).Single();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
         string relationship,
@@ -82,6 +92,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Entity?> UpdateRatingAsync(
         Guid id,
         int? value,
@@ -129,6 +140,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Entity?> UpdateFlagsAsync(
         Guid id,
         bool? isFavorite,
@@ -161,9 +173,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return await GetAsync(id, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<EntityPage> ListVideosAsync(CancellationToken cancellationToken) =>
         ListAsync("video", null, null, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<Video?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
@@ -194,9 +208,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
             new Subtitles(subtitles));
     }
 
+    /// <inheritdoc />
     public Task<EntityPage> ListSeriesAsync(CancellationToken cancellationToken) =>
         ListAsync("video-series", null, null, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<VideoSeries?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
