@@ -31,6 +31,10 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityExternalIdRow> EntityExternalIds => Set<EntityExternalIdRow>();
 
+    public DbSet<EntityMarkerRow> EntityMarkers => Set<EntityMarkerRow>();
+
+    public DbSet<EntitySubtitleRow> EntitySubtitles => Set<EntitySubtitleRow>();
+
     public DbSet<EntityFileRow> EntityFiles => Set<EntityFileRow>();
 
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
@@ -219,6 +223,46 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.HasIndex(row => new { row.EntityId, row.Provider }).IsUnique();
             entity.HasIndex(row => row.Provider);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.EntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityMarkerRow>(entity =>
+        {
+            entity.ToTable("entity_markers");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.Title).HasColumnName("title").IsRequired();
+            entity.Property(row => row.Seconds).HasColumnName("seconds");
+            entity.Property(row => row.EndSeconds).HasColumnName("end_seconds");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
+            entity.HasIndex(row => new { row.EntityId, row.Seconds });
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.EntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntitySubtitleRow>(entity =>
+        {
+            entity.ToTable("entity_subtitles");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.Language).HasColumnName("language").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.Label).HasColumnName("label");
+            entity.Property(row => row.Format).HasColumnName("format").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.Source).HasColumnName("source").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.StoragePath).HasColumnName("storage_path").IsRequired();
+            entity.Property(row => row.SourceFormat).HasColumnName("source_format").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.SourcePath).HasColumnName("source_path");
+            entity.Property(row => row.IsDefault).HasColumnName("is_default");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(row => new { row.EntityId, row.Language, row.Source }).IsUnique();
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.EntityId)

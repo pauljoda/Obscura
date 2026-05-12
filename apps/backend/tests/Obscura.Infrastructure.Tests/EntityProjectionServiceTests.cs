@@ -138,6 +138,29 @@ public sealed class EntityProjectionServiceTests
             Height = 1080
         });
         db.EntityRatings.Add(new EntityRatingRow { EntityId = videoId, Value = 3 });
+        db.EntityMarkers.Add(new EntityMarkerRow
+        {
+            Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+            EntityId = videoId,
+            Title = "Opening",
+            Seconds = 12.5,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntitySubtitles.Add(new EntitySubtitleRow
+        {
+            Id = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+            EntityId = videoId,
+            Language = "en",
+            Label = "English",
+            Format = "vtt",
+            Source = "manual",
+            StoragePath = "/data/subtitles/feature.vtt",
+            SourceFormat = "srt",
+            SourcePath = "/media/feature.srt",
+            IsDefault = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -149,6 +172,13 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(1920, detail.Width);
         Assert.Equal(1080, detail.Height);
         Assert.Equal(3, detail.Capabilities.Rating?.Value);
+        var marker = Assert.Single(detail.Markers);
+        Assert.Equal("Opening", marker.Title);
+        Assert.Equal(12.5, marker.Seconds);
+        var subtitle = Assert.Single(detail.Subtitles);
+        Assert.Equal("en", subtitle.Language);
+        Assert.Equal("English", subtitle.Label);
+        Assert.True(subtitle.IsDefault);
     }
 
     [Fact]

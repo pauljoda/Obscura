@@ -120,6 +120,8 @@ public sealed class EntityVideoEndpointServiceTests
                 TimeSpan.FromMinutes(2),
                 1280,
                 720,
+                [],
+                [],
                 Card(null).Capabilities));
         }
 

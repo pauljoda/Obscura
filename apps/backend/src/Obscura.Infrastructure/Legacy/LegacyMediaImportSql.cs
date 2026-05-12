@@ -368,6 +368,18 @@ public static class LegacyMediaImportSql
                     sort_order = EXCLUDED.sort_order;
             END IF;
 
+            IF to_regclass('public.audio_track_markers') IS NOT NULL THEN
+                INSERT INTO v2.entity_markers (id, entity_id, title, seconds, end_seconds, created_at, updated_at)
+                SELECT marker.id, marker.track_id, marker.title, marker.seconds, marker.end_seconds, marker.created_at, marker.updated_at
+                FROM public.audio_track_markers marker
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.track_id AND entity.kind_code = 'audio-track')
+                ON CONFLICT (id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    seconds = EXCLUDED.seconds,
+                    end_seconds = EXCLUDED.end_seconds,
+                    updated_at = EXCLUDED.updated_at;
+            END IF;
+
             IF to_regclass('public.gallery_tags') IS NOT NULL THEN
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT gallery_id, tag_id, now()
@@ -461,6 +473,7 @@ public static class LegacyMediaImportSql
             ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('gallery', 'image', 'audio-library', 'audio-track')) +
              (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = 'collection-item') +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
-             (SELECT COUNT(*)::int FROM v2.entity_studio_links)) AS links_imported;
+             (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_markers)) AS links_imported;
         """;
 }

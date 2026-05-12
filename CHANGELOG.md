@@ -39,6 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The .NET worker can now run queued legacy video and media preview imports, so migration backfills can execute through the v2 job system as well as direct API calls.
 - The v2 global entity model now preserves source URLs and external provider IDs across media types, so future detail pages can show provider links from one shared capability shape.
 - The v2 .NET backend now exposes collection list/detail routes and imports legacy collection membership into shared entity links for backend comparison.
+- The v2 video detail API now includes imported subtitle tracks and media markers, preparing the .NET backend for playback-detail parity with the current app.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -140,6 +141,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added v2 worker handlers for `legacy-video-import` and `legacy-media-import` jobs.
 - Added shared v2 URL and external-ID capability tables, projections, generated DTOs, and legacy preview-import coverage across video, book, image, gallery, and audio entities.
 - Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.
+- Added shared v2 marker and subtitle capability tables, video detail DTO projection, EF migration coverage, and legacy import coverage for video subtitles, video markers, and audio-track markers.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.

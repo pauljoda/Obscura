@@ -5,6 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilitiesDto } from './entityCapabilitiesDto';
+import type { VideoMarkerDto } from './videoMarkerDto';
+import type { VideoSubtitleDto } from './videoSubtitleDto';
 
 export interface VideoDetailDto {
   id: string;
@@ -27,5 +29,7 @@ export interface VideoDetailDto {
      * @pattern ^-?(?:0|[1-9]\d*)$
      */
   height: number | string | null;
+  markers: VideoMarkerDto[];
+  subtitles: VideoSubtitleDto[];
   capabilities: EntityCapabilitiesDto;
 }

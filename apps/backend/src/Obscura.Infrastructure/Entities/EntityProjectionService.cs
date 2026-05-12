@@ -180,6 +180,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
         var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
+        var markers = await LoadMarkersAsync(id, cancellationToken);
+        var subtitles = await LoadSubtitlesAsync(id, cancellationToken);
 
         return new VideoDetailDto(
             entity.Id,
@@ -189,6 +191,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
             detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
             detail?.Width,
             detail?.Height,
+            markers,
+            subtitles,
             card.Capabilities);
     }
 
@@ -319,6 +323,46 @@ public sealed class EntityProjectionService : IEntityProjectionService
                         flag?.IsOrganized));
             })
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<VideoMarkerDto>> LoadMarkersAsync(
+        Guid entityId,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityMarkers
+            .AsNoTracking()
+            .Where(marker => marker.EntityId == entityId)
+            .OrderBy(marker => marker.Seconds)
+            .ThenBy(marker => marker.Title)
+            .Select(marker => new VideoMarkerDto(
+                marker.Id,
+                marker.Title,
+                marker.Seconds,
+                marker.EndSeconds))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<VideoSubtitleDto>> LoadSubtitlesAsync(
+        Guid entityId,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntitySubtitles
+            .AsNoTracking()
+            .Where(subtitle => subtitle.EntityId == entityId)
+            .OrderByDescending(subtitle => subtitle.IsDefault)
+            .ThenBy(subtitle => subtitle.Language)
+            .ThenBy(subtitle => subtitle.Label)
+            .Select(subtitle => new VideoSubtitleDto(
+                subtitle.Id,
+                subtitle.Language,
+                subtitle.Label,
+                subtitle.Format,
+                subtitle.Source,
+                subtitle.StoragePath,
+                subtitle.SourceFormat,
+                subtitle.SourcePath,
+                subtitle.IsDefault))
+            .ToArrayAsync(cancellationToken);
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityUrlDto>>> LoadUrlsAsync(

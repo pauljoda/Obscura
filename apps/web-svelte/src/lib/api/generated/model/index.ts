@@ -41,5 +41,7 @@ export * from './v2FreshStartPrepareResponseDto';
 export * from './v2UpgradeGateStatusDto';
 export * from './videoDetailDto';
 export * from './videoListResponseDto';
+export * from './videoMarkerDto';
 export * from './videoSeriesDetailDto';
 export * from './videoSeriesListResponseDto';
+export * from './videoSubtitleDto';

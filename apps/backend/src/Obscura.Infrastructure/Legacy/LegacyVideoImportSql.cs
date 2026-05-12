@@ -320,6 +320,55 @@ public static class LegacyVideoImportSql
                     updated_at = EXCLUDED.updated_at;
             END IF;
 
+            IF to_regclass('public.video_markers') IS NOT NULL THEN
+                INSERT INTO v2.entity_markers (id, entity_id, title, seconds, end_seconds, created_at, updated_at)
+                SELECT marker.id, marker.entity_id, marker.title, marker.seconds, marker.end_seconds, marker.created_at, marker.updated_at
+                FROM public.video_markers marker
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = marker.entity_id AND entity.kind_code = 'video')
+                ON CONFLICT (id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    seconds = EXCLUDED.seconds,
+                    end_seconds = EXCLUDED.end_seconds,
+                    updated_at = EXCLUDED.updated_at;
+            END IF;
+
+            IF to_regclass('public.video_subtitles') IS NOT NULL THEN
+                INSERT INTO v2.entity_subtitles (
+                    id,
+                    entity_id,
+                    language,
+                    label,
+                    format,
+                    source,
+                    storage_path,
+                    source_format,
+                    source_path,
+                    is_default,
+                    created_at
+                )
+                SELECT
+                    gen_random_uuid(),
+                    subtitle.entity_id,
+                    subtitle.language,
+                    subtitle.label,
+                    subtitle.format,
+                    subtitle.source,
+                    subtitle.storage_path,
+                    subtitle.source_format,
+                    subtitle.source_path,
+                    subtitle.is_default,
+                    subtitle.created_at
+                FROM public.video_subtitles subtitle
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = subtitle.entity_id AND entity.kind_code = 'video')
+                ON CONFLICT (entity_id, language, source) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    format = EXCLUDED.format,
+                    storage_path = EXCLUDED.storage_path,
+                    source_format = EXCLUDED.source_format,
+                    source_path = EXCLUDED.source_path,
+                    is_default = EXCLUDED.is_default;
+            END IF;
+
             IF to_regclass('public.video_series_tags') IS NOT NULL THEN
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT series_id, tag_id, now()
@@ -379,6 +428,8 @@ public static class LegacyVideoImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'studio') AS studios_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
-             (SELECT COUNT(*)::int FROM v2.entity_studio_links)) AS links_imported;
+             (SELECT COUNT(*)::int FROM v2.entity_studio_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_markers) +
+             (SELECT COUNT(*)::int FROM v2.entity_subtitles)) AS links_imported;
         """;
 }

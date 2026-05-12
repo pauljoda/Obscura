@@ -19,6 +19,7 @@ public sealed class LegacyMediaImportSqlTests
         Assert.Contains("v2.entity_studio_links", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_external_ids", LegacyMediaImportSql.Import);
         Assert.Contains("v2.entity_urls", LegacyMediaImportSql.Import);
+        Assert.Contains("v2.entity_markers", LegacyMediaImportSql.Import);
     }
 
     [Fact]
