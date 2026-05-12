@@ -221,8 +221,10 @@ public sealed class EntityProjectionServiceTests
         await using var db = CreateContext();
         var collectionId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var imageId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        var audioId = Guid.Parse("abababab-abab-abab-abab-abababababab");
         SeedEntity(db, collectionId, "collection", "Reference Set");
         SeedEntity(db, imageId, "image", "Still");
+        SeedEntity(db, audioId, "audio-track", "Cue");
         db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
         {
             ParentEntityId = collectionId,
@@ -231,11 +233,19 @@ public sealed class EntityProjectionServiceTests
             SortOrder = 2,
             CreatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = collectionId,
+            ChildEntityId = audioId,
+            Relationship = "collection-item",
+            SortOrder = 3,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityRatings.Add(new EntityRatingRow { EntityId = imageId, Value = 4 });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
-        var children = await service.ListChildrenAsync(collectionId, "collection-item", CancellationToken.None);
+        var children = await service.ListChildrenAsync(collectionId, "collection-item", "image", CancellationToken.None);
 
         var child = Assert.Single(children);
         Assert.Equal(imageId, child.Id);

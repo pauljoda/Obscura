@@ -1,3 +1,4 @@
+using Obscura.Contracts.Entities;
 using Obscura.Contracts.Media;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure.Entities;
@@ -8,11 +9,11 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", "image");
-        MapMediaGroup(routes, "/api/galleries", "Galleries", "gallery");
-        MapMediaGroup(routes, "/api/books", "Books", "book");
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", "audio-library");
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", "audio-track");
+        MapMediaGroup(routes, "/api/images", "Images", "image", null);
+        MapMediaGroup(routes, "/api/galleries", "Galleries", "gallery", ("image", "image"));
+        MapMediaGroup(routes, "/api/books", "Books", "book", null);
+        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", "audio-library", ("audio-track", "audio-track"));
+        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", "audio-track", null);
 
         return routes;
     }
@@ -21,7 +22,8 @@ public static class MediaEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        string kind)
+        string kind,
+        (string Relationship, string ChildKind)? children)
     {
         var group = routes.MapGroup(path)
             .WithTags(tag);
@@ -51,11 +53,16 @@ public static class MediaEndpoints
                     $"{tag} item '{id}' was not found."));
             }
 
+            IReadOnlyList<EntityCardDto> childItems = children is null
+                ? []
+                : await entities.ListChildrenAsync(id, children.Value.Relationship, children.Value.ChildKind, cancellationToken);
+
             return Results.Ok(new MediaDetailDto(
                 entity.Id,
                 entity.Kind,
                 entity.Title,
-                entity.Capabilities));
+                entity.Capabilities,
+                childItems));
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind} media entity.")

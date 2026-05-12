@@ -5,10 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EntityCapabilitiesDto } from './entityCapabilitiesDto';
+import type { EntityCardDto } from './entityCardDto';
 
 export interface MediaDetailDto {
   id: string;
   kind: string;
   title: string;
   capabilities: EntityCapabilitiesDto;
+  children: EntityCardDto[];
 }

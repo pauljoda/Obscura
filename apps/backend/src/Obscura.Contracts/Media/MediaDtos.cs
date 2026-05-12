@@ -10,4 +10,5 @@ public sealed record MediaDetailDto(
     Guid Id,
     string Kind,
     string Title,
-    EntityCapabilitiesDto Capabilities);
+    EntityCapabilitiesDto Capabilities,
+    IReadOnlyList<EntityCardDto> Children);

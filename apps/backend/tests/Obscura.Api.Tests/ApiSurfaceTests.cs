@@ -201,6 +201,7 @@ public sealed class ApiSurfaceTests
         public Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
             Guid parentId,
             string relationship,
+            string? childKind,
             CancellationToken cancellationToken)
         {
             return Task.FromResult<IReadOnlyList<EntityCardDto>>([]);

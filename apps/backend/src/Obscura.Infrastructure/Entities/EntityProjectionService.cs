@@ -75,9 +75,10 @@ public sealed class EntityProjectionService : IEntityProjectionService
     public async Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
         Guid parentId,
         string relationship,
+        string? childKind,
         CancellationToken cancellationToken)
     {
-        return await LoadLinkedChildrenAsync(parentId, relationship, null, cancellationToken);
+        return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
     }
 
     public async Task<EntityCardDto?> UpdateRatingAsync(

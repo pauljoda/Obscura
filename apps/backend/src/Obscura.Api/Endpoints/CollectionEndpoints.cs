@@ -36,7 +36,7 @@ public static class CollectionEndpoints
                     $"Collection '{id}' was not found."));
             }
 
-            var items = await entities.ListChildrenAsync(id, "collection-item", cancellationToken);
+            var items = await entities.ListChildrenAsync(id, "collection-item", null, cancellationToken);
 
             return Results.Ok(new CollectionDetailDto(
                 entity.Id,
