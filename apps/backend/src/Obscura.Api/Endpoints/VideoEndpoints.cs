@@ -1,6 +1,7 @@
 using Obscura.Contracts.System;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Entities;
+using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Api.Endpoints;
 
@@ -36,12 +37,13 @@ public static class VideoEndpoints
             .Produces<VideoDetailDto>()
             .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/{id:guid}/stream", (Guid id) =>
-            Results.NotFound(new ProblemDetailsDto(
-                "video_stream_not_found",
-                $"Video stream '{id}' was not found.")))
+        group.MapGet("/{id:guid}/stream", StreamVideoAsync)
             .WithName("StreamVideo")
-            .WithSummary("Streams the original video source when available.");
+            .WithSummary("Streams the original video source when available.")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status206PartialContent)
+            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetailsDto>(StatusCodes.Status415UnsupportedMediaType);
 
         group.MapGet("/{id:guid}/hls/master.m3u8", (Guid id) =>
             Results.NotFound(new ProblemDetailsDto(
@@ -51,5 +53,34 @@ public static class VideoEndpoints
             .WithSummary("Gets the adaptive HLS manifest for one video.");
 
         return group;
+    }
+
+    private static async Task<IResult> StreamVideoAsync(
+        Guid id,
+        IVideoSourceService sourceFiles,
+        CancellationToken cancellationToken)
+    {
+        var source = await sourceFiles.GetSourceAsync(id, cancellationToken);
+
+        if (source is null)
+        {
+            return Results.NotFound(new ProblemDetailsDto(
+                "video_stream_not_found",
+                $"Video stream '{id}' was not found."));
+        }
+
+        if (!source.DirectPlayable)
+        {
+            return Results.Json(
+                new ProblemDetailsDto(
+                    "video_stream_not_direct_playable",
+                    "Direct playback is not available for this container."),
+                statusCode: StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        return Results.File(
+            File.OpenRead(source.Path),
+            source.ContentType,
+            enableRangeProcessing: true);
     }
 }

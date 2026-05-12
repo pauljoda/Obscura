@@ -317,12 +317,29 @@ export type streamVideoResponse200 = {
   status: 200
 }
 
-export type streamVideoResponseSuccess = (streamVideoResponse200) & {
+export type streamVideoResponse206 = {
+  data: void
+  status: 206
+}
+
+export type streamVideoResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type streamVideoResponse415 = {
+  data: ProblemDetailsDto
+  status: 415
+}
+
+export type streamVideoResponseSuccess = (streamVideoResponse200 | streamVideoResponse206) & {
   headers: Headers;
 };
-;
+export type streamVideoResponseError = (streamVideoResponse404 | streamVideoResponse415) & {
+  headers: Headers;
+};
 
-export type streamVideoResponse = (streamVideoResponseSuccess)
+export type streamVideoResponse = (streamVideoResponseSuccess | streamVideoResponseError)
 
 export const getStreamVideoUrl = (id: string,) => {
 

@@ -21,6 +21,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityTagLinkRow> EntityTagLinks => Set<EntityTagLinkRow>();
 
+    public DbSet<EntityFileRow> EntityFiles => Set<EntityFileRow>();
+
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
 
     public DbSet<LibraryRootRow> LibraryRoots => Set<LibraryRootRow>();
@@ -112,6 +114,25 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.TagId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityFileRow>(entity =>
+        {
+            entity.ToTable("entity_files");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.Role).HasColumnName("role").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Path).HasColumnName("path").IsRequired();
+            entity.Property(row => row.MimeType).HasColumnName("mime_type").HasMaxLength(128);
+            entity.Property(row => row.SizeBytes).HasColumnName("size_bytes");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
+            entity.HasIndex(row => new { row.EntityId, row.Role }).IsUnique();
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.EntityId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

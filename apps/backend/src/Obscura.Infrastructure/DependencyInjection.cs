@@ -10,6 +10,7 @@ using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 using Obscura.Infrastructure.Upgrades;
+using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Infrastructure;
 
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<IEntityProjectionService, EntityProjectionService>();
+        services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();
 
