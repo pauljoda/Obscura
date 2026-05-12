@@ -18,9 +18,9 @@ public enum HierarchyOrdering
 /// <param name="ChildMayHaveMultipleParents">True when the child can be reused under more than one parent for this relationship.</param>
 /// <param name="Ordering">Ordering policy for children in this layer.</param>
 public sealed record HierarchyLayer(
-    EntityKind ParentKind,
-    EntityKind ChildKind,
-    EntityRelationship Relationship,
+    IEntityKind ParentKind,
+    IEntityKind ChildKind,
+    IEntityRelationship Relationship,
     bool ChildMayHaveMultipleParents,
     HierarchyOrdering Ordering);
 
@@ -30,7 +30,7 @@ public sealed record HierarchyLayer(
 /// <param name="RootKind">Entity kind that starts the hierarchy.</param>
 /// <param name="Layers">Allowed parent-child layers reachable from the root.</param>
 public sealed record HierarchyDefinition(
-    EntityKind RootKind,
+    IEntityKind RootKind,
     IReadOnlyList<HierarchyLayer> Layers);
 
 /// <summary>
@@ -42,7 +42,7 @@ public sealed record HierarchyDefinition(
 /// <param name="Children">Ordered child nodes.</param>
 public sealed record EntityHierarchyNode(
     Entity Entity,
-    EntityRelationship? RelationshipToParent,
+    IEntityRelationship? RelationshipToParent,
     int SortOrder,
     IReadOnlyList<EntityHierarchyNode> Children);
 
@@ -62,51 +62,51 @@ public static class EntityHierarchyDefinitions
 {
     /// <summary>Hierarchy for video series, including season-grouped and flat episode lists.</summary>
     public static readonly HierarchyDefinition VideoSeries = new(
-        EntityKind.VideoSeries,
+        IEntityKind.VideoSeries,
         [
-            Layer(EntityKind.VideoSeries, EntityKind.VideoSeason, EntityRelationship.Season),
-            Layer(EntityKind.VideoSeason, EntityKind.Video, EntityRelationship.Episode),
-            Layer(EntityKind.VideoSeries, EntityKind.Video, EntityRelationship.Episode)
+            Layer(IEntityKind.VideoSeries, IEntityKind.VideoSeason, IEntityRelationship.Season),
+            Layer(IEntityKind.VideoSeason, IEntityKind.Video, IEntityRelationship.Episode),
+            Layer(IEntityKind.VideoSeries, IEntityKind.Video, IEntityRelationship.Episode)
         ]);
 
     /// <summary>Hierarchy for books, including volume-grouped and direct chapter lists.</summary>
     public static readonly HierarchyDefinition Book = new(
-        EntityKind.Book,
+        IEntityKind.Book,
         [
-            Layer(EntityKind.Book, EntityKind.BookVolume, EntityRelationship.Volume),
-            Layer(EntityKind.BookVolume, EntityKind.BookChapter, EntityRelationship.Chapter),
-            Layer(EntityKind.Book, EntityKind.BookChapter, EntityRelationship.Chapter),
-            Layer(EntityKind.BookChapter, EntityKind.BookPage, EntityRelationship.Page)
+            Layer(IEntityKind.Book, IEntityKind.BookVolume, IEntityRelationship.Volume),
+            Layer(IEntityKind.BookVolume, IEntityKind.BookChapter, IEntityRelationship.Chapter),
+            Layer(IEntityKind.Book, IEntityKind.BookChapter, IEntityRelationship.Chapter),
+            Layer(IEntityKind.BookChapter, IEntityKind.BookPage, IEntityRelationship.Page)
         ]);
 
     /// <summary>Hierarchy for galleries and their nested galleries or image children.</summary>
     public static readonly HierarchyDefinition Gallery = new(
-        EntityKind.Gallery,
+        IEntityKind.Gallery,
         [
-            Layer(EntityKind.Gallery, EntityKind.Gallery, EntityRelationship.NestedGallery),
-            Layer(EntityKind.Gallery, EntityKind.Image, EntityRelationship.GalleryImage)
+            Layer(IEntityKind.Gallery, IEntityKind.Gallery, IEntityRelationship.NestedGallery),
+            Layer(IEntityKind.Gallery, IEntityKind.Image, IEntityRelationship.GalleryImage)
         ]);
 
     /// <summary>Hierarchy for audio libraries and their nested libraries or track children.</summary>
     public static readonly HierarchyDefinition AudioLibrary = new(
-        EntityKind.AudioLibrary,
+        IEntityKind.AudioLibrary,
         [
-            Layer(EntityKind.AudioLibrary, EntityKind.AudioLibrary, EntityRelationship.NestedAudioLibrary),
-            Layer(EntityKind.AudioLibrary, EntityKind.AudioTrack, EntityRelationship.AudioTrack)
+            Layer(IEntityKind.AudioLibrary, IEntityKind.AudioLibrary, IEntityRelationship.NestedAudioLibrary),
+            Layer(IEntityKind.AudioLibrary, IEntityKind.AudioTrack, IEntityRelationship.AudioTrack)
         ]);
 
     /// <summary>Hierarchy for nested tag taxonomy.</summary>
     public static readonly HierarchyDefinition Tag = new(
-        EntityKind.Tag,
+        IEntityKind.Tag,
         [
-            Layer(EntityKind.Tag, EntityKind.Tag, EntityRelationship.NestedTag)
+            Layer(IEntityKind.Tag, IEntityKind.Tag, IEntityRelationship.NestedTag)
         ]);
 
     /// <summary>Hierarchy for nested studio taxonomy.</summary>
     public static readonly HierarchyDefinition Studio = new(
-        EntityKind.Studio,
+        IEntityKind.Studio,
         [
-            Layer(EntityKind.Studio, EntityKind.Studio, EntityRelationship.NestedStudio)
+            Layer(IEntityKind.Studio, IEntityKind.Studio, IEntityRelationship.NestedStudio)
         ]);
 
     private static readonly HierarchyDefinition[] Known =
@@ -133,7 +133,7 @@ public static class EntityHierarchyDefinitions
     /// <param name="rootKind">Root entity kind to resolve.</param>
     /// <param name="definition">The matched hierarchy definition when the method returns true.</param>
     /// <returns>True when the root kind owns a known hierarchy; otherwise false.</returns>
-    public static bool TryGet(EntityKind rootKind, out HierarchyDefinition definition) =>
+    public static bool TryGet(IEntityKind rootKind, out HierarchyDefinition definition) =>
         ByRootKind.TryGetValue(rootKind.Value, out definition!);
 
     /// <summary>
@@ -142,7 +142,7 @@ public static class EntityHierarchyDefinitions
     /// <param name="rootKind">Root entity kind to resolve.</param>
     /// <returns>The hierarchy definition for the supplied root kind.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the root kind has no hierarchy definition.</exception>
-    public static HierarchyDefinition Require(EntityKind rootKind)
+    public static HierarchyDefinition Require(IEntityKind rootKind)
     {
         if (TryGet(rootKind, out var definition))
         {
@@ -159,15 +159,15 @@ public static class EntityHierarchyDefinitions
     /// <param name="childKind">Child entity kind.</param>
     /// <param name="relationship">Relationship between parent and child.</param>
     /// <returns>True when the layer is allowed by any registered structural hierarchy.</returns>
-    public static bool IsAllowed(EntityKind parentKind, EntityKind childKind, EntityRelationship relationship) =>
+    public static bool IsAllowed(IEntityKind parentKind, IEntityKind childKind, IEntityRelationship relationship) =>
         Known.SelectMany(definition => definition.Layers).Any(layer =>
             layer.ParentKind == parentKind &&
             layer.ChildKind == childKind &&
             layer.Relationship == relationship);
 
     private static HierarchyLayer Layer(
-        EntityKind parentKind,
-        EntityKind childKind,
-        EntityRelationship relationship) =>
+        IEntityKind parentKind,
+        IEntityKind childKind,
+        IEntityRelationship relationship) =>
         new(parentKind, childKind, relationship, false, HierarchyOrdering.SortOrder);
 }

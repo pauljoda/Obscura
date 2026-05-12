@@ -12,5 +12,5 @@ namespace Obscura.Domain.Media;
 public sealed record EntityLibrary(
     Entity Entity,
     IReadOnlyList<Entity> Children,
-    EntityRelationship Relationship,
-    EntityKind? ChildKind);
+    IEntityRelationship Relationship,
+    IEntityKind? ChildKind);

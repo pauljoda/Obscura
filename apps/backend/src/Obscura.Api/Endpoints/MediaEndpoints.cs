@@ -10,11 +10,11 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", EntityKind.Image, null);
-        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKind.Gallery, (EntityRelationship.GalleryImage, EntityKind.Image));
-        MapMediaGroup(routes, "/api/books", "Books", EntityKind.Book, null);
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKind.AudioLibrary, (EntityRelationship.AudioTrack, EntityKind.AudioTrack));
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKind.AudioTrack, null);
+        MapMediaGroup(routes, "/api/images", "Images", IEntityKind.Image, null);
+        MapMediaGroup(routes, "/api/galleries", "Galleries", IEntityKind.Gallery, (IEntityRelationship.GalleryImage, IEntityKind.Image));
+        MapMediaGroup(routes, "/api/books", "Books", IEntityKind.Book, null);
+        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", IEntityKind.AudioLibrary, (IEntityRelationship.AudioTrack, IEntityKind.AudioTrack));
+        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", IEntityKind.AudioTrack, null);
 
         return routes;
     }
@@ -23,8 +23,8 @@ public static class MediaEndpoints
         IEndpointRouteBuilder routes,
         string path,
         string tag,
-        EntityKind kind,
-        (EntityRelationship Relationship, EntityKind ChildKind)? children)
+        IEntityKind kind,
+        (IEntityRelationship Relationship, IEntityKind ChildKind)? children)
     {
         var group = routes.MapGroup(path)
             .WithTags(tag);

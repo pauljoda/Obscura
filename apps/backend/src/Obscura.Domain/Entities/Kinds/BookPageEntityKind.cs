@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Book page structural entity kind.</summary>
 public sealed record BookPageEntityKind()
-    : EntityKind(EntityKindCode.BookPage, "book-page", "Book Page", EntityKindCategory.Media);
+    : IEntityKind
+{
+    public EntityKindCode Value => EntityKindCode.BookPage;
+    public string Code => "book-page";
+    public string DisplayName => "Book Page";
+    public EntityKindCategory Category => EntityKindCategory.Media;
+}

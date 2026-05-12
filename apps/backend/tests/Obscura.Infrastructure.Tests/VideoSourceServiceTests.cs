@@ -78,7 +78,7 @@ public sealed class VideoSourceServiceTests : IDisposable
         db.Entities.Add(new EntityRow
         {
             Id = videoId,
-            KindCode = EntityKind.Video.Code,
+            KindCode = IEntityKind.Video.Code,
             Title = "Source",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow

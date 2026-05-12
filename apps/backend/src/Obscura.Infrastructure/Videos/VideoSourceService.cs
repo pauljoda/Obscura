@@ -41,7 +41,7 @@ public sealed class VideoSourceService : IVideoSourceService
             from entity in _db.Entities.AsNoTracking()
             join file in _db.EntityFiles.AsNoTracking() on entity.Id equals file.EntityId
             where entity.Id == id &&
-                entity.KindCode == EntityKind.Video.Code &&
+                entity.KindCode == IEntityKind.Video.Code &&
                 entity.DeletedAt == null &&
                 file.Role == EntityFileRole.Source
             select file)

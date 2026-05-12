@@ -108,7 +108,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.Code).HasColumnName("code").HasMaxLength(64);
             entity.Property(row => row.DisplayName).HasColumnName("display_name").HasMaxLength(128).IsRequired();
             entity.Property(row => row.Category).HasColumnName("category").HasMaxLength(64).IsRequired();
-            entity.HasData(Obscura.Domain.Entities.EntityKind.All.Select(kind => new EntityKindRow
+            entity.HasData(Obscura.Domain.Entities.IEntityKind.All.Select(kind => new EntityKindRow
             {
                 Code = kind.Code,
                 DisplayName = kind.DisplayName,
@@ -185,7 +185,7 @@ public sealed class ObscuraDbContext : DbContext
 
         modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
         {
-            var canonicalRelationshipCodes = string.Join(", ", EntityRelationship.Structural.Select(relationship => $"'{relationship.Code}'"));
+            var canonicalRelationshipCodes = string.Join(", ", IEntityRelationship.Structural.Select(relationship => $"'{relationship.Code}'"));
 
             entity.ToTable("entity_hierarchy_links");
             entity.HasKey(row => new { row.ParentEntityId, row.ChildEntityId, row.Relationship });

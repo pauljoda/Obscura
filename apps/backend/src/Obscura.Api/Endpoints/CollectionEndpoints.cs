@@ -20,7 +20,7 @@ public static class CollectionEndpoints
             CollectionService collections,
             CancellationToken cancellationToken) =>
         {
-            var response = await collections.ListAsync(new EntityListQuery(EntityKind.Collection, query, cursor), cancellationToken);
+            var response = await collections.ListAsync(new EntityListQuery(IEntityKind.Collection, query, cursor), cancellationToken);
             return ContractMapper.ToCollectionListResponse(response);
         })
             .WithName("ListCollections")

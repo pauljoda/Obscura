@@ -16,7 +16,7 @@ public interface IEntityCatalog
     /// <param name="cancellationToken">Token used to cancel the query.</param>
     /// <returns>A page of projected domain entities.</returns>
     Task<EntityPage> ListAsync(
-        EntityKind? kind,
+        IEntityKind? kind,
         string? query,
         string? cursor,
         CancellationToken cancellationToken);
@@ -39,7 +39,7 @@ public interface IEntityCatalog
     /// <returns>Child entities in relationship order.</returns>
     Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        EntityRelationship relationship,
-        EntityKind? childKind,
+        IEntityRelationship relationship,
+        IEntityKind? childKind,
         CancellationToken cancellationToken);
 }

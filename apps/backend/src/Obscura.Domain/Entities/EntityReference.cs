@@ -6,4 +6,4 @@ namespace Obscura.Domain.Entities;
 /// <param name="Id">Referenced entity identifier.</param>
 /// <param name="Kind">Referenced entity kind.</param>
 /// <param name="Title">Referenced entity title for display.</param>
-public sealed record EntityReference(Guid Id, EntityKind Kind, string Title);
+public sealed record EntityReference(Guid Id, IEntityKind Kind, string Title);

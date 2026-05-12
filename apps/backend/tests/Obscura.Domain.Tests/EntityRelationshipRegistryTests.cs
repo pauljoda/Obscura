@@ -7,22 +7,30 @@ public sealed class EntityRelationshipRegistryTests
     [Fact]
     public void KnownRelationshipsAreDiscoveredConcreteImplementations()
     {
-        Assert.Contains(EntityRelationship.All, relationship =>
+        Assert.Contains(IEntityRelationship.All, relationship =>
             relationship is IEntityRelationship && relationship.GetType().Name == "EpisodeRelationship");
-        Assert.Contains(EntityRelationship.All, relationship =>
+        Assert.Contains(IEntityRelationship.All, relationship =>
             relationship is IEntityRelationship && relationship.GetType().Name == "PageRelationship");
-        Assert.All(EntityRelationship.All, relationship =>
+        Assert.All(IEntityRelationship.All, relationship =>
         {
-            Assert.NotEqual(typeof(EntityRelationship), relationship.GetType());
+            Assert.NotEqual(typeof(IEntityRelationship), relationship.GetType());
             Assert.True(relationship.GetType().IsSealed);
         });
     }
 
     [Fact]
+    public void RelationshipModelDoesNotKeepParallelAbstractClass()
+    {
+        Assert.DoesNotContain(
+            typeof(IEntityRelationship).Assembly.GetTypes(),
+            type => type is { Name: "EntityRelationship", IsClass: true });
+    }
+
+    [Fact]
     public void StaticKnownRelationshipsReturnDiscoveredInstances()
     {
-        var found = EntityRelationship.Require("episode");
+        var found = IEntityRelationship.Require("episode");
 
-        Assert.Same(EntityRelationship.Episode, found);
+        Assert.Same(IEntityRelationship.Episode, found);
     }
 }

@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Relationship from a video series or season to an episode video.</summary>
 public sealed record EpisodeRelationship()
-    : EntityRelationship(EntityRelationshipCode.Episode, "episode", "Episode", true);
+    : IEntityRelationship
+{
+    public EntityRelationshipCode Value => EntityRelationshipCode.Episode;
+    public string Code => "episode";
+    public string DisplayName => "Episode";
+    public bool IsStructural => true;
+}

@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Relationship from a studio to a nested studio.</summary>
 public sealed record NestedStudioRelationship()
-    : EntityRelationship(EntityRelationshipCode.NestedStudio, "studio", "Nested Studio", true);
+    : IEntityRelationship
+{
+    public EntityRelationshipCode Value => EntityRelationshipCode.NestedStudio;
+    public string Code => "studio";
+    public string DisplayName => "Nested Studio";
+    public bool IsStructural => true;
+}

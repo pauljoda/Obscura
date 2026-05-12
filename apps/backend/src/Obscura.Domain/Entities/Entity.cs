@@ -12,7 +12,7 @@ namespace Obscura.Domain.Entities;
 /// <param name="Capabilities">Reusable behaviors and projections attached to this entity.</param>
 public record Entity(
     Guid Id,
-    EntityKind Kind,
+    IEntityKind Kind,
     string Title,
     string? Subtitle,
     EntityCapabilities Capabilities);

@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Person taxonomy entity kind.</summary>
 public sealed record PersonEntityKind()
-    : EntityKind(EntityKindCode.Person, "person", "Person", EntityKindCategory.Taxonomy);
+    : IEntityKind
+{
+    public EntityKindCode Value => EntityKindCode.Person;
+    public string Code => "person";
+    public string DisplayName => "Person";
+    public EntityKindCategory Category => EntityKindCategory.Taxonomy;
+}

@@ -203,7 +203,7 @@ public sealed class ApiSurfaceTests
     private sealed class EmptyEntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
     {
         public Task<DomainEntityPage> ListAsync(
-            EntityKind? kind,
+            IEntityKind? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
@@ -218,8 +218,8 @@ public sealed class ApiSurfaceTests
 
         public Task<IReadOnlyList<DomainEntity>> ListChildrenAsync(
             Guid parentId,
-            EntityRelationship relationship,
-            EntityKind? childKind,
+            IEntityRelationship relationship,
+            IEntityKind? childKind,
             CancellationToken cancellationToken)
         {
             return Task.FromResult<IReadOnlyList<DomainEntity>>([]);

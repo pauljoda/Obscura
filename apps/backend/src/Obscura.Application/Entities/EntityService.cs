@@ -50,8 +50,8 @@ public sealed class EntityService
     /// <returns>Child entities in relationship order.</returns>
     public Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        EntityRelationship relationship,
-        EntityKind? childKind,
+        IEntityRelationship relationship,
+        IEntityKind? childKind,
         CancellationToken cancellationToken) =>
         _entities.ListChildrenAsync(parentId, relationship, childKind, cancellationToken);
 

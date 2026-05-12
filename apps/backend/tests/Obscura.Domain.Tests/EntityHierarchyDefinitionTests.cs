@@ -7,7 +7,7 @@ public sealed class EntityHierarchyDefinitionTests
     [Fact]
     public void StructuralEntityKindsAreRegistered()
     {
-        var kinds = EntityKind.All.Select(kind => kind.Value).ToHashSet();
+        var kinds = IEntityKind.All.Select(kind => kind.Value).ToHashSet();
 
         Assert.Contains(EntityKindCode.VideoSeason, kinds);
         Assert.Contains(EntityKindCode.BookVolume, kinds);
@@ -18,12 +18,12 @@ public sealed class EntityHierarchyDefinitionTests
     [Fact]
     public void SemanticHierarchyRelationshipsAreRegisteredWithoutDuplicateCodes()
     {
-        Assert.Equal("season", EntityRelationship.Season.Code);
-        Assert.Equal("volume", EntityRelationship.Volume.Code);
-        Assert.Equal("chapter", EntityRelationship.Chapter.Code);
-        Assert.Equal("page", EntityRelationship.Page.Code);
+        Assert.Equal("season", IEntityRelationship.Season.Code);
+        Assert.Equal("volume", IEntityRelationship.Volume.Code);
+        Assert.Equal("chapter", IEntityRelationship.Chapter.Code);
+        Assert.Equal("page", IEntityRelationship.Page.Code);
 
-        var duplicateCodes = EntityRelationship.All
+        var duplicateCodes = IEntityRelationship.All
             .GroupBy(relationship => relationship.Code, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
@@ -35,58 +35,58 @@ public sealed class EntityHierarchyDefinitionTests
     [Fact]
     public void HierarchyDefinitionsDescribeSeriesAndBookLayerPaths()
     {
-        var series = EntityHierarchyDefinitions.Require(EntityKind.VideoSeries);
+        var series = EntityHierarchyDefinitions.Require(IEntityKind.VideoSeries);
         Assert.Contains(series.Layers, layer =>
-            layer.ParentKind == EntityKind.VideoSeries &&
-            layer.ChildKind == EntityKind.VideoSeason &&
-            layer.Relationship == EntityRelationship.Season);
+            layer.ParentKind == IEntityKind.VideoSeries &&
+            layer.ChildKind == IEntityKind.VideoSeason &&
+            layer.Relationship == IEntityRelationship.Season);
         Assert.Contains(series.Layers, layer =>
-            layer.ParentKind == EntityKind.VideoSeason &&
-            layer.ChildKind == EntityKind.Video &&
-            layer.Relationship == EntityRelationship.Episode);
+            layer.ParentKind == IEntityKind.VideoSeason &&
+            layer.ChildKind == IEntityKind.Video &&
+            layer.Relationship == IEntityRelationship.Episode);
         Assert.Contains(series.Layers, layer =>
-            layer.ParentKind == EntityKind.VideoSeries &&
-            layer.ChildKind == EntityKind.Video &&
-            layer.Relationship == EntityRelationship.Episode);
+            layer.ParentKind == IEntityKind.VideoSeries &&
+            layer.ChildKind == IEntityKind.Video &&
+            layer.Relationship == IEntityRelationship.Episode);
 
-        var book = EntityHierarchyDefinitions.Require(EntityKind.Book);
+        var book = EntityHierarchyDefinitions.Require(IEntityKind.Book);
         Assert.Contains(book.Layers, layer =>
-            layer.ParentKind == EntityKind.Book &&
-            layer.ChildKind == EntityKind.BookVolume &&
-            layer.Relationship == EntityRelationship.Volume);
+            layer.ParentKind == IEntityKind.Book &&
+            layer.ChildKind == IEntityKind.BookVolume &&
+            layer.Relationship == IEntityRelationship.Volume);
         Assert.Contains(book.Layers, layer =>
-            layer.ParentKind == EntityKind.BookVolume &&
-            layer.ChildKind == EntityKind.BookChapter &&
-            layer.Relationship == EntityRelationship.Chapter);
+            layer.ParentKind == IEntityKind.BookVolume &&
+            layer.ChildKind == IEntityKind.BookChapter &&
+            layer.Relationship == IEntityRelationship.Chapter);
         Assert.Contains(book.Layers, layer =>
-            layer.ParentKind == EntityKind.Book &&
-            layer.ChildKind == EntityKind.BookChapter &&
-            layer.Relationship == EntityRelationship.Chapter);
+            layer.ParentKind == IEntityKind.Book &&
+            layer.ChildKind == IEntityKind.BookChapter &&
+            layer.Relationship == IEntityRelationship.Chapter);
         Assert.Contains(book.Layers, layer =>
-            layer.ParentKind == EntityKind.BookChapter &&
-            layer.ChildKind == EntityKind.BookPage &&
-            layer.Relationship == EntityRelationship.Page);
+            layer.ParentKind == IEntityKind.BookChapter &&
+            layer.ChildKind == IEntityKind.BookPage &&
+            layer.Relationship == IEntityRelationship.Page);
     }
 
     [Fact]
     public void DefinitionsValidateAllowedParentChildRelationships()
     {
         Assert.True(EntityHierarchyDefinitions.IsAllowed(
-            EntityKind.Book,
-            EntityKind.BookChapter,
-            EntityRelationship.Chapter));
+            IEntityKind.Book,
+            IEntityKind.BookChapter,
+            IEntityRelationship.Chapter));
         Assert.True(EntityHierarchyDefinitions.IsAllowed(
-            EntityKind.VideoSeason,
-            EntityKind.Video,
-            EntityRelationship.Episode));
+            IEntityKind.VideoSeason,
+            IEntityKind.Video,
+            IEntityRelationship.Episode));
 
         Assert.False(EntityHierarchyDefinitions.IsAllowed(
-            EntityKind.BookPage,
-            EntityKind.BookChapter,
-            EntityRelationship.Chapter));
+            IEntityKind.BookPage,
+            IEntityKind.BookChapter,
+            IEntityRelationship.Chapter));
         Assert.False(EntityHierarchyDefinitions.IsAllowed(
-            EntityKind.Collection,
-            EntityKind.Video,
-            EntityRelationship.CollectionItem));
+            IEntityKind.Collection,
+            IEntityKind.Video,
+            IEntityRelationship.CollectionItem));
     }
 }

@@ -12,7 +12,7 @@ public sealed record Image(
     string? Subtitle,
     EntityCapabilities Capabilities,
     ImageDetails Details)
-    : Entity(Id, EntityKind.Image, Title, Subtitle, Capabilities)
+    : Entity(Id, IEntityKind.Image, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the image with updated image-specific metadata.

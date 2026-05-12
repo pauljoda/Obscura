@@ -8,4 +8,4 @@ namespace Obscura.Application.Entities;
 /// <param name="Kind">Optional typed entity kind to restrict the list.</param>
 /// <param name="Search">Optional title search text.</param>
 /// <param name="Cursor">Optional opaque cursor returned by a previous page.</param>
-public sealed record EntityListQuery(EntityKind? Kind, string? Search, string? Cursor);
+public sealed record EntityListQuery(IEntityKind? Kind, string? Search, string? Cursor);

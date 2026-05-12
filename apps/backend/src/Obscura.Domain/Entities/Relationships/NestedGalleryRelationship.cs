@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Relationship from a gallery to a nested gallery entity.</summary>
 public sealed record NestedGalleryRelationship()
-    : EntityRelationship(EntityRelationshipCode.NestedGallery, "gallery", "Nested Gallery", true);
+    : IEntityRelationship
+{
+    public EntityRelationshipCode Value => EntityRelationshipCode.NestedGallery;
+    public string Code => "gallery";
+    public string DisplayName => "Nested Gallery";
+    public bool IsStructural => true;
+}

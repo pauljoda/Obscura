@@ -2,4 +2,10 @@ namespace Obscura.Domain.Entities;
 
 /// <summary>Book volume structural entity kind.</summary>
 public sealed record BookVolumeEntityKind()
-    : EntityKind(EntityKindCode.BookVolume, "book-volume", "Book Volume", EntityKindCategory.Media);
+    : IEntityKind
+{
+    public EntityKindCode Value => EntityKindCode.BookVolume;
+    public string Code => "book-volume";
+    public string DisplayName => "Book Volume";
+    public EntityKindCategory Category => EntityKindCategory.Media;
+}

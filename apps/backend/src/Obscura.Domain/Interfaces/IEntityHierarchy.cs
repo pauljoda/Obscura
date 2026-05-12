@@ -17,8 +17,8 @@ public interface IEntityHierarchy
     /// <returns>Child entities in relationship order.</returns>
     Task<IReadOnlyList<Entity>> ListChildrenAsync(
         Guid parentId,
-        EntityRelationship relationship,
-        EntityKind? childKind,
+        IEntityRelationship relationship,
+        IEntityKind? childKind,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -40,5 +40,5 @@ public interface IEntityHierarchy
     /// <param name="childKind">Child entity kind.</param>
     /// <param name="relationship">Relationship between parent and child.</param>
     /// <returns>True when the edge is allowed by a registered hierarchy definition.</returns>
-    bool IsAllowed(EntityKind parentKind, EntityKind childKind, EntityRelationship relationship);
+    bool IsAllowed(IEntityKind parentKind, IEntityKind childKind, IEntityRelationship relationship);
 }

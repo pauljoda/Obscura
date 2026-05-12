@@ -100,7 +100,7 @@ public static class EntityEndpoints
         return group;
     }
 
-    private static bool TryResolveEntityKind(string? code, out EntityKind? kind, out ApiProblem? problem)
+    private static bool TryResolveEntityKind(string? code, out IEntityKind? kind, out ApiProblem? problem)
     {
         kind = null;
         problem = null;
@@ -110,7 +110,7 @@ public static class EntityEndpoints
             return true;
         }
 
-        if (EntityKind.TryGet(code, out var knownKind))
+        if (IEntityKind.TryGet(code, out var knownKind))
         {
             kind = knownKind;
             return true;
