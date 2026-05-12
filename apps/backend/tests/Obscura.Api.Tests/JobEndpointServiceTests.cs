@@ -79,5 +79,24 @@ public sealed class JobEndpointServiceTests
                 null,
                 null));
         }
+
+        public Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API endpoint tests do not claim jobs.");
+        }
+
+        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API endpoint tests do not complete jobs.");
+        }
+
+        public Task FailAsync(
+            Guid id,
+            string message,
+            TimeSpan retryDelay,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API endpoint tests do not fail jobs.");
+        }
     }
 }

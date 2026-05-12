@@ -101,6 +101,25 @@ public sealed class ApiSurfaceTests
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
         }
+
+        public Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not claim jobs.");
+        }
+
+        public Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not complete jobs.");
+        }
+
+        public Task FailAsync(
+            Guid id,
+            string message,
+            TimeSpan retryDelay,
+            CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("The API surface smoke test does not fail jobs.");
+        }
     }
 
     private sealed class EmptyEntityProjectionService : IEntityProjectionService
