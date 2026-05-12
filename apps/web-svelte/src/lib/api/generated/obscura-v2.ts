@@ -16,7 +16,9 @@ import type {
   SettingsUpdateRequestDto,
   V2UpgradeGateStatusDto,
   VideoDetailDto,
-  VideoListResponseDto
+  VideoListResponseDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListResponseDto
 } from './model';
 
 import { orvalFetch } from '../orval-fetch';
@@ -228,6 +230,85 @@ export const updateEntityFlags = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       entityFlagsUpdateRequestDto,)
+  }
+);}
+
+
+
+export type listSeriesResponse200 = {
+  data: VideoSeriesListResponseDto
+  status: 200
+}
+
+export type listSeriesResponseSuccess = (listSeriesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listSeriesResponse = (listSeriesResponseSuccess)
+
+export const getListSeriesUrl = () => {
+
+
+
+
+  return `/api/series`
+}
+
+/**
+ * @summary Lists video series entities through the global entity projection.
+ */
+export const listSeries = async ( options?: RequestInit): Promise<listSeriesResponse> => {
+
+  return orvalFetch<listSeriesResponse>(getListSeriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getSeriesResponse200 = {
+  data: VideoSeriesDetailDto
+  status: 200
+}
+
+export type getSeriesResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getSeriesResponseSuccess = (getSeriesResponse200) & {
+  headers: Headers;
+};
+export type getSeriesResponseError = (getSeriesResponse404) & {
+  headers: Headers;
+};
+
+export type getSeriesResponse = (getSeriesResponseSuccess | getSeriesResponseError)
+
+export const getGetSeriesUrl = (id: string,) => {
+
+
+
+
+  return `/api/series/${id}`
+}
+
+/**
+ * @summary Gets one video series detail record.
+ */
+export const getSeries = async (id: string, options?: RequestInit): Promise<getSeriesResponse> => {
+
+  return orvalFetch<getSeriesResponse>(getGetSeriesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

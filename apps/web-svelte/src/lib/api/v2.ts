@@ -1,10 +1,12 @@
 import {
   listEntities,
   listJobs,
+  listSeries,
   listVideos,
   updateEntityFlags,
   updateEntityRating,
   getSettings,
+  getSeries,
   getVideo,
 } from "./generated/obscura-v2";
 import type {
@@ -18,6 +20,8 @@ import type {
   SettingsDto,
   VideoDetailDto,
   VideoListResponseDto,
+  VideoSeriesDetailDto,
+  VideoSeriesListResponseDto,
 } from "./generated/model";
 
 export type V2EntityReferenceDto = EntityReferenceDto;
@@ -27,6 +31,8 @@ export type V2EntityCardDto = EntityCardDto;
 export type V2EntityListResponseDto = EntityListResponseDto;
 export type V2VideoListResponseDto = VideoListResponseDto;
 export type V2VideoDetailDto = VideoDetailDto;
+export type V2VideoSeriesListResponseDto = VideoSeriesListResponseDto;
+export type V2VideoSeriesDetailDto = VideoSeriesDetailDto;
 export type V2JobRunDto = JobRunDto;
 export type V2JobListResponseDto = JobListResponseDto;
 export type V2SettingsDto = SettingsDto;
@@ -53,6 +59,25 @@ export function fetchV2Video(
   options?: V2RequestOptions,
 ): Promise<V2VideoDetailDto> {
   return getVideo(id, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) {
+      throw new Error(response.data.message);
+    }
+
+    return response.data;
+  });
+}
+
+export function fetchV2SeriesList(
+  options?: V2RequestOptions,
+): Promise<V2VideoSeriesListResponseDto> {
+  return listSeries({ signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Series(
+  id: string,
+  options?: V2RequestOptions,
+): Promise<V2VideoSeriesDetailDto> {
+  return getSeries(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
     }

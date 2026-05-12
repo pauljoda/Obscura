@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
+using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Entities;
 
@@ -112,6 +113,16 @@ public sealed class EntityVideoEndpointServiceTests
                 1280,
                 720,
                 Card(null).Capabilities));
+        }
+
+        public Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new VideoSeriesListResponseDto([], null));
+        }
+
+        public Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<VideoSeriesDetailDto?>(null);
         }
 
         private static EntityCardDto Card(int? rating)

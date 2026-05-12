@@ -91,6 +91,30 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(3, detail.Capabilities.Rating?.Value);
     }
 
+    [Fact]
+    public async Task SeriesListAndDetailUseSharedEntityCapabilities()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        SeedEntity(db, seriesId, "video-series", "Collected Episodes");
+        db.EntityRatings.Add(new EntityRatingRow { EntityId = seriesId, Value = 5 });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var list = await service.ListSeriesAsync(CancellationToken.None);
+        var detail = await service.GetSeriesAsync(seriesId, CancellationToken.None);
+
+        var card = Assert.Single(list.Items);
+        Assert.Equal(seriesId, card.Id);
+        Assert.Equal("video-series", card.Kind);
+        Assert.Equal(5, card.Capabilities.Rating?.Value);
+        Assert.NotNull(detail);
+        Assert.Equal("Collected Episodes", detail.Title);
+        Assert.Equal("flat", detail.RenderingMode);
+        Assert.Empty(detail.Children);
+        Assert.Empty(detail.Videos);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Contracts.Entities;
+using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -181,6 +182,38 @@ public sealed class EntityProjectionService : IEntityProjectionService
             detail?.Width,
             detail?.Height,
             card.Capabilities);
+    }
+
+    public async Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+    {
+        var entities = await ListAsync("video-series", null, null, cancellationToken);
+        return new VideoSeriesListResponseDto(entities.Items, entities.NextCursor);
+    }
+
+    public async Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await _db.Entities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                row => row.Id == id && row.KindCode == "video-series" && row.DeletedAt == null,
+                cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
+
+        return new VideoSeriesDetailDto(
+            entity.Id,
+            entity.KindCode,
+            entity.Title,
+            null,
+            card.Capabilities,
+            [],
+            [],
+            "flat");
     }
 
     private async Task<IReadOnlyList<EntityCardDto>> BuildCardsAsync(

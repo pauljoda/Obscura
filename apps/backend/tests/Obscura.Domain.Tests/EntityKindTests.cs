@@ -10,6 +10,7 @@ public sealed class EntityKindTests
         var codes = EntityKinds.All.Select(kind => kind.Code).ToArray();
 
         Assert.Contains("video", codes);
+        Assert.Contains("video-series", codes);
         Assert.Contains("image", codes);
         Assert.Contains("gallery", codes);
         Assert.Contains("book", codes);
@@ -17,7 +18,7 @@ public sealed class EntityKindTests
         Assert.Contains("performer", codes);
         Assert.Contains("studio", codes);
         Assert.Contains("tag", codes);
-        Assert.All(codes, code => Assert.Matches("^[a-z][a-z0-9_]*$", code));
+        Assert.All(codes, code => Assert.Matches("^[a-z][a-z0-9_-]*$", code));
     }
 
     [Fact]

@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Svelte app now includes a static v2 video browser that loads from the .NET entity API with skeleton, empty, error, cursor-prefetch, detail, playback, and rating states.
 - The v2 .NET backend now has shared media-process helpers for detecting ffmpeg and ffprobe before probe, thumbnail, sprite, and HLS worker ports land.
 - The v2 video browser now works during local Svelte development by calling the .NET backend directly and the .NET backend now applies EF migrations automatically on startup.
+- The v2 .NET backend and Svelte UI now include side-by-side video-series routes, so `/v2/series` can be tested against the new global entity projection alongside `/v2/videos`.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -118,6 +119,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a v2 global entity upgrade gate service and API endpoint for recording migration consent.
 - Added v2 preservation tables for library settings, library roots, and database backup tracking.
 - Added a v2 fresh-start preparation endpoint that runs a database backup and copies current settings/library roots into the v2 schema.
+- Added the v2 video-series entity kind, .NET series list/detail endpoints, generated TypeScript client coverage, and static Svelte `/v2/series` list/detail pages.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.

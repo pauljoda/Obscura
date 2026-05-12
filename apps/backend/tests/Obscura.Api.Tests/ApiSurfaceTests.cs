@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
+using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Entities;
@@ -49,6 +50,18 @@ public sealed class ApiSurfaceTests
         using var client = _factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<VideoListResponseDto>("/api/videos");
+
+        Assert.NotNull(response);
+        Assert.Empty(response.Items);
+        Assert.Null(response.NextCursor);
+    }
+
+    [Fact]
+    public async Task SeriesListEndpointReturnsAStablePagedShape()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetFromJsonAsync<VideoSeriesListResponseDto>("/api/series");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -162,6 +175,16 @@ public sealed class ApiSurfaceTests
         public Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<VideoDetailDto?>(null);
+        }
+
+        public Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new VideoSeriesListResponseDto([], null));
+        }
+
+        public Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<VideoSeriesDetailDto?>(null);
         }
     }
 

@@ -1,4 +1,5 @@
 using Obscura.Contracts.Entities;
+using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 
 namespace Obscura.Infrastructure.Entities;
@@ -26,4 +27,8 @@ public interface IEntityProjectionService
     Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken);
 
     Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken);
+
+    Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken);
 }

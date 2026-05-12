@@ -5,6 +5,7 @@ public static class EntityKinds
     private static readonly EntityKind[] Known =
     [
         new("video", "Video", EntityKindCategory.Media),
+        new("video-series", "Video Series", EntityKindCategory.Media),
         new("image", "Image", EntityKindCategory.Media),
         new("gallery", "Gallery", EntityKindCategory.Media),
         new("book", "Book", EntityKindCategory.Media),

@@ -21,3 +21,5 @@ export * from './settingsUpdateRequestDto';
 export * from './v2UpgradeGateStatusDto';
 export * from './videoDetailDto';
 export * from './videoListResponseDto';
+export * from './videoSeriesDetailDto';
+export * from './videoSeriesListResponseDto';
