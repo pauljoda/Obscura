@@ -11,6 +11,8 @@ public sealed class EntityRelationshipRegistryTests
             relationship is IEntityRelationship && relationship.GetType().Name == "EpisodeRelationship");
         Assert.Contains(EntityRelationshipRegistry.All, relationship =>
             relationship is IEntityRelationship && relationship.GetType().Name == "PageRelationship");
+        Assert.DoesNotContain(EntityRelationshipRegistry.All, relationship =>
+            relationship.GetType().Name.StartsWith("Nested", StringComparison.Ordinal));
         Assert.All(EntityRelationshipRegistry.All, relationship =>
         {
             Assert.NotEqual(typeof(IEntityRelationship), relationship.GetType());

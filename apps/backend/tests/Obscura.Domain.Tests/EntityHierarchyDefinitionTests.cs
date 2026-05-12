@@ -20,15 +20,20 @@ public sealed class EntityHierarchyDefinitionTests
     {
         Assert.Equal("season", EntityRelationshipRegistry.Season.Code);
         Assert.Equal("episode", EntityRelationshipRegistry.Episode.Code);
-        Assert.Equal("gallery-image", EntityRelationshipRegistry.GalleryImage.Code);
-        Assert.Equal("nested-gallery", EntityRelationshipRegistry.NestedGallery.Code);
-        Assert.Equal("audio-track", EntityRelationshipRegistry.AudioTrack.Code);
-        Assert.Equal("nested-audio-library", EntityRelationshipRegistry.NestedAudioLibrary.Code);
+        Assert.Equal("gallery", EntityRelationshipRegistry.Gallery.Code);
+        Assert.Equal("audio-library", EntityRelationshipRegistry.AudioLibrary.Code);
         Assert.Equal("volume", EntityRelationshipRegistry.Volume.Code);
         Assert.Equal("chapter", EntityRelationshipRegistry.Chapter.Code);
         Assert.Equal("page", EntityRelationshipRegistry.Page.Code);
-        Assert.Equal("nested-tag", EntityRelationshipRegistry.NestedTag.Code);
-        Assert.Equal("nested-studio", EntityRelationshipRegistry.NestedStudio.Code);
+        Assert.Equal("tag", EntityRelationshipRegistry.Tag.Code);
+        Assert.Equal("studio", EntityRelationshipRegistry.Studio.Code);
+
+        Assert.DoesNotContain(EntityRelationshipRegistry.All, relationship =>
+            relationship.Code.StartsWith("nested-", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(EntityRelationshipRegistry.All, relationship =>
+            relationship.Code is "gallery-image" or "image");
+        Assert.DoesNotContain(EntityRelationshipRegistry.All, relationship =>
+            relationship.Code == "audio-track");
 
         var duplicateCodes = EntityRelationshipRegistry.All
             .GroupBy(relationship => relationship.Code, StringComparer.OrdinalIgnoreCase)
@@ -80,6 +85,30 @@ public sealed class EntityHierarchyDefinitionTests
             layer.ParentKind == EntityKindRegistry.BookChapter &&
             layer.ChildKind == EntityKindRegistry.BookPage &&
             layer.Relationship == EntityRelationshipRegistry.Page);
+    }
+
+    [Fact]
+    public void GalleryAndAudioLibraryRelationshipsCoverTheirChildShapes()
+    {
+        var gallery = EntityHierarchyDefinitions.Require(EntityKindRegistry.Gallery);
+        Assert.Contains(gallery.Layers, layer =>
+            layer.ParentKind == EntityKindRegistry.Gallery &&
+            layer.ChildKind == EntityKindRegistry.Gallery &&
+            layer.Relationship == EntityRelationshipRegistry.Gallery);
+        Assert.Contains(gallery.Layers, layer =>
+            layer.ParentKind == EntityKindRegistry.Gallery &&
+            layer.ChildKind == EntityKindRegistry.Image &&
+            layer.Relationship == EntityRelationshipRegistry.Gallery);
+
+        var audio = EntityHierarchyDefinitions.Require(EntityKindRegistry.AudioLibrary);
+        Assert.Contains(audio.Layers, layer =>
+            layer.ParentKind == EntityKindRegistry.AudioLibrary &&
+            layer.ChildKind == EntityKindRegistry.AudioLibrary &&
+            layer.Relationship == EntityRelationshipRegistry.AudioLibrary);
+        Assert.Contains(audio.Layers, layer =>
+            layer.ParentKind == EntityKindRegistry.AudioLibrary &&
+            layer.ChildKind == EntityKindRegistry.AudioTrack &&
+            layer.Relationship == EntityRelationshipRegistry.AudioLibrary);
     }
 
     [Fact]

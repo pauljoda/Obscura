@@ -77,7 +77,7 @@ public static class LegacyMediaImportSql
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT parent_id, id, '{{EntityRelationshipRegistry.NestedGallery.Code}}', 0, created_at
+                SELECT parent_id, id, '{{EntityRelationshipRegistry.Gallery.Code}}', 0, created_at
                 FROM public.galleries
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -142,7 +142,7 @@ public static class LegacyMediaImportSql
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT gallery_id, id, '{{EntityRelationshipRegistry.GalleryImage.Code}}', sort_order, created_at
+                SELECT gallery_id, id, '{{EntityRelationshipRegistry.Gallery.Code}}', sort_order, created_at
                 FROM public.images
                 WHERE gallery_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -276,7 +276,7 @@ public static class LegacyMediaImportSql
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT parent_id, id, '{{EntityRelationshipRegistry.NestedAudioLibrary.Code}}', 0, created_at
+                SELECT parent_id, id, '{{EntityRelationshipRegistry.AudioLibrary.Code}}', 0, created_at
                 FROM public.audio_libraries
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -334,7 +334,7 @@ public static class LegacyMediaImportSql
                     studio_id = EXCLUDED.studio_id;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
-                SELECT library_id, id, '{{EntityRelationshipRegistry.AudioTrack.Code}}', sort_order, created_at
+                SELECT library_id, id, '{{EntityRelationshipRegistry.AudioLibrary.Code}}', sort_order, created_at
                 FROM public.audio_tracks
                 WHERE library_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
@@ -472,7 +472,7 @@ public static class LegacyMediaImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.AudioLibrary.Code}}') AS audio_libraries_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.AudioTrack.Code}}') AS audio_tracks_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = '{{EntityKindRegistry.Collection.Code}}') AS collections_imported,
-            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('{{EntityRelationshipRegistry.NestedGallery.Code}}', '{{EntityRelationshipRegistry.GalleryImage.Code}}', '{{EntityRelationshipRegistry.NestedAudioLibrary.Code}}', '{{EntityRelationshipRegistry.AudioTrack.Code}}')) +
+            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('{{EntityRelationshipRegistry.Gallery.Code}}', '{{EntityRelationshipRegistry.AudioLibrary.Code}}')) +
              (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = '{{EntityRelationshipRegistry.CollectionItem.Code}}') +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links) +

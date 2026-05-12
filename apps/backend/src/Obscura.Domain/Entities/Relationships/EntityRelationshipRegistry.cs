@@ -27,17 +27,11 @@ public sealed class EntityRelationshipRegistry : AbstractRegistry<IEntityRelatio
     /// <summary>Relationship from a user collection to one of its member entities.</summary>
     public static IEntityRelationship CollectionItem => Require("collection-item");
 
-    /// <summary>Relationship from a gallery to a nested gallery entity.</summary>
-    public static IEntityRelationship NestedGallery => Require("nested-gallery");
+    /// <summary>Relationship from a gallery to either another gallery or one of its image entities.</summary>
+    public static IEntityRelationship Gallery => Require("gallery");
 
-    /// <summary>Relationship from a gallery to one of its image entities.</summary>
-    public static IEntityRelationship GalleryImage => Require("gallery-image");
-
-    /// <summary>Relationship from an audio library to a nested audio library entity.</summary>
-    public static IEntityRelationship NestedAudioLibrary => Require("nested-audio-library");
-
-    /// <summary>Relationship from an audio library to one of its track entities.</summary>
-    public static IEntityRelationship AudioTrack => Require("audio-track");
+    /// <summary>Relationship from an audio library to either another audio library or one of its track entities.</summary>
+    public static IEntityRelationship AudioLibrary => Require("audio-library");
 
     /// <summary>Relationship from a book to a volume grouping.</summary>
     public static IEntityRelationship Volume => Require("volume");
@@ -48,11 +42,11 @@ public sealed class EntityRelationshipRegistry : AbstractRegistry<IEntityRelatio
     /// <summary>Relationship from a chapter to a readable page.</summary>
     public static IEntityRelationship Page => Require("page");
 
-    /// <summary>Relationship from a tag to a nested tag.</summary>
-    public static IEntityRelationship NestedTag => Require("nested-tag");
+    /// <summary>Relationship from a tag to another tag.</summary>
+    public static IEntityRelationship Tag => Require("tag");
 
-    /// <summary>Relationship from a studio to a nested studio.</summary>
-    public static IEntityRelationship NestedStudio => Require("nested-studio");
+    /// <summary>Relationship from a studio to another studio.</summary>
+    public static IEntityRelationship Studio => Require("studio");
 
     /// <summary>
     /// Gets every known entity relationship in deterministic registry order.

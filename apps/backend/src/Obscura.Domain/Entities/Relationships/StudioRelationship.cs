@@ -1,11 +1,11 @@
 namespace Obscura.Domain.Entities;
 
-/// <summary>Relationship from a studio to a nested studio.</summary>
-public sealed record NestedStudioRelationship()
+/// <summary>Relationship from a studio to another studio.</summary>
+public sealed record StudioRelationship()
     : IEntityRelationship
 {
-    public string Code => "nested-studio";
-    public string DisplayName => "Nested Studio";
+    public string Code => "studio";
+    public string DisplayName => "Studio";
     public bool IsStructural => true;
     public IReadOnlyList<HierarchyLayer> Layers =>
     [
