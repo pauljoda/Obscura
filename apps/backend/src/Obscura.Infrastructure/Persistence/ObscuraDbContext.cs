@@ -29,6 +29,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<DatabaseBackupRow> DatabaseBackups => Set<DatabaseBackupRow>();
 
+    public DbSet<JobRunRow> JobRuns => Set<JobRunRow>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("v2");
@@ -189,6 +191,33 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.Error).HasColumnName("error");
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.Property(row => row.CompletedAt).HasColumnName("completed_at");
+        });
+
+        modelBuilder.Entity<JobRunRow>(entity =>
+        {
+            entity.ToTable("job_runs");
+            entity.HasKey(row => row.Id);
+            entity.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            entity.Property(row => row.Type).HasColumnName("type").HasMaxLength(128).IsRequired();
+            entity.Property(row => row.Status).HasColumnName("status").HasMaxLength(32).IsRequired();
+            entity.Property(row => row.PayloadJson).HasColumnName("payload_json").HasColumnType("jsonb").IsRequired();
+            entity.Property(row => row.Priority).HasColumnName("priority");
+            entity.Property(row => row.Attempts).HasColumnName("attempts");
+            entity.Property(row => row.MaxAttempts).HasColumnName("max_attempts");
+            entity.Property(row => row.Progress).HasColumnName("progress");
+            entity.Property(row => row.Message).HasColumnName("message");
+            entity.Property(row => row.AvailableAt).HasColumnName("available_at");
+            entity.Property(row => row.LockedAt).HasColumnName("locked_at");
+            entity.Property(row => row.LockedBy).HasColumnName("locked_by").HasMaxLength(128);
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.Property(row => row.StartedAt).HasColumnName("started_at");
+            entity.Property(row => row.FinishedAt).HasColumnName("finished_at");
+            entity.HasIndex(row => new { row.Status, row.AvailableAt, row.Priority });
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("ck_job_runs_progress", "progress >= 0 AND progress <= 100");
+                table.HasCheckConstraint("ck_job_runs_attempts", "attempts >= 0 AND max_attempts > 0");
+            });
         });
     }
 }

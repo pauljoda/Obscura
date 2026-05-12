@@ -16,6 +16,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(LibraryRootRow), "library_roots")]
     [InlineData(typeof(LibrarySettingsRow), "library_settings")]
     [InlineData(typeof(DatabaseBackupRow), "database_backups")]
+    [InlineData(typeof(JobRunRow), "job_runs")]
     public void V2ModelMapsGlobalEntityTablesToV2Schema(Type entityType, string tableName)
     {
         using var db = CreateContext();
@@ -44,6 +45,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(LibraryRootRow), nameof(LibraryRootRow.ScanVideos), "scan_videos")]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.AutoScanEnabled), "auto_scan_enabled")]
     [InlineData(typeof(DatabaseBackupRow), nameof(DatabaseBackupRow.BackupPath), "backup_path")]
+    [InlineData(typeof(JobRunRow), nameof(JobRunRow.AvailableAt), "available_at")]
     public void V2ModelUsesSnakeCaseColumns(Type entityType, string propertyName, string columnName)
     {
         using var db = CreateContext();
