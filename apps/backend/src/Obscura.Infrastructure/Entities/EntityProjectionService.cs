@@ -267,6 +267,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
         var tags = await LoadTagTitlesAsync(ids, cancellationToken);
         var thumbnails = await LoadFilePathsAsync(ids, "thumbnail", cancellationToken);
+        var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
+        var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
 
         return rows
             .Select(row =>
@@ -275,6 +277,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
                 flags.TryGetValue(row.Id, out var flag);
                 tags.TryGetValue(row.Id, out var tagTitles);
                 thumbnails.TryGetValue(row.Id, out var thumbnailUrl);
+                studios.TryGetValue(row.Id, out var studio);
+                credits.TryGetValue(row.Id, out var creditRefs);
 
                 return new EntityCardDto(
                     row.Id,
@@ -284,8 +288,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
                     new EntityCapabilitiesDto(
                         ratings.ContainsKey(row.Id) ? new RatingDto(rating) : null,
                         tagTitles ?? [],
-                        [],
-                        null,
+                        creditRefs ?? [],
+                        studio,
                         thumbnailUrl,
                         null,
                         flag?.IsFavorite,
@@ -335,5 +339,72 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .AsNoTracking()
             .Where(file => entityIds.Contains(file.EntityId) && file.Role == role)
             .ToDictionaryAsync(file => file.EntityId, file => file.Path, cancellationToken);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, EntityReferenceDto>> LoadStudioReferencesAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var links = await _db.EntityStudioLinks
+            .AsNoTracking()
+            .Where(link => entityIds.Contains(link.EntityId))
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+        {
+            return new Dictionary<Guid, EntityReferenceDto>();
+        }
+
+        var studioIds = links.Select(link => link.StudioId).Distinct().ToArray();
+        var studios = await _db.Entities
+            .AsNoTracking()
+            .Where(entity => studioIds.Contains(entity.Id) && entity.KindCode == "studio" && entity.DeletedAt == null)
+            .ToDictionaryAsync(entity => entity.Id, cancellationToken);
+
+        return links
+            .Where(link => studios.ContainsKey(link.StudioId))
+            .ToDictionary(
+                link => link.EntityId,
+                link =>
+                {
+                    var studio = studios[link.StudioId];
+                    return new EntityReferenceDto(studio.Id, studio.KindCode, studio.Title);
+                });
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityReferenceDto>>> LoadCreditReferencesAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var links = await _db.EntityCreditLinks
+            .AsNoTracking()
+            .Where(link => entityIds.Contains(link.EntityId))
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.PersonEntityId)
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyList<EntityReferenceDto>>();
+        }
+
+        var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
+        var people = await _db.Entities
+            .AsNoTracking()
+            .Where(entity => personIds.Contains(entity.Id) && entity.KindCode == "performer" && entity.DeletedAt == null)
+            .ToDictionaryAsync(entity => entity.Id, cancellationToken);
+
+        return links
+            .Where(link => people.ContainsKey(link.PersonEntityId))
+            .GroupBy(link => link.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityReferenceDto>)group
+                    .Select(link =>
+                    {
+                        var person = people[link.PersonEntityId];
+                        return new EntityReferenceDto(person.Id, person.KindCode, person.Title);
+                    })
+                    .ToArray());
     }
 }

@@ -14,8 +14,12 @@ public sealed class EntityProjectionServiceTests
         await using var db = CreateContext();
         var videoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var tagId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var studioId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        var performerId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         SeedEntity(db, videoId, "video", "A Quiet Scene");
         SeedEntity(db, tagId, "tag", "Favorite");
+        SeedEntity(db, studioId, "studio", "Obscura Studio");
+        SeedEntity(db, performerId, "performer", "Ada Actor");
         db.EntityRatings.Add(new EntityRatingRow { EntityId = videoId, Value = 4 });
         db.EntityFlags.Add(new EntityFlagRow
         {
@@ -25,6 +29,21 @@ public sealed class EntityProjectionServiceTests
             IsOrganized = true
         });
         db.EntityTagLinks.Add(new EntityTagLinkRow { EntityId = videoId, TagId = tagId });
+        db.EntityStudioLinks.Add(new EntityStudioLinkRow
+        {
+            EntityId = videoId,
+            StudioId = studioId,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityCreditLinks.Add(new EntityCreditLinkRow
+        {
+            EntityId = videoId,
+            PersonEntityId = performerId,
+            Role = "performer",
+            Character = "Lead",
+            SortOrder = 1,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.Parse("77777777-7777-7777-7777-777777777777"),
@@ -44,6 +63,11 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("video", card.Kind);
         Assert.Equal(4, card.Capabilities.Rating?.Value);
         Assert.Equal(["Favorite"], card.Capabilities.Tags);
+        Assert.Equal(studioId, card.Capabilities.Studio?.Id);
+        Assert.Equal("Obscura Studio", card.Capabilities.Studio?.Title);
+        var credit = Assert.Single(card.Capabilities.Credits);
+        Assert.Equal(performerId, credit.Id);
+        Assert.Equal("Ada Actor", credit.Title);
         Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.ThumbnailUrl);
         Assert.True(card.Capabilities.IsFavorite);
         Assert.False(card.Capabilities.IsNsfw);

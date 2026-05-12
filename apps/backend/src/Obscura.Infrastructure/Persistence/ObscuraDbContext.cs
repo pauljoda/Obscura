@@ -23,6 +23,10 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityHierarchyLinkRow> EntityHierarchyLinks => Set<EntityHierarchyLinkRow>();
 
+    public DbSet<EntityStudioLinkRow> EntityStudioLinks => Set<EntityStudioLinkRow>();
+
+    public DbSet<EntityCreditLinkRow> EntityCreditLinks => Set<EntityCreditLinkRow>();
+
     public DbSet<EntityFileRow> EntityFiles => Set<EntityFileRow>();
 
     public DbSet<VideoDetailRow> VideoDetails => Set<VideoDetailRow>();
@@ -137,6 +141,46 @@ public sealed class ObscuraDbContext : DbContext
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.ChildEntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityStudioLinkRow>(entity =>
+        {
+            entity.ToTable("entity_studio_links");
+            entity.HasKey(row => row.EntityId);
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.StudioId).HasColumnName("studio_id");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(row => row.StudioId);
+            entity.HasOne<EntityRow>()
+                .WithOne()
+                .HasForeignKey<EntityStudioLinkRow>(row => row.EntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.StudioId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityCreditLinkRow>(entity =>
+        {
+            entity.ToTable("entity_credit_links");
+            entity.HasKey(row => new { row.EntityId, row.PersonEntityId, row.Role });
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.PersonEntityId).HasColumnName("person_entity_id");
+            entity.Property(row => row.Role).HasColumnName("role").HasMaxLength(64).IsRequired();
+            entity.Property(row => row.Character).HasColumnName("character");
+            entity.Property(row => row.SortOrder).HasColumnName("sort_order");
+            entity.Property(row => row.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(row => new { row.EntityId, row.SortOrder });
+            entity.HasIndex(row => row.PersonEntityId);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.EntityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<EntityRow>()
+                .WithMany()
+                .HasForeignKey(row => row.PersonEntityId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

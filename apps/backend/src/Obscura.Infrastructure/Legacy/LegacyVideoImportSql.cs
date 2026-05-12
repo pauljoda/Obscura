@@ -30,6 +30,14 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id) DO UPDATE SET
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
+                FROM public.tags
+                WHERE COALESCE(image_path, image_url) IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.studios') IS NOT NULL THEN
@@ -56,6 +64,49 @@ public static class LegacyVideoImportSql
                 WHERE rating IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
+                FROM public.studios
+                WHERE COALESCE(image_path, image_url) IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+            END IF;
+
+            IF to_regclass('public.performers') IS NOT NULL THEN
+                INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
+                SELECT id, 'performer', name, created_at, updated_at
+                FROM public.performers
+                ON CONFLICT (id) DO UPDATE SET
+                    kind_code = EXCLUDED.kind_code,
+                    title = EXCLUDED.title,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
+                SELECT id, favorite, is_nsfw, true, updated_at
+                FROM public.performers
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    is_favorite = EXCLUDED.is_favorite,
+                    is_nsfw = EXCLUDED.is_nsfw,
+                    is_organized = EXCLUDED.is_organized,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_ratings (entity_id, value, updated_at)
+                SELECT id, LEAST(GREATEST(rating, 0), 5), updated_at
+                FROM public.performers
+                WHERE rating IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(image_path, image_url), NULL, NULL, created_at, updated_at
+                FROM public.performers
+                WHERE COALESCE(image_path, image_url) IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
             END IF;
 
@@ -92,6 +143,13 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
+                SELECT id, studio_id, updated_at
+                FROM public.video_series
+                WHERE studio_id IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    studio_id = EXCLUDED.studio_id;
             END IF;
 
             IF to_regclass('public.video_movies') IS NOT NULL THEN
@@ -136,6 +194,13 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, role) DO UPDATE SET
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
+                SELECT id, studio_id, updated_at
+                FROM public.video_movies
+                WHERE studio_id IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    studio_id = EXCLUDED.studio_id;
             END IF;
 
             IF to_regclass('public.video_episodes') IS NOT NULL THEN
@@ -221,6 +286,33 @@ public static class LegacyVideoImportSql
                 FROM public.video_episode_tags
                 ON CONFLICT (entity_id, tag_id) DO NOTHING;
             END IF;
+
+            IF to_regclass('public.video_series_performers') IS NOT NULL THEN
+                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
+                SELECT series_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                FROM public.video_series_performers
+                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
+                    character = EXCLUDED.character,
+                    sort_order = EXCLUDED.sort_order;
+            END IF;
+
+            IF to_regclass('public.video_movie_performers') IS NOT NULL THEN
+                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
+                SELECT movie_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                FROM public.video_movie_performers
+                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
+                    character = EXCLUDED.character,
+                    sort_order = EXCLUDED.sort_order;
+            END IF;
+
+            IF to_regclass('public.video_episode_performers') IS NOT NULL THEN
+                INSERT INTO v2.entity_credit_links (entity_id, person_entity_id, role, character, sort_order, created_at)
+                SELECT episode_id, performer_id, 'performer', character, COALESCE("order", 0), now()
+                FROM public.video_episode_performers
+                ON CONFLICT (entity_id, person_entity_id, role) DO UPDATE SET
+                    character = EXCLUDED.character,
+                    sort_order = EXCLUDED.sort_order;
+            END IF;
         END $$;
         """;
 
@@ -228,8 +320,11 @@ public static class LegacyVideoImportSql
         SELECT
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'video-series') AS series_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'video') AS videos_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'performer') AS performers_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'tag') AS tags_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'studio') AS studios_imported,
-            (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) AS links_imported;
+            ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
+             (SELECT COUNT(*)::int FROM v2.entity_studio_links)) AS links_imported;
         """;
 }

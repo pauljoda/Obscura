@@ -55,6 +55,7 @@ public static class SystemEndpoints
             return Results.Ok(new LegacyVideoImportResponseDto(
                 result.SeriesImported,
                 result.VideosImported,
+                result.PerformersImported,
                 result.TagsImported,
                 result.StudiosImported,
                 result.LinksImported));

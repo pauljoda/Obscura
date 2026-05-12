@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 migration can now preview-import existing video and series metadata into the global entity tables, including tags, studios, ratings, source files, and series-to-episode links for side-by-side testing.
 - The v2 video and series cards now receive imported thumbnail URLs through the shared file capability projection.
 - The v2 video detail page now sends playback requests to the .NET backend during local Svelte development instead of falling back to the legacy SvelteKit API path.
+- The v2 global entity model now imports and projects shared studio and performer credit capabilities for videos and series.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -126,6 +127,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added v2 entity hierarchy links and a legacy video import endpoint for populating the new entity schema from current videos, series, tags, and studios during migration verification.
 - Added thumbnail file-role projection to v2 entity cards so shared media surfaces can render artwork from the global entity model.
 - Added a shared v2 API URL helper for generated fetches and media URLs, keeping typed API calls and stream sources on the same backend.
+- Added v2 studio and credit capability tables plus legacy import coverage for performers, studios, and video/series cast links.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.
