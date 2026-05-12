@@ -38,7 +38,7 @@ public static class CollectionEndpoints
                     $"Collection '{id}' was not found."));
             }
 
-            return Results.Ok(ContractMapper.ToCollectionDetail(collection.Entity, collection.Items));
+            return Results.Ok(ContractMapper.ToCollectionDetail(collection));
         })
             .WithName("GetCollection")
             .WithSummary("Gets one collection entity with its projected items.")

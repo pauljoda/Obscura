@@ -6,6 +6,7 @@ using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
 using DomainCapabilities = Obscura.Domain.Capabilities.EntityCapabilities;
 using DomainEntity = Obscura.Domain.Entities.Entity;
+using DomainEntityLibrary = Obscura.Domain.Media.EntityLibrary;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
 using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
@@ -104,18 +105,17 @@ public static class ContractMapper
             ToEntityCards(children));
 
     /// <summary>
-    /// Converts a collection entity and its member entities into the collection detail contract.
+    /// Converts a generic entity library aggregate into the collection detail contract.
     /// </summary>
-    /// <param name="entity">Domain entity root for the collection.</param>
-    /// <param name="items">Collection member entities.</param>
+    /// <param name="library">Domain aggregate containing the collection root and linked members.</param>
     /// <returns>Collection detail contract for API callers.</returns>
-    public static CollectionDetail ToCollectionDetail(DomainEntity entity, IReadOnlyList<DomainEntity> items) =>
+    public static CollectionDetail ToCollectionDetail(DomainEntityLibrary library) =>
         new(
-            entity.Id,
-            entity.Kind.Code,
-            entity.Title,
-            ToEntityCapabilities(entity.Capabilities),
-            ToEntityCards(items));
+            library.Entity.Id,
+            library.Entity.Kind.Code,
+            library.Entity.Title,
+            ToEntityCapabilities(library.Entity.Capabilities),
+            ToEntityCards(library.Children));
 
     /// <summary>
     /// Converts a taxonomy entity into its detail contract.

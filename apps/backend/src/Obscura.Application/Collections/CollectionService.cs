@@ -10,6 +10,9 @@ namespace Obscura.Application.Collections;
 /// </summary>
 public sealed class CollectionService
 {
+    private const string CollectionKind = "collection";
+    private const string CollectionItemRelationship = "collection-item";
+
     private readonly IEntityCatalog _entities;
 
     /// <summary>
@@ -28,7 +31,7 @@ public sealed class CollectionService
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A page of collection entity roots.</returns>
     public Task<EntityPage> ListAsync(EntityListQuery query, CancellationToken cancellationToken) =>
-        _entities.ListAsync("collection", query.Search, query.Cursor, cancellationToken);
+        _entities.ListAsync(CollectionKind, query.Search, query.Cursor, cancellationToken);
 
     /// <summary>
     /// Gets a collection and expands its collection-item links.
@@ -36,16 +39,16 @@ public sealed class CollectionService
     /// <param name="id">Collection entity identifier.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>The collection aggregate, or null when the entity is missing or not a collection.</returns>
-    public async Task<Collection?> GetAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<EntityLibrary?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _entities.GetAsync(id, cancellationToken);
-        if (entity is null || !entity.Kind.Code.Equals("collection", StringComparison.OrdinalIgnoreCase))
+        if (entity is null || !entity.Kind.Code.Equals(CollectionKind, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        var items = await _entities.ListChildrenAsync(id, "collection-item", null, cancellationToken);
+        var items = await _entities.ListChildrenAsync(id, CollectionItemRelationship, null, cancellationToken);
 
-        return new Collection(entity, items);
+        return new EntityLibrary(entity, items, CollectionItemRelationship, null);
     }
 }
