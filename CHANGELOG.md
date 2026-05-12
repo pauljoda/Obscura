@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 video browser now works during local Svelte development by calling the .NET backend directly and the .NET backend now applies EF migrations automatically on startup.
 - The v2 .NET backend and Svelte UI now include side-by-side video-series routes, so `/v2/series` can be tested against the new global entity projection alongside `/v2/videos`.
 - The v2 migration can now preview-import existing video and series metadata into the global entity tables, including tags, studios, ratings, source files, and series-to-episode links for side-by-side testing.
+- The v2 video and series cards now receive imported thumbnail URLs through the shared file capability projection.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -122,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a v2 fresh-start preparation endpoint that runs a database backup and copies current settings/library roots into the v2 schema.
 - Added the v2 video-series entity kind, .NET series list/detail endpoints, generated TypeScript client coverage, and static Svelte `/v2/series` list/detail pages.
 - Added v2 entity hierarchy links and a legacy video import endpoint for populating the new entity schema from current videos, series, tags, and studios during migration verification.
+- Added thumbnail file-role projection to v2 entity cards so shared media surfaces can render artwork from the global entity model.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.

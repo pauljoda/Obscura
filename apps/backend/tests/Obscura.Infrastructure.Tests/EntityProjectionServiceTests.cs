@@ -25,6 +25,15 @@ public sealed class EntityProjectionServiceTests
             IsOrganized = true
         });
         db.EntityTagLinks.Add(new EntityTagLinkRow { EntityId = videoId, TagId = tagId });
+        db.EntityFiles.Add(new EntityFileRow
+        {
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777777"),
+            EntityId = videoId,
+            Role = "thumbnail",
+            Path = "/assets/videos/11111111-1111-1111-1111-111111111111/card",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -35,6 +44,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("video", card.Kind);
         Assert.Equal(4, card.Capabilities.Rating?.Value);
         Assert.Equal(["Favorite"], card.Capabilities.Tags);
+        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.ThumbnailUrl);
         Assert.True(card.Capabilities.IsFavorite);
         Assert.False(card.Capabilities.IsNsfw);
         Assert.True(card.Capabilities.IsOrganized);

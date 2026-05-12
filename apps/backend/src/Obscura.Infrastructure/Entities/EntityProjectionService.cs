@@ -266,6 +266,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .Where(row => ids.Contains(row.EntityId))
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
         var tags = await LoadTagTitlesAsync(ids, cancellationToken);
+        var thumbnails = await LoadFilePathsAsync(ids, "thumbnail", cancellationToken);
 
         return rows
             .Select(row =>
@@ -273,6 +274,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
                 ratings.TryGetValue(row.Id, out var rating);
                 flags.TryGetValue(row.Id, out var flag);
                 tags.TryGetValue(row.Id, out var tagTitles);
+                thumbnails.TryGetValue(row.Id, out var thumbnailUrl);
 
                 return new EntityCardDto(
                     row.Id,
@@ -284,7 +286,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
                         tagTitles ?? [],
                         [],
                         null,
-                        null,
+                        thumbnailUrl,
                         null,
                         flag?.IsFavorite,
                         flag?.IsNsfw,
@@ -322,5 +324,16 @@ public sealed class EntityProjectionService : IEntityProjectionService
                     .Select(link => tagTitles[link.TagId])
                     .OrderBy(title => title, StringComparer.OrdinalIgnoreCase)
                     .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, string>> LoadFilePathsAsync(
+        IReadOnlyList<Guid> entityIds,
+        string role,
+        CancellationToken cancellationToken)
+    {
+        return await _db.EntityFiles
+            .AsNoTracking()
+            .Where(file => entityIds.Contains(file.EntityId) && file.Role == role)
+            .ToDictionaryAsync(file => file.EntityId, file => file.Path, cancellationToken);
     }
 }
