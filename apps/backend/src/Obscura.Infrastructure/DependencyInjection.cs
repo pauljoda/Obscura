@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.Persistence;
+using Obscura.Infrastructure.Upgrades;
 
 namespace Obscura.Infrastructure;
 
@@ -23,6 +24,11 @@ public static class DependencyInjection
         services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
             options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
+        services.AddSingleton(new V2UpgradeGateOptions(
+            configuration["OBSCURA_DATA_DIR"] ??
+            configuration["Obscura:DataDir"] ??
+            "/data"));
+        services.AddSingleton<IV2UpgradeGate, V2UpgradeGate>();
 
         return services;
     }

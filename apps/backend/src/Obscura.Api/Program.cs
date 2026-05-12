@@ -27,6 +27,7 @@ app.MapEntityEndpoints();
 app.MapVideoEndpoints();
 app.MapJobEndpoints();
 app.MapSettingsEndpoints();
+app.MapSystemEndpoints();
 
 app.MapFallback(() => Results.NotFound(new ProblemDetailsDto(
     "not_found",
