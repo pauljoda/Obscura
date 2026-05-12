@@ -30,6 +30,8 @@ public sealed class LibrarySettingsRow
 
     public bool NsfwLanAutoEnable { get; set; }
 
+    public bool HideNsfw { get; set; }
+
     public bool MetadataStorageDedicated { get; set; } = true;
 
     public bool SubtitlesAutoEnable { get; set; }

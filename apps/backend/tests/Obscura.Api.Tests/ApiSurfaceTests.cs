@@ -8,6 +8,7 @@ using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Videos;
 using Obscura.Infrastructure.Queue;
+using Obscura.Infrastructure.Settings;
 
 namespace Obscura.Api.Tests;
 
@@ -23,6 +24,7 @@ public sealed class ApiSurfaceTests
                 builder.ConfigureServices(services =>
                 {
                     services.AddScoped<IJobQueueService, EmptyJobQueueService>();
+                    services.AddScoped<ISettingsService, DefaultSettingsService>();
                 });
             });
     }
@@ -96,6 +98,21 @@ public sealed class ApiSurfaceTests
         public Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
+        }
+    }
+
+    private sealed class DefaultSettingsService : ISettingsService
+    {
+        public Task<SettingsDto> GetAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new SettingsDto(false, true));
+        }
+
+        public Task<SettingsDto> UpdateAsync(SettingsUpdateRequestDto request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new SettingsDto(
+                request.HideNsfw ?? false,
+                request.EnableCastControls ?? true));
         }
     }
 }

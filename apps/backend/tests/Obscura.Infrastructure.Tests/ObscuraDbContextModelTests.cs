@@ -44,6 +44,7 @@ public sealed class ObscuraDbContextModelTests
     [InlineData(typeof(VideoDetailRow), nameof(VideoDetailRow.DurationMs), "duration_ms")]
     [InlineData(typeof(LibraryRootRow), nameof(LibraryRootRow.ScanVideos), "scan_videos")]
     [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.AutoScanEnabled), "auto_scan_enabled")]
+    [InlineData(typeof(LibrarySettingsRow), nameof(LibrarySettingsRow.HideNsfw), "hide_nsfw")]
     [InlineData(typeof(DatabaseBackupRow), nameof(DatabaseBackupRow.BackupPath), "backup_path")]
     [InlineData(typeof(JobRunRow), nameof(JobRunRow.AvailableAt), "available_at")]
     public void V2ModelUsesSnakeCaseColumns(Type entityType, string propertyName, string columnName)

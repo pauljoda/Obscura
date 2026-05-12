@@ -168,6 +168,7 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.TrickplayQuality).HasColumnName("trickplay_quality");
             entity.Property(row => row.BackgroundWorkerConcurrency).HasColumnName("background_worker_concurrency");
             entity.Property(row => row.NsfwLanAutoEnable).HasColumnName("nsfw_lan_auto_enable");
+            entity.Property(row => row.HideNsfw).HasColumnName("hide_nsfw");
             entity.Property(row => row.MetadataStorageDedicated).HasColumnName("metadata_storage_dedicated");
             entity.Property(row => row.SubtitlesAutoEnable).HasColumnName("subtitles_auto_enable");
             entity.Property(row => row.SubtitlesPreferredLanguages).HasColumnName("subtitles_preferred_languages");

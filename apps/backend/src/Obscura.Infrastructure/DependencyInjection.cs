@@ -7,6 +7,7 @@ using Obscura.Infrastructure.Database;
 using Obscura.Infrastructure.FreshStart;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Queue;
+using Obscura.Infrastructure.Settings;
 using Obscura.Infrastructure.Upgrades;
 
 namespace Obscura.Infrastructure;
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
+        services.AddScoped<ISettingsService, SettingsService>();
 
         return services;
     }
