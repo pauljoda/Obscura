@@ -44,6 +44,9 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
     /// <summary>Known files capability kind.</summary>
     public static ICapabilityKind<CapabilityFiles> Files => Require<CapabilityFiles>("files");
 
+    /// <summary>Known playback capability kind.</summary>
+    public static ICapabilityKind<CapabilityPlayback> Playback => Require<CapabilityPlayback>("playback");
+
     /// <summary>
     /// Gets every known capability kind in deterministic registry order.
     /// </summary>

@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Taxonomy;
@@ -7,12 +6,8 @@ namespace Obscura.Domain.Taxonomy;
 /// Domain model for studio, publisher, label, or production-group taxonomy entities.
 /// </summary>
 public sealed record Studio(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     StudioDetails Details)
-    : Entity(Id, EntityKindRegistry.Studio, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the studio with updated studio-specific metadata.

@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -6,20 +5,13 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for a book, comic, manga, or other page-based media item.
 /// </summary>
-/// <param name="Id">Stable global entity identifier inherited from the root entity model.</param>
-/// <param name="Title">Primary user-facing title inherited from the root entity model.</param>
-/// <param name="Subtitle">Optional secondary card/detail text inherited from the root entity model.</param>
-/// <param name="Capabilities">Shared capabilities attached to the book, such as ratings, tags, people, studio, artwork, and files.</param>
+/// <param name="Entity">Shared global entity root for the book.</param>
 /// <param name="Details">Book-specific metadata and scan state.</param>
 /// <param name="ReadProgress">Single-user reading progress for the book.</param>
 public sealed record Book(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     BookDetails Details,
     BookReadProgress ReadProgress)
-    : Entity(Id, EntityKindRegistry.Book, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the book with new book-specific metadata.

@@ -102,6 +102,32 @@ public record Entity
         return false;
     }
 
+    /// <summary>
+    /// Returns a copy of the entity with one explicit capability added or replaced by kind.
+    /// </summary>
+    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
+    /// <param name="kind">Capability kind to replace.</param>
+    /// <param name="capability">Capability value to attach to the entity.</param>
+    /// <returns>A new entity with the supplied capability in its explicit capability list.</returns>
+    public Entity WithCapability<TCapability>(
+        ICapabilityKind<TCapability> kind,
+        TCapability capability)
+        where TCapability : class, ICapability
+    {
+        ArgumentNullException.ThrowIfNull(kind);
+        ArgumentNullException.ThrowIfNull(capability);
+
+        var next = Capabilities
+            .Where(existing => !string.Equals(
+                existing.Kind.Code,
+                kind.Code,
+                StringComparison.OrdinalIgnoreCase))
+            .Append(capability)
+            .ToArray();
+
+        return this with { Capabilities = next };
+    }
+
     private static IReadOnlyList<ICapability> NormalizeCapabilities(IReadOnlyList<ICapability> capabilities)
     {
         ArgumentNullException.ThrowIfNull(capabilities);

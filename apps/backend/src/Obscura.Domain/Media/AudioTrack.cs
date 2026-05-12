@@ -7,27 +7,9 @@ namespace Obscura.Domain.Media;
 /// Domain model for a playable audio track.
 /// </summary>
 public sealed record AudioTrack(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
-    AudioTrackDetails Details,
-    Playback Playback)
-    : Entity(Id, EntityKindRegistry.AudioTrack, Title, Subtitle, Capabilities)
+    Entity Entity,
+    AudioTrackDetails Details)
 {
-    /// <summary>
-    /// Convenience constructor for audio tracks before playback state has been loaded.
-    /// </summary>
-    public AudioTrack(
-        Guid id,
-        string title,
-        string? subtitle,
-        IReadOnlyList<ICapability> capabilities,
-        AudioTrackDetails details)
-        : this(id, title, subtitle, capabilities, details, Playback.Empty)
-    {
-    }
-
     /// <summary>
     /// Returns a copy of the audio track with updated technical or descriptive details.
     /// </summary>
@@ -39,17 +21,26 @@ public sealed record AudioTrack(
     /// <param name="resumeTime">Playback position where the next session should resume.</param>
     /// <param name="playedAt">Timestamp of the playback event.</param>
     /// <returns>A new audio track with incremented playback state.</returns>
-    public AudioTrack MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt) =>
-        this with
+    public AudioTrack MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt)
+    {
+        var playback = Entity.TryGetCapability(CapabilityRegistry.Playback, out var existing)
+            ? existing.Value
+            : Playback.Empty;
+        var next = playback with
         {
-            Playback = Playback with
-            {
-                PlayCount = Playback.PlayCount + 1,
-                ResumeTime = resumeTime < TimeSpan.Zero ? TimeSpan.Zero : resumeTime,
-                LastPlayedAt = playedAt,
-                CompletedAt = null
-            }
+            PlayCount = playback.PlayCount + 1,
+            ResumeTime = resumeTime < TimeSpan.Zero ? TimeSpan.Zero : resumeTime,
+            LastPlayedAt = playedAt,
+            CompletedAt = null
         };
+
+        return this with
+        {
+            Entity = Entity.WithCapability(
+                CapabilityRegistry.Playback,
+                new CapabilityPlayback(next))
+        };
+    }
 }
 
 /// <summary>

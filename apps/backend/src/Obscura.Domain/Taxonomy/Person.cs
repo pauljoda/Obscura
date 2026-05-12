@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Taxonomy;
@@ -6,18 +5,11 @@ namespace Obscura.Domain.Taxonomy;
 /// <summary>
 /// Domain model for a person taxonomy entity; UI contexts decide whether to label this as actor, artist, author, or another role.
 /// </summary>
-/// <param name="Id">Stable global entity identifier inherited from the root entity model.</param>
-/// <param name="Title">Primary display name inherited from the root entity model.</param>
-/// <param name="Subtitle">Optional secondary display text inherited from the root entity model.</param>
-/// <param name="Capabilities">Shared ratings, tags, artwork, links, and flags attached to the person.</param>
+/// <param name="Entity">Shared global entity root for the person.</param>
 /// <param name="Details">Person-specific descriptive metadata.</param>
 public sealed record Person(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     PersonDetails Details)
-    : Entity(Id, EntityKindRegistry.Person, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the person with new person-specific metadata.

@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -7,12 +6,8 @@ namespace Obscura.Domain.Media;
 /// Domain model for a single image entity.
 /// </summary>
 public sealed record Image(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     ImageDetails Details)
-    : Entity(Id, EntityKindRegistry.Image, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the image with updated image-specific metadata.

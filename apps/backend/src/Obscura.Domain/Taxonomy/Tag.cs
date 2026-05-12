@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Taxonomy;
@@ -7,12 +6,8 @@ namespace Obscura.Domain.Taxonomy;
 /// Domain model for a tag taxonomy entity.
 /// </summary>
 public sealed record Tag(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     TagDetails Details)
-    : Entity(Id, EntityKindRegistry.Tag, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the tag with updated tag-specific metadata.

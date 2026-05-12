@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -7,12 +6,8 @@ namespace Obscura.Domain.Media;
 /// Domain model for an image gallery.
 /// </summary>
 public sealed record Gallery(
-    Guid Id,
-    string Title,
-    string? Subtitle,
-    IReadOnlyList<ICapability> Capabilities,
+    Entity Entity,
     GalleryDetails Details)
-    : Entity(Id, EntityKindRegistry.Gallery, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the gallery with updated gallery-specific metadata.
