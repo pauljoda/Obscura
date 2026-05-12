@@ -73,6 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Documented `@obscura/contracts` as a legacy migration bridge so old TypeScript DTOs are removed only after matching surfaces move to the .NET OpenAPI/Orval contract.
 - Added the codebase rule for rich public documentation comments and documented the v2 .NET Domain, Application, and contract types so the new backend model is easier to read in C# tooling.
 - Documented the intended .NET Domain/Application/Contracts boundary for the v2 backend so the C# model can grow as first-class application code instead of API DTO plumbing.
 - Rewrote README and documentation site to reflect Obscura's broader media-home identity — books, comics, audio, video, and galleries are now all highlighted equally, the "Stash replacement" framing is dropped, and the doc-site homepage now serves as a product page non-technical visitors can understand.
