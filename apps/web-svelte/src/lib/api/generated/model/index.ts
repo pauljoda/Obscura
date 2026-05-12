@@ -12,6 +12,7 @@ export * from './entityListResponseDto';
 export * from './entityReferenceDto';
 export * from './jobListResponseDto';
 export * from './jobRunDto';
+export * from './legacyMediaImportResponseDto';
 export * from './legacyVideoImportResponseDto';
 export * from './listAudioLibrariesParams';
 export * from './listAudioTracksParams';

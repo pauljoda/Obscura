@@ -61,6 +61,32 @@ public sealed class V2FreshStartEndpointTests
         Assert.Equal(9, payload.LinksImported);
     }
 
+    [Fact]
+    public async Task LegacyMediaImportEndpointReturnsImportCounts()
+    {
+        using var factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.AddSingleton<ILegacyMediaImportService, FakeLegacyMediaImportService>();
+                });
+            });
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/system/v2-legacy-media-import", null);
+        var payload = await response.Content.ReadFromJsonAsync<LegacyMediaImportResponseDto>();
+
+        Assert.True(response.IsSuccessStatusCode);
+        Assert.NotNull(payload);
+        Assert.Equal(10, payload.ImagesImported);
+        Assert.Equal(3, payload.GalleriesImported);
+        Assert.Equal(4, payload.BooksImported);
+        Assert.Equal(2, payload.AudioLibrariesImported);
+        Assert.Equal(12, payload.AudioTracksImported);
+        Assert.Equal(18, payload.LinksImported);
+    }
+
     private sealed class AcceptedGate : IV2UpgradeGate
     {
         public V2UpgradeGateStatus Check()
@@ -97,6 +123,20 @@ public sealed class V2FreshStartEndpointTests
                 TagsImported: 4,
                 StudiosImported: 2,
                 LinksImported: 9));
+        }
+    }
+
+    private sealed class FakeLegacyMediaImportService : ILegacyMediaImportService
+    {
+        public Task<LegacyMediaImportResult> ImportAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LegacyMediaImportResult(
+                ImagesImported: 10,
+                GalleriesImported: 3,
+                BooksImported: 4,
+                AudioLibrariesImported: 2,
+                AudioTracksImported: 12,
+                LinksImported: 18));
         }
     }
 }

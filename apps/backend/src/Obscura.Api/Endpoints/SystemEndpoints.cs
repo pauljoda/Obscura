@@ -64,6 +64,23 @@ public static class SystemEndpoints
             .WithSummary("Imports legacy video and series metadata into the v2 global entity tables for side-by-side migration testing.")
             .Produces<LegacyVideoImportResponseDto>();
 
+        group.MapPost("/v2-legacy-media-import", async (
+            ILegacyMediaImportService legacyImport,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await legacyImport.ImportAsync(cancellationToken);
+            return Results.Ok(new LegacyMediaImportResponseDto(
+                result.ImagesImported,
+                result.GalleriesImported,
+                result.BooksImported,
+                result.AudioLibrariesImported,
+                result.AudioTracksImported,
+                result.LinksImported));
+        })
+            .WithName("ImportLegacyMedia")
+            .WithSummary("Imports legacy image, gallery, book, and audio metadata into the v2 global entity tables for side-by-side migration testing.")
+            .Produces<LegacyMediaImportResponseDto>();
+
         return group;
     }
 

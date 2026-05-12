@@ -8,7 +8,13 @@ import {
   getSettings,
   getSeries,
   getVideo,
+  importLegacyMedia,
   importLegacyVideos,
+  listAudioLibraries,
+  listAudioTracks,
+  listBooks,
+  listGalleries,
+  listImages,
 } from "./generated/obscura-v2";
 import type {
   EntityCapabilitiesDto,
@@ -17,7 +23,9 @@ import type {
   EntityReferenceDto,
   JobListResponseDto,
   JobRunDto,
+  LegacyMediaImportResponseDto,
   LegacyVideoImportResponseDto,
+  MediaListResponseDto,
   RatingDto,
   SettingsDto,
   VideoDetailDto,
@@ -39,6 +47,8 @@ export type V2JobRunDto = JobRunDto;
 export type V2JobListResponseDto = JobListResponseDto;
 export type V2SettingsDto = SettingsDto;
 export type V2LegacyVideoImportResponseDto = LegacyVideoImportResponseDto;
+export type V2LegacyMediaImportResponseDto = LegacyMediaImportResponseDto;
+export type V2MediaListResponseDto = MediaListResponseDto;
 
 export interface V2RequestOptions {
   signal?: AbortSignal;
@@ -89,6 +99,26 @@ export function fetchV2Series(
   });
 }
 
+export function fetchV2Images(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+  return listImages(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Galleries(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+  return listGalleries(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2Books(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+  return listBooks(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2AudioLibraries(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+  return listAudioLibraries(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
+export function fetchV2AudioTracks(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+  return listAudioTracks(undefined, { signal: options?.signal }).then((response) => response.data);
+}
+
 export function updateV2EntityRating(
   id: string,
   value: number | null,
@@ -119,4 +149,10 @@ export function importV2LegacyVideos(
   options?: V2RequestOptions,
 ): Promise<V2LegacyVideoImportResponseDto> {
   return importLegacyVideos({ signal: options?.signal }).then((response) => response.data);
+}
+
+export function importV2LegacyMedia(
+  options?: V2RequestOptions,
+): Promise<V2LegacyMediaImportResponseDto> {
+  return importLegacyMedia({ signal: options?.signal }).then((response) => response.data);
 }

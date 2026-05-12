@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddSingleton<IMediaToolService, MediaToolService>();
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
+        services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
         services.AddScoped<IEntityProjectionService, EntityProjectionService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();

@@ -9,6 +9,7 @@ import type {
   EntityFlagsUpdateRequestDto,
   EntityListResponseDto,
   JobListResponseDto,
+  LegacyMediaImportResponseDto,
   LegacyVideoImportResponseDto,
   ListAudioLibrariesParams,
   ListAudioTracksParams,
@@ -1264,6 +1265,42 @@ export const getImportLegacyVideosUrl = () => {
 export const importLegacyVideos = async ( options?: RequestInit): Promise<importLegacyVideosResponse> => {
 
   return orvalFetch<importLegacyVideosResponse>(getImportLegacyVideosUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+export type importLegacyMediaResponse200 = {
+  data: LegacyMediaImportResponseDto
+  status: 200
+}
+
+export type importLegacyMediaResponseSuccess = (importLegacyMediaResponse200) & {
+  headers: Headers;
+};
+;
+
+export type importLegacyMediaResponse = (importLegacyMediaResponseSuccess)
+
+export const getImportLegacyMediaUrl = () => {
+
+
+
+
+  return `/api/system/v2-legacy-media-import`
+}
+
+/**
+ * @summary Imports legacy image, gallery, book, and audio metadata into the v2 global entity tables for side-by-side migration testing.
+ */
+export const importLegacyMedia = async ( options?: RequestInit): Promise<importLegacyMediaResponse> => {
+
+  return orvalFetch<importLegacyMediaResponse>(getImportLegacyMediaUrl(),
   {
     ...options,
     method: 'POST'
