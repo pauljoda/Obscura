@@ -1,6 +1,7 @@
 using Obscura.Api.Endpoints;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure;
+using Obscura.Infrastructure.Persistence;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,20 @@ var staticFileProvider = !string.IsNullOrWhiteSpace(configuredStaticWebRoot) &&
 
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ObscuraDevCors", policy =>
+    {
+        policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .SetIsOriginAllowed(origin =>
+                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                 uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                 uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase)));
+    });
+});
 builder.Services.AddObscuraInfrastructure(builder.Configuration);
 
 var app = builder.Build();
@@ -21,6 +36,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseCors("ObscuraDevCors");
 }
 
 if (staticFileProvider is not null)
@@ -60,6 +76,8 @@ else
         "not_found",
         "The requested Obscura route was not found.")));
 }
+
+await ObscuraMigrationRunner.ApplyObscuraMigrationsAsync(app.Services, app.Configuration);
 
 app.Run();
 
