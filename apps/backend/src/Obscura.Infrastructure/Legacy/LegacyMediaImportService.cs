@@ -33,7 +33,8 @@ public sealed class LegacyMediaImportService : ILegacyMediaImportService
                 reader.GetInt32(2),
                 reader.GetInt32(3),
                 reader.GetInt32(4),
-                reader.GetInt32(5));
+                reader.GetInt32(5),
+                reader.GetInt32(6));
         }
 
         await transaction.CommitAsync(cancellationToken);

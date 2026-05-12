@@ -136,6 +136,7 @@ public sealed class V2FreshStartEndpointTests
                 BooksImported: 4,
                 AudioLibrariesImported: 2,
                 AudioTracksImported: 12,
+                CollectionsImported: 5,
                 LinksImported: 18));
         }
     }

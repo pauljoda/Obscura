@@ -5,6 +5,33 @@ public static class LegacyMediaImportSql
     public const string Import = """
         DO $$
         BEGIN
+            IF to_regclass('public.collections') IS NOT NULL THEN
+                INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
+                SELECT id, 'collection', name, created_at, updated_at
+                FROM public.collections
+                ON CONFLICT (id) DO UPDATE SET
+                    kind_code = EXCLUDED.kind_code,
+                    title = EXCLUDED.title,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
+                SELECT id, false, is_nsfw, true, updated_at
+                FROM public.collections
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    is_favorite = EXCLUDED.is_favorite,
+                    is_nsfw = EXCLUDED.is_nsfw,
+                    is_organized = EXCLUDED.is_organized,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), id, 'thumbnail', cover_image_path, NULL, NULL, created_at, updated_at
+                FROM public.collections
+                WHERE cover_image_path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+            END IF;
+
             IF to_regclass('public.galleries') IS NOT NULL THEN
                 INSERT INTO v2.entities (id, kind_code, title, created_at, updated_at)
                 SELECT id, 'gallery', title, created_at, updated_at
@@ -331,6 +358,16 @@ public static class LegacyMediaImportSql
                     updated_at = EXCLUDED.updated_at;
             END IF;
 
+            IF to_regclass('public.collection_items') IS NOT NULL THEN
+                INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
+                SELECT item.collection_id, item.entity_id, 'collection-item', item.sort_order, item.added_at
+                FROM public.collection_items item
+                WHERE EXISTS (SELECT 1 FROM v2.entities collection WHERE collection.id = item.collection_id AND collection.kind_code = 'collection')
+                  AND EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = item.entity_id)
+                ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
+                    sort_order = EXCLUDED.sort_order;
+            END IF;
+
             IF to_regclass('public.gallery_tags') IS NOT NULL THEN
                 INSERT INTO v2.entity_tag_links (entity_id, tag_id, created_at)
                 SELECT gallery_id, tag_id, now()
@@ -420,7 +457,9 @@ public static class LegacyMediaImportSql
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'book') AS books_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'audio-library') AS audio_libraries_imported,
             (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'audio-track') AS audio_tracks_imported,
+            (SELECT COUNT(*)::int FROM v2.entities WHERE kind_code = 'collection') AS collections_imported,
             ((SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship IN ('gallery', 'image', 'audio-library', 'audio-track')) +
+             (SELECT COUNT(*)::int FROM v2.entity_hierarchy_links WHERE relationship = 'collection-item') +
              (SELECT COUNT(*)::int FROM v2.entity_credit_links) +
              (SELECT COUNT(*)::int FROM v2.entity_studio_links)) AS links_imported;
         """;

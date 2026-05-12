@@ -185,6 +185,34 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(episodeId, video.Id);
     }
 
+    [Fact]
+    public async Task CollectionChildrenUseSharedEntityProjections()
+    {
+        await using var db = CreateContext();
+        var collectionId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var imageId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        SeedEntity(db, collectionId, "collection", "Reference Set");
+        SeedEntity(db, imageId, "image", "Still");
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = collectionId,
+            ChildEntityId = imageId,
+            Relationship = "collection-item",
+            SortOrder = 2,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityRatings.Add(new EntityRatingRow { EntityId = imageId, Value = 4 });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var children = await service.ListChildrenAsync(collectionId, "collection-item", CancellationToken.None);
+
+        var child = Assert.Single(children);
+        Assert.Equal(imageId, child.Id);
+        Assert.Equal("image", child.Kind);
+        Assert.Equal(4, child.Capabilities.Rating?.Value);
+    }
+
     private static ObscuraDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ObscuraDbContext>()

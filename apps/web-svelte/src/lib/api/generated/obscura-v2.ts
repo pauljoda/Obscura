@@ -5,6 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  CollectionDetailDto,
+  CollectionListResponseDto,
   EntityCardDto,
   EntityFlagsUpdateRequestDto,
   EntityListResponseDto,
@@ -14,6 +16,7 @@ import type {
   ListAudioLibrariesParams,
   ListAudioTracksParams,
   ListBooksParams,
+  ListCollectionsParams,
   ListEntitiesParams,
   ListGalleriesParams,
   ListImagesParams,
@@ -245,6 +248,92 @@ export const updateEntityFlags = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       entityFlagsUpdateRequestDto,)
+  }
+);}
+
+
+
+export type listCollectionsResponse200 = {
+  data: CollectionListResponseDto
+  status: 200
+}
+
+export type listCollectionsResponseSuccess = (listCollectionsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listCollectionsResponse = (listCollectionsResponseSuccess)
+
+export const getListCollectionsUrl = (params?: ListCollectionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/collections?${stringifiedParams}` : `/api/collections`
+}
+
+/**
+ * @summary Lists collection entities through the global entity projection.
+ */
+export const listCollections = async (params?: ListCollectionsParams, options?: RequestInit): Promise<listCollectionsResponse> => {
+
+  return orvalFetch<listCollectionsResponse>(getListCollectionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getCollectionResponse200 = {
+  data: CollectionDetailDto
+  status: 200
+}
+
+export type getCollectionResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getCollectionResponseSuccess = (getCollectionResponse200) & {
+  headers: Headers;
+};
+export type getCollectionResponseError = (getCollectionResponse404) & {
+  headers: Headers;
+};
+
+export type getCollectionResponse = (getCollectionResponseSuccess | getCollectionResponseError)
+
+export const getGetCollectionUrl = (id: string,) => {
+
+
+
+
+  return `/api/collections/${id}`
+}
+
+/**
+ * @summary Gets one collection entity with its projected items.
+ */
+export const getCollection = async (id: string, options?: RequestInit): Promise<getCollectionResponse> => {
+
+  return orvalFetch<getCollectionResponse>(getGetCollectionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

@@ -75,6 +75,7 @@ public static class SystemEndpoints
                 result.BooksImported,
                 result.AudioLibrariesImported,
                 result.AudioTracksImported,
+                result.CollectionsImported,
                 result.LinksImported));
         })
             .WithName("ImportLegacyMedia")

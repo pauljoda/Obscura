@@ -76,6 +76,14 @@ public sealed class EntityVideoEndpointServiceTests
             return Task.FromResult(id == VideoId ? Card(null) : null);
         }
 
+        public Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+            Guid parentId,
+            string relationship,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<EntityCardDto>>([]);
+        }
+
         public Task<EntityCardDto?> UpdateRatingAsync(
             Guid id,
             RatingUpdateRequestDto request,

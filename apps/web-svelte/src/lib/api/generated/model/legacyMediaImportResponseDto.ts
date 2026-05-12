@@ -17,5 +17,7 @@ export interface LegacyMediaImportResponseDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   audioTracksImported: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  collectionsImported: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
   linksImported: number | string;
 }

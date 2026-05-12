@@ -14,6 +14,11 @@ public interface IEntityProjectionService
 
     Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+        Guid parentId,
+        string relationship,
+        CancellationToken cancellationToken);
+
     Task<EntityCardDto?> UpdateRatingAsync(
         Guid id,
         RatingUpdateRequestDto request,

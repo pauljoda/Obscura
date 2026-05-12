@@ -6,4 +6,5 @@ public sealed record LegacyMediaImportResponseDto(
     int BooksImported,
     int AudioLibrariesImported,
     int AudioTracksImported,
+    int CollectionsImported,
     int LinksImported);

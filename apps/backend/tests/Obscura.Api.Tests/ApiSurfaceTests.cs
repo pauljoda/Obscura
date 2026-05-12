@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Obscura.Contracts.Collections;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Media;
@@ -64,6 +65,18 @@ public sealed class ApiSurfaceTests
         using var client = _factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<VideoSeriesListResponseDto>("/api/series");
+
+        Assert.NotNull(response);
+        Assert.Empty(response.Items);
+        Assert.Null(response.NextCursor);
+    }
+
+    [Fact]
+    public async Task CollectionListEndpointReturnsAStablePagedShape()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetFromJsonAsync<CollectionListResponseDto>("/api/collections");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -183,6 +196,14 @@ public sealed class ApiSurfaceTests
         public Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult<EntityCardDto?>(null);
+        }
+
+        public Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+            Guid parentId,
+            string relationship,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyList<EntityCardDto>>([]);
         }
 
         public Task<EntityCardDto?> UpdateRatingAsync(

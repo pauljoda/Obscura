@@ -5,6 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './collectionDetailDto';
+export * from './collectionListResponseDto';
 export * from './entityCapabilitiesDto';
 export * from './entityCardDto';
 export * from './entityExternalIdDto';
@@ -19,6 +21,7 @@ export * from './legacyVideoImportResponseDto';
 export * from './listAudioLibrariesParams';
 export * from './listAudioTracksParams';
 export * from './listBooksParams';
+export * from './listCollectionsParams';
 export * from './listEntitiesParams';
 export * from './listGalleriesParams';
 export * from './listImagesParams';

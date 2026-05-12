@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 migration can now preview-import existing image, gallery, book, audio-library, and audio-track metadata into the global entity tables for backend comparison.
 - The .NET worker can now run queued legacy video and media preview imports, so migration backfills can execute through the v2 job system as well as direct API calls.
 - The v2 global entity model now preserves source URLs and external provider IDs across media types, so future detail pages can show provider links from one shared capability shape.
+- The v2 .NET backend now exposes collection list/detail routes and imports legacy collection membership into shared entity links for backend comparison.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -138,6 +139,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a legacy media import endpoint and Svelte API wrapper coverage for testing the remaining v2 media facades with real local metadata.
 - Added v2 worker handlers for `legacy-video-import` and `legacy-media-import` jobs.
 - Added shared v2 URL and external-ID capability tables, projections, generated DTOs, and legacy preview-import coverage across video, book, image, gallery, and audio entities.
+- Added v2 collection DTOs, `/api/collections` list/detail endpoints, collection-item projection loading, and legacy collection import counts.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.
