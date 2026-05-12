@@ -85,6 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Identify queues now hide organized series, books, galleries, images, albums, tracks, and videos by default while preserving Show all for broader review.
 - Tags and Studios now use server-side search, filters, sorting, pagination, and shared bulk actions instead of loading and reshaping the full list in the browser.
 - Media list API calls now share one query encoder across client and server fetchers, keeping repeated filters and pagination parameters consistent across library pages.
+- Book and gallery scans now reuse the shared metadata relation helpers, preserving NSFW propagation while reducing duplicated studio, actor, and tag lookup logic.
 
 ### Added
 

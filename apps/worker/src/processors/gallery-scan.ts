@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { and, eq, ilike, inArray, like, sql } from "drizzle-orm";
+import { and, eq, inArray, like, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverImageFilesAndDirs,
@@ -14,6 +14,9 @@ import {
   type ComicInfoMetadata,
 } from "@obscura/media-core";
 import {
+  findOrCreatePerformerId,
+  findOrCreateStudioId,
+  findOrCreateTagId,
   listIgnoredMediaPathsUnderRoot,
   markLinkedMetadataNsfwForLibraryRoot,
 } from "@obscura/app-core";
@@ -24,9 +27,6 @@ import {
   libraryRoots,
   galleryPerformers,
   galleryTags,
-  performers,
-  studios,
-  tags,
 } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueuePendingImageJob, enqueueCollectionRefreshAll } from "../lib/enqueue.js";
@@ -65,52 +65,6 @@ async function readFolderComicInfo(dirPath: string): Promise<ComicInfoMetadata |
   }
 }
 
-async function findOrCreateStudioId(name: string | null | undefined) {
-  const trimmed = name?.trim() ?? "";
-  if (!trimmed) return null;
-  const [existing] = await db
-    .select({ id: studios.id })
-    .from(studios)
-    .where(ilike(studios.name, trimmed))
-    .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db
-    .insert(studios)
-    .values({ name: trimmed })
-    .returning({ id: studios.id });
-  return created.id;
-}
-
-async function findOrCreatePerformerId(name: string) {
-  const trimmed = name.trim();
-  const [existing] = await db
-    .select({ id: performers.id })
-    .from(performers)
-    .where(ilike(performers.name, trimmed))
-    .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db
-    .insert(performers)
-    .values({ name: trimmed })
-    .returning({ id: performers.id });
-  return created.id;
-}
-
-async function findOrCreateTagId(name: string) {
-  const trimmed = name.trim();
-  const [existing] = await db
-    .select({ id: tags.id })
-    .from(tags)
-    .where(ilike(tags.name, trimmed))
-    .limit(1);
-  if (existing) return existing.id;
-  const [created] = await db
-    .insert(tags)
-    .values({ name: trimmed })
-    .returning({ id: tags.id });
-  return created.id;
-}
-
 function shouldSeedText(current: string | null | undefined) {
   return !current || current.trim().length === 0;
 }
@@ -134,7 +88,7 @@ async function buildComicGalleryUpdate(
     update.urls = comicInfo.urls;
   }
   if (comicInfo.publisher && (!existing || !existing.studioId)) {
-    update.studioId = await findOrCreateStudioId(comicInfo.publisher);
+    update.studioId = await findOrCreateStudioId(db, comicInfo.publisher);
   }
   return update;
 }
@@ -142,14 +96,14 @@ async function buildComicGalleryUpdate(
 async function attachComicGalleryRelations(galleryId: string, comicInfo: ComicInfoMetadata | null) {
   if (!comicInfo) return;
   for (const name of comicInfo.creators) {
-    const performerId = await findOrCreatePerformerId(name);
+    const performerId = await findOrCreatePerformerId(db, name);
     await db
       .insert(galleryPerformers)
       .values({ galleryId, performerId })
       .onConflictDoNothing();
   }
   for (const name of comicInfo.tags) {
-    const tagId = await findOrCreateTagId(name);
+    const tagId = await findOrCreateTagId(db, name);
     await db
       .insert(galleryTags)
       .values({ galleryId, tagId })

@@ -1,8 +1,7 @@
 // Public surface of @obscura/app-core. Internal helpers
 // (appearance-count-expressions, hierarchy, library-root-visibility,
-// media-query-helpers, media-shared, upload-utils) are deliberately
-// not re-exported — they are SQL/upload primitives meant for use
-// inside this package only.
+// media-query-helpers and upload-utils are deliberately not re-exported —
+// they are SQL/upload primitives meant for use inside this package only.
 
 export * from "./breaking-gate";
 export * from "./changelog";
@@ -19,6 +18,7 @@ export * from "./library-root-nsfw-sync";
 export * from "./library-roots-crud";
 export * from "./library-settings-writes";
 export * from "./media-file-ignores";
+export * from "./media-shared";
 export * from "./gallery-media";
 export * from "./books";
 export * from "./audio-libraries";

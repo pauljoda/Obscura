@@ -1,7 +1,7 @@
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { readdir, readFile, rename } from "node:fs/promises";
-import { and, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { JobLike as Job } from "../lib/job-tracking.js";
 import {
   discoverImageFilesAndDirs,
@@ -11,7 +11,13 @@ import {
   parseZipImageMembers,
   type ComicInfoMetadata,
 } from "@obscura/media-core";
-import { listIgnoredMediaPathsUnderRoot, markLinkedMetadataNsfwForLibraryRoot } from "@obscura/app-core";
+import {
+  findOrCreatePerformerId,
+  findOrCreateStudioId,
+  findOrCreateTagId,
+  listIgnoredMediaPathsUnderRoot,
+  markLinkedMetadataNsfwForLibraryRoot,
+} from "@obscura/app-core";
 import {
   db,
   libraryRoots,
@@ -21,76 +27,25 @@ import {
   bookPages,
   bookPerformers,
   bookTags,
-  performers,
-  studios,
-  tags,
 } from "../lib/db.js";
 import { markJobActive, markJobProgress } from "../lib/job-tracking.js";
 import { enqueueCollectionRefreshAll, enqueuePendingBookPageJob } from "../lib/enqueue.js";
 import { inferComicBookArchivePlan, isSupportedComicBookArchive } from "./book-scan-utils.js";
 
-async function findOrCreateStudioId(name: string | null | undefined, isNsfw: boolean) {
-  const trimmed = name?.trim() ?? "";
-  if (!trimmed) return null;
-  const [existing] = await db
-    .select({ id: studios.id })
-    .from(studios)
-    .where(ilike(studios.name, trimmed))
-    .limit(1);
-  if (existing) {
-    if (isNsfw) {
-      await db.update(studios).set({ isNsfw: true, updatedAt: new Date() }).where(eq(studios.id, existing.id));
-    }
-    return existing.id;
-  }
-  const [created] = await db.insert(studios).values({ name: trimmed, isNsfw }).returning({ id: studios.id });
-  return created.id;
-}
-
-async function findOrCreatePerformerId(name: string, isNsfw: boolean) {
-  const trimmed = name.trim();
-  const [existing] = await db
-    .select({ id: performers.id })
-    .from(performers)
-    .where(ilike(performers.name, trimmed))
-    .limit(1);
-  if (existing) {
-    if (isNsfw) {
-      await db.update(performers).set({ isNsfw: true, updatedAt: new Date() }).where(eq(performers.id, existing.id));
-    }
-    return existing.id;
-  }
-  const [created] = await db.insert(performers).values({ name: trimmed, isNsfw }).returning({ id: performers.id });
-  return created.id;
-}
-
-async function findOrCreateTagId(name: string, isNsfw: boolean) {
-  const trimmed = name.trim();
-  const [existing] = await db
-    .select({ id: tags.id })
-    .from(tags)
-    .where(ilike(tags.name, trimmed))
-    .limit(1);
-  if (existing) {
-    if (isNsfw) {
-      await db.update(tags).set({ isNsfw: true, updatedAt: new Date() }).where(eq(tags.id, existing.id));
-    }
-    return existing.id;
-  }
-  const [created] = await db.insert(tags).values({ name: trimmed, isNsfw }).returning({ id: tags.id });
-  return created.id;
-}
-
-async function attachBookRelations(bookId: string, comicInfo: ComicInfoMetadata | null, isNsfw: boolean) {
+async function attachBookRelations(
+  bookId: string,
+  comicInfo: ComicInfoMetadata | null,
+  isNsfw: boolean,
+) {
   if (!comicInfo) return;
 
   for (const name of comicInfo.creators) {
-    const performerId = await findOrCreatePerformerId(name, isNsfw);
+    const performerId = await findOrCreatePerformerId(db, name, { isNsfw });
     await db.insert(bookPerformers).values({ bookId, performerId }).onConflictDoNothing();
   }
 
   for (const name of comicInfo.tags) {
-    const tagId = await findOrCreateTagId(name, isNsfw);
+    const tagId = await findOrCreateTagId(db, name, { isNsfw });
     await db.insert(bookTags).values({ bookId, tagId }).onConflictDoNothing();
   }
 }
@@ -343,7 +298,9 @@ export async function processBookScan(job: Job) {
       comicInfo,
     });
     const bookIsNsfw = Boolean(root.isNsfw || comicInfoMarksNsfw(comicInfo));
-    const studioId = await findOrCreateStudioId(comicInfo?.publisher, bookIsNsfw);
+    const studioId = await findOrCreateStudioId(db, comicInfo?.publisher, {
+      isNsfw: bookIsNsfw,
+    });
 
     const [existingBook] = await db
       .select({ id: books.id, details: books.details, date: books.date, urls: books.urls, studioId: books.studioId })
