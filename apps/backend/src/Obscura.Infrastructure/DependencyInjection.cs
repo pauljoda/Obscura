@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Infrastructure.Database;
+using Obscura.Infrastructure.Persistence;
 
 namespace Obscura.Infrastructure;
 
@@ -19,6 +21,8 @@ public static class DependencyInjection
         var connectionString = PostgresConnectionString.Normalize(configuredConnectionString);
 
         services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+        services.AddDbContext<ObscuraDbContext>((provider, options) =>
+            options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
 
         return services;
     }
