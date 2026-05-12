@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book series pages now expose root cover upload/clear controls and rating controls again, so series artwork and ratings can be managed from the book itself.
 - Book progress cards now resume the current chapter directly, and rated media thumbnails now show a star chip across rated entity types.
 - Video series pages now have their full edit panel again, including metadata, rating, organized/NSFW state, cover art, and backdrop controls.
+- Tags and Studios now browse through the shared library surface, so search, filters, sorting, thumbnail sizing, and bulk actions behave like the rest of the media library and scale better on larger collections.
 
 ### Docs
 
@@ -82,6 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book root and chapter pages now describe comic reading progress with chapter names, page labels, and progress meters instead of bare saved page numbers.
 - Book chapter detail pages now surface Read, Resume, Re-read, Start over, and Next chapter actions directly in the chapter hero.
 - Identify queues now hide organized series, books, galleries, images, albums, tracks, and videos by default while preserving Show all for broader review.
+- Tags and Studios now use server-side search, filters, sorting, pagination, and shared bulk actions instead of loading and reshaping the full list in the browser.
 
 ### Added
 

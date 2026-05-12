@@ -1,245 +1,31 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
-  import { page } from "$app/state";
-  import { onMount } from "svelte";
-  import { Tag as TagIcon, Star, Image as ImageIcon } from "@lucide/svelte";
-  import FilterBar, {
-    type SortDir,
-    type ActiveFilter,
-    type ViewMode,
-  } from "$lib/components/FilterBar.svelte";
-  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
-  import HierarchySection from "$lib/components/shared/HierarchySection.svelte";
-  import EntityThumbnail from "$lib/components/thumbnails/EntityThumbnail.svelte";
-  import { Checkbox, cn } from "@obscura/ui-svelte";
-  import BulkActionBar from "$lib/components/BulkActionBar.svelte";
-  import { deleteTag, updateTag } from "$lib/api/entities";
+  import { invalidateAll } from "$app/navigation";
+  import { Image as ImageIcon, Star, Tag as TagIcon } from "@lucide/svelte";
+  import { cn } from "@obscura/ui-svelte";
+  import type { PageData } from "./$types";
+  import MediaSurface from "$lib/media-surface/MediaSurface.svelte";
   import {
-    detectUiPrefsFormFactor,
-    formFactorUiPrefKey,
-  } from "$lib/prefs/form-factor-prefs";
-  import { createServerPrefs } from "$lib/server-prefs.svelte";
-  import { createServerPresets, type FilterPreset } from "$lib/server-presets.svelte";
+    tagsSurfaceConfig,
+    type TagFilterType,
+  } from "$lib/media-surface/configs/tags";
+  import FilterSection from "$lib/media-surface/toolbar/FilterSection.svelte";
 
-  let { data } = $props();
-  const viewPrefsFormFactor = detectUiPrefsFormFactor();
+  let { data }: { data: PageData } = $props();
 
-  const sortOptions = [
-    { value: "videos", label: "Usage Count" },
-    { value: "name", label: "Name A-Z" },
-    { value: "rating", label: "Rating" },
-    { value: "randomized", label: "Randomized" },
-  ];
-  let randomSortSeed = $state(createRandomSortSeed());
+  type DrawerCtx = {
+    panelFilters: Array<{ type?: string; label: string; value: string }>;
+    onAddFilter: (type: TagFilterType, label: string, value: string) => void;
+  };
 
-  const sortBy = $derived(page.url.searchParams.get("sort") ?? "videos");
-  const sortDir: SortDir = $derived(
-    page.url.searchParams.get("order") === "asc" ? "asc" : "desc",
+  const config = $derived(
+    tagsSurfaceConfig({
+      initial: { items: data.tags, total: data.total },
+      pageSize: data.pageSize,
+      page: data.page,
+      nsfwMode: data.nsfwMode,
+      onMutated: () => invalidateAll(),
+    }),
   );
-  let bulkBusy = $state(false);
-  let selectedTagIds = $state.raw(new Set<string>());
-  const searchQuery = $derived(page.url.searchParams.get("search") ?? "");
-  const favoriteFilter = $derived(page.url.searchParams.get("favorite"));
-  const hasImageFilter = $derived(page.url.searchParams.get("hasImage"));
-  const ratingMinFilter = $derived(page.url.searchParams.get("ratingMin"));
-
-  function updateUrl(patch: Record<string, string | null | undefined>) {
-    const params = new URLSearchParams(page.url.searchParams);
-    for (const [k, v] of Object.entries(patch)) {
-      if (v === null || v === undefined || v === "") params.delete(k);
-      else params.set(k, v);
-    }
-    const qs = params.toString();
-    void goto(qs ? `/tags?${qs}` : "/tags", { keepFocus: true, noScroll: true });
-  }
-
-  function createRandomSortSeed(): string {
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  }
-
-  function stableRandomSortValue(value: string): number {
-    let hash = 2166136261;
-    const input = `${randomSortSeed}:${value}`;
-    for (let i = 0; i < input.length; i += 1) {
-      hash ^= input.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }
-
-  const activeFilters = $derived<ActiveFilter[]>([
-    ...(favoriteFilter ? [{ label: "Favorite", type: "favorite", value: favoriteFilter }] : []),
-    ...(hasImageFilter ? [{ label: "Image", type: "hasImage", value: hasImageFilter }] : []),
-    ...(ratingMinFilter
-      ? [{ label: "Min rating", type: "ratingMin", value: ratingMinFilter }]
-      : []),
-  ]);
-
-  function onAddFilter(type: string, _label: string, value: string) {
-    updateUrl({ [type]: value });
-  }
-
-  function onRemoveFilter(index: number) {
-    const f = activeFilters[index];
-    if (!f) return;
-    updateUrl({ [f.type!]: null });
-  }
-
-  function onClearFiltersAndSort() {
-    void goto("/tags", { keepFocus: true, noScroll: true });
-  }
-
-  const canClearFiltersAndSort = $derived(
-    !!searchQuery || sortBy !== "videos" || sortDir !== "desc" || activeFilters.length > 0,
-  );
-
-  const presetsApi = createServerPresets("tags:filterPresets");
-  // svelte-ignore state_referenced_locally
-  const viewPrefs = createServerPrefs<{ cols: number; viewMode: "grid" | "list" }>(
-    formFactorUiPrefKey("tags:view", viewPrefsFormFactor),
-    { cols: 2, viewMode: "grid" },
-    data.viewPrefsByFormFactor?.[viewPrefsFormFactor] ?? data.viewPrefs,
-  );
-  const viewMode = $derived(viewPrefs.current.viewMode);
-
-  onMount(() => {
-    void presetsApi.load();
-    void viewPrefs.load();
-  });
-
-  function samePresetFilters(preset: FilterPreset): boolean {
-    if (preset.sortBy !== sortBy || preset.sortDir !== sortDir) return false;
-    if (preset.filters.length !== activeFilters.length) return false;
-    return preset.filters.every((pf) =>
-      activeFilters.some((af) => af.type === pf.type && af.value === pf.value),
-    );
-  }
-
-  const activePresetId = $derived.by(() => {
-    const match = presetsApi.presets.find((preset) => samePresetFilters(preset));
-    return match?.id ?? null;
-  });
-
-  function applyPreset(preset: FilterPreset) {
-    const params = new URLSearchParams();
-    if (preset.sortBy && preset.sortBy !== "videos") params.set("sort", preset.sortBy);
-    if (preset.sortDir && preset.sortDir !== "desc") params.set("order", preset.sortDir);
-    for (const filter of preset.filters) {
-      if (filter.type) params.set(filter.type, filter.value);
-    }
-    const qs = params.toString();
-    void goto(qs ? `/tags?${qs}` : "/tags", { keepFocus: true, noScroll: true });
-  }
-
-  function currentPreset(name: string): FilterPreset {
-    return {
-      id: `preset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      filters: activeFilters.map((f) => ({ label: f.label, type: f.type ?? f.label, value: f.value })),
-      sortBy,
-      sortDir,
-    };
-  }
-
-  function savePreset(name: string) {
-    presetsApi.save([...presetsApi.presets, currentPreset(name)]);
-  }
-
-  function overwritePreset(id: string) {
-    presetsApi.save(
-      presetsApi.presets.map((preset) =>
-        preset.id === id ? { ...currentPreset(preset.name), id } : preset,
-      ),
-    );
-  }
-
-  function deletePreset(id: string) {
-    presetsApi.save(presetsApi.presets.filter((preset) => preset.id !== id));
-  }
-
-  const filtered = $derived.by(() => {
-    const q = searchQuery.trim().toLowerCase();
-    let list = data.tags;
-    if (q) list = list.filter((t) => t.name.toLowerCase().includes(q));
-    if (favoriteFilter === "true") list = list.filter((t) => t.favorite);
-    if (hasImageFilter === "true") list = list.filter((t) => !!t.imagePath);
-    if (hasImageFilter === "false") list = list.filter((t) => !t.imagePath);
-    if (ratingMinFilter) {
-      const n = Number(ratingMinFilter);
-      if (Number.isFinite(n)) list = list.filter((t) => (t.rating ?? 0) >= n);
-    }
-    const sign = sortDir === "asc" ? 1 : -1;
-    list = [...list].sort((a, b) => {
-      switch (sortBy) {
-        case "videos":
-          return (
-            sign *
-            ((a.videoCount ?? 0) + (a.imageCount ?? 0) -
-              ((b.videoCount ?? 0) + (b.imageCount ?? 0)))
-          );
-        case "rating":
-          return sign * ((a.rating ?? 0) - (b.rating ?? 0));
-        case "randomized":
-          return stableRandomSortValue(a.id) - stableRandomSortValue(b.id);
-        case "name":
-        default:
-          return sign * a.name.localeCompare(b.name);
-      }
-    });
-    return list;
-  });
-
-  const withContent = $derived(
-    filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) > 0),
-  );
-  const withoutContent = $derived(
-    filtered.filter((t) => (t.videoCount ?? 0) + (t.imageCount ?? 0) === 0),
-  );
-  const visibleTagIds = $derived(filtered.map((tag) => tag.id));
-  const allVisibleSelected = $derived(
-    visibleTagIds.length > 0 && visibleTagIds.every((id) => selectedTagIds.has(id)),
-  );
-
-  function toggleSelectedTag(id: string) {
-    const next = new Set(selectedTagIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    selectedTagIds = next;
-  }
-
-  function selectAllVisibleTags() {
-    selectedTagIds = allVisibleSelected ? new Set() : new Set(visibleTagIds);
-  }
-
-  function clearSelectedTags() {
-    selectedTagIds = new Set();
-  }
-
-  async function markSelectedTagsNsfw() {
-    const ids = [...selectedTagIds];
-    if (ids.length === 0 || bulkBusy) return;
-    bulkBusy = true;
-    try {
-      await Promise.all(ids.map((id) => updateTag(id, { isNsfw: true })));
-      clearSelectedTags();
-      await invalidateAll();
-    } finally {
-      bulkBusy = false;
-    }
-  }
-
-  async function deleteSelectedTags() {
-    const ids = [...selectedTagIds];
-    if (ids.length === 0 || bulkBusy) return;
-    bulkBusy = true;
-    try {
-      await Promise.all(ids.map((id) => deleteTag(id)));
-      clearSelectedTags();
-      await invalidateAll();
-    } finally {
-      bulkBusy = false;
-    }
-  }
 </script>
 
 <svelte:head>
@@ -253,200 +39,57 @@
         <TagIcon class="h-5 w-5 text-text-accent" />
         Tags
       </h1>
-      <p class="text-text-muted text-[0.78rem] mt-1">Browse tags in your library</p>
+      <p class="mt-1 text-[0.78rem] text-text-muted">Browse tags in your library</p>
     </div>
-    <span class="text-mono-sm text-text-disabled mt-1">{filtered.length} total</span>
+    <span class="mt-1 text-mono-sm text-text-disabled">{data.total} total</span>
   </div>
 
-  <FilterBar
-    {sortOptions}
-    {viewMode}
-    onViewModeChange={(v: ViewMode) =>
-      viewPrefs.update({ viewMode: v === "list" ? "list" : "grid" })}
-    {sortBy}
-    {sortDir}
-    onSortChange={(sort: string, dir?: SortDir) => {
-      if (sort === "randomized") randomSortSeed = createRandomSortSeed();
-      updateUrl({ sort, order: dir ?? sortDir });
-    }}
-    {searchQuery}
-    onSearchChange={(q) => updateUrl({ search: q || null })}
-    searchPlaceholder="Search tags..."
-    filterSections={["rating"]}
-    {activeFilters}
-    {onAddFilter}
-    {onRemoveFilter}
-    {onClearFiltersAndSort}
-    {canClearFiltersAndSort}
-    presets={presetsApi.presets}
-    {activePresetId}
-    onApplyPreset={applyPreset}
-    onSavePreset={savePreset}
-    onOverwritePreset={overwritePreset}
-    onDeletePreset={deletePreset}
-    thumbSize={viewMode === "grid"
-      ? {
-          value: viewPrefs.current.cols,
-          min: 2,
-          max: 8,
-          onChange: (n) => viewPrefs.update({ cols: n }),
-          label: "Tag card size",
-        }
-      : undefined}
-  >
-    {#snippet customFilterSections({ panelFilters })}
-      <FilterSection title="Tag">
-        {#snippet children()}
-          <div class="flex flex-wrap gap-1">
-            <button
-              type="button"
-              onclick={() => onAddFilter("favorite", "Favorite", "true")}
-              class={cn(
-                "tag-chip cursor-pointer transition-colors duration-fast",
-                panelFilters.some((f) => f.type === "favorite" && f.value === "true")
-                  ? "tag-chip-accent"
-                  : "tag-chip-default hover:tag-chip-accent",
-              )}
-            >
-              <Star class="h-3 w-3" /> Favorites
-            </button>
-            <button
-              type="button"
-              onclick={() => onAddFilter("hasImage", "Image", "true")}
-              class={cn(
-                "tag-chip cursor-pointer transition-colors duration-fast",
-                panelFilters.some((f) => f.type === "hasImage" && f.value === "true")
-                  ? "tag-chip-accent"
-                  : "tag-chip-default hover:tag-chip-accent",
-              )}
-            >
-              <ImageIcon class="h-3 w-3" /> Has image
-            </button>
-            <button
-              type="button"
-              onclick={() => onAddFilter("hasImage", "Image", "false")}
-              class={cn(
-                "tag-chip cursor-pointer transition-colors duration-fast",
-                panelFilters.some((f) => f.type === "hasImage" && f.value === "false")
-                  ? "tag-chip-accent"
-                  : "tag-chip-default hover:tag-chip-accent",
-              )}
-            >
-              No image
-            </button>
-          </div>
-        {/snippet}
-      </FilterSection>
-    {/snippet}
-  </FilterBar>
+  {#snippet drawerSections({ panelFilters, onAddFilter }: DrawerCtx)}
+    <FilterSection title="Tag">
+      <div class="flex flex-wrap gap-1">
+        <button
+          type="button"
+          onclick={() => onAddFilter("favorite", "Favorite", "true")}
+          class={cn(
+            "tag-chip cursor-pointer transition-colors duration-fast",
+            panelFilters.some((f) => f.type === "favorite" && f.value === "true")
+              ? "tag-chip-accent"
+              : "tag-chip-default hover:tag-chip-accent",
+          )}
+        >
+          <Star class="h-3 w-3" /> Favorites
+        </button>
+        <button
+          type="button"
+          onclick={() => onAddFilter("hasImage", "Image", "true")}
+          class={cn(
+            "tag-chip cursor-pointer transition-colors duration-fast",
+            panelFilters.some((f) => f.type === "hasImage" && f.value === "true")
+              ? "tag-chip-accent"
+              : "tag-chip-default hover:tag-chip-accent",
+          )}
+        >
+          <ImageIcon class="h-3 w-3" /> Has image
+        </button>
+        <button
+          type="button"
+          onclick={() => onAddFilter("hasImage", "Image", "false")}
+          class={cn(
+            "tag-chip cursor-pointer transition-colors duration-fast",
+            panelFilters.some((f) => f.type === "hasImage" && f.value === "false")
+              ? "tag-chip-accent"
+              : "tag-chip-default hover:tag-chip-accent",
+          )}
+        >
+          No image
+        </button>
+      </div>
+    </FilterSection>
+  {/snippet}
 
-  {#if viewMode === "list"}
-    <BulkActionBar
-      selectedCount={selectedTagIds.size}
-      visibleCount={visibleTagIds.length}
-      allSelected={allVisibleSelected}
-      itemLabel="tags"
-      busy={bulkBusy}
-      onSelectAll={selectAllVisibleTags}
-      onClear={clearSelectedTags}
-      onMarkNsfw={markSelectedTagsNsfw}
-      onDelete={deleteSelectedTags}
-    />
-  {/if}
-
-  {#if filtered.length === 0}
-    <div class="surface-panel p-8 text-center">
-      <TagIcon class="h-10 w-10 mx-auto mb-3 text-text-disabled" />
-      <p class="text-body text-text-muted">
-        {searchQuery ? "No tags match that search." : "No tags yet."}
-      </p>
-      {#if !searchQuery}
-        <p class="text-body-sm text-text-disabled mt-1">
-          Tags you create from the Identify or Edit flows will appear here.
-        </p>
-      {/if}
-    </div>
-  {:else if viewMode === "list"}
-    <div class="surface-panel divide-y divide-border-subtle overflow-hidden">
-      {#each filtered as tag (tag.id)}
-        <div class="flex items-center gap-3 px-3 py-2">
-          <Checkbox
-            checked={selectedTagIds.has(tag.id)}
-            onchange={() => toggleSelectedTag(tag.id)}
-          />
-          <a href={`/tags/${encodeURIComponent(tag.name)}`} class="w-16 shrink-0">
-            <EntityThumbnail kind="tag" {tag} size="list" showLabel={false} />
-          </a>
-          <a
-            href={`/tags/${encodeURIComponent(tag.name)}`}
-            class="min-w-0 flex-1 text-[0.82rem] font-medium text-text-primary hover:text-text-accent"
-          >
-            {tag.name}
-          </a>
-          <span class="text-[0.68rem] text-text-muted">
-            {(
-              (tag.videoCount ?? 0) +
-              (tag.imageCount ?? 0) +
-              (tag.galleryCount ?? 0) +
-              (tag.audioTrackCount ?? 0)
-            ).toLocaleString()} uses
-          </span>
-        </div>
-      {/each}
-    </div>
-  {:else}
-    <div class="space-y-6">
-      {#if withContent.length > 0}
-        <HierarchySection title={`Tagged content · ${withContent.length}`}>
-          {#snippet children()}
-            <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
-              {#each withContent as tag (tag.id)}
-                <a
-                  href={`/tags/${encodeURIComponent(tag.name)}`}
-                  title={`${tag.name} — ${(tag.videoCount ?? 0) + (tag.imageCount ?? 0)} uses`}
-                >
-                  <EntityThumbnail kind="tag" {tag} />
-                </a>
-              {/each}
-            </div>
-          {/snippet}
-        </HierarchySection>
-      {/if}
-
-      {#if withoutContent.length > 0}
-        <HierarchySection title={`Unused tags · ${withoutContent.length}`}>
-          {#snippet children()}
-            <div class="tag-grid" style:--col-count={viewPrefs.current.cols}>
-              {#each withoutContent as tag (tag.id)}
-                <a
-                  href={`/tags/${encodeURIComponent(tag.name)}`}
-                  title={tag.name}
-                >
-                  <EntityThumbnail kind="tag" {tag} muted />
-                </a>
-              {/each}
-            </div>
-          {/snippet}
-        </HierarchySection>
-      {/if}
-    </div>
-  {/if}
+  <MediaSurface
+    config={{ ...config, extraFilterSections: drawerSections }}
+    initialPrefsByFormFactor={data.surfacePrefs}
+    legacyPrefsKey="tags:filterPresets"
+  />
 </div>
-
-<style>
-  .tag-grid {
-    display: grid;
-    grid-template-columns: repeat(max(1, min(var(--col-count, 5), 2)), minmax(0, 1fr));
-    gap: 0.625rem;
-  }
-  @media (min-width: 640px) {
-    .tag-grid {
-      grid-template-columns: repeat(max(1, min(var(--col-count, 5), 4)), minmax(0, 1fr));
-    }
-  }
-  @media (min-width: 1024px) {
-    .tag-grid {
-      grid-template-columns: repeat(var(--col-count, 5), minmax(0, 1fr));
-    }
-  }
-</style>

@@ -27,6 +27,7 @@ import type {
   StudioItem,
   TagItem,
 } from "../api/types";
+import type { TagStudioListParams } from "../api/entities";
 
 export async function fetchGalleries(
   params?: {
@@ -223,21 +224,53 @@ export async function fetchImages(
 }
 
 export async function fetchStudios(
-  params?: { nsfw?: string },
+  params?: TagStudioListParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
-  return serverFetch<{ studios: StudioItem[] }>(`/studios${qs}`, {
+  const qs = buildQueryString({
+    search: params?.search,
+    sort: params?.sort,
+    order: params?.order,
+    randomSeed: params?.randomSeed,
+    favorite: params?.favorite,
+    hasImage: params?.hasImage,
+    ratingMin: params?.ratingMin,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
+  return serverFetch<{
+    studios: StudioItem[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/studios${qs}`, {
     fetch: options?.fetch,
   });
 }
 
 export async function fetchTags(
-  params?: { nsfw?: string },
+  params?: TagStudioListParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
-  return serverFetch<{ tags: TagItem[] }>(`/tags${qs}`, {
+  const qs = buildQueryString({
+    search: params?.search,
+    sort: params?.sort,
+    order: params?.order,
+    randomSeed: params?.randomSeed,
+    favorite: params?.favorite,
+    hasImage: params?.hasImage,
+    ratingMin: params?.ratingMin,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
+  return serverFetch<{
+    tags: TagItem[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(`/tags${qs}`, {
     fetch: options?.fetch,
   });
 }

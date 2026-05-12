@@ -13,8 +13,35 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export async function fetchStudios(params?: { nsfw?: string }, options?: RequestOptions): Promise<{ studios: StudioItem[] }> {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
+export interface TagStudioListParams {
+  search?: string;
+  sort?: string;
+  order?: string;
+  randomSeed?: string;
+  favorite?: string;
+  hasImage?: string;
+  ratingMin?: number;
+  limit?: number;
+  offset?: number;
+  nsfw?: string;
+}
+
+export async function fetchStudios(
+  params?: TagStudioListParams,
+  options?: RequestOptions,
+): Promise<{ studios: StudioItem[]; total: number; limit: number; offset: number }> {
+  const qs = buildQueryString({
+    search: params?.search,
+    sort: params?.sort,
+    order: params?.order,
+    randomSeed: params?.randomSeed,
+    favorite: params?.favorite,
+    hasImage: params?.hasImage,
+    ratingMin: params?.ratingMin,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
   return fetchApi(`/studios${qs}`, { signal: options?.signal });
 }
 
@@ -95,8 +122,22 @@ export async function fetchAllPerformers(
   return { performers, total };
 }
 
-export async function fetchTags(params?: { nsfw?: string }, options?: RequestOptions): Promise<{ tags: TagItem[] }> {
-  const qs = buildQueryString({ nsfw: params?.nsfw });
+export async function fetchTags(
+  params?: TagStudioListParams,
+  options?: RequestOptions,
+): Promise<{ tags: TagItem[]; total: number; limit: number; offset: number }> {
+  const qs = buildQueryString({
+    search: params?.search,
+    sort: params?.sort,
+    order: params?.order,
+    randomSeed: params?.randomSeed,
+    favorite: params?.favorite,
+    hasImage: params?.hasImage,
+    ratingMin: params?.ratingMin,
+    limit: params?.limit,
+    offset: params?.offset,
+    nsfw: params?.nsfw,
+  });
   return fetchApi(`/tags${qs}`, { signal: options?.signal });
 }
 

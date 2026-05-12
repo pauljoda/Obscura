@@ -16,6 +16,7 @@ import {
   galleryVisibleSql,
   imageVisibleSql,
 } from "./library-root-visibility";
+import { applyTagListQuery, type TagStudioListQuery } from "./tag-studio-list-query";
 
 const {
   tags,
@@ -94,8 +95,13 @@ export interface TagListEntry {
 
 export async function listTagsRead(
   db: AppDb,
-  sfwOnly: boolean,
-): Promise<{ tags: TagListEntry[] }> {
+  queryOrSfwOnly: boolean | TagStudioListQuery = {},
+): Promise<{ tags: TagListEntry[]; total: number; limit: number; offset: number }> {
+  const query =
+    typeof queryOrSfwOnly === "boolean"
+      ? { nsfw: queryOrSfwOnly ? "off" : undefined }
+      : queryOrSfwOnly;
+  const sfwOnly = query.nsfw === "off";
   const sceneCountExpr = sfwOnly
     ? tagSfwSceneCountExpr()
     : tagTotalSceneCountExpr();
@@ -192,11 +198,5 @@ export async function listTagsRead(
     audioTrackCount: audioTrackMap.get(tag.id) ?? 0,
   }));
 
-  mapped.sort(
-    (a, b) =>
-      b.videoCount + b.galleryCount + b.imageCount + b.audioTrackCount -
-      (a.videoCount + a.galleryCount + a.imageCount + a.audioTrackCount),
-  );
-
-  return { tags: mapped };
+  return applyTagListQuery(mapped, query);
 }

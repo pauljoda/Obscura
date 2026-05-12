@@ -1,23 +1,65 @@
 import type { PageServerLoad } from "./$types";
 import { fetchStudios } from "$lib/server/media";
 import { parseNsfwModeCookie } from "$lib/nsfw/cookie";
-import {
-  loadFormFactorUiPrefObjects,
-  loadUiPrefObject,
-} from "$lib/server/ui-prefs";
+import { loadFormFactorUiPrefObjects } from "$lib/server/ui-prefs";
 
-export const load: PageServerLoad = async ({ cookies, depends, fetch }) => {
+const PAGE_SIZE = 120;
+
+function optionalNumber(value: string | null): number | undefined {
+  if (value === null) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export const load: PageServerLoad = async ({ cookies, url, depends, fetch }) => {
   depends("studios");
+
   const nsfwMode = parseNsfwModeCookie(cookies.get("obscura-nsfw-mode"));
-  const response = await fetchStudios({ nsfw: nsfwMode }, { fetch }).catch(() => ({
+  const sortRaw = url.searchParams.get("sort");
+  const sort =
+    sortRaw === "videoCount" || sortRaw === "rating" || sortRaw === "randomized"
+      ? sortRaw
+      : "name";
+  const orderRaw = url.searchParams.get("order");
+  const order: "asc" | "desc" =
+    orderRaw === "asc" || orderRaw === "desc"
+      ? orderRaw
+      : sort === "name"
+        ? "asc"
+        : "desc";
+  const pageParam = Number(url.searchParams.get("page") ?? 1);
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
+  const search = url.searchParams.get("search") ?? undefined;
+
+  const response = await fetchStudios(
+    {
+      search,
+      sort,
+      order,
+      favorite: url.searchParams.get("favorite") ?? undefined,
+      hasImage: url.searchParams.get("hasImage") ?? undefined,
+      ratingMin: optionalNumber(url.searchParams.get("ratingMin")),
+      nsfw: nsfwMode,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    },
+    { fetch },
+  ).catch(() => ({
     studios: [],
+    total: 0,
+    limit: PAGE_SIZE,
+    offset: 0,
   }));
+
   return {
     studios: response.studios,
-    viewPrefsByFormFactor: await loadFormFactorUiPrefObjects(
-      "studios:view",
-      { cols: 2, viewMode: "grid" },
-    ),
-    viewPrefs: await loadUiPrefObject("studios:view", { cols: 2 }),
+    total: response.total,
+    page,
+    pageSize: PAGE_SIZE,
+    search: search ?? "",
+    sort,
+    order,
+    nsfwMode,
+    surfacePrefs: await loadFormFactorUiPrefObjects("surface:studios", {}, ":prefs"),
   };
 };

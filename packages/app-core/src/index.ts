@@ -37,6 +37,7 @@ export * from "./search";
 export * from "./studio-reads";
 export * from "./studio-writes";
 export * from "./stashbox-runtime";
+export * from "./tag-studio-list-query";
 export * from "./tag-reads";
 export * from "./tag-writes";
 export * from "./ui-prefs";

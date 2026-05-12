@@ -13,6 +13,7 @@ import {
   videoMovieVisibleSql,
   videoSeriesVisibleSql,
 } from "./library-root-visibility";
+import { applyStudioListQuery, type TagStudioListQuery } from "./tag-studio-list-query";
 
 const { studios } = schema;
 
@@ -37,8 +38,13 @@ export interface StudioListEntry {
 
 export async function listStudiosRead(
   db: AppDb,
-  sfwOnly: boolean,
-): Promise<{ studios: StudioListEntry[] }> {
+  queryOrSfwOnly: boolean | TagStudioListQuery = {},
+): Promise<{ studios: StudioListEntry[]; total: number; limit: number; offset: number }> {
+  const query =
+    typeof queryOrSfwOnly === "boolean"
+      ? { nsfw: queryOrSfwOnly ? "off" : undefined }
+      : queryOrSfwOnly;
+  const sfwOnly = query.nsfw === "off";
   const rows = await db
     .select({
       id: studios.id,
@@ -64,26 +70,26 @@ export async function listStudiosRead(
     .where(sfwOnly ? ne(studios.isNsfw, true) : undefined)
     .orderBy(asc(studios.name));
 
-  return {
-    studios: rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      aliases: r.aliases,
-      url: r.url,
-      parentId: r.parentId,
-      imageUrl: r.imageUrl,
-      imagePath: r.imagePath,
-      favorite: r.favorite,
-      rating: r.rating,
-      isNsfw: r.isNsfw,
-      videoCount: Number(r.videoCount ?? 0),
-      imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
-      audioLibraryCount: Number(r.audioLibraryCount ?? 0),
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    })),
-  };
+  const mapped = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    aliases: r.aliases,
+    url: r.url,
+    parentId: r.parentId,
+    imageUrl: r.imageUrl,
+    imagePath: r.imagePath,
+    favorite: r.favorite,
+    rating: r.rating,
+    isNsfw: r.isNsfw,
+    videoCount: Number(r.videoCount ?? 0),
+    imageAppearanceCount: Number(r.imageAppearanceCount ?? 0),
+    audioLibraryCount: Number(r.audioLibraryCount ?? 0),
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }));
+
+  return applyStudioListQuery(mapped, query);
 }
 
 export interface StudioDetailParent {

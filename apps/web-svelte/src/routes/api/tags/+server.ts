@@ -4,9 +4,21 @@ import { getWebDb } from "$lib/server/db";
 import { mapAppCoreErrorToJson } from "$lib/server/error-mapper";
 
 export const GET: RequestHandler = async ({ url }) => {
-  const sfwOnly = url.searchParams.get("nsfw") === "off";
   const db = await getWebDb();
-  return json(await listTagsRead(db, sfwOnly));
+  return json(
+    await listTagsRead(db, {
+      search: url.searchParams.get("search") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      order: url.searchParams.get("order") ?? undefined,
+      randomSeed: url.searchParams.get("randomSeed") ?? undefined,
+      favorite: url.searchParams.get("favorite") ?? undefined,
+      hasImage: url.searchParams.get("hasImage") ?? undefined,
+      ratingMin: url.searchParams.get("ratingMin") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
+      offset: url.searchParams.get("offset") ?? undefined,
+      nsfw: url.searchParams.get("nsfw") ?? undefined,
+    }),
+  );
 };
 
 export const POST: RequestHandler = async ({ request }) => {
