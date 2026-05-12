@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Obscura.Application.Entities;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
@@ -7,7 +8,7 @@ using Obscura.Infrastructure.Persistence.Entities;
 
 namespace Obscura.Infrastructure.Entities;
 
-public sealed class EntityProjectionService : IEntityProjectionService
+public sealed class EntityProjectionService : IEntityCatalog
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;

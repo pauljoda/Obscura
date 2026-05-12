@@ -1,6 +1,6 @@
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -15,7 +15,7 @@ public static class EntityEndpoints
             string? kind,
             string? query,
             string? cursor,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             await entities.ListAsync(kind, query, cursor, cancellationToken))
             .WithName("ListEntities")
@@ -23,7 +23,7 @@ public static class EntityEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.GetCardAsync(id, cancellationToken);
@@ -42,7 +42,7 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
             RatingUpdateRequest request,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.UpdateRatingAsync(id, request, cancellationToken);
@@ -61,7 +61,7 @@ public static class EntityEndpoints
         group.MapPatch("/{id:guid}/flags", async (
             Guid id,
             EntityFlagsUpdateRequest request,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.UpdateFlagsAsync(id, request, cancellationToken);

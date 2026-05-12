@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Obscura.Application/Obscura.Application.csproj" />
     <Project Path="src/Obscura.Api/Obscura.Api.csproj" />
     <Project Path="src/Obscura.Contracts/Obscura.Contracts.csproj" />
     <Project Path="src/Obscura.Domain/Obscura.Domain.csproj" />

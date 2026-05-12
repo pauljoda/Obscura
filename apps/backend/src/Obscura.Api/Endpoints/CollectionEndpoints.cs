@@ -1,6 +1,6 @@
 using Obscura.Contracts.Collections;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -14,7 +14,7 @@ public static class CollectionEndpoints
         group.MapGet("/", async (
             string? query,
             string? cursor,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync("collection", query, cursor, cancellationToken);
@@ -25,7 +25,7 @@ public static class CollectionEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
             var entity = await entities.GetCardAsync(id, cancellationToken);

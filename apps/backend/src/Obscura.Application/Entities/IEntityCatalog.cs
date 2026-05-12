@@ -2,9 +2,9 @@ using Obscura.Contracts.Entities;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 
-namespace Obscura.Infrastructure.Entities;
+namespace Obscura.Application.Entities;
 
-public interface IEntityProjectionService
+public interface IEntityCatalog
 {
     Task<EntityListResponse> ListAsync(
         string? kind,

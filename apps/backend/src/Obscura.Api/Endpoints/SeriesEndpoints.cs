@@ -1,6 +1,6 @@
 using Obscura.Contracts.Series;
 using Obscura.Contracts.System;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -12,7 +12,7 @@ public static class SeriesEndpoints
             .WithTags("Series");
 
         group.MapGet("/", async (
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             await entities.ListSeriesAsync(cancellationToken))
             .WithName("ListSeries")
@@ -20,7 +20,7 @@ public static class SeriesEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             {
                 var series = await entities.GetSeriesAsync(id, cancellationToken);

@@ -1,6 +1,6 @@
 using Obscura.Contracts.System;
 using Obscura.Contracts.Taxonomy;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -27,7 +27,7 @@ public static class TaxonomyEndpoints
         group.MapGet("/", async (
             string? query,
             string? cursor,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
@@ -38,7 +38,7 @@ public static class TaxonomyEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
         {
             var entity = await entities.GetCardAsync(id, cancellationToken);

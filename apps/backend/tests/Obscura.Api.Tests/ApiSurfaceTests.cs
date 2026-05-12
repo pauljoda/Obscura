@@ -11,7 +11,7 @@ using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 
@@ -28,7 +28,7 @@ public sealed class ApiSurfaceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IEntityProjectionService, EmptyEntityProjectionService>();
+                    services.AddScoped<IEntityCatalog, EmptyEntityProjectionService>();
                     services.AddScoped<IJobQueueService, EmptyJobQueueService>();
                     services.AddScoped<ISettingsService, DefaultSettingsService>();
                 });
@@ -182,7 +182,7 @@ public sealed class ApiSurfaceTests
         }
     }
 
-    private sealed class EmptyEntityProjectionService : IEntityProjectionService
+    private sealed class EmptyEntityProjectionService : IEntityCatalog
     {
         public Task<EntityListResponse> ListAsync(
             string? kind,

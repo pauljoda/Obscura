@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Database;
+using Obscura.Application.Entities;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.FreshStart;
 using Obscura.Infrastructure.Legacy;
@@ -49,7 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<ILegacyMediaImportService, LegacyMediaImportService>();
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
-        services.AddScoped<IEntityProjectionService, EntityProjectionService>();
+        services.AddScoped<IEntityCatalog, EntityProjectionService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
         services.AddSingleton(new HlsAssetServiceOptions(cacheDir));
         services.AddSingleton<IHlsAssetService, HlsAssetService>();

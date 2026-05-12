@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 
 namespace Obscura.Api.Tests;
 
@@ -53,12 +53,12 @@ public sealed class EntityVideoEndpointServiceTests
             {
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IEntityProjectionService, FakeEntityProjectionService>();
+                    services.AddScoped<IEntityCatalog, FakeEntityProjectionService>();
                 });
             });
     }
 
-    private sealed class FakeEntityProjectionService : IEntityProjectionService
+    private sealed class FakeEntityProjectionService : IEntityCatalog
     {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 

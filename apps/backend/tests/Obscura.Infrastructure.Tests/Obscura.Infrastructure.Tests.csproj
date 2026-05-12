@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Obscura.Application\Obscura.Application.csproj" />
     <ProjectReference Include="..\..\src\Obscura.Infrastructure\Obscura.Infrastructure.csproj" />
   </ItemGroup>
 

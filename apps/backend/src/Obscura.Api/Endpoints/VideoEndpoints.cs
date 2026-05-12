@@ -1,6 +1,6 @@
 using Obscura.Contracts.System;
 using Obscura.Contracts.Videos;
-using Obscura.Infrastructure.Entities;
+using Obscura.Application.Entities;
 using Obscura.Infrastructure.Videos;
 
 namespace Obscura.Api.Endpoints;
@@ -13,7 +13,7 @@ public static class VideoEndpoints
             .WithTags("Videos");
 
         group.MapGet("/", async (
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             await entities.ListVideosAsync(cancellationToken))
             .WithName("ListVideos")
@@ -21,7 +21,7 @@ public static class VideoEndpoints
 
         group.MapGet("/{id:guid}", async (
             Guid id,
-            IEntityProjectionService entities,
+            IEntityCatalog entities,
             CancellationToken cancellationToken) =>
             {
                 var video = await entities.GetVideoAsync(id, cancellationToken);
