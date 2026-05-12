@@ -1,10 +1,7 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>Capability kind for shared artwork URLs.</summary>
-public sealed record ImagesCapabilityKind()
-    : ICapabilityKind<CapabilityImages>
+public sealed class ImagesCapabilityKind()
+    : CapabilityKind<CapabilityImages>("images", "Images")
 {
-    public string Code => "images";
-    public string DisplayName => "Images";
-    public Type CapabilityType => typeof(CapabilityImages);
 }

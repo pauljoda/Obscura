@@ -7,10 +7,12 @@ public sealed class CapabilityRegistryTests
     [Fact]
     public void KnownCapabilitiesAreDiscoveredConcreteImplementations()
     {
+        Assert.True(typeof(CapabilityKind<>).IsAbstract);
         Assert.Contains(CapabilityRegistry.All, capability =>
             capability is ICapabilityKind && capability.GetType().Name == "RatingCapabilityKind");
         Assert.Contains(CapabilityRegistry.All, capability =>
             capability is ICapabilityKind && capability.GetType().Name == "FilesCapabilityKind");
+        Assert.IsAssignableFrom<CapabilityKind<CapabilityRating>>(CapabilityRegistry.Rating);
         Assert.All(CapabilityRegistry.All, capability =>
         {
             Assert.NotEqual(typeof(ICapabilityKind), capability.GetType());

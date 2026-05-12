@@ -1,10 +1,7 @@
 namespace Obscura.Domain.Capabilities;
 
 /// <summary>Capability kind for credited people.</summary>
-public sealed record CreditsCapabilityKind()
-    : ICapabilityKind<CapabilityCredits>
+public sealed class CreditsCapabilityKind()
+    : CapabilityKind<CapabilityCredits>("credits", "Credits")
 {
-    public string Code => "credits";
-    public string DisplayName => "Credits";
-    public Type CapabilityType => typeof(CapabilityCredits);
 }
