@@ -1,3 +1,4 @@
+using Obscura.Api.Endpoints;
 using Obscura.Contracts.System;
 using Obscura.Infrastructure;
 
@@ -21,6 +22,11 @@ app.MapGet("/api/health", () =>
     Results.Ok(new HealthResponseDto("ok", "dotnet")))
     .WithName("GetHealth")
     .WithSummary("Reports that the Obscura .NET backend is ready to accept requests.");
+
+app.MapEntityEndpoints();
+app.MapVideoEndpoints();
+app.MapJobEndpoints();
+app.MapSettingsEndpoints();
 
 app.MapFallback(() => Results.NotFound(new ProblemDetailsDto(
     "not_found",

@@ -21,3 +21,14 @@ public sealed record EntityCardDto(
     string Title,
     string? Subtitle,
     EntityCapabilitiesDto Capabilities);
+
+public sealed record EntityListResponseDto(
+    IReadOnlyList<EntityCardDto> Items,
+    string? NextCursor);
+
+public sealed record RatingUpdateRequestDto(int? Value);
+
+public sealed record EntityFlagsUpdateRequestDto(
+    bool? IsFavorite,
+    bool? IsNsfw,
+    bool? IsOrganized);
