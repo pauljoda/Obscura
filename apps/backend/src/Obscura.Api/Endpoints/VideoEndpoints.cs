@@ -1,5 +1,6 @@
 using Obscura.Contracts.System;
 using Obscura.Contracts.Videos;
+using Obscura.Infrastructure.Entities;
 
 namespace Obscura.Api.Endpoints;
 
@@ -10,16 +11,30 @@ public static class VideoEndpoints
         var group = routes.MapGroup("/api/videos")
             .WithTags("Videos");
 
-        group.MapGet("/", () => new VideoListResponseDto([], null))
+        group.MapGet("/", async (
+            IEntityProjectionService entities,
+            CancellationToken cancellationToken) =>
+            await entities.ListVideosAsync(cancellationToken))
             .WithName("ListVideos")
             .WithSummary("Lists video entities through the video domain facade.");
 
-        group.MapGet("/{id:guid}", (Guid id) =>
-            Results.NotFound(new ProblemDetailsDto(
-                "video_not_found",
-                $"Video '{id}' was not found.")))
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            IEntityProjectionService entities,
+            CancellationToken cancellationToken) =>
+            {
+                var video = await entities.GetVideoAsync(id, cancellationToken);
+
+                return video is null
+                    ? Results.NotFound(new ProblemDetailsDto(
+                        "video_not_found",
+                        $"Video '{id}' was not found."))
+                    : Results.Ok(video);
+            })
             .WithName("GetVideo")
-            .WithSummary("Gets one video detail record.");
+            .WithSummary("Gets one video detail record.")
+            .Produces<VideoDetailDto>()
+            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
 
         group.MapGet("/{id:guid}/stream", (Guid id) =>
             Results.NotFound(new ProblemDetailsDto(

@@ -7,6 +7,7 @@ using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Videos;
+using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Queue;
 using Obscura.Infrastructure.Settings;
 
@@ -23,6 +24,7 @@ public sealed class ApiSurfaceTests
             {
                 builder.ConfigureServices(services =>
                 {
+                    services.AddScoped<IEntityProjectionService, EmptyEntityProjectionService>();
                     services.AddScoped<IJobQueueService, EmptyJobQueueService>();
                     services.AddScoped<ISettingsService, DefaultSettingsService>();
                 });
@@ -98,6 +100,49 @@ public sealed class ApiSurfaceTests
         public Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
+        }
+    }
+
+    private sealed class EmptyEntityProjectionService : IEntityProjectionService
+    {
+        public Task<EntityListResponseDto> ListAsync(
+            string? kind,
+            string? query,
+            string? cursor,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new EntityListResponseDto([], null));
+        }
+
+        public Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<EntityCardDto?>(null);
+        }
+
+        public Task<EntityCardDto?> UpdateRatingAsync(
+            Guid id,
+            RatingUpdateRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<EntityCardDto?>(null);
+        }
+
+        public Task<EntityCardDto?> UpdateFlagsAsync(
+            Guid id,
+            EntityFlagsUpdateRequestDto request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<EntityCardDto?>(null);
+        }
+
+        public Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new VideoListResponseDto([], null));
+        }
+
+        public Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<VideoDetailDto?>(null);
         }
     }
 

@@ -5,14 +5,17 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  EntityCardDto,
   EntityFlagsUpdateRequestDto,
   EntityListResponseDto,
   JobListResponseDto,
   ListEntitiesParams,
+  ProblemDetailsDto,
   RatingUpdateRequestDto,
   SettingsDto,
   SettingsUpdateRequestDto,
   V2UpgradeGateStatusDto,
+  VideoDetailDto,
   VideoListResponseDto
 } from './model';
 
@@ -98,16 +101,23 @@ export const listEntities = async (params?: ListEntitiesParams, options?: Reques
 
 
 export type getEntityResponse200 = {
-  data: void
+  data: EntityCardDto
   status: 200
+}
+
+export type getEntityResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
 }
 
 export type getEntityResponseSuccess = (getEntityResponse200) & {
   headers: Headers;
 };
-;
+export type getEntityResponseError = (getEntityResponse404) & {
+  headers: Headers;
+};
 
-export type getEntityResponse = (getEntityResponseSuccess)
+export type getEntityResponse = (getEntityResponseSuccess | getEntityResponseError)
 
 export const getGetEntityUrl = (id: string,) => {
 
@@ -134,16 +144,23 @@ export const getEntity = async (id: string, options?: RequestInit): Promise<getE
 
 
 export type updateEntityRatingResponse200 = {
-  data: void
+  data: EntityCardDto
   status: 200
+}
+
+export type updateEntityRatingResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
 }
 
 export type updateEntityRatingResponseSuccess = (updateEntityRatingResponse200) & {
   headers: Headers;
 };
-;
+export type updateEntityRatingResponseError = (updateEntityRatingResponse404) & {
+  headers: Headers;
+};
 
-export type updateEntityRatingResponse = (updateEntityRatingResponseSuccess)
+export type updateEntityRatingResponse = (updateEntityRatingResponseSuccess | updateEntityRatingResponseError)
 
 export const getUpdateEntityRatingUrl = (id: string,) => {
 
@@ -172,16 +189,23 @@ export const updateEntityRating = async (id: string,
 
 
 export type updateEntityFlagsResponse200 = {
-  data: void
+  data: EntityCardDto
   status: 200
+}
+
+export type updateEntityFlagsResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
 }
 
 export type updateEntityFlagsResponseSuccess = (updateEntityFlagsResponse200) & {
   headers: Headers;
 };
-;
+export type updateEntityFlagsResponseError = (updateEntityFlagsResponse404) & {
+  headers: Headers;
+};
 
-export type updateEntityFlagsResponse = (updateEntityFlagsResponseSuccess)
+export type updateEntityFlagsResponse = (updateEntityFlagsResponseSuccess | updateEntityFlagsResponseError)
 
 export const getUpdateEntityFlagsUrl = (id: string,) => {
 
@@ -246,16 +270,23 @@ export const listVideos = async ( options?: RequestInit): Promise<listVideosResp
 
 
 export type getVideoResponse200 = {
-  data: void
+  data: VideoDetailDto
   status: 200
+}
+
+export type getVideoResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
 }
 
 export type getVideoResponseSuccess = (getVideoResponse200) & {
   headers: Headers;
 };
-;
+export type getVideoResponseError = (getVideoResponse404) & {
+  headers: Headers;
+};
 
-export type getVideoResponse = (getVideoResponseSuccess)
+export type getVideoResponse = (getVideoResponseSuccess | getVideoResponseError)
 
 export const getGetVideoUrl = (id: string,) => {
 

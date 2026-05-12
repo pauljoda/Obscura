@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Obscura.Infrastructure.Backups;
 using Obscura.Infrastructure.Database;
+using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.FreshStart;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Queue;
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
+        services.AddScoped<IEntityProjectionService, EntityProjectionService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();
 
