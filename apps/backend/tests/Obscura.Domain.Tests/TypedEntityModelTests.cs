@@ -1,6 +1,5 @@
 using Obscura.Domain.Media;
 using Obscura.Domain.Taxonomy;
-using CapabilityKinds = Obscura.Domain.Entities.Capabilities;
 
 namespace Obscura.Domain.Tests;
 
@@ -13,7 +12,7 @@ public sealed class TypedEntityModelTests
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             "Ada Person",
             null,
-            CapabilityKinds.Empty,
+            [],
             PersonDetails.Empty);
 
         var updated = person.WithDetails(person.Details with { Country = "US", CareerStart = 2020 });
@@ -30,7 +29,7 @@ public sealed class TypedEntityModelTests
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             "Main Theme",
             null,
-            CapabilityKinds.Empty,
+            [],
             AudioTrackDetails.Empty with { Duration = TimeSpan.FromSeconds(90), Codec = "flac" });
 
         var played = track.MarkPlayed(TimeSpan.FromSeconds(45), DateTimeOffset.Parse("2026-05-12T12:00:00Z"));

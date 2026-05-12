@@ -6,5 +6,5 @@ namespace Obscura.Domain.Capabilities;
 /// <param name="Value">Validated rating value, or null when the entity is unrated.</param>
 public sealed record CapabilityRating(Rating? Value) : ICapability
 {
-    public ICapabilityKind Kind => Obscura.Domain.Entities.Capabilities.Rating;
+    public ICapabilityKind Kind => CapabilityRegistry.Rating;
 }

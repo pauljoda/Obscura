@@ -9,7 +9,7 @@ public sealed record CapabilityLinks(
     IReadOnlyList<EntityUrl> Urls,
     IReadOnlyList<EntityExternalId> ExternalIds) : ICapability
 {
-    public ICapabilityKind Kind => Obscura.Domain.Entities.Capabilities.Links;
+    public ICapabilityKind Kind => CapabilityRegistry.Links;
 
     /// <summary>A reusable empty link capability.</summary>
     public static CapabilityLinks Empty { get; } = new([], []);

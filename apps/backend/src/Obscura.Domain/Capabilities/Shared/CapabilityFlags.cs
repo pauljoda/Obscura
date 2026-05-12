@@ -8,7 +8,7 @@ namespace Obscura.Domain.Capabilities;
 /// <param name="IsOrganized">Whether the entity has been reviewed and accepted into the organized library.</param>
 public sealed record CapabilityFlags(bool? IsFavorite, bool? IsNsfw, bool? IsOrganized) : ICapability
 {
-    public ICapabilityKind Kind => Obscura.Domain.Entities.Capabilities.Flags;
+    public ICapabilityKind Kind => CapabilityRegistry.Flags;
 
     /// <summary>A reusable empty flags capability.</summary>
     public static CapabilityFlags Empty { get; } = new(null, null, null);

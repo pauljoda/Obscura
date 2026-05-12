@@ -1,7 +1,7 @@
 using Obscura.Domain.Entities;
+using Obscura.Domain.Capabilities;
 using CapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
 using CapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
-using CapabilityKinds = Obscura.Domain.Entities.Capabilities;
 using Rating = Obscura.Domain.Capabilities.Rating;
 using RatingValue = Obscura.Domain.Capabilities.RatingValue;
 
@@ -22,8 +22,8 @@ public sealed class EntityCapabilityTests
                 new CapabilityTags(["Favorite"])
             ]);
 
-        Assert.True(entity.HasCapability(CapabilityKinds.Rating));
-        var rating = entity.GetCapability(CapabilityKinds.Rating);
+        Assert.True(entity.HasCapability(CapabilityRegistry.Rating));
+        var rating = entity.GetCapability(CapabilityRegistry.Rating);
 
         Assert.IsType<CapabilityRating>(rating);
         Assert.Equal(4, rating.Value?.Value.Value);
@@ -55,9 +55,9 @@ public sealed class EntityCapabilityTests
             null,
             [new CapabilityTags([])]);
 
-        Assert.False(entity.HasCapability(CapabilityKinds.Rating));
-        Assert.False(entity.TryGetCapability(CapabilityKinds.Rating, out var rating));
+        Assert.False(entity.HasCapability(CapabilityRegistry.Rating));
+        Assert.False(entity.TryGetCapability(CapabilityRegistry.Rating, out var rating));
         Assert.Null(rating);
-        Assert.Throws<InvalidOperationException>(() => entity.GetCapability(CapabilityKinds.Rating));
+        Assert.Throws<InvalidOperationException>(() => entity.GetCapability(CapabilityRegistry.Rating));
     }
 }

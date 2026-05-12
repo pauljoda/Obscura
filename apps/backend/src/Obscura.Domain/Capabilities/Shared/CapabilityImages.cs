@@ -7,7 +7,7 @@ namespace Obscura.Domain.Capabilities;
 /// <param name="CoverUrl">Larger artwork path used by detail surfaces.</param>
 public sealed record CapabilityImages(string? ThumbnailUrl, string? CoverUrl) : ICapability
 {
-    public ICapabilityKind Kind => Obscura.Domain.Entities.Capabilities.Images;
+    public ICapabilityKind Kind => CapabilityRegistry.Images;
 
     /// <summary>A reusable empty image capability.</summary>
     public static CapabilityImages Empty { get; } = new(null, null);

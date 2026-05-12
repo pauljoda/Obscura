@@ -8,5 +8,5 @@ namespace Obscura.Domain.Capabilities;
 /// <param name="Value">Primary studio or publisher-like taxonomy entity, or null when none is projected.</param>
 public sealed record CapabilityStudio(EntityReference? Value) : ICapability
 {
-    public ICapabilityKind Kind => Obscura.Domain.Entities.Capabilities.Studio;
+    public ICapabilityKind Kind => CapabilityRegistry.Studio;
 }
