@@ -10,10 +10,17 @@ import type {
   EntityListResponseDto,
   JobListResponseDto,
   LegacyVideoImportResponseDto,
+  ListAudioLibrariesParams,
+  ListAudioTracksParams,
+  ListBooksParams,
   ListEntitiesParams,
+  ListGalleriesParams,
+  ListImagesParams,
   ListPerformersParams,
   ListStudiosParams,
   ListTagsParams,
+  MediaDetailDto,
+  MediaListResponseDto,
   ProblemDetailsDto,
   RatingUpdateRequestDto,
   SettingsDto,
@@ -237,6 +244,436 @@ export const updateEntityFlags = async (id: string,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
       entityFlagsUpdateRequestDto,)
+  }
+);}
+
+
+
+export type listImagesResponse200 = {
+  data: MediaListResponseDto
+  status: 200
+}
+
+export type listImagesResponseSuccess = (listImagesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listImagesResponse = (listImagesResponseSuccess)
+
+export const getListImagesUrl = (params?: ListImagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/images?${stringifiedParams}` : `/api/images`
+}
+
+/**
+ * @summary Lists image media entities through the global entity projection.
+ */
+export const listImages = async (params?: ListImagesParams, options?: RequestInit): Promise<listImagesResponse> => {
+
+  return orvalFetch<listImagesResponse>(getListImagesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getImageResponse200 = {
+  data: MediaDetailDto
+  status: 200
+}
+
+export type getImageResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getImageResponseSuccess = (getImageResponse200) & {
+  headers: Headers;
+};
+export type getImageResponseError = (getImageResponse404) & {
+  headers: Headers;
+};
+
+export type getImageResponse = (getImageResponseSuccess | getImageResponseError)
+
+export const getGetImageUrl = (id: string,) => {
+
+
+
+
+  return `/api/images/${id}`
+}
+
+/**
+ * @summary Gets one image media entity.
+ */
+export const getImage = async (id: string, options?: RequestInit): Promise<getImageResponse> => {
+
+  return orvalFetch<getImageResponse>(getGetImageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listGalleriesResponse200 = {
+  data: MediaListResponseDto
+  status: 200
+}
+
+export type listGalleriesResponseSuccess = (listGalleriesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listGalleriesResponse = (listGalleriesResponseSuccess)
+
+export const getListGalleriesUrl = (params?: ListGalleriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/galleries?${stringifiedParams}` : `/api/galleries`
+}
+
+/**
+ * @summary Lists gallery media entities through the global entity projection.
+ */
+export const listGalleries = async (params?: ListGalleriesParams, options?: RequestInit): Promise<listGalleriesResponse> => {
+
+  return orvalFetch<listGalleriesResponse>(getListGalleriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getGallerieResponse200 = {
+  data: MediaDetailDto
+  status: 200
+}
+
+export type getGallerieResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getGallerieResponseSuccess = (getGallerieResponse200) & {
+  headers: Headers;
+};
+export type getGallerieResponseError = (getGallerieResponse404) & {
+  headers: Headers;
+};
+
+export type getGallerieResponse = (getGallerieResponseSuccess | getGallerieResponseError)
+
+export const getGetGallerieUrl = (id: string,) => {
+
+
+
+
+  return `/api/galleries/${id}`
+}
+
+/**
+ * @summary Gets one gallery media entity.
+ */
+export const getGallerie = async (id: string, options?: RequestInit): Promise<getGallerieResponse> => {
+
+  return orvalFetch<getGallerieResponse>(getGetGallerieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listBooksResponse200 = {
+  data: MediaListResponseDto
+  status: 200
+}
+
+export type listBooksResponseSuccess = (listBooksResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listBooksResponse = (listBooksResponseSuccess)
+
+export const getListBooksUrl = (params?: ListBooksParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/books?${stringifiedParams}` : `/api/books`
+}
+
+/**
+ * @summary Lists book media entities through the global entity projection.
+ */
+export const listBooks = async (params?: ListBooksParams, options?: RequestInit): Promise<listBooksResponse> => {
+
+  return orvalFetch<listBooksResponse>(getListBooksUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getBookResponse200 = {
+  data: MediaDetailDto
+  status: 200
+}
+
+export type getBookResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getBookResponseSuccess = (getBookResponse200) & {
+  headers: Headers;
+};
+export type getBookResponseError = (getBookResponse404) & {
+  headers: Headers;
+};
+
+export type getBookResponse = (getBookResponseSuccess | getBookResponseError)
+
+export const getGetBookUrl = (id: string,) => {
+
+
+
+
+  return `/api/books/${id}`
+}
+
+/**
+ * @summary Gets one book media entity.
+ */
+export const getBook = async (id: string, options?: RequestInit): Promise<getBookResponse> => {
+
+  return orvalFetch<getBookResponse>(getGetBookUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listAudioLibrariesResponse200 = {
+  data: MediaListResponseDto
+  status: 200
+}
+
+export type listAudioLibrariesResponseSuccess = (listAudioLibrariesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listAudioLibrariesResponse = (listAudioLibrariesResponseSuccess)
+
+export const getListAudioLibrariesUrl = (params?: ListAudioLibrariesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audio-libraries?${stringifiedParams}` : `/api/audio-libraries`
+}
+
+/**
+ * @summary Lists audio-library media entities through the global entity projection.
+ */
+export const listAudioLibraries = async (params?: ListAudioLibrariesParams, options?: RequestInit): Promise<listAudioLibrariesResponse> => {
+
+  return orvalFetch<listAudioLibrariesResponse>(getListAudioLibrariesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getAudioLibrarieResponse200 = {
+  data: MediaDetailDto
+  status: 200
+}
+
+export type getAudioLibrarieResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getAudioLibrarieResponseSuccess = (getAudioLibrarieResponse200) & {
+  headers: Headers;
+};
+export type getAudioLibrarieResponseError = (getAudioLibrarieResponse404) & {
+  headers: Headers;
+};
+
+export type getAudioLibrarieResponse = (getAudioLibrarieResponseSuccess | getAudioLibrarieResponseError)
+
+export const getGetAudioLibrarieUrl = (id: string,) => {
+
+
+
+
+  return `/api/audio-libraries/${id}`
+}
+
+/**
+ * @summary Gets one audio-library media entity.
+ */
+export const getAudioLibrarie = async (id: string, options?: RequestInit): Promise<getAudioLibrarieResponse> => {
+
+  return orvalFetch<getAudioLibrarieResponse>(getGetAudioLibrarieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type listAudioTracksResponse200 = {
+  data: MediaListResponseDto
+  status: 200
+}
+
+export type listAudioTracksResponseSuccess = (listAudioTracksResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listAudioTracksResponse = (listAudioTracksResponseSuccess)
+
+export const getListAudioTracksUrl = (params?: ListAudioTracksParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audio-tracks?${stringifiedParams}` : `/api/audio-tracks`
+}
+
+/**
+ * @summary Lists audio-track media entities through the global entity projection.
+ */
+export const listAudioTracks = async (params?: ListAudioTracksParams, options?: RequestInit): Promise<listAudioTracksResponse> => {
+
+  return orvalFetch<listAudioTracksResponse>(getListAudioTracksUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getAudioTrackResponse200 = {
+  data: MediaDetailDto
+  status: 200
+}
+
+export type getAudioTrackResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getAudioTrackResponseSuccess = (getAudioTrackResponse200) & {
+  headers: Headers;
+};
+export type getAudioTrackResponseError = (getAudioTrackResponse404) & {
+  headers: Headers;
+};
+
+export type getAudioTrackResponse = (getAudioTrackResponseSuccess | getAudioTrackResponseError)
+
+export const getGetAudioTrackUrl = (id: string,) => {
+
+
+
+
+  return `/api/audio-tracks/${id}`
+}
+
+/**
+ * @summary Gets one audio-track media entity.
+ */
+export const getAudioTrack = async (id: string, options?: RequestInit): Promise<getAudioTrackResponse> => {
+
+  return orvalFetch<getAudioTrackResponse>(getGetAudioTrackUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

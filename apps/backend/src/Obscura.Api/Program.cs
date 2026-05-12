@@ -56,6 +56,7 @@ app.MapGet("/api/health", () =>
     .WithSummary("Reports that the Obscura .NET backend is ready to accept requests.");
 
 app.MapEntityEndpoints();
+app.MapMediaEndpoints();
 app.MapSeriesEndpoints();
 app.MapVideoEndpoints();
 app.MapJobEndpoints();

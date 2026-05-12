@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 video detail page now sends playback requests to the .NET backend during local Svelte development instead of falling back to the legacy SvelteKit API path.
 - The v2 global entity model now imports and projects shared studio and performer credit capabilities for videos and series.
 - The v2 .NET backend now exposes first-class performer, studio, and tag list/detail API routes backed by the global entity projection.
+- The v2 .NET backend now exposes first-class image, gallery, book, audio-library, and audio-track media routes backed by the global entity projection.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -130,6 +131,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added a shared v2 API URL helper for generated fetches and media URLs, keeping typed API calls and stream sources on the same backend.
 - Added v2 studio and credit capability tables plus legacy import coverage for performers, studios, and video/series cast links.
 - Added typed v2 taxonomy DTOs and OpenAPI coverage for `/api/performers`, `/api/studios`, and `/api/tags`.
+- Added typed v2 media DTOs and OpenAPI coverage for `/api/images`, `/api/galleries`, `/api/books`, `/api/audio-libraries`, and `/api/audio-tracks`.
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.

@@ -15,6 +15,8 @@ public sealed class EntityKindTests
         Assert.Contains("gallery", codes);
         Assert.Contains("book", codes);
         Assert.Contains("audio", codes);
+        Assert.Contains("audio-library", codes);
+        Assert.Contains("audio-track", codes);
         Assert.Contains("performer", codes);
         Assert.Contains("studio", codes);
         Assert.Contains("tag", codes);

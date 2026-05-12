@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Obscura.Contracts.Entities;
 using Obscura.Contracts.Jobs;
+using Obscura.Contracts.Media;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Settings;
 using Obscura.Contracts.Taxonomy;
@@ -78,6 +79,23 @@ public sealed class ApiSurfaceTests
         using var client = _factory.CreateClient();
 
         var response = await client.GetFromJsonAsync<TaxonomyListResponseDto>(path);
+
+        Assert.NotNull(response);
+        Assert.Empty(response.Items);
+        Assert.Null(response.NextCursor);
+    }
+
+    [Theory]
+    [InlineData("/api/images")]
+    [InlineData("/api/galleries")]
+    [InlineData("/api/books")]
+    [InlineData("/api/audio-libraries")]
+    [InlineData("/api/audio-tracks")]
+    public async Task MediaListEndpointsReturnStablePagedShapes(string path)
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetFromJsonAsync<MediaListResponseDto>(path);
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
