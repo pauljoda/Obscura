@@ -67,6 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Docs
 
+- Documented the intended .NET Domain/Application/Contracts boundary for the v2 backend so the C# model can grow as first-class application code instead of API DTO plumbing.
 - Rewrote README and documentation site to reflect Obscura's broader media-home identity — books, comics, audio, video, and galleries are now all highlighted equally, the "Stash replacement" framing is dropped, and the doc-site homepage now serves as a product page non-technical visitors can understand.
 
 ### Changed
