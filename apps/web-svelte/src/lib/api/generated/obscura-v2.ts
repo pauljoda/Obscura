@@ -370,12 +370,19 @@ export type getVideoHlsManifestResponse200 = {
   status: 200
 }
 
+export type getVideoHlsManifestResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
 export type getVideoHlsManifestResponseSuccess = (getVideoHlsManifestResponse200) & {
   headers: Headers;
 };
-;
+export type getVideoHlsManifestResponseError = (getVideoHlsManifestResponse404) & {
+  headers: Headers;
+};
 
-export type getVideoHlsManifestResponse = (getVideoHlsManifestResponseSuccess)
+export type getVideoHlsManifestResponse = (getVideoHlsManifestResponseSuccess | getVideoHlsManifestResponseError)
 
 export const getGetVideoHlsManifestUrl = (id: string,) => {
 
@@ -391,6 +398,51 @@ export const getGetVideoHlsManifestUrl = (id: string,) => {
 export const getVideoHlsManifest = async (id: string, options?: RequestInit): Promise<getVideoHlsManifestResponse> => {
 
   return orvalFetch<getVideoHlsManifestResponse>(getGetVideoHlsManifestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type getVideoHlsAssetResponse200 = {
+  data: void
+  status: 200
+}
+
+export type getVideoHlsAssetResponse404 = {
+  data: ProblemDetailsDto
+  status: 404
+}
+
+export type getVideoHlsAssetResponseSuccess = (getVideoHlsAssetResponse200) & {
+  headers: Headers;
+};
+export type getVideoHlsAssetResponseError = (getVideoHlsAssetResponse404) & {
+  headers: Headers;
+};
+
+export type getVideoHlsAssetResponse = (getVideoHlsAssetResponseSuccess | getVideoHlsAssetResponseError)
+
+export const getGetVideoHlsAssetUrl = (id: string,
+    asset: string,) => {
+
+
+
+
+  return `/api/videos/${id}/hls/${asset}`
+}
+
+/**
+ * @summary Gets an adaptive HLS variant playlist or segment for one video.
+ */
+export const getVideoHlsAsset = async (id: string,
+    asset: string, options?: RequestInit): Promise<getVideoHlsAssetResponse> => {
+
+  return orvalFetch<getVideoHlsAssetResponse>(getGetVideoHlsAssetUrl(id,asset),
   {
     ...options,
     method: 'GET'

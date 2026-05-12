@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The Svelte app can now generate its v2 API client from the .NET OpenAPI contract, reducing duplicate DTO definitions as the migration continues.
 - The v2 .NET entity and video APIs now read projected data from the global entity schema, including shared ratings, tags, flags, and video-specific detail fields.
 - The v2 .NET backend can now stream browser-playable video source files with HTTP range support from the new shared file capability table.
+- The v2 .NET backend can now serve cached HLS manifests, variant playlists, and segments from the configured cache directory.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -122,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added Orval generation for the v2 .NET OpenAPI contract and wired the existing Svelte v2 API wrapper to generated DTOs and fetch functions.
 - Added a shared .NET entity projection service that powers generic entity lists, video lists, video details, and rating/flag updates from one capability-aware path.
 - Added the v2 `entity_files` capability table and a .NET video source service for direct playback source resolution.
+- Added a safe HLS asset resolver for the .NET backend with traversal protection, MIME types, and cache headers.
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
 - Added book upload, delete, metadata update, and merge-into-book actions so comic archives can be managed from the Books section.
 - Added an in-reader Next Chapter action for multi-chapter books, preserving the current paged, webtoon, and spread preferences while continuing into the following chapter.

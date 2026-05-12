@@ -29,6 +29,9 @@ public static class DependencyInjection
         var dataDir = configuration["OBSCURA_DATA_DIR"] ??
             configuration["Obscura:DataDir"] ??
             "/data";
+        var cacheDir = configuration["OBSCURA_CACHE_DIR"] ??
+            configuration["Obscura:CacheDir"] ??
+            Path.Combine(dataDir, "cache");
 
         services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
         services.AddDbContext<ObscuraDbContext>((provider, options) =>
@@ -41,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<IV2FreshStartService, V2FreshStartService>();
         services.AddScoped<IEntityProjectionService, EntityProjectionService>();
         services.AddScoped<IVideoSourceService, VideoSourceService>();
+        services.AddSingleton(new HlsAssetServiceOptions(cacheDir));
+        services.AddSingleton<IHlsAssetService, HlsAssetService>();
         services.AddScoped<IJobQueueService, JobQueueService>();
         services.AddScoped<ISettingsService, SettingsService>();
 

@@ -45,12 +45,22 @@ public static class VideoEndpoints
             .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound)
             .Produces<ProblemDetailsDto>(StatusCodes.Status415UnsupportedMediaType);
 
-        group.MapGet("/{id:guid}/hls/master.m3u8", (Guid id) =>
-            Results.NotFound(new ProblemDetailsDto(
-                "video_hls_not_found",
-                $"Video HLS package '{id}' was not found.")))
+        group.MapGet("/{id:guid}/hls/master.m3u8", (
+            Guid id,
+            IHlsAssetService hlsAssets,
+            HttpContext httpContext,
+            CancellationToken cancellationToken) =>
+            StreamHlsAssetAsync(id, "master.m3u8", hlsAssets, httpContext, cancellationToken))
             .WithName("GetVideoHlsManifest")
-            .WithSummary("Gets the adaptive HLS manifest for one video.");
+            .WithSummary("Gets the adaptive HLS manifest for one video.")
+            .Produces(StatusCodes.Status200OK)
+            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/hls/{**asset}", StreamHlsAssetAsync)
+            .WithName("GetVideoHlsAsset")
+            .WithSummary("Gets an adaptive HLS variant playlist or segment for one video.")
+            .Produces(StatusCodes.Status200OK)
+            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
 
         return group;
     }
@@ -82,5 +92,28 @@ public static class VideoEndpoints
             File.OpenRead(source.Path),
             source.ContentType,
             enableRangeProcessing: true);
+    }
+
+    private static async Task<IResult> StreamHlsAssetAsync(
+        Guid id,
+        string asset,
+        IHlsAssetService hlsAssets,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var hlsAsset = await hlsAssets.GetAssetAsync(id, asset, cancellationToken);
+        if (hlsAsset is null)
+        {
+            return Results.NotFound(new ProblemDetailsDto(
+                "video_hls_not_found",
+                $"Video HLS asset '{asset}' for '{id}' was not found."));
+        }
+
+        httpContext.Response.Headers.CacheControl = hlsAsset.CacheControl;
+
+        return Results.File(
+            File.OpenRead(hlsAsset.Path),
+            hlsAsset.ContentType,
+            enableRangeProcessing: false);
     }
 }
