@@ -3,6 +3,7 @@ using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
 using Obscura.Domain.Media;
+using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
 
@@ -263,6 +264,271 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             seasons,
             videos,
             seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+    }
+
+    /// <summary>
+    /// Gets one image aggregate with image-specific detail fields hydrated from v2 storage.
+    /// </summary>
+    public async Task<Image?> GetImageAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Image, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.ImageDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new Image(entity, detail is null
+            ? ImageDetails.Empty
+            : new ImageDetails(
+                detail.Details,
+                detail.Date,
+                detail.FilePath,
+                detail.FileSizeBytes,
+                detail.Width,
+                detail.Height,
+                detail.Format,
+                detail.SortOrder));
+    }
+
+    /// <summary>
+    /// Gets one gallery aggregate with gallery-specific detail fields hydrated from v2 storage.
+    /// </summary>
+    public async Task<Gallery?> GetGalleryAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Gallery, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.GalleryDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new Gallery(entity, detail is null
+            ? GalleryDetails.Empty
+            : new GalleryDetails(
+                detail.Details,
+                detail.Date,
+                detail.GalleryType,
+                detail.FolderPath,
+                detail.ZipFilePath,
+                detail.Photographer,
+                detail.CoverImageEntityId,
+                detail.ImageCount));
+    }
+
+    /// <summary>
+    /// Gets one book aggregate with book details and single-user read progress.
+    /// </summary>
+    public async Task<Book?> GetBookAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Book, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.BookDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        var progress = await _db.BookReadProgress
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.BookEntityId == id, cancellationToken);
+
+        return new Book(
+            entity,
+            detail is null
+                ? BookDetails.Empty
+                : new BookDetails(
+                    detail.BookType,
+                    detail.SortTitle,
+                    detail.Summary,
+                    detail.Date,
+                    detail.FolderPath,
+                    detail.RelativePath,
+                    detail.CoverPageEntityId,
+                    detail.CoverImagePath,
+                    detail.PageCount,
+                    detail.ChapterCount),
+            progress is null
+                ? BookReadProgress.Empty
+                : new BookReadProgress(
+                    progress.ChapterEntityId,
+                    progress.PageIndex,
+                    progress.PageCount,
+                    progress.ReaderMode,
+                    progress.CompletedAt));
+    }
+
+    /// <summary>
+    /// Gets one audio library aggregate with audio-library-specific detail fields.
+    /// </summary>
+    public async Task<AudioLibrary?> GetAudioLibraryAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.AudioLibrary, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.AudioLibraryDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new AudioLibrary(entity, detail is null
+            ? AudioLibraryDetails.Empty
+            : new AudioLibraryDetails(
+                detail.Details,
+                detail.Date,
+                detail.FolderPath,
+                detail.ParentLibraryEntityId,
+                detail.TrackCount));
+    }
+
+    /// <summary>
+    /// Gets one audio track aggregate with technical probe details and playback capability state.
+    /// </summary>
+    public async Task<AudioTrack?> GetAudioTrackAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.AudioTrack, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.AudioTrackDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new AudioTrack(entity, detail is null
+            ? AudioTrackDetails.Empty
+            : new AudioTrackDetails(
+                detail.Details,
+                detail.Date,
+                detail.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
+                detail.BitRate,
+                detail.SampleRate,
+                detail.Channels,
+                detail.Codec,
+                detail.Container,
+                detail.EmbeddedArtist,
+                detail.EmbeddedAlbum,
+                detail.TrackNumber,
+                detail.WaveformPath));
+    }
+
+    /// <summary>
+    /// Gets one person taxonomy aggregate with person-specific descriptive detail fields.
+    /// </summary>
+    public async Task<Person?> GetPersonAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Person, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.PersonDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new Person(entity, detail is null
+            ? PersonDetails.Empty
+            : new PersonDetails(
+                detail.Disambiguation,
+                detail.Gender,
+                detail.Birthdate,
+                detail.Country,
+                detail.Ethnicity,
+                detail.EyeColor,
+                detail.HairColor,
+                detail.Height,
+                detail.Weight,
+                detail.Measurements,
+                detail.Tattoos,
+                detail.Piercings,
+                detail.CareerStart,
+                detail.CareerEnd,
+                detail.Details));
+    }
+
+    /// <summary>
+    /// Gets one studio taxonomy aggregate with hierarchy metadata.
+    /// </summary>
+    public async Task<Studio?> GetStudioAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Studio, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.StudioDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new Studio(entity, detail is null
+            ? StudioDetails.Empty
+            : new StudioDetails(detail.Description, detail.ParentStudioEntityId));
+    }
+
+    /// <summary>
+    /// Gets one tag taxonomy aggregate with hierarchy and automation metadata.
+    /// </summary>
+    public async Task<Tag?> GetTagAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Tag, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.TagDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+
+        return new Tag(entity, detail is null
+            ? TagDetails.Empty
+            : new TagDetails(detail.Description, detail.ParentTagEntityId, detail.IgnoreAutoTag));
+    }
+
+    /// <summary>
+    /// Gets one collection aggregate with collection-specific detail fields and ordered member projections.
+    /// </summary>
+    public async Task<Collection?> GetCollectionAggregateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await GetEntityOfKindAsync(id, EntityKindRegistry.Collection, cancellationToken);
+        if (entity is null)
+        {
+            return null;
+        }
+
+        var detail = await _db.CollectionDetails
+            .AsNoTracking()
+            .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
+        var items = await LoadLinkedChildrenAsync(id, EntityRelationshipRegistry.CollectionItem, null, cancellationToken);
+
+        return new Collection(
+            entity,
+            detail is null
+                ? CollectionDetails.Empty
+                : new CollectionDetails(
+                    detail.Description,
+                    detail.Mode,
+                    detail.RuleTreeJson,
+                    detail.ItemCount,
+                    detail.CoverMode,
+                    detail.CoverImagePath,
+                    detail.CoverItemEntityId,
+                    TimeSpan.FromSeconds(detail.SlideshowDurationSeconds),
+                    detail.SlideshowAutoAdvance,
+                    detail.LastRefreshedAt),
+            items);
     }
 
     private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(
@@ -688,6 +954,20 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
     }
 
     private static IEntityKind ResolveKind(string code) => EntityKindRegistry.Require(code);
+
+    private async Task<Entity?> GetEntityOfKindAsync(
+        Guid id,
+        IEntityKind kind,
+        CancellationToken cancellationToken)
+    {
+        var entity = await GetAsync(id, cancellationToken);
+        if (entity is null || !string.Equals(entity.Kind.Code, kind.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return entity;
+    }
 
     private sealed record LinkedEntity(Entity Entity, IEntityRelationship Relationship, int SortOrder);
 }

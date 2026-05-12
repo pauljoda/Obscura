@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
+using Obscura.Domain.Media;
+using Obscura.Domain.Taxonomy;
 using Obscura.Infrastructure.Entities;
 using Obscura.Infrastructure.Persistence;
 using Obscura.Infrastructure.Persistence.Entities;
@@ -393,6 +395,134 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(imageId, child.Id);
         Assert.Equal("image", child.Kind.Code);
         Assert.Equal(4, child.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+    }
+
+    [Fact]
+    public async Task DetailHydratorsProjectTypedMediaTaxonomyAndCollectionAggregates()
+    {
+        await using var db = CreateContext();
+        var imageId = Guid.Parse("20202020-2020-2020-2020-202020202020");
+        var galleryId = Guid.Parse("21212121-2121-2121-2121-212121212121");
+        var bookId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var audioLibraryId = Guid.Parse("23232323-2323-2323-2323-232323232323");
+        var audioTrackId = Guid.Parse("24242424-2424-2424-2424-242424242424");
+        var personId = Guid.Parse("25252525-2525-2525-2525-252525252525");
+        var studioId = Guid.Parse("26262626-2626-2626-2626-262626262626");
+        var tagId = Guid.Parse("27272727-2727-2727-2727-272727272727");
+        var collectionId = Guid.Parse("28282828-2828-2828-2828-282828282828");
+        SeedEntity(db, imageId, "image", "Still Frame");
+        SeedEntity(db, galleryId, "gallery", "Gallery Root");
+        SeedEntity(db, bookId, "book", "Book Root");
+        SeedEntity(db, audioLibraryId, "audio-library", "Album Root");
+        SeedEntity(db, audioTrackId, "audio-track", "Track Root");
+        SeedEntity(db, personId, "person", "Ada Person");
+        SeedEntity(db, studioId, "studio", "Obscura Studio");
+        SeedEntity(db, tagId, "tag", "Favorite");
+        SeedEntity(db, collectionId, "collection", "Reference Set");
+        db.ImageDetails.Add(new ImageDetailRow
+        {
+            EntityId = imageId,
+            Details = "Image details",
+            Date = "2026-05-12",
+            FilePath = "/media/still.jpg",
+            FileSizeBytes = 1234,
+            Width = 800,
+            Height = 600,
+            Format = "jpg",
+            SortOrder = 7
+        });
+        db.GalleryDetails.Add(new GalleryDetailRow
+        {
+            EntityId = galleryId,
+            Details = "Gallery details",
+            Date = "2026",
+            GalleryType = GalleryType.Folder,
+            FolderPath = "/media/gallery",
+            Photographer = "Photographer",
+            ImageCount = 12
+        });
+        db.BookDetails.Add(new BookDetailRow
+        {
+            EntityId = bookId,
+            BookType = BookType.Comic,
+            Summary = "Book summary",
+            RelativePath = "books/book",
+            PageCount = 42,
+            ChapterCount = 3
+        });
+        db.BookReadProgress.Add(new BookReadProgressRow
+        {
+            BookEntityId = bookId,
+            PageIndex = 5,
+            PageCount = 42,
+            ReaderMode = ReaderMode.Webtoon,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.AudioLibraryDetails.Add(new AudioLibraryDetailRow
+        {
+            EntityId = audioLibraryId,
+            Details = "Album summary",
+            Date = "2026",
+            FolderPath = "/media/audio",
+            TrackCount = 9
+        });
+        db.AudioTrackDetails.Add(new AudioTrackDetailRow
+        {
+            EntityId = audioTrackId,
+            Details = "Track summary",
+            DurationSeconds = 90,
+            Codec = "flac",
+            TrackNumber = 2
+        });
+        db.PersonDetails.Add(new PersonDetailRow
+        {
+            EntityId = personId,
+            Country = "US",
+            CareerStart = 2020
+        });
+        db.StudioDetails.Add(new StudioDetailRow
+        {
+            EntityId = studioId,
+            Description = "Studio description"
+        });
+        db.TagDetails.Add(new TagDetailRow
+        {
+            EntityId = tagId,
+            Description = "Tag description",
+            IgnoreAutoTag = true
+        });
+        db.CollectionDetails.Add(new CollectionDetailRow
+        {
+            EntityId = collectionId,
+            Description = "Collection description",
+            Mode = CollectionMode.Manual,
+            ItemCount = 2,
+            CoverMode = CollectionCoverMode.Mosaic
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+
+        var image = await service.GetImageAggregateAsync(imageId, CancellationToken.None);
+        var gallery = await service.GetGalleryAggregateAsync(galleryId, CancellationToken.None);
+        var book = await service.GetBookAggregateAsync(bookId, CancellationToken.None);
+        var audioLibrary = await service.GetAudioLibraryAggregateAsync(audioLibraryId, CancellationToken.None);
+        var audioTrack = await service.GetAudioTrackAggregateAsync(audioTrackId, CancellationToken.None);
+        var person = await service.GetPersonAggregateAsync(personId, CancellationToken.None);
+        var studio = await service.GetStudioAggregateAsync(studioId, CancellationToken.None);
+        var tag = await service.GetTagAggregateAsync(tagId, CancellationToken.None);
+        var collection = await service.GetCollectionAggregateAsync(collectionId, CancellationToken.None);
+
+        Assert.Equal("/media/still.jpg", image?.Details.FilePath);
+        Assert.Equal(GalleryType.Folder, gallery?.Details.GalleryType);
+        Assert.Equal(BookType.Comic, book?.Details.BookType);
+        Assert.Equal(ReaderMode.Webtoon, book?.ReadProgress.ReaderMode);
+        Assert.Equal(9, audioLibrary?.Details.TrackCount);
+        Assert.Equal("flac", audioTrack?.Details.Codec);
+        Assert.Equal("US", person?.Details.Country);
+        Assert.Equal("Studio description", studio?.Details.Description);
+        Assert.True(tag?.Details.IgnoreAutoTag);
+        Assert.Equal("Collection description", collection?.Details.Description);
     }
 
     private static ObscuraDbContext CreateContext()
