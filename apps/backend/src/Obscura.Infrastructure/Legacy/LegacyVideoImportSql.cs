@@ -146,6 +146,27 @@ public static class LegacyVideoImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), series.id, asset.role, asset.path, NULL, NULL, series.created_at, series.updated_at
+                FROM public.video_series series
+                CROSS JOIN LATERAL (VALUES
+                    ('poster', series.poster_path),
+                    ('backdrop', series.backdrop_path),
+                    ('logo', series.logo_path)
+                ) AS asset(role, path)
+                WHERE asset.path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
+                SELECT id, overview, updated_at
+                FROM public.video_series
+                WHERE overview IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
                 FROM public.video_series
@@ -172,14 +193,34 @@ public static class LegacyVideoImportSql
                     title = EXCLUDED.title,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.video_details (entity_id, summary, duration_ms, width, height)
-                SELECT id, overview, (duration * 1000)::bigint, width, height
+                INSERT INTO v2.video_details (
+                    entity_id,
+                    summary,
+                    release_date,
+                    content_rating,
+                    duration_ms,
+                    width,
+                    height,
+                    frame_rate,
+                    bit_rate,
+                    codec,
+                    container,
+                    subtitles_extracted_at
+                )
+                SELECT id, overview, release_date, content_rating, (duration * 1000)::bigint, width, height, frame_rate, bit_rate, codec, container, subtitles_extracted_at
                 FROM public.video_movies
                 ON CONFLICT (entity_id) DO UPDATE SET
                     summary = EXCLUDED.summary,
+                    release_date = EXCLUDED.release_date,
+                    content_rating = EXCLUDED.content_rating,
                     duration_ms = EXCLUDED.duration_ms,
                     width = EXCLUDED.width,
-                    height = EXCLUDED.height;
+                    height = EXCLUDED.height,
+                    frame_rate = EXCLUDED.frame_rate,
+                    bit_rate = EXCLUDED.bit_rate,
+                    codec = EXCLUDED.codec,
+                    container = EXCLUDED.container,
+                    subtitles_extracted_at = EXCLUDED.subtitles_extracted_at;
 
                 INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
                 SELECT id, false, is_nsfw, organized, updated_at
@@ -188,6 +229,14 @@ public static class LegacyVideoImportSql
                     is_favorite = EXCLUDED.is_favorite,
                     is_nsfw = EXCLUDED.is_nsfw,
                     is_organized = EXCLUDED.is_organized,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_ratings (entity_id, value, updated_at)
+                SELECT id, LEAST(GREATEST(rating, 0), 5), updated_at
+                FROM public.video_movies
+                WHERE rating IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
@@ -206,6 +255,41 @@ public static class LegacyVideoImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), movie.id, asset.role, asset.path, NULL, NULL, movie.created_at, movie.updated_at
+                FROM public.video_movies movie
+                CROSS JOIN LATERAL (VALUES
+                    ('poster', movie.poster_path),
+                    ('backdrop', movie.backdrop_path),
+                    ('logo', movie.logo_path),
+                    ('preview', movie.preview_path),
+                    ('sprite', movie.sprite_path),
+                    ('trickplay', movie.trickplay_vtt_path)
+                ) AS asset(role, path)
+                WHERE asset.path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
+                SELECT id, overview, updated_at
+                FROM public.video_movies
+                WHERE overview IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
+                SELECT id, play_count, play_duration, resume_time, last_played_at, NULL, updated_at
+                FROM public.video_movies
+                WHERE play_count > 0 OR play_duration > 0 OR resume_time > 0 OR last_played_at IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    play_count = EXCLUDED.play_count,
+                    play_duration_seconds = EXCLUDED.play_duration_seconds,
+                    resume_seconds = EXCLUDED.resume_seconds,
+                    last_played_at = EXCLUDED.last_played_at,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_counters (entity_id, code, value, updated_at)
                 SELECT id, 'orgasm', GREATEST(orgasm_count, 0), updated_at
                 FROM public.video_movies
@@ -213,6 +297,18 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, code) DO UPDATE SET
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_file_fingerprints (id, entity_id, entity_file_id, algorithm, value, created_at)
+                SELECT gen_random_uuid(), movie.id, NULL, hash.algorithm, hash.value, movie.created_at
+                FROM public.video_movies movie
+                CROSS JOIN LATERAL (VALUES
+                    ('md5', movie.checksum_md5),
+                    ('oshash', movie.oshash),
+                    ('phash', movie.phash)
+                ) AS hash(algorithm, value)
+                WHERE hash.value IS NOT NULL
+                ON CONFLICT (entity_id, algorithm) DO UPDATE SET
+                    value = EXCLUDED.value;
 
                 INSERT INTO v2.entity_studio_links (entity_id, studio_id, created_at)
                 SELECT id, studio_id, updated_at
@@ -253,14 +349,32 @@ public static class LegacyVideoImportSql
                     title = EXCLUDED.title,
                     updated_at = EXCLUDED.updated_at;
 
-                INSERT INTO v2.video_details (entity_id, summary, duration_ms, width, height)
-                SELECT id, overview, (duration * 1000)::bigint, width, height
+                INSERT INTO v2.video_details (
+                    entity_id,
+                    summary,
+                    release_date,
+                    duration_ms,
+                    width,
+                    height,
+                    frame_rate,
+                    bit_rate,
+                    codec,
+                    container,
+                    subtitles_extracted_at
+                )
+                SELECT id, overview, air_date, (duration * 1000)::bigint, width, height, frame_rate, bit_rate, codec, container, subtitles_extracted_at
                 FROM public.video_episodes
                 ON CONFLICT (entity_id) DO UPDATE SET
                     summary = EXCLUDED.summary,
+                    release_date = EXCLUDED.release_date,
                     duration_ms = EXCLUDED.duration_ms,
                     width = EXCLUDED.width,
-                    height = EXCLUDED.height;
+                    height = EXCLUDED.height,
+                    frame_rate = EXCLUDED.frame_rate,
+                    bit_rate = EXCLUDED.bit_rate,
+                    codec = EXCLUDED.codec,
+                    container = EXCLUDED.container,
+                    subtitles_extracted_at = EXCLUDED.subtitles_extracted_at;
 
                 INSERT INTO v2.entity_flags (entity_id, is_favorite, is_nsfw, is_organized, updated_at)
                 SELECT id, false, is_nsfw, organized, updated_at
@@ -295,6 +409,39 @@ public static class LegacyVideoImportSql
                     path = EXCLUDED.path,
                     updated_at = EXCLUDED.updated_at;
 
+                INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
+                SELECT gen_random_uuid(), episode.id, asset.role, asset.path, NULL, NULL, episode.created_at, episode.updated_at
+                FROM public.video_episodes episode
+                CROSS JOIN LATERAL (VALUES
+                    ('poster', episode.still_path),
+                    ('preview', episode.preview_path),
+                    ('sprite', episode.sprite_path),
+                    ('trickplay', episode.trickplay_vtt_path)
+                ) AS asset(role, path)
+                WHERE asset.path IS NOT NULL
+                ON CONFLICT (entity_id, role) DO UPDATE SET
+                    path = EXCLUDED.path,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_descriptions (entity_id, value, updated_at)
+                SELECT id, overview, updated_at
+                FROM public.video_episodes
+                WHERE overview IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_playback (entity_id, play_count, play_duration_seconds, resume_seconds, last_played_at, completed_at, updated_at)
+                SELECT id, play_count, play_duration, resume_time, last_played_at, NULL, updated_at
+                FROM public.video_episodes
+                WHERE play_count > 0 OR play_duration > 0 OR resume_time > 0 OR last_played_at IS NOT NULL
+                ON CONFLICT (entity_id) DO UPDATE SET
+                    play_count = EXCLUDED.play_count,
+                    play_duration_seconds = EXCLUDED.play_duration_seconds,
+                    resume_seconds = EXCLUDED.resume_seconds,
+                    last_played_at = EXCLUDED.last_played_at,
+                    updated_at = EXCLUDED.updated_at;
+
                 INSERT INTO v2.entity_counters (entity_id, code, value, updated_at)
                 SELECT id, 'orgasm', GREATEST(orgasm_count, 0), updated_at
                 FROM public.video_episodes
@@ -302,6 +449,18 @@ public static class LegacyVideoImportSql
                 ON CONFLICT (entity_id, code) DO UPDATE SET
                     value = EXCLUDED.value,
                     updated_at = EXCLUDED.updated_at;
+
+                INSERT INTO v2.entity_file_fingerprints (id, entity_id, entity_file_id, algorithm, value, created_at)
+                SELECT gen_random_uuid(), episode.id, NULL, hash.algorithm, hash.value, episode.created_at
+                FROM public.video_episodes episode
+                CROSS JOIN LATERAL (VALUES
+                    ('md5', episode.checksum_md5),
+                    ('oshash', episode.oshash),
+                    ('phash', episode.phash)
+                ) AS hash(algorithm, value)
+                WHERE hash.value IS NOT NULL
+                ON CONFLICT (entity_id, algorithm) DO UPDATE SET
+                    value = EXCLUDED.value;
 
                 INSERT INTO v2.entity_hierarchy_links (parent_entity_id, child_entity_id, relationship, sort_order, created_at)
                 SELECT series_id, id, '{{EntityRelationshipRegistry.Episode.Code}}', (season_number * 10000) + COALESCE(episode_number, absolute_episode_number, 0), created_at

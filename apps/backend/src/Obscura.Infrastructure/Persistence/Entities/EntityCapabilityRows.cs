@@ -10,6 +10,13 @@ public sealed class EntityAliasRow
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+public sealed class EntityDescriptionRow
+{
+    public Guid EntityId { get; set; }
+    public string Value { get; set; } = string.Empty;
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 public sealed class EntityPlaybackRow
 {
     public Guid EntityId { get; set; }

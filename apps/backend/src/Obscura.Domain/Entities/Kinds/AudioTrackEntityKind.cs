@@ -7,4 +7,9 @@ public sealed record AudioTrackEntityKind()
     public string Code => "audio-track";
     public string DisplayName => "Audio Track";
     public EntityKindCategory Category => EntityKindCategory.Media;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Cover,
+        EntityFileRole.Waveform
+    ];
 }

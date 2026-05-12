@@ -7,4 +7,9 @@ public sealed record VideoSeasonEntityKind()
     public string Code => "video-season";
     public string DisplayName => "Video Season";
     public EntityKindCategory Category => EntityKindCategory.Media;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Thumbnail,
+        EntityFileRole.Poster
+    ];
 }

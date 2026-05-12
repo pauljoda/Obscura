@@ -13,6 +13,8 @@ using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
 using ContractEntityExternalId = Obscura.Contracts.Entities.EntityExternalId;
 using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
 using ContractEntityCounter = Obscura.Contracts.Entities.EntityCounter;
+using ContractEntityFingerprint = Obscura.Contracts.Entities.EntityFingerprint;
+using ContractEntityImageAsset = Obscura.Contracts.Entities.EntityImageAsset;
 using ContractEntityUrl = Obscura.Contracts.Entities.EntityUrl;
 using ContractRating = Obscura.Contracts.Entities.Rating;
 using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
@@ -184,7 +186,15 @@ public static class ContractMapper
             CapabilityTags tags => new TagsCapability(tags.Values),
             CapabilityCredits credits => new CreditsCapability(credits.People.Select(ToEntityReference).ToArray()),
             CapabilityStudio studio => new StudioCapability(studio.Value is null ? null : ToEntityReference(studio.Value)),
-            CapabilityImages images => new ImagesCapability(images.ThumbnailUrl, images.CoverUrl),
+            CapabilityImages images => new ImagesCapability(
+                images.SupportedKinds.Select(kind => kind.ToCode()).ToArray(),
+                images.Items.Select(asset => new ContractEntityImageAsset(
+                    asset.Kind.ToCode(),
+                    asset.Path,
+                    asset.MimeType)).ToArray(),
+                images.ThumbnailUrl,
+                images.CoverUrl),
+            CapabilityDescription description => new DescriptionCapability(description.Value),
             CapabilityLinks links => new LinksCapability(
                 links.Urls.Select(url => new ContractEntityUrl(url.Url, url.Label)).ToArray(),
                 links.ExternalIds
@@ -198,6 +208,9 @@ public static class ContractMapper
             CapabilityCounters counters => new CountersCapability(counters.Items.Select(counter => new ContractEntityCounter(
                 counter.Code,
                 counter.Value)).ToArray()),
+            CapabilityFingerprints fingerprints => new FingerprintsCapability(fingerprints.Items.Select(fingerprint => new ContractEntityFingerprint(
+                fingerprint.Algorithm,
+                fingerprint.Value)).ToArray()),
             _ => null
         };
 

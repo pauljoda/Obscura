@@ -7,4 +7,14 @@ public sealed record VideoEntityKind()
     public string Code => "video";
     public string DisplayName => "Video";
     public EntityKindCategory Category => EntityKindCategory.Media;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Thumbnail,
+        EntityFileRole.Poster,
+        EntityFileRole.Backdrop,
+        EntityFileRole.Logo,
+        EntityFileRole.Preview,
+        EntityFileRole.Sprite,
+        EntityFileRole.Trickplay
+    ];
 }

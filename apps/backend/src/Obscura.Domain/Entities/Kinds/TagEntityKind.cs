@@ -7,4 +7,5 @@ public sealed record TagEntityKind()
     public string Code => "tag";
     public string DisplayName => "Tag";
     public EntityKindCategory Category => EntityKindCategory.Taxonomy;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles => [EntityFileRole.Thumbnail];
 }

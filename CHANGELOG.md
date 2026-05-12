@@ -71,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Tags and Studios now browse through the shared library surface, so search, filters, sorting, thumbnail sizing, and bulk actions behave like the rest of the media library and scale better on larger collections.
 - The v2 .NET backend now models seasons, book volumes, chapters, and pages as first-class hierarchy entities, giving future series and reader screens one shared way to load ordered child structure.
 - The v2 .NET backend now preserves named video counters such as the legacy orgasm counter through the shared entity capability model.
+- The v2 .NET backend now exposes shared descriptions, richer image asset metadata, and preserved video hashes so migrated entities keep more of their source metadata.
 
 ### Docs
 
@@ -106,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added typed v2 .NET EF hydrators for media, taxonomy, collection, and hierarchy entities so each root entity loads its kind-specific fields directly without changing the public API yet.
 - Added typed v2 .NET EF hydrators for direct video technical fields plus direct video-series, video-season, book-volume, book-chapter, and book-page fields.
 - Added a shared v2 .NET counter capability and `entity_counters` table so named per-entity counts can move across the API without becoming video-only fields.
+- Added shared v2 .NET description and fingerprint capabilities, plus per-entity-kind image asset shapes for typed generated artwork such as posters, logos, previews, sprites, and trickplay.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

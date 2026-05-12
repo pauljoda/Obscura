@@ -7,4 +7,5 @@ public sealed record AudioLibraryEntityKind()
     public string Code => "audio-library";
     public string DisplayName => "Audio Library";
     public EntityKindCategory Category => EntityKindCategory.Media;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles => [EntityFileRole.Cover];
 }

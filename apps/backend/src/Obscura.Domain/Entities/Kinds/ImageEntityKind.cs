@@ -7,4 +7,9 @@ public sealed record ImageEntityKind()
     public string Code => "image";
     public string DisplayName => "Image";
     public EntityKindCategory Category => EntityKindCategory.Media;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Thumbnail,
+        EntityFileRole.Source
+    ];
 }

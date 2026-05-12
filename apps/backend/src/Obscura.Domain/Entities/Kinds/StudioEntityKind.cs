@@ -7,4 +7,9 @@ public sealed record StudioEntityKind()
     public string Code => "studio";
     public string DisplayName => "Studio";
     public EntityKindCategory Category => EntityKindCategory.Taxonomy;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Thumbnail,
+        EntityFileRole.Logo
+    ];
 }

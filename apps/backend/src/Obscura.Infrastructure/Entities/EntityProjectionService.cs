@@ -228,7 +228,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new Video(
             card,
-            Summary: detail?.Summary,
+            Summary: detail?.Summary ?? TryGetDescription(card),
             SortTitle: detail?.SortTitle,
             OriginalTitle: detail?.OriginalTitle,
             Tagline: detail?.Tagline,
@@ -768,6 +768,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         }
 
         var ids = rows.Select(row => row.Id).ToArray();
+        var descriptions = await _db.EntityDescriptions
+            .AsNoTracking()
+            .Where(row => ids.Contains(row.EntityId))
+            .ToDictionaryAsync(row => row.EntityId, row => row.Value, cancellationToken);
         var ratings = await _db.EntityRatings
             .AsNoTracking()
             .Where(row => ids.Contains(row.EntityId))
@@ -778,6 +782,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
         var tags = await LoadTagReferencesAsync(ids, cancellationToken);
         var files = await LoadFilesAsync(ids, cancellationToken);
+        var fingerprints = await LoadFingerprintsAsync(ids, cancellationToken);
         var playback = await LoadPlaybackAsync(ids, cancellationToken);
         var counters = await LoadCountersAsync(ids, cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
@@ -788,10 +793,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         return rows
             .Select(row =>
             {
+                var kind = ResolveKind(row.KindCode);
+                descriptions.TryGetValue(row.Id, out var description);
                 ratings.TryGetValue(row.Id, out var rating);
                 flags.TryGetValue(row.Id, out var flag);
                 tags.TryGetValue(row.Id, out var tagRefs);
                 files.TryGetValue(row.Id, out var fileRefs);
+                fingerprints.TryGetValue(row.Id, out var fingerprintRefs);
                 playback.TryGetValue(row.Id, out var playbackState);
                 counters.TryGetValue(row.Id, out var counterRefs);
                 studios.TryGetValue(row.Id, out var studio);
@@ -801,15 +809,18 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
                 return new Entity(
                     row.Id,
-                    ResolveKind(row.KindCode),
+                    kind,
                     row.Title,
                     null,
                     BuildExplicitCapabilities(
+                        kind,
+                        description,
                         ratings.ContainsKey(row.Id) ? Rating.FromNullable(rating) : null,
                         tagRefs ?? [],
                         creditRefs ?? [],
                         studio,
                         fileRefs ?? [],
+                        fingerprintRefs ?? [],
                         playbackState,
                         counterRefs ?? [],
                         urlRefs ?? [],
@@ -820,28 +831,53 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
     }
 
     private static IReadOnlyList<ICapability> BuildExplicitCapabilities(
+        IEntityKind kind,
+        string? description,
         Rating? rating,
         IReadOnlyList<EntityTag> tags,
         IReadOnlyList<EntityCredit> credits,
         EntityReference? studio,
         IReadOnlyList<EntityFile> files,
+        IReadOnlyList<EntityFingerprint> fingerprints,
         Playback? playback,
         IReadOnlyList<EntityCounter> counters,
         IReadOnlyList<EntityUrl> urls,
         IReadOnlyList<EntityExternalId> externalIds,
         EntityFlagRow? flag)
     {
+        var imageAssets = files
+            .Where(file => kind.ImageAssetRoles.Contains(file.Role))
+            .Select(file => new EntityImageAsset(file.Role, file.Path, file.MimeType))
+            .ToArray();
+        var thumbnailUrl = imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Thumbnail)?.Path ??
+            imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Cover)?.Path ??
+            imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Poster)?.Path ??
+            imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Source)?.Path;
+        var coverUrl = imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Cover)?.Path ??
+            imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Poster)?.Path ??
+            imageAssets.FirstOrDefault(asset => asset.Kind == EntityFileRole.Thumbnail)?.Path;
+
         var capabilities = new List<ICapability>
         {
             new CapabilityRating(rating),
             new CapabilityTags(tags),
             new CapabilityCredits(credits),
             new CapabilityStudio(studio),
-            new CapabilityImages(files.FirstOrDefault(file => file.Role == EntityFileRole.Thumbnail)?.Path, null),
+            new CapabilityImages(kind.ImageAssetRoles, imageAssets, thumbnailUrl, coverUrl),
             new CapabilityLinks(urls, externalIds),
             new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
             new CapabilityFiles(files)
         };
+
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            capabilities.Add(new CapabilityDescription(description));
+        }
+
+        if (fingerprints.Count > 0)
+        {
+            capabilities.Add(new CapabilityFingerprints(fingerprints));
+        }
 
         if (playback is not null)
         {
@@ -854,6 +890,25 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         }
 
         return capabilities;
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityFingerprint>>> LoadFingerprintsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityFileFingerprints
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Algorithm)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityFingerprint>)group
+                    .Select(row => new EntityFingerprint(row.Algorithm, row.Value))
+                    .ToArray());
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityCounter>>> LoadCountersAsync(
@@ -1096,6 +1151,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                     })
                     .ToArray());
     }
+
+    private static string? TryGetDescription(Entity entity) =>
+        entity.TryGetCapability(CapabilityRegistry.Description, out var description)
+            ? description.Value
+            : null;
 
     private static IEntityKind ResolveKind(string code) => EntityKindRegistry.Require(code);
 

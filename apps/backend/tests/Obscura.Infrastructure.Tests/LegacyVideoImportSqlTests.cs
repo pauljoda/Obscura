@@ -17,10 +17,22 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("v2.entity_studio_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_external_ids", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_urls", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_descriptions", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_playback", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_file_fingerprints", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_markers", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_subtitles", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_counters", LegacyVideoImportSql.Import);
         Assert.Contains("orgasm_count", LegacyVideoImportSql.Import);
+        Assert.Contains("poster_path", LegacyVideoImportSql.Import);
+        Assert.Contains("backdrop_path", LegacyVideoImportSql.Import);
+        Assert.Contains("logo_path", LegacyVideoImportSql.Import);
+        Assert.Contains("preview_path", LegacyVideoImportSql.Import);
+        Assert.Contains("sprite_path", LegacyVideoImportSql.Import);
+        Assert.Contains("trickplay_vtt_path", LegacyVideoImportSql.Import);
+        Assert.Contains("checksum_md5", LegacyVideoImportSql.Import);
+        Assert.Contains("oshash", LegacyVideoImportSql.Import);
+        Assert.Contains("phash", LegacyVideoImportSql.Import);
     }
 
     [Fact]

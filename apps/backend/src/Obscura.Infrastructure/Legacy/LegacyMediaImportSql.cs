@@ -260,7 +260,7 @@ public static class LegacyMediaImportSql
                     updated_at = EXCLUDED.updated_at;
 
                 INSERT INTO v2.entity_files (id, entity_id, role, path, mime_type, size_bytes, created_at, updated_at)
-                SELECT gen_random_uuid(), id, 'thumbnail', COALESCE(cover_image_path, icon_path), NULL, NULL, created_at, updated_at
+                SELECT gen_random_uuid(), id, 'cover', COALESCE(cover_image_path, icon_path), NULL, NULL, created_at, updated_at
                 FROM public.audio_libraries
                 WHERE COALESCE(cover_image_path, icon_path) IS NOT NULL
                 ON CONFLICT (entity_id, role) DO UPDATE SET

@@ -35,6 +35,9 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
     /// <summary>Known images capability kind.</summary>
     public static ICapabilityKind<CapabilityImages> Images => Require<CapabilityImages>("images");
 
+    /// <summary>Known description capability kind.</summary>
+    public static ICapabilityKind<CapabilityDescription> Description => Require<CapabilityDescription>("description");
+
     /// <summary>Known links capability kind.</summary>
     public static ICapabilityKind<CapabilityLinks> Links => Require<CapabilityLinks>("links");
 
@@ -49,6 +52,9 @@ public sealed class CapabilityRegistry : AbstractRegistry<ICapabilityKind, strin
 
     /// <summary>Known named counters capability kind.</summary>
     public static ICapabilityKind<CapabilityCounters> Counters => Require<CapabilityCounters>("counters");
+
+    /// <summary>Known fingerprints capability kind.</summary>
+    public static ICapabilityKind<CapabilityFingerprints> Fingerprints => Require<CapabilityFingerprints>("fingerprints");
 
     /// <summary>
     /// Gets every known capability kind in deterministic registry order.

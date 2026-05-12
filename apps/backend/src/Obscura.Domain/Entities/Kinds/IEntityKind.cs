@@ -13,4 +13,7 @@ public interface IEntityKind
 
     /// <summary>Broad category used to group behavior and browsing surfaces.</summary>
     EntityKindCategory Category { get; }
+
+    /// <summary>Image or generated visual asset roles this kind can expose through the image capability.</summary>
+    IReadOnlyList<EntityFileRole> ImageAssetRoles => [];
 }

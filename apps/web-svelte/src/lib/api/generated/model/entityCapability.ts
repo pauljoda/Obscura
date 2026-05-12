@@ -6,7 +6,9 @@
  */
 import type { EntityCapabilityCountersCapability } from './entityCapabilityCountersCapability';
 import type { EntityCapabilityCreditsCapability } from './entityCapabilityCreditsCapability';
+import type { EntityCapabilityDescriptionCapability } from './entityCapabilityDescriptionCapability';
 import type { EntityCapabilityFilesCapability } from './entityCapabilityFilesCapability';
+import type { EntityCapabilityFingerprintsCapability } from './entityCapabilityFingerprintsCapability';
 import type { EntityCapabilityFlagsCapability } from './entityCapabilityFlagsCapability';
 import type { EntityCapabilityImagesCapability } from './entityCapabilityImagesCapability';
 import type { EntityCapabilityLinksCapability } from './entityCapabilityLinksCapability';
@@ -14,4 +16,4 @@ import type { EntityCapabilityRatingCapability } from './entityCapabilityRatingC
 import type { EntityCapabilityStudioCapability } from './entityCapabilityStudioCapability';
 import type { EntityCapabilityTagsCapability } from './entityCapabilityTagsCapability';
 
-export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability;
+export type EntityCapability = EntityCapabilityRatingCapability | EntityCapabilityTagsCapability | EntityCapabilityCreditsCapability | EntityCapabilityStudioCapability | EntityCapabilityImagesCapability | EntityCapabilityDescriptionCapability | EntityCapabilityLinksCapability | EntityCapabilityFlagsCapability | EntityCapabilityFilesCapability | EntityCapabilityCountersCapability | EntityCapabilityFingerprintsCapability;

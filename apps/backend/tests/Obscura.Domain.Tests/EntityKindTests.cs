@@ -67,4 +67,15 @@ public sealed class EntityKindTests
 
         Assert.Same(EntityKindRegistry.Video, found);
     }
+
+    [Fact]
+    public void EntityKindsDeclareTheirSupportedImageAssetShape()
+    {
+        Assert.Contains(EntityFileRole.Trickplay, EntityKindRegistry.Video.ImageAssetRoles);
+        Assert.Contains(EntityFileRole.Logo, EntityKindRegistry.Video.ImageAssetRoles);
+        Assert.Contains(EntityFileRole.Backdrop, EntityKindRegistry.Video.ImageAssetRoles);
+
+        Assert.Equal([EntityFileRole.Cover], EntityKindRegistry.AudioLibrary.ImageAssetRoles);
+        Assert.DoesNotContain(EntityFileRole.Trickplay, EntityKindRegistry.AudioLibrary.ImageAssetRoles);
+    }
 }

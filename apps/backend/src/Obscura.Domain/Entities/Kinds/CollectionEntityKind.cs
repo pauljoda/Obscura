@@ -7,4 +7,9 @@ public sealed record CollectionEntityKind()
     public string Code => "collection";
     public string DisplayName => "Collection";
     public EntityKindCategory Category => EntityKindCategory.Collection;
+    public IReadOnlyList<EntityFileRole> ImageAssetRoles =>
+    [
+        EntityFileRole.Thumbnail,
+        EntityFileRole.Cover
+    ];
 }

@@ -24,6 +24,12 @@ public sealed class EntityProjectionServiceTests
         SeedEntity(db, studioId, "studio", "Obscura Studio");
         SeedEntity(db, personId, "person", "Ada Person");
         db.EntityRatings.Add(new EntityRatingRow { EntityId = videoId, Value = 4 });
+        db.EntityDescriptions.Add(new EntityDescriptionRow
+        {
+            EntityId = videoId,
+            Value = "Shared description.",
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityFlags.Add(new EntityFlagRow
         {
             EntityId = videoId,
@@ -102,6 +108,34 @@ public sealed class EntityProjectionServiceTests
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityFiles.Add(new EntityFileRow
+        {
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777779"),
+            EntityId = videoId,
+            Role = EntityFileRole.Logo,
+            Path = "/assets/videos/11111111-1111-1111-1111-111111111111/logo.png",
+            MimeType = "image/png",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityFiles.Add(new EntityFileRow
+        {
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777780"),
+            EntityId = videoId,
+            Role = EntityFileRole.Trickplay,
+            Path = "/assets/videos/11111111-1111-1111-1111-111111111111/trickplay.vtt",
+            MimeType = "text/vtt",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityFileFingerprints.Add(new EntityFileFingerprintRow
+        {
+            Id = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            EntityId = videoId,
+            Algorithm = "oshash",
+            Value = "abc123",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
         await db.SaveChangesAsync();
 
         var service = new EntityProjectionService(db);
@@ -110,6 +144,7 @@ public sealed class EntityProjectionServiceTests
         var card = Assert.Single(response.Items);
         Assert.Equal(videoId, card.Id);
         Assert.Equal("video", card.Kind.Code);
+        Assert.Equal("Shared description.", card.GetCapability(CapabilityRegistry.Description).Value);
         Assert.Equal(4, card.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         Assert.Equal(["Favorite"], card.GetCapability(CapabilityRegistry.Tags).Values);
         var tag = Assert.Single(card.GetCapability(CapabilityRegistry.Tags).Items);
@@ -131,10 +166,17 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("tmdb", externalId.Provider);
         Assert.Equal("12345", externalId.Value);
         Assert.Equal("https://www.themoviedb.org/movie/12345", externalId.Url);
-        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.GetCapability(CapabilityRegistry.Images).ThumbnailUrl);
+        var images = card.GetCapability(CapabilityRegistry.Images);
+        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", images.ThumbnailUrl);
+        Assert.Contains(images.Items, asset => asset.Kind == EntityFileRole.Thumbnail && asset.Path == "/assets/videos/11111111-1111-1111-1111-111111111111/card");
+        Assert.Contains(images.Items, asset => asset.Kind == EntityFileRole.Logo && asset.Path.EndsWith("/logo.png", StringComparison.Ordinal));
+        Assert.Contains(images.Items, asset => asset.Kind == EntityFileRole.Trickplay && asset.Path.EndsWith("/trickplay.vtt", StringComparison.Ordinal));
         var files = card.GetCapability(CapabilityRegistry.Files).Items;
         Assert.Contains(files, file => file.Role == EntityFileRole.Thumbnail && file.Path == "/assets/videos/11111111-1111-1111-1111-111111111111/card");
         Assert.Contains(files, file => file.Role == EntityFileRole.Source && file.Path == "/media/videos/a-quiet-scene.mkv");
+        var fingerprint = Assert.Single(card.GetCapability(CapabilityRegistry.Fingerprints).Items);
+        Assert.Equal("oshash", fingerprint.Algorithm);
+        Assert.Equal("abc123", fingerprint.Value);
         var playback = card.GetCapability(CapabilityRegistry.Playback).Value;
         Assert.Equal(2, playback.PlayCount);
         Assert.Equal(TimeSpan.FromSeconds(45), playback.ResumeTime);

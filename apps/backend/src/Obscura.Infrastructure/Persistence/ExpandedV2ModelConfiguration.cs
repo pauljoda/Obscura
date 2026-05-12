@@ -31,6 +31,16 @@ internal static class ExpandedV2ModelConfiguration
             entity.HasOne<EntityRow>().WithMany().HasForeignKey(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<EntityDescriptionRow>(entity =>
+        {
+            entity.ToTable("entity_descriptions");
+            entity.HasKey(row => row.EntityId);
+            entity.Property(row => row.EntityId).HasColumnName("entity_id");
+            entity.Property(row => row.Value).HasColumnName("value").IsRequired();
+            entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
+            entity.HasOne<EntityRow>().WithOne().HasForeignKey<EntityDescriptionRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<EntityPlaybackRow>(entity =>
         {
             entity.ToTable("entity_playback");

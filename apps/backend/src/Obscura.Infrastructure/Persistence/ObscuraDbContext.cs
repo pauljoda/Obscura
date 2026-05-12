@@ -19,6 +19,8 @@ public sealed class ObscuraDbContext : DbContext
 
     public DbSet<EntityFlagRow> EntityFlags => Set<EntityFlagRow>();
 
+    public DbSet<EntityDescriptionRow> EntityDescriptions => Set<EntityDescriptionRow>();
+
     public DbSet<EntityTagLinkRow> EntityTagLinks => Set<EntityTagLinkRow>();
 
     public DbSet<EntityAliasRow> EntityAliases => Set<EntityAliasRow>();
