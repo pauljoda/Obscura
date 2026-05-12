@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -5,13 +6,42 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain aggregate for a user collection plus its ordered member entities.
 /// </summary>
-/// <param name="Entity">Shared global entity root for the collection.</param>
+/// <param name="Id">Shared global entity identifier.</param>
+/// <param name="Title">Display title inherited from the shared entity root.</param>
+/// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
 /// <param name="Details">Collection-specific display and refresh metadata.</param>
 /// <param name="Items">Projected collection members in relationship order.</param>
 public sealed record Collection(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     CollectionDetails Details,
-    IReadOnlyList<Entity> Items);
+    IReadOnlyList<Entity> Items)
+    : Entity(
+        Id,
+        EntityKindRegistry.Collection,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
+{
+    /// <summary>
+    /// Creates a collection from an already hydrated entity root.
+    /// </summary>
+    public Collection(Entity entity, CollectionDetails details, IReadOnlyList<Entity> items)
+        : this(entity.Id, entity.Title, entity.Subtitle, details, items)
+    {
+        Capabilities = entity.Capabilities;
+    }
+}
 
 /// <summary>
 /// Collection-specific metadata that should not live on every entity.

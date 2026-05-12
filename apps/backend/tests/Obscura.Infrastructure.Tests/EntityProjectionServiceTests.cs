@@ -204,11 +204,11 @@ public sealed class EntityProjectionServiceTests
         var detail = await service.GetVideoAsync(videoId, CancellationToken.None);
 
         Assert.NotNull(detail);
-        Assert.Equal("Feature", detail.Entity.Title);
+        Assert.Equal("Feature", detail.Title);
         Assert.Equal(TimeSpan.FromSeconds(90), detail.Duration);
         Assert.Equal(1920, detail.Width);
         Assert.Equal(1080, detail.Height);
-        Assert.Equal(3, detail.Entity.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(3, detail.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
         var marker = Assert.Single(detail.Markers.Items);
         Assert.Equal("Opening", marker.Title);
         Assert.Equal(12.5, marker.Seconds);
@@ -245,7 +245,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal("video-series", card.Kind.Code);
         Assert.Equal(5, card.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
         Assert.NotNull(detail);
-        Assert.Equal("Collected Episodes", detail.Entity.Title);
+        Assert.Equal("Collected Episodes", detail.Title);
         Assert.Equal(VideoSeriesRenderingMode.Flat, detail.RenderingMode);
         Assert.Empty(detail.Children);
         var video = Assert.Single(detail.Videos);
@@ -604,8 +604,8 @@ public sealed class EntityProjectionServiceTests
         var chapter = await service.GetBookChapterAggregateAsync(chapterId, CancellationToken.None);
         var page = await service.GetBookPageAggregateAsync(pageId, CancellationToken.None);
 
-        Assert.Equal("Original Feature", video?.Details.OriginalTitle);
-        Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Details.Duration);
+        Assert.Equal("Original Feature", video?.OriginalTitle);
+        Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Duration);
         Assert.Equal("Series overview", series?.Details.Overview);
         Assert.Equal(VideoSeriesRenderingMode.Flat, series?.Details.RenderingMode);
         Assert.Equal(1, season?.Details.SeasonNumber);

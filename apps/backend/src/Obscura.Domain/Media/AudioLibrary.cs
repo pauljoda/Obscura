@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -6,9 +7,35 @@ namespace Obscura.Domain.Media;
 /// Domain model for an album, audiobook, podcast, or other audio grouping.
 /// </summary>
 public sealed record AudioLibrary(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     AudioLibraryDetails Details)
+    : Entity(
+        Id,
+        EntityKindRegistry.AudioLibrary,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
 {
+    /// <summary>
+    /// Creates an audio library from an already hydrated entity root.
+    /// </summary>
+    public AudioLibrary(Entity entity, AudioLibraryDetails details)
+        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    {
+        Capabilities = entity.Capabilities;
+    }
+
     /// <summary>
     /// Returns a copy of the audio library with updated audio-library-specific metadata.
     /// </summary>

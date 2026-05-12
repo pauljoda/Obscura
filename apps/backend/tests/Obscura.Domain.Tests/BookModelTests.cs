@@ -8,14 +8,10 @@ public sealed class BookModelTests
     [Fact]
     public void BookCarriesBaseEntityFieldsAndBookSpecificDetails()
     {
-        var root = new Entity(
+        var book = new Book(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            EntityKindRegistry.Book,
             "The Brass Archive",
             null,
-            []);
-        var book = new Book(
-            root,
             BookDetails.Empty with
             {
                 BookType = BookType.Comic,
@@ -25,8 +21,8 @@ public sealed class BookModelTests
             },
             BookReadProgress.Empty);
 
-        Assert.Equal("book", book.Entity.Kind.Code);
-        Assert.Equal("The Brass Archive", book.Entity.Title);
+        Assert.Equal("book", book.Kind.Code);
+        Assert.Equal("The Brass Archive", book.Title);
         Assert.Equal(BookType.Comic, book.Details.BookType);
         Assert.Equal(120, book.Details.PageCount);
     }
@@ -34,14 +30,10 @@ public sealed class BookModelTests
     [Fact]
     public void BookMutatorsKeepBookRulesInsideTheBookModel()
     {
-        var root = new Entity(
+        var book = new Book(
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            EntityKindRegistry.Book,
             "Draft Book",
             null,
-            []);
-        var book = new Book(
-            root,
             BookDetails.Empty,
             BookReadProgress.Empty);
 

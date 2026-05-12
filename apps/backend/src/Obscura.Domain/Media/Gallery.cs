@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -6,9 +7,35 @@ namespace Obscura.Domain.Media;
 /// Domain model for an image gallery.
 /// </summary>
 public sealed record Gallery(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     GalleryDetails Details)
+    : Entity(
+        Id,
+        EntityKindRegistry.Gallery,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
 {
+    /// <summary>
+    /// Creates a gallery from an already hydrated entity root.
+    /// </summary>
+    public Gallery(Entity entity, GalleryDetails details)
+        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    {
+        Capabilities = entity.Capabilities;
+    }
+
     /// <summary>
     /// Returns a copy of the gallery with updated gallery-specific metadata.
     /// </summary>

@@ -141,16 +141,16 @@ public static class ContractMapper
     /// <returns>Video detail contract for API callers.</returns>
     public static VideoDetail ToVideoDetail(DomainVideo video) =>
         new(
-            video.Entity.Id,
-            video.Entity.Kind.Code,
-            video.Entity.Title,
+            video.Id,
+            video.Kind.Code,
+            video.Title,
             video.Summary,
             video.Duration,
             video.Width,
             video.Height,
             video.Markers.Items.Select(ToVideoMarker).ToArray(),
             video.Subtitles.Items.Select(ToVideoSubtitle).ToArray(),
-            ToEntityCapabilities(video.Entity.Capabilities));
+            ToEntityCapabilities(video.Capabilities));
 
     /// <summary>
     /// Converts a video-series aggregate into the series detail contract.
@@ -159,11 +159,11 @@ public static class ContractMapper
     /// <returns>Video-series detail contract for API callers.</returns>
     public static VideoSeriesDetail ToVideoSeriesDetail(DomainVideoSeries series) =>
         new(
-            series.Entity.Id,
-            series.Entity.Kind.Code,
-            series.Entity.Title,
+            series.Id,
+            series.Kind.Code,
+            series.Title,
             series.Summary,
-            ToEntityCapabilities(series.Entity.Capabilities),
+            ToEntityCapabilities(series.Capabilities),
             ToEntityCards(series.Children),
             ToEntityCards(series.Videos),
             series.RenderingMode.ToCode());

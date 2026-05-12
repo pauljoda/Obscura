@@ -8,36 +8,39 @@ namespace Obscura.Domain.Tests;
 public sealed class TypedEntityModelTests
 {
     [Theory]
+    [InlineData(typeof(Video))]
+    [InlineData(typeof(VideoSeries))]
+    [InlineData(typeof(VideoSeason))]
     [InlineData(typeof(AudioLibrary))]
     [InlineData(typeof(AudioTrack))]
     [InlineData(typeof(Book))]
+    [InlineData(typeof(BookVolume))]
+    [InlineData(typeof(BookChapter))]
+    [InlineData(typeof(BookPage))]
+    [InlineData(typeof(Collection))]
     [InlineData(typeof(Gallery))]
     [InlineData(typeof(Image))]
     [InlineData(typeof(Person))]
     [InlineData(typeof(Studio))]
     [InlineData(typeof(Tag))]
-    public void TypedEntityExtensionsComposeTheSharedEntityRoot(Type aggregateType)
+    public void TypedEntityExtensionsInheritTheSharedEntityRoot(Type aggregateType)
     {
-        Assert.False(typeof(Entity).IsAssignableFrom(aggregateType));
-        Assert.NotNull(aggregateType.GetProperty("Entity"));
+        Assert.True(typeof(Entity).IsAssignableFrom(aggregateType));
+        Assert.Null(aggregateType.GetProperty("Entity"));
     }
 
     [Fact]
     public void PersonOwnsPersonSpecificDetailsAndMutators()
     {
-        var root = new Entity(
+        var person = new Person(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-            EntityKindRegistry.Person,
             "Ada Person",
             null,
-            []);
-        var person = new Person(
-            root,
             PersonDetails.Empty);
 
         var updated = person.WithDetails(person.Details with { Country = "US", CareerStart = 2020 });
 
-        Assert.Equal("person", updated.Entity.Kind.Code);
+        Assert.Equal("person", updated.Kind.Code);
         Assert.Equal("US", updated.Details.Country);
         Assert.Equal(2020, updated.Details.CareerStart);
     }
@@ -45,22 +48,54 @@ public sealed class TypedEntityModelTests
     [Fact]
     public void AudioTrackOwnsPlaybackAwareAudioDetails()
     {
-        var root = new Entity(
+        var track = new AudioTrack(
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
-            EntityKindRegistry.AudioTrack,
             "Main Theme",
             null,
-            [CapabilityPlayback.Empty]);
-        var track = new AudioTrack(
-            root,
             AudioTrackDetails.Empty with { Duration = TimeSpan.FromSeconds(90), Codec = "flac" });
 
         var played = track.MarkPlayed(TimeSpan.FromSeconds(45), DateTimeOffset.Parse("2026-05-12T12:00:00Z"));
 
-        Assert.Equal("audio-track", played.Entity.Kind.Code);
+        Assert.Equal("audio-track", played.Kind.Code);
         Assert.Equal("flac", played.Details.Codec);
-        var playback = played.Entity.GetCapability(CapabilityRegistry.Playback);
+        var playback = played.GetCapability(CapabilityRegistry.Playback);
         Assert.Equal(1, playback.Value.PlayCount);
         Assert.Equal(TimeSpan.FromSeconds(45), playback.Value.ResumeTime);
+    }
+
+    [Fact]
+    public void VideoSubtypeExposesSpecificFieldsDirectly()
+    {
+        var video = new Video(
+            Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            "Feature",
+            null,
+            Summary: "Direct summary",
+            SortTitle: "Feature",
+            OriginalTitle: "Original Feature",
+            Tagline: "A tiny test.",
+            ReleaseDate: "2026-05-12",
+            ContentRating: "PG",
+            Duration: TimeSpan.FromMinutes(2),
+            Width: 1920,
+            Height: 1080,
+            FrameRate: 23.976,
+            BitRate: 8_000,
+            Codec: "h264",
+            Container: "mkv",
+            LibraryRootId: null,
+            SubtitlesExtractedAt: null,
+            Markers: Markers.Empty,
+            Subtitles: Subtitles.Empty);
+
+        Entity entity = video;
+
+        Assert.Equal(video.Id, entity.Id);
+        Assert.Equal("video", entity.Kind.Code);
+        Assert.Equal("Direct summary", video.Summary);
+        Assert.Equal("Original Feature", video.OriginalTitle);
+        Assert.Equal(TimeSpan.FromMinutes(2), video.Duration);
+        Assert.Null(typeof(Video).GetProperty("Details"));
+        Assert.True(video.HasCapability(CapabilityRegistry.Playback));
     }
 }

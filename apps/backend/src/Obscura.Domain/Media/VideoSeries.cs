@@ -1,25 +1,69 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
 
 /// <summary>
-/// Media aggregate for a video series plus its projected child entities and playable videos.
+/// Video-series entity extension with projected child groupings and playable videos.
 /// </summary>
-/// <param name="Entity">Shared global entity root for the series.</param>
-/// <param name="Details">Series-specific descriptive metadata.</param>
+/// <param name="Id">Shared global entity identifier.</param>
+/// <param name="Title">Display title inherited from the shared entity root.</param>
+/// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
+/// <param name="Summary">Series synopsis or freeform details.</param>
+/// <param name="RenderingMode">How the series should present episodes and seasons.</param>
 /// <param name="Children">Non-video child groupings such as seasons, once they are projected.</param>
 /// <param name="Videos">Playable video entities linked to the series.</param>
 public sealed record VideoSeries(
-    Entity Entity,
-    VideoSeriesDetails Details,
+    Guid Id,
+    string Title,
+    string? Subtitle,
+    string? Summary,
+    VideoSeriesRenderingMode RenderingMode,
     IReadOnlyList<Entity> Children,
     IReadOnlyList<Entity> Videos)
+    : Entity(
+        Id,
+        EntityKindRegistry.VideoSeries,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
 {
-    /// <summary>Optional series summary.</summary>
-    public string? Summary => Details.Overview;
+    /// <summary>
+    /// Creates a video series from the broader detail value object used by persistence hydration.
+    /// </summary>
+    public VideoSeries(
+        Entity entity,
+        VideoSeriesDetails details,
+        IReadOnlyList<Entity> children,
+        IReadOnlyList<Entity> videos)
+        : this(
+            entity.Id,
+            entity.Title,
+            entity.Subtitle,
+            details.Overview,
+            details.RenderingMode,
+            children,
+            videos)
+    {
+        Capabilities = entity.Capabilities;
+        Details = details;
+    }
 
-    /// <summary>UI hint describing whether the series should render as flat or season-grouped.</summary>
-    public VideoSeriesRenderingMode RenderingMode => Details.RenderingMode;
+    /// <summary>Full hydrated series detail fields when loaded from persistence.</summary>
+    public VideoSeriesDetails Details { get; init; } = VideoSeriesDetails.Empty with
+    {
+        Overview = Summary,
+        RenderingMode = RenderingMode
+    };
 }
 
 /// <summary>
@@ -60,7 +104,36 @@ public sealed record VideoSeriesDetails(
 /// <summary>
 /// Structural video-season aggregate for season-grouped video series.
 /// </summary>
-public sealed record VideoSeason(Entity Entity, VideoSeasonDetails Details);
+public sealed record VideoSeason(
+    Guid Id,
+    string Title,
+    string? Subtitle,
+    VideoSeasonDetails Details)
+    : Entity(
+        Id,
+        EntityKindRegistry.VideoSeason,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
+{
+    /// <summary>
+    /// Creates a video season from an already hydrated entity root.
+    /// </summary>
+    public VideoSeason(Entity entity, VideoSeasonDetails details)
+        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    {
+        Capabilities = entity.Capabilities;
+    }
+}
 
 /// <summary>
 /// Video-season-specific hierarchy and descriptive metadata.

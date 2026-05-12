@@ -7,9 +7,36 @@ namespace Obscura.Domain.Media;
 /// Domain model for a playable audio track.
 /// </summary>
 public sealed record AudioTrack(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     AudioTrackDetails Details)
+    : Entity(
+        Id,
+        EntityKindRegistry.AudioTrack,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty,
+            CapabilityPlayback.Empty
+        ])
 {
+    /// <summary>
+    /// Creates an audio track from an already hydrated entity root.
+    /// </summary>
+    public AudioTrack(Entity entity, AudioTrackDetails details)
+        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    {
+        Capabilities = entity.Capabilities;
+    }
+
     /// <summary>
     /// Returns a copy of the audio track with updated technical or descriptive details.
     /// </summary>
@@ -23,7 +50,7 @@ public sealed record AudioTrack(
     /// <returns>A new audio track with incremented playback state.</returns>
     public AudioTrack MarkPlayed(TimeSpan resumeTime, DateTimeOffset playedAt)
     {
-        var playback = Entity.TryGetCapability(CapabilityRegistry.Playback, out var existing)
+        var playback = TryGetCapability(CapabilityRegistry.Playback, out var existing)
             ? existing.Value
             : Playback.Empty;
         var next = playback with
@@ -36,9 +63,9 @@ public sealed record AudioTrack(
 
         return this with
         {
-            Entity = Entity.WithCapability(
+            Capabilities = WithCapability(
                 CapabilityRegistry.Playback,
-                new CapabilityPlayback(next))
+                new CapabilityPlayback(next)).Capabilities
         };
     }
 }

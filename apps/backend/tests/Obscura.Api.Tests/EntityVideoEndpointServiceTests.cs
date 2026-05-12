@@ -25,7 +25,6 @@ using DomainRating = Obscura.Domain.Capabilities.Rating;
 using DomainRatingValue = Obscura.Domain.Capabilities.RatingValue;
 using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
 using DomainVideo = Obscura.Domain.Media.Video;
-using DomainVideoDetails = Obscura.Domain.Media.VideoDetails;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
 namespace Obscura.Api.Tests;
@@ -165,15 +164,23 @@ public sealed class EntityVideoEndpointServiceTests
 
             return Task.FromResult<DomainVideo?>(new DomainVideo(
                 Card(null),
-                DomainVideoDetails.Empty with
-                {
-                    Summary = "Detail from projection service.",
-                    Duration = TimeSpan.FromMinutes(2),
-                    Width = 1280,
-                    Height = 720
-                },
-                DomainMarkers.Empty,
-                DomainSubtitles.Empty));
+                Summary: "Detail from projection service.",
+                SortTitle: null,
+                OriginalTitle: null,
+                Tagline: null,
+                ReleaseDate: null,
+                ContentRating: null,
+                Duration: TimeSpan.FromMinutes(2),
+                Width: 1280,
+                Height: 720,
+                FrameRate: null,
+                BitRate: null,
+                Codec: null,
+                Container: null,
+                LibraryRootId: null,
+                SubtitlesExtractedAt: null,
+                markers: DomainMarkers.Empty,
+                subtitles: DomainSubtitles.Empty));
         }
 
         public Task<DomainEntityPage> ListSeriesAsync(CancellationToken cancellationToken)

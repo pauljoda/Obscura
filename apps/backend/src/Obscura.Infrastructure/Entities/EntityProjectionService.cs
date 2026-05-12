@@ -228,26 +228,23 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new Video(
             card,
-            detail is null
-                ? VideoDetails.Empty
-                : new VideoDetails(
-                    detail.LibraryRootId,
-                    detail.Summary,
-                    detail.SortTitle,
-                    detail.OriginalTitle,
-                    detail.Tagline,
-                    detail.ReleaseDate,
-                    detail.ContentRating,
-                    detail.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
-                    detail.Width,
-                    detail.Height,
-                    detail.FrameRate,
-                    detail.BitRate,
-                    detail.Codec,
-                    detail.Container,
-                    detail.SubtitlesExtractedAt),
-            new Markers(markers),
-            new Subtitles(subtitles));
+            Summary: detail?.Summary,
+            SortTitle: detail?.SortTitle,
+            OriginalTitle: detail?.OriginalTitle,
+            Tagline: detail?.Tagline,
+            ReleaseDate: detail?.ReleaseDate,
+            ContentRating: detail?.ContentRating,
+            Duration: detail?.DurationMs is null ? null : TimeSpan.FromMilliseconds(detail.DurationMs.Value),
+            Width: detail?.Width,
+            Height: detail?.Height,
+            FrameRate: detail?.FrameRate,
+            BitRate: detail?.BitRate,
+            Codec: detail?.Codec,
+            Container: detail?.Container,
+            LibraryRootId: detail?.LibraryRootId,
+            SubtitlesExtractedAt: detail?.SubtitlesExtractedAt,
+            markers: new Markers(markers),
+            subtitles: new Subtitles(subtitles));
     }
 
     /// <inheritdoc />

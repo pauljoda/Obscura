@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -6,9 +7,35 @@ namespace Obscura.Domain.Media;
 /// Domain model for a single image entity.
 /// </summary>
 public sealed record Image(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     ImageDetails Details)
+    : Entity(
+        Id,
+        EntityKindRegistry.Image,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
 {
+    /// <summary>
+    /// Creates an image from an already hydrated entity root.
+    /// </summary>
+    public Image(Entity entity, ImageDetails details)
+        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    {
+        Capabilities = entity.Capabilities;
+    }
+
     /// <summary>
     /// Returns a copy of the image with updated image-specific metadata.
     /// </summary>

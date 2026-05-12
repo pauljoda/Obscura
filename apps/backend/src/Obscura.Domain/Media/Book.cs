@@ -1,3 +1,4 @@
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 
 namespace Obscura.Domain.Media;
@@ -5,14 +6,42 @@ namespace Obscura.Domain.Media;
 /// <summary>
 /// Domain model for a book, comic, manga, or other page-based media item.
 /// </summary>
-/// <param name="Entity">Shared global entity root for the book.</param>
+/// <param name="Id">Shared global entity identifier.</param>
+/// <param name="Title">Display title inherited from the shared entity root.</param>
+/// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
 /// <param name="Details">Book-specific metadata and scan state.</param>
 /// <param name="ReadProgress">Single-user reading progress for the book.</param>
 public sealed record Book(
-    Entity Entity,
+    Guid Id,
+    string Title,
+    string? Subtitle,
     BookDetails Details,
     BookReadProgress ReadProgress)
+    : Entity(
+        Id,
+        EntityKindRegistry.Book,
+        Title,
+        Subtitle,
+        [
+            new CapabilityRating(null),
+            CapabilityTags.Empty,
+            CapabilityCredits.Empty,
+            new CapabilityStudio(null),
+            CapabilityImages.Empty,
+            CapabilityLinks.Empty,
+            CapabilityFlags.Empty,
+            CapabilityFiles.Empty
+        ])
 {
+    /// <summary>
+    /// Creates a book from an already hydrated entity root.
+    /// </summary>
+    public Book(Entity entity, BookDetails details, BookReadProgress readProgress)
+        : this(entity.Id, entity.Title, entity.Subtitle, details, readProgress)
+    {
+        Capabilities = entity.Capabilities;
+    }
+
     /// <summary>
     /// Returns a copy of the book with new book-specific metadata.
     /// </summary>
