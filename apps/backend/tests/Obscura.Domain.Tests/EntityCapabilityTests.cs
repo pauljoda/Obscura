@@ -3,7 +3,6 @@ using Obscura.Domain.Capabilities;
 using CapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
 using CapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
 using Rating = Obscura.Domain.Capabilities.Rating;
-using RatingValue = Obscura.Domain.Capabilities.RatingValue;
 
 namespace Obscura.Domain.Tests;
 
@@ -20,7 +19,7 @@ public sealed class EntityCapabilityTests
             "Projected Video",
             null,
             [
-                new CapabilityRating(new Rating(RatingValue.Create(4))),
+                new CapabilityRating(new Rating(4)),
                 new CapabilityTags([
                     new EntityTag(new EntityReference(tagId, EntityKindRegistry.Tag, "Favorite"))
                 ]),
@@ -36,7 +35,7 @@ public sealed class EntityCapabilityTests
         var rating = entity.GetCapability(CapabilityRegistry.Rating);
 
         Assert.IsType<CapabilityRating>(rating);
-        Assert.Equal(4, rating.Value?.Value.Value);
+        Assert.Equal(4, rating.Value?.Value);
         var tag = Assert.Single(entity.GetCapability(CapabilityRegistry.Tags).Items);
         Assert.Equal(tagId, tag.Reference.Id);
         var credit = Assert.Single(entity.GetCapability(CapabilityRegistry.Credits).Items);

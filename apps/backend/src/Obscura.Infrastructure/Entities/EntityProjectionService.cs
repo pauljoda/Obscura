@@ -144,7 +144,7 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
         }
         else
         {
-            var rating = Math.Clamp(value.Value, 0, 5);
+            var rating = new Rating(value.Value).Value;
             var existing = await _db.EntityRatings.FindAsync([id], cancellationToken);
             if (existing is null)
             {

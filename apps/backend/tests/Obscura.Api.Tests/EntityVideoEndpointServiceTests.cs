@@ -22,7 +22,6 @@ using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainMarkers = Obscura.Domain.Capabilities.Markers;
 using DomainRating = Obscura.Domain.Capabilities.Rating;
-using DomainRatingValue = Obscura.Domain.Capabilities.RatingValue;
 using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
@@ -202,7 +201,7 @@ public sealed class EntityVideoEndpointServiceTests
                 null,
                 [
                     new DomainCapabilityRating(
-                        rating is null ? null : new DomainRating(DomainRatingValue.Create(rating.Value))),
+                        rating is null ? null : new DomainRating(rating.Value)),
                     new DomainCapabilityTags(["Demo"]),
                     DomainCapabilityCredits.Empty,
                     new DomainCapabilityStudio(null),

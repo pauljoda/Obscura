@@ -179,7 +179,7 @@ public static class ContractMapper
         capability switch
         {
             CapabilityRating rating => new RatingCapability(
-                rating.Value is null ? null : new ContractRating(rating.Value.Value.Value)),
+                rating.Value is null ? null : new ContractRating(rating.Value.Value)),
             CapabilityTags tags => new TagsCapability(tags.Values),
             CapabilityCredits credits => new CreditsCapability(credits.People.Select(ToEntityReference).ToArray()),
             CapabilityStudio studio => new StudioCapability(studio.Value is null ? null : ToEntityReference(studio.Value)),

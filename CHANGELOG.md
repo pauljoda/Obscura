@@ -98,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Collapsed the v2 .NET registry base classes into one `AbstractRegistry` so each domain registry declares its own lookup key, ordering, and missing-key behavior in one place.
 - Corrected v2 .NET media, taxonomy, collection, and structural hierarchy models to inherit from the shared `Entity` root, added playback as an explicit reusable capability, and removed the stale Domain-to-Contracts project reference.
 - Expanded v2 .NET tag and credit capabilities to keep entity references and role metadata, and hydrated file/playback capabilities from their EF rows instead of returning empty placeholders.
+- Simplified the v2 .NET rating model so `Rating` owns the integer value, clamps it to the shared zero-through-five scale, and replaces the extra `RatingValue` wrapper.
 - Added typed v2 .NET EF hydrators for media, taxonomy, collection, and hierarchy entities so each root entity loads its kind-specific fields directly without changing the public API yet.
 - Added typed v2 .NET EF hydrators for direct video technical fields plus direct video-series, video-season, book-volume, book-chapter, and book-page fields.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.

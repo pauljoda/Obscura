@@ -103,7 +103,7 @@ public sealed class EntityProjectionServiceTests
         var card = Assert.Single(response.Items);
         Assert.Equal(videoId, card.Id);
         Assert.Equal("video", card.Kind.Code);
-        Assert.Equal(4, card.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(4, card.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         Assert.Equal(["Favorite"], card.GetCapability(CapabilityRegistry.Tags).Values);
         var tag = Assert.Single(card.GetCapability(CapabilityRegistry.Tags).Items);
         Assert.Equal(tagId, tag.Reference.Id);
@@ -155,7 +155,7 @@ public sealed class EntityProjectionServiceTests
             null,
             CancellationToken.None);
 
-        Assert.Equal(5, rated?.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(5, rated?.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         Assert.Null(cleared?.GetCapability(CapabilityRegistry.Rating).Value);
         Assert.Empty(db.EntityRatings);
     }
@@ -208,7 +208,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(TimeSpan.FromSeconds(90), detail.Duration);
         Assert.Equal(1920, detail.Width);
         Assert.Equal(1080, detail.Height);
-        Assert.Equal(3, detail.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(3, detail.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         var marker = Assert.Single(detail.Markers.Items);
         Assert.Equal("Opening", marker.Title);
         Assert.Equal(12.5, marker.Seconds);
@@ -243,7 +243,7 @@ public sealed class EntityProjectionServiceTests
         var card = Assert.Single(list.Items);
         Assert.Equal(seriesId, card.Id);
         Assert.Equal("video-series", card.Kind.Code);
-        Assert.Equal(5, card.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(5, card.GetCapability(CapabilityRegistry.Rating).Value?.Value);
         Assert.NotNull(detail);
         Assert.Equal("Collected Episodes", detail.Title);
         Assert.Equal(VideoSeriesRenderingMode.Flat, detail.RenderingMode);
@@ -394,7 +394,7 @@ public sealed class EntityProjectionServiceTests
         var child = Assert.Single(children);
         Assert.Equal(imageId, child.Id);
         Assert.Equal("image", child.Kind.Code);
-        Assert.Equal(4, child.GetCapability(CapabilityRegistry.Rating).Value?.Value.Value);
+        Assert.Equal(4, child.GetCapability(CapabilityRegistry.Rating).Value?.Value);
     }
 
     [Fact]
