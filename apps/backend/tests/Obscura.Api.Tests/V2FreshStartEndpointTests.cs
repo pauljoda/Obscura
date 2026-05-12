@@ -26,7 +26,7 @@ public sealed class V2FreshStartEndpointTests
         using var client = factory.CreateClient();
 
         using var response = await client.PostAsync("/api/system/v2-fresh-start/prepare", null);
-        var payload = await response.Content.ReadFromJsonAsync<V2FreshStartPrepareResponseDto>();
+        var payload = await response.Content.ReadFromJsonAsync<V2FreshStartPrepareResponse>();
 
         Assert.True(response.IsSuccessStatusCode);
         Assert.NotNull(payload);
@@ -49,7 +49,7 @@ public sealed class V2FreshStartEndpointTests
         using var client = factory.CreateClient();
 
         using var response = await client.PostAsync("/api/system/v2-legacy-video-import", null);
-        var payload = await response.Content.ReadFromJsonAsync<LegacyVideoImportResponseDto>();
+        var payload = await response.Content.ReadFromJsonAsync<LegacyVideoImportResponse>();
 
         Assert.True(response.IsSuccessStatusCode);
         Assert.NotNull(payload);
@@ -75,7 +75,7 @@ public sealed class V2FreshStartEndpointTests
         using var client = factory.CreateClient();
 
         using var response = await client.PostAsync("/api/system/v2-legacy-media-import", null);
-        var payload = await response.Content.ReadFromJsonAsync<LegacyMediaImportResponseDto>();
+        var payload = await response.Content.ReadFromJsonAsync<LegacyMediaImportResponse>();
 
         Assert.True(response.IsSuccessStatusCode);
         Assert.NotNull(payload);

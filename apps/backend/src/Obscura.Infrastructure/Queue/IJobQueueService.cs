@@ -4,11 +4,11 @@ namespace Obscura.Infrastructure.Queue;
 
 public interface IJobQueueService
 {
-    Task<IReadOnlyList<JobRunDto>> ListAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken);
 
-    Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken);
+    Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken);
 
-    Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken);
+    Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken);
 
     Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken);
 

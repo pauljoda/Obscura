@@ -26,15 +26,15 @@ public static class SeriesEndpoints
                 var series = await entities.GetSeriesAsync(id, cancellationToken);
 
                 return series is null
-                    ? Results.NotFound(new ProblemDetailsDto(
+                    ? Results.NotFound(new ApiProblem(
                         "series_not_found",
                         $"Series '{id}' was not found."))
                     : Results.Ok(series);
             })
             .WithName("GetSeries")
             .WithSummary("Gets one video series detail record.")
-            .Produces<VideoSeriesDetailDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<VideoSeriesDetail>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
     }

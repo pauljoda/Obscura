@@ -6,5 +6,5 @@ public interface IJobHandler
 {
     string Type { get; }
 
-    Task HandleAsync(JobRunDto job, CancellationToken cancellationToken);
+    Task HandleAsync(JobRun job, CancellationToken cancellationToken);
 }

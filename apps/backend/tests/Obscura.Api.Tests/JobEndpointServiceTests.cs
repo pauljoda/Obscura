@@ -16,7 +16,7 @@ public sealed class JobEndpointServiceTests
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<JobListResponseDto>("/api/jobs");
+        var response = await client.GetFromJsonAsync<JobListResponse>("/api/jobs");
 
         Assert.NotNull(response);
         var job = Assert.Single(response.Items);
@@ -31,7 +31,7 @@ public sealed class JobEndpointServiceTests
         using var client = factory.CreateClient();
 
         using var response = await client.PostAsync("/api/jobs/probe-video", null);
-        var payload = await response.Content.ReadFromJsonAsync<JobCreateResponseDto>();
+        var payload = await response.Content.ReadFromJsonAsync<JobCreateResponse>();
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Equal("/api/jobs/22222222-2222-2222-2222-222222222222", response.Headers.Location?.OriginalString);
@@ -57,19 +57,19 @@ public sealed class JobEndpointServiceTests
         private static readonly Guid ExistingJobId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid CreatedJobId = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
-        public Task<IReadOnlyList<JobRunDto>> ListAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
         {
-            IReadOnlyList<JobRunDto> jobs =
+            IReadOnlyList<JobRun> jobs =
             [
-                new JobRunDto(ExistingJobId, "scan-library", "queued", 0, null, DateTimeOffset.UnixEpoch, null, null)
+                new JobRun(ExistingJobId, "scan-library", "queued", 0, null, DateTimeOffset.UnixEpoch, null, null)
             ];
 
             return Task.FromResult(jobs);
         }
 
-        public Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
+        public Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new JobRunDto(
+            return Task.FromResult(new JobRun(
                 CreatedJobId,
                 type,
                 "queued",
@@ -80,7 +80,7 @@ public sealed class JobEndpointServiceTests
                 null));
         }
 
-        public Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        public Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API endpoint tests do not claim jobs.");
         }

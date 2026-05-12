@@ -14,13 +14,13 @@ public sealed class JobQueueService : IJobQueueService
         _db = db;
     }
 
-    public async Task<IReadOnlyList<JobRunDto>> ListAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
     {
         return await _db.JobRuns
             .AsNoTracking()
             .OrderByDescending(row => row.CreatedAt)
             .Take(100)
-            .Select(row => new JobRunDto(
+            .Select(row => new JobRun(
                 row.Id,
                 row.Type,
                 row.Status,
@@ -32,7 +32,7 @@ public sealed class JobQueueService : IJobQueueService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
+    public async Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(type);
 
@@ -54,10 +54,10 @@ public sealed class JobQueueService : IJobQueueService
         _db.JobRuns.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToDto(row);
+        return ToContract(row);
     }
 
-    public async Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+    public async Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workerId);
 
@@ -81,7 +81,7 @@ public sealed class JobQueueService : IJobQueueService
         row.Attempts += 1;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToDto(row);
+        return ToContract(row);
     }
 
     public async Task CompleteAsync(Guid id, string? message, CancellationToken cancellationToken)
@@ -123,9 +123,9 @@ public sealed class JobQueueService : IJobQueueService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    private static JobRunDto ToDto(JobRunRow row)
+    private static JobRun ToContract(JobRunRow row)
     {
-        return new JobRunDto(
+        return new JobRun(
             row.Id,
             row.Type,
             row.Status,

@@ -35,7 +35,7 @@ public static class MediaEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return new MediaListResponseDto(response.Items, response.NextCursor);
+            return new MediaListResponse(response.Items, response.NextCursor);
         })
             .WithName($"List{tag}")
             .WithSummary($"Lists {kind} media entities through the global entity projection.");
@@ -48,16 +48,16 @@ public static class MediaEndpoints
             var entity = await entities.GetCardAsync(id, cancellationToken);
             if (entity is null || !entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))
             {
-                return Results.NotFound(new ProblemDetailsDto(
+                return Results.NotFound(new ApiProblem(
                     $"{kind}_not_found",
                     $"{tag} item '{id}' was not found."));
             }
 
-            IReadOnlyList<EntityCardDto> childItems = children is null
+            IReadOnlyList<EntityCard> childItems = children is null
                 ? []
                 : await entities.ListChildrenAsync(id, children.Value.Relationship, children.Value.ChildKind, cancellationToken);
 
-            return Results.Ok(new MediaDetailDto(
+            return Results.Ok(new MediaDetail(
                 entity.Id,
                 entity.Kind,
                 entity.Title,
@@ -66,7 +66,7 @@ public static class MediaEndpoints
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind} media entity.")
-            .Produces<MediaDetailDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<MediaDetail>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }
 }

@@ -13,12 +13,12 @@ public static class SystemEndpoints
             .WithTags("System");
 
         group.MapGet("/v2-upgrade-gate", (IV2UpgradeGate gate) =>
-            ToDto(gate.Check()))
+            ToContract(gate.Check()))
             .WithName("GetV2UpgradeGate")
             .WithSummary("Reports whether the v2 global entity upgrade has user consent.");
 
         group.MapPost("/v2-upgrade-gate/accept", (IV2UpgradeGate gate) =>
-            ToDto(gate.Accept()))
+            ToContract(gate.Accept()))
             .WithName("AcceptV2UpgradeGate")
             .WithSummary("Records consent for the v2 global entity upgrade.");
 
@@ -30,13 +30,13 @@ public static class SystemEndpoints
             var status = gate.Check();
             if (!status.Accepted)
             {
-                return Results.Conflict(new ProblemDetailsDto(
+                return Results.Conflict(new ApiProblem(
                     "v2_upgrade_consent_required",
                     "Accept the v2 global entity upgrade gate before preparing the fresh-start migration."));
             }
 
             var result = await freshStart.PrepareAsync(cancellationToken);
-            return Results.Ok(new V2FreshStartPrepareResponseDto(
+            return Results.Ok(new V2FreshStartPrepareResponse(
                 result.BackupPath,
                 result.PreservedLibraryRoots,
                 result.PreservedSettings,
@@ -44,15 +44,15 @@ public static class SystemEndpoints
         })
             .WithName("PrepareV2FreshStart")
             .WithSummary("Backs up the current database and preserves settings/library roots for a v2 fresh start.")
-            .Produces<V2FreshStartPrepareResponseDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status409Conflict);
+            .Produces<V2FreshStartPrepareResponse>()
+            .Produces<ApiProblem>(StatusCodes.Status409Conflict);
 
         group.MapPost("/v2-legacy-video-import", async (
             ILegacyVideoImportService legacyImport,
             CancellationToken cancellationToken) =>
         {
             var result = await legacyImport.ImportAsync(cancellationToken);
-            return Results.Ok(new LegacyVideoImportResponseDto(
+            return Results.Ok(new LegacyVideoImportResponse(
                 result.SeriesImported,
                 result.VideosImported,
                 result.PerformersImported,
@@ -62,14 +62,14 @@ public static class SystemEndpoints
         })
             .WithName("ImportLegacyVideos")
             .WithSummary("Imports legacy video and series metadata into the v2 global entity tables for side-by-side migration testing.")
-            .Produces<LegacyVideoImportResponseDto>();
+            .Produces<LegacyVideoImportResponse>();
 
         group.MapPost("/v2-legacy-media-import", async (
             ILegacyMediaImportService legacyImport,
             CancellationToken cancellationToken) =>
         {
             var result = await legacyImport.ImportAsync(cancellationToken);
-            return Results.Ok(new LegacyMediaImportResponseDto(
+            return Results.Ok(new LegacyMediaImportResponse(
                 result.ImagesImported,
                 result.GalleriesImported,
                 result.BooksImported,
@@ -80,13 +80,13 @@ public static class SystemEndpoints
         })
             .WithName("ImportLegacyMedia")
             .WithSummary("Imports legacy image, gallery, book, and audio metadata into the v2 global entity tables for side-by-side migration testing.")
-            .Produces<LegacyMediaImportResponseDto>();
+            .Produces<LegacyMediaImportResponse>();
 
         return group;
     }
 
-    private static V2UpgradeGateStatusDto ToDto(V2UpgradeGateStatus status)
+    private static V2UpgradeGateStatusResponse ToContract(V2UpgradeGateStatus status)
     {
-        return new V2UpgradeGateStatusDto(status.GateId, status.Accepted);
+        return new V2UpgradeGateStatusResponse(status.GateId, status.Accepted);
     }
 }

@@ -111,11 +111,11 @@ public sealed class EntityProjectionServiceTests
         var service = new EntityProjectionService(db);
         var rated = await service.UpdateRatingAsync(
             imageId,
-            new RatingUpdateRequestDto(5),
+            new RatingUpdateRequest(5),
             CancellationToken.None);
         var cleared = await service.UpdateRatingAsync(
             imageId,
-            new RatingUpdateRequestDto(null),
+            new RatingUpdateRequest(null),
             CancellationToken.None);
 
         Assert.Equal(5, rated?.Capabilities.Rating?.Value);

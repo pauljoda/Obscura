@@ -14,13 +14,13 @@ public sealed class SettingsService : ISettingsService
         _db = db;
     }
 
-    public async Task<SettingsDto> GetAsync(CancellationToken cancellationToken)
+    public async Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
-        return ToDto(row);
+        return ToContract(row);
     }
 
-    public async Task<SettingsDto> UpdateAsync(SettingsUpdateRequestDto request, CancellationToken cancellationToken)
+    public async Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
     {
         var row = await EnsureRowAsync(cancellationToken);
 
@@ -37,7 +37,7 @@ public sealed class SettingsService : ISettingsService
         row.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
-        return ToDto(row);
+        return ToContract(row);
     }
 
     private async Task<LibrarySettingsRow> EnsureRowAsync(CancellationToken cancellationToken)
@@ -65,9 +65,9 @@ public sealed class SettingsService : ISettingsService
         return row;
     }
 
-    private static SettingsDto ToDto(LibrarySettingsRow row)
+    private static SettingsResponse ToContract(LibrarySettingsRow row)
     {
-        return new SettingsDto(
+        return new SettingsResponse(
             HideNsfw: row.HideNsfw,
             EnableCastControls: row.ShowCastControls);
     }

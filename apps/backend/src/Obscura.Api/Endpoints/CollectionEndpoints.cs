@@ -18,7 +18,7 @@ public static class CollectionEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync("collection", query, cursor, cancellationToken);
-            return new CollectionListResponseDto(response.Items, response.NextCursor);
+            return new CollectionListResponse(response.Items, response.NextCursor);
         })
             .WithName("ListCollections")
             .WithSummary("Lists collection entities through the global entity projection.");
@@ -31,14 +31,14 @@ public static class CollectionEndpoints
             var entity = await entities.GetCardAsync(id, cancellationToken);
             if (entity is null || !entity.Kind.Equals("collection", StringComparison.OrdinalIgnoreCase))
             {
-                return Results.NotFound(new ProblemDetailsDto(
+                return Results.NotFound(new ApiProblem(
                     "collection_not_found",
                     $"Collection '{id}' was not found."));
             }
 
             var items = await entities.ListChildrenAsync(id, "collection-item", null, cancellationToken);
 
-            return Results.Ok(new CollectionDetailDto(
+            return Results.Ok(new CollectionDetail(
                 entity.Id,
                 entity.Kind,
                 entity.Title,
@@ -47,8 +47,8 @@ public static class CollectionEndpoints
         })
             .WithName("GetCollection")
             .WithSummary("Gets one collection entity with its projected items.")
-            .Produces<CollectionDetailDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<CollectionDetail>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return routes;
     }

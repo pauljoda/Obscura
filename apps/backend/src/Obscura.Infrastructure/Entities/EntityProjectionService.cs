@@ -17,7 +17,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
         _db = db;
     }
 
-    public async Task<EntityListResponseDto> ListAsync(
+    public async Task<EntityListResponse> ListAsync(
         string? kind,
         string? query,
         string? cursor,
@@ -53,10 +53,10 @@ public sealed class EntityProjectionService : IEntityProjectionService
         var cards = await BuildCardsAsync(pageRows, cancellationToken);
         var nextCursor = rows.Count > PageSize ? (skip + PageSize).ToString() : null;
 
-        return new EntityListResponseDto(cards, nextCursor);
+        return new EntityListResponse(cards, nextCursor);
     }
 
-    public async Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
     {
         var row = await _db.Entities
             .AsNoTracking()
@@ -72,7 +72,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
         return (await BuildCardsAsync([row], cancellationToken)).Single();
     }
 
-    public async Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+    public async Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
         Guid parentId,
         string relationship,
         string? childKind,
@@ -81,9 +81,9 @@ public sealed class EntityProjectionService : IEntityProjectionService
         return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
     }
 
-    public async Task<EntityCardDto?> UpdateRatingAsync(
+    public async Task<EntityCard?> UpdateRatingAsync(
         Guid id,
-        RatingUpdateRequestDto request,
+        RatingUpdateRequest request,
         CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
@@ -128,9 +128,9 @@ public sealed class EntityProjectionService : IEntityProjectionService
         return await GetCardAsync(id, cancellationToken);
     }
 
-    public async Task<EntityCardDto?> UpdateFlagsAsync(
+    public async Task<EntityCard?> UpdateFlagsAsync(
         Guid id,
-        EntityFlagsUpdateRequestDto request,
+        EntityFlagsUpdateRequest request,
         CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
@@ -158,13 +158,13 @@ public sealed class EntityProjectionService : IEntityProjectionService
         return await GetCardAsync(id, cancellationToken);
     }
 
-    public async Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken)
+    public async Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
     {
         var entities = await ListAsync("video", null, null, cancellationToken);
-        return new VideoListResponseDto(entities.Items, entities.NextCursor);
+        return new VideoListResponse(entities.Items, entities.NextCursor);
     }
 
-    public async Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
             .AsNoTracking()
@@ -184,7 +184,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
         var markers = await LoadMarkersAsync(id, cancellationToken);
         var subtitles = await LoadSubtitlesAsync(id, cancellationToken);
 
-        return new VideoDetailDto(
+        return new VideoDetail(
             entity.Id,
             entity.KindCode,
             entity.Title,
@@ -197,13 +197,13 @@ public sealed class EntityProjectionService : IEntityProjectionService
             card.Capabilities);
     }
 
-    public async Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+    public async Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
     {
         var entities = await ListAsync("video-series", null, null, cancellationToken);
-        return new VideoSeriesListResponseDto(entities.Items, entities.NextCursor);
+        return new VideoSeriesListResponse(entities.Items, entities.NextCursor);
     }
 
-    public async Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
     {
         var entity = await _db.Entities
             .AsNoTracking()
@@ -219,7 +219,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
         var card = (await BuildCardsAsync([entity], cancellationToken)).Single();
         var videos = await LoadLinkedChildrenAsync(id, "episode", "video", cancellationToken);
 
-        return new VideoSeriesDetailDto(
+        return new VideoSeriesDetail(
             entity.Id,
             entity.KindCode,
             entity.Title,
@@ -230,7 +230,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             videos.Count > 0 ? "seasons" : "flat");
     }
 
-    private async Task<IReadOnlyList<EntityCardDto>> LoadLinkedChildrenAsync(
+    private async Task<IReadOnlyList<EntityCard>> LoadLinkedChildrenAsync(
         Guid parentId,
         string relationship,
         string? childKind,
@@ -268,7 +268,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToArray();
     }
 
-    private async Task<IReadOnlyList<EntityCardDto>> BuildCardsAsync(
+    private async Task<IReadOnlyList<EntityCard>> BuildCardsAsync(
         IReadOnlyList<EntityRow> rows,
         CancellationToken cancellationToken)
     {
@@ -305,13 +305,13 @@ public sealed class EntityProjectionService : IEntityProjectionService
                 urls.TryGetValue(row.Id, out var urlRefs);
                 externalIds.TryGetValue(row.Id, out var externalIdRefs);
 
-                return new EntityCardDto(
+                return new EntityCard(
                     row.Id,
                     row.KindCode,
                     row.Title,
                     null,
-                    new EntityCapabilitiesDto(
-                        ratings.ContainsKey(row.Id) ? new RatingDto(rating) : null,
+                    new EntityCapabilities(
+                        ratings.ContainsKey(row.Id) ? new Rating(rating) : null,
                         tagTitles ?? [],
                         creditRefs ?? [],
                         studio,
@@ -326,7 +326,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToArray();
     }
 
-    private async Task<IReadOnlyList<VideoMarkerDto>> LoadMarkersAsync(
+    private async Task<IReadOnlyList<VideoMarker>> LoadMarkersAsync(
         Guid entityId,
         CancellationToken cancellationToken)
     {
@@ -335,7 +335,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .Where(marker => marker.EntityId == entityId)
             .OrderBy(marker => marker.Seconds)
             .ThenBy(marker => marker.Title)
-            .Select(marker => new VideoMarkerDto(
+            .Select(marker => new VideoMarker(
                 marker.Id,
                 marker.Title,
                 marker.Seconds,
@@ -343,7 +343,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToArrayAsync(cancellationToken);
     }
 
-    private async Task<IReadOnlyList<VideoSubtitleDto>> LoadSubtitlesAsync(
+    private async Task<IReadOnlyList<VideoSubtitle>> LoadSubtitlesAsync(
         Guid entityId,
         CancellationToken cancellationToken)
     {
@@ -353,7 +353,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .OrderByDescending(subtitle => subtitle.IsDefault)
             .ThenBy(subtitle => subtitle.Language)
             .ThenBy(subtitle => subtitle.Label)
-            .Select(subtitle => new VideoSubtitleDto(
+            .Select(subtitle => new VideoSubtitle(
                 subtitle.Id,
                 subtitle.Language,
                 subtitle.Label,
@@ -366,7 +366,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToArrayAsync(cancellationToken);
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityUrlDto>>> LoadUrlsAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityUrl>>> LoadUrlsAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -381,12 +381,12 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .GroupBy(row => row.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<EntityUrlDto>)group
-                    .Select(row => new EntityUrlDto(row.Url, row.Label))
+                group => (IReadOnlyList<EntityUrl>)group
+                    .Select(row => new EntityUrl(row.Url, row.Label))
                     .ToArray());
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityExternalIdDto>>> LoadExternalIdsAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityExternalId>>> LoadExternalIdsAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -401,8 +401,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .GroupBy(row => row.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<EntityExternalIdDto>)group
-                    .Select(row => new EntityExternalIdDto(row.Provider, row.Value, row.Url))
+                group => (IReadOnlyList<EntityExternalId>)group
+                    .Select(row => new EntityExternalId(row.Provider, row.Value, row.Url))
                     .ToArray());
     }
 
@@ -448,7 +448,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .ToDictionaryAsync(file => file.EntityId, file => file.Path, cancellationToken);
     }
 
-    private async Task<IReadOnlyDictionary<Guid, EntityReferenceDto>> LoadStudioReferencesAsync(
+    private async Task<IReadOnlyDictionary<Guid, EntityReference>> LoadStudioReferencesAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -459,7 +459,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
 
         if (links.Count == 0)
         {
-            return new Dictionary<Guid, EntityReferenceDto>();
+            return new Dictionary<Guid, EntityReference>();
         }
 
         var studioIds = links.Select(link => link.StudioId).Distinct().ToArray();
@@ -475,11 +475,11 @@ public sealed class EntityProjectionService : IEntityProjectionService
                 link =>
                 {
                     var studio = studios[link.StudioId];
-                    return new EntityReferenceDto(studio.Id, studio.KindCode, studio.Title);
+                    return new EntityReference(studio.Id, studio.KindCode, studio.Title);
                 });
     }
 
-    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityReferenceDto>>> LoadCreditReferencesAsync(
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityReference>>> LoadCreditReferencesAsync(
         IReadOnlyList<Guid> entityIds,
         CancellationToken cancellationToken)
     {
@@ -492,7 +492,7 @@ public sealed class EntityProjectionService : IEntityProjectionService
 
         if (links.Count == 0)
         {
-            return new Dictionary<Guid, IReadOnlyList<EntityReferenceDto>>();
+            return new Dictionary<Guid, IReadOnlyList<EntityReference>>();
         }
 
         var personIds = links.Select(link => link.PersonEntityId).Distinct().ToArray();
@@ -506,11 +506,11 @@ public sealed class EntityProjectionService : IEntityProjectionService
             .GroupBy(link => link.EntityId)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<EntityReferenceDto>)group
+                group => (IReadOnlyList<EntityReference>)group
                     .Select(link =>
                     {
                         var person = people[link.PersonEntityId];
-                        return new EntityReferenceDto(person.Id, person.KindCode, person.Title);
+                        return new EntityReference(person.Id, person.KindCode, person.Title);
                     })
                     .ToArray());
     }

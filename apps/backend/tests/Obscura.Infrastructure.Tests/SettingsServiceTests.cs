@@ -26,7 +26,7 @@ public sealed class SettingsServiceTests
         await using var db = CreateContext();
         var service = new SettingsService(db);
 
-        await service.UpdateAsync(new SettingsUpdateRequestDto(true, false), CancellationToken.None);
+        await service.UpdateAsync(new SettingsUpdateRequest(true, false), CancellationToken.None);
         var settings = await service.GetAsync(CancellationToken.None);
 
         Assert.True(settings.HideNsfw);

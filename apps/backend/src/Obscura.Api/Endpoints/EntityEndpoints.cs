@@ -29,53 +29,53 @@ public static class EntityEndpoints
                 var entity = await entities.GetCardAsync(id, cancellationToken);
 
                 return entity is null
-                    ? Results.NotFound(new ProblemDetailsDto(
+                    ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
                     : Results.Ok(entity);
             })
             .WithName("GetEntity")
             .WithSummary("Gets one global entity by id.")
-            .Produces<EntityCardDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         group.MapPatch("/{id:guid}/rating", async (
             Guid id,
-            RatingUpdateRequestDto request,
+            RatingUpdateRequest request,
             IEntityProjectionService entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.UpdateRatingAsync(id, request, cancellationToken);
 
                 return entity is null
-                    ? Results.NotFound(new ProblemDetailsDto(
+                    ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
                     : Results.Ok(entity);
             })
             .WithName("UpdateEntityRating")
             .WithSummary("Updates the shared rating capability for one entity.")
-            .Produces<EntityCardDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         group.MapPatch("/{id:guid}/flags", async (
             Guid id,
-            EntityFlagsUpdateRequestDto request,
+            EntityFlagsUpdateRequest request,
             IEntityProjectionService entities,
             CancellationToken cancellationToken) =>
             {
                 var entity = await entities.UpdateFlagsAsync(id, request, cancellationToken);
 
                 return entity is null
-                    ? Results.NotFound(new ProblemDetailsDto(
+                    ? Results.NotFound(new ApiProblem(
                         "entity_not_found",
                         $"Entity '{id}' was not found."))
                     : Results.Ok(entity);
             })
             .WithName("UpdateEntityFlags")
             .WithSummary("Updates shared boolean flags for one entity.")
-            .Produces<EntityCardDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<EntityCard>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
 
         return group;
     }

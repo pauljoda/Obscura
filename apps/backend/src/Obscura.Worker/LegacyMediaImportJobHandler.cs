@@ -14,7 +14,7 @@ public sealed class LegacyMediaImportJobHandler : IJobHandler
 
     public string Type => "legacy-media-import";
 
-    public async Task HandleAsync(JobRunDto job, CancellationToken cancellationToken)
+    public async Task HandleAsync(JobRun job, CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
         var legacyImport = scope.ServiceProvider.GetRequiredService<ILegacyMediaImportService>();

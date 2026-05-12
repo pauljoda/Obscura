@@ -40,7 +40,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<EntityListResponseDto>("/api/entities?kind=video");
+        var response = await client.GetFromJsonAsync<EntityListResponse>("/api/entities?kind=video");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -52,7 +52,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<VideoListResponseDto>("/api/videos");
+        var response = await client.GetFromJsonAsync<VideoListResponse>("/api/videos");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -64,7 +64,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<VideoSeriesListResponseDto>("/api/series");
+        var response = await client.GetFromJsonAsync<VideoSeriesListResponse>("/api/series");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -76,7 +76,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<CollectionListResponseDto>("/api/collections");
+        var response = await client.GetFromJsonAsync<CollectionListResponse>("/api/collections");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -91,7 +91,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<TaxonomyListResponseDto>(path);
+        var response = await client.GetFromJsonAsync<TaxonomyListResponse>(path);
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -108,7 +108,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<MediaListResponseDto>(path);
+        var response = await client.GetFromJsonAsync<MediaListResponse>(path);
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -120,7 +120,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<JobListResponseDto>("/api/jobs");
+        var response = await client.GetFromJsonAsync<JobListResponse>("/api/jobs");
 
         Assert.NotNull(response);
         Assert.Empty(response.Items);
@@ -131,7 +131,7 @@ public sealed class ApiSurfaceTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetFromJsonAsync<SettingsDto>("/api/settings");
+        var response = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
 
         Assert.NotNull(response);
         Assert.False(response.HideNsfw);
@@ -152,17 +152,17 @@ public sealed class ApiSurfaceTests
 
     private sealed class EmptyJobQueueService : IJobQueueService
     {
-        public Task<IReadOnlyList<JobRunDto>> ListAsync(CancellationToken cancellationToken)
+        public Task<IReadOnlyList<JobRun>> ListAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<JobRunDto>>([]);
+            return Task.FromResult<IReadOnlyList<JobRun>>([]);
         }
 
-        public Task<JobRunDto> EnqueueAsync(string type, CancellationToken cancellationToken)
+        public Task<JobRun> EnqueueAsync(string type, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not create jobs.");
         }
 
-        public Task<JobRunDto?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
+        public Task<JobRun?> ClaimNextAsync(string workerId, CancellationToken cancellationToken)
         {
             throw new NotSupportedException("The API surface smoke test does not claim jobs.");
         }
@@ -184,76 +184,76 @@ public sealed class ApiSurfaceTests
 
     private sealed class EmptyEntityProjectionService : IEntityProjectionService
     {
-        public Task<EntityListResponseDto> ListAsync(
+        public Task<EntityListResponse> ListAsync(
             string? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new EntityListResponseDto([], null));
+            return Task.FromResult(new EntityListResponse([], null));
         }
 
-        public Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+        public Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCardDto?>(null);
+            return Task.FromResult<EntityCard?>(null);
         }
 
-        public Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+        public Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
             Guid parentId,
             string relationship,
             string? childKind,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<EntityCardDto>>([]);
+            return Task.FromResult<IReadOnlyList<EntityCard>>([]);
         }
 
-        public Task<EntityCardDto?> UpdateRatingAsync(
+        public Task<EntityCard?> UpdateRatingAsync(
             Guid id,
-            RatingUpdateRequestDto request,
+            RatingUpdateRequest request,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCardDto?>(null);
+            return Task.FromResult<EntityCard?>(null);
         }
 
-        public Task<EntityCardDto?> UpdateFlagsAsync(
+        public Task<EntityCard?> UpdateFlagsAsync(
             Guid id,
-            EntityFlagsUpdateRequestDto request,
+            EntityFlagsUpdateRequest request,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<EntityCardDto?>(null);
+            return Task.FromResult<EntityCard?>(null);
         }
 
-        public Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoListResponseDto([], null));
+            return Task.FromResult(new VideoListResponse([], null));
         }
 
-        public Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+        public Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoDetailDto?>(null);
+            return Task.FromResult<VideoDetail?>(null);
         }
 
-        public Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoSeriesListResponseDto([], null));
+            return Task.FromResult(new VideoSeriesListResponse([], null));
         }
 
-        public Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        public Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoSeriesDetailDto?>(null);
+            return Task.FromResult<VideoSeriesDetail?>(null);
         }
     }
 
     private sealed class DefaultSettingsService : ISettingsService
     {
-        public Task<SettingsDto> GetAsync(CancellationToken cancellationToken)
+        public Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsDto(false, true));
+            return Task.FromResult(new SettingsResponse(false, true));
         }
 
-        public Task<SettingsDto> UpdateAsync(SettingsUpdateRequestDto request, CancellationToken cancellationToken)
+        public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsDto(
+            return Task.FromResult(new SettingsResponse(
                 request.HideNsfw ?? false,
                 request.EnableCastControls ?? true));
         }

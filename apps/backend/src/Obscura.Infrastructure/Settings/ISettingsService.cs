@@ -4,7 +4,7 @@ namespace Obscura.Infrastructure.Settings;
 
 public interface ISettingsService
 {
-    Task<SettingsDto> GetAsync(CancellationToken cancellationToken);
+    Task<SettingsResponse> GetAsync(CancellationToken cancellationToken);
 
-    Task<SettingsDto> UpdateAsync(SettingsUpdateRequestDto request, CancellationToken cancellationToken);
+    Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken);
 }

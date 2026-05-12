@@ -22,9 +22,9 @@ public sealed class SettingsEndpointServiceTests
             });
         using var client = factory.CreateClient();
 
-        var before = await client.GetFromJsonAsync<SettingsDto>("/api/settings");
-        var after = await client.PatchAsJsonAsync("/api/settings", new SettingsUpdateRequestDto(true, false));
-        var updated = await after.Content.ReadFromJsonAsync<SettingsDto>();
+        var before = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        var after = await client.PatchAsJsonAsync("/api/settings", new SettingsUpdateRequest(true, false));
+        var updated = await after.Content.ReadFromJsonAsync<SettingsResponse>();
 
         Assert.NotNull(before);
         Assert.False(before.HideNsfw);
@@ -36,14 +36,14 @@ public sealed class SettingsEndpointServiceTests
 
     private sealed class FakeSettingsService : ISettingsService
     {
-        public Task<SettingsDto> GetAsync(CancellationToken cancellationToken)
+        public Task<SettingsResponse> GetAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsDto(false, true));
+            return Task.FromResult(new SettingsResponse(false, true));
         }
 
-        public Task<SettingsDto> UpdateAsync(SettingsUpdateRequestDto request, CancellationToken cancellationToken)
+        public Task<SettingsResponse> UpdateAsync(SettingsUpdateRequest request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new SettingsDto(
+            return Task.FromResult(new SettingsResponse(
                 request.HideNsfw ?? false,
                 request.EnableCastControls ?? true));
         }

@@ -5,19 +5,19 @@
   import {
     fetchV2Series,
     updateV2EntityRating,
-    type V2VideoSeriesDetailDto,
+    type V2VideoSeriesDetail,
   } from "$lib/api/v2";
 
   type LoadState = "loading" | "ready" | "error";
 
   let loadState: LoadState = $state("loading");
-  let series = $state<V2VideoSeriesDetailDto | null>(null);
+  let series = $state<V2VideoSeriesDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
 
   const childCount = $derived((series?.children.length ?? 0) + (series?.videos.length ?? 0));
 
-  function ratingValue(current: V2VideoSeriesDetailDto): number {
+  function ratingValue(current: V2VideoSeriesDetail): number {
     const value = current.capabilities.rating?.value;
     return typeof value === "number" ? value : Number(value ?? 0);
   }

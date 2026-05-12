@@ -51,7 +51,7 @@ else
 }
 
 app.MapGet("/api/health", () =>
-    Results.Ok(new HealthResponseDto("ok", "dotnet")))
+    Results.Ok(new HealthResponse("ok", "dotnet")))
     .WithName("GetHealth")
     .WithSummary("Reports that the Obscura .NET backend is ready to accept requests.");
 
@@ -76,7 +76,7 @@ if (File.Exists(staticIndexPath))
 }
 else
 {
-    app.MapFallback(() => Results.NotFound(new ProblemDetailsDto(
+    app.MapFallback(() => Results.NotFound(new ApiProblem(
         "not_found",
         "The requested Obscura route was not found.")));
 }

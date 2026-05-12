@@ -4,14 +4,14 @@
   import {
     fetchV2Entities,
     updateV2EntityRating,
-    type V2EntityCardDto,
+    type V2EntityCard,
   } from "$lib/api/v2";
 
   type LoadState = "loading" | "ready" | "error";
 
   let loadState: LoadState = $state("loading");
-  let items: V2EntityCardDto[] = $state.raw([]);
-  let prefetchedItems: V2EntityCardDto[] | null = $state.raw(null);
+  let items: V2EntityCard[] = $state.raw([]);
+  let prefetchedItems: V2EntityCard[] | null = $state.raw(null);
   let nextCursor: string | null = $state(null);
   let prefetchedNextCursor: string | null = $state(null);
   let errorMessage: string | null = $state(null);
@@ -22,7 +22,7 @@
     items.length === 1 ? "1 video" : `${items.length.toLocaleString()} videos`,
   );
 
-  function ratingValue(item: V2EntityCardDto): number {
+  function ratingValue(item: V2EntityCard): number {
     const value = item.capabilities.rating?.value;
     return typeof value === "number" ? value : Number(value ?? 0);
   }
@@ -88,13 +88,13 @@
     }
   }
 
-  async function setRating(item: V2EntityCardDto, value: number) {
+  async function setRating(item: V2EntityCard, value: number) {
     if (ratingBusy) return;
     const previousItems = items;
     const nextValue = item.capabilities.rating?.value === value ? null : value;
 
     ratingBusy = item.id;
-    items = items.map((candidate: V2EntityCardDto) =>
+    items = items.map((candidate: V2EntityCard) =>
       candidate.id === item.id
         ? {
             ...candidate,

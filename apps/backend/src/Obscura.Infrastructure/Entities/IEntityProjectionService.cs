@@ -6,35 +6,35 @@ namespace Obscura.Infrastructure.Entities;
 
 public interface IEntityProjectionService
 {
-    Task<EntityListResponseDto> ListAsync(
+    Task<EntityListResponse> ListAsync(
         string? kind,
         string? query,
         string? cursor,
         CancellationToken cancellationToken);
 
-    Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken);
+    Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+    Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
         Guid parentId,
         string relationship,
         string? childKind,
         CancellationToken cancellationToken);
 
-    Task<EntityCardDto?> UpdateRatingAsync(
+    Task<EntityCard?> UpdateRatingAsync(
         Guid id,
-        RatingUpdateRequestDto request,
+        RatingUpdateRequest request,
         CancellationToken cancellationToken);
 
-    Task<EntityCardDto?> UpdateFlagsAsync(
+    Task<EntityCard?> UpdateFlagsAsync(
         Guid id,
-        EntityFlagsUpdateRequestDto request,
+        EntityFlagsUpdateRequest request,
         CancellationToken cancellationToken);
 
-    Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken);
+    Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken);
 
-    Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken);
+    Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken);
 
-    Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken);
+    Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken);
 
-    Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken);
+    Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken);
 }

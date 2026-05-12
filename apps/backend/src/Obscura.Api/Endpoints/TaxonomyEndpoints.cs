@@ -31,7 +31,7 @@ public static class TaxonomyEndpoints
             CancellationToken cancellationToken) =>
         {
             var response = await entities.ListAsync(kind, query, cursor, cancellationToken);
-            return new TaxonomyListResponseDto(response.Items, response.NextCursor);
+            return new TaxonomyListResponse(response.Items, response.NextCursor);
         })
             .WithName($"List{tag}")
             .WithSummary($"Lists {kind} entities through the global entity projection.");
@@ -44,12 +44,12 @@ public static class TaxonomyEndpoints
             var entity = await entities.GetCardAsync(id, cancellationToken);
             if (entity is null || !entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase))
             {
-                return Results.NotFound(new ProblemDetailsDto(
+                return Results.NotFound(new ApiProblem(
                     $"{kind}_not_found",
                     $"{tag.TrimEnd('s')} '{id}' was not found."));
             }
 
-            return Results.Ok(new TaxonomyDetailDto(
+            return Results.Ok(new TaxonomyDetail(
                 entity.Id,
                 entity.Kind,
                 entity.Title,
@@ -57,7 +57,7 @@ public static class TaxonomyEndpoints
         })
             .WithName($"Get{tag.TrimEnd('s')}")
             .WithSummary($"Gets one {kind} entity.")
-            .Produces<TaxonomyDetailDto>()
-            .Produces<ProblemDetailsDto>(StatusCodes.Status404NotFound);
+            .Produces<TaxonomyDetail>()
+            .Produces<ApiProblem>(StatusCodes.Status404NotFound);
     }
 }

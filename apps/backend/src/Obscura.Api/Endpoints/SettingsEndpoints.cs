@@ -18,7 +18,7 @@ public static class SettingsEndpoints
             .WithSummary("Gets application settings.");
 
         group.MapPatch("/", (
-            SettingsUpdateRequestDto request,
+            SettingsUpdateRequest request,
             ISettingsService settings,
             CancellationToken cancellationToken) =>
             settings.UpdateAsync(request, cancellationToken))

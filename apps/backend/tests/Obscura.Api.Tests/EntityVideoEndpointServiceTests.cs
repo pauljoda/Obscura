@@ -19,12 +19,12 @@ public sealed class EntityVideoEndpointServiceTests
         using var client = factory.CreateClient();
         var id = FakeEntityProjectionService.VideoId;
 
-        var entities = await client.GetFromJsonAsync<EntityListResponseDto>("/api/entities?kind=video");
-        var video = await client.GetFromJsonAsync<VideoDetailDto>($"/api/videos/{id}");
+        var entities = await client.GetFromJsonAsync<EntityListResponse>("/api/entities?kind=video");
+        var video = await client.GetFromJsonAsync<VideoDetail>($"/api/videos/{id}");
         var ratingResponse = await client.PatchAsJsonAsync(
             $"/api/entities/{id}/rating",
-            new RatingUpdateRequestDto(5));
-        var rated = await ratingResponse.Content.ReadFromJsonAsync<EntityCardDto>();
+            new RatingUpdateRequest(5));
+        var rated = await ratingResponse.Content.ReadFromJsonAsync<EntityCard>();
 
         var entity = Assert.Single(entities!.Items);
         Assert.Equal(id, entity.Id);
@@ -62,58 +62,58 @@ public sealed class EntityVideoEndpointServiceTests
     {
         public static readonly Guid VideoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-        public Task<EntityListResponseDto> ListAsync(
+        public Task<EntityListResponse> ListAsync(
             string? kind,
             string? query,
             string? cursor,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(new EntityListResponseDto([Card(null)], null));
+            return Task.FromResult(new EntityListResponse([Card(null)], null));
         }
 
-        public Task<EntityCardDto?> GetCardAsync(Guid id, CancellationToken cancellationToken)
+        public Task<EntityCard?> GetCardAsync(Guid id, CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? Card(null) : null);
         }
 
-        public Task<IReadOnlyList<EntityCardDto>> ListChildrenAsync(
+        public Task<IReadOnlyList<EntityCard>> ListChildrenAsync(
             Guid parentId,
             string relationship,
             string? childKind,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult<IReadOnlyList<EntityCardDto>>([]);
+            return Task.FromResult<IReadOnlyList<EntityCard>>([]);
         }
 
-        public Task<EntityCardDto?> UpdateRatingAsync(
+        public Task<EntityCard?> UpdateRatingAsync(
             Guid id,
-            RatingUpdateRequestDto request,
+            RatingUpdateRequest request,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? Card(request.Value) : null);
         }
 
-        public Task<EntityCardDto?> UpdateFlagsAsync(
+        public Task<EntityCard?> UpdateFlagsAsync(
             Guid id,
-            EntityFlagsUpdateRequestDto request,
+            EntityFlagsUpdateRequest request,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(id == VideoId ? Card(null) : null);
         }
 
-        public Task<VideoListResponseDto> ListVideosAsync(CancellationToken cancellationToken)
+        public Task<VideoListResponse> ListVideosAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoListResponseDto([Card(null)], null));
+            return Task.FromResult(new VideoListResponse([Card(null)], null));
         }
 
-        public Task<VideoDetailDto?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
+        public Task<VideoDetail?> GetVideoAsync(Guid id, CancellationToken cancellationToken)
         {
             if (id != VideoId)
             {
-                return Task.FromResult<VideoDetailDto?>(null);
+                return Task.FromResult<VideoDetail?>(null);
             }
 
-            return Task.FromResult<VideoDetailDto?>(new VideoDetailDto(
+            return Task.FromResult<VideoDetail?>(new VideoDetail(
                 VideoId,
                 "video",
                 "Projected Video",
@@ -126,25 +126,25 @@ public sealed class EntityVideoEndpointServiceTests
                 Card(null).Capabilities));
         }
 
-        public Task<VideoSeriesListResponseDto> ListSeriesAsync(CancellationToken cancellationToken)
+        public Task<VideoSeriesListResponse> ListSeriesAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(new VideoSeriesListResponseDto([], null));
+            return Task.FromResult(new VideoSeriesListResponse([], null));
         }
 
-        public Task<VideoSeriesDetailDto?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
+        public Task<VideoSeriesDetail?> GetSeriesAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult<VideoSeriesDetailDto?>(null);
+            return Task.FromResult<VideoSeriesDetail?>(null);
         }
 
-        private static EntityCardDto Card(int? rating)
+        private static EntityCard Card(int? rating)
         {
-            return new EntityCardDto(
+            return new EntityCard(
                 VideoId,
                 "video",
                 "Projected Video",
                 null,
-                new EntityCapabilitiesDto(
-                    rating is null ? null : new RatingDto(rating),
+                new EntityCapabilities(
+                    rating is null ? null : new Rating(rating),
                     ["Demo"],
                     [],
                     null,

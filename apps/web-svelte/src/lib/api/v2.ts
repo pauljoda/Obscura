@@ -17,38 +17,38 @@ import {
   listImages,
 } from "./generated/obscura-v2";
 import type {
-  EntityCapabilitiesDto,
-  EntityCardDto,
-  EntityListResponseDto,
-  EntityReferenceDto,
-  JobListResponseDto,
-  JobRunDto,
-  LegacyMediaImportResponseDto,
-  LegacyVideoImportResponseDto,
-  MediaListResponseDto,
-  RatingDto,
-  SettingsDto,
-  VideoDetailDto,
-  VideoListResponseDto,
-  VideoSeriesDetailDto,
-  VideoSeriesListResponseDto,
+  EntityCapabilities,
+  EntityCard,
+  EntityListResponse,
+  EntityReference,
+  JobListResponse,
+  JobRun,
+  LegacyMediaImportResponse,
+  LegacyVideoImportResponse,
+  MediaListResponse,
+  Rating,
+  SettingsResponse,
+  VideoDetail,
+  VideoListResponse,
+  VideoSeriesDetail,
+  VideoSeriesListResponse,
 } from "./generated/model";
 
-export type V2EntityReferenceDto = EntityReferenceDto;
-export type V2RatingDto = RatingDto;
-export type V2EntityCapabilitiesDto = EntityCapabilitiesDto;
-export type V2EntityCardDto = EntityCardDto;
-export type V2EntityListResponseDto = EntityListResponseDto;
-export type V2VideoListResponseDto = VideoListResponseDto;
-export type V2VideoDetailDto = VideoDetailDto;
-export type V2VideoSeriesListResponseDto = VideoSeriesListResponseDto;
-export type V2VideoSeriesDetailDto = VideoSeriesDetailDto;
-export type V2JobRunDto = JobRunDto;
-export type V2JobListResponseDto = JobListResponseDto;
-export type V2SettingsDto = SettingsDto;
-export type V2LegacyVideoImportResponseDto = LegacyVideoImportResponseDto;
-export type V2LegacyMediaImportResponseDto = LegacyMediaImportResponseDto;
-export type V2MediaListResponseDto = MediaListResponseDto;
+export type V2EntityReference = EntityReference;
+export type V2Rating = Rating;
+export type V2EntityCapabilities = EntityCapabilities;
+export type V2EntityCard = EntityCard;
+export type V2EntityListResponse = EntityListResponse;
+export type V2VideoListResponse = VideoListResponse;
+export type V2VideoDetail = VideoDetail;
+export type V2VideoSeriesListResponse = VideoSeriesListResponse;
+export type V2VideoSeriesDetail = VideoSeriesDetail;
+export type V2JobRun = JobRun;
+export type V2JobListResponse = JobListResponse;
+export type V2SettingsResponse = SettingsResponse;
+export type V2LegacyVideoImportResponse = LegacyVideoImportResponse;
+export type V2LegacyMediaImportResponse = LegacyMediaImportResponse;
+export type V2MediaListResponse = MediaListResponse;
 
 export interface V2RequestOptions {
   signal?: AbortSignal;
@@ -57,20 +57,20 @@ export interface V2RequestOptions {
 export function fetchV2Entities(
   params?: { kind?: string; query?: string; cursor?: string },
   options?: V2RequestOptions,
-): Promise<V2EntityListResponseDto> {
+): Promise<V2EntityListResponse> {
   return listEntities(params, { signal: options?.signal }).then((response) => response.data);
 }
 
 export function fetchV2Videos(
   options?: V2RequestOptions,
-): Promise<V2VideoListResponseDto> {
+): Promise<V2VideoListResponse> {
   return listVideos({ signal: options?.signal }).then((response) => response.data);
 }
 
 export function fetchV2Video(
   id: string,
   options?: V2RequestOptions,
-): Promise<V2VideoDetailDto> {
+): Promise<V2VideoDetail> {
   return getVideo(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
@@ -82,14 +82,14 @@ export function fetchV2Video(
 
 export function fetchV2SeriesList(
   options?: V2RequestOptions,
-): Promise<V2VideoSeriesListResponseDto> {
+): Promise<V2VideoSeriesListResponse> {
   return listSeries({ signal: options?.signal }).then((response) => response.data);
 }
 
 export function fetchV2Series(
   id: string,
   options?: V2RequestOptions,
-): Promise<V2VideoSeriesDetailDto> {
+): Promise<V2VideoSeriesDetail> {
   return getSeries(id, { signal: options?.signal }).then((response) => {
     if (response.status !== 200) {
       throw new Error(response.data.message);
@@ -99,23 +99,23 @@ export function fetchV2Series(
   });
 }
 
-export function fetchV2Images(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+export function fetchV2Images(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listImages(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
-export function fetchV2Galleries(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+export function fetchV2Galleries(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listGalleries(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
-export function fetchV2Books(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+export function fetchV2Books(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listBooks(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
-export function fetchV2AudioLibraries(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+export function fetchV2AudioLibraries(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listAudioLibraries(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
-export function fetchV2AudioTracks(options?: V2RequestOptions): Promise<V2MediaListResponseDto> {
+export function fetchV2AudioTracks(options?: V2RequestOptions): Promise<V2MediaListResponse> {
   return listAudioTracks(undefined, { signal: options?.signal }).then((response) => response.data);
 }
 
@@ -137,22 +137,22 @@ export function updateV2EntityFlags(
   });
 }
 
-export function fetchV2Jobs(options?: V2RequestOptions): Promise<V2JobListResponseDto> {
+export function fetchV2Jobs(options?: V2RequestOptions): Promise<V2JobListResponse> {
   return listJobs({ signal: options?.signal }).then((response) => response.data);
 }
 
-export function fetchV2Settings(options?: V2RequestOptions): Promise<V2SettingsDto> {
+export function fetchV2Settings(options?: V2RequestOptions): Promise<V2SettingsResponse> {
   return getSettings({ signal: options?.signal }).then((response) => response.data);
 }
 
 export function importV2LegacyVideos(
   options?: V2RequestOptions,
-): Promise<V2LegacyVideoImportResponseDto> {
+): Promise<V2LegacyVideoImportResponse> {
   return importLegacyVideos({ signal: options?.signal }).then((response) => response.data);
 }
 
 export function importV2LegacyMedia(
   options?: V2RequestOptions,
-): Promise<V2LegacyMediaImportResponseDto> {
+): Promise<V2LegacyMediaImportResponse> {
   return importLegacyMedia({ signal: options?.signal }).then((response) => response.data);
 }

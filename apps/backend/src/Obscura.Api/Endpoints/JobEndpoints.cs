@@ -13,7 +13,7 @@ public static class JobEndpoints
         group.MapGet("/", async (
             IJobQueueService queue,
             CancellationToken cancellationToken) =>
-            new JobListResponseDto(await queue.ListAsync(cancellationToken)))
+            new JobListResponse(await queue.ListAsync(cancellationToken)))
             .WithName("ListJobs")
             .WithSummary("Lists Obscura background job runs for the operations dashboard.");
 
@@ -24,7 +24,7 @@ public static class JobEndpoints
         {
             var job = await queue.EnqueueAsync(type, cancellationToken);
 
-            return Results.Accepted($"/api/jobs/{job.Id}", new JobCreateResponseDto(job));
+            return Results.Accepted($"/api/jobs/{job.Id}", new JobCreateResponse(job));
         })
             .WithName("CreateJob")
             .WithSummary("Queues a background job run.");

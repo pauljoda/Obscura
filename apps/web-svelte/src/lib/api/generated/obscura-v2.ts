@@ -5,14 +5,15 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
-  CollectionDetailDto,
-  CollectionListResponseDto,
-  EntityCardDto,
-  EntityFlagsUpdateRequestDto,
-  EntityListResponseDto,
-  JobListResponseDto,
-  LegacyMediaImportResponseDto,
-  LegacyVideoImportResponseDto,
+  ApiProblem,
+  CollectionDetail,
+  CollectionListResponse,
+  EntityCard,
+  EntityFlagsUpdateRequest,
+  EntityListResponse,
+  JobListResponse,
+  LegacyMediaImportResponse,
+  LegacyVideoImportResponse,
   ListAudioLibrariesParams,
   ListAudioTracksParams,
   ListBooksParams,
@@ -23,20 +24,19 @@ import type {
   ListPerformersParams,
   ListStudiosParams,
   ListTagsParams,
-  MediaDetailDto,
-  MediaListResponseDto,
-  ProblemDetailsDto,
-  RatingUpdateRequestDto,
-  SettingsDto,
-  SettingsUpdateRequestDto,
-  TaxonomyDetailDto,
-  TaxonomyListResponseDto,
-  V2FreshStartPrepareResponseDto,
-  V2UpgradeGateStatusDto,
-  VideoDetailDto,
-  VideoListResponseDto,
-  VideoSeriesDetailDto,
-  VideoSeriesListResponseDto
+  MediaDetail,
+  MediaListResponse,
+  RatingUpdateRequest,
+  SettingsResponse,
+  SettingsUpdateRequest,
+  TaxonomyDetail,
+  TaxonomyListResponse,
+  V2FreshStartPrepareResponse,
+  V2UpgradeGateStatusResponse,
+  VideoDetail,
+  VideoListResponse,
+  VideoSeriesDetail,
+  VideoSeriesListResponse
 } from './model';
 
 import { orvalFetch } from '../orval-fetch';
@@ -78,7 +78,7 @@ export const getHealth = async ( options?: RequestInit): Promise<getHealthRespon
 
 
 export type listEntitiesResponse200 = {
-  data: EntityListResponseDto
+  data: EntityListResponse
   status: 200
 }
 
@@ -121,12 +121,12 @@ export const listEntities = async (params?: ListEntitiesParams, options?: Reques
 
 
 export type getEntityResponse200 = {
-  data: EntityCardDto
+  data: EntityCard
   status: 200
 }
 
 export type getEntityResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -164,12 +164,12 @@ export const getEntity = async (id: string, options?: RequestInit): Promise<getE
 
 
 export type updateEntityRatingResponse200 = {
-  data: EntityCardDto
+  data: EntityCard
   status: 200
 }
 
 export type updateEntityRatingResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -194,7 +194,7 @@ export const getUpdateEntityRatingUrl = (id: string,) => {
  * @summary Updates the shared rating capability for one entity.
  */
 export const updateEntityRating = async (id: string,
-    ratingUpdateRequestDto: RatingUpdateRequestDto, options?: RequestInit): Promise<updateEntityRatingResponse> => {
+    ratingUpdateRequest: RatingUpdateRequest, options?: RequestInit): Promise<updateEntityRatingResponse> => {
 
   return orvalFetch<updateEntityRatingResponse>(getUpdateEntityRatingUrl(id),
   {
@@ -202,19 +202,19 @@ export const updateEntityRating = async (id: string,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      ratingUpdateRequestDto,)
+      ratingUpdateRequest,)
   }
 );}
 
 
 
 export type updateEntityFlagsResponse200 = {
-  data: EntityCardDto
+  data: EntityCard
   status: 200
 }
 
 export type updateEntityFlagsResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -239,7 +239,7 @@ export const getUpdateEntityFlagsUrl = (id: string,) => {
  * @summary Updates shared boolean flags for one entity.
  */
 export const updateEntityFlags = async (id: string,
-    entityFlagsUpdateRequestDto: EntityFlagsUpdateRequestDto, options?: RequestInit): Promise<updateEntityFlagsResponse> => {
+    entityFlagsUpdateRequest: EntityFlagsUpdateRequest, options?: RequestInit): Promise<updateEntityFlagsResponse> => {
 
   return orvalFetch<updateEntityFlagsResponse>(getUpdateEntityFlagsUrl(id),
   {
@@ -247,14 +247,14 @@ export const updateEntityFlags = async (id: string,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      entityFlagsUpdateRequestDto,)
+      entityFlagsUpdateRequest,)
   }
 );}
 
 
 
 export type listCollectionsResponse200 = {
-  data: CollectionListResponseDto
+  data: CollectionListResponse
   status: 200
 }
 
@@ -297,12 +297,12 @@ export const listCollections = async (params?: ListCollectionsParams, options?: 
 
 
 export type getCollectionResponse200 = {
-  data: CollectionDetailDto
+  data: CollectionDetail
   status: 200
 }
 
 export type getCollectionResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -340,7 +340,7 @@ export const getCollection = async (id: string, options?: RequestInit): Promise<
 
 
 export type listImagesResponse200 = {
-  data: MediaListResponseDto
+  data: MediaListResponse
   status: 200
 }
 
@@ -383,12 +383,12 @@ export const listImages = async (params?: ListImagesParams, options?: RequestIni
 
 
 export type getImageResponse200 = {
-  data: MediaDetailDto
+  data: MediaDetail
   status: 200
 }
 
 export type getImageResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -426,7 +426,7 @@ export const getImage = async (id: string, options?: RequestInit): Promise<getIm
 
 
 export type listGalleriesResponse200 = {
-  data: MediaListResponseDto
+  data: MediaListResponse
   status: 200
 }
 
@@ -469,12 +469,12 @@ export const listGalleries = async (params?: ListGalleriesParams, options?: Requ
 
 
 export type getGallerieResponse200 = {
-  data: MediaDetailDto
+  data: MediaDetail
   status: 200
 }
 
 export type getGallerieResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -512,7 +512,7 @@ export const getGallerie = async (id: string, options?: RequestInit): Promise<ge
 
 
 export type listBooksResponse200 = {
-  data: MediaListResponseDto
+  data: MediaListResponse
   status: 200
 }
 
@@ -555,12 +555,12 @@ export const listBooks = async (params?: ListBooksParams, options?: RequestInit)
 
 
 export type getBookResponse200 = {
-  data: MediaDetailDto
+  data: MediaDetail
   status: 200
 }
 
 export type getBookResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -598,7 +598,7 @@ export const getBook = async (id: string, options?: RequestInit): Promise<getBoo
 
 
 export type listAudioLibrariesResponse200 = {
-  data: MediaListResponseDto
+  data: MediaListResponse
   status: 200
 }
 
@@ -641,12 +641,12 @@ export const listAudioLibraries = async (params?: ListAudioLibrariesParams, opti
 
 
 export type getAudioLibrarieResponse200 = {
-  data: MediaDetailDto
+  data: MediaDetail
   status: 200
 }
 
 export type getAudioLibrarieResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -684,7 +684,7 @@ export const getAudioLibrarie = async (id: string, options?: RequestInit): Promi
 
 
 export type listAudioTracksResponse200 = {
-  data: MediaListResponseDto
+  data: MediaListResponse
   status: 200
 }
 
@@ -727,12 +727,12 @@ export const listAudioTracks = async (params?: ListAudioTracksParams, options?: 
 
 
 export type getAudioTrackResponse200 = {
-  data: MediaDetailDto
+  data: MediaDetail
   status: 200
 }
 
 export type getAudioTrackResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -770,7 +770,7 @@ export const getAudioTrack = async (id: string, options?: RequestInit): Promise<
 
 
 export type listSeriesResponse200 = {
-  data: VideoSeriesListResponseDto
+  data: VideoSeriesListResponse
   status: 200
 }
 
@@ -806,12 +806,12 @@ export const listSeries = async ( options?: RequestInit): Promise<listSeriesResp
 
 
 export type getSeriesResponse200 = {
-  data: VideoSeriesDetailDto
+  data: VideoSeriesDetail
   status: 200
 }
 
 export type getSeriesResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -849,7 +849,7 @@ export const getSeries = async (id: string, options?: RequestInit): Promise<getS
 
 
 export type listVideosResponse200 = {
-  data: VideoListResponseDto
+  data: VideoListResponse
   status: 200
 }
 
@@ -885,12 +885,12 @@ export const listVideos = async ( options?: RequestInit): Promise<listVideosResp
 
 
 export type getVideoResponse200 = {
-  data: VideoDetailDto
+  data: VideoDetail
   status: 200
 }
 
 export type getVideoResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -938,12 +938,12 @@ export type streamVideoResponse206 = {
 }
 
 export type streamVideoResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
 export type streamVideoResponse415 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 415
 }
 
@@ -986,7 +986,7 @@ export type getVideoHlsManifestResponse200 = {
 }
 
 export type getVideoHlsManifestResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -1029,7 +1029,7 @@ export type getVideoHlsAssetResponse200 = {
 }
 
 export type getVideoHlsAssetResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -1069,7 +1069,7 @@ export const getVideoHlsAsset = async (id: string,
 
 
 export type listJobsResponse200 = {
-  data: JobListResponseDto
+  data: JobListResponse
   status: 200
 }
 
@@ -1141,7 +1141,7 @@ export const createJob = async (type: string, options?: RequestInit): Promise<cr
 
 
 export type getSettingsResponse200 = {
-  data: SettingsDto
+  data: SettingsResponse
   status: 200
 }
 
@@ -1177,7 +1177,7 @@ export const getSettings = async ( options?: RequestInit): Promise<getSettingsRe
 
 
 export type updateSettingsResponse200 = {
-  data: SettingsDto
+  data: SettingsResponse
   status: 200
 }
 
@@ -1199,7 +1199,7 @@ export const getUpdateSettingsUrl = () => {
 /**
  * @summary Updates application settings.
  */
-export const updateSettings = async (settingsUpdateRequestDto: SettingsUpdateRequestDto, options?: RequestInit): Promise<updateSettingsResponse> => {
+export const updateSettings = async (settingsUpdateRequest: SettingsUpdateRequest, options?: RequestInit): Promise<updateSettingsResponse> => {
 
   return orvalFetch<updateSettingsResponse>(getUpdateSettingsUrl(),
   {
@@ -1207,14 +1207,14 @@ export const updateSettings = async (settingsUpdateRequestDto: SettingsUpdateReq
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      settingsUpdateRequestDto,)
+      settingsUpdateRequest,)
   }
 );}
 
 
 
 export type getV2UpgradeGateResponse200 = {
-  data: V2UpgradeGateStatusDto
+  data: V2UpgradeGateStatusResponse
   status: 200
 }
 
@@ -1250,7 +1250,7 @@ export const getV2UpgradeGate = async ( options?: RequestInit): Promise<getV2Upg
 
 
 export type acceptV2UpgradeGateResponse200 = {
-  data: V2UpgradeGateStatusDto
+  data: V2UpgradeGateStatusResponse
   status: 200
 }
 
@@ -1286,12 +1286,12 @@ export const acceptV2UpgradeGate = async ( options?: RequestInit): Promise<accep
 
 
 export type prepareV2FreshStartResponse200 = {
-  data: V2FreshStartPrepareResponseDto
+  data: V2FreshStartPrepareResponse
   status: 200
 }
 
 export type prepareV2FreshStartResponse409 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 409
 }
 
@@ -1329,7 +1329,7 @@ export const prepareV2FreshStart = async ( options?: RequestInit): Promise<prepa
 
 
 export type importLegacyVideosResponse200 = {
-  data: LegacyVideoImportResponseDto
+  data: LegacyVideoImportResponse
   status: 200
 }
 
@@ -1365,7 +1365,7 @@ export const importLegacyVideos = async ( options?: RequestInit): Promise<import
 
 
 export type importLegacyMediaResponse200 = {
-  data: LegacyMediaImportResponseDto
+  data: LegacyMediaImportResponse
   status: 200
 }
 
@@ -1401,7 +1401,7 @@ export const importLegacyMedia = async ( options?: RequestInit): Promise<importL
 
 
 export type listPerformersResponse200 = {
-  data: TaxonomyListResponseDto
+  data: TaxonomyListResponse
   status: 200
 }
 
@@ -1444,12 +1444,12 @@ export const listPerformers = async (params?: ListPerformersParams, options?: Re
 
 
 export type getPerformerResponse200 = {
-  data: TaxonomyDetailDto
+  data: TaxonomyDetail
   status: 200
 }
 
 export type getPerformerResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -1487,7 +1487,7 @@ export const getPerformer = async (id: string, options?: RequestInit): Promise<g
 
 
 export type listStudiosResponse200 = {
-  data: TaxonomyListResponseDto
+  data: TaxonomyListResponse
   status: 200
 }
 
@@ -1530,12 +1530,12 @@ export const listStudios = async (params?: ListStudiosParams, options?: RequestI
 
 
 export type getStudioResponse200 = {
-  data: TaxonomyDetailDto
+  data: TaxonomyDetail
   status: 200
 }
 
 export type getStudioResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 
@@ -1573,7 +1573,7 @@ export const getStudio = async (id: string, options?: RequestInit): Promise<getS
 
 
 export type listTagsResponse200 = {
-  data: TaxonomyListResponseDto
+  data: TaxonomyListResponse
   status: 200
 }
 
@@ -1616,12 +1616,12 @@ export const listTags = async (params?: ListTagsParams, options?: RequestInit): 
 
 
 export type getTagResponse200 = {
-  data: TaxonomyDetailDto
+  data: TaxonomyDetail
   status: 200
 }
 
 export type getTagResponse404 = {
-  data: ProblemDetailsDto
+  data: ApiProblem
   status: 404
 }
 

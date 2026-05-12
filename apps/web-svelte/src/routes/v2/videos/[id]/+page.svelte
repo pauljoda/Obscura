@@ -5,14 +5,14 @@
   import {
     fetchV2Video,
     updateV2EntityRating,
-    type V2VideoDetailDto,
+    type V2VideoDetail,
   } from "$lib/api/v2";
   import { v2ApiPath } from "$lib/api/orval-fetch";
 
   type LoadState = "loading" | "ready" | "error";
 
   let loadState: LoadState = $state("loading");
-  let video = $state<V2VideoDetailDto | null>(null);
+  let video = $state<V2VideoDetail | null>(null);
   let errorMessage: string | null = $state(null);
   let ratingBusy = $state(false);
 
@@ -21,7 +21,7 @@
     video?.width && video?.height ? `${video.width} x ${video.height}` : "Unknown resolution",
   );
 
-  function ratingValue(current: V2VideoDetailDto): number {
+  function ratingValue(current: V2VideoDetail): number {
     const value = current.capabilities.rating?.value;
     return typeof value === "number" ? value : Number(value ?? 0);
   }
