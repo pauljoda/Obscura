@@ -4,6 +4,7 @@
     <Project Path="src/Obscura.Contracts/Obscura.Contracts.csproj" />
     <Project Path="src/Obscura.Domain/Obscura.Domain.csproj" />
     <Project Path="src/Obscura.Infrastructure/Obscura.Infrastructure.csproj" />
+    <Project Path="src/Obscura.Worker/Obscura.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Obscura.Api.Tests/Obscura.Api.Tests.csproj" />

@@ -52,6 +52,21 @@ services:
       - ../..:/app
       - cache-data:/data/cache
 
+  backend-worker:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /app
+    command: dotnet watch --project apps/backend/src/Obscura.Worker/Obscura.Worker.csproj run
+    environment:
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      DATABASE_URL: postgresql://obscura:obscura@postgres:5432/obscura
+      OBSCURA_CACHE_DIR: /data/cache
+      OBSCURA_DATA_DIR: /data
+    depends_on:
+      - postgres
+    volumes:
+      - ../..:/app
+      - cache-data:/data/cache
+
   postgres:
     image: postgres:16-alpine
     environment:
