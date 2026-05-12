@@ -29,7 +29,7 @@ public sealed class QueueWorker(
                 continue;
             }
 
-            if (!job.Type.TryToJobType(out var jobType) || !_handlers.TryGetValue(jobType, out var handler))
+            if (!job.Type.TryDecodeAs<JobType>(out var jobType) || !_handlers.TryGetValue(jobType, out var handler))
             {
                 await queue.FailAsync(
                     job.Id,

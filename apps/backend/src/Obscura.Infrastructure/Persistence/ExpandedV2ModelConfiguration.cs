@@ -82,7 +82,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.RenderingMode)
                 .HasColumnName("rendering_mode")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToVideoSeriesRenderingMode());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<VideoSeriesRenderingMode>());
             entity.HasIndex(row => row.FolderPath).IsUnique();
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<VideoSeriesDetailRow>(row => row.EntityId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<LibraryRootRow>().WithMany().HasForeignKey(row => row.LibraryRootId).OnDelete(DeleteBehavior.SetNull);
@@ -113,7 +113,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.GalleryType)
                 .HasColumnName("gallery_type")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToGalleryType());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<GalleryType>());
             entity.Property(row => row.FolderPath).HasColumnName("folder_path");
             entity.Property(row => row.ZipFilePath).HasColumnName("zip_file_path");
             entity.Property(row => row.Photographer).HasColumnName("photographer");
@@ -156,7 +156,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.BookType)
                 .HasColumnName("book_type")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToBookType());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<BookType>());
             entity.Property(row => row.SortTitle).HasColumnName("sort_title");
             entity.Property(row => row.Summary).HasColumnName("summary");
             entity.Property(row => row.Date).HasColumnName("date");
@@ -235,7 +235,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.ReaderMode)
                 .HasColumnName("reader_mode")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToReaderMode());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<ReaderMode>());
             entity.Property(row => row.CompletedAt).HasColumnName("completed_at");
             entity.Property(row => row.UpdatedAt).HasColumnName("updated_at");
             entity.HasOne<EntityRow>().WithOne().HasForeignKey<BookReadProgressRow>(row => row.BookEntityId).OnDelete(DeleteBehavior.Cascade);
@@ -337,13 +337,13 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Mode)
                 .HasColumnName("mode")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToCollectionMode());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<CollectionMode>());
             entity.Property(row => row.RuleTreeJson).HasColumnName("rule_tree_json").HasColumnType("jsonb");
             entity.Property(row => row.ItemCount).HasColumnName("item_count");
             entity.Property(row => row.CoverMode)
                 .HasColumnName("cover_mode")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToCollectionCoverMode());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<CollectionCoverMode>());
             entity.Property(row => row.CoverImagePath).HasColumnName("cover_image_path");
             entity.Property(row => row.CoverItemEntityId).HasColumnName("cover_item_entity_id");
             entity.Property(row => row.SlideshowDurationSeconds).HasColumnName("slideshow_duration_seconds");
@@ -362,7 +362,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Source)
                 .HasColumnName("source")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToCollectionItemSource());
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<CollectionItemSource>());
             entity.Property(row => row.SortOrder).HasColumnName("sort_order");
             entity.Property(row => row.AddedAt).HasColumnName("added_at");
             entity.HasIndex(row => new { row.CollectionEntityId, row.ItemEntityId }).IsUnique();
@@ -403,7 +403,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.ProviderType)
                 .HasColumnName("provider_type")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToProviderType())
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<ProviderType>())
                 .IsRequired();
             entity.Property(row => row.SettingsJson).HasColumnName("settings_json").HasColumnType("jsonb");
             entity.Property(row => row.Enabled).HasColumnName("enabled");
@@ -438,7 +438,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Status)
                 .HasColumnName("status")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToIdentifyResultStatus())
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<IdentifyResultStatus>())
                 .IsRequired();
             entity.Property(row => row.MatchType).HasColumnName("match_type").HasMaxLength(64);
             entity.Property(row => row.RawResultJson).HasColumnName("raw_result_json").HasColumnType("jsonb");
@@ -463,7 +463,7 @@ internal static class ExpandedV2ModelConfiguration
             entity.Property(row => row.Status)
                 .HasColumnName("status")
                 .HasMaxLength(64)
-                .HasConversion(value => value.ToCode(), value => value.ToFingerprintSubmissionStatus())
+                .HasConversion(value => value.ToCode(), value => value.DecodeAs<FingerprintSubmissionStatus>())
                 .IsRequired();
             entity.Property(row => row.Error).HasColumnName("error");
             entity.Property(row => row.SubmittedAt).HasColumnName("submitted_at");

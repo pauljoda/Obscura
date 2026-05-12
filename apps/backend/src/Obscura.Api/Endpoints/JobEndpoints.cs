@@ -23,7 +23,7 @@ public static class JobEndpoints
             IJobQueueService queue,
             CancellationToken cancellationToken) =>
         {
-            if (!type.TryToJobType(out var jobType))
+            if (!type.TryDecodeAs<JobType>(out var jobType))
             {
                 return Results.Problem(
                     title: "Unknown job type.",
