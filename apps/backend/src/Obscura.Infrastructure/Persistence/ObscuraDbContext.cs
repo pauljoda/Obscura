@@ -185,6 +185,8 @@ public sealed class ObscuraDbContext : DbContext
 
         modelBuilder.Entity<EntityHierarchyLinkRow>(entity =>
         {
+            var canonicalRelationshipCodes = string.Join(", ", EntityRelationships.Structural.Select(relationship => $"'{relationship.Code}'"));
+
             entity.ToTable("entity_hierarchy_links");
             entity.HasKey(row => new { row.ParentEntityId, row.ChildEntityId, row.Relationship });
             entity.Property(row => row.ParentEntityId).HasColumnName("parent_entity_id");
@@ -194,6 +196,9 @@ public sealed class ObscuraDbContext : DbContext
             entity.Property(row => row.CreatedAt).HasColumnName("created_at");
             entity.HasIndex(row => new { row.ParentEntityId, row.SortOrder });
             entity.HasIndex(row => row.ChildEntityId);
+            entity.HasIndex(row => new { row.ChildEntityId, row.Relationship })
+                .IsUnique()
+                .HasFilter($"relationship IN ({canonicalRelationshipCodes})");
             entity.HasOne<EntityRow>()
                 .WithMany()
                 .HasForeignKey(row => row.ParentEntityId)

@@ -11,6 +11,9 @@ public enum EntityKindCode
     /// <summary>Series, season, or other video grouping media.</summary>
     VideoSeries,
 
+    /// <summary>Season or season-like structural grouping inside a video series.</summary>
+    VideoSeason,
+
     /// <summary>Single image media.</summary>
     Image,
 
@@ -19,6 +22,15 @@ public enum EntityKindCode
 
     /// <summary>Book, comic, or manga media.</summary>
     Book,
+
+    /// <summary>Volume or volume-like structural grouping inside a book.</summary>
+    BookVolume,
+
+    /// <summary>Chapter or chapter-like readable unit inside a book.</summary>
+    BookChapter,
+
+    /// <summary>Single readable page inside a book chapter.</summary>
+    BookPage,
 
     /// <summary>Generic audio media.</summary>
     Audio,

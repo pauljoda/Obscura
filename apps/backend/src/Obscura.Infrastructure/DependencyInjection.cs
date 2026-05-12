@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<ILegacyVideoImportService, LegacyVideoImportService>();
         services.AddScoped<EntityProjectionService>();
         services.AddScoped<IEntityCatalog>(provider => provider.GetRequiredService<EntityProjectionService>());
+        services.AddScoped<IEntityHierarchy>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IRatingService>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoLibrary>(provider => provider.GetRequiredService<EntityProjectionService>());
         services.AddScoped<IVideoSourceService, VideoSourceService>();

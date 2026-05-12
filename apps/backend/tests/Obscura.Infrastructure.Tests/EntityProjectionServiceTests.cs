@@ -209,10 +209,113 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(5, card.Capabilities.Rating?.Value.Value);
         Assert.NotNull(detail);
         Assert.Equal("Collected Episodes", detail.Entity.Title);
-        Assert.Equal(VideoSeriesRenderingMode.Seasons, detail.RenderingMode);
+        Assert.Equal(VideoSeriesRenderingMode.Flat, detail.RenderingMode);
         Assert.Empty(detail.Children);
         var video = Assert.Single(detail.Videos);
         Assert.Equal(episodeId, video.Id);
+    }
+
+    [Fact]
+    public async Task SeriesDetailProjectsSeasonChildrenSeparatelyFromFlatEpisodes()
+    {
+        await using var db = CreateContext();
+        var seriesId = Guid.Parse("12121212-1212-1212-1212-121212121212");
+        var seasonId = Guid.Parse("13131313-1313-1313-1313-131313131313");
+        var episodeId = Guid.Parse("14141414-1414-1414-1414-141414141414");
+        SeedEntity(db, seriesId, "video-series", "Seasoned Series");
+        SeedEntity(db, seasonId, "video-season", "Season 1");
+        SeedEntity(db, episodeId, "video", "Episode 1");
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seriesId,
+            ChildEntityId = seasonId,
+            Relationship = EntityRelationships.Season.Code,
+            SortOrder = 1
+        });
+        db.EntityHierarchyLinks.Add(new EntityHierarchyLinkRow
+        {
+            ParentEntityId = seasonId,
+            ChildEntityId = episodeId,
+            Relationship = EntityRelationships.Episode.Code,
+            SortOrder = 1
+        });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var detail = await service.GetSeriesAsync(seriesId, CancellationToken.None);
+
+        Assert.NotNull(detail);
+        Assert.Equal(VideoSeriesRenderingMode.Seasons, detail.RenderingMode);
+        var season = Assert.Single(detail.Children);
+        Assert.Equal(seasonId, season.Id);
+        Assert.Empty(detail.Videos);
+    }
+
+    [Fact]
+    public async Task HierarchyTreeLoadsOrderedChildrenAndSkipsDeletedEntities()
+    {
+        await using var db = CreateContext();
+        var bookId = Guid.Parse("15151515-1515-1515-1515-151515151515");
+        var volumeId = Guid.Parse("16161616-1616-1616-1616-161616161616");
+        var chapterId = Guid.Parse("17171717-1717-1717-1717-171717171717");
+        var firstPageId = Guid.Parse("18181818-1818-1818-1818-181818181818");
+        var deletedPageId = Guid.Parse("19191919-1919-1919-1919-191919191919");
+        SeedEntity(db, bookId, "book", "Book Root");
+        SeedEntity(db, volumeId, "book-volume", "Volume 1");
+        SeedEntity(db, chapterId, "book-chapter", "Chapter 1");
+        SeedEntity(db, firstPageId, "book-page", "Page 1");
+        db.Entities.Add(new EntityRow
+        {
+            Id = deletedPageId,
+            KindCode = "book-page",
+            Title = "Deleted Page",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            DeletedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityHierarchyLinks.AddRange(
+            new EntityHierarchyLinkRow
+            {
+                ParentEntityId = bookId,
+                ChildEntityId = volumeId,
+                Relationship = EntityRelationships.Volume.Code,
+                SortOrder = 1
+            },
+            new EntityHierarchyLinkRow
+            {
+                ParentEntityId = volumeId,
+                ChildEntityId = chapterId,
+                Relationship = EntityRelationships.Chapter.Code,
+                SortOrder = 1
+            },
+            new EntityHierarchyLinkRow
+            {
+                ParentEntityId = chapterId,
+                ChildEntityId = deletedPageId,
+                Relationship = EntityRelationships.Page.Code,
+                SortOrder = 1
+            },
+            new EntityHierarchyLinkRow
+            {
+                ParentEntityId = chapterId,
+                ChildEntityId = firstPageId,
+                Relationship = EntityRelationships.Page.Code,
+                SortOrder = 2
+            });
+        await db.SaveChangesAsync();
+
+        var service = new EntityProjectionService(db);
+        var tree = await service.GetTreeAsync(bookId, EntityHierarchyDefinitions.Book, CancellationToken.None);
+
+        Assert.NotNull(tree);
+        Assert.Equal(bookId, tree.Root.Entity.Id);
+        var volume = Assert.Single(tree.Root.Children);
+        Assert.Equal(EntityRelationships.Volume, volume.RelationshipToParent);
+        var chapter = Assert.Single(volume.Children);
+        Assert.Equal(EntityRelationships.Chapter, chapter.RelationshipToParent);
+        var page = Assert.Single(chapter.Children);
+        Assert.Equal(firstPageId, page.Entity.Id);
+        Assert.Equal(2, page.SortOrder);
     }
 
     [Fact]

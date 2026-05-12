@@ -64,6 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Book progress cards now resume the current chapter directly, and rated media thumbnails now show a star chip across rated entity types.
 - Video series pages now have their full edit panel again, including metadata, rating, organized/NSFW state, cover art, and backdrop controls.
 - Tags and Studios now browse through the shared library surface, so search, filters, sorting, thumbnail sizing, and bulk actions behave like the rest of the media library and scale better on larger collections.
+- The v2 .NET backend now models seasons, book volumes, chapters, and pages as first-class hierarchy entities, giving future series and reader screens one shared way to load ordered child structure.
 
 ### Docs
 
@@ -84,6 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Restructured the v2 .NET backend core so infrastructure now projects PostgreSQL rows into first-class Domain entities, capabilities, and media aggregates before API endpoints map them back to OpenAPI/Orval contracts.
 - The v2 .NET backend now has an `Obscura.Application` boundary for API-facing service interfaces, starting with a cleaner `IEntityCatalog` abstraction over the entity projection implementation.
 - Renamed the v2 .NET API contract records and generated Orval models to remove `Dto` suffixes, keeping request/response names only where they describe API direction.
+- Added a code-defined v2 .NET hierarchy registry, semantic structural relationship codes, tree projection support, and canonical structural-link indexing so parentage lives in shared hierarchy links instead of bespoke traversal logic.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

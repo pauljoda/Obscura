@@ -11,7 +11,7 @@ namespace Obscura.Infrastructure.Entities;
 /// <summary>
 /// Projects v2 PostgreSQL entity rows into Domain objects used by application services.
 /// </summary>
-public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IVideoLibrary
+public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, IRatingService, IVideoLibrary
 {
     private const int PageSize = 50;
     private readonly ObscuraDbContext _db;
@@ -90,6 +90,33 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         CancellationToken cancellationToken)
     {
         return await LoadLinkedChildrenAsync(parentId, relationship, childKind, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public bool IsAllowed(EntityKind parentKind, EntityKind childKind, EntityRelationship relationship) =>
+        EntityHierarchyDefinitions.IsAllowed(parentKind, childKind, relationship);
+
+    /// <inheritdoc />
+    public async Task<EntityHierarchyTree?> GetTreeAsync(
+        Guid rootId,
+        HierarchyDefinition definition,
+        CancellationToken cancellationToken)
+    {
+        var root = await GetAsync(rootId, cancellationToken);
+        if (root is null || root.Kind != definition.RootKind)
+        {
+            return null;
+        }
+
+        var rootNode = await BuildHierarchyNodeAsync(
+            root,
+            definition,
+            null,
+            0,
+            new HashSet<Guid> { root.Id },
+            cancellationToken);
+
+        return new EntityHierarchyTree(definition, rootNode);
     }
 
     /// <inheritdoc />
@@ -227,14 +254,50 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         }
 
         var card = (await BuildEntitiesAsync([entity], cancellationToken)).Single();
+        var seasons = await LoadLinkedChildrenAsync(id, EntityRelationships.Season, EntityKinds.VideoSeason, cancellationToken);
         var videos = await LoadLinkedChildrenAsync(id, EntityRelationships.Episode, EntityKinds.Video, cancellationToken);
 
         return new VideoSeries(
             card,
             null,
-            [],
+            seasons,
             videos,
-            videos.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+            seasons.Count > 0 ? VideoSeriesRenderingMode.Seasons : VideoSeriesRenderingMode.Flat);
+    }
+
+    private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(
+        Entity entity,
+        HierarchyDefinition definition,
+        EntityRelationship? relationshipToParent,
+        int sortOrder,
+        HashSet<Guid> visited,
+        CancellationToken cancellationToken)
+    {
+        var childLinks = new List<LinkedEntity>();
+        foreach (var layer in definition.Layers.Where(layer => layer.ParentKind == entity.Kind))
+        {
+            childLinks.AddRange(await LoadLinkedChildrenWithEdgesAsync(entity.Id, layer.Relationship, layer.ChildKind, cancellationToken));
+        }
+
+        var children = new List<EntityHierarchyNode>();
+        foreach (var childLink in childLinks.OrderBy(link => link.SortOrder).ThenBy(link => link.Entity.Id))
+        {
+            if (!visited.Add(childLink.Entity.Id))
+            {
+                continue;
+            }
+
+            children.Add(await BuildHierarchyNodeAsync(
+                childLink.Entity,
+                definition,
+                childLink.Relationship,
+                childLink.SortOrder,
+                visited,
+                cancellationToken));
+            visited.Remove(childLink.Entity.Id);
+        }
+
+        return new EntityHierarchyNode(entity, relationshipToParent, sortOrder, children);
     }
 
     private async Task<IReadOnlyList<Entity>> LoadLinkedChildrenAsync(
@@ -272,6 +335,44 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
         return links
             .Where(link => cardsById.ContainsKey(link.ChildEntityId))
             .Select(link => cardsById[link.ChildEntityId])
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<LinkedEntity>> LoadLinkedChildrenWithEdgesAsync(
+        Guid parentId,
+        EntityRelationship relationship,
+        EntityKind? childKind,
+        CancellationToken cancellationToken)
+    {
+        var links = await _db.EntityHierarchyLinks
+            .AsNoTracking()
+            .Where(link => link.ParentEntityId == parentId && link.Relationship == relationship.Code)
+            .OrderBy(link => link.SortOrder)
+            .ThenBy(link => link.ChildEntityId)
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+        {
+            return [];
+        }
+
+        var childIds = links.Select(link => link.ChildEntityId).ToArray();
+        var childQuery = _db.Entities
+            .AsNoTracking()
+            .Where(entity => childIds.Contains(entity.Id) && entity.DeletedAt == null);
+
+        if (childKind is not null)
+        {
+            childQuery = childQuery.Where(entity => entity.KindCode == childKind.Code);
+        }
+
+        var childRows = await childQuery.ToListAsync(cancellationToken);
+        var cardsById = (await BuildEntitiesAsync(childRows, cancellationToken))
+            .ToDictionary(entity => entity.Id);
+
+        return links
+            .Where(link => cardsById.ContainsKey(link.ChildEntityId))
+            .Select(link => new LinkedEntity(cardsById[link.ChildEntityId], relationship, link.SortOrder))
             .ToArray();
     }
 
@@ -520,4 +621,6 @@ public sealed class EntityProjectionService : IEntityCatalog, IRatingService, IV
     }
 
     private static EntityKind ResolveKind(string code) => EntityKinds.Require(code);
+
+    private sealed record LinkedEntity(Entity Entity, EntityRelationship Relationship, int SortOrder);
 }

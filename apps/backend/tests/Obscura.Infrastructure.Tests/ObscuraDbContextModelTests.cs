@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Infrastructure.Persistence;
@@ -62,6 +64,42 @@ public sealed class ObscuraDbContextModelTests
 
         var key = Assert.Single(modelEntity!.FindPrimaryKey()!.Properties);
         Assert.Equal(nameof(EntityRatingRow.EntityId), key.Name);
+    }
+
+    [Fact]
+    public void EntityKindSeedDataIncludesStructuralHierarchyKinds()
+    {
+        using var db = CreateContext();
+        var modelEntity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(EntityKindRow));
+
+        var seededCodes = modelEntity!.GetSeedData()
+            .Select(seed => seed[nameof(EntityKindRow.Code)])
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains(EntityKinds.VideoSeason.Code, seededCodes);
+        Assert.Contains(EntityKinds.BookVolume.Code, seededCodes);
+        Assert.Contains(EntityKinds.BookChapter.Code, seededCodes);
+        Assert.Contains(EntityKinds.BookPage.Code, seededCodes);
+    }
+
+    [Fact]
+    public void StructuralHierarchyLinksHaveCanonicalChildIndex()
+    {
+        using var db = CreateContext();
+        var modelEntity = db.Model.FindEntityType(typeof(EntityHierarchyLinkRow));
+
+        var index = modelEntity!.GetIndexes().SingleOrDefault(candidate =>
+            candidate.IsUnique &&
+            candidate.Properties.Select(property => property.Name).SequenceEqual([
+                nameof(EntityHierarchyLinkRow.ChildEntityId),
+                nameof(EntityHierarchyLinkRow.Relationship)
+            ]));
+
+        Assert.NotNull(index);
+        Assert.Contains("relationship IN", index!.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(EntityRelationships.Chapter.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(EntityRelationships.Page.Code, index.GetFilter(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

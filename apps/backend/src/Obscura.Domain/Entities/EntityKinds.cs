@@ -11,6 +11,9 @@ public static class EntityKinds
     /// <summary>Known video series entity kind.</summary>
     public static readonly EntityKind VideoSeries = new(EntityKindCode.VideoSeries, "video-series", "Video Series", EntityKindCategory.Media);
 
+    /// <summary>Known video season structural entity kind.</summary>
+    public static readonly EntityKind VideoSeason = new(EntityKindCode.VideoSeason, "video-season", "Video Season", EntityKindCategory.Media);
+
     /// <summary>Known image entity kind.</summary>
     public static readonly EntityKind Image = new(EntityKindCode.Image, "image", "Image", EntityKindCategory.Media);
 
@@ -19,6 +22,15 @@ public static class EntityKinds
 
     /// <summary>Known book entity kind.</summary>
     public static readonly EntityKind Book = new(EntityKindCode.Book, "book", "Book", EntityKindCategory.Media);
+
+    /// <summary>Known book volume structural entity kind.</summary>
+    public static readonly EntityKind BookVolume = new(EntityKindCode.BookVolume, "book-volume", "Book Volume", EntityKindCategory.Media);
+
+    /// <summary>Known book chapter structural entity kind.</summary>
+    public static readonly EntityKind BookChapter = new(EntityKindCode.BookChapter, "book-chapter", "Book Chapter", EntityKindCategory.Media);
+
+    /// <summary>Known book page structural entity kind.</summary>
+    public static readonly EntityKind BookPage = new(EntityKindCode.BookPage, "book-page", "Book Page", EntityKindCategory.Media);
 
     /// <summary>Known generic audio entity kind.</summary>
     public static readonly EntityKind Audio = new(EntityKindCode.Audio, "audio", "Audio", EntityKindCategory.Media);
@@ -45,9 +57,13 @@ public static class EntityKinds
     [
         Video,
         VideoSeries,
+        VideoSeason,
         Image,
         Gallery,
         Book,
+        BookVolume,
+        BookChapter,
+        BookPage,
         Audio,
         AudioLibrary,
         AudioTrack,
