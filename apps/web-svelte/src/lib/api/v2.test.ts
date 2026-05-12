@@ -24,7 +24,7 @@ describe("v2 api client", () => {
     await fetchV2Entities({ kind: "video", query: "space movie", cursor: "abc+123" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/entities?kind=video&query=space+movie&cursor=abc%2B123",
+      "http://127.0.0.1:8010/api/entities?kind=video&query=space+movie&cursor=abc%2B123",
       expect.objectContaining({ headers: expect.any(Headers) }),
     );
   });
@@ -41,7 +41,7 @@ describe("v2 api client", () => {
     await updateV2EntityRating("11111111-1111-1111-1111-111111111111", 4);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/entities/11111111-1111-1111-1111-111111111111/rating",
+      "http://127.0.0.1:8010/api/entities/11111111-1111-1111-1111-111111111111/rating",
       expect.objectContaining({
         method: "PATCH",
         body: JSON.stringify({ value: 4 }),

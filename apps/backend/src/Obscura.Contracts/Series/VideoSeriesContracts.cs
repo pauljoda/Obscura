@@ -27,7 +27,7 @@ public sealed record VideoSeriesDetail(
     string Kind,
     string Title,
     string? Summary,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityCard> Children,
     IReadOnlyList<EntityCard> Videos,
     string RenderingMode);

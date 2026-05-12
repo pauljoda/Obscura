@@ -10,7 +10,7 @@ public sealed record Studio(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     StudioDetails Details)
     : Entity(Id, EntityKindRegistry.Studio, Title, Subtitle, Capabilities)
 {

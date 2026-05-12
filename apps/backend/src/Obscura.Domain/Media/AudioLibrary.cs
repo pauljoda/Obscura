@@ -10,7 +10,7 @@ public sealed record AudioLibrary(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     AudioLibraryDetails Details)
     : Entity(Id, EntityKindRegistry.AudioLibrary, Title, Subtitle, Capabilities)
 {

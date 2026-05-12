@@ -22,4 +22,4 @@ public sealed record TaxonomyDetail(
     Guid Id,
     string Kind,
     string Title,
-    EntityCapabilities Capabilities);
+    IReadOnlyList<EntityCapability> Capabilities);

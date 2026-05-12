@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Obscura.Domain.Capabilities;
 
 namespace Obscura.Domain.Entities;
@@ -5,14 +6,118 @@ namespace Obscura.Domain.Entities;
 /// <summary>
 /// The root object for anything Obscura can display, organize, rate, tag, or relate to other objects.
 /// </summary>
-/// <param name="Id">Stable global entity identifier.</param>
-/// <param name="Kind">Code-defined entity kind that determines broad behavior and routing.</param>
-/// <param name="Title">Primary user-facing title.</param>
-/// <param name="Subtitle">Optional secondary text for cards and detail headers.</param>
-/// <param name="Capabilities">Reusable behaviors and projections attached to this entity.</param>
-public record Entity(
-    Guid Id,
-    IEntityKind Kind,
-    string Title,
-    string? Subtitle,
-    EntityCapabilities Capabilities);
+public record Entity
+{
+    /// <summary>
+    /// Creates a global entity root with a modular list of supported capabilities.
+    /// </summary>
+    /// <param name="id">Stable global entity identifier.</param>
+    /// <param name="kind">Code-defined entity kind that determines broad behavior and routing.</param>
+    /// <param name="title">Primary user-facing title.</param>
+    /// <param name="subtitle">Optional secondary text for cards and detail headers.</param>
+    /// <param name="capabilities">Reusable behaviors and projections attached to this entity.</param>
+    /// <exception cref="ArgumentException">Thrown when more than one capability has the same kind code.</exception>
+    public Entity(
+        Guid id,
+        IEntityKind kind,
+        string title,
+        string? subtitle,
+        IReadOnlyList<ICapability> capabilities)
+    {
+        Id = id;
+        Kind = kind;
+        Title = title;
+        Subtitle = subtitle;
+        Capabilities = NormalizeCapabilities(capabilities);
+    }
+
+    /// <summary>Stable global entity identifier.</summary>
+    public Guid Id { get; init; }
+
+    /// <summary>Code-defined entity kind that determines broad behavior and routing.</summary>
+    public IEntityKind Kind { get; init; }
+
+    /// <summary>Primary user-facing title.</summary>
+    public string Title { get; init; }
+
+    /// <summary>Optional secondary text for cards and detail headers.</summary>
+    public string? Subtitle { get; init; }
+
+    /// <summary>Reusable behaviors and projections attached to this entity.</summary>
+    public IReadOnlyList<ICapability> Capabilities { get; init; }
+
+    /// <summary>
+    /// Checks whether this entity supports a capability kind.
+    /// </summary>
+    /// <param name="kind">Capability kind to look up.</param>
+    /// <returns><see langword="true" /> when the entity includes the capability kind, even if the capability data is empty.</returns>
+    public bool HasCapability(ICapabilityKind kind) =>
+        Capabilities.Any(capability => string.Equals(
+            capability.Kind.Code,
+            kind.Code,
+            StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Gets a supported capability by kind.
+    /// </summary>
+    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
+    /// <param name="kind">Typed capability kind to retrieve.</param>
+    /// <returns>The supported capability instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when this entity does not support the capability kind.</exception>
+    public TCapability GetCapability<TCapability>(ICapabilityKind<TCapability> kind)
+        where TCapability : class, ICapability
+    {
+        if (TryGetCapability(kind, out var capability))
+        {
+            return capability;
+        }
+
+        throw new InvalidOperationException($"Entity '{Id}' does not support capability '{kind.Code}'.");
+    }
+
+    /// <summary>
+    /// Attempts to get a supported capability by kind.
+    /// </summary>
+    /// <typeparam name="TCapability">Concrete capability type represented by the kind.</typeparam>
+    /// <param name="kind">Typed capability kind to retrieve.</param>
+    /// <param name="capability">The supported capability when the method returns true.</param>
+    /// <returns><see langword="true" /> when this entity supports the capability kind; otherwise <see langword="false" />.</returns>
+    public bool TryGetCapability<TCapability>(
+        ICapabilityKind<TCapability> kind,
+        [NotNullWhen(true)] out TCapability? capability)
+        where TCapability : class, ICapability
+    {
+        var match = Capabilities.FirstOrDefault(capability => string.Equals(
+            capability.Kind.Code,
+            kind.Code,
+            StringComparison.OrdinalIgnoreCase));
+
+        if (match is TCapability typed)
+        {
+            capability = typed;
+            return true;
+        }
+
+        capability = null;
+        return false;
+    }
+
+    private static IReadOnlyList<ICapability> NormalizeCapabilities(IReadOnlyList<ICapability> capabilities)
+    {
+        ArgumentNullException.ThrowIfNull(capabilities);
+
+        var duplicates = capabilities
+            .GroupBy(capability => capability.Kind.Code, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicates.Length > 0)
+        {
+            throw new ArgumentException(
+                $"Entity capabilities contain duplicate kind codes: {string.Join(", ", duplicates)}.",
+                nameof(capabilities));
+        }
+
+        return capabilities.ToArray();
+    }
+}

@@ -4,11 +4,11 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCapabilities } from './entityCapabilities';
+import type { EntityCapability } from './entityCapability';
 
 export interface TaxonomyDetail {
   id: string;
   kind: string;
   title: string;
-  capabilities: EntityCapabilities;
+  capabilities: EntityCapability[];
 }

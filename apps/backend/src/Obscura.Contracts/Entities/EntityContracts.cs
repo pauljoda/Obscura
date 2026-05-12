@@ -30,33 +30,6 @@ public sealed record EntityUrl(string Url, string? Label);
 public sealed record EntityExternalId(string Provider, string Value, string? Url);
 
 /// <summary>
-/// Normalized capability projection shared by entity cards and detail responses.
-/// </summary>
-/// <param name="Rating">Optional rating capability.</param>
-/// <param name="Tags">Tag names attached to the entity.</param>
-/// <param name="Credits">Credited people associated with the entity.</param>
-/// <param name="Studio">Primary studio or publisher-like entity.</param>
-/// <param name="Urls">External URLs for the entity.</param>
-/// <param name="ExternalIds">Provider identifiers for matching and refresh.</param>
-/// <param name="ThumbnailUrl">Small artwork URL for cards and rows.</param>
-/// <param name="CoverUrl">Large artwork URL for detail surfaces.</param>
-/// <param name="IsFavorite">Favorite flag when projected.</param>
-/// <param name="IsNsfw">NSFW flag when projected.</param>
-/// <param name="IsOrganized">Organized/reviewed flag when projected.</param>
-public sealed record EntityCapabilities(
-    Rating? Rating,
-    IReadOnlyList<string> Tags,
-    IReadOnlyList<EntityReference> Credits,
-    EntityReference? Studio,
-    IReadOnlyList<EntityUrl> Urls,
-    IReadOnlyList<EntityExternalId> ExternalIds,
-    string? ThumbnailUrl,
-    string? CoverUrl,
-    bool? IsFavorite,
-    bool? IsNsfw,
-    bool? IsOrganized);
-
-/// <summary>
 /// Normalized list-card shape used across media, taxonomy, and collection routes.
 /// </summary>
 /// <param name="Id">Global entity identifier.</param>
@@ -69,7 +42,7 @@ public sealed record EntityCard(
     string Kind,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities);
+    IReadOnlyList<EntityCapability> Capabilities);
 
 /// <summary>
 /// Cursor-paged entity list response.

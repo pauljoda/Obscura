@@ -10,7 +10,7 @@ public sealed record Gallery(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     GalleryDetails Details)
     : Entity(Id, EntityKindRegistry.Gallery, Title, Subtitle, Capabilities)
 {

@@ -4,12 +4,16 @@ using Obscura.Contracts.Media;
 using Obscura.Contracts.Series;
 using Obscura.Contracts.Taxonomy;
 using Obscura.Contracts.Videos;
+using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
-using DomainCapabilities = Obscura.Domain.Capabilities.EntityCapabilities;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityLibrary = Obscura.Domain.Media.EntityLibrary;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
 using DomainEntityReference = Obscura.Domain.Entities.EntityReference;
+using ContractEntityExternalId = Obscura.Contracts.Entities.EntityExternalId;
+using ContractEntityFile = Obscura.Contracts.Entities.EntityFile;
+using ContractEntityUrl = Obscura.Contracts.Entities.EntityUrl;
+using ContractRating = Obscura.Contracts.Entities.Rating;
 using DomainMarker = Obscura.Domain.Capabilities.EntityMarker;
 using DomainSubtitle = Obscura.Domain.Capabilities.EntitySubtitle;
 using DomainVideo = Obscura.Domain.Media.Video;
@@ -164,21 +168,34 @@ public static class ContractMapper
             ToEntityCards(series.Videos),
             series.RenderingMode.ToCode());
 
-    private static EntityCapabilities ToEntityCapabilities(DomainCapabilities capabilities) =>
-        new(
-            capabilities.Rating is null ? null : new Rating(capabilities.Rating.Value.Value),
-            capabilities.Tags.Values,
-            capabilities.Credits.People.Select(ToEntityReference).ToArray(),
-            capabilities.Studio is null ? null : ToEntityReference(capabilities.Studio),
-            capabilities.Links.Urls.Select(url => new EntityUrl(url.Url, url.Label)).ToArray(),
-            capabilities.Links.ExternalIds
-                .Select(externalId => new EntityExternalId(externalId.Provider, externalId.Value, externalId.Url))
-                .ToArray(),
-            capabilities.Images.ThumbnailUrl,
-            capabilities.Images.CoverUrl,
-            capabilities.Flags.IsFavorite,
-            capabilities.Flags.IsNsfw,
-            capabilities.Flags.IsOrganized);
+    private static IReadOnlyList<EntityCapability> ToEntityCapabilities(IReadOnlyList<ICapability> capabilities) =>
+        capabilities
+            .Select(ToEntityCapability)
+            .Where(capability => capability is not null)
+            .Select(capability => capability!)
+            .ToArray();
+
+    private static EntityCapability? ToEntityCapability(ICapability capability) =>
+        capability switch
+        {
+            CapabilityRating rating => new RatingCapability(
+                rating.Value is null ? null : new ContractRating(rating.Value.Value.Value)),
+            CapabilityTags tags => new TagsCapability(tags.Values),
+            CapabilityCredits credits => new CreditsCapability(credits.People.Select(ToEntityReference).ToArray()),
+            CapabilityStudio studio => new StudioCapability(studio.Value is null ? null : ToEntityReference(studio.Value)),
+            CapabilityImages images => new ImagesCapability(images.ThumbnailUrl, images.CoverUrl),
+            CapabilityLinks links => new LinksCapability(
+                links.Urls.Select(url => new ContractEntityUrl(url.Url, url.Label)).ToArray(),
+                links.ExternalIds
+                    .Select(externalId => new ContractEntityExternalId(externalId.Provider, externalId.Value, externalId.Url))
+                    .ToArray()),
+            CapabilityFlags flags => new FlagsCapability(flags.IsFavorite, flags.IsNsfw, flags.IsOrganized),
+            CapabilityFiles files => new FilesCapability(files.Items.Select(file => new ContractEntityFile(
+                file.Role.ToCode(),
+                file.Path,
+                file.MimeType)).ToArray()),
+            _ => null
+        };
 
     private static Obscura.Contracts.Entities.EntityReference ToEntityReference(DomainEntityReference reference) =>
         new(reference.Id, reference.Kind.Code, reference.Title);

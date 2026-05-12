@@ -4,7 +4,7 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCapabilities } from './entityCapabilities';
+import type { EntityCapability } from './entityCapability';
 import type { EntityCard } from './entityCard';
 
 export interface VideoSeriesDetail {
@@ -13,7 +13,7 @@ export interface VideoSeriesDetail {
   title: string;
   /** @nullable */
   summary: string | null;
-  capabilities: EntityCapabilities;
+  capabilities: EntityCapability[];
   children: EntityCard[];
   videos: EntityCard[];
   renderingMode: string;

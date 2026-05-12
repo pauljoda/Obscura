@@ -70,4 +70,4 @@ public sealed record VideoDetail(
     int? Height,
     IReadOnlyList<VideoMarker> Markers,
     IReadOnlyList<VideoSubtitle> Subtitles,
-    EntityCapabilities Capabilities);
+    IReadOnlyList<EntityCapability> Capabilities);

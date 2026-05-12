@@ -4,13 +4,13 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCapabilities } from './entityCapabilities';
+import type { EntityCapability } from './entityCapability';
 import type { EntityCard } from './entityCard';
 
 export interface MediaDetail {
   id: string;
   kind: string;
   title: string;
-  capabilities: EntityCapabilities;
+  capabilities: EntityCapability[];
   children: EntityCard[];
 }

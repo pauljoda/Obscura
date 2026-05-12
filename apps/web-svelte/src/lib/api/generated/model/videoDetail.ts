@@ -4,7 +4,7 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCapabilities } from './entityCapabilities';
+import type { EntityCapability } from './entityCapability';
 import type { VideoMarker } from './videoMarker';
 import type { VideoSubtitle } from './videoSubtitle';
 
@@ -31,5 +31,5 @@ export interface VideoDetail {
   height: number | string | null;
   markers: VideoMarker[];
   subtitles: VideoSubtitle[];
-  capabilities: EntityCapabilities;
+  capabilities: EntityCapability[];
 }

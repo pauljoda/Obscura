@@ -8,6 +8,11 @@
     type V2VideoDetail,
   } from "$lib/api/v2";
   import { v2ApiPath } from "$lib/api/orval-fetch";
+  import {
+    getRatingValue,
+    getTags,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -22,8 +27,7 @@
   );
 
   function ratingValue(current: V2VideoDetail): number {
-    const value = current.capabilities.rating?.value;
-    return typeof value === "number" ? value : Number(value ?? 0);
+    return getRatingValue(current.capabilities);
   }
 
   onMount(() => {
@@ -46,15 +50,12 @@
   async function setRating(value: number) {
     if (!video || ratingBusy) return;
     const previous = video;
-    const nextValue = video.capabilities.rating?.value === value ? null : value;
+    const nextValue = getRatingValue(video.capabilities) === value ? null : value;
 
     ratingBusy = true;
     video = {
       ...video,
-      capabilities: {
-        ...video.capabilities,
-        rating: nextValue == null ? null : { value: nextValue },
-      },
+      capabilities: withRatingCapability(video.capabilities, nextValue),
     };
 
     try {
@@ -104,7 +105,7 @@
         <div class="stats">
           <span>{dimensions}</span>
           <span>{video.duration ?? "Unknown duration"}</span>
-          <span>{video.capabilities.tags.join(", ") || "No tags"}</span>
+          <span>{getTags(video.capabilities).join(", ") || "No tags"}</span>
         </div>
 
         <div class="rating-row" aria-label={`Rating for ${video.title}`}>

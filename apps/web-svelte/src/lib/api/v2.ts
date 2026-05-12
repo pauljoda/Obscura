@@ -17,7 +17,7 @@ import {
   listImages,
 } from "./generated/obscura-v2";
 import type {
-  EntityCapabilities,
+  EntityCapability,
   EntityCard,
   EntityListResponse,
   EntityReference,
@@ -36,7 +36,7 @@ import type {
 
 export type V2EntityReference = EntityReference;
 export type V2Rating = Rating;
-export type V2EntityCapabilities = EntityCapabilities;
+export type V2EntityCapability = EntityCapability;
 export type V2EntityCard = EntityCard;
 export type V2EntityListResponse = EntityListResponse;
 export type V2VideoListResponse = VideoListResponse;
@@ -58,7 +58,13 @@ export function fetchV2Entities(
   params?: { kind?: string; query?: string; cursor?: string },
   options?: V2RequestOptions,
 ): Promise<V2EntityListResponse> {
-  return listEntities(params, { signal: options?.signal }).then((response) => response.data);
+  return listEntities(params, { signal: options?.signal }).then((response) => {
+    if (response.status !== 200) {
+      throw new Error(response.data.message);
+    }
+
+    return response.data;
+  });
 }
 
 export function fetchV2Videos(

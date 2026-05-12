@@ -82,12 +82,19 @@ export type listEntitiesResponse200 = {
   status: 200
 }
 
+export type listEntitiesResponse400 = {
+  data: ApiProblem
+  status: 400
+}
+
 export type listEntitiesResponseSuccess = (listEntitiesResponse200) & {
   headers: Headers;
 };
-;
+export type listEntitiesResponseError = (listEntitiesResponse400) & {
+  headers: Headers;
+};
 
-export type listEntitiesResponse = (listEntitiesResponseSuccess)
+export type listEntitiesResponse = (listEntitiesResponseSuccess | listEntitiesResponseError)
 
 export const getListEntitiesUrl = (params?: ListEntitiesParams,) => {
   const normalizedParams = new URLSearchParams();

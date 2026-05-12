@@ -7,6 +7,12 @@
     updateV2EntityRating,
     type V2VideoSeriesDetail,
   } from "$lib/api/v2";
+  import {
+    getRatingValue,
+    getTags,
+    getThumbnailUrl,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -18,8 +24,7 @@
   const childCount = $derived((series?.children.length ?? 0) + (series?.videos.length ?? 0));
 
   function ratingValue(current: V2VideoSeriesDetail): number {
-    const value = current.capabilities.rating?.value;
-    return typeof value === "number" ? value : Number(value ?? 0);
+    return getRatingValue(current.capabilities);
   }
 
   onMount(() => {
@@ -42,15 +47,12 @@
   async function setRating(value: number) {
     if (!series || ratingBusy) return;
     const previous = series;
-    const nextValue = series.capabilities.rating?.value === value ? null : value;
+    const nextValue = getRatingValue(series.capabilities) === value ? null : value;
 
     ratingBusy = true;
     series = {
       ...series,
-      capabilities: {
-        ...series.capabilities,
-        rating: nextValue == null ? null : { value: nextValue },
-      },
+      capabilities: withRatingCapability(series.capabilities, nextValue),
     };
 
     try {
@@ -83,8 +85,8 @@
   {:else if series}
     <div class="detail-shell">
       <div class="poster-surface">
-        {#if series.capabilities.thumbnailUrl}
-          <img src={series.capabilities.thumbnailUrl} alt="" />
+        {#if getThumbnailUrl(series.capabilities)}
+          <img src={getThumbnailUrl(series.capabilities)} alt="" />
         {:else}
           <Layers class="h-10 w-10 text-text-disabled" />
         {/if}
@@ -102,7 +104,7 @@
         <div class="stats">
           <span>{childCount} linked items</span>
           <span>{series.renderingMode}</span>
-          <span>{series.capabilities.tags.join(", ") || "No tags"}</span>
+          <span>{getTags(series.capabilities).join(", ") || "No tags"}</span>
         </div>
 
         <div class="rating-row" aria-label={`Rating for ${series.title}`}>

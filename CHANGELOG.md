@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 video detail API now includes imported subtitle tracks and media markers, preparing the .NET backend for playback-detail parity with the current app.
 - The v2 media detail APIs now return child entities for galleries and audio libraries, so imported gallery images and album tracks are visible through the shared projection.
 - The v2 .NET contracts now use clean API model names without `Dto` suffixes, and the generated Svelte client follows those names directly.
+- The v2 entity model now exposes shared capabilities as modular, typed capability items, making ratings, tags, artwork, links, flags, and files easier to extend across entity kinds.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -87,6 +88,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Renamed the v2 .NET API contract records and generated Orval models to remove `Dto` suffixes, keeping request/response names only where they describe API direction.
 - Added a code-defined v2 .NET hierarchy registry, semantic structural relationship codes, tree projection support, and canonical structural-link indexing so parentage lives in shared hierarchy links instead of bespoke traversal logic.
 - Refactored v2 .NET entity kinds and relationships into Codec-style interfaces with one concrete implementation per kind or relationship, dedicated interface files, and separate registries for lookup/discovery behavior instead of central enum-style kind and relationship models.
+- Changed the v2 API capability payload from a fixed grouped object to a discriminated capability list so clients can consume capability kinds independently.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

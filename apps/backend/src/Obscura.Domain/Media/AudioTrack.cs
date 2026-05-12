@@ -10,7 +10,7 @@ public sealed record AudioTrack(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     AudioTrackDetails Details,
     Playback Playback)
     : Entity(Id, EntityKindRegistry.AudioTrack, Title, Subtitle, Capabilities)
@@ -22,7 +22,7 @@ public sealed record AudioTrack(
         Guid id,
         string title,
         string? subtitle,
-        EntityCapabilities capabilities,
+        IReadOnlyList<ICapability> capabilities,
         AudioTrackDetails details)
         : this(id, title, subtitle, capabilities, details, Playback.Empty)
     {

@@ -10,7 +10,7 @@ public sealed record Tag(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     TagDetails Details)
     : Entity(Id, EntityKindRegistry.Tag, Title, Subtitle, Capabilities)
 {

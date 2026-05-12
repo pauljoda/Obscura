@@ -6,6 +6,13 @@
     updateV2EntityRating,
     type V2EntityCard,
   } from "$lib/api/v2";
+  import {
+    getRatingValue,
+    getTags,
+    getThumbnailUrl,
+    isNsfw,
+    withRatingCapability,
+  } from "$lib/api/capabilities";
 
   type LoadState = "loading" | "ready" | "error";
 
@@ -23,8 +30,7 @@
   );
 
   function ratingValue(item: V2EntityCard): number {
-    const value = item.capabilities.rating?.value;
-    return typeof value === "number" ? value : Number(value ?? 0);
+    return getRatingValue(item.capabilities);
   }
 
   onMount(() => {
@@ -91,17 +97,14 @@
   async function setRating(item: V2EntityCard, value: number) {
     if (ratingBusy) return;
     const previousItems = items;
-    const nextValue = item.capabilities.rating?.value === value ? null : value;
+    const nextValue = getRatingValue(item.capabilities) === value ? null : value;
 
     ratingBusy = item.id;
     items = items.map((candidate: V2EntityCard) =>
       candidate.id === item.id
         ? {
             ...candidate,
-            capabilities: {
-              ...candidate.capabilities,
-              rating: nextValue == null ? null : { value: nextValue },
-            },
+            capabilities: withRatingCapability(candidate.capabilities, nextValue),
           }
         : candidate,
     );
@@ -154,8 +157,8 @@
       {#each items as item (item.id)}
         <article class="series-tile">
           <a href={`/v2/series/${item.id}`} class="thumb" aria-label={item.title}>
-            {#if item.capabilities.thumbnailUrl}
-              <img src={item.capabilities.thumbnailUrl} alt="" loading="lazy" />
+            {#if getThumbnailUrl(item.capabilities)}
+              <img src={getThumbnailUrl(item.capabilities)} alt="" loading="lazy" />
             {:else}
               <Layers class="h-8 w-8 text-text-disabled" />
             {/if}
@@ -164,8 +167,8 @@
           <div class="tile-body">
             <a href={`/v2/series/${item.id}`} class="title">{item.title}</a>
             <div class="meta-row">
-              <span>{item.capabilities.tags.slice(0, 2).join(", ") || item.kind}</span>
-              {#if item.capabilities.isNsfw}
+              <span>{getTags(item.capabilities).slice(0, 2).join(", ") || item.kind}</span>
+              {#if isNsfw(item.capabilities)}
                 <span>NSFW</span>
               {/if}
             </div>

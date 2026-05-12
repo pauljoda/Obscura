@@ -23,5 +23,5 @@ public sealed record MediaDetail(
     Guid Id,
     string Kind,
     string Title,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityCard> Children);

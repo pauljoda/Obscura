@@ -15,7 +15,7 @@ public sealed record Person(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     PersonDetails Details)
     : Entity(Id, EntityKindRegistry.Person, Title, Subtitle, Capabilities)
 {

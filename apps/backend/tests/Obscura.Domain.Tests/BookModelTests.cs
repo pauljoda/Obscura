@@ -1,4 +1,3 @@
-using Obscura.Domain.Capabilities;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Media;
 
@@ -13,7 +12,7 @@ public sealed class BookModelTests
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "The Brass Archive",
             null,
-            EntityCapabilities.Empty,
+            Obscura.Domain.Entities.Capabilities.Empty,
             BookDetails.Empty with
             {
                 BookType = BookType.Comic,
@@ -36,7 +35,7 @@ public sealed class BookModelTests
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
             "Draft Book",
             null,
-            EntityCapabilities.Empty,
+            Obscura.Domain.Entities.Capabilities.Empty,
             BookDetails.Empty,
             BookReadProgress.Empty);
 

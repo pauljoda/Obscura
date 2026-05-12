@@ -80,24 +80,28 @@ public sealed class EntityProjectionServiceTests
         var card = Assert.Single(response.Items);
         Assert.Equal(videoId, card.Id);
         Assert.Equal("video", card.Kind.Code);
-        Assert.Equal(4, card.Capabilities.Rating?.Value.Value);
-        Assert.Equal(["Favorite"], card.Capabilities.Tags.Values);
-        Assert.Equal(studioId, card.Capabilities.Studio?.Id);
-        Assert.Equal("Obscura Studio", card.Capabilities.Studio?.Title);
-        var credit = Assert.Single(card.Capabilities.Credits.People);
+        Assert.Equal(4, card.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value?.Value.Value);
+        Assert.Equal(["Favorite"], card.GetCapability(Obscura.Domain.Entities.Capabilities.Tags).Values);
+        var studio = card.GetCapability(Obscura.Domain.Entities.Capabilities.Studio).Value;
+        Assert.NotNull(studio);
+        Assert.Equal(studioId, studio.Id);
+        Assert.Equal("Obscura Studio", studio.Title);
+        var credit = Assert.Single(card.GetCapability(Obscura.Domain.Entities.Capabilities.Credits).People);
         Assert.Equal(personId, credit.Id);
         Assert.Equal("Ada Person", credit.Title);
-        var url = Assert.Single(card.Capabilities.Links.Urls);
+        var links = card.GetCapability(Obscura.Domain.Entities.Capabilities.Links);
+        var url = Assert.Single(links.Urls);
         Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
         Assert.Equal("Example", url.Label);
-        var externalId = Assert.Single(card.Capabilities.Links.ExternalIds);
+        var externalId = Assert.Single(links.ExternalIds);
         Assert.Equal("tmdb", externalId.Provider);
         Assert.Equal("12345", externalId.Value);
         Assert.Equal("https://www.themoviedb.org/movie/12345", externalId.Url);
-        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.Images.ThumbnailUrl);
-        Assert.True(card.Capabilities.Flags.IsFavorite);
-        Assert.False(card.Capabilities.Flags.IsNsfw);
-        Assert.True(card.Capabilities.Flags.IsOrganized);
+        Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.GetCapability(Obscura.Domain.Entities.Capabilities.Images).ThumbnailUrl);
+        var flags = card.GetCapability(Obscura.Domain.Entities.Capabilities.Flags);
+        Assert.True(flags.IsFavorite);
+        Assert.False(flags.IsNsfw);
+        Assert.True(flags.IsOrganized);
     }
 
     [Fact]
@@ -118,8 +122,8 @@ public sealed class EntityProjectionServiceTests
             null,
             CancellationToken.None);
 
-        Assert.Equal(5, rated?.Capabilities.Rating?.Value.Value);
-        Assert.Null(cleared?.Capabilities.Rating);
+        Assert.Equal(5, rated?.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value?.Value.Value);
+        Assert.Null(cleared?.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value);
         Assert.Empty(db.EntityRatings);
     }
 
@@ -171,7 +175,7 @@ public sealed class EntityProjectionServiceTests
         Assert.Equal(TimeSpan.FromSeconds(90), detail.Duration);
         Assert.Equal(1920, detail.Width);
         Assert.Equal(1080, detail.Height);
-        Assert.Equal(3, detail.Entity.Capabilities.Rating?.Value.Value);
+        Assert.Equal(3, detail.Entity.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value?.Value.Value);
         var marker = Assert.Single(detail.Markers.Items);
         Assert.Equal("Opening", marker.Title);
         Assert.Equal(12.5, marker.Seconds);
@@ -206,7 +210,7 @@ public sealed class EntityProjectionServiceTests
         var card = Assert.Single(list.Items);
         Assert.Equal(seriesId, card.Id);
         Assert.Equal("video-series", card.Kind.Code);
-        Assert.Equal(5, card.Capabilities.Rating?.Value.Value);
+        Assert.Equal(5, card.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value?.Value.Value);
         Assert.NotNull(detail);
         Assert.Equal("Collected Episodes", detail.Entity.Title);
         Assert.Equal(VideoSeriesRenderingMode.Flat, detail.RenderingMode);
@@ -357,7 +361,7 @@ public sealed class EntityProjectionServiceTests
         var child = Assert.Single(children);
         Assert.Equal(imageId, child.Id);
         Assert.Equal("image", child.Kind.Code);
-        Assert.Equal(4, child.Capabilities.Rating?.Value.Value);
+        Assert.Equal(4, child.GetCapability(Obscura.Domain.Entities.Capabilities.Rating).Value?.Value.Value);
     }
 
     private static ObscuraDbContext CreateContext()

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,19 +9,21 @@ using Obscura.Contracts.Series;
 using Obscura.Contracts.Videos;
 using Obscura.Domain.Entities;
 using Obscura.Domain.Interfaces;
-using DomainCapabilities = Obscura.Domain.Capabilities.EntityCapabilities;
-using DomainCredits = Obscura.Domain.Capabilities.Credits;
+using ContractRatingCapability = Obscura.Contracts.Entities.RatingCapability;
+using DomainCapabilityCredits = Obscura.Domain.Capabilities.CapabilityCredits;
+using DomainCapabilityFiles = Obscura.Domain.Capabilities.CapabilityFiles;
+using DomainCapabilityFlags = Obscura.Domain.Capabilities.CapabilityFlags;
+using DomainCapabilityImages = Obscura.Domain.Capabilities.CapabilityImages;
+using DomainCapabilityLinks = Obscura.Domain.Capabilities.CapabilityLinks;
+using DomainCapabilityRating = Obscura.Domain.Capabilities.CapabilityRating;
+using DomainCapabilityStudio = Obscura.Domain.Capabilities.CapabilityStudio;
+using DomainCapabilityTags = Obscura.Domain.Capabilities.CapabilityTags;
 using DomainEntity = Obscura.Domain.Entities.Entity;
 using DomainEntityPage = Obscura.Domain.Entities.EntityPage;
-using DomainFiles = Obscura.Domain.Capabilities.Files;
-using DomainFlags = Obscura.Domain.Capabilities.EntityFlags;
-using DomainImages = Obscura.Domain.Capabilities.Images;
-using DomainLinks = Obscura.Domain.Capabilities.Links;
 using DomainMarkers = Obscura.Domain.Capabilities.Markers;
 using DomainRating = Obscura.Domain.Capabilities.Rating;
 using DomainRatingValue = Obscura.Domain.Capabilities.RatingValue;
 using DomainSubtitles = Obscura.Domain.Capabilities.Subtitles;
-using DomainTags = Obscura.Domain.Capabilities.Tags;
 using DomainVideo = Obscura.Domain.Media.Video;
 using DomainVideoSeries = Obscura.Domain.Media.VideoSeries;
 
@@ -47,7 +50,32 @@ public sealed class EntityVideoEndpointServiceTests
         Assert.Equal("video", entity.Kind);
         Assert.NotNull(video);
         Assert.Equal("Projected Video", video.Title);
-        Assert.Equal(5, rated?.Capabilities.Rating?.Value);
+        var rating = Assert.Single(rated!.Capabilities.OfType<ContractRatingCapability>());
+        Assert.Equal(5, rating.Value?.Value);
+    }
+
+    [Fact]
+    public async Task EntityEndpointSerializesCapabilitiesAsDiscriminatedList()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var json = await client.GetStringAsync("/api/entities?kind=video");
+        using var document = JsonDocument.Parse(json);
+
+        var capabilities = document.RootElement
+            .GetProperty("items")[0]
+            .GetProperty("capabilities");
+        Assert.Equal(JsonValueKind.Array, capabilities.ValueKind);
+
+        var rating = capabilities.EnumerateArray().Single(capability =>
+            capability.GetProperty("kind").GetString() == "rating");
+        var tags = capabilities.EnumerateArray().Single(capability =>
+            capability.GetProperty("kind").GetString() == "tags");
+
+        Assert.True(rating.TryGetProperty("value", out var value));
+        Assert.Equal(JsonValueKind.Null, value.ValueKind);
+        Assert.Equal("Demo", tags.GetProperty("values")[0].GetString());
     }
 
     [Fact]
@@ -161,15 +189,17 @@ public sealed class EntityVideoEndpointServiceTests
                 EntityKindRegistry.Video,
                 "Projected Video",
                 null,
-                new DomainCapabilities(
-                    rating is null ? null : new DomainRating(DomainRatingValue.Create(rating.Value)),
-                    new DomainTags(["Demo"]),
-                    DomainCredits.Empty,
-                    null,
-                    DomainImages.Empty,
-                    DomainLinks.Empty,
-                    new DomainFlags(false, false, true),
-                    DomainFiles.Empty));
+                [
+                    new DomainCapabilityRating(
+                        rating is null ? null : new DomainRating(DomainRatingValue.Create(rating.Value))),
+                    new DomainCapabilityTags(["Demo"]),
+                    DomainCapabilityCredits.Empty,
+                    new DomainCapabilityStudio(null),
+                    DomainCapabilityImages.Empty,
+                    DomainCapabilityLinks.Empty,
+                    new DomainCapabilityFlags(false, false, true),
+                    DomainCapabilityFiles.Empty
+                ]);
         }
     }
 }

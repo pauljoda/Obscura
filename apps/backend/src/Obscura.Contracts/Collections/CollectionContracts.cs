@@ -23,5 +23,5 @@ public sealed record CollectionDetail(
     Guid Id,
     string Kind,
     string Title,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<EntityCapability> Capabilities,
     IReadOnlyList<EntityCard> Items);

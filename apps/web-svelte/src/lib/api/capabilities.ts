@@ -1,0 +1,78 @@
+import type {
+  EntityCapability,
+  EntityCapabilityFlagsCapability,
+  EntityCapabilityImagesCapability,
+  EntityCapabilityRatingCapability,
+  EntityCapabilityTagsCapability,
+  Rating,
+} from "$lib/api/generated/model";
+
+export type EntityCapabilityKind = EntityCapability["kind"];
+
+export type EntityCapabilityFor<K extends EntityCapabilityKind> = Extract<
+  EntityCapability,
+  { kind: K }
+>;
+
+export function getCapability<K extends EntityCapabilityKind>(
+  capabilities: EntityCapability[],
+  kind: K,
+): EntityCapabilityFor<K> | undefined {
+  return capabilities.find((capability): capability is EntityCapabilityFor<K> => capability.kind === kind);
+}
+
+export function getRatingCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityRatingCapability | undefined {
+  return getCapability(capabilities, "rating");
+}
+
+export function getTagsCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityTagsCapability | undefined {
+  return getCapability(capabilities, "tags");
+}
+
+export function getImagesCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityImagesCapability | undefined {
+  return getCapability(capabilities, "images");
+}
+
+export function getFlagsCapability(
+  capabilities: EntityCapability[],
+): EntityCapabilityFlagsCapability | undefined {
+  return getCapability(capabilities, "flags");
+}
+
+export function getRatingValue(capabilities: EntityCapability[]): number {
+  const value = getRatingCapability(capabilities)?.value?.value;
+  return typeof value === "number" ? value : Number(value ?? 0);
+}
+
+export function getTags(capabilities: EntityCapability[]): string[] {
+  return getTagsCapability(capabilities)?.values ?? [];
+}
+
+export function getThumbnailUrl(capabilities: EntityCapability[]): string | null {
+  return getImagesCapability(capabilities)?.thumbnailUrl ?? null;
+}
+
+export function isNsfw(capabilities: EntityCapability[]): boolean {
+  return getFlagsCapability(capabilities)?.isNsfw === true;
+}
+
+export function withRatingCapability(
+  capabilities: EntityCapability[],
+  value: number | null,
+): EntityCapability[] {
+  const rating: Rating | null = value == null ? null : { value };
+  return capabilities.map((capability) =>
+    capability.kind === "rating"
+      ? {
+          ...capability,
+          value: rating,
+        }
+      : capability,
+  );
+}

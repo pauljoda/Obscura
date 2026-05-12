@@ -16,7 +16,7 @@ public sealed record Book(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     BookDetails Details,
     BookReadProgress ReadProgress)
     : Entity(Id, EntityKindRegistry.Book, Title, Subtitle, Capabilities)

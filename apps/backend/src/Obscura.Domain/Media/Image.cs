@@ -10,7 +10,7 @@ public sealed record Image(
     Guid Id,
     string Title,
     string? Subtitle,
-    EntityCapabilities Capabilities,
+    IReadOnlyList<ICapability> Capabilities,
     ImageDetails Details)
     : Entity(Id, EntityKindRegistry.Image, Title, Subtitle, Capabilities)
 {

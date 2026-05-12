@@ -418,18 +418,38 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
                     ResolveKind(row.KindCode),
                     row.Title,
                     null,
-                    new EntityCapabilities(
+                    BuildSharedCapabilities(
                         ratings.ContainsKey(row.Id) ? Rating.FromNullable(rating) : null,
-                        tagTitles is null ? Tags.Empty : new Tags(tagTitles),
-                        creditRefs is null ? Credits.Empty : new Credits(creditRefs),
+                        tagTitles ?? [],
+                        creditRefs ?? [],
                         studio,
-                        new Images(thumbnailUrl, null),
-                        new Links(urlRefs ?? [], externalIdRefs ?? []),
-                        new EntityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
-                        Files.Empty));
+                        thumbnailUrl,
+                        urlRefs ?? [],
+                        externalIdRefs ?? [],
+                        flag));
             })
             .ToArray();
     }
+
+    private static IReadOnlyList<ICapability> BuildSharedCapabilities(
+        Rating? rating,
+        IReadOnlyList<string> tags,
+        IReadOnlyList<EntityReference> credits,
+        EntityReference? studio,
+        string? thumbnailUrl,
+        IReadOnlyList<EntityUrl> urls,
+        IReadOnlyList<EntityExternalId> externalIds,
+        EntityFlagRow? flag) =>
+    [
+        new CapabilityRating(rating),
+        new CapabilityTags(tags),
+        new CapabilityCredits(credits),
+        new CapabilityStudio(studio),
+        new CapabilityImages(thumbnailUrl, null),
+        new CapabilityLinks(urls, externalIds),
+        new CapabilityFlags(flag?.IsFavorite, flag?.IsNsfw, flag?.IsOrganized),
+        CapabilityFiles.Empty
+    ];
 
     private async Task<IReadOnlyList<EntityMarker>> LoadMarkersAsync(
         Guid entityId,

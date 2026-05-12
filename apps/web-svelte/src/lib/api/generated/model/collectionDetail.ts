@@ -4,13 +4,13 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { EntityCapabilities } from './entityCapabilities';
+import type { EntityCapability } from './entityCapability';
 import type { EntityCard } from './entityCard';
 
 export interface CollectionDetail {
   id: string;
   kind: string;
   title: string;
-  capabilities: EntityCapabilities;
+  capabilities: EntityCapability[];
   items: EntityCard[];
 }
