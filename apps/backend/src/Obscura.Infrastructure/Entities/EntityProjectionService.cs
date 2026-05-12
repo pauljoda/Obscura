@@ -276,21 +276,18 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new VideoSeries(
             card,
-            detail is null
-                ? VideoSeriesDetails.Empty with { RenderingMode = renderingMode }
-                : new VideoSeriesDetails(
-                    detail.LibraryRootId,
-                    detail.FolderPath,
-                    detail.RelativePath,
-                    detail.SortTitle,
-                    detail.OriginalTitle,
-                    detail.Overview,
-                    detail.Tagline,
-                    detail.Status,
-                    detail.FirstAirDate,
-                    detail.EndAirDate,
-                    detail.ContentRating,
-                    renderingMode),
+            LibraryRootId: detail?.LibraryRootId,
+            FolderPath: detail?.FolderPath,
+            RelativePath: detail?.RelativePath,
+            SortTitle: detail?.SortTitle,
+            OriginalTitle: detail?.OriginalTitle,
+            Summary: detail?.Overview,
+            Tagline: detail?.Tagline,
+            Status: detail?.Status,
+            FirstAirDate: detail?.FirstAirDate,
+            EndAirDate: detail?.EndAirDate,
+            ContentRating: detail?.ContentRating,
+            RenderingMode: renderingMode,
             seasons,
             videos);
     }
@@ -310,17 +307,16 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Image(entity, detail is null
-            ? ImageDetails.Empty
-            : new ImageDetails(
-                detail.Details,
-                detail.Date,
-                detail.FilePath,
-                detail.FileSizeBytes,
-                detail.Width,
-                detail.Height,
-                detail.Format,
-                detail.SortOrder));
+        return new Image(
+            entity,
+            Summary: detail?.Details,
+            Date: detail?.Date,
+            FilePath: detail?.FilePath,
+            FileSizeBytes: detail?.FileSizeBytes,
+            Width: detail?.Width,
+            Height: detail?.Height,
+            Format: detail?.Format,
+            SortOrder: detail?.SortOrder ?? 0);
     }
 
     /// <summary>
@@ -338,17 +334,16 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Gallery(entity, detail is null
-            ? GalleryDetails.Empty
-            : new GalleryDetails(
-                detail.Details,
-                detail.Date,
-                detail.GalleryType,
-                detail.FolderPath,
-                detail.ZipFilePath,
-                detail.Photographer,
-                detail.CoverImageEntityId,
-                detail.ImageCount));
+        return new Gallery(
+            entity,
+            Summary: detail?.Details,
+            Date: detail?.Date,
+            GalleryType: detail?.GalleryType ?? GalleryType.Virtual,
+            FolderPath: detail?.FolderPath,
+            ZipFilePath: detail?.ZipFilePath,
+            Photographer: detail?.Photographer,
+            CoverImageId: detail?.CoverImageEntityId,
+            ImageCount: detail?.ImageCount ?? 0);
     }
 
     /// <summary>
@@ -371,27 +366,21 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new Book(
             entity,
-            detail is null
-                ? BookDetails.Empty
-                : new BookDetails(
-                    detail.BookType,
-                    detail.SortTitle,
-                    detail.Summary,
-                    detail.Date,
-                    detail.FolderPath,
-                    detail.RelativePath,
-                    detail.CoverPageEntityId,
-                    detail.CoverImagePath,
-                    detail.PageCount,
-                    detail.ChapterCount),
-            progress is null
-                ? BookReadProgress.Empty
-                : new BookReadProgress(
-                    progress.ChapterEntityId,
-                    progress.PageIndex,
-                    progress.PageCount,
-                    progress.ReaderMode,
-                    progress.CompletedAt));
+            BookType: detail?.BookType ?? BookType.Book,
+            SortTitle: detail?.SortTitle,
+            Summary: detail?.Summary,
+            Date: detail?.Date,
+            FolderPath: detail?.FolderPath,
+            RelativePath: detail?.RelativePath,
+            CoverPageId: detail?.CoverPageEntityId,
+            CoverImagePath: detail?.CoverImagePath,
+            PageCount: detail?.PageCount ?? 0,
+            ChapterCount: detail?.ChapterCount ?? 0,
+            CurrentChapterId: progress?.ChapterEntityId,
+            CurrentPageIndex: progress?.PageIndex ?? 0,
+            CurrentChapterPageCount: progress?.PageCount ?? 0,
+            ReaderMode: progress?.ReaderMode ?? ReaderMode.Paged,
+            CompletedAt: progress?.CompletedAt);
     }
 
     /// <summary>
@@ -409,14 +398,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new AudioLibrary(entity, detail is null
-            ? AudioLibraryDetails.Empty
-            : new AudioLibraryDetails(
-                detail.Details,
-                detail.Date,
-                detail.FolderPath,
-                detail.ParentLibraryEntityId,
-                detail.TrackCount));
+        return new AudioLibrary(
+            entity,
+            Summary: detail?.Details,
+            Date: detail?.Date,
+            FolderPath: detail?.FolderPath,
+            ParentLibraryId: detail?.ParentLibraryEntityId,
+            TrackCount: detail?.TrackCount ?? 0);
     }
 
     /// <summary>
@@ -434,21 +422,20 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new AudioTrack(entity, detail is null
-            ? AudioTrackDetails.Empty
-            : new AudioTrackDetails(
-                detail.Details,
-                detail.Date,
-                detail.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
-                detail.BitRate,
-                detail.SampleRate,
-                detail.Channels,
-                detail.Codec,
-                detail.Container,
-                detail.EmbeddedArtist,
-                detail.EmbeddedAlbum,
-                detail.TrackNumber,
-                detail.WaveformPath));
+        return new AudioTrack(
+            entity,
+            Summary: detail?.Details,
+            Date: detail?.Date,
+            Duration: detail?.DurationSeconds is null ? null : TimeSpan.FromSeconds(detail.DurationSeconds.Value),
+            BitRate: detail?.BitRate,
+            SampleRate: detail?.SampleRate,
+            Channels: detail?.Channels,
+            Codec: detail?.Codec,
+            Container: detail?.Container,
+            EmbeddedArtist: detail?.EmbeddedArtist,
+            EmbeddedAlbum: detail?.EmbeddedAlbum,
+            TrackNumber: detail?.TrackNumber,
+            WaveformPath: detail?.WaveformPath);
     }
 
     /// <summary>
@@ -466,24 +453,23 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Person(entity, detail is null
-            ? PersonDetails.Empty
-            : new PersonDetails(
-                detail.Disambiguation,
-                detail.Gender,
-                detail.Birthdate,
-                detail.Country,
-                detail.Ethnicity,
-                detail.EyeColor,
-                detail.HairColor,
-                detail.Height,
-                detail.Weight,
-                detail.Measurements,
-                detail.Tattoos,
-                detail.Piercings,
-                detail.CareerStart,
-                detail.CareerEnd,
-                detail.Details));
+        return new Person(
+            entity,
+            Disambiguation: detail?.Disambiguation,
+            Gender: detail?.Gender,
+            Birthdate: detail?.Birthdate,
+            Country: detail?.Country,
+            Ethnicity: detail?.Ethnicity,
+            EyeColor: detail?.EyeColor,
+            HairColor: detail?.HairColor,
+            Height: detail?.Height,
+            Weight: detail?.Weight,
+            Measurements: detail?.Measurements,
+            Tattoos: detail?.Tattoos,
+            Piercings: detail?.Piercings,
+            CareerStart: detail?.CareerStart,
+            CareerEnd: detail?.CareerEnd,
+            Description: detail?.Details);
     }
 
     /// <summary>
@@ -501,9 +487,10 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Studio(entity, detail is null
-            ? StudioDetails.Empty
-            : new StudioDetails(detail.Description, detail.ParentStudioEntityId));
+        return new Studio(
+            entity,
+            Description: detail?.Description,
+            ParentStudioId: detail?.ParentStudioEntityId);
     }
 
     /// <summary>
@@ -521,9 +508,11 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new Tag(entity, detail is null
-            ? TagDetails.Empty
-            : new TagDetails(detail.Description, detail.ParentTagEntityId, detail.IgnoreAutoTag));
+        return new Tag(
+            entity,
+            Description: detail?.Description,
+            ParentTagId: detail?.ParentTagEntityId,
+            IgnoreAutoTag: detail?.IgnoreAutoTag ?? false);
     }
 
     /// <summary>
@@ -544,19 +533,16 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
 
         return new Collection(
             entity,
-            detail is null
-                ? CollectionDetails.Empty
-                : new CollectionDetails(
-                    detail.Description,
-                    detail.Mode,
-                    detail.RuleTreeJson,
-                    detail.ItemCount,
-                    detail.CoverMode,
-                    detail.CoverImagePath,
-                    detail.CoverItemEntityId,
-                    TimeSpan.FromSeconds(detail.SlideshowDurationSeconds),
-                    detail.SlideshowAutoAdvance,
-                    detail.LastRefreshedAt),
+            Description: detail?.Description,
+            Mode: detail?.Mode ?? CollectionMode.Manual,
+            RuleTreeJson: detail?.RuleTreeJson,
+            ItemCount: detail?.ItemCount ?? 0,
+            CoverMode: detail?.CoverMode ?? CollectionCoverMode.Mosaic,
+            CoverImagePath: detail?.CoverImagePath,
+            CoverItemId: detail?.CoverItemEntityId,
+            SlideshowDuration: TimeSpan.FromSeconds(detail?.SlideshowDurationSeconds ?? 5),
+            SlideshowAutoAdvance: detail?.SlideshowAutoAdvance ?? true,
+            LastRefreshedAt: detail?.LastRefreshedAt,
             items);
     }
 
@@ -575,14 +561,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new VideoSeason(entity, detail is null
-            ? VideoSeasonDetails.Empty
-            : new VideoSeasonDetails(
-                detail.SeriesEntityId,
-                detail.SeasonNumber,
-                detail.FolderPath,
-                detail.Overview,
-                detail.AirDate));
+        return new VideoSeason(
+            entity,
+            SeriesId: detail?.SeriesEntityId ?? Guid.Empty,
+            SeasonNumber: detail?.SeasonNumber ?? 0,
+            FolderPath: detail?.FolderPath,
+            Overview: detail?.Overview,
+            AirDate: detail?.AirDate);
     }
 
     /// <summary>
@@ -600,14 +585,13 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new BookVolume(entity, detail is null
-            ? BookVolumeDetails.Empty
-            : new BookVolumeDetails(
-                detail.BookEntityId,
-                detail.VolumeNumber,
-                detail.FolderPath,
-                detail.RelativePath,
-                detail.CoverImagePath));
+        return new BookVolume(
+            entity,
+            BookId: detail?.BookEntityId ?? Guid.Empty,
+            VolumeNumber: detail?.VolumeNumber,
+            FolderPath: detail?.FolderPath,
+            RelativePath: detail?.RelativePath,
+            CoverImagePath: detail?.CoverImagePath);
     }
 
     /// <summary>
@@ -625,16 +609,15 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new BookChapter(entity, detail is null
-            ? BookChapterDetails.Empty
-            : new BookChapterDetails(
-                detail.BookEntityId,
-                detail.VolumeEntityId,
-                detail.ChapterNumber,
-                detail.ArchivePath,
-                detail.RelativePath,
-                detail.PageCount,
-                detail.CoverPageEntityId));
+        return new BookChapter(
+            entity,
+            BookId: detail?.BookEntityId ?? Guid.Empty,
+            VolumeId: detail?.VolumeEntityId,
+            ChapterNumber: detail?.ChapterNumber ?? 0,
+            ArchivePath: detail?.ArchivePath,
+            RelativePath: detail?.RelativePath,
+            PageCount: detail?.PageCount ?? 0,
+            CoverPageId: detail?.CoverPageEntityId);
     }
 
     /// <summary>
@@ -652,17 +635,16 @@ public sealed class EntityProjectionService : IEntityCatalog, IEntityHierarchy, 
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.EntityId == id, cancellationToken);
 
-        return new BookPage(entity, detail is null
-            ? BookPageDetails.Empty
-            : new BookPageDetails(
-                detail.BookEntityId,
-                detail.ChapterEntityId,
-                detail.FilePath,
-                detail.FileSizeBytes,
-                detail.Width,
-                detail.Height,
-                detail.Format,
-                detail.SortOrder));
+        return new BookPage(
+            entity,
+            BookId: detail?.BookEntityId ?? Guid.Empty,
+            ChapterId: detail?.ChapterEntityId ?? Guid.Empty,
+            FilePath: detail?.FilePath ?? string.Empty,
+            FileSizeBytes: detail?.FileSizeBytes,
+            Width: detail?.Width,
+            Height: detail?.Height,
+            Format: detail?.Format,
+            SortOrder: detail?.SortOrder ?? 0);
     }
 
     private async Task<EntityHierarchyNode> BuildHierarchyNodeAsync(

@@ -10,7 +10,14 @@ public sealed record Image(
     Guid Id,
     string Title,
     string? Subtitle,
-    ImageDetails Details)
+    string? Summary,
+    string? Date,
+    string? FilePath,
+    long? FileSizeBytes,
+    int? Width,
+    int? Height,
+    string? Format,
+    int SortOrder)
     : Entity(
         Id,
         EntityKindRegistry.Image,
@@ -30,33 +37,18 @@ public sealed record Image(
     /// <summary>
     /// Creates an image from an already hydrated entity root.
     /// </summary>
-    public Image(Entity entity, ImageDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public Image(
+        Entity entity,
+        string? Summary,
+        string? Date,
+        string? FilePath,
+        long? FileSizeBytes,
+        int? Width,
+        int? Height,
+        string? Format,
+        int SortOrder)
+        : this(entity.Id, entity.Title, entity.Subtitle, Summary, Date, FilePath, FileSizeBytes, Width, Height, Format, SortOrder)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the image with updated image-specific metadata.
-    /// </summary>
-    public Image WithDetails(ImageDetails details) => this with { Details = details };
-}
-
-/// <summary>
-/// Image-specific metadata and probe fields.
-/// </summary>
-public sealed record ImageDetails(
-    string? Summary,
-    string? Date,
-    string? FilePath,
-    long? FileSizeBytes,
-    int? Width,
-    int? Height,
-    string? Format,
-    int SortOrder)
-{
-    /// <summary>
-    /// Empty image details used before scan or probe data is attached.
-    /// </summary>
-    public static ImageDetails Empty { get; } = new(null, null, null, null, null, null, null, 0);
 }

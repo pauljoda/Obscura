@@ -10,7 +10,8 @@ public sealed record Studio(
     Guid Id,
     string Title,
     string? Subtitle,
-    StudioDetails Details)
+    string? Description,
+    Guid? ParentStudioId)
     : Entity(
         Id,
         EntityKindRegistry.Studio,
@@ -28,27 +29,9 @@ public sealed record Studio(
     /// <summary>
     /// Creates a studio from an already hydrated entity root.
     /// </summary>
-    public Studio(Entity entity, StudioDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public Studio(Entity entity, string? Description, Guid? ParentStudioId)
+        : this(entity.Id, entity.Title, entity.Subtitle, Description, ParentStudioId)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the studio with updated studio-specific metadata.
-    /// </summary>
-    public Studio WithDetails(StudioDetails details) => this with { Details = details };
-}
-
-/// <summary>
-/// Studio-specific metadata for hierarchical studio/publisher relationships.
-/// </summary>
-/// <param name="Description">Freeform studio description.</param>
-/// <param name="ParentStudioId">Optional parent studio entity identifier.</param>
-public sealed record StudioDetails(string? Description, Guid? ParentStudioId)
-{
-    /// <summary>
-    /// Empty studio details used before metadata is attached.
-    /// </summary>
-    public static StudioDetails Empty { get; } = new(null, null);
 }

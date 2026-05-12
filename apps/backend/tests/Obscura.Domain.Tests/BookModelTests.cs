@@ -12,19 +12,26 @@ public sealed class BookModelTests
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "The Brass Archive",
             null,
-            BookDetails.Empty with
-            {
-                BookType = BookType.Comic,
-                SortTitle = "Brass Archive",
-                PageCount = 120,
-                ChapterCount = 6
-            },
-            BookReadProgress.Empty);
+            BookType: BookType.Comic,
+            SortTitle: "Brass Archive",
+            Summary: null,
+            Date: null,
+            FolderPath: null,
+            RelativePath: null,
+            CoverPageId: null,
+            CoverImagePath: null,
+            PageCount: 120,
+            ChapterCount: 6,
+            CurrentChapterId: null,
+            CurrentPageIndex: 0,
+            CurrentChapterPageCount: 0,
+            ReaderMode: ReaderMode.Paged,
+            CompletedAt: null);
 
         Assert.Equal("book", book.Kind.Code);
         Assert.Equal("The Brass Archive", book.Title);
-        Assert.Equal(BookType.Comic, book.Details.BookType);
-        Assert.Equal(120, book.Details.PageCount);
+        Assert.Equal(BookType.Comic, book.BookType);
+        Assert.Equal(120, book.PageCount);
     }
 
     [Fact]
@@ -34,17 +41,31 @@ public sealed class BookModelTests
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
             "Draft Book",
             null,
-            BookDetails.Empty,
-            BookReadProgress.Empty);
+            BookType: BookType.Book,
+            SortTitle: null,
+            Summary: null,
+            Date: null,
+            FolderPath: null,
+            RelativePath: null,
+            CoverPageId: null,
+            CoverImagePath: null,
+            PageCount: 0,
+            ChapterCount: 0,
+            CurrentChapterId: null,
+            CurrentPageIndex: 0,
+            CurrentChapterPageCount: 0,
+            ReaderMode: ReaderMode.Paged,
+            CompletedAt: null);
 
         var updated = book
-            .WithDetails(book.Details with { Summary = "Updated from metadata.", PageCount = 12 })
+            with { Summary = "Updated from metadata.", PageCount = 12 };
+        updated = updated
             .MoveReaderToChapter(Guid.Parse("33333333-3333-3333-3333-333333333333"), 4, 12, ReaderMode.Paged);
 
-        Assert.Equal("Updated from metadata.", updated.Details.Summary);
-        Assert.Equal(12, updated.Details.PageCount);
-        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), updated.ReadProgress.ChapterId);
-        Assert.Equal(4, updated.ReadProgress.PageIndex);
-        Assert.Null(updated.ReadProgress.CompletedAt);
+        Assert.Equal("Updated from metadata.", updated.Summary);
+        Assert.Equal(12, updated.PageCount);
+        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), updated.CurrentChapterId);
+        Assert.Equal(4, updated.CurrentPageIndex);
+        Assert.Null(updated.CompletedAt);
     }
 }

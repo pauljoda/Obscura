@@ -10,7 +10,18 @@ public sealed record AudioTrack(
     Guid Id,
     string Title,
     string? Subtitle,
-    AudioTrackDetails Details)
+    string? Summary,
+    string? Date,
+    TimeSpan? Duration,
+    int? BitRate,
+    int? SampleRate,
+    int? Channels,
+    string? Codec,
+    string? Container,
+    string? EmbeddedArtist,
+    string? EmbeddedAlbum,
+    int? TrackNumber,
+    string? WaveformPath)
     : Entity(
         Id,
         EntityKindRegistry.AudioTrack,
@@ -31,16 +42,39 @@ public sealed record AudioTrack(
     /// <summary>
     /// Creates an audio track from an already hydrated entity root.
     /// </summary>
-    public AudioTrack(Entity entity, AudioTrackDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public AudioTrack(
+        Entity entity,
+        string? Summary,
+        string? Date,
+        TimeSpan? Duration,
+        int? BitRate,
+        int? SampleRate,
+        int? Channels,
+        string? Codec,
+        string? Container,
+        string? EmbeddedArtist,
+        string? EmbeddedAlbum,
+        int? TrackNumber,
+        string? WaveformPath)
+        : this(
+            entity.Id,
+            entity.Title,
+            entity.Subtitle,
+            Summary,
+            Date,
+            Duration,
+            BitRate,
+            SampleRate,
+            Channels,
+            Codec,
+            Container,
+            EmbeddedArtist,
+            EmbeddedAlbum,
+            TrackNumber,
+            WaveformPath)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the audio track with updated technical or descriptive details.
-    /// </summary>
-    public AudioTrack WithDetails(AudioTrackDetails details) => this with { Details = details };
 
     /// <summary>
     /// Returns a copy of the audio track after a playback event.
@@ -68,27 +102,4 @@ public sealed record AudioTrack(
                 new CapabilityPlayback(next)).Capabilities
         };
     }
-}
-
-/// <summary>
-/// Audio-track-specific metadata and technical probe fields.
-/// </summary>
-public sealed record AudioTrackDetails(
-    string? Summary,
-    string? Date,
-    TimeSpan? Duration,
-    int? BitRate,
-    int? SampleRate,
-    int? Channels,
-    string? Codec,
-    string? Container,
-    string? EmbeddedArtist,
-    string? EmbeddedAlbum,
-    int? TrackNumber,
-    string? WaveformPath)
-{
-    /// <summary>
-    /// Empty audio details used before scan or probe data is attached.
-    /// </summary>
-    public static AudioTrackDetails Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null);
 }

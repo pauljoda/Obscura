@@ -27,6 +27,7 @@ public sealed class TypedEntityModelTests
     {
         Assert.True(typeof(Entity).IsAssignableFrom(aggregateType));
         Assert.Null(aggregateType.GetProperty("Entity"));
+        Assert.Null(aggregateType.GetProperty("Details"));
     }
 
     [Fact]
@@ -36,13 +37,27 @@ public sealed class TypedEntityModelTests
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             "Ada Person",
             null,
-            PersonDetails.Empty);
+            Disambiguation: null,
+            Gender: null,
+            Birthdate: null,
+            Country: null,
+            Ethnicity: null,
+            EyeColor: null,
+            HairColor: null,
+            Height: null,
+            Weight: null,
+            Measurements: null,
+            Tattoos: null,
+            Piercings: null,
+            CareerStart: null,
+            CareerEnd: null,
+            Description: null);
 
-        var updated = person.WithDetails(person.Details with { Country = "US", CareerStart = 2020 });
+        var updated = person with { Country = "US", CareerStart = 2020 };
 
         Assert.Equal("person", updated.Kind.Code);
-        Assert.Equal("US", updated.Details.Country);
-        Assert.Equal(2020, updated.Details.CareerStart);
+        Assert.Equal("US", updated.Country);
+        Assert.Equal(2020, updated.CareerStart);
     }
 
     [Fact]
@@ -52,12 +67,23 @@ public sealed class TypedEntityModelTests
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             "Main Theme",
             null,
-            AudioTrackDetails.Empty with { Duration = TimeSpan.FromSeconds(90), Codec = "flac" });
+            Summary: null,
+            Date: null,
+            Duration: TimeSpan.FromSeconds(90),
+            BitRate: null,
+            SampleRate: null,
+            Channels: null,
+            Codec: "flac",
+            Container: null,
+            EmbeddedArtist: null,
+            EmbeddedAlbum: null,
+            TrackNumber: null,
+            WaveformPath: null);
 
         var played = track.MarkPlayed(TimeSpan.FromSeconds(45), DateTimeOffset.Parse("2026-05-12T12:00:00Z"));
 
         Assert.Equal("audio-track", played.Kind.Code);
-        Assert.Equal("flac", played.Details.Codec);
+        Assert.Equal("flac", played.Codec);
         var playback = played.GetCapability(CapabilityRegistry.Playback);
         Assert.Equal(1, playback.Value.PlayCount);
         Assert.Equal(TimeSpan.FromSeconds(45), playback.Value.ResumeTime);

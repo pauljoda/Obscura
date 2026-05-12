@@ -513,16 +513,16 @@ public sealed class EntityProjectionServiceTests
         var tag = await service.GetTagAggregateAsync(tagId, CancellationToken.None);
         var collection = await service.GetCollectionAggregateAsync(collectionId, CancellationToken.None);
 
-        Assert.Equal("/media/still.jpg", image?.Details.FilePath);
-        Assert.Equal(GalleryType.Folder, gallery?.Details.GalleryType);
-        Assert.Equal(BookType.Comic, book?.Details.BookType);
-        Assert.Equal(ReaderMode.Webtoon, book?.ReadProgress.ReaderMode);
-        Assert.Equal(9, audioLibrary?.Details.TrackCount);
-        Assert.Equal("flac", audioTrack?.Details.Codec);
-        Assert.Equal("US", person?.Details.Country);
-        Assert.Equal("Studio description", studio?.Details.Description);
-        Assert.True(tag?.Details.IgnoreAutoTag);
-        Assert.Equal("Collection description", collection?.Details.Description);
+        Assert.Equal("/media/still.jpg", image?.FilePath);
+        Assert.Equal(GalleryType.Folder, gallery?.GalleryType);
+        Assert.Equal(BookType.Comic, book?.BookType);
+        Assert.Equal(ReaderMode.Webtoon, book?.ReaderMode);
+        Assert.Equal(9, audioLibrary?.TrackCount);
+        Assert.Equal("flac", audioTrack?.Codec);
+        Assert.Equal("US", person?.Country);
+        Assert.Equal("Studio description", studio?.Description);
+        Assert.True(tag?.IgnoreAutoTag);
+        Assert.Equal("Collection description", collection?.Description);
     }
 
     [Fact]
@@ -606,12 +606,12 @@ public sealed class EntityProjectionServiceTests
 
         Assert.Equal("Original Feature", video?.OriginalTitle);
         Assert.Equal(TimeSpan.FromMilliseconds(1500), video?.Duration);
-        Assert.Equal("Series overview", series?.Details.Overview);
-        Assert.Equal(VideoSeriesRenderingMode.Flat, series?.Details.RenderingMode);
-        Assert.Equal(1, season?.Details.SeasonNumber);
-        Assert.Equal(1, volume?.Details.VolumeNumber);
-        Assert.Equal(30, chapter?.Details.PageCount);
-        Assert.Equal("/media/book/page-001.jpg", page?.Details.FilePath);
+        Assert.Equal("Series overview", series?.Summary);
+        Assert.Equal(VideoSeriesRenderingMode.Flat, series?.RenderingMode);
+        Assert.Equal(1, season?.SeasonNumber);
+        Assert.Equal(1, volume?.VolumeNumber);
+        Assert.Equal(30, chapter?.PageCount);
+        Assert.Equal("/media/book/page-001.jpg", page?.FilePath);
     }
 
     private static ObscuraDbContext CreateContext()

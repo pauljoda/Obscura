@@ -10,7 +10,14 @@ public sealed record Gallery(
     Guid Id,
     string Title,
     string? Subtitle,
-    GalleryDetails Details)
+    string? Summary,
+    string? Date,
+    GalleryType GalleryType,
+    string? FolderPath,
+    string? ZipFilePath,
+    string? Photographer,
+    Guid? CoverImageId,
+    int ImageCount)
     : Entity(
         Id,
         EntityKindRegistry.Gallery,
@@ -30,33 +37,18 @@ public sealed record Gallery(
     /// <summary>
     /// Creates a gallery from an already hydrated entity root.
     /// </summary>
-    public Gallery(Entity entity, GalleryDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public Gallery(
+        Entity entity,
+        string? Summary,
+        string? Date,
+        GalleryType GalleryType,
+        string? FolderPath,
+        string? ZipFilePath,
+        string? Photographer,
+        Guid? CoverImageId,
+        int ImageCount)
+        : this(entity.Id, entity.Title, entity.Subtitle, Summary, Date, GalleryType, FolderPath, ZipFilePath, Photographer, CoverImageId, ImageCount)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the gallery with updated gallery-specific metadata.
-    /// </summary>
-    public Gallery WithDetails(GalleryDetails details) => this with { Details = details };
-}
-
-/// <summary>
-/// Gallery-specific metadata and scan fields.
-/// </summary>
-public sealed record GalleryDetails(
-    string? Summary,
-    string? Date,
-    GalleryType GalleryType,
-    string? FolderPath,
-    string? ZipFilePath,
-    string? Photographer,
-    Guid? CoverImageId,
-    int ImageCount)
-{
-    /// <summary>
-    /// Empty gallery details used before scan metadata is attached.
-    /// </summary>
-    public static GalleryDetails Empty { get; } = new(null, null, GalleryType.Virtual, null, null, null, null, 0);
 }

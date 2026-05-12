@@ -17,7 +17,17 @@ public sealed record VideoSeries(
     Guid Id,
     string Title,
     string? Subtitle,
+    Guid? LibraryRootId,
+    string? FolderPath,
+    string? RelativePath,
+    string? SortTitle,
+    string? OriginalTitle,
     string? Summary,
+    string? Tagline,
+    string? Status,
+    string? FirstAirDate,
+    string? EndAirDate,
+    string? ContentRating,
     VideoSeriesRenderingMode RenderingMode,
     IReadOnlyList<Entity> Children,
     IReadOnlyList<Entity> Videos)
@@ -42,63 +52,41 @@ public sealed record VideoSeries(
     /// </summary>
     public VideoSeries(
         Entity entity,
-        VideoSeriesDetails details,
+        Guid? LibraryRootId,
+        string? FolderPath,
+        string? RelativePath,
+        string? SortTitle,
+        string? OriginalTitle,
+        string? Summary,
+        string? Tagline,
+        string? Status,
+        string? FirstAirDate,
+        string? EndAirDate,
+        string? ContentRating,
+        VideoSeriesRenderingMode RenderingMode,
         IReadOnlyList<Entity> children,
         IReadOnlyList<Entity> videos)
         : this(
             entity.Id,
             entity.Title,
             entity.Subtitle,
-            details.Overview,
-            details.RenderingMode,
+            LibraryRootId,
+            FolderPath,
+            RelativePath,
+            SortTitle,
+            OriginalTitle,
+            Summary,
+            Tagline,
+            Status,
+            FirstAirDate,
+            EndAirDate,
+            ContentRating,
+            RenderingMode,
             children,
             videos)
     {
         Capabilities = entity.Capabilities;
-        Details = details;
     }
-
-    /// <summary>Full hydrated series detail fields when loaded from persistence.</summary>
-    public VideoSeriesDetails Details { get; init; } = VideoSeriesDetails.Empty with
-    {
-        Overview = Summary,
-        RenderingMode = RenderingMode
-    };
-}
-
-/// <summary>
-/// Video-series-specific metadata that should not live on every entity.
-/// </summary>
-public sealed record VideoSeriesDetails(
-    Guid? LibraryRootId,
-    string? FolderPath,
-    string? RelativePath,
-    string? SortTitle,
-    string? OriginalTitle,
-    string? Overview,
-    string? Tagline,
-    string? Status,
-    string? FirstAirDate,
-    string? EndAirDate,
-    string? ContentRating,
-    VideoSeriesRenderingMode RenderingMode)
-{
-    /// <summary>
-    /// Empty series details used before scan or provider metadata is attached.
-    /// </summary>
-    public static VideoSeriesDetails Empty { get; } = new(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        VideoSeriesRenderingMode.Flat);
 }
 
 /// <summary>
@@ -108,7 +96,11 @@ public sealed record VideoSeason(
     Guid Id,
     string Title,
     string? Subtitle,
-    VideoSeasonDetails Details)
+    Guid SeriesId,
+    int SeasonNumber,
+    string? FolderPath,
+    string? Overview,
+    string? AirDate)
     : Entity(
         Id,
         EntityKindRegistry.VideoSeason,
@@ -128,25 +120,15 @@ public sealed record VideoSeason(
     /// <summary>
     /// Creates a video season from an already hydrated entity root.
     /// </summary>
-    public VideoSeason(Entity entity, VideoSeasonDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public VideoSeason(
+        Entity entity,
+        Guid SeriesId,
+        int SeasonNumber,
+        string? FolderPath,
+        string? Overview,
+        string? AirDate)
+        : this(entity.Id, entity.Title, entity.Subtitle, SeriesId, SeasonNumber, FolderPath, Overview, AirDate)
     {
         Capabilities = entity.Capabilities;
     }
-}
-
-/// <summary>
-/// Video-season-specific hierarchy and descriptive metadata.
-/// </summary>
-public sealed record VideoSeasonDetails(
-    Guid SeriesId,
-    int SeasonNumber,
-    string? FolderPath,
-    string? Overview,
-    string? AirDate)
-{
-    /// <summary>
-    /// Empty season details used before hierarchy metadata is attached.
-    /// </summary>
-    public static VideoSeasonDetails Empty { get; } = new(Guid.Empty, 0, null, null, null);
 }

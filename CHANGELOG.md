@@ -43,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 media detail APIs now return child entities for galleries and audio libraries, so imported gallery images and album tracks are visible through the shared projection.
 - The v2 .NET contracts now use clean API model names without `Dto` suffixes, and the generated Svelte client follows those names directly.
 - The v2 entity model now exposes shared capabilities as modular, typed capability items, making ratings, tags, artwork, links, flags, and files easier to extend across entity kinds.
-- The v2 domain model now keeps typed media and taxonomy models as shared `Entity` extensions with self-declared capabilities, so common surfaces such as thumbnails can accept one entity shape while detail screens still get type-specific fields.
+- The v2 domain model now keeps typed media and taxonomy models as shared `Entity` extensions with self-declared capabilities and direct type-specific fields, so common surfaces such as thumbnails can accept one entity shape while detail screens can read fields without nested detail wrappers.
 - The v2 entity projection now preserves richer shared capability data, including tag IDs, credit roles and characters, attached files, and playback state.
 - The v2 .NET projection now hydrates typed image, gallery, book, audio, taxonomy, and collection aggregates from their detail tables, giving model work a tested persistence path before API migration.
 - The v2 .NET model now carries richer video, series, season, volume, chapter, and page details as typed domain aggregates, closing the remaining structural hierarchy detail gaps.
@@ -98,8 +98,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Collapsed the v2 .NET registry base classes into one `AbstractRegistry` so each domain registry declares its own lookup key, ordering, and missing-key behavior in one place.
 - Corrected v2 .NET media, taxonomy, collection, and structural hierarchy models to inherit from the shared `Entity` root, added playback as an explicit reusable capability, and removed the stale Domain-to-Contracts project reference.
 - Expanded v2 .NET tag and credit capabilities to keep entity references and role metadata, and hydrated file/playback capabilities from their EF rows instead of returning empty placeholders.
-- Added typed v2 .NET EF hydrators for media, taxonomy, and collection aggregates so each root entity can be paired with its kind-specific detail row without changing the public API yet.
-- Added typed v2 .NET EF hydrators for direct video technical fields plus video-series metadata, video seasons, book volumes, book chapters, and book pages.
+- Added typed v2 .NET EF hydrators for media, taxonomy, collection, and hierarchy entities so each root entity loads its kind-specific fields directly without changing the public API yet.
+- Added typed v2 .NET EF hydrators for direct video technical fields plus direct video-series, video-season, book-volume, book-chapter, and book-page fields.
 - Job Control active jobs are now grouped by queue type and rendered as compact rows instead of large cards, making it easy to see what kind of work is running and how many jobs each queue has.
 - Job Control failures can now be individually suppressed by error type — clicking Suppress on any failed job hides all jobs sharing the same error fingerprint until you click Show all or clear all failures.
 - Job Control completed jobs now show a duration column so you can see how long each run took, plus a retry indicator when a job needed more than one attempt.

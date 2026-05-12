@@ -9,12 +9,25 @@ namespace Obscura.Domain.Taxonomy;
 /// <param name="Id">Shared global entity identifier.</param>
 /// <param name="Title">Display title inherited from the shared entity root.</param>
 /// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
-/// <param name="Details">Person-specific descriptive metadata.</param>
 public sealed record Person(
     Guid Id,
     string Title,
     string? Subtitle,
-    PersonDetails Details)
+    string? Disambiguation,
+    string? Gender,
+    string? Birthdate,
+    string? Country,
+    string? Ethnicity,
+    string? EyeColor,
+    string? HairColor,
+    int? Height,
+    int? Weight,
+    string? Measurements,
+    string? Tattoos,
+    string? Piercings,
+    int? CareerStart,
+    int? CareerEnd,
+    string? Description)
     : Entity(
         Id,
         EntityKindRegistry.Person,
@@ -32,57 +45,43 @@ public sealed record Person(
     /// <summary>
     /// Creates a person from an already hydrated entity root.
     /// </summary>
-    public Person(Entity entity, PersonDetails details)
-        : this(entity.Id, entity.Title, entity.Subtitle, details)
+    public Person(
+        Entity entity,
+        string? Disambiguation,
+        string? Gender,
+        string? Birthdate,
+        string? Country,
+        string? Ethnicity,
+        string? EyeColor,
+        string? HairColor,
+        int? Height,
+        int? Weight,
+        string? Measurements,
+        string? Tattoos,
+        string? Piercings,
+        int? CareerStart,
+        int? CareerEnd,
+        string? Description)
+        : this(
+            entity.Id,
+            entity.Title,
+            entity.Subtitle,
+            Disambiguation,
+            Gender,
+            Birthdate,
+            Country,
+            Ethnicity,
+            EyeColor,
+            HairColor,
+            Height,
+            Weight,
+            Measurements,
+            Tattoos,
+            Piercings,
+            CareerStart,
+            CareerEnd,
+            Description)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the person with new person-specific metadata.
-    /// </summary>
-    /// <param name="details">Replacement person details.</param>
-    /// <returns>A new person instance with unchanged shared entity fields and updated details.</returns>
-    public Person WithDetails(PersonDetails details) => this with { Details = details };
-}
-
-/// <summary>
-/// Person-specific metadata that should not live on every global entity.
-/// </summary>
-/// <param name="Disambiguation">Short qualifier used to distinguish people with the same display name.</param>
-/// <param name="Gender">Optional provider/user-supplied gender text.</param>
-/// <param name="Birthdate">Optional birthdate as provider/user-facing text.</param>
-/// <param name="Country">Optional country or region text.</param>
-/// <param name="Ethnicity">Optional ethnicity text.</param>
-/// <param name="EyeColor">Optional eye color text.</param>
-/// <param name="HairColor">Optional hair color text.</param>
-/// <param name="Height">Optional height in centimeters.</param>
-/// <param name="Weight">Optional weight in kilograms.</param>
-/// <param name="Measurements">Optional measurements text.</param>
-/// <param name="Tattoos">Optional tattoo notes.</param>
-/// <param name="Piercings">Optional piercing notes.</param>
-/// <param name="CareerStart">Optional first active year.</param>
-/// <param name="CareerEnd">Optional final active year.</param>
-/// <param name="Details">Freeform person description.</param>
-public sealed record PersonDetails(
-    string? Disambiguation,
-    string? Gender,
-    string? Birthdate,
-    string? Country,
-    string? Ethnicity,
-    string? EyeColor,
-    string? HairColor,
-    int? Height,
-    int? Weight,
-    string? Measurements,
-    string? Tattoos,
-    string? Piercings,
-    int? CareerStart,
-    int? CareerEnd,
-    string? Details)
-{
-    /// <summary>
-    /// Empty person details used before provider or manual metadata is attached.
-    /// </summary>
-    public static PersonDetails Empty { get; } = new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 }

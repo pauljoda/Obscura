@@ -9,14 +9,25 @@ namespace Obscura.Domain.Media;
 /// <param name="Id">Shared global entity identifier.</param>
 /// <param name="Title">Display title inherited from the shared entity root.</param>
 /// <param name="Subtitle">Optional display subtitle inherited from the shared entity root.</param>
-/// <param name="Details">Book-specific metadata and scan state.</param>
-/// <param name="ReadProgress">Single-user reading progress for the book.</param>
 public sealed record Book(
     Guid Id,
     string Title,
     string? Subtitle,
-    BookDetails Details,
-    BookReadProgress ReadProgress)
+    BookType BookType,
+    string? SortTitle,
+    string? Summary,
+    string? Date,
+    string? FolderPath,
+    string? RelativePath,
+    Guid? CoverPageId,
+    string? CoverImagePath,
+    int PageCount,
+    int ChapterCount,
+    Guid? CurrentChapterId,
+    int CurrentPageIndex,
+    int CurrentChapterPageCount,
+    ReaderMode ReaderMode,
+    DateTimeOffset? CompletedAt)
     : Entity(
         Id,
         EntityKindRegistry.Book,
@@ -36,18 +47,45 @@ public sealed record Book(
     /// <summary>
     /// Creates a book from an already hydrated entity root.
     /// </summary>
-    public Book(Entity entity, BookDetails details, BookReadProgress readProgress)
-        : this(entity.Id, entity.Title, entity.Subtitle, details, readProgress)
+    public Book(
+        Entity entity,
+        BookType BookType,
+        string? SortTitle,
+        string? Summary,
+        string? Date,
+        string? FolderPath,
+        string? RelativePath,
+        Guid? CoverPageId,
+        string? CoverImagePath,
+        int PageCount,
+        int ChapterCount,
+        Guid? CurrentChapterId,
+        int CurrentPageIndex,
+        int CurrentChapterPageCount,
+        ReaderMode ReaderMode,
+        DateTimeOffset? CompletedAt)
+        : this(
+            entity.Id,
+            entity.Title,
+            entity.Subtitle,
+            BookType,
+            SortTitle,
+            Summary,
+            Date,
+            FolderPath,
+            RelativePath,
+            CoverPageId,
+            CoverImagePath,
+            PageCount,
+            ChapterCount,
+            CurrentChapterId,
+            CurrentPageIndex,
+            CurrentChapterPageCount,
+            ReaderMode,
+            CompletedAt)
     {
         Capabilities = entity.Capabilities;
     }
-
-    /// <summary>
-    /// Returns a copy of the book with new book-specific metadata.
-    /// </summary>
-    /// <param name="details">Replacement book-specific metadata.</param>
-    /// <returns>A new book instance with unchanged shared entity fields and updated details.</returns>
-    public Book WithDetails(BookDetails details) => this with { Details = details };
 
     /// <summary>
     /// Returns a copy of the book with its reading cursor moved to a chapter and page.
@@ -66,14 +104,11 @@ public sealed record Book(
 
         return this with
         {
-            ReadProgress = ReadProgress with
-            {
-                ChapterId = chapterId,
-                PageIndex = normalizedPageIndex,
-                PageCount = normalizedPageCount,
-                ReaderMode = readerMode,
-                CompletedAt = null
-            }
+            CurrentChapterId = chapterId,
+            CurrentPageIndex = normalizedPageIndex,
+            CurrentChapterPageCount = normalizedPageCount,
+            ReaderMode = readerMode,
+            CompletedAt = null
         };
     }
 
@@ -83,57 +118,5 @@ public sealed record Book(
     /// <param name="completedAt">Timestamp when the book was completed.</param>
     /// <returns>A new book instance with completed reading progress.</returns>
     public Book MarkCompleted(DateTimeOffset completedAt) =>
-        this with { ReadProgress = ReadProgress with { CompletedAt = completedAt } };
-}
-
-/// <summary>
-/// Book-specific metadata that should not live on the shared global entity root.
-/// </summary>
-/// <param name="BookType">Closed book category used by scanning, readers, and provider adapters.</param>
-/// <param name="SortTitle">Optional normalized title used for sorting.</param>
-/// <param name="Summary">Book synopsis or freeform details.</param>
-/// <param name="Date">Release or publication date as provider/user-facing text.</param>
-/// <param name="FolderPath">Source folder path when the book was discovered from a folder.</param>
-/// <param name="RelativePath">Path relative to the library root.</param>
-/// <param name="CoverPageId">Optional page entity selected as the cover.</param>
-/// <param name="CoverImagePath">Optional generated or uploaded cover image path.</param>
-/// <param name="PageCount">Total projected pages across all chapters.</param>
-/// <param name="ChapterCount">Total projected chapters.</param>
-public sealed record BookDetails(
-    BookType BookType,
-    string? SortTitle,
-    string? Summary,
-    string? Date,
-    string? FolderPath,
-    string? RelativePath,
-    Guid? CoverPageId,
-    string? CoverImagePath,
-    int PageCount,
-    int ChapterCount)
-{
-    /// <summary>
-    /// Empty book details used before scan or provider metadata is attached.
-    /// </summary>
-    public static BookDetails Empty { get; } = new(BookType.Book, null, null, null, null, null, null, null, 0, 0);
-}
-
-/// <summary>
-/// Reading progress for a book in Obscura's single-user library model.
-/// </summary>
-/// <param name="ChapterId">Current chapter entity identifier, when reading has started.</param>
-/// <param name="PageIndex">Zero-based current page index within the chapter.</param>
-/// <param name="PageCount">Total page count in the active chapter.</param>
-/// <param name="ReaderMode">Reader layout selected by the user.</param>
-/// <param name="CompletedAt">Completion timestamp when the book has been read through.</param>
-public sealed record BookReadProgress(
-    Guid? ChapterId,
-    int PageIndex,
-    int PageCount,
-    ReaderMode ReaderMode,
-    DateTimeOffset? CompletedAt)
-{
-    /// <summary>
-    /// Empty reading progress for books that have not been opened yet.
-    /// </summary>
-    public static BookReadProgress Empty { get; } = new(null, 0, 0, ReaderMode.Paged, null);
+        this with { CompletedAt = completedAt };
 }
