@@ -13,6 +13,10 @@ import {
   buildFetchVideosQuery,
   type FetchVideosParams,
 } from "./video-query";
+import {
+  buildVideoSeriesListQuery,
+  type VideoSeriesListQueryParams,
+} from "./query-builders";
 import type {
   VideoCardListItem,
   VideoDetail,
@@ -245,50 +249,11 @@ export async function generateVideoThumbnailFromFrame(
   });
 }
 
-export async function fetchSeries(params?: {
-  parent?: string;
-  root?: string;
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  randomSeed?: string;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-  studio?: string | string[];
-  tag?: string | string[];
-  performer?: string | string[];
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  organized?: string;
-}, options?: RequestOptions): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
-  const toList = (value: string | string[] | undefined) =>
-    Array.isArray(value) ? value : value ? [value] : undefined;
-  const qs = buildQueryString(
-    {
-      parent: params?.parent,
-      root: params?.root,
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      limit: params?.limit,
-      offset: params?.offset,
-      nsfw: params?.nsfw,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      organized: params?.organized,
-    },
-    {
-      studio: toList(params?.studio),
-      tag: toList(params?.tag),
-      performer: toList(params?.performer),
-    },
-  );
+export async function fetchSeries(
+  params?: VideoSeriesListQueryParams,
+  options?: RequestOptions,
+): Promise<{ items: VideoSeriesListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildVideoSeriesListQuery(params);
   return fetchApi(`/video-series${qs}`, { signal: options?.signal });
 }
 

@@ -30,6 +30,16 @@ import type {
   PaginatedResponse,
 } from "@obscura/contracts";
 import { buildQueryString, fetchApi, uploadFile } from "./core";
+import {
+  buildAudioLibraryListQuery,
+  buildBookListQuery,
+  buildGalleryListQuery,
+  buildImageListQuery,
+  type AudioLibraryListQueryParams,
+  type BookListQueryParams,
+  type GalleryListQueryParams,
+  type ImageListQueryParams,
+} from "./query-builders";
 
 export interface RequestOptions {
   signal?: AbortSignal;
@@ -51,100 +61,20 @@ export async function deleteAudioTrack(
   return fetchApi(`/audio-tracks/${id}${qs}`, { method: "DELETE" });
 }
 
-export async function fetchGalleries(params?: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  randomSeed?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  type?: string;
-  parent?: string;
-  root?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  imageCountMin?: number;
-  organized?: string;
-  isNsfw?: string;
-  nsfw?: string;
-  limit?: number;
-  offset?: number;
-}, options?: RequestOptions): Promise<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      type: params?.type,
-      parent: params?.parent,
-      root: params?.root,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      imageCountMin: params?.imageCountMin,
-      organized: params?.organized,
-      isNsfw: params?.isNsfw,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+export async function fetchGalleries(
+  params?: GalleryListQueryParams,
+  options?: RequestOptions,
+): Promise<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildGalleryListQuery(params);
 
   return fetchApi(`/galleries${qs}`, { signal: options?.signal });
 }
 
-export async function fetchBooks(params?: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  randomSeed?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  organized?: string;
-  isNsfw?: string;
-  read?: string;
-  nsfw?: string;
-  limit?: number;
-  offset?: number;
-}, options?: RequestOptions): Promise<{ books: BookListItemDto[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      organized: params?.organized,
-      isNsfw: params?.isNsfw,
-      read: params?.read,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+export async function fetchBooks(
+  params?: BookListQueryParams,
+  options?: RequestOptions,
+): Promise<{ books: BookListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildBookListQuery(params);
 
   return fetchApi(`/books${qs}`, { signal: options?.signal });
 }
@@ -248,52 +178,11 @@ export async function updateBookProgress(
   });
 }
 
-export async function fetchAudioLibraries(params?: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  randomSeed?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  parent?: string;
-  root?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  trackCountMin?: number;
-  organized?: string;
-  isNsfw?: string;
-  nsfw?: string;
-  limit?: number;
-  offset?: number;
-}, options?: RequestOptions): Promise<{ items: AudioLibraryListItemDto[]; total: number }> {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      parent: params?.parent,
-      root: params?.root,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      trackCountMin: params?.trackCountMin,
-      organized: params?.organized,
-      isNsfw: params?.isNsfw,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+export async function fetchAudioLibraries(
+  params?: AudioLibraryListQueryParams,
+  options?: RequestOptions,
+): Promise<{ items: AudioLibraryListItemDto[]; total: number }> {
+  const qs = buildAudioLibraryListQuery(params);
 
   return fetchApi(`/audio-libraries${qs}`, { signal: options?.signal });
 }
@@ -431,56 +320,11 @@ export async function deleteGallery(
   return fetchApi(`/galleries/${id}${qs}`, { method: "DELETE" });
 }
 
-export async function fetchImages(params?: {
-  search?: string;
-  sort?: string;
-  order?: "asc" | "desc";
-  randomSeed?: string;
-  gallery?: string;
-  tag?: string[];
-  performer?: string[];
-  studio?: string;
-  format?: string[];
-  animated?: string;
-  dimension?: string[];
-  nsfw?: string;
-  ratingMin?: number;
-  ratingMax?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  resolution?: string;
-  organized?: string;
-  isNsfw?: string;
-  limit?: number;
-  offset?: number;
-}, options?: RequestOptions): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      gallery: params?.gallery,
-      studio: params?.studio,
-      animated: params?.animated,
-      nsfw: params?.nsfw,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      resolution: params?.resolution,
-      organized: params?.organized,
-      isNsfw: params?.isNsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-      format: params?.format,
-      dimension: params?.dimension,
-    },
-  );
+export async function fetchImages(
+  params?: ImageListQueryParams,
+  options?: RequestOptions,
+): Promise<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }> {
+  const qs = buildImageListQuery(params);
 
   return fetchApi(`/images${qs}`, { signal: options?.signal });
 }

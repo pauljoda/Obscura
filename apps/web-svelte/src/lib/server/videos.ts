@@ -14,6 +14,10 @@ import {
   buildFetchVideosQuery,
   type FetchVideosParams,
 } from "../api/video-query";
+import {
+  buildVideoSeriesListQuery,
+  type VideoSeriesListQueryParams,
+} from "../api/query-builders";
 import type {
   VideoDetail,
   VideoListItem,
@@ -49,52 +53,10 @@ export async function fetchVideoCards(
 }
 
 export async function fetchSeries(
-  params?: {
-    parent?: string;
-    root?: string;
-    search?: string;
-    sort?: string;
-    order?: "asc" | "desc";
-    randomSeed?: string;
-    limit?: number;
-    offset?: number;
-    nsfw?: string;
-    studio?: string | string[];
-    tag?: string | string[];
-    performer?: string | string[];
-    ratingMin?: number;
-    ratingMax?: number;
-    dateFrom?: string;
-    dateTo?: string;
-    organized?: string;
-  },
+  params?: VideoSeriesListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const toList = (value: string | string[] | undefined) =>
-    Array.isArray(value) ? value : value ? [value] : undefined;
-  const qs = buildQueryString(
-    {
-      parent: params?.parent,
-      root: params?.root,
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      limit: params?.limit,
-      offset: params?.offset,
-      nsfw: params?.nsfw,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      organized: params?.organized,
-    },
-    {
-      studio: toList(params?.studio),
-      tag: toList(params?.tag),
-      performer: toList(params?.performer),
-    },
-  );
+  const qs = buildVideoSeriesListQuery(params);
   return serverFetch<{
     items: VideoSeriesListItemDto[];
     total: number;

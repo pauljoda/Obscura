@@ -1,4 +1,9 @@
 import { buildQueryString, fetchApi, uploadFile } from "./core";
+import {
+  buildStudioListQuery,
+  buildTagListQuery,
+  type TagStudioListQueryParams,
+} from "./query-builders";
 import type {
   NormalizedPerformerScrapeResult,
   PerformerDetail,
@@ -13,35 +18,13 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export interface TagStudioListParams {
-  search?: string;
-  sort?: string;
-  order?: string;
-  randomSeed?: string;
-  favorite?: string;
-  hasImage?: string;
-  ratingMin?: number;
-  limit?: number;
-  offset?: number;
-  nsfw?: string;
-}
+export type TagStudioListParams = TagStudioListQueryParams;
 
 export async function fetchStudios(
   params?: TagStudioListParams,
   options?: RequestOptions,
 ): Promise<{ studios: StudioItem[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString({
-    search: params?.search,
-    sort: params?.sort,
-    order: params?.order,
-    randomSeed: params?.randomSeed,
-    favorite: params?.favorite,
-    hasImage: params?.hasImage,
-    ratingMin: params?.ratingMin,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-  });
+  const qs = buildStudioListQuery(params);
   return fetchApi(`/studios${qs}`, { signal: options?.signal });
 }
 
@@ -126,18 +109,7 @@ export async function fetchTags(
   params?: TagStudioListParams,
   options?: RequestOptions,
 ): Promise<{ tags: TagItem[]; total: number; limit: number; offset: number }> {
-  const qs = buildQueryString({
-    search: params?.search,
-    sort: params?.sort,
-    order: params?.order,
-    randomSeed: params?.randomSeed,
-    favorite: params?.favorite,
-    hasImage: params?.hasImage,
-    ratingMin: params?.ratingMin,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-  });
+  const qs = buildTagListQuery(params);
   return fetchApi(`/tags${qs}`, { signal: options?.signal });
 }
 

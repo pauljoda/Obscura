@@ -27,57 +27,25 @@ import type {
   StudioItem,
   TagItem,
 } from "../api/types";
-import type { TagStudioListParams } from "../api/entities";
+import {
+  buildAudioLibraryListQuery,
+  buildBookListQuery,
+  buildGalleryListQuery,
+  buildImageListQuery,
+  buildStudioListQuery,
+  buildTagListQuery,
+  type AudioLibraryListQueryParams,
+  type BookListQueryParams,
+  type GalleryListQueryParams,
+  type ImageListQueryParams,
+  type TagStudioListQueryParams,
+} from "../api/query-builders";
 
 export async function fetchGalleries(
-  params?: {
-    search?: string;
-    sort?: string;
-    order?: string;
-    randomSeed?: string;
-    tag?: string[];
-    performer?: string[];
-    studio?: string;
-    type?: string;
-    parent?: string;
-    root?: string;
-    ratingMin?: number;
-    ratingMax?: number;
-    dateFrom?: string;
-    dateTo?: string;
-    imageCountMin?: number;
-    organized?: string;
-    nsfw?: string;
-    limit?: number;
-    offset?: number;
-  },
+  params?: GalleryListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      type: params?.type,
-      parent: params?.parent,
-      root: params?.root,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      imageCountMin: params?.imageCountMin,
-      organized: params?.organized,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+  const qs = buildGalleryListQuery(params);
 
   return serverFetch<{ galleries: GalleryListItemDto[]; total: number; limit: number; offset: number }>(
     `/galleries${qs}`,
@@ -107,48 +75,10 @@ export async function fetchGalleryStats() {
 }
 
 export async function fetchBooks(
-  params?: {
-    search?: string;
-    sort?: string;
-    order?: string;
-    randomSeed?: string;
-    tag?: string[];
-    performer?: string[];
-    studio?: string;
-    ratingMin?: number;
-    ratingMax?: number;
-    dateFrom?: string;
-    dateTo?: string;
-    organized?: string;
-    read?: string;
-    nsfw?: string;
-    limit?: number;
-    offset?: number;
-  },
+  params?: BookListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      organized: params?.organized,
-      read: params?.read,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+  const qs = buildBookListQuery(params);
 
   return serverFetch<{ books: BookListItemDto[]; total: number; limit: number; offset: number }>(
     `/books${qs}`,
@@ -166,56 +96,10 @@ export async function fetchBookDetail(
 }
 
 export async function fetchImages(
-  params?: {
-    search?: string;
-    sort?: string;
-    order?: string;
-    randomSeed?: string;
-    gallery?: string;
-    tag?: string[];
-    performer?: string[];
-    studio?: string;
-    format?: string[];
-    animated?: string;
-    dimension?: string[];
-    nsfw?: string;
-    ratingMin?: number;
-    ratingMax?: number;
-    dateFrom?: string;
-    dateTo?: string;
-    resolution?: string;
-    organized?: string;
-    limit?: number;
-    offset?: number;
-  },
+  params?: ImageListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      gallery: params?.gallery,
-      studio: params?.studio,
-      animated: params?.animated,
-      nsfw: params?.nsfw,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      resolution: params?.resolution,
-      organized: params?.organized,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-      format: params?.format,
-      dimension: params?.dimension,
-    },
-  );
+  const qs = buildImageListQuery(params);
 
   return serverFetch<{ images: ImageListItemDto[]; total: number; limit: number; offset: number }>(
     `/images${qs}`,
@@ -224,21 +108,10 @@ export async function fetchImages(
 }
 
 export async function fetchStudios(
-  params?: TagStudioListParams,
+  params?: TagStudioListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString({
-    search: params?.search,
-    sort: params?.sort,
-    order: params?.order,
-    randomSeed: params?.randomSeed,
-    favorite: params?.favorite,
-    hasImage: params?.hasImage,
-    ratingMin: params?.ratingMin,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-  });
+  const qs = buildStudioListQuery(params);
   return serverFetch<{
     studios: StudioItem[];
     total: number;
@@ -250,21 +123,10 @@ export async function fetchStudios(
 }
 
 export async function fetchTags(
-  params?: TagStudioListParams,
+  params?: TagStudioListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString({
-    search: params?.search,
-    sort: params?.sort,
-    order: params?.order,
-    randomSeed: params?.randomSeed,
-    favorite: params?.favorite,
-    hasImage: params?.hasImage,
-    ratingMin: params?.ratingMin,
-    limit: params?.limit,
-    offset: params?.offset,
-    nsfw: params?.nsfw,
-  });
+  const qs = buildTagListQuery(params);
   return serverFetch<{
     tags: TagItem[];
     total: number;
@@ -379,52 +241,10 @@ export async function fetchAllPendingScrapeResults(): Promise<{
 // ─── Audio ────────────────────────────────────────────────────
 
 export async function fetchAudioLibraries(
-  params?: {
-    search?: string;
-    sort?: string;
-    order?: string;
-    randomSeed?: string;
-    tag?: string[];
-    performer?: string[];
-    studio?: string;
-    parent?: string;
-    root?: string;
-    ratingMin?: number;
-    ratingMax?: number;
-    dateFrom?: string;
-    dateTo?: string;
-    trackCountMin?: number;
-    organized?: string;
-    nsfw?: string;
-    limit?: number;
-    offset?: number;
-  },
+  params?: AudioLibraryListQueryParams,
   options?: { fetch?: typeof fetch },
 ) {
-  const qs = buildQueryString(
-    {
-      search: params?.search,
-      sort: params?.sort,
-      order: params?.order,
-      randomSeed: params?.randomSeed,
-      studio: params?.studio,
-      parent: params?.parent,
-      root: params?.root,
-      ratingMin: params?.ratingMin,
-      ratingMax: params?.ratingMax,
-      dateFrom: params?.dateFrom,
-      dateTo: params?.dateTo,
-      trackCountMin: params?.trackCountMin,
-      organized: params?.organized,
-      nsfw: params?.nsfw,
-      limit: params?.limit,
-      offset: params?.offset,
-    },
-    {
-      tag: params?.tag,
-      performer: params?.performer,
-    },
-  );
+  const qs = buildAudioLibraryListQuery(params);
 
   return serverFetch<{ items: AudioLibraryListItemDto[]; total: number }>(
     `/audio-libraries${qs}`,
