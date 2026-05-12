@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record GalleryEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.Gallery;
     public string Code => "gallery";
     public string DisplayName => "Gallery";
     public EntityKindCategory Category => EntityKindCategory.Media;

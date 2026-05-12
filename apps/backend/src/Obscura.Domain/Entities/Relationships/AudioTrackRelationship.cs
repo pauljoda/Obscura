@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record AudioTrackRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.AudioTrack;
     public string Code => "audio-track";
     public string DisplayName => "Audio Track";
     public bool IsStructural => true;

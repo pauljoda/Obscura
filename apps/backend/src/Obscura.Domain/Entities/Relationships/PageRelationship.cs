@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record PageRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.Page;
     public string Code => "page";
     public string DisplayName => "Page";
     public bool IsStructural => true;

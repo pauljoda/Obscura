@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record VolumeRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.Volume;
     public string Code => "volume";
     public string DisplayName => "Volume";
     public bool IsStructural => true;

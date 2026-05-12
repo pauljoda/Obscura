@@ -13,7 +13,7 @@ public sealed record AudioTrack(
     EntityCapabilities Capabilities,
     AudioTrackDetails Details,
     Playback Playback)
-    : Entity(Id, IEntityKind.AudioTrack, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKindRegistry.AudioTrack, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Convenience constructor for audio tracks before playback state has been loaded.

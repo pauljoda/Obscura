@@ -23,7 +23,7 @@ public sealed class BookModelTests
             },
             BookReadProgress.Empty);
 
-        Assert.Equal(EntityKindCode.Book, book.Kind.Value);
+        Assert.Equal("book", book.Kind.Code);
         Assert.Equal("The Brass Archive", book.Title);
         Assert.Equal(BookType.Comic, book.Details.BookType);
         Assert.Equal(120, book.Details.PageCount);

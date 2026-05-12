@@ -4,8 +4,7 @@ namespace Obscura.Domain.Entities;
 public sealed record NestedAudioLibraryRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.NestedAudioLibrary;
-    public string Code => "audio-library";
+    public string Code => "nested-audio-library";
     public string DisplayName => "Nested Audio Library";
     public bool IsStructural => true;
 }

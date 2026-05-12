@@ -19,7 +19,7 @@ public sealed record Book(
     EntityCapabilities Capabilities,
     BookDetails Details,
     BookReadProgress ReadProgress)
-    : Entity(Id, IEntityKind.Book, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKindRegistry.Book, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the book with new book-specific metadata.

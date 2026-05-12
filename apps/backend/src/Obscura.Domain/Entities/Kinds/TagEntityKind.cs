@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record TagEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.Tag;
     public string Code => "tag";
     public string DisplayName => "Tag";
     public EntityKindCategory Category => EntityKindCategory.Taxonomy;

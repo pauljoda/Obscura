@@ -4,8 +4,7 @@ namespace Obscura.Domain.Entities;
 public sealed record NestedTagRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.NestedTag;
-    public string Code => "tag";
+    public string Code => "nested-tag";
     public string DisplayName => "Nested Tag";
     public bool IsStructural => true;
 }

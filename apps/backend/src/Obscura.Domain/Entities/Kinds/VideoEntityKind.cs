@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record VideoEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.Video;
     public string Code => "video";
     public string DisplayName => "Video";
     public EntityKindCategory Category => EntityKindCategory.Media;

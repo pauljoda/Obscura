@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record BookChapterEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.BookChapter;
     public string Code => "book-chapter";
     public string DisplayName => "Book Chapter";
     public EntityKindCategory Category => EntityKindCategory.Media;

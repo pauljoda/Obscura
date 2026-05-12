@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record CollectionItemRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.CollectionItem;
     public string Code => "collection-item";
     public string DisplayName => "Collection Item";
     public bool IsStructural => false;

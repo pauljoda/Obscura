@@ -10,11 +10,11 @@ public static class MediaEndpoints
 {
     public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapMediaGroup(routes, "/api/images", "Images", IEntityKind.Image, null);
-        MapMediaGroup(routes, "/api/galleries", "Galleries", IEntityKind.Gallery, (IEntityRelationship.GalleryImage, IEntityKind.Image));
-        MapMediaGroup(routes, "/api/books", "Books", IEntityKind.Book, null);
-        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", IEntityKind.AudioLibrary, (IEntityRelationship.AudioTrack, IEntityKind.AudioTrack));
-        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", IEntityKind.AudioTrack, null);
+        MapMediaGroup(routes, "/api/images", "Images", EntityKindRegistry.Image, null);
+        MapMediaGroup(routes, "/api/galleries", "Galleries", EntityKindRegistry.Gallery, (EntityRelationshipRegistry.GalleryImage, EntityKindRegistry.Image));
+        MapMediaGroup(routes, "/api/books", "Books", EntityKindRegistry.Book, null);
+        MapMediaGroup(routes, "/api/audio-libraries", "AudioLibraries", EntityKindRegistry.AudioLibrary, (EntityRelationshipRegistry.AudioTrack, EntityKindRegistry.AudioTrack));
+        MapMediaGroup(routes, "/api/audio-tracks", "AudioTracks", EntityKindRegistry.AudioTrack, null);
 
         return routes;
     }
@@ -47,7 +47,7 @@ public static class MediaEndpoints
             CancellationToken cancellationToken) =>
         {
             var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || entity.Kind.Value != kind.Value)
+            if (entity is null || !string.Equals(entity.Kind.Code, kind.Code, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind.Code}_not_found",

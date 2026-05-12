@@ -158,7 +158,7 @@ public sealed class EntityVideoEndpointServiceTests
         {
             return new DomainEntity(
                 VideoId,
-                IEntityKind.Video,
+                EntityKindRegistry.Video,
                 "Projected Video",
                 null,
                 new DomainCapabilities(

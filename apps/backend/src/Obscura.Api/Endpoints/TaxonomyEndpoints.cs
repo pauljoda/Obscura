@@ -10,9 +10,9 @@ public static class TaxonomyEndpoints
 {
     public static IEndpointRouteBuilder MapTaxonomyEndpoints(this IEndpointRouteBuilder routes)
     {
-        MapTaxonomyGroup(routes, "/api/people", "People", IEntityKind.Person);
-        MapTaxonomyGroup(routes, "/api/studios", "Studios", IEntityKind.Studio);
-        MapTaxonomyGroup(routes, "/api/tags", "Tags", IEntityKind.Tag);
+        MapTaxonomyGroup(routes, "/api/people", "People", EntityKindRegistry.Person);
+        MapTaxonomyGroup(routes, "/api/studios", "Studios", EntityKindRegistry.Studio);
+        MapTaxonomyGroup(routes, "/api/tags", "Tags", EntityKindRegistry.Tag);
 
         return routes;
     }
@@ -44,7 +44,7 @@ public static class TaxonomyEndpoints
             CancellationToken cancellationToken) =>
         {
             var entity = await entities.GetAsync(id, cancellationToken);
-            if (entity is null || entity.Kind.Value != kind.Value)
+            if (entity is null || !string.Equals(entity.Kind.Code, kind.Code, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.NotFound(new ApiProblem(
                     $"{kind.Code}_not_found",

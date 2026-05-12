@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record StudioEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.Studio;
     public string Code => "studio";
     public string DisplayName => "Studio";
     public EntityKindCategory Category => EntityKindCategory.Taxonomy;

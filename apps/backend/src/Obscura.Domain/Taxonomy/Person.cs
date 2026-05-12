@@ -17,7 +17,7 @@ public sealed record Person(
     string? Subtitle,
     EntityCapabilities Capabilities,
     PersonDetails Details)
-    : Entity(Id, IEntityKind.Person, Title, Subtitle, Capabilities)
+    : Entity(Id, EntityKindRegistry.Person, Title, Subtitle, Capabilities)
 {
     /// <summary>
     /// Returns a copy of the person with new person-specific metadata.

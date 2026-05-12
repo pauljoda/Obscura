@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record BookPageEntityKind()
     : IEntityKind
 {
-    public EntityKindCode Value => EntityKindCode.BookPage;
     public string Code => "book-page";
     public string DisplayName => "Book Page";
     public EntityKindCategory Category => EntityKindCategory.Media;

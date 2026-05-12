@@ -7,7 +7,7 @@ public sealed class EntityKindTests
     [Fact]
     public void KnownKindsExposeStableLowercaseCodes()
     {
-        var codes = IEntityKind.All.Select(kind => kind.Code).ToArray();
+        var codes = EntityKindRegistry.All.Select(kind => kind.Code).ToArray();
 
         Assert.Contains("video", codes);
         Assert.Contains("video-series", codes);
@@ -26,29 +26,26 @@ public sealed class EntityKindTests
     [Fact]
     public void TryGetReturnsKnownKindCaseInsensitively()
     {
-        var found = IEntityKind.TryGet("Video", out var kind);
+        var found = EntityKindRegistry.TryGet("Video", out var kind);
 
         Assert.True(found);
-        Assert.Equal(EntityKindCode.Video, kind.Value);
         Assert.Equal("video", kind.Code);
         Assert.Equal(EntityKindCategory.Media, kind.Category);
     }
 
     [Fact]
-    public void StaticKnownKindsExposeTypedIdentities()
+    public void StaticKnownKindsExposeStableCodes()
     {
-        Assert.Equal(EntityKindCode.Video, IEntityKind.Video.Value);
-        Assert.Equal("video", IEntityKind.Video.Code);
-        Assert.Equal(EntityKindCode.Collection, IEntityKind.Collection.Value);
-        Assert.Equal("collection", IEntityKind.Collection.Code);
+        Assert.Equal("video", EntityKindRegistry.Video.Code);
+        Assert.Equal("collection", EntityKindRegistry.Collection.Code);
     }
 
     [Fact]
     public void KnownKindsAreDiscoveredConcreteImplementations()
     {
-        Assert.Contains(IEntityKind.All, kind => kind is IEntityKind && kind.GetType().Name == "VideoEntityKind");
-        Assert.Contains(IEntityKind.All, kind => kind is IEntityKind && kind.GetType().Name == "BookPageEntityKind");
-        Assert.All(IEntityKind.All, kind =>
+        Assert.Contains(EntityKindRegistry.All, kind => kind is IEntityKind && kind.GetType().Name == "VideoEntityKind");
+        Assert.Contains(EntityKindRegistry.All, kind => kind is IEntityKind && kind.GetType().Name == "BookPageEntityKind");
+        Assert.All(EntityKindRegistry.All, kind =>
         {
             Assert.NotEqual(typeof(IEntityKind), kind.GetType());
             Assert.True(kind.GetType().IsSealed);
@@ -56,18 +53,18 @@ public sealed class EntityKindTests
     }
 
     [Fact]
-    public void KindModelDoesNotKeepParallelAbstractClass()
+    public void KindModelDoesNotKeepParallelClassOrEnum()
     {
         Assert.DoesNotContain(
             typeof(IEntityKind).Assembly.GetTypes(),
-            type => type is { Name: "EntityKind", IsClass: true });
+            type => type.Name is "EntityKind" or "EntityKinds" or "EntityKindCode");
     }
 
     [Fact]
     public void StaticKnownKindsReturnDiscoveredInstances()
     {
-        var found = IEntityKind.Require("video");
+        var found = EntityKindRegistry.Require("video");
 
-        Assert.Same(IEntityKind.Video, found);
+        Assert.Same(EntityKindRegistry.Video, found);
     }
 }

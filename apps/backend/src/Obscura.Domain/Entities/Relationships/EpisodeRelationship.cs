@@ -4,7 +4,6 @@ namespace Obscura.Domain.Entities;
 public sealed record EpisodeRelationship()
     : IEntityRelationship
 {
-    public EntityRelationshipCode Value => EntityRelationshipCode.Episode;
     public string Code => "episode";
     public string DisplayName => "Episode";
     public bool IsStructural => true;
