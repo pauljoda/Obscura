@@ -150,6 +150,15 @@ public static class LegacyVideoImportSql
                 WHERE studio_id IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
+
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), series.id, external.key, external.value, NULL, series.created_at, series.updated_at
+                FROM public.video_series series
+                CROSS JOIN LATERAL jsonb_each_text(COALESCE(series.external_ids, '{}'::jsonb)) AS external(key, value)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.video_movies') IS NOT NULL THEN
@@ -201,6 +210,23 @@ public static class LegacyVideoImportSql
                 WHERE studio_id IS NOT NULL
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), id, url, NULL, 0, created_at
+                FROM public.video_movies
+                WHERE url IS NOT NULL
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), movie.id, external.key, external.value, NULL, movie.created_at, movie.updated_at
+                FROM public.video_movies movie
+                CROSS JOIN LATERAL jsonb_each_text(COALESCE(movie.external_ids, '{}'::jsonb)) AS external(key, value)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.video_episodes') IS NOT NULL THEN
@@ -264,6 +290,34 @@ public static class LegacyVideoImportSql
                 FROM public.video_episodes
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), id, url, NULL, 0, created_at
+                FROM public.video_episodes
+                WHERE url IS NOT NULL
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), episode.id, external.key, external.value, NULL, episode.created_at, episode.updated_at
+                FROM public.video_episodes episode
+                CROSS JOIN LATERAL jsonb_each_text(COALESCE(episode.external_ids, '{}'::jsonb)) AS external(key, value)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
+            END IF;
+
+            IF to_regclass('public.external_ids') IS NOT NULL THEN
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), external.entity_id, external.provider, external.external_id, external.external_url, external.created_at, external.created_at
+                FROM public.external_ids external
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = external.entity_id)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.video_series_tags') IS NOT NULL THEN

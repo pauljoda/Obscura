@@ -4,11 +4,17 @@ public sealed record EntityReferenceDto(Guid Id, string Kind, string Title);
 
 public sealed record RatingDto(int? Value);
 
+public sealed record EntityUrlDto(string Url, string? Label);
+
+public sealed record EntityExternalIdDto(string Provider, string Value, string? Url);
+
 public sealed record EntityCapabilitiesDto(
     RatingDto? Rating,
     IReadOnlyList<string> Tags,
     IReadOnlyList<EntityReferenceDto> Credits,
     EntityReferenceDto? Studio,
+    IReadOnlyList<EntityUrlDto> Urls,
+    IReadOnlyList<EntityExternalIdDto> ExternalIds,
     string? ThumbnailUrl,
     string? CoverUrl,
     bool? IsFavorite,

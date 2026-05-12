@@ -269,6 +269,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
         var thumbnails = await LoadFilePathsAsync(ids, "thumbnail", cancellationToken);
         var studios = await LoadStudioReferencesAsync(ids, cancellationToken);
         var credits = await LoadCreditReferencesAsync(ids, cancellationToken);
+        var urls = await LoadUrlsAsync(ids, cancellationToken);
+        var externalIds = await LoadExternalIdsAsync(ids, cancellationToken);
 
         return rows
             .Select(row =>
@@ -279,6 +281,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
                 thumbnails.TryGetValue(row.Id, out var thumbnailUrl);
                 studios.TryGetValue(row.Id, out var studio);
                 credits.TryGetValue(row.Id, out var creditRefs);
+                urls.TryGetValue(row.Id, out var urlRefs);
+                externalIds.TryGetValue(row.Id, out var externalIdRefs);
 
                 return new EntityCardDto(
                     row.Id,
@@ -290,6 +294,8 @@ public sealed class EntityProjectionService : IEntityProjectionService
                         tagTitles ?? [],
                         creditRefs ?? [],
                         studio,
+                        urlRefs ?? [],
+                        externalIdRefs ?? [],
                         thumbnailUrl,
                         null,
                         flag?.IsFavorite,
@@ -297,6 +303,46 @@ public sealed class EntityProjectionService : IEntityProjectionService
                         flag?.IsOrganized));
             })
             .ToArray();
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityUrlDto>>> LoadUrlsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityUrls
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.SortOrder)
+            .ThenBy(row => row.Url)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityUrlDto>)group
+                    .Select(row => new EntityUrlDto(row.Url, row.Label))
+                    .ToArray());
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<EntityExternalIdDto>>> LoadExternalIdsAsync(
+        IReadOnlyList<Guid> entityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.EntityExternalIds
+            .AsNoTracking()
+            .Where(row => entityIds.Contains(row.EntityId))
+            .OrderBy(row => row.Provider)
+            .ThenBy(row => row.Value)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.EntityId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<EntityExternalIdDto>)group
+                    .Select(row => new EntityExternalIdDto(row.Provider, row.Value, row.Url))
+                    .ToArray());
     }
 
     private async Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> LoadTagTitlesAsync(

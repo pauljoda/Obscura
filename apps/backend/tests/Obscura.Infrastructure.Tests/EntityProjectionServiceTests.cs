@@ -44,6 +44,25 @@ public sealed class EntityProjectionServiceTests
             SortOrder = 1,
             CreatedAt = DateTimeOffset.UtcNow
         });
+        db.EntityUrls.Add(new EntityUrlRow
+        {
+            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            EntityId = videoId,
+            Url = "https://example.test/videos/a-quiet-scene",
+            Label = "Example",
+            SortOrder = 0,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        db.EntityExternalIds.Add(new EntityExternalIdRow
+        {
+            Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+            EntityId = videoId,
+            Provider = "tmdb",
+            Value = "12345",
+            Url = "https://www.themoviedb.org/movie/12345",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
         db.EntityFiles.Add(new EntityFileRow
         {
             Id = Guid.Parse("77777777-7777-7777-7777-777777777777"),
@@ -68,6 +87,13 @@ public sealed class EntityProjectionServiceTests
         var credit = Assert.Single(card.Capabilities.Credits);
         Assert.Equal(performerId, credit.Id);
         Assert.Equal("Ada Actor", credit.Title);
+        var url = Assert.Single(card.Capabilities.Urls);
+        Assert.Equal("https://example.test/videos/a-quiet-scene", url.Url);
+        Assert.Equal("Example", url.Label);
+        var externalId = Assert.Single(card.Capabilities.ExternalIds);
+        Assert.Equal("tmdb", externalId.Provider);
+        Assert.Equal("12345", externalId.Value);
+        Assert.Equal("https://www.themoviedb.org/movie/12345", externalId.Url);
         Assert.Equal("/assets/videos/11111111-1111-1111-1111-111111111111/card", card.Capabilities.ThumbnailUrl);
         Assert.True(card.Capabilities.IsFavorite);
         Assert.False(card.Capabilities.IsNsfw);

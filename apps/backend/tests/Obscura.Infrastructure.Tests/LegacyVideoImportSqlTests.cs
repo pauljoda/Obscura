@@ -15,6 +15,8 @@ public sealed class LegacyVideoImportSqlTests
         Assert.Contains("v2.entity_hierarchy_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_credit_links", LegacyVideoImportSql.Import);
         Assert.Contains("v2.entity_studio_links", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_external_ids", LegacyVideoImportSql.Import);
+        Assert.Contains("v2.entity_urls", LegacyVideoImportSql.Import);
     }
 
     [Fact]

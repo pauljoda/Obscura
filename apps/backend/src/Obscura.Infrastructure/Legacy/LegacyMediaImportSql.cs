@@ -53,6 +53,14 @@ public static class LegacyMediaImportSql
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), gallery.id, link.url, NULL, (link.sort_order - 1)::int, gallery.created_at
+                FROM public.galleries gallery
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(gallery.urls, '[]'::jsonb)) WITH ORDINALITY AS link(url, sort_order)
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
             END IF;
 
             IF to_regclass('public.images') IS NOT NULL THEN
@@ -110,6 +118,14 @@ public static class LegacyMediaImportSql
                 WHERE gallery_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), image.id, link.url, NULL, (link.sort_order - 1)::int, image.created_at
+                FROM public.images image
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(image.urls, '[]'::jsonb)) WITH ORDINALITY AS link(url, sort_order)
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
             END IF;
 
             IF to_regclass('public.books') IS NOT NULL THEN
@@ -161,6 +177,23 @@ public static class LegacyMediaImportSql
                   AND EXISTS (SELECT 1 FROM v2.entities studio WHERE studio.id = studio_id AND studio.kind_code = 'studio')
                 ON CONFLICT (entity_id) DO UPDATE SET
                     studio_id = EXCLUDED.studio_id;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), book.id, link.url, NULL, (link.sort_order - 1)::int, book.created_at
+                FROM public.books book
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(book.urls, '[]'::jsonb)) WITH ORDINALITY AS link(url, sort_order)
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), book.id, external.key, external.value, NULL, book.created_at, book.updated_at
+                FROM public.books book
+                CROSS JOIN LATERAL jsonb_each_text(COALESCE(book.external_ids, '{}'::jsonb)) AS external(key, value)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.audio_libraries') IS NOT NULL THEN
@@ -219,6 +252,14 @@ public static class LegacyMediaImportSql
                 WHERE parent_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), library.id, link.url, NULL, (link.sort_order - 1)::int, library.created_at
+                FROM public.audio_libraries library
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(library.urls, '[]'::jsonb)) WITH ORDINALITY AS link(url, sort_order)
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
             END IF;
 
             IF to_regclass('public.audio_tracks') IS NOT NULL THEN
@@ -269,6 +310,25 @@ public static class LegacyMediaImportSql
                 WHERE library_id IS NOT NULL
                 ON CONFLICT (parent_entity_id, child_entity_id, relationship) DO UPDATE SET
                     sort_order = EXCLUDED.sort_order;
+
+                INSERT INTO v2.entity_urls (id, entity_id, url, label, sort_order, created_at)
+                SELECT gen_random_uuid(), track.id, link.url, NULL, (link.sort_order - 1)::int, track.created_at
+                FROM public.audio_tracks track
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(track.urls, '[]'::jsonb)) WITH ORDINALITY AS link(url, sort_order)
+                ON CONFLICT (entity_id, url) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    sort_order = EXCLUDED.sort_order;
+            END IF;
+
+            IF to_regclass('public.external_ids') IS NOT NULL THEN
+                INSERT INTO v2.entity_external_ids (id, entity_id, provider, value, url, created_at, updated_at)
+                SELECT gen_random_uuid(), external.entity_id, external.provider, external.external_id, external.external_url, external.created_at, external.created_at
+                FROM public.external_ids external
+                WHERE EXISTS (SELECT 1 FROM v2.entities entity WHERE entity.id = external.entity_id)
+                ON CONFLICT (entity_id, provider) DO UPDATE SET
+                    value = EXCLUDED.value,
+                    url = EXCLUDED.url,
+                    updated_at = EXCLUDED.updated_at;
             END IF;
 
             IF to_regclass('public.gallery_tags') IS NOT NULL THEN

@@ -7,9 +7,11 @@
 
 export * from './entityCapabilitiesDto';
 export * from './entityCardDto';
+export * from './entityExternalIdDto';
 export * from './entityFlagsUpdateRequestDto';
 export * from './entityListResponseDto';
 export * from './entityReferenceDto';
+export * from './entityUrlDto';
 export * from './jobListResponseDto';
 export * from './jobRunDto';
 export * from './legacyMediaImportResponseDto';

@@ -8,6 +8,8 @@ public static class FreshStartSql
             v2.entity_credit_links,
             v2.entity_studio_links,
             v2.entity_tag_links,
+            v2.entity_external_ids,
+            v2.entity_urls,
             v2.entity_files,
             v2.video_details,
             v2.entity_flags,

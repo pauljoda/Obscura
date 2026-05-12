@@ -137,6 +137,8 @@ public sealed class EntityVideoEndpointServiceTests
                     ["Demo"],
                     [],
                     null,
+                    [],
+                    [],
                     null,
                     null,
                     false,

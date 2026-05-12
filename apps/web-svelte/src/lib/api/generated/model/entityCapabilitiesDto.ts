@@ -4,7 +4,9 @@
  * Obscura.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { EntityExternalIdDto } from './entityExternalIdDto';
 import type { EntityReferenceDto } from './entityReferenceDto';
+import type { EntityUrlDto } from './entityUrlDto';
 import type { RatingDto } from './ratingDto';
 
 export interface EntityCapabilitiesDto {
@@ -12,6 +14,8 @@ export interface EntityCapabilitiesDto {
   tags: string[];
   credits: EntityReferenceDto[];
   studio: null | EntityReferenceDto;
+  urls: EntityUrlDto[];
+  externalIds: EntityExternalIdDto[];
   /** @nullable */
   thumbnailUrl: string | null;
   /** @nullable */
