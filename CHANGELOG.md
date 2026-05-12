@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - The v2 .NET backend can now serve a configured static Svelte build with SPA fallback, preparing production to run without a Node server once UI routes are migrated.
 - The v2 schema now includes a native Postgres job-run table for the future Obscura queue, with retry/progress/locking fields for worker coordination.
 - The .NET backend now has a separate worker host that can run beside the API and is ready for v2 queue handlers as scan, probe, thumbnail, and HLS jobs move over.
+- The v2 queue now has tested Postgres claim and retry SQL, including `FOR UPDATE SKIP LOCKED` coordination for multiple worker processes.
 - Migrated the video player to VidStack, using this as the core engine improves playback across browsers, also fixed some backend issues with hls and improper direct streaming, should have much more stable streaming behavior
 - Create "Books" entry type, and moved comics/manga to that library type. To use, enable a library with books in the settings
 - Uses SvelteKit snapshots on previously viewed pages for the grids, should allow you to pop into a entry, such as a video, then navigate back and preserve position in the scroll
@@ -110,6 +111,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added configurable ASP.NET static-file hosting and client-route fallback for the future static Svelte app.
 - Added the initial v2 job-run table for the native Postgres-backed worker queue.
 - Added the initial .NET worker runtime and development Docker/script wiring.
+- Added tested v2 queue SQL for claiming, completing, and retrying native Postgres jobs.
 - Added Books as a first-class library category with library-root scan toggles, book/chapter/page tables, Books API routes, search and collection support, a `/books` Comics tab, and series-style book detail pages with chapter reading progress.
 - Added book upload, delete, metadata update, and merge-into-book actions so comic archives can be managed from the Books section.
 - Added an in-reader Next Chapter action for multi-chapter books, preserving the current paged, webtoon, and spread preferences while continuing into the following chapter.
